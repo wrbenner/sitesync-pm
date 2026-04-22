@@ -38,8 +38,8 @@ describe('useRFIs query function', () => {
   it('calls supabase.from("rfis") with select and project_id filter', async () => {
     const PROJECT_ID = 'proj-abc-123'
     const mockRFIs = [
-      { id: 'rfi-1', rfi_number: 1, subject: 'Clarify wall detail', status: 'open', project_id: PROJECT_ID },
-      { id: 'rfi-2', rfi_number: 2, subject: 'Confirm rebar spec', status: 'answered', project_id: PROJECT_ID },
+      { id: 'rfi-1', number: 1, title: 'Clarify wall detail', status: 'open', project_id: PROJECT_ID },
+      { id: 'rfi-2', number: 2, title: 'Confirm rebar spec', status: 'answered', project_id: PROJECT_ID },
     ]
     setupChain(mockRFIs, 2)
 
@@ -57,13 +57,13 @@ describe('useRFIs query function', () => {
       .from('rfis')
       .select('*', { count: 'exact' })
       .eq('project_id', projectId)
-      .order('rfi_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(from, to)
 
     expect(mockFrom).toHaveBeenCalledWith('rfis')
     expect(mockSelect).toHaveBeenCalledWith('*', { count: 'exact' })
     expect(mockEq).toHaveBeenCalledWith('project_id', PROJECT_ID)
-    expect(mockOrder).toHaveBeenCalledWith('rfi_number', { ascending: false })
+    expect(mockOrder).toHaveBeenCalledWith('number', { ascending: false })
     expect(mockRange).toHaveBeenCalledWith(0, 49)
     expect(data).toEqual(mockRFIs)
     expect(error).toBeNull()
@@ -79,7 +79,7 @@ describe('useRFIs query function', () => {
       .from('rfis')
       .select('*', { count: 'exact' })
       .eq('project_id', 'proj-empty')
-      .order('rfi_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(0, 49)
 
     expect(data).toEqual([])
@@ -100,7 +100,7 @@ describe('useRFIs query function', () => {
       .from('rfis')
       .select('*', { count: 'exact' })
       .eq('project_id', 'proj-no-access')
-      .order('rfi_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(0, 49)
 
     expect(data).toBeNull()
@@ -121,7 +121,7 @@ describe('useRFIs query function', () => {
       .from('rfis')
       .select('*', { count: 'exact' })
       .eq('project_id', 'proj-big')
-      .order('rfi_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(from, to)
 
     expect(mockRange).toHaveBeenCalledWith(50, 99)

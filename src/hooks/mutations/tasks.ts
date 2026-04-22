@@ -44,7 +44,7 @@ export function useUpdateTask() {
       if (typeof updates.status === 'string') {
         await validateTaskStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('tasks').update(updates).eq('id', id)
+      const { error } = await from('tasks').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -61,7 +61,7 @@ export function useDeleteTask() {
     entityType: 'task',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('tasks').delete().eq('id', id)
+      const { error } = await from('tasks').delete().eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

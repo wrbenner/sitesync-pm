@@ -305,7 +305,7 @@ export function useNotifications(userId: string) {
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
-        .eq('is_read', false)
+        .eq('read', false)
         .order('created_at', { ascending: false })
         .limit(20)
       if (error) throw error

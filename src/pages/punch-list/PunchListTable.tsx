@@ -1,20 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { VirtualDataTable } from '../../components/shared/VirtualDataTable';
 import { Card, PriorityTag } from '../../components/Primitives';
-import EmptyState from '../../components/ui/EmptyState';
-import { Search } from 'lucide-react';
+import { Search, Camera, MapPin, ChevronRight, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { InlineEditCell } from '../../components/forms/EditableField';
-import { AIAnnotationIndicator } from '../../components/ai/AIAnnotation';
-import { getAnnotationsForEntity } from '../../data/aiAnnotations';
 import { toast } from 'sonner';
 import type { PunchItem } from './types';
 import {
   STATUS_COLORS,
   statusLabel,
-  responsibleColors,
-  responsibleLabel,
   getDaysRemaining,
   getDueDateColor,
   formatDate,
@@ -22,6 +17,7 @@ import {
 
 const plColHelper = createColumnHelper<PunchItem>();
 
+// ── Status Badge ────────────────────────────────────────
 export const StatusDot: React.FC<{ status: string }> = ({ status }) => {
   const color = STATUS_COLORS[status] ?? STATUS_COLORS.open;
   const label = statusLabel[status] ?? status;
@@ -29,14 +25,24 @@ export const StatusDot: React.FC<{ status: string }> = ({ status }) => {
     <div
       role="img"
       aria-label={`Status: ${label}`}
-      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '3px 10px', borderRadius: '100px',
+        backgroundColor: `${color}14`,
+      }}
     >
-      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-      <span style={{ fontSize: 12, fontWeight: 500, color }}>{label}</span>
+      <div style={{
+        width: 7, height: 7, borderRadius: '50%',
+        backgroundColor: color, flexShrink: 0,
+      }} />
+      <span style={{ fontSize: 12, fontWeight: 600, color, whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
     </div>
   );
 };
 
+// ── Photo Thumbnail ─────────────────────────────────────
 export const PhotoThumbnail: React.FC<{ url: string; alt: string }> = ({ url, alt }) => {
   const [hovered, setHovered] = React.useState(false);
   return (
@@ -47,32 +53,75 @@ export const PhotoThumbnail: React.FC<{ url: string; alt: string }> = ({ url, al
         loading="lazy"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, cursor: 'zoom-in', display: 'block' }}
+        style={{
+          width: 36, height: 36, objectFit: 'cover',
+          borderRadius: 8,
+          border: `1.5px solid ${colors.borderSubtle}`,
+          cursor: 'zoom-in', display: 'block',
+          transition: 'transform 0.15s, box-shadow 0.15s',
+          ...(hovered ? { transform: 'scale(1.05)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' } : {}),
+        }}
       />
       {hovered && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            marginBottom: 6,
-            zIndex: 50,
-            pointerEvents: 'none',
-          }}
-        >
-          <img
-            src={url}
-            alt={alt}
-            loading="lazy"
-            style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: borderRadius.md, border: `1px solid ${colors.borderDefault}`, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', display: 'block' }}
-          />
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
+          transform: 'translateX(-50%)', zIndex: 50, pointerEvents: 'none',
+        }}>
+          <img src={url} alt={alt} loading="lazy" style={{
+            width: 180, height: 140, objectFit: 'cover',
+            borderRadius: 12, border: `1px solid ${colors.borderDefault}`,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)', display: 'block',
+          }} />
         </div>
       )}
     </div>
   );
 };
 
+// ── Search Bar ──────────────────────────────────────────
+const SearchBar: React.FC<{
+  value: string;
+  onChange: (v: string) => void;
+  count: number;
+  total: number;
+}> = ({ value, onChange, count, total }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '0 20px', height: 48,
+    borderBottom: `1px solid ${colors.borderSubtle}`,
+    backgroundColor: colors.surfaceRaised,
+  }}>
+    <Search size={15} style={{ color: colors.textTertiary, flexShrink: 0 }} />
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Search punch items..."
+      style={{
+        flex: 1, border: 'none', outline: 'none',
+        fontSize: 14, color: colors.textPrimary,
+        backgroundColor: 'transparent',
+        fontFamily: 'inherit',
+      }}
+    />
+    {value && (
+      <button onClick={() => onChange('')} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: colors.textTertiary, padding: 2, display: 'flex',
+      }}>
+        <X size={14} />
+      </button>
+    )}
+    <span style={{
+      fontSize: 12, color: colors.textTertiary,
+      fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+    }}>
+      {count === total ? `${total} items` : `${count} of ${total}`}
+    </span>
+  </div>
+);
+
+// ── Props ───────────────────────────────────────────────
 interface PunchListTableProps {
   filteredList: PunchItem[];
   hasActiveFilters: boolean;
@@ -118,7 +167,47 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
   handleVerifyById,
   handleRejectById,
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Search filtering
+  const searchedList = useMemo(() => {
+    if (!searchQuery.trim()) return filteredList;
+    const q = searchQuery.toLowerCase();
+    return filteredList.filter(item =>
+      item.description.toLowerCase().includes(q) ||
+      item.itemNumber.toLowerCase().includes(q) ||
+      item.area.toLowerCase().includes(q) ||
+      item.assigned.toLowerCase().includes(q) ||
+      item.trade.toLowerCase().includes(q) ||
+      item.location.toLowerCase().includes(q)
+    );
+  }, [filteredList, searchQuery]);
+
+  // ── Inline action button ──────────────────────────────
+  const ActionBtn: React.FC<{
+    label: string;
+    color: string;
+    bg: string;
+    onClick: () => void;
+  }> = useCallback(({ label, color, bg, onClick }: { label: string; color: string; bg: string; onClick: () => void }) => (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{
+        padding: '4px 10px', fontSize: 11, fontWeight: 600,
+        fontFamily: 'inherit',
+        backgroundColor: bg, color,
+        border: `1px solid ${color}30`,
+        borderRadius: 6, cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'all 0.15s',
+      }}
+    >
+      {label}
+    </button>
+  ), []);
+
   const plColumns = useMemo(() => [
+    // Checkbox
     plColHelper.display({
       id: 'select',
       size: 40,
@@ -143,79 +232,110 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
         );
       },
     }),
-    plColHelper.accessor('itemNumber', {
-      header: 'Item',
-      size: 80,
-      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue()}</span>,
-    }),
+
+    // Photo + Description (combined for visual impact)
     plColHelper.accessor('description', {
-      header: 'Description',
-      size: 300,
+      header: 'Item',
+      size: 380,
       cell: (info) => {
         const item = info.row.original;
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.snug, flex: 1, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                {info.getValue()}
-                {getAnnotationsForEntity('punch_item', item.id).map((ann: unknown) => (
-                  <AIAnnotationIndicator key={(ann as { id: string | number }).id} annotation={ann as never} inline />
-                ))}
-              </span>
-              {item.before_photo_url && <PhotoThumbnail url={item.before_photo_url} alt="Before photo" />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* Photo or placeholder */}
+            {item.before_photo_url ? (
+              <PhotoThumbnail url={item.before_photo_url} alt={item.description} />
+            ) : (
+              <div style={{
+                width: 36, height: 36, borderRadius: 8,
+                backgroundColor: colors.surfaceInset,
+                border: `1.5px dashed ${colors.borderDefault}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <Camera size={14} style={{ color: colors.textTertiary }} />
+              </div>
+            )}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 600,
+                  color: colors.primaryOrange,
+                  fontFamily: typography.fontFamilyMono,
+                  flexShrink: 0,
+                }}>
+                  {item.itemNumber}
+                </span>
+                <span style={{
+                  fontSize: 13, fontWeight: 600,
+                  color: colors.textPrimary,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {info.getValue()}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: colors.textTertiary }}>
+                {item.area && (
+                  <>
+                    <MapPin size={9} style={{ flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.area}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-              {item.reportedBy && <span>{item.reportedBy}</span>}
-              {item.createdDate && <span> · {formatDate(item.createdDate)}</span>}
-            </span>
           </div>
         );
       },
     }),
-    plColHelper.accessor('area', {
-      header: 'Location',
-      size: 180,
-      cell: (info) => {
-        const item = info.row.original;
-        const parts = [info.getValue(), item.location].filter(Boolean).join(', ').split(',').map((s: string) => s.trim()).filter(Boolean);
-        if (parts.length <= 1) {
-          return <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{parts[0] || '\u2014'}</span>;
-        }
-        return (
-          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' as const }}>
-            {parts.map((part, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <span style={{ color: colors.textTertiary, fontSize: 10 }}>{'>'}</span>}
-                <span>{part}</span>
-              </React.Fragment>
-            ))}
-          </span>
-        );
-      },
-    }),
+
+    // Assigned
     plColHelper.accessor('assigned', {
-      header: 'Assigned',
-      size: 120,
+      header: 'Assigned To',
+      size: 140,
       cell: (info) => {
+        const val = info.getValue();
         const item = info.row.original;
+        if (!val) return <span style={{ fontSize: 12, color: colors.textTertiary }}>—</span>;
+        const initials = val.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{info.getValue()}</span>
-            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: responsibleColors[item.responsible]?.text || colors.textTertiary }}>
-              {responsibleLabel[item.responsible] || ''}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: '50%',
+              backgroundColor: colors.orangeSubtle,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 10, fontWeight: 700,
+              color: colors.primaryOrange,
+              flexShrink: 0,
+            }}>
+              {initials}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {val}
+              </div>
+              {item.trade && (
+                <div style={{ fontSize: 11, color: colors.textTertiary }}>
+                  {item.trade}
+                </div>
+              )}
+            </div>
           </div>
         );
       },
     }),
+
+    // Priority
     plColHelper.accessor('priority', {
       header: 'Priority',
       size: 90,
       cell: (info) => <PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} />,
     }),
+
+    // Status
     plColHelper.accessor('verification_status', {
       header: 'Status',
-      size: 130,
+      size: 140,
       cell: (info) => {
         const item = info.row.original;
         return (
@@ -240,91 +360,64 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
         );
       },
     }),
+
+    // Due Date
     plColHelper.accessor('dueDate', {
       header: 'Due',
-      size: 110,
+      size: 100,
       cell: (info) => {
         const val = info.getValue();
-        if (!val) return null;
+        if (!val) return <span style={{ fontSize: 12, color: colors.textTertiary }}>—</span>;
         const days = getDaysRemaining(val);
         const color = getDueDateColor(val);
+        const item = info.row.original;
+        const isVerified = item.verification_status === 'verified';
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color, fontVariantNumeric: 'tabular-nums' as const }}>
+          <div>
+            <span style={{
+              fontSize: 13, fontWeight: 500,
+              color: isVerified ? colors.textTertiary : color,
+              fontVariantNumeric: 'tabular-nums',
+            }}>
               {formatDate(val)}
             </span>
-            {days <= 0 ? (
-              <span style={{ fontSize: 10, fontWeight: 600, color: colors.statusCritical }}>{Math.abs(days)} days overdue</span>
-            ) : days <= 4 ? (
-              <span style={{ fontSize: 10, color: colors.statusPending }}>{days}d left</span>
-            ) : (
-              <span style={{ fontSize: 10, color: colors.textTertiary }}>{days}d left</span>
+            {!isVerified && (
+              <div style={{
+                fontSize: 10, fontWeight: days <= 0 ? 700 : 500,
+                color: days <= 0 ? colors.statusCritical : days <= 4 ? colors.statusPending : colors.textTertiary,
+                marginTop: 1,
+              }}>
+                {days <= 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}
+              </div>
             )}
           </div>
         );
       },
     }),
-    plColHelper.accessor('trade', {
-      header: 'Responsible',
-      size: 110,
-      cell: (info) => {
-        const trade = info.getValue()?.toLowerCase() ?? '';
-        const item = info.row.original;
-        let bg = 'transparent';
-        const label = item.responsible === 'gc' ? 'GC' : item.responsible === 'owner' ? 'Owner' : trade || 'Sub';
-        const isSubTrade = trade.includes('electric') || trade.includes('plumb') || trade.includes('hvac') || trade.includes('drywall') || trade.includes('paint');
-        let textColor = colors.statusPending;
-        if (item.responsible === 'gc') {
-          bg = 'rgba(59,130,246,0.10)';
-          textColor = colors.statusInfo;
-        } else if (item.responsible === 'owner') {
-          bg = 'rgba(244,120,32,0.10)';
-          textColor = colors.primaryOrange as string;
-        } else if (isSubTrade || item.responsible === 'subcontractor') {
-          bg = 'rgba(245,166,35,0.12)';
-          textColor = colors.statusPending;
-        }
-        return (
-          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: borderRadius.full, backgroundColor: bg, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: textColor, whiteSpace: 'nowrap' as const }}>
-            {label}
-          </span>
-        );
-      },
-    }),
+
+    // Quick Actions
     plColHelper.display({
-      id: 'inline_actions',
+      id: 'actions',
       header: '',
-      size: 160,
+      size: 140,
       cell: (info) => {
         const item = info.row.original;
         return (
           <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             {item.verification_status === 'open' && hasPermission('punch_list.edit') && (
-              <button
-                onClick={() => handleMarkInProgressById(item)}
-                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusInfoSubtle, color: STATUS_COLORS.in_progress, border: `1px solid ${STATUS_COLORS.in_progress}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-              >
-                Start
-              </button>
+              <ActionBtn label="Start" color={STATUS_COLORS.in_progress} bg={colors.statusInfoSubtle}
+                onClick={() => handleMarkInProgressById(item)} />
             )}
             {item.verification_status === 'in_progress' && hasPermission('punch_list.edit') && (
-              <button
-                onClick={() => handleMarkSubCompleteById(item)}
-                style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusReviewSubtle, color: STATUS_COLORS.sub_complete, border: `1px solid ${STATUS_COLORS.sub_complete}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-              >
-                Mark Complete
-              </button>
+              <ActionBtn label="Complete" color={STATUS_COLORS.sub_complete} bg={colors.statusReviewSubtle}
+                onClick={() => handleMarkSubCompleteById(item)} />
             )}
             {item.verification_status === 'sub_complete' && hasPermission('punch_list.verify') && (
               <>
-                <button
-                  onClick={() => handleVerifyById(item)}
-                  style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusActiveSubtle, color: colors.statusActive, border: `1px solid ${colors.statusActive}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-                >
-                  Verify
-                </button>
+                <ActionBtn label="Verify" color={colors.statusActive} bg={colors.statusActiveSubtle}
+                  onClick={() => handleVerifyById(item)} />
                 {inlineRejectId === item.id ? (
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
                     <input
                       type="text"
                       placeholder="Reason..."
@@ -335,150 +428,225 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
                         if (e.key === 'Enter') handleRejectById(item, inlineRejectNote);
                         if (e.key === 'Escape') { setInlineRejectId(null); setInlineRejectNote(''); }
                       }}
-                      style={{ padding: '2px 6px', fontSize: 11, fontFamily: 'inherit', border: `1px solid ${colors.statusCritical}80`, borderRadius: borderRadius.base, width: 110, outline: 'none', color: colors.textPrimary }}
+                      style={{
+                        padding: '3px 8px', fontSize: 11, fontFamily: 'inherit',
+                        border: `1.5px solid ${colors.statusCritical}60`,
+                        borderRadius: 6, width: 100, outline: 'none',
+                        color: colors.textPrimary, backgroundColor: colors.statusCriticalSubtle,
+                      }}
                     />
                     <button
                       onClick={() => handleRejectById(item, inlineRejectNote)}
-                      style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.base, cursor: 'pointer' }}
+                      style={{
+                        padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                        backgroundColor: colors.statusCritical, color: colors.white,
+                        border: 'none', borderRadius: 6, cursor: 'pointer',
+                      }}
                     >
-                      Send
-                    </button>
-                    <button
-                      onClick={() => { setInlineRejectId(null); setInlineRejectNote(''); }}
-                      style={{ padding: '3px 6px', fontSize: 11, fontFamily: 'inherit', backgroundColor: 'transparent', color: colors.textTertiary, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, cursor: 'pointer' }}
-                    >
-                      x
+                      ↵
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => { setInlineRejectId(item.id); setInlineRejectNote(''); }}
-                    style={{ padding: '3px 8px', fontSize: 11, fontWeight: 600, fontFamily: 'inherit', backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical, border: `1px solid ${colors.statusCritical}40`, borderRadius: borderRadius.base, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-                  >
-                    Reject
-                  </button>
+                  <ActionBtn label="Reject" color={colors.statusCritical} bg={colors.statusCriticalSubtle}
+                    onClick={() => { setInlineRejectId(item.id); setInlineRejectNote(''); }} />
                 )}
               </>
             )}
+            {/* Arrow indicator for row click */}
+            <ChevronRight size={14} style={{ color: colors.textTertiary, marginLeft: 'auto', opacity: 0.4 }} />
           </div>
         );
       },
     }),
-  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission, handleMarkInProgressById, handleMarkSubCompleteById, handleVerifyById, handleRejectById, inlineRejectId, inlineRejectNote, setInlineRejectId, setInlineRejectNote]);
+  ], [bulkSelected, setBulkSelected, updatePunchItem, projectId, hasPermission,
+      handleMarkInProgressById, handleMarkSubCompleteById, handleVerifyById, handleRejectById,
+      inlineRejectId, inlineRejectNote, setInlineRejectId, setInlineRejectNote, ActionBtn]);
 
-  // Suppress unused warning (EmptyState reserved for potential future enhancement)
-  void EmptyState;
-
+  // ── Mobile Card View ──────────────────────────────────
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-        {filteredList.length === 0 && hasActiveFilters && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['3'], padding: `${spacing['8']} ${spacing['4']}`, textAlign: 'center' }}>
-            <Search size={32} color={colors.textTertiary} />
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>No punch items match your current filters</p>
-            <button
-              onClick={clearAllFilters}
-              style={{ padding: `${spacing['2']} ${spacing['4']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
-            >
-              Clear All Filters
-            </button>
+      <div>
+        {/* Mobile Search */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 16px', marginBottom: 12,
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: 12,
+          border: `1px solid ${colors.borderSubtle}`,
+        }}>
+          <Search size={16} style={{ color: colors.textTertiary }} />
+          <input
+            type="text" value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items..."
+            style={{
+              flex: 1, border: 'none', outline: 'none',
+              fontSize: 15, color: colors.textPrimary,
+              backgroundColor: 'transparent', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+
+        {searchedList.length === 0 && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: 12, padding: '48px 24px', textAlign: 'center',
+          }}>
+            <Search size={28} color={colors.textTertiary} />
+            <p style={{ fontSize: 15, color: colors.textSecondary, margin: 0 }}>
+              {hasActiveFilters || searchQuery ? 'No items match your search' : 'No punch items yet'}
+            </p>
+            {(hasActiveFilters || searchQuery) && (
+              <button onClick={() => { clearAllFilters(); setSearchQuery(''); }}
+                style={{
+                  padding: '8px 20px', fontSize: 14, fontFamily: 'inherit',
+                  fontWeight: 600, backgroundColor: colors.primaryOrange,
+                  color: colors.white, border: 'none', borderRadius: 8, cursor: 'pointer',
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         )}
-        {filteredList.map((item) => {
-          const statusDotColor = STATUS_COLORS[item.verification_status] ?? STATUS_COLORS.open;
-          return (
-            <div
-              key={item.id}
-              onClick={() => setSelectedId(item.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(item.id); } }}
-              style={{
-                backgroundColor: colors.white,
-                borderRadius: borderRadius.md,
-                border: `1px solid ${colors.borderDefault}`,
-                padding: '16px',
-                minHeight: '72px',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-              }}
-            >
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ fontSize: '16px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, lineHeight: 1.3 }}>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {searchedList.map((item) => {
+            const statusColor = STATUS_COLORS[item.verification_status] ?? STATUS_COLORS.open;
+            const days = item.dueDate ? getDaysRemaining(item.dueDate) : null;
+            const isOverdue = days !== null && days <= 0 && item.verification_status !== 'verified';
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => setSelectedId(item.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(item.id); } }}
+                style={{
+                  backgroundColor: colors.surfaceRaised,
+                  borderRadius: 14,
+                  border: `1px solid ${colors.borderSubtle}`,
+                  padding: 16,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  display: 'flex', gap: 12,
+                }}
+              >
+                {/* Photo */}
+                {item.before_photo_url ? (
+                  <img loading="lazy" src={item.before_photo_url} alt=""
+                    style={{
+                      width: 56, height: 56, objectFit: 'cover',
+                      borderRadius: 10, flexShrink: 0,
+                      border: `1px solid ${colors.borderSubtle}`,
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 10,
+                    backgroundColor: colors.surfaceInset,
+                    border: `1.5px dashed ${colors.borderDefault}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Camera size={18} style={{ color: colors.textTertiary }} />
+                  </div>
+                )}
+
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>
+                      {item.itemNumber}
+                    </span>
+                    {isOverdue && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, color: colors.statusCritical,
+                        backgroundColor: colors.statusCriticalSubtle,
+                        padding: '1px 6px', borderRadius: 4,
+                      }}>
+                        OVERDUE
+                      </span>
+                    )}
+                  </div>
+                  <div style={{
+                    fontSize: 15, fontWeight: 600, color: colors.textPrimary,
+                    lineHeight: 1.3, marginBottom: 6,
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  }}>
                     {item.description}
                   </div>
-                  {item.area && (
-                    <div style={{ fontSize: '14px', color: colors.textTertiary }}>{item.area}</div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' as const }}>
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', minHeight: '44px', minWidth: '44px' }}
-                      aria-label={`Status: ${statusLabel[item.verification_status] ?? item.verification_status}`}
-                    >
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: statusDotColor, flexShrink: 0 }} aria-hidden="true" />
-                      <span style={{ fontSize: '13px', color: statusDotColor, fontWeight: 500 }} aria-hidden="true">
-                        {statusLabel[item.verification_status] ?? item.verification_status}
-                      </span>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <StatusDot status={item.verification_status} />
                     <PriorityTag priority={item.priority as 'low' | 'medium' | 'high' | 'critical'} />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
-                    {item.assigned && (
-                      <span style={{ fontSize: '13px', color: colors.textSecondary }}>{item.assigned}</span>
-                    )}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    marginTop: 8, fontSize: 12, color: colors.textTertiary,
+                  }}>
+                    {item.assigned && <span>{item.assigned}</span>}
                     {item.dueDate && (
-                      <span style={{ fontSize: '13px', fontWeight: 500, color: getDueDateColor(item.dueDate) }}>
+                      <span style={{ fontWeight: 500, color: getDueDateColor(item.dueDate) }}>
                         Due {formatDate(item.dueDate)}
                       </span>
                     )}
                   </div>
                 </div>
-                {item.before_photo_url && (
-                  <div style={{ flexShrink: 0 }}>
-                    <img loading="lazy"
-                      src={item.before_photo_url}
-                      alt="Before"
-                      style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}` }}
-                    />
-                  </div>
-                )}
+
+                <ChevronRight size={16} style={{ color: colors.textTertiary, alignSelf: 'center', flexShrink: 0, opacity: 0.4 }} />
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     );
   }
 
+  // ── Desktop Table ─────────────────────────────────────
   return (
     <Card padding="0">
-      {filteredList.length === 0 && hasActiveFilters ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['3'], padding: `${spacing['12']} ${spacing['4']}`, textAlign: 'center' }}>
-          <Search size={36} color={colors.textTertiary} />
-          <p style={{ fontSize: typography.fontSize.base, color: colors.textSecondary, margin: 0 }}>No punch items match your current filters</p>
-          <button
-            onClick={clearAllFilters}
-            style={{ padding: `${spacing['2']} ${spacing['4']}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer' }}
-          >
-            Clear All Filters
-          </button>
-        </div>
-      ) : (
-        <VirtualDataTable
-          aria-label="Punch list items"
-          data={filteredList}
-          columns={plColumns}
-          rowHeight={48}
-          containerHeight={600}
-          onRowClick={(row) => setSelectedId(row.id)}
-          selectedRowId={selectedId}
-          getRowId={(row) => String(row.id)}
-          emptyMessage="No items match your filters"
+      <div style={{ borderRadius: 14, overflow: 'hidden' }}>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          count={searchedList.length}
+          total={filteredList.length}
         />
-      )}
+        {searchedList.length === 0 ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            gap: 12, padding: '56px 24px', textAlign: 'center',
+          }}>
+            <Search size={32} color={colors.textTertiary} />
+            <p style={{ fontSize: 15, color: colors.textSecondary, margin: 0 }}>
+              {searchQuery ? 'No items match your search' : 'No punch items match your filters'}
+            </p>
+            <button onClick={() => { clearAllFilters(); setSearchQuery(''); }}
+              style={{
+                padding: '8px 20px', fontSize: 13, fontFamily: 'inherit',
+                fontWeight: 600, backgroundColor: colors.primaryOrange,
+                color: colors.white, border: 'none', borderRadius: 8, cursor: 'pointer',
+              }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          <VirtualDataTable
+            aria-label="Punch list items"
+            data={searchedList}
+            columns={plColumns}
+            rowHeight={56}
+            containerHeight={600}
+            onRowClick={(row) => setSelectedId(row.id)}
+            selectedRowId={selectedId}
+            getRowId={(row) => String(row.id)}
+            emptyMessage="No items match your filters"
+          />
+        )}
+      </div>
     </Card>
   );
 };

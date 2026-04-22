@@ -34,7 +34,7 @@ export function useUpdateCorrectiveAction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
-      const { error } = await from('corrective_actions').update(updates).eq('id', id)
+      const { error } = await from('corrective_actions').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

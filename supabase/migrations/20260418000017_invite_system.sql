@@ -18,7 +18,11 @@ CREATE TABLE IF NOT EXISTS invite_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_invite_logs_org_email ON invite_logs(organization_id, email);
-CREATE INDEX IF NOT EXISTS idx_invite_logs_token ON invite_logs(token);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'invite_logs' AND column_name = 'token') THEN
+    CREATE INDEX IF NOT EXISTS idx_invite_logs_token ON invite_logs(token);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_invite_logs_status ON invite_logs(organization_id, status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_invite_logs_pending_unique
   ON invite_logs(organization_id, lower(email))

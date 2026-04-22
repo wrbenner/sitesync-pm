@@ -7,7 +7,7 @@ import type { DrawingRevision } from '../../types/api';
 import { formatRevDate } from './types';
 
 interface DrawingItem {
-  id: number;
+  id: string;
   title: string;
   setNumber: string;
   discipline: string;

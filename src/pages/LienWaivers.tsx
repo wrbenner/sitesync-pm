@@ -1,18 +1,23 @@
-import React, { useState, useEffect} from 'react';
-import { FileCheck } from 'lucide-react';
-import { PageContainer, MetricBox, Skeleton, Btn } from '../components/Primitives';
+import React, { useState } from 'react';
+import { FileCheck, Plus, Trash2, Send } from 'lucide-react';
+import { PageContainer, MetricBox, Skeleton, Btn, Modal, InputField } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
-import { supabase } from '../lib/supabase';
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
-import type { Database } from '../types/database';
+import { useLienWaivers, useCreateLienWaiver, useDeleteLienWaiver } from '../hooks/queries/lien-waivers';
+import { toast } from 'sonner';
+import {
+  useCreateSignatureRequest,
+  useSendForSignature,
+  useAddSigner,
+} from '../hooks/queries/signatures';
+import { getSignerColorPalette } from '../services/signatureService';
 
-type LienWaiver = Database['public']['Tables']['lien_waivers']['Row'];
-
-type WaiverType = LienWaiver['type'] | 'all';
+type WaiverStateValue = 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final';
+type WaiverFilterType = WaiverStateValue | 'all';
 type StatusFilter = 'all' | 'pending' | 'signed';
 
-const WAIVER_TYPE_LABELS: Record<LienWaiver['type'], string> = {
+const WAIVER_TYPE_LABELS: Record<WaiverStateValue, string> = {
   conditional_progress: 'Conditional Progress',
   unconditional_progress: 'Unconditional Progress',
   conditional_final: 'Conditional Final',
@@ -32,7 +37,7 @@ function fmtDate(iso: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function isSignedStatus(status: LienWaiver['status']): boolean {
+function isSignedStatus(status: string): boolean {
   return status === 'received';
 }
 
@@ -40,42 +45,129 @@ export function LienWaivers() {
   const projectId = useProjectId();
   const navigate = useNavigate();
 
-  const [waivers, setWaivers] = useState<LienWaiver[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<WaiverType>('all');
+  const { data: rawWaivers, isLoading: loading } = useLienWaivers(projectId);
+  const createWaiver = useCreateLienWaiver();
+  const deleteWaiver = useDeleteLienWaiver();
+  const createSignatureRequest = useCreateSignatureRequest();
+  const sendForSignature = useSendForSignature();
+  const addSignerMutation = useAddSigner();
+
+  // Cast to any[] since the API endpoint maps columns to different names
+  const waivers = (rawWaivers ?? []) as any[];
+  const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
+
+  const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [hovered, setHovered] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
-  useEffect(() => {
-    if (!projectId) {
-      setTimeout(() => setLoading(false), 0);
-      return;
-    }
-    setTimeout(() => setLoading(true), 0);
-    supabase
-      .from('lien_waivers')
-      .select('*')
-      .eq('project_id', projectId)
-      .then(({ data, error }) => {
-        if (!error && data) setWaivers(data);
-        setLoading(false);
-      });
-  }, [projectId]);
+  // Create form state
+  const [formContractor, setFormContractor] = useState('');
+  const [formWaiverState, setFormWaiverState] = useState<WaiverStateValue>('conditional_progress');
+  const [formAmount, setFormAmount] = useState('');
+  const [formThroughDate, setFormThroughDate] = useState('');
+  const [formStatus, setFormStatus] = useState('pending');
+  const [formNotes, setFormNotes] = useState('');
+
+  const resetForm = () => {
+    setFormContractor('');
+    setFormWaiverState('conditional_progress');
+    setFormAmount('');
+    setFormThroughDate('');
+    setFormStatus('pending');
+    setFormNotes('');
+  };
+
+  // Use the actual DB column names. The API endpoint maps them so we need to handle both naming conventions.
+  const getWaiverState = (w: any): string => w.waiver_type ?? w.waiver_state ?? w.type ?? '';
+  const getContractorName = (w: any): string => w.contractor_name ?? w.subcontractor_id ?? '';
+  const getThroughDate = (w: any): string | null => w.through_date ?? w.payment_period ?? null;
+  const getSignedAt = (w: any): string | null => w.signed_at ?? w.received_at ?? null;
+  const getStatus = (w: any): string => w.status ?? 'pending';
 
   const filtered = waivers.filter((w) => {
-    if (typeFilter !== 'all' && w.type !== typeFilter) return false;
-    if (statusFilter === 'pending' && isSignedStatus(w.status)) return false;
-    if (statusFilter === 'signed' && !isSignedStatus(w.status)) return false;
+    const ws = getWaiverState(w);
+    if (typeFilter !== 'all' && ws !== typeFilter) return false;
+    if (statusFilter === 'pending' && isSignedStatus(getStatus(w))) return false;
+    if (statusFilter === 'signed' && !isSignedStatus(getStatus(w))) return false;
     return true;
   });
 
   const totalCount = waivers.length;
-  const pendingCount = waivers.filter((w) => !isSignedStatus(w.status)).length;
-  const signedCount = waivers.filter((w) => isSignedStatus(w.status)).length;
-  const missingCount = waivers.filter((w) => w.status === 'missing').length;
+  const pendingCount = waivers.filter((w) => !isSignedStatus(getStatus(w))).length;
+  const signedCount = waivers.filter((w) => isSignedStatus(getStatus(w))).length;
+  const missingCount = waivers.filter((w) => getStatus(w) === 'missing').length;
 
-  const colWidths = ['22%', '22%', '14%', '16%', '12%', '14%'];
-  const colHeaders = ['Vendor', 'Waiver Type', 'Amount Waived', 'Period Covered Through', 'Status', 'Signed Date'];
+  const handleCreate = async () => {
+    if (!projectId) return;
+    if (!formContractor.trim()) {
+      toast.error('Contractor name is required');
+      return;
+    }
+    try {
+      await createWaiver.mutateAsync({
+        project_id: projectId,
+        contractor_name: formContractor.trim(),
+        waiver_state: formWaiverState,
+        amount: formAmount ? parseFloat(formAmount) : null,
+        through_date: formThroughDate || null,
+        status: formStatus,
+        notes: formNotes || null,
+      });
+      setShowCreate(false);
+      resetForm();
+    } catch {
+      // toast handled by hook
+    }
+  };
+
+  const handleDelete = async (w: any) => {
+    if (!projectId) return;
+    const label = getContractorName(w) || 'this waiver';
+    if (!window.confirm(`Delete waiver for "${label}"? This cannot be undone.`)) return;
+    try {
+      await deleteWaiver.mutateAsync({ id: w.id, projectId });
+    } catch {
+      // toast handled by hook
+    }
+  };
+
+  const handleSendForSignature = async (w: any) => {
+    if (!projectId) return;
+    const vendor = getContractorName(w) || 'Unknown Vendor';
+    setSendingSignatureId(w.id);
+    try {
+      const waiverState = getWaiverState(w);
+      const label = WAIVER_TYPE_LABELS[waiverState as WaiverStateValue] ?? waiverState;
+      const request = await createSignatureRequest.mutateAsync({
+        project_id: projectId,
+        title: `Lien Waiver — ${label} — ${vendor}`,
+        source_file_url: `lien-waiver://${w.id}`,
+        signing_order: 'parallel',
+        metadata: { lien_waiver_id: w.id, signer_count: 1 },
+      });
+      const palette = getSignerColorPalette();
+      await addSignerMutation.mutateAsync({
+        request_id: request.id,
+        signer_name: vendor,
+        signer_email: `${vendor.toLowerCase().replace(/[^a-z0-9]/g, '')}@example.com`,
+        signing_order_index: 0,
+        color_code: palette[0],
+      });
+      await sendForSignature.mutateAsync({
+        request_id: request.id,
+        project_id: projectId,
+      });
+      toast.success(`Lien waiver sent to ${vendor} for signature`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send for signature');
+    } finally {
+      setSendingSignatureId(null);
+    }
+  };
+
+  const colWidths = ['18%', '16%', '11%', '12%', '9%', '11%', '23%'];
+  const colHeaders = ['Vendor', 'Waiver Type', 'Amount Waived', 'Period Through', 'Status', 'Signed Date', 'Actions'];
 
   const thStyle: React.CSSProperties = {
     textAlign: 'left',
@@ -100,6 +192,11 @@ export function LienWaivers() {
     <PageContainer
       title="Lien Waivers"
       subtitle="Track conditional and unconditional lien waivers from subcontractors and vendors."
+      actions={
+        <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
+          New Waiver
+        </Btn>
+      }
     >
       {/* Metric cards */}
       <div
@@ -142,7 +239,7 @@ export function LienWaivers() {
       >
         <select
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as WaiverType)}
+          onChange={(e) => setTypeFilter(e.target.value as WaiverFilterType)}
           aria-label="Filter by waiver type"
           style={{
             fontSize: typography.fontSize.body,
@@ -157,7 +254,7 @@ export function LienWaivers() {
           }}
         >
           <option value="all">All Types</option>
-          {(Object.keys(WAIVER_TYPE_LABELS) as LienWaiver['type'][]).map((t) => (
+          {(Object.keys(WAIVER_TYPE_LABELS) as WaiverStateValue[]).map((t) => (
             <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
           ))}
         </select>
@@ -237,7 +334,7 @@ export function LienWaivers() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   style={{
                     padding: spacing['16'],
                     textAlign: 'center',
@@ -262,7 +359,7 @@ export function LienWaivers() {
                         lineHeight: 1.6,
                       }}
                     >
-                      No lien waivers for this period. Waivers are generated automatically when pay applications are approved.
+                      No lien waivers for this period. Click "New Waiver" to create one, or waivers are generated automatically when pay applications are approved.
                     </p>
                     <Btn
                       variant="secondary"
@@ -275,9 +372,11 @@ export function LienWaivers() {
               </tr>
             ) : (
               filtered.map((w) => {
-                const signed = isSignedStatus(w.status);
-                const isMissing = w.status === 'missing';
+                const status = getStatus(w);
+                const signed = isSignedStatus(status);
+                const isMissing = status === 'missing';
                 const isHovered = hovered === w.id;
+                const waiverState = getWaiverState(w);
 
                 return (
                   <tr
@@ -301,9 +400,7 @@ export function LienWaivers() {
                           color: colors.textPrimary,
                         }}
                       >
-                        {w.subcontractor_id
-                          ? w.subcontractor_id.slice(0, 8).toUpperCase()
-                          : 'Unknown Vendor'}
+                        {getContractorName(w) || 'Unknown Vendor'}
                       </span>
                     </td>
 
@@ -320,7 +417,7 @@ export function LienWaivers() {
                           padding: `2px ${spacing['2']}`,
                         }}
                       >
-                        {WAIVER_TYPE_LABELS[w.type]}
+                        {WAIVER_TYPE_LABELS[waiverState as WaiverStateValue] ?? waiverState}
                       </span>
                     </td>
 
@@ -331,7 +428,7 @@ export function LienWaivers() {
 
                     {/* Period Covered Through */}
                     <td style={{ ...tdStyle, color: colors.textSecondary }}>
-                      {w.payment_period ? fmtDate(w.payment_period) : <span style={{ color: colors.textTertiary }}>Not set</span>}
+                      {getThroughDate(w) ? fmtDate(getThroughDate(w)) : <span style={{ color: colors.textTertiary }}>Not set</span>}
                     </td>
 
                     {/* Status */}
@@ -368,9 +465,37 @@ export function LienWaivers() {
 
                     {/* Signed Date */}
                     <td style={{ ...tdStyle, color: colors.textSecondary }}>
-                      {signed && w.received_at
-                        ? fmtDate(w.received_at)
-                        : <span style={{ color: colors.textTertiary }}>—</span>}
+                      {signed && getSignedAt(w)
+                        ? fmtDate(getSignedAt(w))
+                        : <span style={{ color: colors.textTertiary }}>--</span>}
+                    </td>
+
+                    {/* Actions */}
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', gap: spacing.xs, alignItems: 'center' }}>
+                        {!signed && (
+                          <Btn
+                            size="sm"
+                            variant="secondary"
+                            icon={<Send size={12} />}
+                            onClick={(e) => { e.stopPropagation(); handleSendForSignature(w); }}
+                            loading={sendingSignatureId === w.id}
+                            disabled={sendingSignatureId != null}
+                            aria-label="Send for signature"
+                          >
+                            Sign
+                          </Btn>
+                        )}
+                        <Btn
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(w); }}
+                          disabled={deleteWaiver.isPending}
+                          aria-label="Delete waiver"
+                        >
+                          <Trash2 size={14} />
+                        </Btn>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -379,6 +504,110 @@ export function LienWaivers() {
           </tbody>
         </table>
       </div>
+
+      {/* Create Modal */}
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); resetForm(); }} title="New Lien Waiver">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <InputField
+            label="Contractor Name"
+            value={formContractor}
+            onChange={setFormContractor}
+            placeholder="e.g. ABC Contractors, LLC"
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+                Waiver Type
+              </label>
+              <select
+                value={formWaiverState}
+                onChange={(e) => setFormWaiverState(e.target.value as WaiverStateValue)}
+                style={{
+                  width: '100%',
+                  padding: spacing['2'],
+                  borderRadius: borderRadius.base,
+                  border: `1px solid ${colors.borderDefault}`,
+                  backgroundColor: colors.surfaceRaised,
+                  color: colors.textPrimary,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                }}
+              >
+                {(Object.keys(WAIVER_TYPE_LABELS) as WaiverStateValue[]).map((t) => (
+                  <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+            </div>
+            <InputField
+              label="Amount ($)"
+              value={formAmount}
+              onChange={setFormAmount}
+              placeholder="0.00"
+              type="number"
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField
+              label="Through Date"
+              value={formThroughDate}
+              onChange={setFormThroughDate}
+              type="date"
+            />
+            <div>
+              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+                Status
+              </label>
+              <select
+                value={formStatus}
+                onChange={(e) => setFormStatus(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: spacing['2'],
+                  borderRadius: borderRadius.base,
+                  border: `1px solid ${colors.borderDefault}`,
+                  backgroundColor: colors.surfaceRaised,
+                  color: colors.textPrimary,
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                }}
+              >
+                <option value="pending">Pending</option>
+                <option value="received">Received</option>
+                <option value="missing">Missing</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+              Notes
+            </label>
+            <textarea
+              value={formNotes}
+              onChange={(e) => setFormNotes(e.target.value)}
+              rows={3}
+              placeholder="Additional notes..."
+              style={{
+                width: '100%',
+                padding: spacing['2'],
+                borderRadius: borderRadius.base,
+                border: `1px solid ${colors.borderDefault}`,
+                backgroundColor: colors.surfaceRaised,
+                color: colors.textPrimary,
+                fontSize: typography.fontSize.sm,
+                fontFamily: typography.fontFamily,
+                resize: 'vertical',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
+            <Btn variant="secondary" onClick={() => { setShowCreate(false); resetForm(); }}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleCreate} loading={createWaiver.isPending}>
+              {createWaiver.isPending ? 'Creating...' : 'Create Waiver'}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
     </PageContainer>
   );
 }

@@ -1,26 +1,147 @@
-import React, { useState, useEffect } from 'react'
-import { Briefcase, Plus, FileText, BarChart3, AlertTriangle } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
+import React, { useState } from 'react'
+import { Briefcase, Plus, FileText, BarChart3, AlertTriangle, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
-import { usePortfolios, usePortfolioProjects, useExecutiveReports, useOrgPortfolioMetrics } from '../hooks/queries'
-import { usePortfolioMetrics } from '../hooks/useProjectMetrics'
+import { useProjects } from '../hooks/queries/projects'
 import { captureException } from '../lib/errorTracking'
 import { toast } from 'sonner'
-import { useAuthStore } from '../stores/authStore'
 import { supabase } from '../lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+
+// ── Currency formatter ───────────────────────────────────────
+const fmtCurrency = (n: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+
+// ── Aggregate metrics hook ───────────────────────────────────
+// Fetches counts from rfis, punch_items, tasks across all user-visible projects.
+// Each query is RLS-scoped so only projects the user belongs to are counted.
+
+interface PortfolioAggregates {
+  openRfis: number
+  openPunchItems: number
+  openTasks: number
+  overdueRfis: number
+}
+
+function usePortfolioAggregates(projectIds: string[]) {
+  return useQuery({
+    queryKey: ['portfolio_aggregates', projectIds.sort().join(',')],
+    queryFn: async (): Promise<PortfolioAggregates> => {
+      if (projectIds.length === 0) return { openRfis: 0, openPunchItems: 0, openTasks: 0, overdueRfis: 0 }
+
+      const now = new Date().toISOString()
+      const [rfiRes, punchRes, taskRes, overdueRes] = await Promise.all([
+        supabase.from('rfis').select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
+          .not('status', 'in', '("closed","answered")'),
+        supabase.from('punch_items').select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
+          .not('status', 'in', '("complete","closed")'),
+        supabase.from('tasks').select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
+          .not('status', 'in', '("completed","cancelled")'),
+        supabase.from('rfis').select('id', { count: 'exact', head: true })
+          .in('project_id', projectIds)
+          .neq('status', 'closed')
+          .lt('due_date', now),
+      ])
+
+      return {
+        openRfis: rfiRes.count ?? 0,
+        openPunchItems: punchRes.count ?? 0,
+        openTasks: taskRes.count ?? 0,
+        overdueRfis: overdueRes.count ?? 0,
+      }
+    },
+    enabled: projectIds.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+// ── Per-project quick metrics ────────────────────────────────
+interface ProjectQuickMetrics {
+  rfis: number
+  punch: number
+  tasks: number
+}
+
+function usePerProjectMetrics(projectIds: string[]) {
+  return useQuery({
+    queryKey: ['per_project_metrics', projectIds.sort().join(',')],
+    queryFn: async (): Promise<Record<string, ProjectQuickMetrics>> => {
+      if (projectIds.length === 0) return {}
+
+      const [rfiRes, punchRes, taskRes] = await Promise.all([
+        supabase.from('rfis').select('project_id')
+          .in('project_id', projectIds)
+          .not('status', 'in', '("closed","answered")'),
+        supabase.from('punch_items').select('project_id')
+          .in('project_id', projectIds)
+          .not('status', 'in', '("complete","closed")'),
+        supabase.from('tasks').select('project_id')
+          .in('project_id', projectIds)
+          .not('status', 'in', '("completed","cancelled")'),
+      ])
+
+      const map: Record<string, ProjectQuickMetrics> = {}
+      for (const id of projectIds) {
+        map[id] = { rfis: 0, punch: 0, tasks: 0 }
+      }
+
+      for (const r of rfiRes.data ?? []) {
+        if (map[r.project_id]) map[r.project_id].rfis++
+      }
+      for (const r of punchRes.data ?? []) {
+        if (map[r.project_id]) map[r.project_id].punch++
+      }
+      for (const r of taskRes.data ?? []) {
+        if (map[r.project_id]) map[r.project_id].tasks++
+      }
+
+      return map
+    },
+    enabled: projectIds.length > 0,
+    staleTime: 30_000,
+  })
+}
 
 // ── Column helpers ─────────────────────────────────────────
+const projectCol = createColumnHelper<Record<string, unknown>>()
 
-const projectCol = createColumnHelper<unknown>()
+const statusBadge = (v: string) => {
+  const statusColor = v === 'active' ? colors.statusActive
+    : v === 'completed' ? colors.statusInfo
+    : v === 'on_hold' ? colors.statusPending
+    : colors.textTertiary
+  const statusBg = v === 'active' ? colors.statusActiveSubtle
+    : v === 'completed' ? colors.statusInfoSubtle
+    : v === 'on_hold' ? colors.statusPendingSubtle
+    : colors.surfaceInset
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: `2px 10px`,
+      borderRadius: borderRadius.full,
+      fontSize: typography.fontSize.caption,
+      fontWeight: typography.fontWeight.medium,
+      color: statusColor,
+      backgroundColor: statusBg,
+      textTransform: 'capitalize',
+    }}>
+      {(v || '').replace(/_/g, ' ')}
+    </span>
+  )
+}
+
 const projectColumns = [
   projectCol.accessor('name', {
     header: 'Project Name',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue()}
+        {info.getValue() as string}
       </span>
     ),
   }),
@@ -28,111 +149,49 @@ const projectColumns = [
     header: 'Contract Value',
     cell: (info) => (
       <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? fmtCurrency(info.getValue()) : 'N/A'}
+        {info.getValue() ? fmtCurrency(info.getValue() as number) : 'N/A'}
       </span>
     ),
   }),
   projectCol.accessor('status', {
     header: 'Status',
-    cell: (info) => {
-      const v = info.getValue() as string
-      const statusColor = v === 'active' ? colors.statusActive
-        : v === 'completed' ? colors.statusInfo
-        : v === 'on_hold' ? colors.statusPending
-        : colors.textTertiary
-      const statusBg = v === 'active' ? colors.statusActiveSubtle
-        : v === 'completed' ? colors.statusInfoSubtle
-        : v === 'on_hold' ? colors.statusPendingSubtle
-        : colors.surfaceInset
-      return (
-        <span style={{
-          display: 'inline-block',
-          padding: `2px 10px`,
-          borderRadius: borderRadius.full,
-          fontSize: typography.fontSize.caption,
-          fontWeight: typography.fontWeight.medium,
-          color: statusColor,
-          backgroundColor: statusBg,
-          textTransform: 'capitalize',
-        }}>
-          {(v || '').replace(/_/g, ' ')}
-        </span>
-      )
-    },
+    cell: (info) => statusBadge(info.getValue() as string),
   }),
   projectCol.accessor('city', {
-    header: 'City',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() || ''}</span>,
+    header: 'Location',
+    cell: (info) => {
+      const row = info.row.original
+      const parts = [row.city, row.state].filter(Boolean)
+      return <span style={{ color: colors.textSecondary }}>{parts.join(', ') || 'Not set'}</span>
+    },
   }),
   projectCol.accessor('start_date', {
-    header: 'Start Date',
+    header: 'Start',
     cell: (info) => (
       <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+        {info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : '—'}
       </span>
     ),
   }),
   projectCol.accessor('target_completion', {
-    header: 'Target Completion',
+    header: 'Target End',
     cell: (info) => (
       <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+        {info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : '—'}
       </span>
     ),
   }),
 ]
-
-const reportCol = createColumnHelper<unknown>()
-const reportColumns = [
-  reportCol.accessor('report_type', {
-    header: 'Type',
-    cell: (info) => (
-      <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary, textTransform: 'capitalize' }}>
-        {(info.getValue() || '').replace(/_/g, ' ')}
-      </span>
-    ),
-  }),
-  reportCol.accessor('period_start', {
-    header: 'Period Start',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
-      </span>
-    ),
-  }),
-  reportCol.accessor('period_end', {
-    header: 'Period End',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
-      </span>
-    ),
-  }),
-  reportCol.accessor('created_at', {
-    header: 'Created',
-    cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
-      </span>
-    ),
-  }),
-]
-
-const fmtCurrency = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 
 // ── Tabs ───────────────────────────────────────────────────
-
-type TabKey = 'overview' | 'analytics' | 'reports'
+type TabKey = 'overview' | 'analytics'
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'overview', label: 'Overview', icon: Briefcase },
   { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { key: 'reports', label: 'Reports', icon: FileText },
 ]
 
-// ── Error Fallbacks ────────────────────────────────────────
-
+// ── Error Fallback ──────────────────────────────────────────
 const PortfolioErrorFallback: React.FC = () => (
   <div style={{
     display: 'flex',
@@ -145,7 +204,7 @@ const PortfolioErrorFallback: React.FC = () => (
   }}>
     <AlertTriangle size={20} color={colors.statusCritical} style={{ flexShrink: 0 }} />
     <span style={{ fontSize: typography.fontSize.sm, color: colors.statusCritical, flex: 1 }}>
-      Portfolio data temporarily unavailable. Some projects may have sync issues.
+      Portfolio data temporarily unavailable.
     </span>
     <button
       onClick={() => window.location.reload()}
@@ -166,150 +225,26 @@ const PortfolioErrorFallback: React.FC = () => (
   </div>
 )
 
-interface ProjectCardErrorProps {
-  projectId: string
-}
-
-const ProjectCardError: React.FC<ProjectCardErrorProps> = () => (
-  <Card>
-    <div style={{
-      padding: spacing['4'],
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing['2'],
-      minHeight: '160px',
-    }}>
-      <AlertTriangle size={20} color={colors.statusCritical} />
-      <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, textAlign: 'center' }}>
-        Project data could not be loaded.
-      </span>
-    </div>
-  </Card>
-)
-
-// ── Portfolio Metrics Section ──────────────────────────────
-// Rendered inside an ErrorBoundary so a total metrics failure shows
-// a targeted error state rather than crashing the whole page.
-
-interface PortfolioMetricsSectionProps {
-  totalValue: number
-  activeCount: number
-  currentPortfolioName: string
-  latestReportLabel: string
-  loading: boolean
-  orgId: string | undefined
-}
-
-const PortfolioMetricsSection: React.FC<PortfolioMetricsSectionProps> = ({
-  totalValue,
-  activeCount,
-
-
-  loading,
-  orgId,
-}) => {
-  const { data: orgMetrics } = useOrgPortfolioMetrics(orgId ?? '')
-  const warnings = orgMetrics?.warnings ?? []
-
-  const rfiWarning = warnings.find((w) => w.includes('RFI'))
-  const punchWarning = warnings.find((w) => w.includes('Punch'))
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
-      <MetricBox
-        label="Total Contract Value"
-        value={loading ? '...' : (totalValue > 0 ? fmtCurrency(totalValue) : 'N/A')}
-      />
-      <MetricBox
-        label="Active Projects"
-        value={loading ? '...' : String(activeCount)}
-      />
-      <MetricBox
-        label="Open RFIs"
-        value={orgMetrics === undefined ? '...' : (orgMetrics.open_rfis !== undefined ? String(orgMetrics.open_rfis) : 'N/A')}
-        warning={rfiWarning}
-      />
-      <MetricBox
-        label="Open Punch Items"
-        value={orgMetrics === undefined ? '...' : (orgMetrics.open_punch_items !== undefined ? String(orgMetrics.open_punch_items) : 'N/A')}
-        warning={punchWarning}
-      />
-    </div>
-  )
-}
-
-// ── Component ──────────────────────────────────────────────
-
+// ── Main Component ──────────────────────────────────────────
 export const Portfolio: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
-  const orgId = useAuthStore((s) => s.profile?.organization_id) || undefined
-  const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
-  const { data: portfolios, isPending: portfoliosLoading } = usePortfolios(orgId ?? '')
-  const portfolioId = (portfolios && portfolios[0]?.id) as string | undefined
-  const { data: portfolioProjects, isPending: projectsPending } = usePortfolioProjects(portfolioId ?? '')
-  const { data: reports } = useExecutiveReports(portfolioId ?? '')
+  // Fetch ALL projects the user can access (RLS handles scoping)
+  const { data: projects, isPending: loading } = useProjects()
+  const allProjects = projects ?? []
 
-  // Only show loading when we're actually fetching. If there's no portfolio
-  // (org has none yet), the projects query stays disabled and "isPending"
-  // is misleading — treat that case as "loaded with zero projects".
-  const loading = portfoliosLoading || (!!portfolioId && projectsPending)
+  const projectIds = allProjects.map((p) => p.id)
+  const { data: aggregates } = usePortfolioAggregates(projectIds)
+  const { data: perProjectMetrics, isPending: metricsLoading } = usePerProjectMetrics(projectIds)
 
-  useEffect(() => {
-    if (!portfolioId) return
-    const channel = supabase
-      .channel(`portfolio-${portfolioId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'projects' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['portfolio_projects', portfolioId] })
-        },
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [portfolioId, queryClient])
-
-  const projects = (portfolioProjects || []).map((pp: unknown) => pp.projects).filter(Boolean)
-
-  const projectIds: string[] = projects.map((p: unknown) => p.id as string)
-  const { metricsMap, isLoading: metricsLoading } = usePortfolioMetrics(projectIds)
-
-  const totalValue = projects.reduce((s: number, p: unknown) => s + (p.contract_value || 0), 0)
-  const activeCount = projects.filter((p: unknown) => p.status === 'active').length
-  const currentPortfolio = (portfolios || []).find((p: unknown) => p.id === portfolioId)
-  const latestReport = (reports || [])[0]
+  const totalValue = allProjects.reduce((s, p) => s + ((p as Record<string, unknown>).contract_value as number || 0), 0)
+  const activeCount = allProjects.filter((p) => p.status === 'active').length
 
   return (
     <PageContainer
       title="Portfolio Dashboard"
-      subtitle="Aggregated view across all projects in your portfolio"
-      actions={
-        <div style={{ display: 'flex', gap: spacing['2'] }}>
-          {portfolios && portfolios.length > 1 && (
-            <select
-              style={{
-                padding: `${spacing['2']} ${spacing['3']}`,
-                borderRadius: borderRadius.base,
-                border: `1px solid ${colors.borderDefault}`,
-                fontSize: typography.fontSize.sm,
-                fontFamily: typography.fontFamily,
-                color: colors.textPrimary,
-                backgroundColor: colors.surfaceRaised,
-                cursor: 'pointer',
-              }}
-              value={portfolioId}
-              onChange={() => {}}
-            >
-              {portfolios.map((p: unknown) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      }
+      subtitle="Aggregated view across all your projects"
     >
       {/* Tabs */}
       <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['6'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: 0 }}>
@@ -336,6 +271,7 @@ export const Portfolio: React.FC = () => {
                 cursor: 'pointer',
                 transition: `color ${transitions.instant}, border-color ${transitions.instant}`,
                 marginBottom: '-1px',
+                minHeight: '44px',
               }}
             >
               {React.createElement(Icon, { size: 15 })}
@@ -345,19 +281,30 @@ export const Portfolio: React.FC = () => {
         })}
       </div>
 
-      {/* KPI Row — wrapped in ErrorBoundary so a total metrics failure shows a targeted error state */}
+      {/* KPI Row */}
       <ErrorBoundary
         fallback={<PortfolioErrorFallback />}
         onError={(error) => captureException(error, { action: 'portfolio_metrics_error' })}
       >
-        <PortfolioMetricsSection
-          totalValue={totalValue}
-          activeCount={activeCount}
-          currentPortfolioName={currentPortfolio?.name || 'Default'}
-          latestReportLabel={latestReport ? (latestReport.type || 'Available') : 'None'}
-          loading={loading}
-          orgId={orgId}
-        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+          <MetricBox
+            label="Total Contract Value"
+            value={loading ? '...' : (totalValue > 0 ? fmtCurrency(totalValue) : '$0')}
+          />
+          <MetricBox
+            label="Active Projects"
+            value={loading ? '...' : String(activeCount)}
+          />
+          <MetricBox
+            label="Open RFIs"
+            value={aggregates ? String(aggregates.openRfis) : '...'}
+            warning={aggregates && aggregates.overdueRfis > 0 ? `${aggregates.overdueRfis} overdue` : undefined}
+          />
+          <MetricBox
+            label="Open Punch Items"
+            value={aggregates ? String(aggregates.openPunchItems) : '...'}
+          />
+        </div>
       </ErrorBoundary>
 
       {/* Tab Content */}
@@ -367,130 +314,136 @@ export const Portfolio: React.FC = () => {
           {loading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'] }}>
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} width="100%" height="180px" />
+                <Skeleton key={i} width="100%" height="200px" />
               ))}
             </div>
-          ) : projects.length === 0 ? (
+          ) : allProjects.length === 0 ? (
             <Card>
               <div style={{ textAlign: 'center', padding: spacing['8'], color: colors.textTertiary }}>
                 <Briefcase size={40} style={{ marginBottom: spacing['3'], opacity: 0.4 }} />
-                <p style={{ margin: 0, fontSize: typography.fontSize.base }}>No projects in this portfolio yet.</p>
-                <p style={{ margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.sm }}>Add projects to see aggregated data here.</p>
+                <p style={{ margin: 0, fontSize: typography.fontSize.base }}>No projects yet.</p>
+                <p style={{ margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.sm }}>Create a project to get started.</p>
               </div>
             </Card>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: projects.length === 1 ? '1fr' : projects.length === 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: spacing['4'] }}>
-              {projects.map((project: unknown) => {
-                const statusColor = project.status === 'active' ? colors.statusActive
-                  : project.status === 'completed' ? colors.statusInfo
-                  : project.status === 'on_hold' ? colors.statusPending
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: allProjects.length === 1 ? '1fr' : allProjects.length === 2 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+              gap: spacing['4'],
+            }}>
+              {allProjects.map((project) => {
+                const p = project as Record<string, unknown>
+                const status = (p.status as string) || ''
+                const statusColor = status === 'active' ? colors.statusActive
+                  : status === 'completed' ? colors.statusInfo
+                  : status === 'on_hold' ? colors.statusPending
                   : colors.textTertiary
-                const statusBg = project.status === 'active' ? colors.statusActiveSubtle
-                  : project.status === 'completed' ? colors.statusInfoSubtle
-                  : project.status === 'on_hold' ? colors.statusPendingSubtle
+                const statusBgColor = status === 'active' ? colors.statusActiveSubtle
+                  : status === 'completed' ? colors.statusInfoSubtle
+                  : status === 'on_hold' ? colors.statusPendingSubtle
                   : colors.surfaceInset
+                const metrics = perProjectMetrics?.[p.id as string]
+
                 return (
                   <ErrorBoundary
-                    key={project.id}
-                    fallback={<ProjectCardError projectId={project.id} />}
-                    onError={(error) => captureException(error, { projectId: project.id, action: 'project_card_error' })}
+                    key={p.id as string}
+                    fallback={<Card><div style={{ padding: spacing['4'], textAlign: 'center', color: colors.textTertiary }}>
+                      <AlertTriangle size={20} color={colors.statusCritical} /><br/>Project data could not be loaded.
+                    </div></Card>}
+                    onError={(error) => captureException(error, { projectId: p.id, action: 'project_card_error' })}
                   >
-                  <Card key={project.id}>
-                    <div style={{ padding: spacing['4'] }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['3'] }}>
-                        <h3 style={{ margin: 0, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                          {project.name}
-                        </h3>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: `2px 10px`,
-                          borderRadius: borderRadius.full,
-                          fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.medium,
-                          color: statusColor,
-                          backgroundColor: statusBg,
-                          textTransform: 'capitalize',
-                        }}>
-                          {(project.status || '').replace(/_/g, ' ')}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['4'] }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Contract Value</span>
-                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>
-                            {project.contract_value ? fmtCurrency(project.contract_value) : 'N/A'}
+                    <Card>
+                      <div style={{ padding: spacing['4'] }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['3'] }}>
+                          <h3 style={{ margin: 0, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                            {p.name as string}
+                          </h3>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: `2px 10px`,
+                            borderRadius: borderRadius.full,
+                            fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium,
+                            color: statusColor,
+                            backgroundColor: statusBgColor,
+                            textTransform: 'capitalize',
+                            flexShrink: 0,
+                          }}>
+                            {status.replace(/_/g, ' ')}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Location</span>
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                            {[project.city, project.state].filter(Boolean).join(', ') || 'Not set'}
-                          </span>
-                        </div>
-                        {project.start_date && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Start Date</span>
-                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                              {new Date(project.start_date).toLocaleDateString()}
-                            </span>
-                          </div>
-                        )}
-                        {project.target_completion && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Target Completion</span>
-                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                              {new Date(project.target_completion).toLocaleDateString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
 
-                      {/* Metrics row — single bulk fetch, not per-project */}
-                      {metricsLoading ? (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['2'], marginBottom: spacing['4'] }}>
-                          {[1, 2, 3].map((i) => <Skeleton key={i} width="100%" height="40px" />)}
+                        {/* Details */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['3'] }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Contract Value</span>
+                            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>
+                              {p.contract_value ? fmtCurrency(p.contract_value as number) : 'N/A'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Location</span>
+                            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                              {[p.city, p.state].filter(Boolean).join(', ') || 'Not set'}
+                            </span>
+                          </div>
+                          {p.start_date && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Timeline</span>
+                              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+                                {new Date(p.start_date as string).toLocaleDateString()}
+                                {p.target_completion ? ` → ${new Date(p.target_completion as string).toLocaleDateString()}` : ''}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      ) : metricsMap[project.id] ? (() => {
-                        const m = metricsMap[project.id]
-                        const budgetVariancePct = m.budget_total > 0
-                          ? ((m.budget_spent - m.budget_total) / m.budget_total) * 100
-                          : null
-                        const healthColor = (m.aiHealthScore ?? 0) >= 75 ? colors.statusActive
-                          : (m.aiHealthScore ?? 0) >= 50 ? colors.statusPending
-                          : colors.statusCritical
-                        return (
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['2'], marginBottom: spacing['4'] }}>
-                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
-                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Health</div>
-                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: healthColor }}>
-                                {m.aiHealthScore != null ? `${Math.round(m.aiHealthScore)}` : 'N/A'}
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
-                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Budget Var.</div>
-                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: budgetVariancePct != null && budgetVariancePct > 5 ? colors.statusCritical : colors.textPrimary }}>
-                                {budgetVariancePct != null ? `${budgetVariancePct > 0 ? '+' : ''}${budgetVariancePct.toFixed(1)}%` : 'N/A'}
-                              </div>
-                            </div>
+
+                        {/* Quick Metrics */}
+                        {metricsLoading ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['2'], marginBottom: spacing['3'] }}>
+                            {[1, 2, 3].map((i) => <Skeleton key={i} width="100%" height="40px" />)}
+                          </div>
+                        ) : metrics ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['2'], marginBottom: spacing['3'] }}>
                             <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
                               <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Open RFIs</div>
-                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: m.rfis_open > 0 ? colors.statusPending : colors.textPrimary }}>
-                                {m.rfis_open}
+                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: metrics.rfis > 0 ? colors.statusPending : colors.textPrimary }}>
+                                {metrics.rfis}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
+                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Punch Items</div>
+                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: metrics.punch > 0 ? colors.statusCritical : colors.textPrimary }}>
+                                {metrics.punch}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'center', padding: `${spacing['2']} 0`, borderTop: `1px solid ${colors.borderSubtle}` }}>
+                              <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: '2px' }}>Open Tasks</div>
+                              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                                {metrics.tasks}
                               </div>
                             </div>
                           </div>
-                        )
-                      })() : null}
+                        ) : null}
 
-                      <Btn
-                        variant="ghost"
-                        size="sm"
-                        fullWidth
-                        onClick={() => { window.location.hash = '#/dashboard' }}
-                      >View Project</Btn>
-                    </div>
-                  </Card>
+                        {/* View Project Button */}
+                        <Btn
+                          variant="ghost"
+                          size="sm"
+                          fullWidth
+                          onClick={() => {
+                            // Store the selected project id and navigate
+                            window.localStorage.setItem('lastProjectId', p.id as string)
+                            navigate('/dashboard')
+                          }}
+                        >
+                          <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                            View Project <ArrowRight size={14} />
+                          </span>
+                        </Btn>
+                      </div>
+                    </Card>
                   </ErrorBoundary>
                 )
               })}
@@ -504,51 +457,55 @@ export const Portfolio: React.FC = () => {
           <SectionHeader title="Comparative Project Metrics" />
           <Card>
             <DataTable
-              data={projects}
+              data={allProjects as unknown as Record<string, unknown>[]}
               columns={projectColumns}
               loading={loading}
               enableSorting
               enableGlobalFilter
-              emptyMessage="No projects in this portfolio."
-            />
-          </Card>
-        </>
-      )}
-
-      {activeTab === 'reports' && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
-            <SectionHeader title="Executive Reports" />
-            <Btn
-              icon={<Plus size={15} />}
-              onClick={() => { toast.success('Report generation started. This may take a moment.') }}
-            >Generate Report</Btn>
-          </div>
-
-          <Card>
-            <DataTable
-              data={reports || []}
-              columns={reportColumns}
-              loading={!reports}
-              enableSorting
-              emptyMessage="No executive reports yet."
+              emptyMessage="No projects to display."
             />
           </Card>
 
-          {latestReport && latestReport.ai_narrative && (
-            <div style={{ marginTop: spacing['4'] }}>
-              <SectionHeader title="Latest AI Narrative" />
+          {/* Summary Cards */}
+          {!loading && allProjects.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing['4'], marginTop: spacing['4'] }}>
               <Card>
                 <div style={{ padding: spacing['4'] }}>
-                  <p style={{
-                    margin: 0,
-                    fontSize: typography.fontSize.sm,
-                    lineHeight: 1.6,
-                    color: colors.textSecondary,
-                    whiteSpace: 'pre-wrap',
-                  }}>
-                    {latestReport.ai_narrative}
-                  </p>
+                  <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing['2'], textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Total Open Tasks
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>
+                    {aggregates?.openTasks ?? '—'}
+                  </div>
+                  <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'] }}>
+                    Across {allProjects.length} project{allProjects.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div style={{ padding: spacing['4'] }}>
+                  <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing['2'], textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Overdue RFIs
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: typography.fontWeight.bold, color: (aggregates?.overdueRfis ?? 0) > 0 ? colors.statusCritical : colors.statusActive }}>
+                    {aggregates?.overdueRfis ?? '—'}
+                  </div>
+                  <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'] }}>
+                    {(aggregates?.overdueRfis ?? 0) === 0 ? 'All RFIs on track' : 'Need attention'}
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <div style={{ padding: spacing['4'] }}>
+                  <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing['2'], textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Avg. Contract Value
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: typography.fontWeight.bold, color: colors.orangeText }}>
+                    {allProjects.length > 0 ? fmtCurrency(totalValue / allProjects.length) : '$0'}
+                  </div>
+                  <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'] }}>
+                    Total: {fmtCurrency(totalValue)}
+                  </div>
                 </div>
               </Card>
             </div>

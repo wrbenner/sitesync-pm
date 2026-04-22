@@ -3,7 +3,7 @@
 // Tokens are stored encrypted in the integrations.config JSONB column.
 // NEVER exposes client secrets or access tokens to the frontend.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
@@ -121,7 +121,7 @@ interface RefreshRequest {
 
 // ── Handler ─────────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 

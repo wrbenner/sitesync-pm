@@ -14,7 +14,7 @@ export function useNotifications(userId: string | undefined) {
         .from('notifications')
         .select('*')
         .eq('user_id', userId!)
-        .order('is_read', { ascending: true })
+        .order('read', { ascending: true })
         .order('created_at', { ascending: false })
       if (error) throw error
       return data as Notification[]

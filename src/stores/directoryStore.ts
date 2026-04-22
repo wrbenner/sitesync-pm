@@ -33,7 +33,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
-        .from('directory')
+        .from('directory_contacts')
         .select('*')
         .eq('project_id', projectId)
         .order('company', { ascending: true });
@@ -44,7 +44,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
         project_id: d.project_id,
         company: d.company,
         role: d.role,
-        contactName: d.contact_name,
+        contactName: d.name,
         phone: d.phone,
         email: d.email,
       }));
@@ -55,11 +55,11 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
   },
 
   addEntry: async (entry) => {
-    const { error } = await fromTable('directory').insert({
+    const { error } = await fromTable('directory_contacts').insert({
       project_id: entry.project_id,
       company: entry.company,
       role: entry.role,
-      contact_name: entry.contactName,
+      name: entry.contactName,
       phone: entry.phone,
       email: entry.email,
     });
@@ -72,12 +72,12 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
     const dbUpdates: Record<string, unknown> = {};
     if (updates.company !== undefined) dbUpdates.company = updates.company;
     if (updates.role !== undefined) dbUpdates.role = updates.role;
-    if (updates.contactName !== undefined) dbUpdates.contact_name = updates.contactName;
+    if (updates.contactName !== undefined) dbUpdates.name = updates.contactName;
     if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
     if (updates.email !== undefined) dbUpdates.email = updates.email;
     if (updates.project_id !== undefined) dbUpdates.project_id = updates.project_id;
 
-    const { error } = await fromTable('directory').update(dbUpdates).eq('id', id);
+    const { error } = await fromTable('directory_contacts').update(dbUpdates).eq('id', id);
     if (!error) {
       set((s) => ({
         entries: s.entries.map((e) => (e.id === id ? { ...e, ...updates } : e)),
@@ -87,7 +87,7 @@ export const useDirectoryStore = create<DirectoryState>()((set, get) => ({
   },
 
   deleteEntry: async (id) => {
-    const { error } = await fromTable('directory').delete().eq('id', id);
+    const { error } = await fromTable('directory_contacts').delete().eq('id', id);
     if (!error) {
       set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
     }

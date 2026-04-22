@@ -5,7 +5,7 @@
 // returns a structured diff description that the client can render via the
 // existing RevisionOverlay component.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -134,7 +134,7 @@ function computeScaleCorrection(
 }
 
 // ── Handler ──────────────────────────────────────────────────
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsCheck = handleCors(req)
   if (corsCheck) return corsCheck
   const corsHeaders = getCorsHeaders(req)

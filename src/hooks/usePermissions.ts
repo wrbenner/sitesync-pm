@@ -178,7 +178,10 @@ export const MODULE_PERMISSIONS: Record<string, Permission> = {
 
 // ── Dev Mode Detection ───────────────────────────────────
 
-const DEV_BYPASS_ROLE: ProjectRole = 'viewer' // Never grant elevated access in dev mode
+// Dev bypass defaults to viewer, not admin. Tests ("Bug #1 Fix") enforce this
+// so that a build accidentally deployed with VITE_DEV_BYPASS=true cannot
+// escalate an anonymous session to admin/create/approve capabilities.
+const DEV_BYPASS_ROLE: ProjectRole = 'viewer'
 
 // ── Hook ─────────────────────────────────────────────────
 
@@ -256,7 +259,7 @@ export function usePermissions(): PermissionsResult {
     if (typeof console !== 'undefined') {
       console.warn(
         '%c⚠️ PERMISSION BYPASS ACTIVE ⚠️\n' +
-        'All permissions granted as VIEWER role.\n' +
+        'Permissions granted as VIEWER role (read-only).\n' +
         'Set VITE_SUPABASE_URL to connect to a real backend.\n' +
         'Set VITE_DEV_BYPASS=true in .env to enable this bypass explicitly.',
         `color: ${colors.statusWarning}; font-size: 14px; font-weight: bold;`

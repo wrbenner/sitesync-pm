@@ -92,8 +92,8 @@ export class SiteSyncOfflineDB extends Dexie {
     this.version(4).stores({
       projects: 'id, name, status',
       projectMembers: 'id, project_id, user_id',
-      rfis: 'id, project_id, rfi_number, status',
-      submittals: 'id, project_id, submittal_number, status',
+      rfis: 'id, project_id, number, status',
+      submittals: 'id, project_id, number, status',
       punchItems: 'id, project_id, number, status',
       tasks: 'id, project_id, status',
       drawings: 'id, project_id, discipline',
@@ -116,8 +116,8 @@ export class SiteSyncOfflineDB extends Dexie {
     this.version(5).stores({
       projects: 'id, name, status',
       projectMembers: 'id, project_id, user_id',
-      rfis: 'id, project_id, rfi_number, status',
-      submittals: 'id, project_id, submittal_number, status',
+      rfis: 'id, project_id, number, status',
+      submittals: 'id, project_id, number, status',
       punchItems: 'id, project_id, number, status',
       tasks: 'id, project_id, status',
       drawings: 'id, project_id, discipline',

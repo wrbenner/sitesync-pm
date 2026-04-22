@@ -18,8 +18,20 @@ CREATE TABLE IF NOT EXISTS site_map_pins (
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_site_map_pins_project ON site_map_pins(project_id);
-CREATE INDEX IF NOT EXISTS idx_site_map_pins_type ON site_map_pins(pin_type);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'site_map_pins' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_site_map_pins_project ON site_map_pins(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'site_map_pins' AND column_name = 'pin_type') THEN
+    CREATE INDEX IF NOT EXISTS idx_site_map_pins_type ON site_map_pins(pin_type);
+  END IF;
+END $$;
 
 ALTER TABLE site_map_pins ENABLE ROW LEVEL SECURITY;
 

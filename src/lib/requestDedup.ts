@@ -39,4 +39,8 @@ export function queryKey(table: string, filters: Record<string, unknown>): strin
 // Clear the TTL cache (useful in tests to prevent cross-test contamination)
 export function clearTtlCache(): void {
   ttlCache.clear()
+  // Also drop any in-flight dedup promises. Tests that reuse the same key
+  // across cases need both caches cleared — otherwise a prior test's pending
+  // (or just-resolved) promise can be reused with stale mock-queue positions.
+  inflightRequests.clear()
 }

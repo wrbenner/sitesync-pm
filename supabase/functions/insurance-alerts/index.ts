@@ -2,12 +2,12 @@
 // Scans insurance_certificates for expiring COIs, sends notification emails.
 // Called by pg_cron daily. Alerts at 60, 30, 14, and 7 days before expiration.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { authenticateCron, handleCors, getCorsHeaders, errorResponse } from '../shared/auth.ts'
 
 const ALERT_THRESHOLDS = [60, 30, 14, 7] // days before expiration
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const cors = getCorsHeaders(req)

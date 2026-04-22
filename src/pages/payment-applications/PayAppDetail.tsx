@@ -17,14 +17,16 @@ interface PayAppDetailProps {
   waivers: LienWaiverRow[]
   contracts: Array<Record<string, unknown>>
   onApprove: () => void
+  onMarkPaid?: () => void
   isApproving: boolean
+  isMarkingPaid?: boolean
   onMarkReceived: (id: string) => void
   onMarkExecuted: (id: string) => void
   markingWaiverId: string | null
 }
 
 export const PayAppDetail = memo<PayAppDetailProps>(({
-  app, projectId, waivers, contracts, onApprove, isApproving, onMarkReceived, onMarkExecuted, markingWaiverId,
+  app, projectId, waivers, contracts, onApprove, onMarkPaid, isApproving, isMarkingPaid, onMarkReceived, onMarkExecuted, markingWaiverId,
 }) => {
   const appNumber = app.application_number as number
   const { data: sovData, isLoading: sovLoading } = usePayAppSOV(projectId, appNumber)
@@ -60,7 +62,10 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
         {(appStatus === 'submitted' || appStatus === 'approved') && (
           <PermissionGate permission="financials.edit">
             <button
-              onClick={() => toast.info('PDF generation available in the next update')}
+              onClick={() => {
+                window.print()
+                toast.success('G702/G703 print view opened')
+              }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,
@@ -126,7 +131,9 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
             liveG702={liveG702}
             liveG703={liveG703}
             onApprove={onApprove}
+            onMarkPaid={onMarkPaid}
             isApproving={isApproving}
+            isMarkingPaid={isMarkingPaid}
             hasPendingWaivers={pendingWaivers.length > 0}
           />
           {sovLoading && <Skeleton width="100%" height="200px" />}

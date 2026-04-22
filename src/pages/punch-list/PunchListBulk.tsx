@@ -10,6 +10,9 @@ interface PunchListBulkProps {
   updatePunchItem: {
     mutateAsync: (args: { id: string; updates: Record<string, unknown>; projectId: string }) => Promise<unknown>;
   };
+  deletePunchItem?: {
+    mutateAsync: (args: { id: string; projectId: string }) => Promise<unknown>;
+  };
   projectId: string | null;
 }
 
@@ -17,6 +20,7 @@ export const PunchListBulk: React.FC<PunchListBulkProps> = ({
   bulkSelected,
   setBulkSelected,
   updatePunchItem,
+  deletePunchItem,
   projectId,
 }) => {
   return (
@@ -35,6 +39,7 @@ export const PunchListBulk: React.FC<PunchListBulkProps> = ({
                 await updatePunchItem.mutateAsync({ id, updates: { verification_status: 'sub_complete', sub_completed_at: new Date().toISOString() }, projectId: projectId! });
               }
               toast.success(`${ids.length} items marked Sub Complete. Superintendent notified.`);
+              setBulkSelected(new Set());
             },
           },
           {
@@ -45,6 +50,7 @@ export const PunchListBulk: React.FC<PunchListBulkProps> = ({
                 await updatePunchItem.mutateAsync({ id, updates: { priority: 'high' }, projectId: projectId! });
               }
               toast.success(`${ids.length} items set to high priority`);
+              setBulkSelected(new Set());
             },
           },
           {
@@ -54,7 +60,21 @@ export const PunchListBulk: React.FC<PunchListBulkProps> = ({
             confirm: true,
             confirmMessage: `Are you sure you want to delete ${bulkSelected.size} punch items? This cannot be undone.`,
             onClick: async (ids) => {
-              toast.success(`${ids.length} items deleted`);
+              if (!deletePunchItem || !projectId) {
+                toast.error('Delete unavailable');
+                return;
+              }
+              let ok = 0;
+              for (const id of ids) {
+                try {
+                  await deletePunchItem.mutateAsync({ id, projectId });
+                  ok++;
+                } catch (e) {
+                  toast.error(`Failed to delete ${id}: ${(e as Error).message}`);
+                }
+              }
+              if (ok > 0) toast.success(`${ok} item${ok > 1 ? 's' : ''} deleted`);
+              setBulkSelected(new Set());
             },
           },
         ]}

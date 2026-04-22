@@ -5,14 +5,13 @@ export interface NotificationRow {
   id: string
   user_id: string
   project_id: string | null
-  notification_type: string
+  type: string | null
   title: string
-  message: string | null
-  related_entity_type: string | null
-  related_entity_id: string | null
-  is_read: boolean
-  read_at: string | null
-  created_at: string
+  body: string | null
+  entity_type: string | null
+  entity_id: string | null
+  read: boolean | null
+  created_at: string | null
 }
 
 export async function getUnreadNotifications(userId: string): Promise<NotificationRow[]> {
@@ -20,7 +19,7 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
-    .eq('is_read', false)
+    .eq('read', false)
     .order('created_at', { ascending: false })
     .limit(50)
   if (error) throw transformSupabaseError(error)
@@ -30,7 +29,7 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
 export async function markNotificationRead(notificationId: string): Promise<void> {
   const { error } = await supabase
     .from('notifications')
-    .update({ is_read: true, read_at: new Date().toISOString() })
+    .update({ read: true })
     .eq('id', notificationId)
   if (error) throw transformSupabaseError(error)
 }
@@ -38,9 +37,9 @@ export async function markNotificationRead(notificationId: string): Promise<void
 export async function markAllRead(userId: string): Promise<void> {
   const { error } = await supabase
     .from('notifications')
-    .update({ is_read: true, read_at: new Date().toISOString() })
+    .update({ read: true })
     .eq('user_id', userId)
-    .eq('is_read', false)
+    .eq('read', false)
   if (error) throw transformSupabaseError(error)
 }
 
@@ -64,7 +63,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     .from('notifications')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .eq('is_read', false)
+    .eq('read', false)
   if (error) throw transformSupabaseError(error)
   return count ?? 0
 }

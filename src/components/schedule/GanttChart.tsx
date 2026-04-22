@@ -1,1237 +1,1427 @@
-import React, { useState, useMemo, useRef, useEffect, useId, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
-import { CalendarDays, GitBranch, Zap } from 'lucide-react';
-import EmptyState from '../ui/EmptyState';
-import type { PredictedRisk, PredictedDelay } from '../../lib/predictions';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { CalendarDays, ChevronRight, ChevronDown, GripVertical, X, Clock, Users, MapPin, Flag, AlertTriangle } from 'lucide-react';
+import type { PredictedRisk } from '../../lib/predictions';
 import type { MappedSchedulePhase } from '../../types/entities';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { AIAnnotationIndicator } from '../ai/AIAnnotation';
-import { getAnnotationsForEntity } from '../../data/aiAnnotations';
 
 export type TimeScale = 'day' | 'week' | 'month' | 'quarter';
-
-const ROW_HEIGHT = 36; // 32px bar + 4px gap
-const PX_PER_DAY: Record<TimeScale, number> = { day: 40, week: 12, month: 4, quarter: 2 };
-const DAY_MS = 86_400_000;
-const LABEL_WIDTH = 200;
-const SLIPPAGE_COL_WIDTH = 72;
-const FLOAT_COL_WIDTH = 84;
-const BASELINE_DATE_COL_WIDTH = 88;
-
-
 export type GanttPhase = MappedSchedulePhase;
 
+// ── Props ────────────────────────────────────────────────
 interface GanttChartProps {
   phases: GanttPhase[];
   isLoading?: boolean;
   onImportSchedule?: () => void;
   onAddActivity?: () => void;
   onPhaseClick?: (phase: GanttPhase) => void;
+  onPhaseUpdate?: (id: string, updates: { start_date?: string; end_date?: string; percent_complete?: number }) => void;
+  onLinkCreate?: (sourceId: string, targetId: string, type: string) => void;
+  onLinkDelete?: (linkId: string) => void;
   baselinePhases?: GanttPhase[];
   showBaseline?: boolean;
   zoomLevel?: TimeScale;
+  whatIfMode?: boolean;
   risks?: PredictedRisk[];
-  delays?: PredictedDelay[];
 }
 
-const SKELETON_ROW_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
+const DAY_MS = 86_400_000;
+const ROW_H = 44;
+const HEADER_H = 56;
+const BAR_H = 32;
+const BAR_TOP = (ROW_H - BAR_H) / 2;
 
+// ── Date helpers ─────────────────────────────────────────
+function parseDate(d: string | null | undefined): Date {
+  if (!d) return new Date();
+  const date = new Date(d + 'T00:00:00');
+  return isNaN(date.getTime()) ? new Date() : date;
+}
+
+function toDateStr(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
+function durationDays(start: Date, end: Date): number {
+  return Math.max(1, Math.round((end.getTime() - start.getTime()) / DAY_MS));
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function addDays(d: Date, n: number): Date {
+  return new Date(d.getTime() + n * DAY_MS);
+}
+
+function formatDateShort(d: string): string {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDateFull(d: string): string {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ── Cell width by zoom ──────────────────────────────────
+function getCellWidth(zoom: TimeScale): number {
+  switch (zoom) {
+    case 'day': return 40;
+    case 'week': return 140;
+    case 'month': return 180;
+    case 'quarter': return 220;
+  }
+}
+
+function getDaysPerCell(zoom: TimeScale): number {
+  switch (zoom) {
+    case 'day': return 1;
+    case 'week': return 7;
+    case 'month': return 30;
+    case 'quarter': return 91;
+  }
+}
+
+// ── Header label generators ─────────────────────────────
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function generateHeaderCells(start: Date, end: Date, zoom: TimeScale): Array<{ label: string; width: number; key: string; isWeekend?: boolean }> {
+  const cells: Array<{ label: string; width: number; key: string; isWeekend?: boolean }> = [];
+  const cellW = getCellWidth(zoom);
+  const dpc = getDaysPerCell(zoom);
+  const totalDays = Math.ceil((end.getTime() - start.getTime()) / DAY_MS);
+  const cellCount = Math.ceil(totalDays / dpc);
+
+  for (let i = 0; i < cellCount; i++) {
+    const cellDate = addDays(start, i * dpc);
+    const dayOfWeek = cellDate.getDay();
+    const isWeekend = zoom === 'day' && (dayOfWeek === 0 || dayOfWeek === 6);
+    let label: string;
+    switch (zoom) {
+      case 'day': {
+        const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        label = `${dayNames[dayOfWeek]} ${cellDate.getDate()}`;
+        break;
+      }
+      case 'week': {
+        const weekEnd = addDays(cellDate, 6);
+        label = `${MONTHS[cellDate.getMonth()]} ${cellDate.getDate()}–${weekEnd.getDate()}`;
+        break;
+      }
+      case 'month':
+        label = `${MONTHS[cellDate.getMonth()]} ${cellDate.getFullYear()}`;
+        break;
+      case 'quarter': {
+        const q = Math.floor(cellDate.getMonth() / 3) + 1;
+        label = `Q${q} ${cellDate.getFullYear()}`;
+        break;
+      }
+    }
+    cells.push({ label, width: cellW, key: `${i}-${cellDate.getTime()}`, isWeekend });
+  }
+  return cells;
+}
+
+function generateMonthHeaders(start: Date, end: Date, zoom: TimeScale): Array<{ label: string; width: number; key: string }> {
+  if (zoom === 'month' || zoom === 'quarter') {
+    const cells: Array<{ label: string; width: number; key: string }> = [];
+    const cellW = getCellWidth(zoom);
+    const dpc = getDaysPerCell(zoom);
+    const totalDays = Math.ceil((end.getTime() - start.getTime()) / DAY_MS);
+    const cellCount = Math.ceil(totalDays / dpc);
+    let currentYear = -1;
+    let accumWidth = 0;
+    let startKey = '';
+    for (let i = 0; i < cellCount; i++) {
+      const cellDate = addDays(start, i * dpc);
+      const year = cellDate.getFullYear();
+      if (year !== currentYear) {
+        if (currentYear !== -1) cells.push({ label: String(currentYear), width: accumWidth, key: startKey });
+        currentYear = year;
+        accumWidth = cellW;
+        startKey = `y-${year}`;
+      } else {
+        accumWidth += cellW;
+      }
+    }
+    if (currentYear !== -1) cells.push({ label: String(currentYear), width: accumWidth, key: startKey });
+    return cells;
+  }
+
+  const cells: Array<{ label: string; width: number; key: string }> = [];
+  const cellW = getCellWidth(zoom);
+  const dpc = getDaysPerCell(zoom);
+  const totalDays = Math.ceil((end.getTime() - start.getTime()) / DAY_MS);
+  const cellCount = Math.ceil(totalDays / dpc);
+  let currentMonth = -1;
+  let currentYear = -1;
+  let accumWidth = 0;
+  let startKey = '';
+  for (let i = 0; i < cellCount; i++) {
+    const cellDate = addDays(start, i * dpc);
+    const m = cellDate.getMonth();
+    const y = cellDate.getFullYear();
+    if (m !== currentMonth || y !== currentYear) {
+      if (currentMonth !== -1) cells.push({ label: `${MONTHS[currentMonth]} ${currentYear}`, width: accumWidth, key: startKey });
+      currentMonth = m;
+      currentYear = y;
+      accumWidth = cellW;
+      startKey = `m-${y}-${m}`;
+    } else {
+      accumWidth += cellW;
+    }
+  }
+  if (currentMonth !== -1) cells.push({ label: `${MONTHS[currentMonth]} ${currentYear}`, width: accumWidth, key: startKey });
+  return cells;
+}
+
+// ── Color mapping — bold, unmistakable palette ──────────
+// Every bar must be clearly visible even at 0% progress.
+// Steve Jobs rule: if you squint and can't see it, it's wrong.
+function barColor(phase: GanttPhase): { bg: string; border: string; progress: string; text: string } {
+  if (phase.is_critical_path || phase.critical) {
+    return { bg: '#FEE2E2', border: '#F87171', progress: '#EF4444', text: '#991B1B' };
+  }
+  if (phase.status === 'completed') {
+    return { bg: '#DCFCE7', border: '#86EFAC', progress: '#22C55E', text: '#166534' };
+  }
+  if (phase.status === 'delayed') {
+    return { bg: '#FEF3C7', border: '#FCD34D', progress: '#F59E0B', text: '#92400E' };
+  }
+  if (phase.status === 'in_progress') {
+    return { bg: '#DBEAFE', border: '#93C5FD', progress: '#3B82F6', text: '#1E40AF' };
+  }
+  // "not_started" / "planned" — warm neutral, NOT invisible gray
+  return { bg: '#E8E5E0', border: '#C4BFB8', progress: '#8D8680', text: '#4B4539' };
+}
+
+// ── Skeleton Loading ────────────────────────────────────
+const SKELETON_WIDTHS = ['70%', '55%', '85%', '40%', '90%', '60%', '75%', '45%'];
+
+function GanttSkeleton() {
+  return (
+    <div style={{ padding: spacing['5'] }}>
+      <style>{`
+        @keyframes ganttShimmer {
+          0% { background-position: -600px 0; }
+          100% { background-position: 600px 0; }
+        }
+      `}</style>
+      {SKELETON_WIDTHS.map((w, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing['4'], padding: `${spacing['3']} 0`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+          <div style={{
+            width: 220, height: 16,
+            borderRadius: borderRadius.base,
+            background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
+            backgroundSize: '600px 100%',
+            animation: 'ganttShimmer 1.5s infinite linear',
+            animationDelay: `${i * 0.08}s`,
+          }} />
+          <div style={{
+            width: w, height: BAR_H,
+            borderRadius: borderRadius.md,
+            background: 'linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%)',
+            backgroundSize: '600px 100%',
+            animation: 'ganttShimmer 1.5s infinite linear',
+            animationDelay: `${i * 0.08 + 0.04}s`,
+          }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Empty state ─────────────────────────────────────────
+function GanttEmpty({ onImportSchedule, onAddActivity }: { onImportSchedule?: () => void; onAddActivity?: () => void }) {
+  return (
+    <div role="status" aria-label="No schedule data" style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '80px 24px', gap: spacing['5'], minHeight: 400,
+    }}>
+      <div style={{
+        width: 80, height: 80, borderRadius: borderRadius['2xl'],
+        background: `linear-gradient(135deg, ${colors.orangeSubtle}, ${colors.brand50})`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <CalendarDays size={36} color={colors.primaryOrange} strokeWidth={1.5} />
+      </div>
+      <div style={{ textAlign: 'center', maxWidth: 440 }}>
+        <p style={{ margin: 0, fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
+          Build your project schedule
+        </p>
+        <p style={{ margin: `${spacing['3']} 0 0`, fontSize: typography.fontSize.body, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
+          Create activities and milestones to track every phase from mobilization to closeout. Import from Primavera P6 or Microsoft Project.
+        </p>
+      </div>
+      <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['2'] }}>
+        <button onClick={onAddActivity} style={{
+          padding: `${spacing['3']} ${spacing['6']}`, backgroundColor: colors.primaryOrange, color: '#fff',
+          border: 'none', borderRadius: borderRadius.lg, fontSize: typography.fontSize.body,
+          fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer',
+          boxShadow: '0 1px 3px rgba(244,120,32,0.3)', transition: transitions.quick,
+        }}>
+          Create First Phase
+        </button>
+        <button onClick={onImportSchedule} style={{
+          padding: `${spacing['3']} ${spacing['6']}`, backgroundColor: 'transparent', color: colors.textPrimary,
+          border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.lg,
+          fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+          fontFamily: typography.fontFamily, cursor: 'pointer', transition: transitions.quick,
+        }}>
+          Import Schedule
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Phase Detail Panel (slide-in from right) ────────────
+interface DetailPanelProps {
+  phase: GanttPhase | null;
+  onClose: () => void;
+  risks: PredictedRisk[];
+}
+
+const PhaseDetailPanel: React.FC<DetailPanelProps> = ({ phase, onClose, risks }) => {
+  if (!phase) return null;
+
+  const clr = barColor(phase);
+  const start = parseDate(phase.startDate || phase.start_date);
+  const end = parseDate(phase.endDate || phase.end_date);
+  const dur = durationDays(start, end);
+  const progress = phase.progress ?? phase.percent_complete ?? 0;
+  const isMilestone = dur <= 1 && start.getTime() === end.getTime();
+  const risk = risks.find(r => r.phaseId === phase.id);
+  const statusLabel = (phase.status ?? 'planned').replace(/_/g, ' ');
+
+  return (
+    <div style={{
+      position: 'absolute', top: 0, right: 0, bottom: 0, width: 360,
+      backgroundColor: colors.white, borderLeft: `1px solid ${colors.borderDefault}`,
+      boxShadow: '-8px 0 32px rgba(0,0,0,0.08)', zIndex: 20,
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      animation: 'slideInRight 200ms cubic-bezier(0.32,0.72,0,1)',
+    }}>
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div style={{
+        padding: `${spacing['5']} ${spacing['5']} ${spacing['4']}`,
+        borderBottom: `1px solid ${colors.borderSubtle}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing['3'] }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {isMilestone && (
+              <span style={{
+                display: 'inline-block', fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange,
+                backgroundColor: colors.orangeSubtle, padding: `1px ${spacing['2']}`,
+                borderRadius: borderRadius.full, marginBottom: spacing['2'],
+              }}>
+                Milestone
+              </span>
+            )}
+            <h3 style={{
+              margin: 0, fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold,
+              color: colors.textPrimary, lineHeight: typography.lineHeight.snug,
+            }}>
+              {phase.name}
+            </h3>
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: 'none', background: colors.surfaceInset, borderRadius: borderRadius.md,
+            cursor: 'pointer', color: colors.textTertiary, flexShrink: 0, transition: transitions.quick,
+          }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Status badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: spacing['3'] }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+            fontSize: typography.fontSize.label, fontWeight: typography.fontWeight.semibold,
+            color: clr.text, backgroundColor: clr.bg, border: `1px solid ${clr.border}`,
+            padding: `2px ${spacing['3']}`, borderRadius: borderRadius.full,
+            textTransform: 'capitalize' as const,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: clr.progress }} />
+            {statusLabel}
+          </span>
+          {(phase.is_critical_path || phase.critical) && (
+            <span style={{
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
+              color: '#991B1B', backgroundColor: '#FEE2E2',
+              padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full,
+            }}>
+              Critical Path
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: spacing['5'] }}>
+        {/* Progress */}
+        {!isMilestone && (
+          <div style={{ marginBottom: spacing['6'] }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>Progress</span>
+              <span style={{ fontSize: typography.fontSize.medium, fontWeight: typography.fontWeight.bold, color: clr.progress }}>{progress}%</span>
+            </div>
+            <div style={{
+              height: 8, borderRadius: borderRadius.full,
+              backgroundColor: colors.surfaceInset, overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%', width: `${Math.min(100, progress)}%`,
+                borderRadius: borderRadius.full, backgroundColor: clr.progress,
+                transition: `width ${transitions.smooth}`,
+              }} />
+            </div>
+          </div>
+        )}
+
+        {/* Details grid */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <DetailRow icon={<Clock size={15} />} label="Start" value={formatDateFull(phase.startDate || phase.start_date || '')} />
+          <DetailRow icon={<Flag size={15} />} label="Finish" value={formatDateFull(phase.endDate || phase.end_date || '')} />
+          {!isMilestone && <DetailRow icon={<CalendarDays size={15} />} label="Duration" value={`${dur} day${dur !== 1 ? 's' : ''}`} />}
+          {phase.float_days != null && (
+            <DetailRow
+              icon={<Clock size={15} />}
+              label="Total Float"
+              value={`${phase.float_days}d`}
+              valueColor={phase.float_days === 0 ? '#DC2626' : phase.float_days <= 3 ? '#D97706' : undefined}
+            />
+          )}
+          {phase.assigned_trade && (
+            <DetailRow icon={<Users size={15} />} label="Trade" value={phase.assigned_trade} />
+          )}
+          {phase.location && (
+            <DetailRow icon={<MapPin size={15} />} label="Location" value={phase.location} />
+          )}
+        </div>
+
+        {/* Baseline comparison */}
+        {phase.baselineEndDate && (
+          <div style={{
+            marginTop: spacing['5'], padding: spacing['4'],
+            backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
+          }}>
+            <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase' as const, letterSpacing: typography.letterSpacing.wider }}>
+              Baseline Comparison
+            </span>
+            <div style={{ marginTop: spacing['3'], display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: typography.fontSize.sm }}>
+                <span style={{ color: colors.textSecondary }}>Planned Finish</span>
+                <span style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{formatDateShort(phase.baselineEndDate)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: typography.fontSize.sm }}>
+                <span style={{ color: colors.textSecondary }}>Current Finish</span>
+                <span style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{formatDateShort(phase.endDate || phase.end_date || '')}</span>
+              </div>
+              {phase.slippageDays !== 0 && (
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+                  color: phase.slippageDays > 0 ? '#DC2626' : '#16A34A',
+                }}>
+                  <span>Variance</span>
+                  <span>{phase.slippageDays > 0 ? '+' : ''}{phase.slippageDays}d</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Risk alert */}
+        {risk && (
+          <div style={{
+            marginTop: spacing['5'], padding: spacing['4'],
+            backgroundColor: '#FEF2F2', border: '1px solid #FEE2E2',
+            borderRadius: borderRadius.lg,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+              <AlertTriangle size={14} color="#DC2626" />
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: '#991B1B' }}>
+                Risk Detected
+              </span>
+              <span style={{
+                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                color: '#DC2626', backgroundColor: '#FEE2E2',
+                padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full, marginLeft: 'auto',
+              }}>
+                {risk.likelihoodPercent}% likely
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: '#7F1D1D', lineHeight: typography.lineHeight.relaxed }}>
+              {risk.reason}
+            </p>
+            {risk.suggestedAction && (
+              <p style={{ margin: `${spacing['2']} 0 0`, fontSize: typography.fontSize.sm, color: '#991B1B', fontWeight: typography.fontWeight.medium }}>
+                Suggested: {risk.suggestedAction}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+function DetailRow({ icon, label, value, valueColor }: { icon: React.ReactNode; label: string; value: string; valueColor?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+      <span style={{ color: colors.textTertiary, flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, minWidth: 80 }}>{label}</span>
+      <span style={{ fontSize: typography.fontSize.sm, color: valueColor || colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{value}</span>
+    </div>
+  );
+}
+
+// ── Dependency arrows ──────────────────────────────────
+function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase[]; chartStart: Date; pxPerDay: number }) {
+  const phaseMap = useMemo(() => {
+    const map = new Map<string, { index: number; phase: GanttPhase }>();
+    phases.forEach((p, i) => map.set(p.id, { index: i, phase: p }));
+    return map;
+  }, [phases]);
+
+  const arrows = useMemo(() => {
+    const result: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    for (const phase of phases) {
+      const deps = phase.dependencies || (phase.depends_on ? [phase.depends_on] : []);
+      for (const depId of deps) {
+        const source = phaseMap.get(depId);
+        const target = phaseMap.get(phase.id);
+        if (!source || !target) continue;
+
+        const sourceEnd = parseDate(source.phase.endDate || source.phase.end_date);
+        const targetStart = parseDate(target.phase.startDate || target.phase.start_date);
+
+        const x1 = ((sourceEnd.getTime() - chartStart.getTime()) / DAY_MS) * pxPerDay;
+        const y1 = source.index * ROW_H + ROW_H / 2;
+        const x2 = ((targetStart.getTime() - chartStart.getTime()) / DAY_MS) * pxPerDay;
+        const y2 = target.index * ROW_H + ROW_H / 2;
+
+        result.push({ x1, y1, x2, y2 });
+      }
+    }
+    return result;
+  }, [phases, phaseMap, chartStart, pxPerDay]);
+
+  if (arrows.length === 0) return null;
+
+  return (
+    <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill={colors.textTertiary} opacity="0.5" />
+        </marker>
+      </defs>
+      {arrows.map((a, i) => {
+        const midX = a.x1 + 12;
+        const path = a.y1 === a.y2
+          ? `M ${a.x1} ${a.y1} L ${a.x2} ${a.y2}`
+          : `M ${a.x1} ${a.y1} L ${midX} ${a.y1} L ${midX} ${a.y2} L ${a.x2} ${a.y2}`;
+        return (
+          <path
+            key={i}
+            d={path}
+            fill="none"
+            stroke={colors.textTertiary}
+            strokeWidth="1.5"
+            strokeOpacity="0.35"
+            markerEnd="url(#arrowhead)"
+            strokeDasharray="4 3"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Today marker ────────────────────────────────────────
+function TodayMarker({ chartStart, pxPerDay, totalHeight }: { chartStart: Date; pxPerDay: number; totalHeight: number }) {
+  const today = startOfDay(new Date());
+  const offset = (today.getTime() - chartStart.getTime()) / DAY_MS;
+  const left = offset * pxPerDay;
+  if (left < 0) return null;
+  return (
+    <>
+      <style>{`
+        @keyframes todayPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(244,120,32,0.4); }
+          50% { box-shadow: 0 0 0 4px rgba(244,120,32,0.1); }
+        }
+      `}</style>
+      <div style={{
+        position: 'absolute', left, top: 0, bottom: 0, width: 2,
+        background: `linear-gradient(180deg, ${colors.primaryOrange}, ${colors.primaryOrange}40)`,
+        zIndex: 6, pointerEvents: 'none',
+      }}>
+        <div style={{
+          position: 'absolute', top: -3, left: -5,
+          width: 12, height: 12, borderRadius: '50%',
+          background: colors.primaryOrange,
+          border: '2px solid white',
+          boxShadow: '0 0 0 0 rgba(244,120,32,0.4)',
+          animation: 'todayPulse 2s ease-in-out infinite',
+        }} />
+        <div style={{
+          position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)',
+          fontSize: 10, fontWeight: 700, color: colors.primaryOrange,
+          whiteSpace: 'nowrap', letterSpacing: '0.02em',
+        }}>
+          TODAY
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Baseline bar overlay ────────────────────────────────
+function BaselineBar({ phase, chartStart, pxPerDay }: { phase: GanttPhase; chartStart: Date; pxPerDay: number }) {
+  if (!phase.baselineStartDate || !phase.baselineEndDate) return null;
+  const start = parseDate(phase.baselineStartDate);
+  const end = parseDate(phase.baselineEndDate);
+  const dur = durationDays(start, end);
+  const offsetDays = (start.getTime() - chartStart.getTime()) / DAY_MS;
+  const left = offsetDays * pxPerDay;
+  const width = Math.max(dur * pxPerDay, 4);
+
+  return (
+    <div
+      title="Baseline"
+      style={{
+        position: 'absolute', left, top: BAR_TOP + BAR_H - 4,
+        width, height: 4,
+        backgroundColor: 'rgba(156,163,175,0.3)',
+        borderRadius: 2,
+        border: '1px dashed rgba(156,163,175,0.5)',
+        zIndex: 1,
+      }}
+    />
+  );
+}
+
+// ── Row component ───────────────────────────────────────
+interface GanttRowProps {
+  phase: GanttPhase;
+  chartStart: Date;
+  pxPerDay: number;
+  rowIndex: number;
+  onSelect: (id: string) => void;
+  selected: boolean;
+  showBaseline?: boolean;
+  hasRisk: boolean;
+  onDragStart?: (id: string, e: React.MouseEvent) => void;
+}
+
+const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPerDay, rowIndex, onSelect, selected, showBaseline, hasRisk, onDragStart }) => {
+  const start = parseDate(phase.startDate || phase.start_date);
+  const end = parseDate(phase.endDate || phase.end_date);
+  const dur = durationDays(start, end);
+  const isMilestone = dur <= 1 && start.getTime() === end.getTime();
+  const progress = phase.progress ?? phase.percent_complete ?? 0;
+  const clr = barColor(phase);
+
+  const offsetDays = (start.getTime() - chartStart.getTime()) / DAY_MS;
+  const left = offsetDays * pxPerDay;
+  const width = Math.max(isMilestone ? 0 : dur * pxPerDay, 6);
+  const top = rowIndex * ROW_H;
+
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      role="row"
+      aria-label={`${phase.name}: ${phase.status ?? 'planned'}, ${progress}% complete`}
+      onClick={() => onSelect(phase.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'absolute', top, left: 0, right: 0, height: ROW_H,
+        cursor: 'pointer',
+        backgroundColor: selected
+          ? `${colors.primaryOrange}08`
+          : hovered
+          ? colors.surfaceHover
+          : rowIndex % 2 === 1
+          ? 'rgba(0,0,0,0.016)'
+          : 'transparent',
+        borderBottom: `1px solid ${colors.borderSubtle}`,
+        transition: 'background-color 120ms ease',
+      }}
+    >
+      {/* Baseline bar */}
+      {showBaseline && <BaselineBar phase={phase} chartStart={chartStart} pxPerDay={pxPerDay} />}
+
+      {isMilestone ? (
+        /* ── Milestone diamond ── */
+        <div style={{ position: 'absolute', left: left - 10, top: ROW_H / 2 - 10 }}>
+          <div
+            title={`${phase.name} (Milestone)`}
+            style={{
+              width: 20, height: 20,
+              transform: 'rotate(45deg)',
+              background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+              borderRadius: 3,
+              boxShadow: hovered
+                ? `0 2px 8px rgba(244,120,32,0.4)`
+                : '0 1px 3px rgba(244,120,32,0.2)',
+              transition: 'box-shadow 150ms ease, transform 150ms ease',
+            }}
+          />
+          {/* Milestone label */}
+          <span style={{
+            position: 'absolute', left: 28, top: 2,
+            fontSize: 12, fontWeight: 600, color: colors.textPrimary,
+            whiteSpace: 'nowrap',
+          }}>
+            {phase.name}
+          </span>
+        </div>
+      ) : (
+        /* ── Activity bar ── */
+        <div
+          title={`${phase.name} — ${progress}% (${toDateStr(start)} → ${toDateStr(end)})`}
+          onMouseDown={(e) => onDragStart?.(phase.id, e)}
+          style={{
+            position: 'absolute', left, top: BAR_TOP, width, height: BAR_H,
+            backgroundColor: clr.bg,
+            border: `1.5px solid ${clr.border}`,
+            borderRadius: borderRadius.md,
+            overflow: 'hidden',
+            zIndex: 4,
+            boxShadow: selected
+              ? `0 0 0 2px ${clr.progress}50, 0 3px 10px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.6)`
+              : hovered
+              ? `0 3px 10px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.6)`
+              : `0 1px 3px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)`,
+            transition: 'box-shadow 150ms ease, transform 150ms ease',
+            transform: hovered ? 'translateY(-0.5px)' : 'none',
+          }}
+        >
+          {/* Bottom edge gradient — gives depth even at 0% */}
+          <div style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: '40%',
+            background: `linear-gradient(to top, ${clr.progress}10, transparent)`,
+            pointerEvents: 'none',
+          }} />
+          {/* Progress fill */}
+          {progress > 0 && (
+            <div style={{
+              position: 'absolute', left: 0, top: 0, bottom: 0,
+              width: `${Math.min(100, progress)}%`,
+              backgroundColor: clr.progress,
+              opacity: 0.35,
+              borderRadius: `${borderRadius.md} 0 0 ${borderRadius.md}`,
+              transition: `width ${transitions.smooth}`,
+            }} />
+          )}
+          {/* Progress indicator line */}
+          {progress > 0 && progress < 100 && (
+            <div style={{
+              position: 'absolute', left: `${Math.min(100, progress)}%`, top: 0, bottom: 0,
+              width: 2, backgroundColor: clr.progress, opacity: 0.6,
+            }} />
+          )}
+          {/* Label inside bar */}
+          {width > 80 && (
+            <div style={{
+              position: 'absolute', left: 10, right: 10, top: '50%', transform: 'translateY(-50%)',
+              display: 'flex', alignItems: 'center', gap: 6,
+              zIndex: 2,
+            }}>
+              <span style={{
+                fontSize: 12.5, fontWeight: 600, color: clr.text,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                flex: 1, letterSpacing: '-0.01em',
+              }}>
+                {phase.name}
+              </span>
+              <span style={{
+                fontSize: 11, fontWeight: 700, color: clr.text,
+                opacity: 0.7, flexShrink: 0,
+              }}>
+                {progress}%
+              </span>
+            </div>
+          )}
+          {/* Drag handle on right edge */}
+          {hovered && (
+            <div style={{
+              position: 'absolute', right: 0, top: 0, bottom: 0, width: 8,
+              cursor: 'ew-resize', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: `${clr.progress}20`,
+              borderLeft: `1px solid ${clr.progress}30`,
+            }}>
+              <GripVertical size={10} color={clr.progress} style={{ opacity: 0.6 }} />
+            </div>
+          )}
+          {/* Risk indicator dot */}
+          {hasRisk && (
+            <div style={{
+              position: 'absolute', top: -3, right: -3,
+              width: 8, height: 8, borderRadius: '50%',
+              backgroundColor: '#EF4444', border: '1.5px solid white',
+              zIndex: 5,
+            }} />
+          )}
+        </div>
+      )}
+
+      {/* ── Float visualization — translucent buffer zone ── */}
+      {!isMilestone && (phase.floatDays ?? 0) > 0 && pxPerDay > 0 && (
+        <div
+          title={`${phase.floatDays} days of float`}
+          style={{
+            position: 'absolute',
+            left: left + width,
+            top: BAR_TOP + 8,
+            width: Math.min((phase.floatDays ?? 0) * pxPerDay, 300), // cap at 300px
+            height: BAR_H - 16,
+            background: `repeating-linear-gradient(
+              90deg,
+              ${clr.progress}18,
+              ${clr.progress}18 4px,
+              transparent 4px,
+              transparent 8px
+            )`,
+            borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
+            borderRight: `2px solid ${clr.progress}25`,
+            pointerEvents: 'none',
+            zIndex: 2,
+          }}
+        />
+      )}
+
+      {/* Right-side label when bar is too narrow */}
+      {!isMilestone && width <= 80 && (
+        <span style={{
+          position: 'absolute', left: left + width + 10, top: BAR_TOP + 7,
+          fontSize: 12.5, fontWeight: 600, color: colors.textPrimary,
+          whiteSpace: 'nowrap', letterSpacing: '-0.01em',
+        }}>
+          {phase.name}
+          <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 500, color: colors.textTertiary }}>{progress}%</span>
+        </span>
+      )}
+    </div>
+  );
+});
+GanttRow.displayName = 'GanttRow';
+
+// ── Table panel (left side) ─────────────────────────────
+const TABLE_W_DEFAULT = 340;
+const TABLE_W_MIN = 220;
+const TABLE_W_MAX = 560;
+
+// ── WBS Hierarchy helpers ──────────────────────────────
+// Determines indent level from WBS code (e.g. "1.2.3" → level 2) or parent_id chain
+function getWbsLevel(phase: GanttPhase, phaseMap: Map<string, GanttPhase>): number {
+  // Try WBS code first (e.g. "1.2.3" means level 2)
+  const wbs = (phase as unknown as Record<string, unknown>).wbs_code ?? (phase as unknown as Record<string, unknown>).wbs;
+  if (typeof wbs === 'string' && wbs.includes('.')) {
+    return wbs.split('.').length - 1;
+  }
+  // Fall back to parent_id chain
+  const parentId = (phase as unknown as Record<string, unknown>).parent_id as string | null;
+  if (!parentId) return 0;
+  let level = 0;
+  let currentId: string | null = parentId;
+  while (currentId && level < 5) {
+    level++;
+    const parent = phaseMap.get(currentId);
+    currentId = parent ? ((parent as unknown as Record<string, unknown>).parent_id as string | null) : null;
+  }
+  return level;
+}
+
+// Check if a phase has children
+function hasChildren(phaseId: string, phases: GanttPhase[]): boolean {
+  return phases.some(p => (p as unknown as Record<string, unknown>).parent_id === phaseId);
+}
+
+function TablePanel({ phases, selectedId, onSelect, risks, width }: { phases: GanttPhase[]; selectedId: string | null; onSelect: (id: string) => void; risks: PredictedRisk[]; width: number }) {
+  const riskIds = useMemo(() => new Set(risks.map(r => r.phaseId)), [risks]);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const phaseMap = useMemo(() => new Map(phases.map(p => [p.id, p])), [phases]);
+
+  const toggleGroup = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Determine which phases are visible (not hidden by collapsed parent)
+  const visiblePhases = useMemo(() => {
+    return phases.filter(p => {
+      let currentId = (p as unknown as Record<string, unknown>).parent_id as string | null;
+      while (currentId) {
+        if (collapsedGroups.has(currentId)) return false;
+        const parent = phaseMap.get(currentId);
+        currentId = parent ? ((parent as unknown as Record<string, unknown>).parent_id as string | null) : null;
+      }
+      return true;
+    });
+  }, [phases, collapsedGroups, phaseMap]);
+
+  return (
+    <div style={{
+      width, flexShrink: 0, borderRight: `1px solid ${colors.borderDefault}`,
+      overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      backgroundColor: colors.white,
+    }}>
+      {/* Header */}
+      <div style={{
+        height: HEADER_H, display: 'flex', alignItems: 'center', padding: `0 ${spacing['4']}`,
+        borderBottom: `1px solid ${colors.borderDefault}`, background: colors.surfaceInset,
+        gap: spacing['1'],
+      }}>
+        {(() => {
+          const colStyle: React.CSSProperties = {
+            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+            color: colors.textTertiary, textTransform: 'uppercase' as const,
+            letterSpacing: typography.letterSpacing.wider, whiteSpace: 'nowrap',
+          };
+          const showDates = width >= 400;
+          return (
+            <>
+              <span style={{ ...colStyle, flex: 1 }}>Activity</span>
+              {showDates && <span style={{ ...colStyle, width: 64, textAlign: 'center' }}>Start</span>}
+              {showDates && <span style={{ ...colStyle, width: 64, textAlign: 'center' }}>Finish</span>}
+              <span style={{ ...colStyle, width: 44, textAlign: 'center' }}>Days</span>
+              <span style={{ ...colStyle, width: 56, textAlign: 'right' }}>Progress</span>
+            </>
+          );
+        })()}
+      </div>
+      {/* Rows */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {visiblePhases.map((p, idx) => {
+          const start = parseDate(p.startDate || p.start_date);
+          const end = parseDate(p.endDate || p.end_date);
+          const dur = durationDays(start, end);
+          const progress = p.progress ?? p.percent_complete ?? 0;
+          const isSelected = p.id === selectedId;
+          const isMilestone = dur <= 1 && start.getTime() === end.getTime();
+          const clr = barColor(p);
+          const hasRisk = riskIds.has(p.id);
+          const indentLevel = getWbsLevel(p, phaseMap);
+          const isParent = hasChildren(p.id, phases);
+          const isCollapsed = collapsedGroups.has(p.id);
+
+          return (
+            <div
+              key={p.id}
+              role="row"
+              onClick={() => onSelect(p.id)}
+              style={{
+                height: ROW_H, display: 'flex', alignItems: 'center',
+                padding: `0 ${spacing['4']}`, gap: spacing['2'],
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                cursor: 'pointer',
+                backgroundColor: isSelected
+                  ? `${colors.primaryOrange}08`
+                  : idx % 2 === 1
+                  ? 'rgba(0,0,0,0.016)'
+                  : 'transparent',
+                transition: 'background-color 120ms ease',
+              }}
+              onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+              onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = isSelected ? `${colors.primaryOrange}08` : idx % 2 === 1 ? 'rgba(0,0,0,0.016)' : 'transparent'; }}
+            >
+              {/* Status indicator */}
+              <div style={{
+                width: 3.5, height: 22, borderRadius: 2, flexShrink: 0,
+                backgroundColor: clr.progress,
+                opacity: p.status === 'completed' ? 0.5 : 1,
+              }} />
+
+              {/* Name with WBS indent and expand/collapse */}
+              <div style={{
+                flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: spacing['1'],
+                paddingLeft: indentLevel * 16,
+              }}>
+                {/* Expand/collapse toggle for parent items */}
+                {isParent ? (
+                  <button
+                    onClick={(e) => toggleGroup(p.id, e)}
+                    style={{
+                      width: 16, height: 16, border: 'none', backgroundColor: 'transparent',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: 0, flexShrink: 0, borderRadius: 2,
+                      color: colors.textTertiary,
+                    }}
+                    aria-label={isCollapsed ? 'Expand group' : 'Collapse group'}
+                  >
+                    {isCollapsed
+                      ? <ChevronRight size={12} />
+                      : <ChevronDown size={12} />
+                    }
+                  </button>
+                ) : (
+                  <span style={{ width: 16, flexShrink: 0 }} />
+                )}
+                {isMilestone && (
+                  <span style={{ color: colors.primaryOrange, fontSize: 10, flexShrink: 0 }}>◆</span>
+                )}
+                <span style={{
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontSize: typography.fontSize.sm, color: colors.textPrimary,
+                  fontWeight: isParent
+                    ? typography.fontWeight.semibold
+                    : isSelected
+                    ? typography.fontWeight.semibold
+                    : typography.fontWeight.normal,
+                  opacity: p.status === 'completed' ? 0.55 : 1,
+                }}>
+                  {p.name}
+                </span>
+                {hasRisk && (
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    backgroundColor: '#EF4444', flexShrink: 0,
+                  }} />
+                )}
+              </div>
+
+              {/* Start / Finish — shown when panel is wide enough */}
+              {width >= 400 && (
+                <span style={{
+                  width: 64, textAlign: 'center',
+                  fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                  fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                }}>
+                  {formatDateShort(p.startDate || p.start_date || '')}
+                </span>
+              )}
+              {width >= 400 && (
+                <span style={{
+                  width: 64, textAlign: 'center',
+                  fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                  fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+                }}>
+                  {formatDateShort(p.endDate || p.end_date || '')}
+                </span>
+              )}
+
+              {/* Duration */}
+              <span style={{
+                width: 44, textAlign: 'center',
+                fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {isMilestone ? '—' : `${dur}d`}
+              </span>
+
+              {/* Progress mini bar */}
+              <div style={{ width: 56, display: 'flex', alignItems: 'center', gap: spacing['1'], justifyContent: 'flex-end' }}>
+                <div style={{
+                  width: 32, height: 4, borderRadius: 2,
+                  backgroundColor: colors.surfaceInset, overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%', width: `${Math.min(100, progress)}%`,
+                    borderRadius: 2, backgroundColor: clr.progress,
+                    transition: `width ${transitions.smooth}`,
+                  }} />
+                </div>
+                <span style={{
+                  fontSize: 10, color: progress >= 100 ? clr.progress : colors.textTertiary,
+                  fontWeight: progress >= 100 ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                  fontVariantNumeric: 'tabular-nums', minWidth: 22, textAlign: 'right',
+                }}>
+                  {progress}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main GanttChart Component ───────────────────────────
 export const GanttChart: React.FC<GanttChartProps> = ({
   phases,
   isLoading = false,
   onImportSchedule,
   onAddActivity,
   onPhaseClick,
+  onPhaseUpdate,
   baselinePhases,
   showBaseline: showBaselineProp,
   zoomLevel: zoomLevelProp,
+  whatIfMode = false,
   risks = [],
-  delays = [],
 }) => {
-  const uid = useId().replace(/:/g, '');
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailPhase, setDetailPhase] = useState<GanttPhase | null>(null);
+  const [tableWidth, setTableWidth] = useState(TABLE_W_DEFAULT);
 
-  const [timeScale, setTimeScale] = useState<TimeScale>(zoomLevelProp ?? 'month');
+  const zoom = zoomLevelProp ?? 'week';
+  const cellW = getCellWidth(zoom);
+  const dpc = getDaysPerCell(zoom);
+  const pxPerDay = cellW / dpc;
 
-  useEffect(() => {
-    if (zoomLevelProp !== undefined) setTimeScale(zoomLevelProp);
-  }, [zoomLevelProp]);
-  const [hoveredPhase, setHoveredPhase] = useState<string | null>(null);
-  const [showBaselineInternal, setShowBaselineInternal] = useState(true);
-  const showBaseline = showBaselineProp !== undefined ? showBaselineProp : showBaselineInternal;
-  const [showCriticalOnly, setShowCriticalOnly] = useState(false);
-  const [riskTooltipPhase, setRiskTooltipPhase] = useState<string | null>(null);
-  const [delayTooltipPhase, setDelayTooltipPhase] = useState<string | null>(null);
-  const [localPhases, setLocalPhases] = useState<GanttPhase[]>(phases);
-  const [announcement] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [, setTrackWidth] = useState(0);
+  const riskIds = useMemo(() => new Set(risks.map(r => r.phaseId)), [risks]);
 
-  const probeRef = useRef<HTMLDivElement>(null);
-  const trackWidthRef = useRef(0);
-  const ganttGridRef = useRef<HTMLDivElement>(null);
-
-  const { focusedIndex: ganttFocused, handleKeyDown: ganttHandleKeyDown, activeRowId: ganttActiveRowId } = useTableKeyboardNavigation({
-    rowCount: localPhases.length,
-    onActivate: useCallback((i: number) => onPhaseClick?.(localPhases[i]), [localPhases, onPhaseClick]),
-    onToggleSelect: useCallback((i: number) => {
-      const id = localPhases[i]?.id;
-      if (!id) return;
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id); else next.add(id);
-        return next;
-      });
-    }, [localPhases]),
-    rowIdPrefix: `${uid}-gantt`,
-  });
-
-  useEffect(() => {
-    if (ganttGridRef.current?.contains(document.activeElement)) {
-      const row = ganttGridRef.current.querySelector<HTMLElement>(`[data-gantt-index="${ganttFocused}"]`);
-      row?.focus({ preventScroll: false });
+  // ── Calculate date range ───────────────────────────────
+  const { chartStart, chartEnd, totalDays } = useMemo(() => {
+    if (!phases || phases.length === 0) {
+      const now = startOfDay(new Date());
+      return { chartStart: addDays(now, -7), chartEnd: addDays(now, 90), totalDays: 97 };
     }
-  }, [ganttFocused]);
+    let minMs = Infinity, maxMs = -Infinity;
+    for (const p of phases) {
+      const s = parseDate(p.startDate || p.start_date).getTime();
+      const e = parseDate(p.endDate || p.end_date).getTime();
+      if (s < minMs) minMs = s;
+      if (e > maxMs) maxMs = e;
+    }
+    const pad = zoom === 'day' ? 7 : zoom === 'week' ? 14 : 30;
+    const start = addDays(new Date(minMs), -pad);
+    const end = addDays(new Date(maxMs), pad);
+    return { chartStart: startOfDay(start), chartEnd: startOfDay(end), totalDays: Math.ceil((end.getTime() - start.getTime()) / DAY_MS) };
+  }, [phases, zoom]);
 
-  // Measure the track column width
-  useEffect(() => {
-    if (!probeRef.current) return;
-    const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width;
-      setTrackWidth(w);
-      trackWidthRef.current = w;
-    });
-    ro.observe(probeRef.current);
-    return () => ro.disconnect();
+  const totalWidth = totalDays * pxPerDay;
+  const totalHeight = (phases?.length ?? 0) * ROW_H;
+
+  // Header cells
+  const monthHeaders = useMemo(() => generateMonthHeaders(chartStart, chartEnd, zoom), [chartStart, chartEnd, zoom]);
+  const cellHeaders = useMemo(() => generateHeaderCells(chartStart, chartEnd, zoom), [chartStart, chartEnd, zoom]);
+
+  // ── Click handler ─────────────────────────────────────
+  const handleSelect = useCallback((id: string) => {
+    setSelectedId(prev => prev === id ? null : id);
+    const phase = phases.find(p => p.id === id);
+    if (phase) {
+      setDetailPhase(prev => prev?.id === id ? null : phase);
+      onPhaseClick?.(phase);
+    }
+  }, [phases, onPhaseClick]);
+
+  const closeDetail = useCallback(() => {
+    setDetailPhase(null);
+    setSelectedId(null);
   }, []);
 
-  useEffect(() => {
-    setLocalPhases(phases);
-  }, [phases]);
+  // ── Drag to reschedule ────────────────────────────────
+  const handleDragStart = useCallback((id: string, e: React.MouseEvent) => {
+    if (!onPhaseUpdate) return;
+    const phase = phases.find(p => p.id === id);
+    if (!phase) return;
 
-  // Timeline anchors
-  const allStarts = phases.map(p => new Date(p.startDate).getTime());
-  const allEnds = phases.map(p => new Date(p.endDate).getTime());
-  const timelineStart = Math.min(...allStarts);
-  const timelineEnd = Math.max(...allEnds);
-  const timelineSpan = timelineEnd - timelineStart;
+    const startX = e.clientX;
+    const origStart = parseDate(phase.startDate || phase.start_date);
+    const origEnd = parseDate(phase.endDate || phase.end_date);
 
-
-  const hasBaselineData = phases.some(p => p.baselineStartDate != null && p.baselineEndDate != null);
-  const today = new Date();
-  const todayPx = Math.round(((today.getTime() - timelineStart) / DAY_MS) * pxPerDay);
-
-  const timeLabels = useMemo(() => {
-    const labels: { label: string; offset: number }[] = [];
-    const start = new Date(timelineStart);
-    const end = new Date(timelineEnd);
-    if (timeScale === 'day') {
-      // Show every 3 days to avoid overlap
-      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      while (d.getTime() <= timelineEnd) {
-        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
-        labels.push({
-          label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          offset,
-        });
-        d.setDate(d.getDate() + 3);
-      }
-    } else if (timeScale === 'week') {
-      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-      d.setDate(d.getDate() - d.getDay()); // rewind to Sunday
-      while (d.getTime() <= timelineEnd) {
-        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
-        if (offset >= 0) {
-          labels.push({
-            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            offset,
-          });
-        }
-        d.setDate(d.getDate() + 7);
-      }
-    } else if (timeScale === 'quarter') {
-      const d = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
-      while (d <= end) {
-        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
-        const q = Math.floor(d.getMonth() / 3) + 1;
-        labels.push({ label: `Q${q} ${d.getFullYear()}`, offset });
-        d.setMonth(d.getMonth() + 3);
-      }
-    } else {
-      const d = new Date(start.getFullYear(), start.getMonth(), 1);
-      while (d <= end) {
-        const offset = Math.round(((d.getTime() - timelineStart) / DAY_MS) * pxPerDay);
-        labels.push({ label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), offset });
-        d.setMonth(d.getMonth() + 1);
-      }
-    }
-    return labels;
-  }, [timelineStart, timelineEnd, timelineSpan, timeScale, pxPerDay]);
-
-  const resourceData = useMemo(() => {
-    const buckets = 20;
-    const bucketWidth = timelineSpan / buckets;
-    return Array.from({ length: buckets }).map((_, i) => {
-      const bucketStart = timelineStart + i * bucketWidth;
-      const bucketEnd = bucketStart + bucketWidth;
-      let count = 0;
-      phases.forEach(p => {
-        const ps = new Date(p.startDate).getTime();
-        const pe = new Date(p.endDate).getTime();
-        if (ps < bucketEnd && pe > bucketStart && !p.completed) {
-          count += p.resources ?? Math.ceil(p.progress / 20) + 1;
-        }
-      });
-      return count;
-    });
-  }, [phases, timelineStart, timelineSpan]);
-
-  const maxResource = Math.max(...resourceData, 1);
-
-  const pxPerDay = PX_PER_DAY[timeScale];
-
-  const totalDays = Math.max(1, Math.ceil(timelineSpan / DAY_MS));
-  const totalTrackWidth = totalDays * pxPerDay;
-
-  const getPhasePos = (phase: GanttPhase) => {
-    const s = new Date(phase.startDate).getTime();
-    const e = new Date(phase.endDate).getTime();
-    return {
-      left: Math.round(((s - timelineStart) / DAY_MS) * pxPerDay),
-      width: Math.max(Math.round(((e - s) / DAY_MS) * pxPerDay), 2),
+    const handleMove = (me: MouseEvent) => {
+      const dx = me.clientX - startX;
+      const daysDelta = Math.round(dx / pxPerDay);
+      if (daysDelta === 0) return;
+      const newStart = addDays(origStart, daysDelta);
+      const newEnd = addDays(origEnd, daysDelta);
+      onPhaseUpdate(id, { start_date: toDateStr(newStart), end_date: toDateStr(newEnd) });
     };
-  };
 
-  const getBarColor = (phase: GanttPhase) => {
-    if (phase.completed || phase.status === 'completed') return '#4EC896';
-    if (phase.status === 'delayed') return '#E74C3C';
-    if (phase.status === 'in_progress') return '#3B82F6';
-    if (phase.is_critical || phase.critical || phase.floatDays === 0) return '#E74C3C';
-    if (phase.status === 'not_started' || phase.progress === 0) return '#9CA3AF';
-    return '#3B82F6';
-  };
+    const handleUp = () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+    };
 
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+  }, [phases, onPhaseUpdate, pxPerDay]);
+
+  // ── Resize table panel ────────────────────────────────
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = tableWidth;
+    const handleMove = (me: MouseEvent) => {
+      const newW = Math.max(TABLE_W_MIN, Math.min(TABLE_W_MAX, startW + (me.clientX - startX)));
+      setTableWidth(newW);
+    };
+    const handleUp = () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+  }, [tableWidth]);
+
+  // ── Scroll to today on mount ──────────────────────────
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    const today = startOfDay(new Date());
+    const offset = (today.getTime() - chartStart.getTime()) / DAY_MS;
+    const scrollX = Math.max(0, offset * pxPerDay - 300);
+    timelineRef.current.scrollTo({ left: scrollX, behavior: 'smooth' });
+  }, [chartStart, pxPerDay]);
+
+  // Scroll sync is handled by the virtual scrolling effect above
+
+  // ── Virtual scrolling: only render visible rows ──────
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportH, setViewportH] = useState(800);
+
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+    const syncScroll = () => {
+      setScrollTop(timeline.scrollTop);
+      if (tableScrollRef.current) {
+        tableScrollRef.current.scrollTop = timeline.scrollTop;
+      }
+    };
+    const syncSize = () => setViewportH(timeline.clientHeight);
+    syncSize();
+    timeline.addEventListener('scroll', syncScroll, { passive: true });
+    const ro = new ResizeObserver(syncSize);
+    ro.observe(timeline);
+    return () => {
+      timeline.removeEventListener('scroll', syncScroll);
+      ro.disconnect();
+    };
+  }, []);
+
+  const overscan = 5; // render extra rows above/below viewport for smooth scrolling
+  const visibleStartIdx = Math.max(0, Math.floor(scrollTop / ROW_H) - overscan);
+  const visibleEndIdx = Math.min(
+    (phases?.length ?? 0) - 1,
+    Math.ceil((scrollTop + viewportH) / ROW_H) + overscan
+  );
+
+  // ── Loading ───────────────────────────────────────────
+  if (isLoading) return <GanttSkeleton />;
+
+  // ── Empty state ───────────────────────────────────────
+  if (!phases || phases.length === 0) {
+    return <GanttEmpty onImportSchedule={onImportSchedule} onAddActivity={onAddActivity} />;
+  }
+
+  // The Gantt IS the product — it should fill the viewport.
+  // Use calc(100vh - offset) so it dominates regardless of content.
+  // For large schedules (20+ rows), let content drive height.
+  // minHeight ensures it never looks like a widget.
+  const viewportChartH = 'calc(100vh - 340px)'; // leaves room for header + KPIs + toolbar
+  const contentDrivenH = HEADER_H + totalHeight + 20;
+  // We'll use the CSS value for the container and a numeric fallback for calculations
+  const chartHNumeric = Math.max(420, contentDrivenH);
 
   return (
-    <div role="region" aria-label="Gantt chart showing project timeline">
-      {/* Visually hidden summary for screen readers */}
-      {localPhases.length > 0 && (
-        <p style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden', margin: 0 }}>
-          {`Schedule contains ${localPhases.length} activities. ${localPhases.filter(p => p.critical).length} are on the critical path. Projected completion: ${new Date(Math.max(...localPhases.map(p => new Date(p.endDate).getTime()))).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.`}
-        </p>
-      )}
-      {/* Tablet touch target overrides: min 32px bar, 44px touch wrapper */}
+    <div style={{ position: 'relative' }}>
       <style>{`
-        @media (min-width: 768px) and (max-width: 1279px) {
-          .gantt-phase-row { min-height: 44px !important; }
-          .gantt-phase-track { min-height: 44px !important; }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
       `}</style>
-      {/* aria-live region for keyboard announcements */}
+
+      {/* Main Gantt container */}
       <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}
+        style={{
+          display: 'flex', position: 'relative',
+          border: `1px solid ${colors.borderDefault}`,
+          borderRadius: borderRadius.xl,
+          overflow: 'hidden',
+          background: colors.white,
+          height: viewportChartH,
+          minHeight: 420,
+          maxHeight: Math.max(800, contentDrivenH),
+          boxShadow: whatIfMode
+            ? `0 0 0 2px rgba(124,58,237,0.15), ${shadows.card}`
+            : shadows.card,
+          transition: `box-shadow ${transitions.quick}`,
+        }}
       >
-        {announcement}
-      </div>
+        {/* Left table */}
+        <TablePanel phases={phases} selectedId={selectedId} onSelect={handleSelect} risks={risks} width={tableWidth} />
 
-      {/* Loading skeleton rows */}
-      {isLoading && (
-        <>
-          <style>{`@keyframes ganttPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }`}</style>
-          {SKELETON_ROW_WIDTHS.map((rowWidth, i) => (
-            <div
-              key={i}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: i === 0 ? 0 : '8px' }}
-            >
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: `${LABEL_WIDTH}px`,
-                  height: '32px',
-                  backgroundColor: '#E5E7EB',
-                  borderRadius: '4px',
-                  animation: 'ganttPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.08}s`,
-                }}
-              />
-              <div
-                style={{
-                  width: rowWidth,
-                  height: '32px',
-                  backgroundColor: '#E5E7EB',
-                  borderRadius: '4px',
-                  animation: 'ganttPulse 1.5s ease-in-out infinite',
-                  animationDelay: `${i * 0.08 + 0.05}s`,
-                }}
-              />
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && phases.length === 0 && (
-        <EmptyState
-          icon={CalendarDays}
-          title="Build your schedule to track every phase from mobilization to closeout"
-          description="Import your Primavera P6 or MS Project schedule, or create your first phase manually to get started."
-          action={{ label: 'Import from P6/MS Project', onClick: onImportSchedule ?? (() => {}) }}
-          secondaryAction={{ label: 'Create First Phase', onClick: onAddActivity ?? (() => {}) }}
-        />
-      )}
-
-      {/* Controls */}
-      {!isLoading && phases.length > 0 && (<>
-      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
-        {zoomLevelProp === undefined && (
-        <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2 }}>
-          {(['day', 'week', 'month', 'quarter'] as TimeScale[]).map(scale => (
-            <button
-              key={scale}
-              aria-label={`View by ${scale}`}
-              aria-pressed={timeScale === scale}
-              onClick={() => setTimeScale(scale)}
-              style={{
-                padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
-                backgroundColor: timeScale === scale ? colors.surfaceRaised : 'transparent',
-                color: timeScale === scale ? colors.textPrimary : colors.textTertiary,
-                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                fontFamily: typography.fontFamily, cursor: 'pointer',
-                boxShadow: timeScale === scale ? shadows.sm : 'none',
-                textTransform: 'capitalize',
-              }}
-            >
-              {scale.charAt(0).toUpperCase() + scale.slice(1)}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {showBaselineProp === undefined && (
-          <button
-            aria-label={showBaseline ? 'Hide baseline schedule' : 'Show baseline schedule'}
-            aria-pressed={showBaseline}
-            onClick={() => setShowBaselineInternal(!showBaselineInternal)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: spacing['1'],
-              padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.full,
-              backgroundColor: showBaseline ? `${colors.statusInfo}14` : 'transparent',
-              color: showBaseline ? colors.statusInfo : colors.textTertiary,
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-              fontFamily: typography.fontFamily, cursor: 'pointer',
-            }}
-          >
-            <GitBranch size={12} /> {showBaseline ? 'Hide Baseline' : 'Show Baseline'}
-          </button>
-        )}
-
-        <button
-          aria-label={showCriticalOnly ? 'Show all activities' : 'Filter to critical path only'}
-          aria-pressed={showCriticalOnly}
-          onClick={() => setShowCriticalOnly(!showCriticalOnly)}
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleResizeStart}
           style={{
-            display: 'flex', alignItems: 'center', gap: spacing['1'],
-            padding: `${spacing['1']} ${spacing['3']}`, borderRadius: borderRadius.full,
-            border: showCriticalOnly ? '1px solid #EF4444' : '1px solid transparent',
-            backgroundColor: showCriticalOnly ? '#EF444414' : 'transparent',
-            color: showCriticalOnly ? '#EF4444' : colors.textTertiary,
-            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-            fontFamily: typography.fontFamily, cursor: 'pointer',
+            width: 6, cursor: 'col-resize', flexShrink: 0,
+            backgroundColor: 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 11, position: 'relative',
+            transition: 'background-color 150ms ease',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${colors.primaryOrange}15`; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
+          <div style={{
+            width: 2, height: 32, borderRadius: 1,
+            backgroundColor: colors.borderDefault,
+            transition: 'background-color 150ms ease',
+          }} />
+        </div>
+
+        {/* Right timeline */}
+        <div
+          ref={timelineRef}
+          style={{
+            flex: 1, overflow: 'auto', position: 'relative',
+            scrollBehavior: 'smooth',
           }}
         >
-          Critical Path Only
-        </button>
-
-        {/* Legend */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: spacing['3'], flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Baseline — always visible so ghost bars on the chart are always explained */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: colors.borderDefault, opacity: 0.7 }} />
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
-          </div>
-          {/* Actual */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ width: 16, height: 6, borderRadius: 2, backgroundColor: colors.primaryOrange }} />
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actual</span>
-          </div>
-          {/* Critical Path */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ width: 16, height: 12, borderLeft: '3px solid #EF4444', paddingLeft: 2 }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: 2, backgroundColor: '#EF4444', opacity: 0.3 }} />
-            </div>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical Path</span>
-          </div>
-          {/* Float */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: 10, height: 6, borderRadius: '2px 0 0 2px', backgroundColor: colors.statusInfo }} />
-              <div style={{ width: 8, height: 6, borderRadius: '0 2px 2px 0', backgroundColor: colors.statusInfo, opacity: 0.15 }} />
-            </div>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Float</span>
-          </div>
-        </div>
-      </div>
-
-      {/* No-baseline banner */}
-      {showBaseline && !hasBaselineData && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: spacing['2'],
-          padding: `${spacing['2']} ${spacing['3']}`, marginBottom: spacing['3'],
-          backgroundColor: `${colors.statusPending}10`, borderRadius: borderRadius.md,
-          border: `1px solid ${colors.statusPending}30`,
-        }}>
-          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending }}>
-            No baseline set. Click Set Baseline to snapshot current schedule.
-          </span>
-        </div>
-      )}
-
-      {/* Timeline */}
-      <div style={{ overflowX: 'auto', minHeight: '400px' }}>
-        <div style={{ minWidth: `${LABEL_WIDTH + totalTrackWidth}px`, position: 'relative' }}>
-
-          {/* Time labels header */}
-          <div role="row" style={{ display: 'flex', marginBottom: spacing['2'] }}>
-            <div role="columnheader" scope="col" aria-label="Activity" style={{ width: LABEL_WIDTH, flexShrink: 0, position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 7 }} />
-            <div role="columnheader" scope="col" aria-label="Timeline" ref={probeRef} style={{ width: totalTrackWidth, flexShrink: 0, position: 'relative', height: 20 }}>
-              {timeLabels.map(tl => (
-                <span
-                  key={tl.label + tl.offset}
-                  style={{
-                    position: 'absolute', left: `${tl.offset}px`, transform: 'translateX(-50%)',
-                    fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap',
-                  }}
-                >
-                  {tl.label}
-                </span>
+          {/* Sticky header */}
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 10,
+            background: colors.surfaceInset,
+            borderBottom: `1px solid ${colors.borderDefault}`,
+          }}>
+            {/* Top row: months/years */}
+            <div style={{ display: 'flex', height: HEADER_H / 2, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+              {monthHeaders.map(h => (
+                <div key={h.key} style={{
+                  width: h.width, minWidth: h.width,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: typography.fontWeight.semibold,
+                  color: colors.textSecondary,
+                  borderRight: `1px solid ${colors.borderSubtle}`,
+                  letterSpacing: typography.letterSpacing.wide,
+                }}>
+                  {h.label}
+                </div>
               ))}
             </div>
-            <div role="columnheader" scope="col" style={{
-              width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
-              paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            }}>
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
-                Slip
-              </span>
-            </div>
-            <div role="columnheader" scope="col" style={{
-              width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right',
-              paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            }}>
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
-                Float
-              </span>
-            </div>
-            {showBaseline && (
-              <div role="columnheader" scope="col" style={{
-                width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
-                paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-              }}>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
-                  Bsln Start
-                </span>
-              </div>
-            )}
-            {showBaseline && (
-              <div role="columnheader" scope="col" style={{
-                width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right',
-                paddingRight: spacing['2'], height: 20, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-              }}>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider }}>
-                  Bsln End
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Legend */}
-          <div
-            aria-label="Gantt chart legend"
-            style={{
-              display: 'flex', alignItems: 'center', gap: spacing['4'],
-              paddingLeft: LABEL_WIDTH, paddingBottom: spacing['2'],
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: '#D1D5DB', opacity: 0.5 }} />
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Baseline</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: colors.primaryOrange }} />
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Actual</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-              <div style={{ width: 16, height: 9, borderRadius: 2, backgroundColor: '#EF4444', boxShadow: '0 0 8px rgba(239, 68, 68, 0.3)' }} />
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Critical Path</span>
+            {/* Bottom row: days/weeks */}
+            <div style={{ display: 'flex', height: HEADER_H / 2 }}>
+              {cellHeaders.map(h => (
+                <div key={h.key} style={{
+                  width: h.width, minWidth: h.width,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: typography.fontWeight.medium,
+                  color: h.isWeekend ? `${colors.textTertiary}80` : colors.textTertiary,
+                  borderRight: `1px solid ${colors.borderSubtle}`,
+                  backgroundColor: h.isWeekend ? `${colors.surfaceInset}` : 'transparent',
+                }}>
+                  {h.label}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Phase rows + SVG dependency overlay */}
-          <div
-            ref={ganttGridRef}
-            id="gantt-activities"
-            role="table"
-            aria-label="Project schedule activities"
-            aria-rowcount={localPhases.length}
-            aria-activedescendant={ganttActiveRowId}
-            tabIndex={0}
-            onKeyDown={ganttHandleKeyDown}
-            onFocus={(e) => {
-              if (e.target === e.currentTarget) {
-                const row = e.currentTarget.querySelector<HTMLElement>(`[data-gantt-index="${ganttFocused}"]`);
-                row?.focus();
-              }
-            }}
-            style={{ position: 'relative', outline: 'none' }}
-          >
-            {/* Visually hidden caption — read by screen readers as grid description */}
-            <p style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden', margin: 0 }}>
-              Project schedule. Use J and K to navigate activities, Enter to open details.
-            </p>
+          {/* Timeline body */}
+          <div style={{ position: 'relative', width: totalWidth, minHeight: Math.max(totalHeight, chartHNumeric - HEADER_H) }}>
+            {/* Row zebra striping — extends full visible height */}
+            {Array.from({ length: Math.max(phases.length + 8, Math.ceil((chartHNumeric - HEADER_H) / ROW_H)) }, (_, i) => i).filter(i => i % 2 === 1).map(i => (
+              <div key={`zs-${i}`} style={{
+                position: 'absolute', left: 0, right: 0, top: i * ROW_H, height: ROW_H,
+                backgroundColor: 'rgba(0,0,0,0.016)', pointerEvents: 'none',
+              }} />
+            ))}
 
-            {/* Visually hidden header row so screen readers announce column names */}
-            <div role="row" style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Activity</div>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Schedule</div>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Slippage</div>
-              <div role="columnheader" scope="col" aria-sort="none" style={{}}>Float</div>
-              {showBaseline && <div role="columnheader" scope="col" aria-sort="none" style={{}}>Baseline Start</div>}
-              {showBaseline && <div role="columnheader" scope="col" aria-sort="none" style={{}}>Baseline End</div>}
-            </div>
-
-            {/* SVG overlay for dependency arrows */}
-            {(dependencyArrows.length > 0 || typedDependencyArrows.length > 0) && (
-              <svg
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  left: LABEL_WIDTH,
-                  top: 0,
-                  width: totalTrackWidth,
-                  height: localPhases.length * ROW_HEIGHT,
-                  pointerEvents: 'none',
-                  overflow: 'visible',
-                  zIndex: 5,
-                }}
-              >
-                <defs>
-                  <marker
-                    id={`arr-nc-${uid}`}
-                    markerWidth="6"
-                    markerHeight="6"
-                    refX="5"
-                    refY="3"
-                    orient="auto"
-                  >
-                    <path d="M0,0 L0,6 L6,3 z" fill="#9CA3AF" />
-                  </marker>
-                  <marker
-                    id={`arr-crit-${uid}`}
-                    markerWidth="6"
-                    markerHeight="6"
-                    refX="5"
-                    refY="3"
-                    orient="auto"
-                  >
-                    <path d="M0,0 L0,6 L6,3 z" fill="#E74C3C" />
-                  </marker>
-                  <marker
-                    id={`arr-typed-${uid}`}
-                    markerWidth="6"
-                    markerHeight="6"
-                    refX="5"
-                    refY="3"
-                    orient="auto"
-                  >
-                    <path d="M0,0 L0,6 L6,3 z" fill="#9CA3AF" />
-                  </marker>
-                </defs>
-                {dependencyArrows.map(arrow => (
-                  <path
-                    key={arrow.key}
-                    d={arrow.d}
-                    stroke={arrow.isCritical ? '#E74C3C' : '#9CA3AF'}
-                    strokeWidth="1.5"
-                    fill="none"
-                    opacity={arrow.isCritical ? 0.9 : 0.7}
-                    markerEnd={`url(#${arrow.isCritical ? `arr-crit-${uid}` : `arr-nc-${uid}`})`}
-                  />
-                ))}
-                {typedDependencyArrows.map(arrow => (
-                  <path
-                    key={arrow.key}
-                    d={arrow.d}
-                    stroke="#6B7280"
-                    strokeWidth="1.5"
-                    fill="none"
-                    opacity={0.7}
-                    strokeDasharray={arrow.type === 'SS' || arrow.type === 'FF' ? '4 3' : undefined}
-                    markerEnd={`url(#arr-typed-${uid})`}
-                  />
-                ))}
-              </svg>
-            )}
-
-            {/* Phase rows */}
-            <motion.div
-              role="rowgroup"
-              initial="hidden"
-              animate="visible"
-              variants={{ visible: { transition: { staggerChildren: 0.03 } } }}
-            >
-            {localPhases.map((phase, index) => {
-              const pos = getPhasePos(phase);
-              const barColor = getBarColor(phase);
-              const isHovered = hoveredPhase === phase.id;
-              const isCriticalPathRow = phase.is_critical_path === true || phase.is_critical || phase.floatDays === 0;
-              const phaseRisk = risks.find(r => r.phaseId === phase.id);
-              const phaseDelay = delays.find(d => d.activityId === phase.id && d.predictedSlippageDays > 0);
-              const durationDays = Math.round((new Date(phase.endDate).getTime() - new Date(phase.startDate).getTime()) / DAY_MS);
-              const isMilestoneBar = phase.is_milestone === true || durationDays === 0;
-
+            {/* Weekend shading (day zoom only) */}
+            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h, i) => {
+              const idx = cellHeaders.indexOf(h);
               return (
-                <motion.div
-                  key={phase.id}
-                  id={`${uid}-gantt-row-${index}`}
-                  data-gantt-index={index}
-                  role="row"
-                  aria-rowindex={index + 1}
-                  aria-selected={selectedIds.has(phase.id)}
-                  aria-label={`${(phase.critical || phase.is_critical) ? 'Critical path activity: ' : ''}${phase.name}: ${new Date(phase.startDate).toLocaleDateString()} to ${new Date(phase.endDate).toLocaleDateString()}, ${phase.progress}% complete${phase.floatDays != null ? `, ${phase.floatDays} days float` : ''}`}
-                  tabIndex={0}
-                  className="gantt-phase-row"
-                  variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: { duration: 0.2 } } }}
-                  style={{
-                    display: showCriticalOnly && !isCriticalPathRow ? 'none' : 'flex',
-                    alignItems: 'center', marginBottom: spacing['1'], position: 'relative',
-                    borderLeft: isCriticalPathRow ? '3px solid #E74C3C' : '3px solid transparent',
-                    paddingLeft: isCriticalPathRow ? spacing['2'] : 0,
-                    outline: 'none',
-                  }}
-                  onMouseEnter={() => setHoveredPhase(phase.id)}
-                  onMouseLeave={() => setHoveredPhase(null)}
-                  onFocus={e => { setHoveredPhase(phase.id); e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primaryOrange}50`; }}
-                  onBlur={e => { setHoveredPhase(null); e.currentTarget.style.boxShadow = 'none'; }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') { e.preventDefault(); onPhaseClick?.(phase); }
-                  }}
-                >
-                  {/* Label */}
-                  <div role="cell" style={{ width: `${LABEL_WIDTH}px`, flexShrink: 0, paddingRight: spacing['3'], position: 'sticky', left: 0, backgroundColor: colors.surfaceRaised, zIndex: 6 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {isCriticalPathRow && !phase.completed && (
-                        <span style={{
-                          fontSize: '10px', fontWeight: 700,
-                          backgroundColor: '#EF4444', color: '#fff',
-                          padding: '0 4px', borderRadius: '3px',
-                          lineHeight: '16px', flexShrink: 0,
-                        }}>CP</span>
-                      )}
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: isCriticalPathRow ? typography.fontWeight.bold : typography.fontWeight.medium, color: colors.textPrimary }}>
-                        {phase.name}
-                      </span>
-                      {getAnnotationsForEntity('schedule_phase', phase.id).map(ann => (
-                        <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                      ))}
-                      {phaseRisk && (
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <button
-                            aria-label={`Risk: ${phaseRisk.likelihoodPercent}% likelihood, ${phaseRisk.impactDays} day impact. ${phaseRisk.reason}`}
-                            onMouseEnter={e => { e.stopPropagation(); setRiskTooltipPhase(phase.id); }}
-                            onMouseLeave={() => setRiskTooltipPhase(null)}
-                            onFocus={() => setRiskTooltipPhase(phase.id)}
-                            onBlur={() => setRiskTooltipPhase(null)}
-                            style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                          >
-                            <Zap size={12} color={colors.primaryOrange} fill={colors.primaryOrange} />
-                          </button>
-                          {riskTooltipPhase === phase.id && (
-                            <div style={{
-                              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                              marginBottom: 6, padding: `${spacing['2']} ${spacing['3']}`,
-                              backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.md,
-                              boxShadow: shadows.dropdown, zIndex: 20,
-                              width: 240, pointerEvents: 'none',
-                            }}>
-                              <p style={{ margin: 0, fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange, fontSize: typography.fontSize.caption }}>
-                                {phaseRisk.likelihoodPercent}% likely, +{phaseRisk.impactDays}d impact
-                              </p>
-                              <p style={{ margin: 0, marginTop: 3, fontSize: typography.fontSize.caption, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                                {phaseRisk.reason}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: 2 }}>
-                      {!isMilestoneBar && (
-                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{phase.progress}%</span>
-                      )}
-                      {phase.floatDays != null && (
-                        <span style={{
-                          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                          backgroundColor: phase.floatDays === 0 ? `${colors.statusCritical}18` : `${colors.statusInfo}12`,
-                          color: phase.floatDays === 0 ? colors.statusCritical : colors.statusInfo,
-                          padding: `0 4px`, borderRadius: borderRadius.sm, lineHeight: '16px',
-                        }}>
-                          {phase.floatDays}d float
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Track */}
-                  <div
-                    className="gantt-phase-track"
-                    style={{
-                      width: totalTrackWidth, flexShrink: 0, height: 32, position: 'relative',
-                      backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onPhaseClick?.(phase)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPhaseClick?.(phase); } }}
-                  >
-                    {/* Baseline ghost bar — visible when showBaseline is true and baseline data exists */}
-                    {showBaseline && (() => {
-                      const bStart = phase.baselineStartDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineStartDate ?? null);
-                      const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
-                      if (!bStart || !bEnd) return null;
-                      const bLeft = Math.round(((new Date(bStart).getTime() - timelineStart) / DAY_MS) * pxPerDay);
-                      const bWidth = Math.max(Math.round(((new Date(bEnd).getTime() - new Date(bStart).getTime()) / DAY_MS) * pxPerDay), 2);
-                      return (
-                        <div aria-hidden="true" style={{
-                          position: 'absolute', top: 2,
-                          height: 4,
-                          left: `${bLeft}px`, width: `${bWidth}px`,
-                          background: 'rgba(156, 163, 175, 0.5)',
-                          borderRadius: 2, pointerEvents: 'none',
-                          zIndex: 0,
-                        }} />
-                      );
-                    })()}
-
-                    {/* Milestone diamond */}
-                    {isMilestoneBar ? (
-                      <div
-                        role="img"
-                        aria-label={`${phase.name}: ${phase.startDate} to ${phase.endDate}, milestone${phase.critical || phase.is_critical ? ', CRITICAL PATH' : ''}`}
-                        style={{
-                          position: 'absolute',
-                          left: `${pos.left}px`,
-                          top: '50%',
-                          transform: 'translate(-50%, -50%) rotate(45deg)',
-                          width: 14, height: 14,
-                          backgroundColor: colors.primaryOrange,
-                          zIndex: 2,
-                        }}
-                      />
-                    ) : null}
-                    {/* Milestone label to the right of the diamond */}
-                    {isMilestoneBar && (
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          position: 'absolute',
-                          left: `${pos.left + 12}px`,
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.semibold,
-                          color: colors.primaryOrange,
-                          whiteSpace: 'nowrap',
-                          pointerEvents: 'none',
-                          zIndex: 3,
-                        }}
-                      >
-                        {phase.name}
-                      </span>
-                    )}
-                    {!isMilestoneBar && (() => {
-                      const barStatus = phase.completed
-                        ? 'complete'
-                        : (phase.slippageDays ?? 0) > 0
-                          ? 'delayed'
-                          : phase.critical || phase.is_critical
-                            ? 'critical path'
-                            : 'on track';
-                      const fmtDate = (d: string) =>
-                        new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      return (
-                      /* Regular phase bar */
-                      <div
-                        role="cell"
-                        data-gantt-bar="true"
-                        aria-label={`${phase.name}, ${fmtDate(phase.startDate)} to ${fmtDate(phase.endDate)}, ${phase.progress}% complete, ${barStatus}`}
-                        tabIndex={0}
-                        title={isCriticalPathRow
-                          ? 'Critical Path \u2014 0 days float'
-                          : phase.floatDays != null
-                            ? `Float: ${phase.floatDays} days`
-                            : undefined}
-                        style={{
-                          position: 'absolute', top: 4, bottom: 4,
-                          left: `${pos.left}px`, width: `${pos.width}px`,
-                          borderRadius: borderRadius.sm, overflow: 'visible',
-                          border: 'none',
-                          boxShadow: isCriticalPathRow
-                            ? '0 0 8px rgba(239, 68, 68, 0.3)'
-                            : isHovered ? `0 0 0 2px ${barColor}30` : 'none',
-                          transition: `box-shadow ${transitions.instant}`,
-                          outline: 'none',
-                          cursor: 'pointer',
-                        }}
-                        onFocus={e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${barColor}60`; }}
-                        onBlur={e => { e.currentTarget.style.boxShadow = isHovered ? `0 0 0 2px ${barColor}30` : 'none'; }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            onPhaseClick?.(phase);
-                          } else if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            ganttGridRef.current
-                              ?.querySelector<HTMLElement>(`[data-gantt-index="${index + 1}"]`)
-                              ?.querySelector<HTMLElement>('[data-gantt-bar]')
-                              ?.focus();
-                          } else if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            ganttGridRef.current
-                              ?.querySelector<HTMLElement>(`[data-gantt-index="${index - 1}"]`)
-                              ?.querySelector<HTMLElement>('[data-gantt-bar]')
-                              ?.focus();
-                          }
-                        }}
-                      >
-                        {/* Bar fill */}
-                        <div style={{ position: 'absolute', inset: 0, backgroundColor: barColor, opacity: 0.25, borderRadius: borderRadius.sm }} />
-                        {/* Progress fill */}
-                        <div
-                          role="progressbar"
-                          aria-valuenow={phase.progress}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label={`${phase.name} progress`}
-                          style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${phase.progress}%`, backgroundColor: barColor, borderRadius: borderRadius.sm }}
-                        />
-
-                        {/* Float extension bar */}
-                        {phase.floatDays > 0 && (
-                          <div
-                            aria-hidden="true"
-                            style={{
-                              position: 'absolute', top: 0, bottom: 0,
-                              left: '100%',
-                              width: `${phase.floatDays * pxPerDay}px`,
-                              backgroundColor: barColor,
-                              opacity: 0.12,
-                              borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
-                              pointerEvents: 'none',
-                            }}
-                          />
-                        )}
-
-                        {/* Variance badge: red when late vs baseline, green when ahead */}
-                        {phase.baselineEndDate != null ? (() => {
-                          const varDays = Math.ceil((new Date(phase.endDate).getTime() - new Date(phase.baselineEndDate).getTime()) / 86400000);
-                          if (varDays === 0) return null;
-                          return (
-                            <div aria-hidden="true" style={{
-                              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                              backgroundColor: varDays > 0 ? colors.statusCritical : colors.statusActive, color: '#fff',
-                              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                              padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
-                              lineHeight: '16px', whiteSpace: 'nowrap', pointerEvents: 'none',
-                            }}>
-                              {varDays > 0 ? `+${varDays}d` : `${varDays}d`}
-                            </div>
-                          );
-                        })() : (phase.slippageDays ?? 0) > 0 ? (
-                          <div aria-hidden="true" style={{
-                            position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                            backgroundColor: colors.statusCritical, color: '#fff',
-                            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                            padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
-                            lineHeight: '16px', whiteSpace: 'nowrap', pointerEvents: 'none',
-                          }}>
-                            +{phase.slippageDays}d
-                          </div>
-                        ) : null}
-
-                        {/* Predicted delay warning badge */}
-                        {phaseDelay && (
-                          <div style={{
-                            position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-                            zIndex: 3,
-                          }}>
-                            <button
-                              aria-label={`Predicted delay: ${phaseDelay.predictedSlippageDays} day${phaseDelay.predictedSlippageDays > 1 ? 's' : ''} slippage. ${phaseDelay.reasons.join('. ')}`}
-                              onMouseEnter={e => { e.stopPropagation(); setDelayTooltipPhase(phase.id); }}
-                              onMouseLeave={() => setDelayTooltipPhase(null)}
-                              onFocus={() => setDelayTooltipPhase(phase.id)}
-                              onBlur={() => setDelayTooltipPhase(null)}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: 2,
-                                backgroundColor: '#FEF08A', border: '1px solid #CA8A04',
-                                borderRadius: 3, padding: '0 4px', lineHeight: '16px',
-                                fontSize: 10, fontWeight: 700, color: '#92400E',
-                                cursor: 'pointer', whiteSpace: 'nowrap',
-                                fontFamily: 'inherit',
-                              }}
-                            >
-                              {`\u26A0 +${phaseDelay.predictedSlippageDays}d`}
-                            </button>
-                            {delayTooltipPhase === phase.id && (
-                              <div style={{
-                                position: 'absolute', bottom: '100%', left: 0,
-                                marginBottom: 6, padding: '8px 12px',
-                                backgroundColor: '#FEFCE8', border: '1px solid #CA8A04',
-                                borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-                                zIndex: 20, width: 260, pointerEvents: 'none',
-                              }}>
-                                <p style={{ margin: 0, fontWeight: 700, color: '#92400E', fontSize: 11 }}>
-                                  {`Predicted delay: +${phaseDelay.predictedSlippageDays}d`}
-                                </p>
-                                <ul style={{ margin: '4px 0 0', paddingLeft: 14, fontSize: 11, color: '#713F12', lineHeight: 1.5 }}>
-                                  {phaseDelay.reasons.map((r, ri) => (
-                                    <li key={ri}>{r}</li>
-                                  ))}
-                                </ul>
-                                <p style={{ margin: '6px 0 0', fontSize: 11, color: '#78350F', fontStyle: 'italic' }}>
-                                  {phaseDelay.suggestedAction}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Completion end-cap diamond */}
-                        {phase.progress === 100 && (
-                          <div style={{
-                            position: 'absolute', right: -5, top: '50%', width: 10, height: 10,
-                            backgroundColor: colors.statusActive, transform: 'translateY(-50%) rotate(45deg)',
-                            border: `2px solid ${colors.surfaceRaised}`,
-                          }} />
-                        )}
-
-                        {/* Left drag handle */}
-                        {canDrag && (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Adjust start date of ${phase.name}`}
-                            style={{
-                              position: 'absolute', left: 0, top: 0, bottom: 0, width: 6,
-                              backgroundColor: barColor, filter: 'brightness(0.65)',
-                              borderRadius: `${borderRadius.sm} 0 0 ${borderRadius.sm}`,
-                              cursor: 'col-resize', zIndex: 2,
-                            }}
-                            onMouseDown={e => startDrag(e, phase.id, 'start')}
-                            onTouchStart={e => startDrag(e, phase.id, 'start')}
-                            onKeyDown={e => handleBarKeyDown(e, phase)}
-                          />
-                        )}
-
-                        {/* Right drag handle */}
-                        {canDrag && (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Adjust end date of ${phase.name}`}
-                            style={{
-                              position: 'absolute', right: 0, top: 0, bottom: 0, width: 6,
-                              backgroundColor: barColor, filter: 'brightness(0.65)',
-                              borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
-                              cursor: 'col-resize', zIndex: 2,
-                            }}
-                            onMouseDown={e => startDrag(e, phase.id, 'end')}
-                            onTouchStart={e => startDrag(e, phase.id, 'end')}
-                            onKeyDown={e => handleBarKeyDown(e, phase)}
-                          />
-                        )}
-                      </div>
-                      );
-                    })()}
-
-                    {/* Cascade highlight */}
-                    {isCascadeAffected && (
-                      <div style={{
-                        position: 'absolute', top: 0, bottom: 0, left: `${pos.left}px`, width: `${pos.width}px`,
-                        backgroundColor: `${colors.statusReview}08`,
-                        borderRadius: borderRadius.sm, pointerEvents: 'none',
-                      }}>
-                        <div style={{
-                          position: 'absolute', top: -16, left: '50%', transform: 'translateX(-50%)',
-                          fontSize: typography.fontSize.caption, color: colors.statusReview, fontWeight: typography.fontWeight.semibold,
-                          backgroundColor: colors.surfaceRaised, padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm,
-                          whiteSpace: 'nowrap', boxShadow: shadows.sm,
-                        }}>
-                          Cascade affected
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Baseline variance text next to bar */}
-                    {showBaseline && !isMilestoneBar && (() => {
-                      const bEnd = phase.baselineEndDate ?? (baselinePhases?.find(b => b.id === phase.id)?.baselineEndDate ?? null);
-                      if (!bEnd) return null;
-                      const variance = Math.round((new Date(phase.endDate).getTime() - new Date(bEnd).getTime()) / DAY_MS);
-                      if (variance === 0) return null;
-                      return (
-                        <div aria-hidden="true" style={{
-                          position: 'absolute',
-                          left: `${pos.left + pos.width + 4}px`,
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: '10px',
-                          fontWeight: 600,
-                          color: variance > 0 ? '#E74C3C' : '#4EC896',
-                          whiteSpace: 'nowrap',
-                          pointerEvents: 'none',
-                          zIndex: 4,
-                        }}>
-                          {variance > 0 ? `+${variance}d` : `${variance}d`}
-                        </div>
-                      );
-                    })()}
-
-                    {/* Today marker */}
-                    {todayPx > 0 && todayPx < totalTrackWidth && (
-                      <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayPx}px`, width: 1, borderLeft: '2px dashed #F47820', opacity: 0.8, pointerEvents: 'none' }} />
-                    )}
-
-                    {/* Float pill below bar */}
-                    {phase.floatDays != null && (
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          position: 'absolute',
-                          top: 30,
-                          left: `${pos.left}px`,
-                          fontSize: '12px',
-                          color: phase.floatDays === 0 ? '#E74C3C' : '#6B7280',
-                          backgroundColor: phase.floatDays === 0 ? '#FEE2E2' : '#F3F4F6',
-                          padding: '0 5px',
-                          borderRadius: '10px',
-                          lineHeight: '16px',
-                          whiteSpace: 'nowrap',
-                          pointerEvents: 'none',
-                          zIndex: 4,
-                        }}
-                      >
-                        {phase.floatDays}d float
-                      </div>
-                    )}
-
-                    {/* Hover popover */}
-                    {isHovered && !activeDrag && (
-                      <div style={{
-                        position: 'absolute', bottom: '100%', left: `${pos.left + pos.width / 2}px`,
-                        transform: 'translateX(-50%)', marginBottom: 4,
-                        padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceRaised,
-                        borderRadius: borderRadius.md, boxShadow: shadows.dropdown,
-                        whiteSpace: 'nowrap', zIndex: 10, fontSize: typography.fontSize.caption,
-                        border: `1px solid ${colors.borderSubtle}`,
-                      }}>
-                        <p style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>{phase.name}</p>
-                        <p style={{ color: colors.textSecondary, margin: 0, marginTop: 3 }}>
-                          {new Date(phase.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          {' \u2013 '}
-                          {new Date(phase.endDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </p>
-                        {!isMilestoneBar && (
-                          <p style={{ color: barColor, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 3 }}>{phase.progress}% complete</p>
-                        )}
-                        {isMilestoneBar && (
-                          <p style={{ color: colors.primaryOrange, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 3 }}>Milestone</p>
-                        )}
-                        {phase.floatDays != null && (
-                          <p style={{ color: phase.floatDays === 0 ? colors.statusCritical : colors.textTertiary, margin: 0, marginTop: 3 }}>
-                            {phase.floatDays} {phase.floatDays === 1 ? 'day' : 'days'} float
-                          </p>
-                        )}
-                        {(phase.critical || phase.is_critical) && (
-                          <p style={{ color: colors.statusCritical, fontWeight: typography.fontWeight.semibold, margin: 0, marginTop: 3 }}>Critical Path</p>
-                        )}
-                        {(phase.slippageDays ?? 0) > 0 && <p style={{ color: colors.statusCritical, margin: 0, marginTop: 3 }}>Slippage: +{phase.slippageDays}d</p>}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Slippage column */}
-                  {(() => {
-                    const slip = phase.slippage_days;
-                    if (slip == null) {
-                      return (
-                        <div role="cell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
-                        </div>
-                      );
-                    }
-                    const slipColor = slip > 0 ? '#E74C3C' : '#4EC896';
-                    const slipLabel = slip > 0 ? `+${slip}d` : slip === 0 ? '0d' : `${slip}d`;
-                    return (
-                      <div role="cell" style={{ width: SLIPPAGE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                        <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: slipColor }}>
-                          {slipLabel}
-                        </span>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Float column */}
-                  {(() => {
-                    const fd = phase.floatDays;
-                    if (fd === 0) {
-                      return (
-                        <div role="cell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                          <span style={{
-                            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                            backgroundColor: '#E74C3C18', color: '#E74C3C',
-                            padding: '0 5px', borderRadius: borderRadius.sm, lineHeight: '16px',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            0d CRITICAL
-                          </span>
-                        </div>
-                      );
-                    }
-                    if (fd <= 2) {
-                      return (
-                        <div role="cell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                          <span style={{
-                            fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                            backgroundColor: `${colors.statusPending}18`, color: colors.statusPending,
-                            padding: '0 5px', borderRadius: borderRadius.sm, lineHeight: '16px',
-                          }}>
-                            {fd}d
-                          </span>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div role="cell" style={{ width: FLOAT_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                          {fd}d
-                        </span>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Baseline Start column */}
-                  {showBaseline && (() => {
-                    const bStart = phase.baselineStartDate;
-                    if (!bStart) {
-                      return (
-                        <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
-                        </div>
-                      );
-                    }
-                    const variance = Math.ceil((new Date(phase.startDate).getTime() - new Date(bStart).getTime()) / 86400000);
-                    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    return (
-                      <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtDate(bStart)}</span>
-                          {variance !== 0 && (
-                            <span style={{
-                              fontSize: '10px', fontWeight: typography.fontWeight.semibold,
-                              color: variance > 0 ? '#E74C3C' : '#4EC896',
-                              backgroundColor: variance > 0 ? '#FEE2E2' : '#D1FAE5',
-                              padding: '0 4px', borderRadius: borderRadius.sm, lineHeight: '16px',
-                            }}>
-                              {variance > 0 ? `+${variance}d` : `${variance}d`}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Baseline End column */}
-                  {showBaseline && (() => {
-                    const bEnd = phase.baselineEndDate;
-                    if (!bEnd) {
-                      return (
-                        <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>—</span>
-                        </div>
-                      );
-                    }
-                    const variance = Math.ceil((new Date(phase.endDate).getTime() - new Date(bEnd).getTime()) / 86400000);
-                    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    return (
-                      <div role="cell" style={{ width: BASELINE_DATE_COL_WIDTH, flexShrink: 0, textAlign: 'right', paddingRight: spacing['2'] }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtDate(bEnd)}</span>
-                          {variance !== 0 && (
-                            <span style={{
-                              fontSize: '10px', fontWeight: typography.fontWeight.semibold,
-                              color: variance > 0 ? '#E74C3C' : '#4EC896',
-                              backgroundColor: variance > 0 ? '#FEE2E2' : '#D1FAE5',
-                              padding: '0 4px', borderRadius: borderRadius.sm, lineHeight: '16px',
-                            }}>
-                              {variance > 0 ? `+${variance}d` : `${variance}d`}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </motion.div>
+                <div key={`we-${h.key}`} style={{
+                  position: 'absolute', left: idx * cellW, top: 0, bottom: 0,
+                  width: cellW, backgroundColor: 'rgba(0,0,0,0.015)',
+                  pointerEvents: 'none',
+                }} />
               );
             })}
-            </motion.div>{/* end rowgroup */}
+
+            {/* Grid lines */}
+            {cellHeaders.map((h, i) => (
+              <div key={`gl-${h.key}`} style={{
+                position: 'absolute', left: i * cellW, top: 0, bottom: 0,
+                width: 1, background: `${colors.borderSubtle}40`,
+                pointerEvents: 'none',
+              }} />
+            ))}
+
+            {/* Dependency arrows */}
+            <DependencyArrows phases={phases} chartStart={chartStart} pxPerDay={pxPerDay} />
+
+            {/* Today marker */}
+            <TodayMarker chartStart={chartStart} pxPerDay={pxPerDay} totalHeight={totalHeight} />
+
+            {/* Phase bars — virtualized: only visible rows rendered */}
+            {phases.map((phase, i) => {
+              if (i < visibleStartIdx || i > visibleEndIdx) return null;
+              return (
+                <GanttRow
+                  key={phase.id}
+                  phase={phase}
+                  chartStart={chartStart}
+                  pxPerDay={pxPerDay}
+                  rowIndex={i}
+                  onSelect={handleSelect}
+                  selected={phase.id === selectedId}
+                  showBaseline={showBaselineProp}
+                  hasRisk={riskIds.has(phase.id)}
+                  onDragStart={handleDragStart}
+                />
+              );
+            })}
           </div>
-
-          {/* Today line label */}
-          {todayPx > 0 && todayPx < totalTrackWidth && (
-            <div style={{ paddingLeft: `${LABEL_WIDTH}px`, position: 'relative', height: 16, marginTop: spacing['1'] }}>
-              <div style={{ position: 'absolute', left: `${todayPx}px`, transform: 'translateX(-50%)' }}>
-                <span style={{ fontSize: typography.fontSize.caption, color: '#F47820', fontWeight: typography.fontWeight.semibold, backgroundColor: '#F4782012', padding: `0 ${spacing['1']}`, borderRadius: borderRadius.sm }}>Today</span>
-              </div>
-            </div>
-          )}
-
-          {/* Resource Histogram */}
-          <div style={{ marginTop: spacing['5'], paddingLeft: `${LABEL_WIDTH}px` }}>
-            <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, marginBottom: spacing['2'] }}>Resource Loading</p>
-            <div style={{ display: 'flex', gap: spacing['2'] }}>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', height: 64, paddingRight: spacing['1'], flexShrink: 0 }}>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>200</span>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>100</span>
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>0</span>
-              </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2, height: 64 }}>
-                {resourceData.map((val, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      flex: 1, height: `${(val / maxResource) * 100}%`,
-                      backgroundColor: val > maxResource * 0.8 ? colors.statusCritical : val > maxResource * 0.5 ? colors.statusPending : colors.statusInfo,
-                      borderRadius: '2px 2px 0 0', opacity: 0.6,
-                      minHeight: val > 0 ? 2 : 0,
-                      transition: `height ${transitions.quick}`,
-                    }}
-                    title={`${val} workers`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div style={{ paddingLeft: '28px', marginTop: spacing['1'] }}>
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Workers</span>
-            </div>
-          </div>
-
         </div>
+
+        {/* Phase detail panel */}
+        {detailPhase && (
+          <PhaseDetailPanel phase={detailPhase} onClose={closeDetail} risks={risks} />
+        )}
       </div>
-      </>)}
+
+      {/* Footer summary */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: `${spacing['3']} ${spacing['1']}`,
+        fontSize: typography.fontSize.caption, color: colors.textTertiary,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
+          <span>{phases.length} {phases.length === 1 ? 'activity' : 'activities'}</span>
+          {phases.some(p => p.is_critical_path || p.critical) && (
+            <>
+              <span style={{ width: 1, height: 12, backgroundColor: colors.borderDefault }} />
+              <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                <span style={{ width: 8, height: 4, backgroundColor: '#FCA5A5', borderRadius: 1 }} />
+                {phases.filter(p => p.is_critical_path || p.critical).length} critical path
+              </span>
+            </>
+          )}
+          {risks.length > 0 && (
+            <>
+              <span style={{ width: 1, height: 12, backgroundColor: colors.borderDefault }} />
+              <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#EF4444' }} />
+                {risks.length} risk{risks.length !== 1 ? 's' : ''}
+              </span>
+            </>
+          )}
+        </div>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {Math.round(phases.reduce((s, p) => s + (p.progress ?? 0), 0) / phases.length)}% overall
+        </span>
+      </div>
     </div>
   );
 };
+
+export default GanttChart;

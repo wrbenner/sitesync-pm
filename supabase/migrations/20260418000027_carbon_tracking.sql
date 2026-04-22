@@ -11,7 +11,15 @@ CREATE TABLE IF NOT EXISTS carbon_factors (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_carbon_factors_cat ON carbon_factors(material_category);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'carbon_factors' AND column_name = 'material_category') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_carbon_factors_cat ON carbon_factors(material_category);
+
+  END IF;
+
+END $$;
 
 CREATE TABLE IF NOT EXISTS project_carbon_entries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,8 +37,20 @@ CREATE TABLE IF NOT EXISTS project_carbon_entries (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_pce_project ON project_carbon_entries(project_id);
-CREATE INDEX IF NOT EXISTS idx_pce_scope ON project_carbon_entries(scope);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'project_carbon_entries' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_pce_project ON project_carbon_entries(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'project_carbon_entries' AND column_name = 'scope') THEN
+    CREATE INDEX IF NOT EXISTS idx_pce_scope ON project_carbon_entries(scope);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS leed_credits (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,7 +65,15 @@ CREATE TABLE IF NOT EXISTS leed_credits (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_leed_project ON leed_credits(project_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'leed_credits' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_leed_project ON leed_credits(project_id);
+
+  END IF;
+
+END $$;
 
 ALTER TABLE carbon_factors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE project_carbon_entries ENABLE ROW LEVEL SECURITY;

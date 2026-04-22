@@ -732,18 +732,17 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     try {
       const { data: rows } = await supabase
         .from('daily_logs')
-        .select('workers_onsite, visitors, crew_entries, equipment_entries')
+        .select('id, workers_onsite, daily_log_entries(type, company, trade, headcount, hours)')
         .eq('project_id', projectId)
         .order('log_date', { ascending: false })
         .limit(1)
       if (rows && rows.length > 0) {
         const prev = rows[0] as {
           workers_onsite?: number
-          visitors?: string
-          crew_entries?: Array<{ trade?: string; company?: string; headcount?: number; hours?: number }>
-          equipment_entries?: unknown[]
+          daily_log_entries?: Array<{ type?: string | null; company?: string | null; trade?: string | null; headcount?: number | null; hours?: number | null }>
         }
-        const seeded: CrewRow[] = (prev.crew_entries ?? []).map(c => ({
+        const prevCrew = (prev.daily_log_entries ?? []).filter(e => e.type === 'crew')
+        const seeded: CrewRow[] = prevCrew.map(c => ({
           id: crypto.randomUUID(),
           trade: c.trade ?? '',
           company: c.company ?? '',
@@ -754,7 +753,6 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         setForm(f => ({
           ...f,
           crew_count: prev.workers_onsite ?? f.crew_count,
-          visitors: prev.visitors ?? f.visitors,
         }))
         toast.success('Copied crew and entries from previous log')
       }

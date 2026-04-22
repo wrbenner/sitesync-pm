@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { MapPin, Circle, Ruler, Type, Undo2, MousePointer, Save, Pen, MessageSquarePlus, ChevronUp, ChevronDown } from 'lucide-react';
+import { MapPin, Highlighter, Ruler, Type, Undo2, MousePointer, Save, Pen, MessageSquarePlus, ChevronUp, ChevronDown, Square, Hash, Crosshair, Spline } from 'lucide-react';
 import { colors, spacing, borderRadius, transitions, shadows } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
-export type MarkupTool = 'select' | 'pin' | 'highlight' | 'measure' | 'text' | 'draw';
+export type MarkupTool = 'select' | 'pin' | 'highlight' | 'measure' | 'text' | 'draw' | 'area' | 'count' | 'calibrate' | 'path';
 
 interface MarkupToolbarProps {
   activeTool: MarkupTool;
@@ -12,21 +12,32 @@ interface MarkupToolbarProps {
   canUndo: boolean;
   onSave?: () => void;
   isSaving?: boolean;
+  /** Whether there's anything to save. Drives the Save button state independently of undo. */
+  canSave?: boolean;
+  /** Number of unsaved annotations — shown as a badge on the Save button. */
+  unsavedCount?: number;
   onCreateRFI?: () => void;
 }
 
 const tools: { id: MarkupTool; icon: React.ReactNode; label: string; ariaLabel: string }[] = [
   { id: 'select', icon: <MousePointer size={18} />, label: 'Select', ariaLabel: 'Select and pan tool' },
+  { id: 'measure', icon: <Ruler size={18} />, label: 'Tape', ariaLabel: 'Tape measure tool' },
+  { id: 'path', icon: <Spline size={18} />, label: 'Path', ariaLabel: 'Measure distance along a non-straight path' },
+  { id: 'area', icon: <Square size={18} />, label: 'Area', ariaLabel: 'Area and perimeter polygon tool' },
+  { id: 'count', icon: <Hash size={18} />, label: 'Count', ariaLabel: 'Count tool' },
+  { id: 'calibrate', icon: <Crosshair size={18} />, label: 'Calibrate', ariaLabel: 'Calibrate scale by two known points' },
   { id: 'pin', icon: <MapPin size={18} />, label: 'Pin', ariaLabel: 'Pin markup tool' },
-  { id: 'highlight', icon: <Circle size={18} />, label: 'Highlight', ariaLabel: 'Cloud markup tool' },
-  { id: 'measure', icon: <Ruler size={18} />, label: 'Measure', ariaLabel: 'Measure markup tool' },
+  { id: 'highlight', icon: <Highlighter size={18} />, label: 'Highlight', ariaLabel: 'Highlight tool' },
   { id: 'text', icon: <Type size={18} />, label: 'Text', ariaLabel: 'Text annotation tool' },
   { id: 'draw', icon: <Pen size={18} />, label: 'Draw', ariaLabel: 'Pen tool' },
 ];
 
 export const MarkupToolbar: React.FC<MarkupToolbarProps> = ({
-  activeTool, onToolChange, onUndo, canUndo, onSave, isSaving, onCreateRFI,
+  activeTool, onToolChange, onUndo, canUndo, onSave, isSaving, canSave, unsavedCount, onCreateRFI,
 }) => {
+  // Derive effective save enablement. If caller passes canSave explicitly, honor it;
+  // otherwise fall back to canUndo (legacy callers).
+  const saveEnabled = !!onSave && !isSaving && (canSave ?? canUndo);
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [expanded, setExpanded] = useState(true);
 
@@ -109,20 +120,36 @@ export const MarkupToolbar: React.FC<MarkupToolbarProps> = ({
             {onSave && (
               <button
                 onClick={onSave}
-                disabled={isSaving || !canUndo}
-                title="Save markups"
+                disabled={!saveEnabled}
+                title={isSaving ? 'Saving…' : unsavedCount ? `Save ${unsavedCount}` : 'Save markups'}
                 aria-label={isSaving ? 'Saving markups' : 'Save markups'}
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  position: 'relative',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   minWidth: 44, height: 44, flexShrink: 0,
                   border: 'none', borderRadius: borderRadius.full,
-                  backgroundColor: (!isSaving && canUndo) ? colors.primaryOrange : 'transparent',
-                  color: (!isSaving && canUndo) ? colors.white : colors.borderDefault,
-                  cursor: (!isSaving && canUndo) ? 'pointer' : 'default',
+                  backgroundColor: saveEnabled ? colors.primaryOrange : 'transparent',
+                  color: saveEnabled ? colors.white : colors.borderDefault,
+                  cursor: saveEnabled ? 'pointer' : 'default',
+                  padding: unsavedCount ? '0 14px' : '0 10px',
+                  fontSize: 13, fontWeight: 600,
                   transition: `all ${transitions.instant}`,
+                  opacity: isSaving ? 0.7 : 1,
                 }}
               >
                 <Save size={18} />
+                {!!unsavedCount && unsavedCount > 0 && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 20, height: 20, padding: '0 6px',
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(255,255,255,0.25)',
+                    color: colors.white,
+                    fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  }}>
+                    {unsavedCount}
+                  </span>
+                )}
               </button>
             )}
 
@@ -207,19 +234,37 @@ export const MarkupToolbar: React.FC<MarkupToolbarProps> = ({
           <div style={{ width: 1, height: 24, backgroundColor: colors.borderSubtle, margin: `0 ${spacing['1']}` }} />
           <button
             onClick={onSave}
-            disabled={isSaving || !canUndo}
-            title="Save markups"
+            disabled={!saveEnabled}
+            title={isSaving ? 'Saving…' : unsavedCount ? `Save ${unsavedCount} markup${unsavedCount === 1 ? '' : 's'}` : 'Nothing to save'}
             aria-label={isSaving ? 'Saving markups' : 'Save markups'}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 36, height: 36, border: 'none', borderRadius: borderRadius.full,
-              backgroundColor: (!isSaving && canUndo) ? colors.primaryOrange : 'transparent',
-              color: (!isSaving && canUndo) ? colors.white : colors.borderDefault,
-              cursor: (!isSaving && canUndo) ? 'pointer' : 'default',
+              position: 'relative',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              height: 36, border: 'none', borderRadius: borderRadius.full,
+              backgroundColor: saveEnabled ? colors.primaryOrange : colors.surfaceRaised,
+              color: saveEnabled ? colors.white : colors.borderDefault,
+              cursor: saveEnabled ? 'pointer' : 'default',
+              padding: unsavedCount ? '0 14px 0 12px' : '0 10px',
+              fontSize: 13, fontWeight: 600,
               transition: `all ${transitions.instant}`,
+              opacity: isSaving ? 0.7 : 1,
             }}
           >
             <Save size={16} />
+            <span>{isSaving ? 'Saving…' : 'Save'}</span>
+            {!!unsavedCount && unsavedCount > 0 && !isSaving && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 20, height: 20, padding: '0 6px',
+                borderRadius: 10,
+                backgroundColor: 'rgba(255,255,255,0.25)',
+                color: colors.white,
+                fontSize: 11, fontWeight: 700,
+                lineHeight: 1,
+              }}>
+                {unsavedCount}
+              </span>
+            )}
           </button>
         </>
       )}

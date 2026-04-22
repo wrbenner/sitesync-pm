@@ -59,7 +59,7 @@ export function useUpdateRFI() {
       if (typeof updates.status === 'string') {
         await validateRfiStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('rfis').update(updates).eq('id', id)
+      const { error } = await from('rfis').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -89,7 +89,7 @@ export function useDeleteRFI() {
     entityType: 'rfi',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('rfis').delete().eq('id', id)
+      const { error } = await from('rfis').delete().eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

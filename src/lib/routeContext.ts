@@ -123,16 +123,16 @@ async function rfisContext(projectId: string): Promise<Partial<RouteContext>> {
       .lt('due_date', now)
       .then((r) => r.count ?? 0),
     fromTable('rfis')
-      .select('created_at, responded_at')
+      .select('created_at, closed_date')
       .eq('project_id', projectId)
-      .not('responded_at', 'is', null)
+      .not('closed_date', 'is', null)
       .limit(200)
       .then((r) => {
-        const rows = (r.data as Array<{ created_at: string; responded_at: string }> | null) ?? []
+        const rows = (r.data as Array<{ created_at: string; closed_date: string }> | null) ?? []
         if (rows.length === 0) return null
         const avgMs =
           rows.reduce(
-            (a, row) => a + (new Date(row.responded_at).getTime() - new Date(row.created_at).getTime()),
+            (a, row) => a + (new Date(row.closed_date).getTime() - new Date(row.created_at).getTime()),
             0,
           ) / rows.length
         return Math.round(avgMs / (1000 * 60 * 60 * 24))
@@ -166,18 +166,18 @@ async function dashboardContext(projectId: string): Promise<Partial<RouteContext
     countRows('tasks', projectId, { status: 'in_progress' }).catch(() => 0),
     countRows('rfis', projectId, { status: 'open' }).catch(() => 0),
     fromTable('tasks')
-      .select('id, name, due_date')
+      .select('id, title, due_date')
       .eq('project_id', projectId)
-      .eq('is_milestone', true)
+      .eq('is_critical_path', true)
       .gte('due_date', new Date().toISOString())
       .order('due_date')
       .limit(3)
-      .then((r) => ((r.data as Array<{ id: string; name: string; due_date: string }> | null) ?? [])),
+      .then((r) => ((r.data as Array<{ id: string; title: string; due_date: string }> | null) ?? [])),
     countRows('safety_incidents', projectId).catch(() => 0),
   ])
 
   return {
-    summary: `${tasks} tasks in progress, ${openRfis} open RFIs. Next milestones: ${upcomingMilestones.map((m) => m.name).join(', ') || 'none'}.`,
+    summary: `${tasks} tasks in progress, ${openRfis} open RFIs. Next milestones: ${upcomingMilestones.map((m) => m.title).join(', ') || 'none'}.`,
     facts: {
       tasks_in_progress: tasks,
       open_rfis: openRfis,
@@ -200,7 +200,7 @@ async function scheduleContext(projectId: string): Promise<Partial<RouteContext>
     fromTable('tasks')
       .select('id', { count: 'exact', head: true })
       .eq('project_id', projectId)
-      .neq('status', 'completed')
+      .neq('status', 'done')
       .lt('due_date', new Date().toISOString())
       .then((r) => r.count ?? 0),
     countRows('tasks', projectId, { is_critical_path: true }).catch(() => 0),

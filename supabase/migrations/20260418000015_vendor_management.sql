@@ -19,9 +19,25 @@ CREATE TABLE IF NOT EXISTS vendors (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_vendors_project ON vendors(project_id);
-CREATE INDEX IF NOT EXISTS idx_vendors_status ON vendors(status);
-CREATE INDEX IF NOT EXISTS idx_vendors_trade ON vendors(trade);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vendors' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_vendors_project ON vendors(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vendors' AND column_name = 'status') THEN
+    CREATE INDEX IF NOT EXISTS idx_vendors_status ON vendors(status);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vendors' AND column_name = 'trade') THEN
+    CREATE INDEX IF NOT EXISTS idx_vendors_trade ON vendors(trade);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS vendor_evaluations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -37,7 +53,15 @@ CREATE TABLE IF NOT EXISTS vendor_evaluations (
   evaluated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_vendor_evaluations_vendor ON vendor_evaluations(vendor_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vendor_evaluations' AND column_name = 'vendor_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_vendor_evaluations_vendor ON vendor_evaluations(vendor_id);
+
+  END IF;
+
+END $$;
 
 ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vendor_evaluations ENABLE ROW LEVEL SECURITY;

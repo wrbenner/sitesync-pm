@@ -33,14 +33,10 @@ export type CreatePhaseInput = {
   name: string;
   start_date?: string;
   end_date?: string;
-  baseline_start?: string;
-  baseline_end?: string;
   percent_complete?: number;
   is_critical_path?: boolean;
-  is_milestone?: boolean;
   depends_on?: string | null;
   assigned_crew_id?: string | null;
-  float_days?: number;
 };
 
 export type ScheduleServiceResult<T = void> = {
@@ -48,20 +44,30 @@ export type ScheduleServiceResult<T = void> = {
   error: string | null;
 };
 
-// Augmented insert type includes columns added by the schedule service migration.
-// These exist in the DB after 20260416000003_schedule_service_layer.sql but are
-// not yet reflected in the auto-generated database.ts.
-type AugmentedInsert = SchedulePhaseInsert & {
-  created_by?: string | null;
-  is_milestone?: boolean;
-};
+type AugmentedInsert = SchedulePhaseInsert;
 
 type AugmentedUpdate = SchedulePhaseUpdate & {
-  updated_by?: string | null;
   deleted_at?: string | null;
   deleted_by?: string | null;
-  is_milestone?: boolean;
 };
+
+/** Columns that actually exist on schedule_phases — writes get filtered against this allowlist. */
+const SCHEDULE_PHASE_COLUMNS = new Set([
+  'project_id', 'name', 'description', 'status',
+  'start_date', 'end_date', 'actual_start', 'actual_end',
+  'percent_complete', 'float_days', 'lag_days',
+  'is_critical', 'is_critical_path', 'is_milestone',
+  'assigned_crew_id', 'depends_on', 'dependency_type', 'predecessor_ids',
+  'updated_at', 'deleted_at', 'deleted_by',
+]);
+
+function sanitizeSchedulePhaseData(data: Record<string, unknown>): Record<string, unknown> {
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (SCHEDULE_PHASE_COLUMNS.has(key)) clean[key] = value;
+  }
+  return clean;
+}
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -82,9 +88,8 @@ export const scheduleService = {
   },
 
   /**
-   * Load milestone phases (is_milestone = true) for a project.
-   * Filters in-memory because is_milestone is a migration-added column not yet
-   * in the generated Supabase types.
+   * Load critical-path phases for a project.
+   * Filters in-memory on is_critical_path.
    */
   async loadMilestones(projectId: string): Promise<ScheduleServiceResult<unknown[]>> {
     const { data, error } = await supabase
@@ -95,7 +100,7 @@ export const scheduleService = {
       .order('end_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
-    const milestones = (data ?? []).filter((p) => (p as Record<string, unknown>)['is_milestone']);
+    const milestones = (data ?? []).filter((p) => (p as Record<string, unknown>)['is_critical_path']);
     return { data: milestones, error: null };
   },
 
@@ -103,23 +108,16 @@ export const scheduleService = {
    * Create a new phase in 'planned' status with provenance.
    */
   async createPhase(input: CreatePhaseInput): Promise<ScheduleServiceResult<unknown>> {
-    const userId = await getCurrentUserId();
-
     const payload: AugmentedInsert = {
       project_id: input.project_id,
       name: input.name,
       status: 'planned' satisfies ScheduleStatus,
       start_date: input.start_date ?? null,
       end_date: input.end_date ?? null,
-      baseline_start: input.baseline_start ?? null,
-      baseline_end: input.baseline_end ?? null,
       percent_complete: input.percent_complete ?? 0,
       is_critical_path: input.is_critical_path ?? false,
       depends_on: input.depends_on ?? null,
       assigned_crew_id: input.assigned_crew_id ?? null,
-      float_days: input.float_days ?? null,
-      created_by: userId,
-      is_milestone: input.is_milestone ?? false,
     };
 
     const { data, error } = await supabase
@@ -174,7 +172,6 @@ export const scheduleService = {
     // 4. Execute transition with provenance
     const updates: AugmentedUpdate = {
       status: newStatus,
-      updated_by: userId,
       ...(newStatus === 'completed' ? { percent_complete: 100 } : {}),
     };
 
@@ -195,13 +192,10 @@ export const scheduleService = {
     phaseId: string,
     updates: Partial<CreatePhaseInput>,
   ): Promise<ScheduleServiceResult> {
-    const userId = await getCurrentUserId();
-    const { ...safeUpdates } = updates as Record<string, unknown>;
-
-    const payload: AugmentedUpdate = {
-      ...safeUpdates,
-      updated_by: userId,
-    };
+    const payload = sanitizeSchedulePhaseData({
+      ...(updates as Record<string, unknown>),
+      updated_at: new Date().toISOString(),
+    });
 
     const { error } = await supabase
       .from('schedule_phases')
@@ -213,19 +207,12 @@ export const scheduleService = {
   },
 
   /**
-   * Soft-delete a phase. Sets deleted_at and deleted_by.
+   * Delete a phase.
    */
   async deletePhase(phaseId: string): Promise<ScheduleServiceResult> {
-    const userId = await getCurrentUserId();
-
-    const payload: AugmentedUpdate = {
-      deleted_at: new Date().toISOString(),
-      deleted_by: userId,
-    };
-
     const { error } = await supabase
       .from('schedule_phases')
-      .update(payload as unknown as SchedulePhaseUpdate)
+      .delete()
       .eq('id', phaseId);
 
     if (error) return { data: null, error: error.message };
@@ -233,19 +220,16 @@ export const scheduleService = {
   },
 
   /**
-   * Update the dependency graph for a phase.
-   * Sets both depends_on (primary predecessor) and dependencies (full list).
+   * Update phase dependencies. Writes the full array to `predecessor_ids`
+   * and mirrors the first one to `depends_on` for legacy single-FK readers.
    */
   async updateDependencies(
     phaseId: string,
     predecessorIds: string[],
   ): Promise<ScheduleServiceResult> {
-    const userId = await getCurrentUserId();
-
     const payload: AugmentedUpdate = {
-      dependencies: predecessorIds,
       depends_on: predecessorIds[0] ?? null,
-      updated_by: userId,
+      predecessor_ids: predecessorIds.length > 0 ? predecessorIds : null,
     };
 
     const { error } = await supabase

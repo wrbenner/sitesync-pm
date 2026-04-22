@@ -37,8 +37,8 @@ export interface WeatherData {
 }
 
 const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || ''
-const DEFAULT_LAT = 40.7128 // New York (project site default)
-const DEFAULT_LON = -74.0060
+const DEFAULT_LAT = 32.7767 // Dallas, TX (most projects are in Texas)
+const DEFAULT_LON = -96.7970
 
 const conditionsMap: Record<string, string> = {
   Clear: 'Clear',
@@ -68,9 +68,8 @@ const iconMap: Record<string, string> = {
 }
 
 // Fetch current weather for a project by lat/lon and return a WeatherSnapshot.
-// Uses the OWM 5-day/3-hour forecast endpoint (free tier) so we get
-// precipitation probability (pop). Falls back to defaults if the API is
-// unavailable — in that case weather_source is 'manual' so no badge appears.
+// Tries OWM first (if key available), then Open-Meteo (free, no key).
+// Falls back to defaults only if both fail.
 export async function fetchWeatherForProject(
   _projectId: string,
   lat?: number,
@@ -79,42 +78,82 @@ export async function fetchWeatherForProject(
   const useLat = lat ?? DEFAULT_LAT
   const useLon = lon ?? DEFAULT_LON
 
-  if (!OPENWEATHER_API_KEY) {
-    return getDefaultSnapshot()
+  // 1. Try OpenWeatherMap if key available
+  if (OPENWEATHER_API_KEY) {
+    try {
+      const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${useLat}&lon=${useLon}&cnt=8&units=imperial&appid=${OPENWEATHER_API_KEY}`
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
+      if (res.ok) {
+        const data = await res.json()
+        const items: Record<string, unknown>[] = data.list ?? []
+        if (items.length > 0) {
+          const first = items[0] as Record<string, Record<string, number>>
+          const mainEntry = (first.weather as unknown as { main: string }[])?.[0]?.main || 'Clear'
+          const allTemps = items.map(h => ((h as Record<string, Record<string, number>>).main?.temp ?? 0)).filter(Boolean)
+          const tempHigh = allTemps.length ? Math.round(Math.max(...allTemps)) : Math.round(first.main?.temp_max ?? 75)
+          const tempLow = allTemps.length ? Math.round(Math.min(...allTemps)) : Math.round(first.main?.temp_min ?? 55)
+          const maxPop = Math.max(...items.map(h => ((h as Record<string, number>).pop as number) ?? 0))
+          return {
+            conditions: conditionsMap[mainEntry] || mainEntry,
+            temperature_high: tempHigh,
+            temperature_low: tempLow,
+            wind_speed: Math.round((first.wind as Record<string, number>)?.speed ?? 0),
+            precipitation_probability: Math.round(maxPop * 100),
+            weather_source: 'api',
+            weather_fetched_at: new Date().toISOString(),
+          }
+        }
+      }
+    } catch {
+      // OWM failed — fall through to Open-Meteo
+    }
   }
 
+  // 2. Fallback: Open-Meteo (free, no API key)
   try {
-    // cnt=8 gives one full day of 3-hour intervals
-    const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${useLat}&lon=${useLon}&cnt=8&units=imperial&appid=${OPENWEATHER_API_KEY}`
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) })
-    if (!res.ok) return getDefaultSnapshot()
-
-    const data = await res.json()
-    const items: Record<string, unknown>[] = data.list ?? []
-    if (!items.length) return getDefaultSnapshot()
-
-    const first = items[0] as Record<string, Record<string, number>>
-    const mainEntry = (first.weather as unknown as { main: string }[])?.[0]?.main || 'Clear'
-
-    const allTemps = items.map(h => ((h as Record<string, Record<string, number>>).main?.temp ?? 0)).filter(Boolean)
-    const tempHigh = allTemps.length ? Math.round(Math.max(...allTemps)) : Math.round(first.main?.temp_max ?? 75)
-    const tempLow = allTemps.length ? Math.round(Math.min(...allTemps)) : Math.round(first.main?.temp_min ?? 55)
-
-    // pop is 0–1 in OWM; take the max across the day
-    const maxPop = Math.max(...items.map(h => ((h as Record<string, number>).pop as number) ?? 0))
-
-    return {
-      conditions: conditionsMap[mainEntry] || mainEntry,
-      temperature_high: tempHigh,
-      temperature_low: tempLow,
-      wind_speed: Math.round((first.wind as Record<string, number>)?.speed ?? 0),
-      precipitation_probability: Math.round(maxPop * 100),
-      weather_source: 'api',
-      weather_fetched_at: new Date().toISOString(),
+    const today = new Date().toISOString().split('T')[0]
+    const params = new URLSearchParams({
+      latitude: String(useLat),
+      longitude: String(useLon),
+      daily: 'temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode',
+      temperature_unit: 'fahrenheit',
+      windspeed_unit: 'mph',
+      timezone: 'auto',
+      start_date: today,
+      end_date: today,
+    })
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      const data: {
+        daily?: {
+          weathercode?: number[]
+          temperature_2m_max?: number[]
+          temperature_2m_min?: number[]
+          windspeed_10m_max?: number[]
+          precipitation_probability_max?: number[]
+        }
+      } = await res.json()
+      const d = data.daily
+      if (d) {
+        const wmo = d.weathercode?.[0] ?? 0
+        return {
+          conditions: WMO_CONDITIONS[wmo] ?? 'Clear',
+          temperature_high: Math.round(d.temperature_2m_max?.[0] ?? 75),
+          temperature_low: Math.round(d.temperature_2m_min?.[0] ?? 55),
+          wind_speed: Math.round(d.windspeed_10m_max?.[0] ?? 0),
+          precipitation_probability: Math.round(d.precipitation_probability_max?.[0] ?? 0),
+          weather_source: 'api',
+          weather_fetched_at: new Date().toISOString(),
+        }
+      }
     }
   } catch {
-    return getDefaultSnapshot()
+    // Open-Meteo also failed
   }
+
+  return getDefaultSnapshot()
 }
 
 function getDefaultSnapshot(): WeatherSnapshot {
@@ -134,32 +173,82 @@ export async function fetchWeather(lat?: number, lon?: number): Promise<WeatherD
   const useLat = lat ?? DEFAULT_LAT
   const useLon = lon ?? DEFAULT_LON
 
-  if (!OPENWEATHER_API_KEY) {
-    return getDefaultWeather()
+  // 1. Try OpenWeatherMap if key is available
+  if (OPENWEATHER_API_KEY) {
+    try {
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${useLat}&lon=${useLon}&units=imperial&appid=${OPENWEATHER_API_KEY}`
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+      if (res.ok) {
+        const data = await res.json()
+        const main = data.weather?.[0]?.main || 'Clear'
+        return {
+          temp_high: Math.round(data.main?.temp_max ?? 75),
+          temp_low: Math.round(data.main?.temp_min ?? 55),
+          conditions: conditionsMap[main] || main,
+          precipitation: data.rain?.['1h'] ? `${data.rain['1h']}mm` : data.snow?.['1h'] ? `${data.snow['1h']}mm` : '0mm',
+          wind_speed: `${Math.round(data.wind?.speed ?? 0)} mph`,
+          icon: iconMap[main] || '☀️',
+          humidity: data.main?.humidity ?? 50,
+          fetched_at: new Date().toISOString(),
+          source: 'openweathermap',
+        }
+      }
+    } catch {
+      // OWM failed — try Open-Meteo
+    }
   }
 
+  // 2. Fallback to Open-Meteo (free, no API key)
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${useLat}&lon=${useLon}&units=imperial&appid=${OPENWEATHER_API_KEY}`
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-    if (!res.ok) return getDefaultWeather()
-
-    const data = await res.json()
-    const main = data.weather?.[0]?.main || 'Clear'
-
-    return {
-      temp_high: Math.round(data.main?.temp_max ?? 75),
-      temp_low: Math.round(data.main?.temp_min ?? 55),
-      conditions: conditionsMap[main] || main,
-      precipitation: data.rain?.['1h'] ? `${data.rain['1h']}mm` : data.snow?.['1h'] ? `${data.snow['1h']}mm` : '0mm',
-      wind_speed: `${Math.round(data.wind?.speed ?? 0)} mph`,
-      icon: iconMap[main] || '☀️',
-      humidity: data.main?.humidity ?? 50,
-      fetched_at: new Date().toISOString(),
-      source: 'openweathermap',
+    const today = new Date().toISOString().split('T')[0]
+    const params = new URLSearchParams({
+      latitude: String(useLat),
+      longitude: String(useLon),
+      daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,weathercode',
+      temperature_unit: 'fahrenheit',
+      windspeed_unit: 'mph',
+      precipitation_unit: 'inch',
+      timezone: 'auto',
+      start_date: today,
+      end_date: today,
+    })
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      const data: {
+        daily?: {
+          weathercode?: number[]
+          temperature_2m_max?: number[]
+          temperature_2m_min?: number[]
+          windspeed_10m_max?: number[]
+          precipitation_sum?: number[]
+        }
+      } = await res.json()
+      const d = data.daily
+      if (d) {
+        const wmo = d.weathercode?.[0] ?? 0
+        const cond = WMO_CONDITIONS[wmo] ?? 'Clear'
+        const wmoToIcon: Record<number, string> = { 0: '☀️', 1: '☀️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '❄️', 73: '❄️', 75: '❄️', 80: '🌧️', 81: '🌧️', 82: '🌧️', 95: '⛈️', 96: '⛈️', 99: '⛈️' }
+        const precip = d.precipitation_sum?.[0] ?? 0
+        return {
+          temp_high: Math.round(d.temperature_2m_max?.[0] ?? 75),
+          temp_low: Math.round(d.temperature_2m_min?.[0] ?? 55),
+          conditions: cond,
+          precipitation: precip > 0 ? `${precip}"` : '0mm',
+          wind_speed: `${Math.round(d.windspeed_10m_max?.[0] ?? 0)} mph`,
+          icon: wmoToIcon[wmo] ?? '☀️',
+          humidity: 50,
+          fetched_at: new Date().toISOString(),
+          source: 'openweathermap', // keep type-compat
+        }
+      }
     }
   } catch {
-    return getDefaultWeather()
+    // Open-Meteo also failed
   }
+
+  return getDefaultWeather()
 }
 
 // Fetch weather for a specific log date using project coordinates.
@@ -280,6 +369,7 @@ export async function getWeatherForecast(
   if (!OPENWEATHER_API_KEY) return defaultForecast(numDays);
 
   try {
+    // TODO: accept lat/lon params from the project; for now use defaults
     const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${DEFAULT_LAT}&lon=${DEFAULT_LON}&units=imperial&appid=${OPENWEATHER_API_KEY}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return defaultForecast(numDays);
@@ -451,8 +541,8 @@ export async function fetchWeatherForDate(
 }
 
 /**
- * Fetch a 5-day daily forecast using Open-Meteo (free, no API key).
- * Cached in localStorage keyed by start date and coordinates.
+ * Fetch a 5-day daily forecast using Open-Meteo (free, no API key required).
+ * Falls back to OpenWeatherMap if available, then to defaults.
  */
 export async function fetchWeatherForecast5Day(lat: number, lon: number): Promise<WeatherDay[]> {
   const today = new Date()
@@ -461,10 +551,8 @@ export async function fetchWeatherForecast5Day(lat: number, lon: number): Promis
     d.setDate(today.getDate() + i)
     return d.toISOString().split('T')[0]
   })
-  const startDate = dates[0]
-  const endDate = dates[4]
 
-  const cacheKey = `forecast5:${startDate}:${lat.toFixed(3)}:${lon.toFixed(3)}`
+  const cacheKey = `forecast5:${dates[0]}:${lat.toFixed(3)}:${lon.toFixed(3)}`
   const cached = readCache<WeatherDay[]>(cacheKey)
   if (cached) return cached
 
@@ -472,19 +560,29 @@ export async function fetchWeatherForecast5Day(lat: number, lon: number): Promis
     date, temp_high: 75, temp_low: 55, conditions: 'Clear', icon: '☀️', precip_probability: 10,
   }))
 
-  const wmoIconMap: Record<string, string> = {
-    Clear: '☀️', 'Partly Cloudy': '⛅', Cloudy: '☁️', Fog: '🌫️',
-    'Light Rain': '🌦️', Rain: '🌧️', 'Heavy Rain': '🌧️',
-    Snow: '❄️', 'Heavy Snow': '❄️', Thunderstorm: '⛈️',
+  // WMO code → icon mapping for Open-Meteo
+  const wmoIcon = (code: number): string => {
+    if (code <= 1) return '☀️'
+    if (code <= 3) return '⛅'
+    if (code <= 48) return '🌫️'
+    if (code <= 55) return '🌦️'
+    if (code <= 65) return '🌧️'
+    if (code <= 75) return '❄️'
+    if (code <= 82) return '🌧️'
+    if (code <= 99) return '⛈️'
+    return '☀️'
   }
 
+  // 1. Try Open-Meteo (free, no API key)
   try {
+    const startDate = dates[0]
+    const endDate = dates[dates.length - 1]
     const params = new URLSearchParams({
       latitude: String(lat),
       longitude: String(lon),
-      daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+      daily: 'temperature_2m_max,temperature_2m_min,precipitation_probability_max,windspeed_10m_max,weathercode',
       temperature_unit: 'fahrenheit',
-      precipitation_unit: 'inch',
+      windspeed_unit: 'mph',
       timezone: 'auto',
       start_date: startDate,
       end_date: endDate,
@@ -492,39 +590,80 @@ export async function fetchWeatherForecast5Day(lat: number, lon: number): Promis
     const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, {
       signal: AbortSignal.timeout(5000),
     })
-    if (!res.ok) return fallback()
+    if (res.ok) {
+      const data: {
+        daily?: {
+          time?: string[]
+          weathercode?: number[]
+          temperature_2m_max?: number[]
+          temperature_2m_min?: number[]
+          precipitation_probability_max?: number[]
+          windspeed_10m_max?: number[]
+        }
+      } = await res.json()
 
-    const data: {
-      daily?: {
-        time?: string[]
-        weathercode?: number[]
-        temperature_2m_max?: number[]
-        temperature_2m_min?: number[]
-        precipitation_probability_max?: number[]
+      const d = data.daily
+      if (d && d.time && d.time.length > 0) {
+        const result: WeatherDay[] = d.time.map((date, i) => {
+          const wmo = d.weathercode?.[i] ?? 0
+          const cond = WMO_CONDITIONS[wmo] ?? 'Clear'
+          return {
+            date,
+            temp_high: Math.round(d.temperature_2m_max?.[i] ?? 75),
+            temp_low: Math.round(d.temperature_2m_min?.[i] ?? 55),
+            conditions: cond,
+            icon: wmoIcon(wmo),
+            precip_probability: Math.round(d.precipitation_probability_max?.[i] ?? 0),
+          }
+        })
+        writeCache(cacheKey, result)
+        return result
       }
-    } = await res.json()
-
-    const d = data.daily
-    if (!d) return fallback()
-
-    const result: WeatherDay[] = (d.time ?? dates).map((date: string, i: number) => {
-      const wmo: number = d.weathercode?.[i] ?? 0
-      const conditions = WMO_CONDITIONS[wmo] ?? 'Clear'
-      return {
-        date,
-        temp_high: Math.round(d.temperature_2m_max?.[i] ?? 75),
-        temp_low: Math.round(d.temperature_2m_min?.[i] ?? 55),
-        conditions,
-        icon: wmoIconMap[conditions] ?? '☀️',
-        precip_probability: Math.round(d.precipitation_probability_max?.[i] ?? 10),
-      }
-    })
-
-    writeCache(cacheKey, result)
-    return result
+    }
   } catch {
-    return fallback()
+    // Open-Meteo failed — try OWM fallback
   }
+
+  // 2. Fallback: OpenWeatherMap (if API key available)
+  if (OPENWEATHER_API_KEY) {
+    try {
+      const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=imperial&appid=${OPENWEATHER_API_KEY}`
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+      if (res.ok) {
+        const data = await res.json()
+        const byDate: Record<string, { temps: number[]; pops: number[]; mains: string[] }> = {}
+        for (const item of (data.list ?? [])) {
+          const date: string = (item.dt_txt as string)?.split(' ')[0]
+          if (!date) continue
+          if (!byDate[date]) byDate[date] = { temps: [], pops: [], mains: [] }
+          byDate[date].temps.push(item.main?.temp ?? 70)
+          byDate[date].pops.push((item.pop ?? 0) * 100)
+          byDate[date].mains.push(item.weather?.[0]?.main || 'Clear')
+        }
+        const result: WeatherDay[] = dates.map((date) => {
+          const entry = byDate[date]
+          if (!entry || entry.temps.length === 0) {
+            return { date, temp_high: 75, temp_low: 55, conditions: 'Clear', icon: '☀️', precip_probability: 10 }
+          }
+          const midMain = entry.mains[Math.floor(entry.mains.length / 2)] || 'Clear'
+          return {
+            date,
+            temp_high: Math.round(Math.max(...entry.temps)),
+            temp_low: Math.round(Math.min(...entry.temps)),
+            conditions: conditionsMap[midMain] || midMain,
+            icon: iconMap[midMain] || '☀️',
+            precip_probability: Math.round(Math.max(...entry.pops)),
+          }
+        })
+        writeCache(cacheKey, result)
+        return result
+      }
+    } catch {
+      // OWM also failed
+    }
+  }
+
+  return fallback()
 }
 
 export function formatWeatherSummary(w: WeatherData): string {

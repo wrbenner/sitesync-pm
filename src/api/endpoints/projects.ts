@@ -17,14 +17,14 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   const [criticalResult, completionResult] = await Promise.all([
     supabase
       .from('schedule_phases')
-      .select('baseline_end, end_date')
+      .select('end_date, start_date')
       .eq('project_id', projectId)
       .eq('is_critical_path', true)
-      .order('baseline_end', { ascending: false })
+      .order('end_date', { ascending: false })
       .limit(1),
     supabase
       .from('schedule_phases')
-      .select('baseline_start, baseline_end, percent_complete')
+      .select('start_date, end_date, percent_complete')
       .eq('project_id', projectId),
   ])
 
@@ -41,12 +41,14 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   // schedule_variance_days: days behind on last critical path item (positive = late)
   let scheduleVarianceDays: number | null = null
   const last = criticalResult.data?.[0]
-  if (last?.baseline_end) {
-    const plannedEnd = new Date(last.baseline_end)
-    const actualEnd = last.end_date ? new Date(last.end_date) : new Date()
+  if (last?.end_date) {
+    // Use end_date as planned end (baseline columns don't exist in this schema)
+    const plannedEnd = new Date(last.end_date)
+    const now = new Date()
     scheduleVarianceDays = Math.round(
-      (actualEnd.getTime() - plannedEnd.getTime()) / 86400000
+      (now.getTime() - plannedEnd.getTime()) / 86400000
     )
+    // If the phase end is in the future, variance is negative (ahead of schedule)
   }
 
   // COMPUTED: source = financialEngine
@@ -54,10 +56,10 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   let weightedSum = 0
   let totalDuration = 0
   for (const phase of (completionResult.data ?? [])) {
-    if (phase.baseline_start && phase.baseline_end && phase.percent_complete != null) {
+    if (phase.start_date && phase.end_date && phase.percent_complete != null) {
       const duration = Math.max(
         1,
-        (new Date(phase.baseline_end).getTime() - new Date(phase.baseline_start).getTime()) / 86400000
+        (new Date(phase.end_date).getTime() - new Date(phase.start_date).getTime()) / 86400000
       )
       weightedSum += phase.percent_complete * duration
       totalDuration += duration
@@ -70,10 +72,14 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
 
 export async function getProject(projectId: string): Promise<EnrichedProject> {
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
-  const [projectResult, { completionPercentage }] = await Promise.all([
+  const [projectResult, scheduleResult] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
-    fetchScheduleMetrics(projectId),
+    fetchScheduleMetrics(projectId).catch((err) => {
+      if (import.meta.env.DEV) console.warn('fetchScheduleMetrics failed, using defaults:', err)
+      return { scheduleVarianceDays: null, completionPercentage: null }
+    }),
   ])
+  const { completionPercentage } = scheduleResult
   if (projectResult.error) throw transformSupabaseError(projectResult.error)
   const data = projectResult.data
   if (!data) {
@@ -104,7 +110,7 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
   const [projectResult, metricsResult, scheduleMetrics, costData] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
     supabase.from('project_metrics').select('*').eq('project_id', projectId).maybeSingle(),
-    fetchScheduleMetrics(projectId),
+    fetchScheduleMetrics(projectId).catch(() => ({ scheduleVarianceDays: null, completionPercentage: null })),
     fetchBudgetDivisions(projectId).catch(() => null),
   ])
 

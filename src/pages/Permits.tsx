@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { ClipboardCheck, Calendar, Plus, FileText } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
@@ -10,6 +11,7 @@ import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { EntityFormModal, type FieldConfig } from '../components/forms/EntityFormModal'
 import { permitSchema } from '../components/forms/schemas'
+import { supabase } from '../lib/supabase'
 
 type TabKey = 'permits' | 'inspections'
 
@@ -157,10 +159,58 @@ const permitColumns = [
 export const Permits: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('permits')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingPermit, setEditingPermit] = useState<Record<string, unknown> | null>(null)
+  const [editForm, setEditForm] = useState({ type: '', permit_number: '', jurisdiction: '', status: '', fee: '', applied_date: '', expiration_date: '', notes: '' })
   const projectId = useProjectId()
+  const queryClient = useQueryClient()
   const { data: permits, isLoading } = usePermits(projectId)
   const createPermit = useCreatePermit()
   const deletePermit = useDeletePermit()
+
+  const updatePermitMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
+      const { data, error } = await supabase.from('permits').update(updates).eq('id', id).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['permits', projectId] })
+      toast.success('Permit updated')
+      setEditingPermit(null)
+    },
+    onError: (err: Error) => { toast.error(err.message || 'Failed to update permit') },
+  })
+
+  const openEditPermit = (permit: Record<string, unknown>) => {
+    setEditForm({
+      type: String(permit.type ?? ''),
+      permit_number: String(permit.permit_number ?? ''),
+      jurisdiction: String(permit.jurisdiction ?? ''),
+      status: String(permit.status ?? ''),
+      fee: String(permit.fee ?? ''),
+      applied_date: String(permit.applied_date ?? ''),
+      expiration_date: String(permit.expiration_date ?? ''),
+      notes: String(permit.notes ?? ''),
+    })
+    setEditingPermit(permit)
+  }
+
+  const handleEditPermitSave = () => {
+    if (!editingPermit) return
+    updatePermitMutation.mutate({
+      id: String(editingPermit.id),
+      updates: {
+        type: editForm.type || null,
+        permit_number: editForm.permit_number || null,
+        jurisdiction: editForm.jurisdiction || null,
+        status: editForm.status || null,
+        fee: editForm.fee ? parseFloat(editForm.fee) : null,
+        applied_date: editForm.applied_date || null,
+        expiration_date: editForm.expiration_date || null,
+        notes: editForm.notes || null,
+      },
+    })
+  }
 
   const totalPermits = permits?.length || 0
   const activePermits = permits?.filter((p: unknown) => p.status === 'approved').length || 0
@@ -213,18 +263,27 @@ export const Permits: React.FC = () => {
         id: 'actions',
         header: '',
         cell: (info) => (
-          <PermissionGate permission="project.settings">
+          <div style={{ display: 'flex', gap: spacing['1'] }}>
             <Btn
               size="sm"
-              variant="ghost"
-              onClick={() => handleDelete(info.row.original as Record<string, unknown>)}
-              disabled={deletePermit.isPending}
-              aria-label="Delete this permit"
-              data-testid="delete-permit-button"
+              variant="secondary"
+              onClick={() => openEditPermit(info.row.original as Record<string, unknown>)}
             >
-              Delete
+              Edit
             </Btn>
-          </PermissionGate>
+            <PermissionGate permission="project.settings">
+              <Btn
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDelete(info.row.original as Record<string, unknown>)}
+                disabled={deletePermit.isPending}
+                aria-label="Delete this permit"
+                data-testid="delete-permit-button"
+              >
+                Delete
+              </Btn>
+            </PermissionGate>
+          </div>
         ),
       }),
     ],
@@ -380,6 +439,56 @@ export const Permits: React.FC = () => {
         submittingLabel="Creating…"
         draftKey="draft_permit"
       />
+
+      <Modal open={!!editingPermit} onClose={() => setEditingPermit(null)} title="Edit Permit">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Permit Type</label>
+              <select value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })} style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}>
+                <option value="building">Building</option>
+                <option value="electrical">Electrical</option>
+                <option value="mechanical">Mechanical</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="fire">Fire</option>
+                <option value="demolition">Demolition</option>
+                <option value="grading">Grading</option>
+                <option value="environmental">Environmental</option>
+                <option value="occupancy">Occupancy</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <InputField label="Permit #" value={editForm.permit_number} onChange={(v) => setEditForm({ ...editForm, permit_number: v })} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField label="Jurisdiction" value={editForm.jurisdiction} onChange={(v) => setEditForm({ ...editForm, jurisdiction: v })} />
+            <div>
+              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Status</label>
+              <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}>
+                <option value="not_applied">Not Applied</option>
+                <option value="application_submitted">Application Submitted</option>
+                <option value="under_review">Under Review</option>
+                <option value="approved">Approved</option>
+                <option value="denied">Denied</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField label="Fee ($)" value={editForm.fee} onChange={(v) => setEditForm({ ...editForm, fee: v })} type="number" />
+            <InputField label="Applied Date" value={editForm.applied_date} onChange={(v) => setEditForm({ ...editForm, applied_date: v })} type="date" />
+          </div>
+          <InputField label="Expiration Date" value={editForm.expiration_date} onChange={(v) => setEditForm({ ...editForm, expiration_date: v })} type="date" />
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
+            <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, resize: 'vertical', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
+            <Btn variant="secondary" onClick={() => setEditingPermit(null)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleEditPermitSave} loading={updatePermitMutation.isPending}>{updatePermitMutation.isPending ? 'Saving...' : 'Save'}</Btn>
+          </div>
+        </div>
+      </Modal>
     </PageContainer>
   )
 }

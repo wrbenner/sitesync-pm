@@ -9,6 +9,28 @@ type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never,
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
 
+// ── Helpers ───────────────────────────────────────────────
+
+/** Columns that actually exist on the punch_items table */
+const PUNCH_ITEM_COLUMNS = new Set([
+  'title', 'description', 'location', 'floor', 'area', 'assigned_to',
+  'priority', 'status', 'trade', 'photos', 'project_id', 'reported_by',
+  'due_date', 'verified_date', 'resolved_date', 'number',
+  // Extended verification columns (may exist from migrations)
+  'verification_status', 'verified_by', 'verified_at', 'sub_completed_at',
+  'before_photo_url', 'after_photo_url', 'rejection_reason',
+])
+
+/** Strip non-DB fields and convert empty strings to null */
+function sanitizePunchData(data: Record<string, unknown>): Record<string, unknown> {
+  const clean: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(data)) {
+    if (!PUNCH_ITEM_COLUMNS.has(key)) continue
+    clean[key] = typeof value === 'string' && value.trim() === '' ? null : value
+  }
+  return clean
+}
+
 // ── Punch Items ───────────────────────────────────────────
 
 export function useCreatePunchItem() {
@@ -20,7 +42,8 @@ export function useCreatePunchItem() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('punch_items').insert(params.data).select().single()
+      const insertData = sanitizePunchData(params.data)
+      const { data, error } = await from('punch_items').insert(insertData).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
@@ -43,7 +66,8 @@ export function useUpdatePunchItem() {
       if (typeof updates.status === 'string') {
         await validatePunchItemStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('punch_items').update(updates).eq('id', id)
+      const cleanUpdates = sanitizePunchData(updates as Record<string, unknown>)
+      const { error } = await from('punch_items').update(cleanUpdates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -60,7 +84,7 @@ export function useDeletePunchItem() {
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('punch_items').delete().eq('id', id)
+      const { error } = await from('punch_items').delete().eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

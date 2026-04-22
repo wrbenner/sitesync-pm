@@ -737,6 +737,73 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'beta',
   },
 
+  // ── Detail routes (sub-paths under list pages) ──────────
+  {
+    route: '/rfis/:rfiId',
+    pageFile: 'src/pages/rfis/RFIDetail.tsx',
+    title: 'RFI Detail',
+    entity: 'rfi',
+    expected: { has_detail_view: true, has_edit: true },
+    permissionModule: 'rfis',
+    status: 'production',
+  },
+  {
+    route: '/submittals/:submittalId',
+    pageFile: 'src/pages/submittals/SubmittalDetailPage.tsx',
+    title: 'Submittal Detail',
+    entity: 'submittal',
+    expected: { has_detail_view: true, has_edit: true },
+    permissionModule: 'submittals',
+    status: 'production',
+  },
+  {
+    route: '/punch-list/:itemId',
+    pageFile: 'src/pages/punch-list/PunchItemDetailPage.tsx',
+    title: 'Punch Item Detail',
+    entity: 'punch-item',
+    expected: { has_detail_view: true, has_edit: true },
+    permissionModule: 'punch-list',
+    status: 'production',
+  },
+  {
+    route: '/submittals/spec-parser',
+    pageFile: 'src/pages/submittals/SpecParserPage.tsx',
+    title: 'Spec Parser',
+    entity: null,
+    expected: {},
+    permissionModule: 'submittals',
+    status: 'beta',
+  },
+
+  // ── Standalone feature pages missing from registry ──────
+  {
+    route: '/bim',
+    pageFile: 'src/pages/bim/BIMViewerPage.tsx',
+    title: '3D Model Viewer',
+    entity: null,
+    expected: {},
+    permissionModule: 'bim',
+    status: 'beta',
+  },
+  {
+    route: '/compliance',
+    pageFile: 'src/pages/compliance/HUDCompliancePage.tsx',
+    title: 'HUD & Tax Credits',
+    entity: null,
+    expected: {},
+    permissionModule: 'compliance',
+    status: 'beta',
+  },
+  {
+    route: '/site-intelligence',
+    pageFile: 'src/pages/SiteMap.tsx',
+    title: 'Site Intelligence (redirects to /site-map)',
+    entity: null,
+    expected: {},
+    permissionModule: 'site-map',
+    status: 'stub',
+  },
+
   // ── Catch-all ────────────────────────────────────────────
   {
     route: '*',

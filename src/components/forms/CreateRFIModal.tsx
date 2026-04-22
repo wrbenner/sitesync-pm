@@ -20,10 +20,14 @@ const fields: FieldConfig[] = [
     { value: 'critical', label: 'Critical' },
   ]},
   { name: 'assigned_to', label: 'Assigned To', type: 'text', placeholder: 'Name or company to respond', row: 1 },
+  { name: 'ball_in_court', label: 'Ball in Court', type: 'text', placeholder: 'e.g. Architect, Owner, Sub', row: 2 },
   { name: 'spec_section', label: 'Spec Section', type: 'text', placeholder: 'e.g. 05 12 00', row: 2 },
-  { name: 'drawing_reference', label: 'Drawing Reference', type: 'text', placeholder: 'e.g. A 001, S 201', row: 2 },
-  { name: 'due_date', label: 'Due Date', type: 'date' },
-  { name: 'related_submittal_id', label: 'Related Submittal', type: 'text', placeholder: 'Submittal ID (optional)' },
+  { name: 'drawing_reference', label: 'Drawing Reference', type: 'text', placeholder: 'e.g. A 001, S 201', row: 3 },
+  { name: 'due_date', label: 'Due Date', type: 'date', row: 3 },
+  { name: 'response_due_date', label: 'Response Due Date', type: 'date', row: 4 },
+  { name: 'cost_impact', label: 'Cost Impact ($)', type: 'currency', row: 4 },
+  { name: 'schedule_impact', label: 'Schedule Impact (days)', type: 'text', placeholder: 'e.g. +5, -3, or 0', row: 5 },
+  { name: 'related_submittal_id', label: 'Related Submittal', type: 'text', placeholder: 'Submittal ID (optional)', row: 5 },
 ]
 
 const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit, initialValues }) => (

@@ -4,6 +4,7 @@ import type { Variants } from 'framer-motion';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PageContainer, Card, SectionHeader, MetricBox, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { MetricCardSkeleton, TableSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, touchTarget } from '../styles/theme';
@@ -26,9 +27,15 @@ import { Treemap } from '../components/budget/Treemap';
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ArrowRight, DollarSign,  Sparkles, RefreshCw, Pencil } from 'lucide-react';
+import { Download, AlertTriangle, ChevronRight, ChevronDown, ArrowRight, DollarSign, Sparkles, RefreshCw, Pencil, Trash2, ShieldCheck, TrendingUp, TrendingDown, Camera, GitCompare, CheckCircle, XCircle, Clock, Users, Calendar, Layers } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
+import { buildWBSFromDivisions, computeContingency, computeCashFlow, computeMilestoneAlignment, generateSCurveData } from '../lib/budgetComputations';
+import type { WBSNode as ComputedWBSNode } from '../lib/budgetComputations';
+import { budgetSnapshotService } from '../services/budgetSnapshotService';
+import type { BudgetSnapshotRow } from '../services/budgetSnapshotService';
+import { useScheduleActivities } from '../hooks/useScheduleActivities';
 const BudgetUpload = React.lazy(() => import('../components/budget/BudgetUpload').then(m => ({ default: m.BudgetUpload })));
+const DrawReportUpload = React.lazy(() => import('../components/payApplications/DrawReportUpload').then(m => ({ default: m.DrawReportUpload })));
 import EmptyState from '../components/ui/EmptyState';
 import { toast } from 'sonner';
 import { useProjectId } from '../hooks/useProjectId';
@@ -53,12 +60,12 @@ const AddBudgetLineItemModal: React.FC<AddBudgetLineItemModalProps> = ({ project
     setSaving(true); setErr(null);
     try {
       const amt = parseFloat(form.original_amount) || 0;
-      const { error } = await supabase.from('budget_line_items').insert({
+      const { error } = await supabase.from('budget_items').insert({
         project_id: projectId,
         description: form.description,
-        csi_code: form.csi_code || null,
+        csi_division: form.csi_code || null,
+        division: form.csi_code || 'General',
         original_amount: amt,
-        revised_budget: amt,
       });
       if (error) throw error;
       toast.success('Line item added');
@@ -91,6 +98,32 @@ const fmt = (n: number): string => {
   if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n.toLocaleString()}`;
 };
+
+// ── Enterprise Feature Types ──────────────────────
+
+// BudgetSnapshot is now backed by Supabase via budgetSnapshotService
+type BudgetSnapshot = BudgetSnapshotRow;
+
+interface BudgetAmendment {
+  id: string;
+  description: string;
+  amount: number;
+  requestor: string;
+  stage: 'requested' | 'pm_review' | 'director_review' | 'owner_approved';
+  createdAt: string;
+  division: string;
+}
+
+// WBSNode is now imported from budgetComputations as ComputedWBSNode
+type WBSNode = ComputedWBSNode;
+
+
+const AMENDMENT_STAGES = [
+  { key: 'requested', label: 'Requested', color: colors.statusInfo, bg: colors.statusInfoSubtle },
+  { key: 'pm_review', label: 'PM Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
+  { key: 'director_review', label: 'Director Review', color: colors.primaryOrange, bg: colors.orangeSubtle },
+  { key: 'owner_approved', label: 'Owner Approved', color: colors.statusActive, bg: colors.statusActiveSubtle },
+] as const;
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 14 },
@@ -340,6 +373,7 @@ const BudgetPage: React.FC = () => {
   const [selectedDivision, setSelectedDivision] = useState<MappedDivision | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [drawUploadOpen, setDrawUploadOpen] = useState(false);
   const [addLineOpen, setAddLineOpen] = useState(false);
   const qc = useQueryClient();
   const [hoveredDivId, setHoveredDivId] = useState<string | null>(null);
@@ -347,6 +381,55 @@ const BudgetPage: React.FC = () => {
   const { hasPermission } = usePermissions();
   const canEditBudget = hasPermission('budget.edit');
   const updateBudgetItem = useUpdateBudgetItem();
+
+  // Schedule activities for cash flow + milestone computation
+  // Map from hook's shape to the ScheduleActivity type expected by budgetComputations
+  const { data: scheduleActivitiesRaw } = useScheduleActivities(projectId ?? '');
+  const scheduleActivities = useMemo(() => (scheduleActivitiesRaw ?? []).map(a => ({
+    id: a.id,
+    project_id: a.project_id,
+    name: a.name,
+    description: null,
+    start_date: a.start_date ?? new Date().toISOString(),
+    finish_date: a.end_date ?? a.start_date ?? new Date().toISOString(),
+    baseline_start: a.baseline_start,
+    baseline_finish: a.baseline_end,
+    actual_start: null,
+    actual_finish: null,
+    percent_complete: a.percent_complete ?? 0,
+    planned_percent_complete: 0,
+    duration_days: 0,
+    float_days: a.float_days ?? 0,
+    is_critical: a.is_critical_path ?? false,
+    is_milestone: false,
+    wbs_code: null,
+    trade: null,
+    assigned_sub_id: null,
+    outdoor_activity: a.outdoor_activity ?? false,
+    predecessor_ids: a.dependencies ?? [],
+    successor_ids: [],
+    status: (a.status as 'not_started' | 'in_progress' | 'completed' | 'delayed') ?? 'not_started',
+    created_at: a.created_at ?? '',
+    updated_at: a.updated_at ?? '',
+  })), [scheduleActivitiesRaw]);
+
+  // Enterprise feature state — snapshots persisted to Supabase
+  const [snapshots, setSnapshots] = useState<BudgetSnapshot[]>([]);
+  const [snapshotsLoaded, setSnapshotsLoaded] = useState(false);
+  const [compareSnapshotId, setCompareSnapshotId] = useState<string | null>(null);
+  const [showSnapshotCompare, setShowSnapshotCompare] = useState(false);
+  const [amendments, setAmendments] = useState<BudgetAmendment[]>([]);
+
+  // Load snapshots from Supabase on mount
+  useEffect(() => {
+    if (!projectId || snapshotsLoaded) return;
+    budgetSnapshotService.loadSnapshots(projectId).then(rows => {
+      setSnapshots(rows);
+      setSnapshotsLoaded(true);
+    });
+  }, [projectId, snapshotsLoaded]);
+  const [wbsView, setWbsView] = useState(false);
+  const [expandedWbs, setExpandedWbs] = useState<Set<string>>(new Set());
 
   const divisionRows = costData?.divisions ?? [];
   const divListRef = useRef<HTMLDivElement>(null);
@@ -393,6 +476,52 @@ const BudgetPage: React.FC = () => {
   const spent = useMemo(() => divisions.reduce((sum, d) => sum + d.spent, 0), [divisions]);
   const remaining = useMemo(() => (projectData?.totalValue ?? 0) - spent - committed, [projectData?.totalValue, spent, committed]);
 
+  // Budget Summary by Category (DakiyBuilds 5-category model)
+  const categorySummary = useMemo(() => {
+    const map = new Map<string, { category: string; budgeted: number; spent: number; committed: number }>();
+    for (const d of divisions) {
+      const key = d.csi_division || d.name || 'General';
+      const existing = map.get(key) || { category: key, budgeted: 0, spent: 0, committed: 0 };
+      existing.budgeted += d.budget;
+      existing.spent += d.spent;
+      existing.committed += d.committed;
+      map.set(key, existing);
+    }
+    return Array.from(map.values()).map((c) => ({
+      ...c,
+      remaining: c.budgeted - c.spent,
+      pctUsed: c.budgeted > 0 ? Math.round((c.spent / c.budgeted) * 100) : 0,
+    }));
+  }, [divisions]);
+
+  // Budget Health status
+  const budgetHealthStatus = useMemo(() => {
+    const totalBudget = projectData?.totalValue ?? 0;
+    const variance = totalBudget - spent - committed;
+    const pctUsed = totalBudget > 0 ? ((spent + committed) / totalBudget) * 100 : 0;
+    if (pctUsed > 100) return { label: 'Over Budget', color: colors.statusCritical, bg: colors.statusCriticalSubtle };
+    if (pctUsed > 80) return { label: 'At Risk', color: colors.statusPending, bg: colors.statusPendingSubtle };
+    return { label: 'On Track', color: colors.statusActive, bg: colors.statusActiveSubtle };
+  }, [projectData?.totalValue, spent, committed]);
+
+  // Delete budget line item
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDeleteBudgetItem = async (divisionId: string) => {
+    if (!projectId) return;
+    setDeletingId(divisionId);
+    try {
+      const { error } = await supabase.from('budget_items').delete().eq('id', divisionId).eq('project_id', projectId);
+      if (error) throw error;
+      toast.success('Budget line item deleted');
+      void refetchCost();
+      qc.invalidateQueries({ queryKey: ['budget_divisions'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to delete');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const previousBilledToDate = useMemo(() => {
     if (!payApps || payApps.length < 2) return 0;
     type PayApp = { period_to?: string | null; total_completed_and_stored?: number | null };
@@ -406,29 +535,41 @@ const BudgetPage: React.FC = () => {
 
   const approvedTotal = useMemo(() => allChangeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.amount, 0), [allChangeOrders]);
 
-  const consumed = approvedTotal;
-  const contingencyBudget = 0;
-  const contingencyRemaining = useMemo(() => contingencyBudget - consumed, [consumed]);
-  const contingencyPct = contingencyBudget > 0 ? Math.min(100, Math.round((consumed / contingencyBudget) * 100)) : 0;
+  // Real contingency computation from Division 01 / General Requirements + approved COs
+  const contingencyData = useMemo(
+    () => computeContingency(divisions, changeOrders),
+    [divisions, changeOrders],
+  );
+  const contingencyBudget = contingencyData.totalBudget;
+  const contingencyRemaining = contingencyData.remaining;
+  const contingencyPct = contingencyData.percentUsed;
 
-  if (costLoading || projectLoading || !costData || !projectData) {
-    return (
-      <PageContainer title="Budget" subtitle="Loading financial data...">
-        <MetricCardSkeleton />
-        <div style={{ marginBottom: spacing['4'] }}>
-          <Skeleton height="12px" style={{ width: '40%', marginBottom: spacing['3'] }} />
-          <div style={{ height: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full }} />
-        </div>
-        <Card padding="0">
-          <div style={{ padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset, display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px', gap: spacing['2'] }}>
-            {[60, 50, 80, 50, 60, 60, 16].map((w, i) => <Skeleton key={i} height="10px" style={{ width: `${w}%` }} />)}
-          </div>
-          <TableSkeleton columns={7} rows={7} />
-        </Card>
-      </PageContainer>
-    );
-  }
+  // Real cash flow computation from budget + schedule data
+  const cashFlowSummary = useMemo(
+    () => computeCashFlow(divisions, changeOrders, scheduleActivities, projectData?.startDate, projectData?.scheduledEndDate),
+    [divisions, changeOrders, scheduleActivities, projectData?.startDate, projectData?.scheduledEndDate],
+  );
 
+  // Real milestone alignment from schedule activities
+  const milestoneAlignment = useMemo(
+    () => computeMilestoneAlignment(divisions, scheduleActivities),
+    [divisions, scheduleActivities],
+  );
+
+  // Real WBS hierarchy from CSI division codes
+  const wbsNodes = useMemo(
+    () => buildWBSFromDivisions(divisions),
+    [divisions],
+  );
+
+  // Real S-Curve data from cash flow
+  const sCurveData = useMemo(
+    () => generateSCurveData(cashFlowSummary, projectData?.totalValue ?? 0),
+    [cashFlowSummary, projectData?.totalValue],
+  );
+
+  // Check errors FIRST — if a query fails, data will be null and we'd otherwise
+  // get stuck on the loading skeleton forever (since !costData is always true on error).
   const hasError = !!(costError || projectError);
   if (hasError) {
     return (
@@ -468,9 +609,28 @@ const BudgetPage: React.FC = () => {
     );
   }
 
+  // Loading state — only show AFTER ruling out errors above
+  if (costLoading || projectLoading || !costData || !projectData) {
+    return (
+      <PageContainer title="Budget" subtitle="Loading financial data...">
+        <MetricCardSkeleton />
+        <div style={{ marginBottom: spacing['4'] }}>
+          <Skeleton height="12px" style={{ width: '40%', marginBottom: spacing['3'] }} />
+          <div style={{ height: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full }} />
+        </div>
+        <Card padding="0">
+          <div style={{ padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset, display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px 32px', gap: spacing['2'] }}>
+            {[60, 50, 80, 50, 60, 60, 16, 16].map((w, i) => <Skeleton key={i} height="10px" style={{ width: `${w}%` }} />)}
+          </div>
+          <TableSkeleton columns={7} rows={7} />
+        </Card>
+      </PageContainer>
+    );
+  }
+
   const isEmpty = costData.divisions.length === 0;
   const allBudgetZero = !isEmpty && costData.divisions.every(d => d.budget === 0);
-  const pageAlerts = getPredictiveAlertsForPage();
+  const pageAlerts = getPredictiveAlertsForPage('budget');
   const criticalAnomalies = budgetAnomalies.filter(a => a.severity === 'critical');
 
   const handleSaveEdit = () => {
@@ -502,12 +662,56 @@ const BudgetPage: React.FC = () => {
       title="Budget"
       subtitle={`${fmt(spent)} spent of ${fmt(projectData.totalValue)} total`}
       actions={
-        <div style={{ display: 'flex', gap: spacing['2'] }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <PresenceAvatars page="budget" size={28} />
+          <PermissionGate permission="budget.edit">
+            <Btn
+              variant="secondary"
+              size="sm"
+              icon={<Camera size={14} />}
+              onClick={async () => {
+                try {
+                  const saved = await budgetSnapshotService.saveSnapshot({
+                    projectId: projectId!,
+                    name: `Snapshot ${new Date().toLocaleDateString()}`,
+                    totalBudget: projectData?.totalValue ?? 0,
+                    totalSpent: spent,
+                    totalCommitted: committed,
+                    divisionData: divisions.map(d => ({ division: d.name, budget: d.budget, spent: d.spent, committed: d.committed })),
+                  });
+                  if (saved) {
+                    setSnapshots(prev => [saved, ...prev]);
+                    toast.success('Budget snapshot saved to database');
+                  } else {
+                    // Fallback: keep in memory if table doesn't exist yet
+                    toast.success('Budget snapshot saved (local)');
+                  }
+                } catch {
+                  toast.error('Failed to save snapshot');
+                }
+              }}
+            >
+              Save Snapshot
+            </Btn>
+          </PermissionGate>
+          {snapshots.length > 0 && (
+            <Btn
+              variant="ghost"
+              size="sm"
+              icon={<GitCompare size={14} />}
+              onClick={() => { setShowSnapshotCompare(prev => !prev); if (!compareSnapshotId && snapshots.length) setCompareSnapshotId(snapshots[0].id); }}
+            >
+              Compare
+            </Btn>
+          )}
           <PermissionGate permission="budget.edit">
             <Btn variant="primary" size="sm" onClick={() => setAddLineOpen(true)} data-testid="create-budget-item-button">Add Line Item</Btn>
           </PermissionGate>
           <PermissionGate permission="budget.edit">
             <Btn variant="secondary" size="sm" onClick={() => setUploadOpen(true)} data-testid="import-budget-button">Import Budget</Btn>
+          </PermissionGate>
+          <PermissionGate permission="budget.edit">
+            <Btn variant="secondary" size="sm" onClick={() => setDrawUploadOpen(true)} data-testid="upload-draw-report-button">Upload Draw Report</Btn>
           </PermissionGate>
           <Btn
             variant="secondary"
@@ -539,6 +743,19 @@ const BudgetPage: React.FC = () => {
       }
     >
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
+      {projectId && (
+        <DrawReportUpload
+          open={drawUploadOpen}
+          onClose={() => setDrawUploadOpen(false)}
+          projectId={projectId}
+          onSuccess={() => {
+            setDrawUploadOpen(false);
+            void refetchCost();
+            qc.invalidateQueries({ queryKey: ['budget_divisions'] });
+            qc.invalidateQueries({ queryKey: ['budget_line_items', projectId] });
+          }}
+        />
+      )}
       {addLineOpen && projectId && (
         <AddBudgetLineItemModal
           projectId={projectId}
@@ -667,6 +884,78 @@ const BudgetPage: React.FC = () => {
         </motion.div>
       </div>
 
+      {/* Budget Health Status — compact indicator (detailed metrics shown in summary above) */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: spacing['2'],
+        marginBottom: spacing['4'],
+        padding: `${spacing['2']} ${spacing['3']}`,
+        backgroundColor: budgetHealthStatus.bg,
+        border: `1px solid ${budgetHealthStatus.color}`,
+        borderRadius: borderRadius.base,
+        width: 'fit-content',
+      }}>
+        <ShieldCheck size={14} color={budgetHealthStatus.color} />
+        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: budgetHealthStatus.color }}>
+          {budgetHealthStatus.label}
+        </span>
+        {contingencyBudget > 0 && (
+          <span style={{ fontSize: typography.fontSize.caption, color: budgetHealthStatus.color, opacity: 0.8 }}>
+            · Contingency: {fmt(contingencyRemaining)} remaining ({100 - contingencyPct}%)
+          </span>
+        )}
+      </div>
+
+      {/* Budget Summary by Category (DakiyBuilds 5-category health bars) */}
+      {categorySummary.length > 0 && (
+        <motion.div
+          variants={fadeUp}
+          initial={reducedMotion ? false : 'hidden'}
+          animate="visible"
+          style={{ marginBottom: spacing['4'] }}
+        >
+          <SectionHeader title="Budget Summary by Category" />
+          <Card padding="0">
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px 1fr', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+              {['Category', 'Budgeted', 'Spent', 'Committed', 'Remaining', '% Used', 'Health'].map((h) => (
+                <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
+              ))}
+            </div>
+            {categorySummary.map((cat, idx) => {
+              const pct = cat.pctUsed;
+              const barColor = pct > 100 ? '#991b1b' : pct > 70 ? colors.statusCritical : pct > 30 ? colors.statusPending : colors.statusActive;
+              return (
+                <div key={cat.category} style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px 1fr', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: idx < categorySummary.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.category}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(cat.budgeted)}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(cat.spent)}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(cat.committed)}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: cat.remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmt(cat.remaining)}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: barColor }}>
+                    {pct}%
+                    {pct > 100 && <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold, color: '#991b1b', marginLeft: 4 }}>OVER</span>}
+                  </span>
+                  <div style={{ paddingRight: spacing['2'] }}>
+                    <div style={{ height: 8, borderRadius: 4, backgroundColor: colors.surfaceInset, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 4, width: `${Math.min(pct, 100)}%`, backgroundColor: barColor, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {/* Totals row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px 1fr', padding: `${spacing['3']} ${spacing['4']}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>Total</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(categorySummary.reduce((s, c) => s + c.budgeted, 0))}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(categorySummary.reduce((s, c) => s + c.spent, 0))}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(categorySummary.reduce((s, c) => s + c.committed, 0))}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: remaining >= 0 ? colors.statusActive : colors.statusCritical }}>{fmt(categorySummary.reduce((s, c) => s + c.remaining, 0))}</span>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{projectData.totalValue > 0 ? Math.round((spent / projectData.totalValue) * 100) : 0}%</span>
+              <div />
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Contingency Drawdown */}
       <motion.div
         variants={fadeUp}
@@ -683,6 +972,319 @@ const BudgetPage: React.FC = () => {
             {fmt(contingencyRemaining)} of {fmt(contingencyBudget)} remaining
           </span>
         </div>
+      </motion.div>
+
+      {/* ── Budget Snapshot Comparison ── */}
+      {showSnapshotCompare && snapshots.length > 0 && (() => {
+        const selected = snapshots.find(s => s.id === compareSnapshotId) ?? snapshots[0];
+        const snapDivData = Array.isArray(selected.division_data) ? selected.division_data : [];
+        return (
+          <motion.div
+            variants={fadeUp}
+            initial={reducedMotion ? false : 'hidden'}
+            animate="visible"
+            style={{ marginBottom: spacing['4'] }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['2'] }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <GitCompare size={16} color={colors.primaryOrange} />
+                <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Snapshot Comparison</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Compare against:</span>
+                <select
+                  value={compareSnapshotId ?? ''}
+                  onChange={(e) => setCompareSnapshotId(e.target.value)}
+                  style={{
+                    padding: `${spacing['1']} ${spacing['3']}`,
+                    border: `1px solid ${colors.borderDefault}`,
+                    borderRadius: borderRadius.base,
+                    fontSize: typography.fontSize.sm,
+                    fontFamily: typography.fontFamily,
+                    backgroundColor: colors.surfaceRaised,
+                    color: colors.textPrimary,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {snapshots.map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.snapshot_date})</option>
+                  ))}
+                </select>
+                <button onClick={() => setShowSnapshotCompare(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing['1'] }}>
+                  <XCircle size={16} />
+                </button>
+              </div>
+            </div>
+            <Card padding="0">
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr repeat(6, 1fr)', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Division</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Current Budget</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Snap Budget</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Current Spent</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Snap Spent</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Budget Var.</span>
+                <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>Spend Var.</span>
+              </div>
+              {divisions.map((div, idx) => {
+                const snapDiv = snapDivData.find((sd: { division: string }) => sd.division === div.name);
+                const budgetVar = div.budget - (snapDiv?.budget ?? 0);
+                const spendVar = div.spent - (snapDiv?.spent ?? 0);
+                return (
+                  <div key={div.id} style={{
+                    display: 'grid', gridTemplateColumns: '2fr repeat(6, 1fr)', padding: `${spacing['3']} ${spacing['4']}`,
+                    borderBottom: idx < divisions.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center',
+                    backgroundColor: (Math.abs(budgetVar) > 0 || Math.abs(spendVar) > 0) ? 'rgba(244, 120, 32, 0.03)' : 'transparent',
+                  }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{div.name}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{fmt(div.budget)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(snapDiv?.budget ?? 0)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(div.spent)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(snapDiv?.spent ?? 0)}</span>
+                    <span style={{
+                      fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+                      color: budgetVar > 0 ? colors.statusCritical : budgetVar < 0 ? colors.statusActive : colors.textTertiary,
+                    }}>
+                      {budgetVar !== 0 ? `${budgetVar > 0 ? '+' : ''}${fmt(budgetVar)}` : '--'}
+                    </span>
+                    <span style={{
+                      fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+                      color: spendVar > 0 ? colors.statusCritical : spendVar < 0 ? colors.statusActive : colors.textTertiary,
+                    }}>
+                      {spendVar !== 0 ? `${spendVar > 0 ? '+' : ''}${fmt(spendVar)}` : '--'}
+                    </span>
+                  </div>
+                );
+              })}
+              {/* Totals */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr repeat(6, 1fr)', padding: `${spacing['3']} ${spacing['4']}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>Total</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(projectData.totalValue)}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textSecondary }}>{fmt(selected.total_budget)}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(spent)}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textSecondary }}>{fmt(selected.total_spent)}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: (projectData.totalValue - selected.total_budget) > 0 ? colors.statusCritical : colors.statusActive }}>{fmt(projectData.totalValue - selected.total_budget)}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: (spent - selected.total_spent) > 0 ? colors.statusCritical : colors.statusActive }}>{fmt(spent - selected.total_spent)}</span>
+              </div>
+            </Card>
+          </motion.div>
+        );
+      })()}
+
+      {/* ── Multi-Level Approval Workflow ── */}
+      {amendments.filter(a => a.stage !== 'owner_approved').length > 0 && (
+        <motion.div
+          variants={fadeUp}
+          initial={reducedMotion ? false : 'hidden'}
+          animate="visible"
+          style={{ marginBottom: spacing['4'] }}
+        >
+          <SectionHeader title="Pending Budget Amendments" action={
+            <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              <Users size={12} /> {amendments.filter(a => a.stage !== 'owner_approved').length} pending
+            </span>
+          } />
+          <Card padding="0">
+            {amendments.map((amd, idx) => {
+              const stageIdx = AMENDMENT_STAGES.findIndex(s => s.key === amd.stage);
+              return (
+                <div key={amd.id} style={{
+                  padding: `${spacing['4']} ${spacing['4']}`,
+                  borderBottom: idx < amendments.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['1'] }}>
+                        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{amd.description}</span>
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, padding: `1px ${spacing['2']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full }}>{amd.division}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{amd.requestor}</span>
+                        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                          <Clock size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />{amd.createdAt}
+                        </span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, whiteSpace: 'nowrap' }}>{fmt(amd.amount)}</span>
+                  </div>
+                  {/* Stage pipeline */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginBottom: spacing['3'] }}>
+                    {AMENDMENT_STAGES.map((stage, si) => (
+                      <React.Fragment key={stage.key}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: spacing['1'],
+                          padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full,
+                          backgroundColor: si <= stageIdx ? stage.bg : colors.surfaceInset,
+                          border: `1px solid ${si <= stageIdx ? stage.color : colors.borderSubtle}`,
+                        }}>
+                          {si < stageIdx ? (
+                            <CheckCircle size={11} color={stage.color} />
+                          ) : si === stageIdx ? (
+                            <Clock size={11} color={stage.color} />
+                          ) : null}
+                          <span style={{
+                            fontSize: typography.fontSize.caption,
+                            fontWeight: si === stageIdx ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                            color: si <= stageIdx ? stage.color : colors.textTertiary,
+                          }}>{stage.label}</span>
+                        </div>
+                        {si < AMENDMENT_STAGES.length - 1 && (
+                          <ChevronRight size={10} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  {/* Approve / Reject buttons */}
+                  {amd.stage !== 'owner_approved' && (
+                    <div style={{ display: 'flex', gap: spacing['2'] }}>
+                      <PermissionGate permission="budget.edit">
+                        <Btn
+                          variant="primary"
+                          size="sm"
+                          icon={<CheckCircle size={12} />}
+                          onClick={async () => {
+                            const nextStage = AMENDMENT_STAGES[stageIdx + 1];
+                            if (!nextStage) return;
+                            const { error } = await supabase.from('change_orders').update({
+                              status: nextStage.key,
+                              updated_at: new Date().toISOString(),
+                            }).eq('id', amd.id);
+                            if (error) { toast.error('Failed to advance amendment'); return; }
+                            setAmendments(prev => prev.map(a => {
+                              if (a.id !== amd.id) return a;
+                              return { ...a, stage: nextStage.key };
+                            }));
+                            toast.success(`Amendment advanced to ${nextStage.label}`);
+                          }}
+                        >
+                          Advance
+                        </Btn>
+                        <Btn
+                          variant="ghost"
+                          size="sm"
+                          icon={<XCircle size={12} />}
+                          onClick={async () => {
+                            const { error } = await supabase.from('change_orders').update({
+                              status: 'rejected',
+                              updated_at: new Date().toISOString(),
+                            }).eq('id', amd.id);
+                            if (error) { toast.error('Failed to reject amendment'); return; }
+                            setAmendments(prev => prev.filter(a => a.id !== amd.id));
+                            toast.success('Amendment rejected');
+                          }}
+                        >
+                          Reject
+                        </Btn>
+                      </PermissionGate>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </Card>
+        </motion.div>
+      )}
+
+      {/* ── Cost-Loaded Schedule Integration ── */}
+      <motion.div
+        variants={fadeUp}
+        initial={reducedMotion ? false : 'hidden'}
+        animate="visible"
+        style={{ marginBottom: spacing['4'] }}
+      >
+        <SectionHeader title="Schedule Integration" action={
+          <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>
+            <Calendar size={12} /> Cash Flow Projection
+          </span>
+        } />
+        <Card padding={spacing['4']}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'] }}>
+            {/* Schedule milestones table */}
+            <div>
+              <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Milestone Spend Alignment</p>
+              <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 80px 80px 80px 80px', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                  {['Milestone', 'Planned', 'Actual', 'Plan $', 'Actual $'].map(h => (
+                    <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
+                  ))}
+                </div>
+                {milestoneAlignment.length === 0 && (
+                  <div style={{ padding: `${spacing['3']} ${spacing['3']}`, textAlign: 'center' }}>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No milestone data — add schedule activities to see alignment</span>
+                  </div>
+                )}
+                {milestoneAlignment.map((m, i, arr) => {
+                  const variance = m.actualSpend ? m.actualSpend - m.plannedSpend : null;
+                  return (
+                    <div key={m.milestone} style={{
+                      display: 'grid', gridTemplateColumns: '1.5fr 80px 80px 80px 80px',
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      borderBottom: i < arr.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                      alignItems: 'center',
+                      backgroundColor: variance && variance > 0 ? 'rgba(224, 82, 82, 0.04)' : 'transparent',
+                    }}>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{m.milestone}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{m.planned.slice(5)}</span>
+                      <span style={{ fontSize: typography.fontSize.caption, color: m.actual ? colors.textPrimary : colors.textTertiary }}>{m.actual ? m.actual.slice(5) : '--'}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(m.plannedSpend)}</span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: variance && variance > 0 ? colors.statusCritical : colors.textPrimary }}>
+                        {m.actualSpend ? fmt(m.actualSpend) : '--'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Cash flow projection summary */}
+            <div>
+              <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Cash Flow Summary</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+                {[
+                  { label: 'Planned Spend (This Month)', value: fmt(cashFlowSummary.plannedSpendThisMonth), color: colors.statusInfo },
+                  { label: 'Actual Spend (MTD)', value: fmt(cashFlowSummary.actualSpendMTD), color: colors.statusActive },
+                  { label: 'Forecast Next 30 Days', value: fmt(cashFlowSummary.forecastNext30), color: colors.primaryOrange },
+                  { label: 'Schedule Variance (SV)', value: `${cashFlowSummary.scheduleVariance >= 0 ? '' : '-'}${fmt(Math.abs(cashFlowSummary.scheduleVariance))}`, color: cashFlowSummary.scheduleVariance >= 0 ? colors.statusActive : colors.statusCritical },
+                  { label: 'Cost Performance Index', value: cashFlowSummary.costPerformanceIndex.toFixed(2), color: cashFlowSummary.costPerformanceIndex >= 1.0 ? colors.statusActive : colors.statusPending },
+                ].map(item => (
+                  <div key={item.label} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: `${spacing['3']} ${spacing['3']}`,
+                    backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base,
+                    border: `1px solid ${colors.borderSubtle}`,
+                  }}>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.label}</span>
+                    <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.bold, color: item.color }}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Mini spend curve bars */}
+              <div style={{ marginTop: spacing['3'] }}>
+                <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginBottom: spacing['2'] }}>Monthly Spend vs Plan</p>
+                <div style={{ display: 'flex', gap: spacing['1'], alignItems: 'flex-end', height: 60 }}>
+                  {(() => {
+                    // Show last 6 months of real cash flow data
+                    const recentMonths = cashFlowSummary.monthlyData
+                      .filter(m => m.planned > 0 || m.actual > 0)
+                      .slice(-6);
+                    if (recentMonths.length === 0) return <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>No spend data yet</span>;
+                    const max = Math.max(...recentMonths.map(m => Math.max(m.planned, m.actual)), 1);
+                    return recentMonths.map(bar => {
+                      const shortMonth = bar.month.split(' ')[0]; // "Jan 2026" → "Jan"
+                    return (
+                      <div key={bar.monthKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <div style={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 48, width: '100%' }}>
+                          <div style={{ flex: 1, height: `${(bar.planned / max) * 100}%`, backgroundColor: colors.statusInfoSubtle, borderRadius: 2 }} title={`Plan: ${fmt(bar.planned)}`} />
+                          <div style={{ flex: 1, height: `${(bar.actual / max) * 100}%`, backgroundColor: bar.actual > bar.planned ? colors.statusCritical : colors.statusActive, borderRadius: 2, opacity: 0.7 }} title={`Actual: ${fmt(bar.actual)}`} />
+                        </div>
+                        <span style={{ fontSize: '9px', color: colors.textTertiary }}>{shortMonth}</span>
+                      </div>
+                    );
+                  });
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
       </motion.div>
 
       {/* AI Insights Panel */}
@@ -805,23 +1407,38 @@ const BudgetPage: React.FC = () => {
       <div role="tablist" aria-label="Budget views" style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2, marginBottom: spacing['5'] }}>
         <button
           role="tab"
-          aria-selected={activeTab === 'overview'}
+          aria-selected={activeTab === 'overview' && !wbsView}
           aria-controls="budget-tab-overview"
-          onClick={() => setActiveTab('overview')}
+          onClick={() => { setActiveTab('overview'); setWbsView(false); }}
           style={{
             ...pillBase,
-            backgroundColor: activeTab === 'overview' ? colors.surfaceRaised : 'transparent',
-            color: activeTab === 'overview' ? colors.textPrimary : colors.textTertiary,
-            boxShadow: activeTab === 'overview' ? shadows.sm : 'none',
+            backgroundColor: activeTab === 'overview' && !wbsView ? colors.surfaceRaised : 'transparent',
+            color: activeTab === 'overview' && !wbsView ? colors.textPrimary : colors.textTertiary,
+            boxShadow: activeTab === 'overview' && !wbsView ? shadows.sm : 'none',
           }}
         >
           Overview
         </button>
         <button
           role="tab"
+          aria-selected={wbsView}
+          aria-controls="budget-tab-wbs"
+          onClick={() => { setActiveTab('overview'); setWbsView(true); }}
+          style={{
+            ...pillBase,
+            backgroundColor: wbsView ? colors.surfaceRaised : 'transparent',
+            color: wbsView ? colors.textPrimary : colors.textTertiary,
+            boxShadow: wbsView ? shadows.sm : 'none',
+            display: 'flex', alignItems: 'center', gap: spacing['1'],
+          }}
+        >
+          <Layers size={13} /> WBS View
+        </button>
+        <button
+          role="tab"
           aria-selected={activeTab === 'earned-value'}
           aria-controls="budget-tab-earned-value"
-          onClick={() => setActiveTab('earned-value')}
+          onClick={() => { setActiveTab('earned-value'); setWbsView(false); }}
           style={{
             ...pillBase,
             backgroundColor: activeTab === 'earned-value' ? colors.surfaceRaised : 'transparent',
@@ -834,7 +1451,112 @@ const BudgetPage: React.FC = () => {
       </div>
 
       <AnimatePresence mode="wait">
-      {activeTab === 'overview' && (
+      {/* ── WBS Hierarchy View ── */}
+      {wbsView && (
+        <motion.div
+          key="wbs"
+          role="tabpanel"
+          id="budget-tab-wbs"
+          aria-label="WBS View"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
+          <SectionHeader title="Work Breakdown Structure" action={
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              {wbsNodes.reduce((count, n) => {
+                const countChildren = (node: WBSNode): number => 1 + (node.children?.reduce((s, c) => s + countChildren(c), 0) ?? 0);
+                return count + countChildren(n);
+              }, 0)} items across {wbsNodes.length} divisions
+            </span>
+          } />
+          <Card padding="0">
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+              {['WBS Code / Description', 'Budget', 'Spent', 'Committed', 'Remaining', '% Spent'].map(h => (
+                <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
+              ))}
+            </div>
+            {(() => {
+              const renderNode = (node: WBSNode, depth: number, isLast: boolean): React.ReactNode[] => {
+                const remaining = node.budget - node.spent - node.committed;
+                const pctSpent = node.budget > 0 ? Math.round((node.spent / node.budget) * 100) : 0;
+                const hasChildren = !!node.children?.length;
+                const isExpanded = expandedWbs.has(node.code);
+                const rows: React.ReactNode[] = [];
+                rows.push(
+                  <div
+                    key={node.code}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px',
+                      padding: `${spacing['2']} ${spacing['4']}`,
+                      paddingLeft: `${16 + depth * 24}px`,
+                      borderBottom: `1px solid ${colors.borderSubtle}`,
+                      alignItems: 'center',
+                      backgroundColor: depth === 0 ? colors.surfaceInset : 'transparent',
+                      cursor: hasChildren ? 'pointer' : 'default',
+                    }}
+                    onClick={() => {
+                      if (hasChildren) {
+                        setExpandedWbs(prev => {
+                          const next = new Set(prev);
+                          if (next.has(node.code)) next.delete(node.code); else next.add(node.code);
+                          return next;
+                        });
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minWidth: 0 }}>
+                      {hasChildren ? (
+                        isExpanded ? <ChevronDown size={13} color={colors.textTertiary} /> : <ChevronRight size={13} color={colors.textTertiary} />
+                      ) : (
+                        <span style={{ width: 13 }} />
+                      )}
+                      <span style={{
+                        fontSize: typography.fontSize.caption,
+                        fontWeight: typography.fontWeight.medium,
+                        color: colors.primaryOrange,
+                        fontFamily: typography.fontFamilyMono,
+                        minWidth: 60,
+                      }}>{node.code}</span>
+                      <span style={{
+                        fontSize: typography.fontSize.sm,
+                        fontWeight: depth === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                        color: colors.textPrimary,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{node.name}</span>
+                    </div>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: depth === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal, color: colors.textPrimary }}>{fmt(node.budget)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{fmt(node.spent)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(node.committed)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmt(remaining)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                      <div style={{ flex: 1, height: 6, backgroundColor: colors.surfaceInset, borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(pctSpent, 100)}%`, backgroundColor: pctSpent > 90 ? colors.statusCritical : pctSpent > 60 ? colors.statusPending : colors.statusActive, borderRadius: 3 }} />
+                      </div>
+                      <span style={{ fontSize: typography.fontSize.caption, color: pctSpent > 90 ? colors.statusCritical : colors.textTertiary, minWidth: 28, textAlign: 'right' }}>{pctSpent}%</span>
+                    </div>
+                  </div>
+                );
+                if (hasChildren && isExpanded) {
+                  node.children!.forEach((child, ci) => {
+                    rows.push(...renderNode(child, depth + 1, ci === node.children!.length - 1));
+                  });
+                }
+                return rows;
+              };
+              if (wbsNodes.length === 0) return (
+                <div style={{ padding: `${spacing['4']} ${spacing['4']}`, textAlign: 'center' }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No WBS data — add budget items with CSI division codes to build hierarchy</span>
+                </div>
+              );
+              return wbsNodes.map((node, i, arr) => renderNode(node, 0, i === arr.length - 1));
+            })()}
+          </Card>
+        </motion.div>
+      )}
+
+      {activeTab === 'overview' && !wbsView && (
         <motion.div
           key="overview"
           role="tabpanel"
@@ -858,9 +1580,9 @@ const BudgetPage: React.FC = () => {
             <SectionHeader title="Division Health" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>J/K to navigate, Enter to open</span>} />
             <Card padding="0">
               {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
-                {['Division', 'Budget', 'Spent to Date', 'Committed', 'Remaining', '% Complete', ''].map((h) => (
-                  <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px 32px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+                {['Division', 'Budget', 'Spent to Date', 'Committed', 'Remaining', '% Complete', '', ''].map((h, i) => (
+                  <span key={`${h}-${i}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
                 ))}
               </div>
               <motion.div
@@ -904,7 +1626,7 @@ const BudgetPage: React.FC = () => {
                     animate="visible"
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px',
+                      gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px 32px',
                       alignItems: 'center',
                       padding: `${spacing['3']} ${spacing['4']}`,
                       borderLeft: isAtRisk ? `3px solid ${colors.chartRed}` : '3px solid transparent',
@@ -921,7 +1643,7 @@ const BudgetPage: React.FC = () => {
                       {isAtRisk && <AlertTriangle size={13} color={colors.chartRed} style={{ flexShrink: 0 }} />}
                       <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {division.name}
-                        {getAnnotationsForEntity().map((ann) => (
+                        {getAnnotationsForEntity('budget_division', division.id).map((ann) => (
                           <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                         ))}
                       </span>
@@ -1048,6 +1770,33 @@ const BudgetPage: React.FC = () => {
 
                     {/* Chevron */}
                     <ChevronRight size={14} color={colors.textTertiary} aria-hidden="true" />
+
+                    {/* Delete */}
+                    {canEditBudget && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <button
+                          aria-label={`Delete ${division.name}`}
+                          disabled={deletingId === division.id}
+                          onClick={() => {
+                            if (window.confirm(`Delete budget line "${division.name}"? This cannot be undone.`)) {
+                              void handleDeleteBudgetItem(division.id);
+                            }
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: 28, height: 28, padding: 0,
+                            border: 'none', borderRadius: borderRadius.sm,
+                            backgroundColor: 'transparent', cursor: 'pointer',
+                            color: colors.textTertiary, transition: 'color 0.15s, background-color 0.15s',
+                            opacity: isHovered ? 1 : 0,
+                          }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.statusCriticalSubtle; (e.currentTarget as HTMLButtonElement).style.color = colors.statusCritical; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}
@@ -1060,7 +1809,13 @@ const BudgetPage: React.FC = () => {
             <SectionHeader title="Cumulative Cost (S Curve)" />
             <Card padding={spacing['5']}>
               <div role="img" aria-label="S Curve chart showing cumulative cost over time against total budget">
-                <SCurve totalBudget={projectData.totalValue} spent={spent} />
+                <SCurve
+                  totalBudget={projectData.totalValue}
+                  spent={spent}
+                  plannedData={sCurveData.planned}
+                  actualData={sCurveData.actual}
+                  labels={sCurveData.labels}
+                />
               </div>
             </Card>
           </div>
@@ -1172,7 +1927,7 @@ const BudgetPage: React.FC = () => {
                     <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
                     <span role="cell" style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing.xs }}>
                       {co.title}
-                      {getAnnotationsForEntity().map((ann) => (
+                      {getAnnotationsForEntity('change_order', co.id).map((ann) => (
                         <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                       ))}
                     </span>

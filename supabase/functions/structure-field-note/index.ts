@@ -1,7 +1,7 @@
 // structure-field-note — Extract structured JSON from a field worker's transcript.
 // The LLM is asked to return a strict JSON document; we normalize and validate it.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -82,7 +82,7 @@ function extractJson(text: string): unknown {
   }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' }

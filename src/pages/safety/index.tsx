@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, Wrench, HardHat } from 'lucide-react';
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, Wrench, HardHat, FileText, FlaskConical, Shield, Flame } from 'lucide-react';
 import { PageContainer, Card, Btn } from '../../components/Primitives';
 import { ExportButton } from '../../components/shared/ExportButton';
 import { exportToXlsx } from '../../lib/exportXlsx';
@@ -14,6 +14,7 @@ import { IncidentForm } from './IncidentForm';
 import { ToolboxTalksList, ToolboxTalkForm } from './ToolboxTalks';
 import { InspectionsTab, CertificationsTab, CorrectiveActionsTab } from './InspectionsAndCerts';
 import { PreTaskPlansTab } from './PreTaskPlans';
+import { OshaLogsTab, JhaTab, SdsTab, PermitsTab } from './EnterpriseCompliance';
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'incidents', label: 'Incidents', icon: AlertTriangle },
@@ -22,6 +23,10 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'certifications', label: 'Certifications', icon: Award },
   { key: 'corrective_actions', label: 'Corrective Actions', icon: Wrench },
   { key: 'ptp', label: 'Pre-Task Plans', icon: HardHat },
+  { key: 'osha_logs', label: 'OSHA Logs', icon: FileText },
+  { key: 'jha', label: 'JHA', icon: Shield },
+  { key: 'sds', label: 'SDS', icon: FlaskConical },
+  { key: 'permits', label: 'Permits', icon: Flame },
 ];
 
 const recordableSeverities = ['medical_treatment', 'lost_time', 'fatality'];
@@ -272,6 +277,10 @@ export const Safety: React.FC = () => {
           {activeTab === 'certifications' && <CertificationsTab certifications={certifications || []} />}
           {activeTab === 'corrective_actions' && <CorrectiveActionsTab correctiveActions={displayCAs} />}
           {activeTab === 'ptp' && <PreTaskPlansTab />}
+          {activeTab === 'osha_logs' && <OshaLogsTab />}
+          {activeTab === 'jha' && <JhaTab onNavigateToPTP={() => setActiveTab('ptp')} />}
+          {activeTab === 'sds' && <SdsTab />}
+          {activeTab === 'permits' && <PermitsTab />}
         </>
       )}
 

@@ -2,7 +2,7 @@
 // IFC STEP is plaintext — we extract entity counts and basic hierarchy
 // (IfcBuilding, IfcBuildingStorey, IfcSpace, IfcWall, IfcDoor, IfcWindow, IfcSlab, ...).
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -151,7 +151,7 @@ function parseIFCText(text: string): ParseSummary {
   return { building, stories, spaces, walls, doors, windows, slabs, columns, beams, mep, total_elements: total, summary, entities }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
   }

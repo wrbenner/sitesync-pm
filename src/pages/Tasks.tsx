@@ -33,10 +33,14 @@ import {
 } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { useTasks } from '../hooks/queries';
+import { useProfileNames } from '../hooks/queries/profiles';
 import { useAppNavigate, getRelatedItemsForTask } from '../utils/connections';
 import { useCreateTask, useUpdateTask, useBulkUpdateTasks, useBulkDeleteTasks, useApplyTaskTemplate } from '../hooks/mutations';
-import { useDirectoryContacts, useTaskCriticalPath, useTaskTemplates } from '../hooks/queries';
+import { useDirectoryContacts, useTaskCriticalPath, useTaskTemplates, useWorkingDaysConfig, useTaskRelations, useCreateTaskRelation, useDeleteTaskRelation } from '../hooks/queries';
+import type { RelationType } from '../hooks/queries/scheduling';
 import { useProjectId } from '../hooks/useProjectId';
+import { countWorkingDays } from '../services/schedulingEngine';
+import { deriveProgress, getScheduleHealth, getScheduleHealthDisplay } from '../services/progressEngine';
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
@@ -84,9 +88,16 @@ export const Tasks: React.FC = () => {
   const { data: tasksResult, isPending: loading, error: tasksError, refetch } = useTasks(projectId);
   const tasksRaw = tasksResult?.data ?? [];
 
+  const assigneeIds = useMemo(
+    () => tasksRaw.map((t: Record<string, unknown>) => t.assigned_to as string | null),
+    [tasksRaw],
+  );
+  const { data: profileMap } = useProfileNames(assigneeIds);
+
   // Map API tasks to component shape
   const fetchedTasks: MappedTask[] = useMemo(() => tasksRaw.map((t: Record<string, unknown>) => {
-    const name = (t.assigned_to as string) || 'Unassigned';
+    const assignedId = t.assigned_to as string | null;
+    const name = assignedId ? (profileMap?.get(assignedId)?.full_name || 'Unassigned') : 'Unassigned';
     const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'NA';
     const predecessorIds = (t.predecessor_ids as string[] | null) || [];
     const successorIds = (t.successor_ids as string[] | null) || [];
@@ -115,7 +126,7 @@ export const Tasks: React.FC = () => {
       isCriticalPath: !!t.is_critical_path,
       is_critical_path: !!t.is_critical_path,
     };
-  }), [tasksRaw]);
+  }), [tasksRaw, profileMap]);
 
   type TaskList = MappedTask[];
   const [localTasks, setLocalTasks] = useState<TaskList>([]);
@@ -151,6 +162,21 @@ export const Tasks: React.FC = () => {
   const { data: templates } = useTaskTemplates();
   const { data: teamMembersResult } = useDirectoryContacts(projectId);
   const teamMembers = teamMembersResult?.data ?? [];
+  const { data: workingDaysConfig } = useWorkingDaysConfig(projectId);
+  const createRelation = useCreateTaskRelation();
+  const deleteRelation = useDeleteTaskRelation();
+  const { data: selectedTaskRelations } = useTaskRelations(selectedTask?.uuid || undefined);
+
+  // New task form: scheduling fields
+  const [newEstimatedHours, setNewEstimatedHours] = useState<string>('');
+  const [newStartDate, setNewStartDate] = useState<string>('');
+  const [newEndDate, setNewEndDate] = useState<string>('');
+  const [newScheduleManually, setNewScheduleManually] = useState(false);
+  // Dependency creation fields
+  const [showAddDep, setShowAddDep] = useState(false);
+  const [depPredecessorId, setDepPredecessorId] = useState('');
+  const [depRelationType, setDepRelationType] = useState<RelationType>('follows');
+  const [depLagDays, setDepLagDays] = useState<string>('0');
 
   const filteredTasks = useMemo(() => {
     return localTasks.filter((t) => {
@@ -329,6 +355,14 @@ export const Tasks: React.FC = () => {
             <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing.xs, display: 'block' }}>
               {task.subtasks.completed}/{task.subtasks.total}
             </span>
+          </div>
+        )}
+
+        {/* Percent complete progress bar */}
+        {task.percent_complete != null && task.percent_complete > 0 && (
+          <div style={{ marginBottom: spacing.md }}>
+            <ProgressBar value={task.percent_complete} max={100} height={3} color={task.percent_complete === 100 ? colors.tealSuccess : colors.primaryOrange} />
+            <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginTop: spacing.xs, display: 'block' }}>{task.percent_complete}%</span>
           </div>
         )}
 
@@ -643,6 +677,59 @@ export const Tasks: React.FC = () => {
                 color={selectedTask.percent_complete === 100 ? colors.tealSuccess : colors.primaryOrange}
               />
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs, display: 'block' }}>{selectedTask.percent_complete}% complete</span>
+            </div>
+          )}
+
+          {/* Schedule Health & Working Days */}
+          {(() => {
+            const rawTask = tasksRaw.find((t: Record<string, unknown>) => String(t.id) === selectedTask.uuid);
+            const startDate = rawTask?.start_date as string | null;
+            const endDate = (rawTask?.end_date as string | null) || selectedTask.dueDate;
+            const health = getScheduleHealth({ start_date: startDate || null, end_date: endDate || null, percent_complete: selectedTask.percent_complete });
+            const healthDisplay = getScheduleHealthDisplay(health);
+            const healthColors: Record<string, string> = { green: colors.tealSuccess, yellow: colors.statusPending, red: colors.statusCritical, blue: colors.statusInfo };
+            const workingDays = (startDate && endDate && workingDaysConfig)
+              ? countWorkingDays(new Date(startDate), new Date(endDate), workingDaysConfig)
+              : null;
+
+            return (
+              <div style={{ marginBottom: spacing['2xl'], padding: spacing.lg, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: workingDays != null ? spacing.md : 0 }}>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Schedule Health</span>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: healthColors[healthDisplay.color] || colors.textSecondary }}>{healthDisplay.label}</span>
+                </div>
+                {workingDays != null && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Working Days</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{workingDays} day{workingDays !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Task Relations (from task_relations table) */}
+          {selectedTaskRelations && selectedTaskRelations.all.length > 0 && (
+            <div style={{ marginBottom: spacing['2xl'] }}>
+              <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>Task Relations</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+                {selectedTaskRelations.all.map((rel) => {
+                  const otherTaskId = rel.from_task_id === selectedTask.uuid ? rel.to_task_id : rel.from_task_id;
+                  const otherTask = localTasks.find(t => t.uuid === otherTaskId);
+                  const direction = rel.from_task_id === selectedTask.uuid ? 'outgoing' : 'incoming';
+                  return (
+                    <div key={rel.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: typography.fontSize.sm, padding: `${spacing.xs} ${spacing.sm}`, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm }}>
+                      <div style={{ color: colors.textSecondary }}>
+                        <span style={{ color: colors.textTertiary, textTransform: 'capitalize' }}>{rel.relation_type}</span>
+                        {direction === 'incoming' ? ' from ' : ' to '}
+                        <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{otherTask?.title || otherTaskId.slice(0, 8)}</span>
+                        {rel.lag_days > 0 && <span style={{ color: colors.textTertiary }}> (+{rel.lag_days}d lag)</span>}
+                      </div>
+                      <button onClick={() => deleteRelation.mutate({ id: rel.id, fromTaskId: rel.from_task_id, toTaskId: rel.to_task_id })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: spacing.xs }}><X size={12} /></button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -1021,6 +1108,81 @@ export const Tasks: React.FC = () => {
             <textarea placeholder="Add details..." rows={3}
               style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
           </div>
+
+          {/* Scheduling Fields */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing.lg }}>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Start Date</label>
+              <input type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)}
+                style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>End Date</label>
+              <input type="date" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)}
+                style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Estimated Hours</label>
+              <input type="number" min="0" step="0.5" placeholder="0" value={newEstimatedHours} onChange={(e) => setNewEstimatedHours(e.target.value)}
+                style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+          </div>
+          {/* Working days display */}
+          {newStartDate && newEndDate && workingDaysConfig && (
+            <div style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, marginTop: `-${spacing.md}` }}>
+              {countWorkingDays(new Date(newStartDate), new Date(newEndDate), workingDaysConfig)} working days between selected dates
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, fontSize: typography.fontSize.sm, color: colors.textSecondary, cursor: 'pointer' }}>
+              <input type="checkbox" checked={newScheduleManually} onChange={(e) => setNewScheduleManually(e.target.checked)} />
+              Schedule manually
+            </label>
+          </div>
+
+          {/* Dependencies Section */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+              <label style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>Dependencies</label>
+              <button onClick={() => setShowAddDep(!showAddDep)} style={{ fontSize: typography.fontSize.xs, color: colors.primaryOrange, background: 'none', border: 'none', cursor: 'pointer', fontFamily: typography.fontFamily }}>
+                {showAddDep ? 'Cancel' : '+ Add Dependency'}
+              </button>
+            </div>
+            {showAddDep && (
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 80px 80px', gap: spacing.sm, alignItems: 'end' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs }}>Predecessor</label>
+                  <select value={depPredecessorId} onChange={(e) => setDepPredecessorId(e.target.value)}
+                    style={{ width: '100%', padding: `${spacing.sm} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, outline: 'none' }}>
+                    <option value="">Select task...</option>
+                    {localTasks.map(t => (
+                      <option key={t.uuid} value={t.uuid}>{t.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs }}>Type</label>
+                  <select value={depRelationType} onChange={(e) => setDepRelationType(e.target.value as RelationType)}
+                    style={{ width: '100%', padding: `${spacing.sm} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, outline: 'none' }}>
+                    <option value="follows">Follows</option>
+                    <option value="blocks">Blocks</option>
+                    <option value="relates">Relates</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs }}>Lag</label>
+                  <input type="number" min="0" value={depLagDays} onChange={(e) => setDepLagDays(e.target.value)}
+                    style={{ width: '100%', padding: `${spacing.sm} ${spacing.md}`, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.sm, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <Btn variant="secondary" size="sm" onClick={() => {
+                  if (!depPredecessorId) { addToast('error', 'Select a predecessor task'); return; }
+                  addToast('info', `Dependency will be created after task is saved`);
+                  setShowAddDep(false);
+                }}>Add</Btn>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing.md }}>
             <Btn variant="ghost" size="md" onClick={() => setShowNewTask(false)}>Cancel</Btn>
             <Btn variant="primary" size="md" onClick={async () => {
@@ -1047,11 +1209,31 @@ export const Tasks: React.FC = () => {
                 linkedItems: [] as { type: string; id: string }[],
               };
               setLocalTasks([newTask as typeof localTasks[0], ...localTasks]);
+              const taskData: Record<string, unknown> = { project_id: projectId!, title: newTask.title, status: 'todo', priority: newPriority };
+              if (newStartDate) taskData.start_date = newStartDate;
+              if (newEndDate) taskData.end_date = newEndDate;
+              if (newEstimatedHours) taskData.estimated_hours = parseFloat(newEstimatedHours);
+              if (newScheduleManually) taskData.schedule_manually = true;
+              // Derive remaining_hours from estimated when creating
+              if (newEstimatedHours) taskData.remaining_hours = parseFloat(newEstimatedHours);
               try {
-                await createTask.mutateAsync({
+                const result = await createTask.mutateAsync({
                   projectId: projectId!,
-                  data: { project_id: projectId!, title: newTask.title, status: 'todo', priority: newPriority }
+                  data: taskData,
                 });
+                // Create dependency relation if one was set
+                if (depPredecessorId && result?.data?.id) {
+                  try {
+                    await createRelation.mutateAsync({
+                      from_task_id: depPredecessorId,
+                      to_task_id: String(result.data.id),
+                      relation_type: depRelationType,
+                      lag_days: parseInt(depLagDays) || 0,
+                    });
+                  } catch {
+                    addToast('error', 'Task created but failed to add dependency');
+                  }
+                }
                 addToast('success', `Task created: ${newTask.title}`);
               } catch {
                 addToast('error', 'Failed to create task');
@@ -1060,6 +1242,14 @@ export const Tasks: React.FC = () => {
               setNewTitle('');
               setNewPriority('medium');
               setNewAssignee('');
+              setNewEstimatedHours('');
+              setNewStartDate('');
+              setNewEndDate('');
+              setNewScheduleManually(false);
+              setShowAddDep(false);
+              setDepPredecessorId('');
+              setDepRelationType('follows');
+              setDepLagDays('0');
             }}>Create Task</Btn>
           </div>
         </div>

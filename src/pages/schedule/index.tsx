@@ -4,27 +4,77 @@ import { PageContainer } from '../../components/Primitives';
 import { useRealtimeSchedulePhases, useScheduleRealtime } from '../../hooks/queries/realtime';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { spacing } from '../../styles/theme';
+import { spacing, colors, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useProjectMetrics } from '../../hooks/useProjectMetrics';
 import { useCopilotStore } from '../../stores/copilotStore';
 import { PredictiveAlertBanner } from '../../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
-import { CoordinationEngine } from '../../components/schedule/CoordinationEngine';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { predictScheduleRisks } from '../../lib/predictions';
 import type { PredictedRisk, WeatherDay } from '../../lib/predictions';
-import { computeScheduleKPIs } from '../../lib/criticalPath';
-import { ScheduleKPIs } from './ScheduleKPIs';
+import { analyzeScheduleHealth } from '../../lib/scheduleHealth';
+import type { HealthReport } from '../../lib/scheduleHealth';
+import { ScheduleHealthPanel } from '../../components/schedule/ScheduleHealthPanel';
+import { BuildingOverview, buildingOf } from '../../components/schedule/BuildingOverview';
 import { ScheduleCoordination } from './ScheduleCoordination';
 import { ScheduleGantt } from './ScheduleGantt';
-import { ScheduleAIRiskPanel } from './ScheduleAIRiskPanel';
-import { ScheduleImportModal } from './ScheduleUpload';
+import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
 import { ScheduleErrorState, ScheduleLoadingState, ScheduleEmptyState } from './ScheduleStates';
 import { ScheduleHeaderActions, ScheduleSkipLink, ScheduleErrorBanner } from './ScheduleShellParts';
 import AddPhaseModal from '../../components/forms/AddPhaseModal';
 import { toast } from 'sonner';
+
+// Compact schedule-health chip that sits inline above the Gantt. Clicking it
+// expands the full findings panel in-place, so the Gantt keeps the full
+// viewport when the user isn't actively inspecting health.
+const HealthPill: React.FC<{
+  score: number;
+  grade: string;
+  critical: number;
+  onExpand: () => void;
+}> = ({ score, grade, critical, onExpand }) => {
+  const tone = (() => {
+    if (score >= 85) return { bg: '#E9F2EC', fg: '#1F4A34', rail: '#65A57D', label: 'Healthy' };
+    if (score >= 65) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Watch'   };
+    return                { bg: '#FAE1E1', fg: '#7A1F1F', rail: '#C23232', label: 'Critical' };
+  })();
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+        padding: `${spacing['2']} ${spacing['3']}`, marginBottom: spacing['3'],
+        border: 'none', borderRadius: borderRadius.full,
+        borderLeft: `3px solid ${tone.rail}`,
+        backgroundColor: tone.bg, color: tone.fg,
+        fontFamily: typography.fontFamily, cursor: 'pointer',
+        fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+      }}
+    >
+      <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+        Health {score}/100 · {grade}
+      </span>
+      <span style={{ opacity: 0.6, fontWeight: typography.fontWeight.normal }}>·</span>
+      <span>{tone.label}</span>
+      {critical > 0 && (
+        <span style={{
+          padding: '1px 8px', borderRadius: borderRadius.full,
+          backgroundColor: tone.rail, color: colors.white,
+          fontSize: 10, fontWeight: typography.fontWeight.bold,
+          letterSpacing: '0.04em', textTransform: 'uppercase' as const,
+        }}>
+          {critical} critical
+        </span>
+      )}
+      <span style={{ opacity: 0.6, fontWeight: typography.fontWeight.normal, fontSize: typography.fontSize.caption }}>
+        expand
+      </span>
+    </button>
+  );
+};
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
@@ -32,7 +82,6 @@ function useMediaQuery(query: string): boolean {
   );
   useEffect(() => {
     const mq = window.matchMedia(query);
-    // REACT-05 FIX: Track the deferred-sync setTimeout so it can't fire after unmount.
     const syncHandle = setTimeout(() => setMatches(mq.matches), 0);
     const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
     mq.addEventListener('change', handler);
@@ -44,16 +93,16 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-// Weather forecast loaded from weather_records table or weather API
-// Empty array is the default until project weather data is populated
 const INITIAL_FORECAST: WeatherDay[] = [];
+
+type ViewTab = 'timeline' | 'lookahead' | 'list';
 
 const SchedulePage: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isNarrow = useMediaQuery('(max-width: 480px)');
   const { activeProject } = useProjectContext();
   const queryClient = useQueryClient();
-  const { phases: schedulePhases, metrics, loading, error, loadSchedule } = useScheduleStore();
+  const { phases: schedulePhases, metrics, loading, error, loadSchedule, updatePhase } = useScheduleStore();
   const { data: projectMetrics } = useProjectMetrics(activeProject?.id);
   const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
   const navigate = useNavigate();
@@ -65,45 +114,52 @@ const SchedulePage: React.FC = () => {
   useEffect(() => { setPageContext('schedule'); }, [setPageContext]);
 
   useEffect(() => {
-    // REACT-04 FIX: include loadSchedule in deps (removed prior eslint-disable).
     if (activeProject?.id) loadSchedule(activeProject.id);
   }, [activeProject?.id, loadSchedule]);
 
-  useEffect(() => {
-    const projectId = activeProject?.id;
-    if (!projectId) return;
-    const channel = supabase
-      .channel('schedule:' + projectId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_phases', filter: 'project_id=eq.' + projectId }, () => {
-        queryClient.invalidateQueries({ queryKey: ['schedule', projectId] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [activeProject?.id, queryClient]);
+  const [viewTab, setViewTab] = useState<ViewTab>('timeline');
 
-  const [viewMode, setViewMode] = useState<'gantt' | 'list'>('gantt');
+  const handleTabChange = useCallback((tab: ViewTab) => {
+    if (tab === 'lookahead') {
+      navigate('/lookahead');
+      return;
+    }
+    setViewTab(tab);
+  }, [navigate]);
+
   const [zoomLevel, setZoomLevel] = useState<'day' | 'week' | 'month' | 'quarter'>('week');
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [showBaseline, setShowBaseline] = useState(false);
-  const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddPhaseModal, setShowAddPhaseModal] = useState(false);
 
-  const handleAddPhase = useCallback(async (data: { name: string; start_date: string; end_date: string }) => {
+  const handleAddPhase = useCallback(async (data: Record<string, unknown>) => {
     const projectId = activeProject?.id;
     if (!projectId) {
       toast.error('No project selected');
       throw new Error('No project selected');
     }
-    const { error } = await supabase.from('schedule_phases').insert({
+
+    const insert: Record<string, unknown> = {
       project_id: projectId,
       name: data.name,
       start_date: data.start_date,
       end_date: data.end_date,
-      status: 'on_track',
-      progress: 0,
-    });
+      status: data.status ?? 'upcoming',
+      percent_complete: data.percent_complete ?? 0,
+    };
+
+    if (data.is_critical_path != null) insert.is_critical_path = data.is_critical_path;
+    if (data.assigned_crew_id) insert.assigned_crew_id = data.assigned_crew_id;
+    if (data.float_days != null) insert.float_days = data.float_days;
+
+    if (Array.isArray(data.predecessor_ids) && data.predecessor_ids.length > 0) {
+      insert.depends_on = data.predecessor_ids[0];
+      insert.predecessor_ids = data.predecessor_ids;
+    }
+
+    const { error } = await supabase.from('schedule_phases').insert(insert);
     if (error) {
       toast.error(error.message || 'Failed to create phase');
       throw error;
@@ -113,10 +169,62 @@ const SchedulePage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['schedule_phases', projectId] });
     loadSchedule(projectId);
   }, [activeProject?.id, queryClient, loadSchedule]);
-  const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'delayed' | 'critical_path'>('all');
 
-  // dirtyPhaseIds: pass phase IDs currently being edited to get conflict toasts.
-  // Populated by whichever editing UI sets them; empty set is safe.
+  const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'delayed' | 'critical_path'>('all');
+  const [healthCollapsed, setHealthCollapsed] = useState(true);
+  const [activeBuilding, setActiveBuilding] = useState<string | null>(null);
+
+  // Filtered + building-grouped view for the Gantt. Sorting by building
+  // (then startDate, then name) keeps rows from the same building contiguous
+  // in the row list — so an imported schedule with 7 "CARPET" entries shows
+  // them clustered under their building instead of scattered.
+  const visiblePhases = useMemo(() => {
+    const base = activeBuilding
+      ? schedulePhases.filter((p) => buildingOf(p) === activeBuilding)
+      : schedulePhases;
+
+    // Stable key per building: Sitework first (early site work), then
+    // alphabetical building order, Clubhouse last among named areas.
+    const bucketOrder = (b: string): number => {
+      if (b === 'Sitework / General') return 0;
+      if (b === 'Clubhouse') return 500;
+      if (b.startsWith('Building ')) return 100 + b.charCodeAt(9);
+      return 800;
+    };
+
+    return [...base].sort((a, b) => {
+      const ba = buildingOf(a);
+      const bb = buildingOf(b);
+      if (ba !== bb) return bucketOrder(ba) - bucketOrder(bb) || ba.localeCompare(bb);
+      const sa = a.startDate || '9999-12-31';
+      const sb = b.startDate || '9999-12-31';
+      if (sa !== sb) return sa.localeCompare(sb);
+      return (a.name ?? '').localeCompare(b.name ?? '');
+    });
+  }, [schedulePhases, activeBuilding]);
+
+  // Smart initial zoom: wide schedules (>8 months) default to 'month'; very
+  // long ones (>2 years) default to 'quarter'. Runs once per project load,
+  // so the user's manual zoom is preserved afterward.
+  const appliedInitialZoomRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (schedulePhases.length === 0) return;
+    if (appliedInitialZoomRef.current === activeProject?.id) return;
+    const starts = schedulePhases.map((p) => p.startDate).filter(Boolean).map((d) => new Date(d).getTime());
+    const ends = schedulePhases.map((p) => p.endDate).filter(Boolean).map((d) => new Date(d).getTime());
+    if (starts.length === 0 || ends.length === 0) return;
+    const spanDays = (Math.max(...ends) - Math.min(...starts)) / 86_400_000;
+    if (spanDays > 730) setZoomLevel('quarter');
+    else if (spanDays > 240) setZoomLevel('month');
+    appliedInitialZoomRef.current = activeProject?.id ?? null;
+  }, [schedulePhases, activeProject?.id]);
+
+  // ── Schedule Health Engine ─────────────────────────────
+  const healthReport: HealthReport = useMemo(
+    () => analyzeScheduleHealth(schedulePhases),
+    [schedulePhases]
+  );
+
   const [dirtyPhaseIds] = useState<ReadonlySet<string>>(() => new Set());
   const { isSubscribed: phasesSubscribed } = useRealtimeSchedulePhases(
     activeProject?.id ?? '',
@@ -127,19 +235,16 @@ const SchedulePage: React.FC = () => {
 
   // Predictive risk state
   const [risks, setRisks] = useState<PredictedRisk[]>([]);
-  const [riskPanelOpen, setRiskPanelOpen] = useState(true);
+  const [riskPanelOpen, setRiskPanelOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [lastAnalyzed, setLastAnalyzed] = useState<Date | null>(null);
   const [minutesAgo, setMinutesAgo] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // REACT-05 FIX: Track pending setTimeout handles so they can be cleared on unmount.
   const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copilotTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [aiEdgeText, setAiEdgeText] = useState<string | null>(null);
   const [aiEdgeLoading, setAiEdgeLoading] = useState(false);
   const [weatherRecords, setWeatherRecords] = useState<Array<{ date: string; conditions: string | null }>>([]);
-
-  useMemo(() => computeScheduleKPIs(schedulePhases), [schedulePhases]);
 
   const hasBaselineData = useMemo(
     () => schedulePhases.some(p => p.baselineStartDate != null && p.baselineEndDate != null),
@@ -148,15 +253,9 @@ const SchedulePage: React.FC = () => {
 
   const activityMetrics = useMemo(() => {
     if (schedulePhases.length === 0) {
-      return {
-        scheduleVarianceDays: 0,
-        criticalPathCount: 0,
-        onTrackPct: 0,
-        completePct: 0,
-      };
+      return { scheduleVarianceDays: 0, criticalPathCount: 0, onTrackPct: 0, completePct: 0 };
     }
 
-    // Schedule Variance: projected finish minus planned finish for the latest activity (positive = behind)
     const lastActivity = schedulePhases.reduce((latest, p) =>
       new Date(p.endDate) > new Date(latest.endDate) ? p : latest
     );
@@ -169,10 +268,10 @@ const SchedulePage: React.FC = () => {
       scheduleVarianceDays = Math.round((projected.getTime() - planned.getTime()) / 86400000);
     }
 
-    // Critical Path Items: activities where is_critical_path === true
     const criticalPathCount = schedulePhases.filter(p => p.is_critical_path === true).length;
+    const milestoneCount = schedulePhases.filter(p => p.start_date === p.end_date).length;
+    const milestonesComplete = schedulePhases.filter(p => p.start_date === p.end_date && (p.status === 'completed' || (p.percent_complete ?? p.progress ?? 0) >= 100)).length;
 
-    // On Track: of non-completed activities, percentage where end_date <= baseline_end (or no baseline = on track)
     const nonCompleted = schedulePhases.filter(p => p.status !== 'completed' && (p.progress ?? 0) < 100);
     const onTrackCount = nonCompleted.length === 0
       ? schedulePhases.length
@@ -181,42 +280,41 @@ const SchedulePage: React.FC = () => {
       ? 100
       : Math.round((onTrackCount / nonCompleted.length) * 100);
 
-    // Complete: average percent_complete across all activities
     const completePct = Math.round(
       schedulePhases.reduce((sum, p) => sum + (p.progress ?? 0), 0) / schedulePhases.length
     );
 
-    return {
-      scheduleVarianceDays,
-      criticalPathCount,
-      onTrackPct,
-      completePct,
-    };
+    return { scheduleVarianceDays, criticalPathCount, onTrackPct, completePct, milestoneCount, milestonesComplete };
   }, [schedulePhases]);
+
+  const mappedForecast: WeatherDay[] = useMemo(
+    () => weatherRecords.map((w) => ({
+      date: w.date,
+      conditions: w.conditions ?? 'Clear',
+      precipitationChance: (w.conditions === 'Rain' || w.conditions === 'Thunderstorm' || w.conditions === 'Snow') ? 80 : 10,
+      tempHigh: 75,
+      tempLow: 55,
+    })),
+    [weatherRecords]
+  );
 
   const runAnalysis = useCallback(() => {
     setAnalyzing(true);
-    // REACT-05 FIX: Cancel any previous pending analysis setTimeout; store the
-    // handle so unmount can clear it.
     if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
     analysisTimeoutRef.current = setTimeout(() => {
       analysisTimeoutRef.current = null;
-      const results = predictScheduleRisks(schedulePhases, INITIAL_FORECAST);
+      const results = predictScheduleRisks(schedulePhases, mappedForecast);
       setRisks(results);
       setLastAnalyzed(new Date());
       setMinutesAgo(0);
       setAnalyzing(false);
     }, 800);
-  }, [schedulePhases]);
+  }, [schedulePhases, mappedForecast]);
 
-  // Run analysis when phases first load
   useEffect(() => {
-    if (schedulePhases.length > 0 && lastAnalyzed === null) {
-      runAnalysis();
-    }
+    if (schedulePhases.length > 0 && lastAnalyzed === null) runAnalysis();
   }, [schedulePhases, lastAnalyzed, runAnalysis]);
 
-  // Tick the "X minutes ago" counter
   useEffect(() => {
     if (lastAnalyzed === null) return;
     if (timerRef.current) clearInterval(timerRef.current);
@@ -242,7 +340,6 @@ const SchedulePage: React.FC = () => {
       });
   }, [activeProject?.id]);
 
-  // Announce schedule load completion to screen readers
   useEffect(() => {
     if (!loading && schedulePhases.length > 0) {
       const criticalCount = schedulePhases.filter(p => p.is_critical_path === true).length;
@@ -250,7 +347,6 @@ const SchedulePage: React.FC = () => {
     }
   }, [loading, schedulePhases]);
 
-  // Global keyboard shortcuts: +/= zoom in, - zoom out, b toggle baseline, Escape exit what-if
   useEffect(() => {
     const ZOOM_ORDER = ['day', 'week', 'month', 'quarter'] as const;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -282,29 +378,34 @@ const SchedulePage: React.FC = () => {
     if (schedulePhases.length === 0) return { status: 'green', label: 'On Track' };
     const behind = schedulePhases.filter(p => {
       if (p.status === 'delayed') return true;
-      const planned = (p as unknown as Record<string, unknown>).planned_percent_complete as number | null | undefined;
-      if (planned != null && (p.percent_complete ?? p.progress ?? 0) < planned) return true;
+      if (p.start_date && p.end_date) {
+        const totalDuration = new Date(p.end_date).getTime() - new Date(p.start_date).getTime();
+        const elapsed = Date.now() - new Date(p.start_date).getTime();
+        if (totalDuration > 0) {
+          const expectedPct = Math.min(100, (elapsed / totalDuration) * 100);
+          if ((p.percent_complete ?? p.progress ?? 0) < expectedPct * 0.8) return true;
+        }
+      }
       return false;
     });
     const pct = (behind.length / schedulePhases.length) * 100;
-    if (pct > 20) return { status: 'red', label: `At Risk: ${behind.length} ${behind.length === 1 ? 'activity' : 'activities'} behind` };
-    if (pct > 10) return { status: 'amber', label: `Monitoring: ${behind.length} ${behind.length === 1 ? 'activity' : 'activities'} behind` };
+    if (pct > 20) return { status: 'red', label: `At Risk: ${behind.length} behind` };
+    if (pct > 10) return { status: 'amber', label: `Monitoring: ${behind.length} behind` };
     return { status: 'green', label: 'On Track' };
   }, [schedulePhases]);
 
   const criticalPathAtRisk = useMemo(() => {
     return schedulePhases
-      .filter(p => p.is_critical_path === true && (p.status === 'delayed' || (p.float_days ?? (p as unknown as Record<string, unknown>).floatDays as number ?? 99) < 3))
-      .map(p => ({
-        id: p.id,
-        name: p.name,
-        floatDays: p.float_days ?? (p as unknown as Record<string, unknown>).floatDays as number ?? 0,
-        status: p.status,
-      }));
+      .filter(p => p.is_critical_path === true && (p.status === 'delayed' || (p.float_days ?? 99) < 3))
+      .map(p => ({ id: p.id, name: p.name, floatDays: p.float_days ?? 0, status: p.status }));
   }, [schedulePhases]);
 
   const outdoorActivityCount = useMemo(() => {
-    return schedulePhases.filter(p => (p as unknown as Record<string, unknown>).outdoor_activity === true).length;
+    const outdoorKeywords = ['exterior', 'roofing', 'grading', 'concrete', 'foundation', 'site work', 'landscaping', 'paving'];
+    return schedulePhases.filter(p => {
+      const name = (p.name ?? '').toLowerCase();
+      return outdoorKeywords.some(kw => name.includes(kw));
+    }).length;
   }, [schedulePhases]);
 
   const runAiEdgeAnalysis = useCallback(async () => {
@@ -329,7 +430,6 @@ const SchedulePage: React.FC = () => {
     const convId = createConversation(`Recovery Plan: ${risk.title}`);
     setActiveConversation(convId);
     navigate('/copilot');
-    // REACT-05 FIX: Track handle so it can be cleared on unmount.
     if (copilotTimeoutRef.current) clearTimeout(copilotTimeoutRef.current);
     copilotTimeoutRef.current = setTimeout(() => {
       copilotTimeoutRef.current = null;
@@ -337,7 +437,16 @@ const SchedulePage: React.FC = () => {
     }, 100);
   }, [createConversation, setActiveConversation, sendMessage, navigate]);
 
-  // REACT-05 FIX: Clear any outstanding setTimeouts when the page unmounts.
+  const handlePhaseUpdate = useCallback(async (
+    id: string,
+    updates: { start_date?: string; end_date?: string; percent_complete?: number }
+  ) => {
+    const result = await updatePhase(id, updates);
+    if (result.error) {
+      toast.error(`Failed to save change: ${result.error}`);
+    }
+  }, [updatePhase]);
+
   useEffect(() => {
     return () => {
       if (analysisTimeoutRef.current) clearTimeout(analysisTimeoutRef.current);
@@ -345,14 +454,8 @@ const SchedulePage: React.FC = () => {
     };
   }, []);
 
-  if (error && !loading) {
-    return <ScheduleErrorState error={error} />;
-  }
-
-  if (loading) {
-    return <ScheduleLoadingState />;
-  }
-
+  if (error && !loading) return <ScheduleErrorState error={error} />;
+  if (loading) return <ScheduleLoadingState />;
   if (!loading && !error && schedulePhases.length === 0) {
     return (
       <ScheduleEmptyState
@@ -364,11 +467,12 @@ const SchedulePage: React.FC = () => {
   }
 
   const pageAlerts = getPredictiveAlertsForPage('schedule');
+  const viewMode: 'gantt' | 'list' = viewTab === 'list' ? 'list' : 'gantt';
 
   return (
     <PageContainer
       title="Schedule"
-      subtitle={`${metrics.daysBeforeSchedule} days ahead \u00B7 ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
+      subtitle={`${metrics.daysBeforeSchedule} days ahead · ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
       actions={
         <ScheduleHeaderActions
           onImport={() => setShowImportModal(true)}
@@ -388,97 +492,190 @@ const SchedulePage: React.FC = () => {
       aria-label="Project Schedule"
       role="main"
     >
-      {/* Visually hidden h1 for screen reader landmark navigation */}
+      {/* Visually hidden h1 for screen reader navigation */}
       <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', margin: 0, padding: 0 }}>
         Schedule
       </h1>
 
-      {/* Global aria-live region: announces filter changes and status updates */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}
-      >
+      {/* Global aria-live region */}
+      <div role="status" aria-live="polite" aria-atomic="true"
+        style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
         {scheduleAnnouncement}
       </div>
 
       <ScheduleSkipLink />
       <ScheduleErrorBanner error={error} refetch={refetch} />
       {pageAlerts.map((alert) => (
-        <PredictiveAlertBanner key={alert.id} alert={alert} onAction={() => setRecoveryExpanded(!recoveryExpanded)} />
+        <PredictiveAlertBanner key={alert.id} alert={alert} onAction={() => setRiskPanelOpen(prev => !prev)} />
       ))}
 
       <style>{`
         @keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.35); } }
       `}</style>
 
-      <ScheduleKPIs
-        activityMetrics={activityMetrics}
-        metrics={metrics}
-        projectMetrics={projectMetrics}
-        isMobile={isMobile}
-        isNarrow={isNarrow}
-      />
+      {/* ── 1. Tab Navigation ── */}
+      <nav
+        role="tablist" aria-label="Schedule views"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 2,
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.full, padding: 3,
+          marginBottom: spacing['5'], width: 'fit-content',
+        }}
+      >
+        {([
+          { key: 'timeline' as const, label: 'Timeline' },
+          { key: 'lookahead' as const, label: 'Look-Ahead' },
+          { key: 'list' as const, label: 'List' },
+        ]).map(tab => (
+          <button
+            key={tab.key} role="tab" aria-selected={viewTab === tab.key}
+            onClick={() => handleTabChange(tab.key)}
+            style={{
+              padding: `${spacing['2']} ${spacing['5']}`,
+              border: 'none', borderRadius: borderRadius.full,
+              backgroundColor: viewTab === tab.key ? colors.white : 'transparent',
+              color: viewTab === tab.key ? colors.textPrimary : colors.textTertiary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: viewTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
+              fontFamily: typography.fontFamily, cursor: 'pointer',
+              boxShadow: viewTab === tab.key ? shadows.sm : 'none',
+              transition: transitions.quick, whiteSpace: 'nowrap',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-      <ScheduleCoordination
-        risks={risks}
-        riskPanelOpen={riskPanelOpen}
-        setRiskPanelOpen={setRiskPanelOpen}
-        analyzing={analyzing}
-        lastAnalyzed={lastAnalyzed}
-        minutesAgo={minutesAgo}
-        runAnalysis={runAnalysis}
-        overallHealthStatus={overallHealthStatus}
-        criticalPathAtRisk={criticalPathAtRisk}
-        outdoorActivityCount={outdoorActivityCount}
-        aiEdgeText={aiEdgeText}
-        aiEdgeLoading={aiEdgeLoading}
-        runAiEdgeAnalysis={runAiEdgeAnalysis}
-        openCopilotWithRisk={openCopilotWithRisk}
-        recoveryExpanded={recoveryExpanded}
-        setRecoveryExpanded={setRecoveryExpanded}
-      />
-
-      {/* ── Coordination Engine — Trade Conflict Detection ──── */}
-      <CoordinationEngine />
-
-      {/* ── Enhanced AI Schedule Risk analysis ──── */}
-      <div style={{ marginTop: spacing['5'] }}>
-        <ScheduleAIRiskPanel schedulePhases={schedulePhases} />
-      </div>
-
-      {/* Timeline: Gantt on desktop/tablet, card list on mobile */}
-      <div style={{ marginTop: spacing['5'] }}>
-        <ScheduleGantt
-          schedulePhases={schedulePhases}
-          loading={loading}
-          error={error}
-          refetch={refetch}
-          isMobile={isMobile}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          whatIfMode={whatIfMode}
-          setWhatIfMode={setWhatIfMode}
-          showBaseline={showBaseline}
-          setShowBaseline={setShowBaseline}
-          hasBaselineData={hasBaselineData}
-          mobileFilter={mobileFilter}
-          setMobileFilter={setMobileFilter}
-          weatherRecords={weatherRecords}
-          initialForecast={INITIAL_FORECAST}
-          risks={risks}
-          setShowImportModal={setShowImportModal}
-          setScheduleAnnouncement={setScheduleAnnouncement}
+      {/* KPI strip + full Health panel intentionally removed from the
+          Schedule page — they belonged on the project dashboard. The
+          Health score surfaces as a compact pill in the toolbar instead,
+          and expanding a per-finding overlay happens via the slide-over. */}
+      {schedulePhases.length > 0 && !healthCollapsed && (
+        <div style={{ marginBottom: spacing['4'] }}>
+          <ScheduleHealthPanel
+            report={healthReport}
+            collapsed={false}
+            onToggleCollapsed={() => setHealthCollapsed(true)}
+            onClose={() => setHealthCollapsed(true)}
+            onFindingClick={(taskIds) => {
+              const names = taskIds
+                .map(id => schedulePhases.find(p => p.id === id)?.name)
+                .filter(Boolean)
+                .slice(0, 3);
+              setScheduleAnnouncement(
+                `Health finding affects: ${names.join(', ')}${taskIds.length > 3 ? ` and ${taskIds.length - 3} more` : ''}`
+              );
+            }}
+          />
+        </div>
+      )}
+      {schedulePhases.length > 0 && healthCollapsed && (
+        <HealthPill
+          score={healthReport.score}
+          grade={healthReport.grade}
+          critical={healthReport.findings?.filter((f) => f.severity === 'critical').length ?? 0}
+          onExpand={() => setHealthCollapsed(false)}
         />
-      </div>
-      <ScheduleImportModal
+      )}
+
+      {/* ── Building overview ── */}
+      {schedulePhases.length > 0 && (
+        <BuildingOverview
+          phases={schedulePhases}
+          activeBuilding={activeBuilding}
+          onSelectBuilding={setActiveBuilding}
+        />
+      )}
+
+      {/* ── 3. Gantt / List (hero) ── */}
+      <ScheduleGantt
+        schedulePhases={visiblePhases}
+        loading={loading}
+        error={error}
+        refetch={refetch}
+        isMobile={isMobile}
+        viewMode={viewMode}
+        setViewMode={(m) => setViewTab(m === 'list' ? 'list' : 'timeline')}
+        zoomLevel={zoomLevel}
+        setZoomLevel={setZoomLevel}
+        whatIfMode={whatIfMode}
+        setWhatIfMode={setWhatIfMode}
+        showBaseline={showBaseline}
+        setShowBaseline={setShowBaseline}
+        hasBaselineData={hasBaselineData}
+        mobileFilter={mobileFilter}
+        setMobileFilter={setMobileFilter}
+        weatherRecords={weatherRecords}
+        initialForecast={INITIAL_FORECAST}
+        risks={risks}
+        setShowImportModal={setShowImportModal}
+        setScheduleAnnouncement={setScheduleAnnouncement}
+        onPhaseUpdate={handlePhaseUpdate}
+      />
+
+      {/* AI Risk Analysis is now opt-in — it's a power-user feature that
+          shouldn't compete with the Gantt for attention. Click to reveal. */}
+      <details style={{ marginTop: spacing['4'] }}>
+        <summary style={{
+          cursor: 'pointer', userSelect: 'none' as const,
+          display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+          padding: `${spacing['2']} ${spacing['3']}`,
+          fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
+          color: colors.textSecondary,
+          border: `1px solid ${colors.borderSubtle}`,
+          borderRadius: borderRadius.full,
+          fontFamily: typography.fontFamily,
+        }}>
+          AI Risk Analysis
+          {risks.length > 0 && (
+            <span style={{
+              padding: '1px 8px', borderRadius: borderRadius.full,
+              backgroundColor: '#FAE1E1', color: '#7A1F1F',
+              fontSize: 10, fontWeight: typography.fontWeight.bold,
+            }}>
+              {risks.length}
+            </span>
+          )}
+        </summary>
+        <div style={{ marginTop: spacing['3'] }}>
+          <ScheduleCoordination
+            risks={risks}
+            riskPanelOpen={riskPanelOpen}
+            setRiskPanelOpen={setRiskPanelOpen}
+            analyzing={analyzing}
+            lastAnalyzed={lastAnalyzed}
+            minutesAgo={minutesAgo}
+            runAnalysis={runAnalysis}
+            overallHealthStatus={overallHealthStatus}
+            criticalPathAtRisk={criticalPathAtRisk}
+            outdoorActivityCount={outdoorActivityCount}
+            aiEdgeText={aiEdgeText}
+            aiEdgeLoading={aiEdgeLoading}
+            runAiEdgeAnalysis={runAiEdgeAnalysis}
+            openCopilotWithRisk={openCopilotWithRisk}
+            recoveryExpanded={false}
+            setRecoveryExpanded={() => {}}
+          />
+        </div>
+      </details>
+
+      {/* Modals */}
+      <ScheduleImportWizard
+        isModal
         open={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onImportComplete={() => { setShowImportModal(false); }}
         projectId={activeProject?.id}
+        projectName={activeProject?.name}
+        onImportComplete={() => {
+          setShowImportModal(false);
+          if (activeProject?.id) {
+            loadSchedule(activeProject.id);
+            queryClient.invalidateQueries({ queryKey: ['schedule', activeProject.id] });
+            queryClient.invalidateQueries({ queryKey: ['schedule_phases', activeProject.id] });
+          }
+        }}
       />
       <AddPhaseModal
         open={showAddPhaseModal}

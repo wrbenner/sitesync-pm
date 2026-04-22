@@ -18,7 +18,7 @@ export function usePunchItems(projectId: string | undefined, pagination?: Pagina
         .from('punch_items')
         .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
-        .order('item_number', { ascending: false })
+        .order('number', { ascending: false })
         .range(from, to)
       if (error) throw error
       return { data: (data ?? []) as PunchItem[], total: count ?? 0, page, pageSize }

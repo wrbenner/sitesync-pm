@@ -18,7 +18,7 @@ export function useDirectoryContacts(projectId: string | undefined, pagination?:
         .from('directory_contacts')
         .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
-        .order('contact_name', { ascending: true })
+        .order('name', { ascending: true })
         .range(from, to)
       if (error) throw error
       return { data: (data ?? []) as DirectoryContact[], total: count ?? 0, page, pageSize }

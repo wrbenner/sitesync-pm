@@ -5,40 +5,27 @@ import { calculateCriticalPath, tasksToCPM } from '../../lib/criticalPath'
 
 // Base columns always present in schedule_phases.
 const SCHEDULE_SELECT_BASE =
-  'id, project_id, name, start_date, end_date, baseline_start, baseline_end, ' +
-  'percent_complete, float_days, is_critical_path, dependencies, status, created_at, updated_at'
+  'id, project_id, name, start_date, end_date, ' +
+  'percent_complete, is_critical_path, depends_on, assigned_crew_id, status, created_at, updated_at, deleted_at, deleted_by'
 
-// Extended select that also fetches optional columns. Falls back to base if these columns
-// do not yet exist in the database.
-const SCHEDULE_SELECT =
-  SCHEDULE_SELECT_BASE +
-  ', actual_start, actual_finish, wbs_code, trade, assigned_sub_id, is_milestone, outdoor_activity, planned_percent_complete'
+// Extended select is the same as base — all columns exist in the schema.
+const SCHEDULE_SELECT = SCHEDULE_SELECT_BASE
 
-type RawRow = Pick<
-  SchedulePhaseRow,
-  | 'id'
-  | 'project_id'
-  | 'name'
-  | 'start_date'
-  | 'end_date'
-  | 'baseline_start'
-  | 'baseline_end'
-  | 'percent_complete'
-  | 'float_days'
-  | 'is_critical_path'
-  | 'dependencies'
-  | 'status'
-  | 'created_at'
-  | 'updated_at'
-> & {
-  actual_start?: string | null
-  actual_finish?: string | null
-  wbs_code?: string | null
-  trade?: string | null
-  assigned_sub_id?: string | null
-  is_milestone?: boolean | null
-  outdoor_activity?: boolean | null
-  planned_percent_complete?: number | null
+type RawRow = {
+  id: string
+  project_id: string
+  name: string
+  start_date: string | null
+  end_date: string | null
+  percent_complete: number | null
+  is_critical_path: boolean | null
+  depends_on: string | null
+  assigned_crew_id: string | null
+  status: string | null
+  created_at: string | null
+  updated_at: string | null
+  deleted_at: string | null
+  deleted_by: string | null
 }
 
 const VALID_STATUSES = new Set<ScheduleActivity['status']>([
@@ -74,21 +61,21 @@ export function mapScheduleActivityRow(row: RawRow): ScheduleActivity {
     description: null,
     start_date: startDate,
     finish_date: finishDate,
-    baseline_start: row.baseline_start ?? null,
-    baseline_finish: row.baseline_end ?? null,
-    actual_start: row.actual_start ?? null,
-    actual_finish: row.actual_finish ?? null,
+    baseline_start: null,
+    baseline_finish: null,
+    actual_start: null,
+    actual_finish: null,
     percent_complete: row.percent_complete ?? 0,
-    planned_percent_complete: row.planned_percent_complete ?? 0,
+    planned_percent_complete: 0,
     duration_days: durationDays,
-    float_days: row.float_days ?? 0,
+    float_days: 0,
     is_critical: row.is_critical_path ?? false,
-    is_milestone: row.is_milestone ?? false,
-    wbs_code: row.wbs_code ?? null,
-    trade: row.trade ?? null,
-    assigned_sub_id: row.assigned_sub_id ?? null,
-    outdoor_activity: row.outdoor_activity ?? false,
-    predecessor_ids: row.dependencies ?? [],
+    is_milestone: false,
+    wbs_code: null,
+    trade: null,
+    assigned_sub_id: row.assigned_crew_id ?? null,
+    outdoor_activity: false,
+    predecessor_ids: row.depends_on ? [row.depends_on] : [],
     successor_ids: [],
     status: toActivityStatus(row.status),
     created_at: row.created_at ?? '',
@@ -125,7 +112,7 @@ export const getSchedulePhases = async (projectId: string): Promise<ScheduleActi
       title: r.name,
       start_date: r.start_date,
       end_date: r.end_date,
-      predecessor_ids: r.dependencies ?? null,
+      predecessor_ids: r.depends_on ? [r.depends_on] : null,
       estimated_hours: null,
     })),
   )

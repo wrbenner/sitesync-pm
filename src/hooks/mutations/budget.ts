@@ -47,7 +47,7 @@ export function useDeleteBudgetItem() {
     entityType: 'budget_line_item',
     getEntityId: (p) => p.id,
     mutationFn: async (params) => {
-      const { error } = await from('budget_line_items').delete().eq('id', params.id)
+      const { error } = await from('budget_line_items').delete().eq('id', params.id).eq('project_id', params.projectId)
       if (error) throw error
       return { projectId: params.projectId }
     },

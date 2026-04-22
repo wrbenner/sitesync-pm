@@ -1,88 +1,130 @@
-import React, { useMemo, useState, useEffect, lazy, Suspense } from 'react';
+import React, { useMemo, useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import {
+  AlertCircle, DollarSign, HelpCircle, Calendar, ChevronRight,
+  Shield, ClipboardList, CloudSun,
+  Sparkles, Scale, FileText, Send, Clock,
+  ArrowUpRight,
+} from 'lucide-react';
 import { PageContainer } from '../../components/Primitives';
-import { MetricCardSkeleton } from '../../components/ui/Skeletons';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day } from '../../lib/weather';
 import type { WeatherData, WeatherDay } from '../../lib/weather';
-import { duration, easingArray, skeletonStyle } from '../../styles/animations';
+import { getProjectCoordinates } from '../../lib/geocoding';
+import type { GeocodingResult } from '../../lib/geocoding';
+import { skeletonStyle } from '../../styles/animations';
 import { useProjectId } from '../../hooks/useProjectId';
 import {
   useProject, useProjects, usePayApplications, useLienWaivers,
-  useAiInsightsMeta, useSchedulePhases,
+  useAiInsightsMeta, useSchedulePhases, useActivityFeed,
 } from '../../hooks/queries';
 import { useProjectMetrics } from '../../hooks/useProjectMetrics';
-import { useProjectDiscrepancies } from '../../hooks/useDrawingIntelligence';
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { DashboardGrid } from '../../components/dashboard/DashboardGrid';
-import { MorningBriefing } from '../../components/dashboard/MorningBriefing';
-import { CoordinationEngine } from '../../components/schedule/CoordinationEngine';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import type { AIInsight } from '../../types/ai';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { supabase } from '../../lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../hooks/useAuth';
+import { compactDollars } from './types';
 
 import { WelcomeOnboarding } from './WelcomeOnboarding';
-import { DashboardMetrics } from './DashboardMetrics';
-import { DashboardWeather } from './DashboardWeather';
-import { AIInsightsBanner, DeterministicInsightsBanner } from './DashboardAI';
-import { DashboardHero, OwnerReportCard, MissingWaiversAlert, OnboardingChecklist } from './DashboardBriefing';
-import { ProactiveAlerts } from '../../components/ai/ProactiveAlerts';
+import { OnboardingChecklist } from './DashboardBriefing';
+import { DashboardBriefingAI } from './DashboardBriefingAI';
 
 const QuickRFIButton = lazy(() => import('../../components/field/QuickRFIButton'));
 
-// ── Loading Skeleton ────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────
 
-const skeletonCard: React.CSSProperties = {
-  ...skeletonStyle,
-  border: `1px solid ${colors.borderSubtle}`,
-  boxShadow: shadows.card,
-};
+function getGreeting(hour: number): string {
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function getFirstName(user: { user_metadata?: { full_name?: string }; email?: string } | null): string {
+  const fullName = user?.user_metadata?.full_name;
+  if (fullName) return fullName.split(' ')[0];
+  const email = user?.email;
+  if (email) return email.split('@')[0];
+  return 'there';
+}
+
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = now - then;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '1d';
+  if (days < 7) return `${days}d`;
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ── Animations ─────────────────────────────────────────
+
+const ease = [0.16, 1, 0.3, 1] as const; // Apple-style overshoot
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.7, ease, delay },
+});
+
+// ── Skeleton ───────────────────────────────────────────
+
+const skel: React.CSSProperties = { ...skeletonStyle, borderRadius: borderRadius.lg };
 
 function DashboardSkeleton() {
   return (
     <PageContainer>
-      {/* Hero placeholder */}
-      <div style={{ ...skeletonCard, height: 104, borderRadius: borderRadius.xl, marginBottom: spacing['5'] }} />
-      {/* Weather strip placeholder */}
-      <div style={{ ...skeletonCard, height: 60, borderRadius: borderRadius.lg, marginBottom: spacing['4'], animationDelay: '0.2s' }} />
-      {/* Insights panel placeholder */}
-      <div style={{ ...skeletonCard, height: 88, borderRadius: borderRadius.xl, marginBottom: spacing['5'], animationDelay: '0.4s' }} />
-      <MetricCardSkeleton count={6} />
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: `${spacing['12']} 0` }}>
+        <div style={{ ...skel, height: 32, width: 260, marginBottom: spacing['3'] }} />
+        <div style={{ ...skel, height: 14, width: 180, marginBottom: spacing['12'], animationDelay: '0.08s' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['10'] }}>
+          {[0, 1, 2, 3].map((i) => <div key={i} style={{ ...skel, height: 110, animationDelay: `${0.12 + i * 0.04}s` }} />)}
+        </div>
+        <div style={{ ...skel, height: 240, animationDelay: '0.3s' }} />
+      </div>
     </PageContainer>
   );
 }
 
-// ── Dashboard ───────────────────────────────────────────
+// ── Dashboard Shell ────────────────────────────────────
 
 const DashboardPage: React.FC = () => {
   const projectId = useProjectId();
   const setActiveProject = useProjectContext((s) => s.setActiveProject);
-
-  // Fetch all projects to detect "no projects" state
   const { data: allProjects, isPending: projectsLoading } = useProjects();
 
-  // Auto-select first project if none selected, OR if the persisted projectId
-  // points to a project the user can no longer see (deleted, archived, RLS).
+  // Ensure a valid project is selected — but guard against infinite loops.
+  // allProjects is a new array reference on every react-query refetch, so we
+  // track the last ID we set via ref to avoid re-triggering setActiveProject
+  // when the store update hasn't propagated to projectId yet.
+  const lastAutoSetRef = useRef<string | null>(null);
   useEffect(() => {
     if (!allProjects || allProjects.length === 0) return;
-    const stillExists = projectId && allProjects.some((p) => p.id === projectId);
-    if (!stillExists) {
-      setActiveProject(allProjects[0].id);
+    const validIds = new Set(allProjects.map((p) => p.id));
+    // Already pointing at a valid project — nothing to do
+    if (projectId && validIds.has(projectId)) {
+      lastAutoSetRef.current = null;
+      return;
     }
+    const fallbackId = allProjects[0].id;
+    // Don't re-set if we already just set this ID (store update in flight)
+    if (lastAutoSetRef.current === fallbackId) return;
+    lastAutoSetRef.current = fallbackId;
+    setActiveProject(fallbackId);
   }, [projectId, allProjects, setActiveProject]);
 
-  // Show onboarding if no projects exist
   if (projectsLoading) return <DashboardSkeleton />;
-  if (!allProjects || allProjects.length === 0) {
-    return <WelcomeOnboarding onProjectCreated={() => {}} />;
-  }
-
+  if (!allProjects || allProjects.length === 0) return <WelcomeOnboarding onProjectCreated={() => {}} />;
   return <DashboardInner />;
 };
 
@@ -91,12 +133,9 @@ export const Dashboard: React.FC = () => (
     <DashboardPage />
   </ErrorBoundary>
 );
-
 export default Dashboard;
 
-// ── Live Metrics Fallback ───────────────────────────────
-// When the materialized view hasn't been refreshed (e.g. new project),
-// run direct count queries so the dashboard shows real numbers.
+// ── Live Metrics Fallback ──────────────────────────────
 
 function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: boolean) {
   return useQuery({
@@ -109,13 +148,11 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
         supabase.from('submittals').select('id, status', { count: 'exact' }).eq('project_id', projectId!),
         supabase.from('daily_logs').select('id', { count: 'exact' }).eq('project_id', projectId!),
       ]);
-
       const rfiRows = rfis.data ?? [];
       const punchRows = punchItems.data ?? [];
       const budgetRows = budgetItems.data ?? [];
       const submittalRows = submittals.data ?? [];
       const today = new Date().toISOString().split('T')[0];
-
       return {
         rfis_open: rfiRows.filter((r) => r.status === 'open' || r.status === 'under_review').length,
         rfis_overdue: rfiRows.filter((r) => (r.status === 'open' || r.status === 'under_review') && r.due_date && r.due_date < today).length,
@@ -135,148 +172,109 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
   });
 }
 
-// ── Dashboard Inner (has a project) ─────────────────────
+// ════════════════════════════════════════════════════════════════
+// ══  DASHBOARD — The Command Center                          ══
+// ══  Design philosophy: Calm authority. Information density   ══
+// ══  without noise. Every element earns its place.           ══
+// ════════════════════════════════════════════════════════════════
 
 const DashboardInner: React.FC = () => {
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
+  const { user } = useAuth();
 
   const { data: project, isError: projectError, error: projectErrorObj } = useProject(projectId);
   const { data: insightsData } = useAiInsightsMeta(projectId);
-  // Single batched query against the project_metrics materialized view.
   const { data: matViewMetrics } = useProjectMetrics(projectId);
   const { data: payApps } = usePayApplications(projectId);
   const { data: lienWaivers } = useLienWaivers(projectId);
-  const { data: discrepancies = [] } = useProjectDiscrepancies(projectId);
-
-  // Fallback: live counts when materialized view has no data for this project
   const { data: liveMetrics } = useLiveMetricsFallback(projectId, !!matViewMetrics);
 
-  // Load schedule phases into Zustand store for coordination engine conflict detection
   const loadSchedule = useScheduleStore((s) => s.loadSchedule);
-  useEffect(() => {
-    if (projectId) loadSchedule(projectId);
-  }, [projectId, loadSchedule]);
+  useEffect(() => { if (projectId) loadSchedule(projectId); }, [projectId, loadSchedule]);
 
-  // Weather: fetch current conditions + 5 day forecast using project coordinates
-  const projectLat = project?.latitude ?? undefined;
-  const projectLon = project?.longitude ?? undefined;
-  const { data: weatherData, isPending: weatherPending } = useQuery<WeatherData>({
+  // Weather
+  const { data: geoResult } = useQuery<GeocodingResult>({
+    queryKey: ['project_geocode', projectId, project?.city, project?.state],
+    queryFn: () => getProjectCoordinates(projectId!, project?.address, project?.city, project?.state, project?.latitude, project?.longitude),
+    enabled: !!projectId && !!project,
+    staleTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const projectLat = geoResult?.lat;
+  const projectLon = geoResult?.lon;
+  const { data: weatherData } = useQuery<WeatherData>({
     queryKey: ['weather_current', projectId, projectLat, projectLon],
     queryFn: () => fetchWeather(projectLat, projectLon),
-    enabled: !!projectId,
+    enabled: !!projectId && !!geoResult,
     staleTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const { data: forecastData } = useQuery<WeatherDay[]>({
     queryKey: ['weather_forecast', projectId, projectLat, projectLon],
-    queryFn: () => fetchWeatherForecast5Day(projectLat ?? 40.7128, projectLon ?? -74.0060),
-    enabled: !!projectId,
+    queryFn: () => fetchWeatherForecast5Day(projectLat ?? 32.7767, projectLon ?? -96.7970),
+    enabled: !!projectId && !!geoResult,
     staleTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
-
-  // Schedule phases for weather-schedule conflict detection
   const { data: schedulePhases } = useSchedulePhases(projectId);
 
-  // Weather-schedule conflict insights: connect forecast to upcoming outdoor phases
+  // Weather conflicts
   const weatherConflictInsights = useMemo<AIInsight[]>(() => {
     if (!forecastData || !schedulePhases) return [];
-    const now = new Date().toISOString();
+    const nowStr = new Date().toISOString();
     const conflicts: AIInsight[] = [];
-    const activePhases = schedulePhases.filter(
-      (p) => p.status !== 'complete' && (p.percent_complete ?? 0) < 100 && p.start_date
-    );
-
+    const activePhases = schedulePhases.filter((p) => p.status !== 'complete' && (p.percent_complete ?? 0) < 100 && p.start_date);
     for (const day of forecastData) {
       if (day.precip_probability < 60) continue;
-      const forecastDate = day.date;
-      const matchingPhase = activePhases.find((p) => {
-        if (!p.start_date) return false;
-        const phaseStart = p.start_date.split('T')[0];
-        const phaseEnd = p.end_date ? p.end_date.split('T')[0] : phaseStart;
-        return forecastDate >= phaseStart && forecastDate <= phaseEnd;
+      const match = activePhases.find((p) => {
+        const s = p.start_date!.split('T')[0];
+        const e = p.end_date ? p.end_date.split('T')[0] : s;
+        return day.date >= s && day.date <= e;
       });
-      if (!matchingPhase) continue;
-
-      const dayLabel = new Date(forecastDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-      const phaseName = matchingPhase.name ?? 'Scheduled phase';
+      if (!match) continue;
+      const dayLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
       conflicts.push({
-        id: `weather-conflict-${forecastDate}-${matchingPhase.id}`,
-        type: 'risk',
+        id: `weather-${day.date}-${match.id}`, type: 'risk',
         severity: day.precip_probability >= 80 ? 'critical' : 'warning',
-        title: `${day.conditions} forecast for ${dayLabel}. ${phaseName} may be impacted`,
-        description: `${day.precip_probability}% chance of precipitation on ${dayLabel} (${day.temp_high}°/${day.temp_low}°). ${phaseName} is scheduled during this period. Consider identifying indoor backup scope or adjusting the sequence.`,
-        affectedEntities: [
-          { type: 'schedule_phase', id: matchingPhase.id, name: phaseName },
-        ],
-        suggestedAction: `Review ${phaseName} schedule and prepare contingency`,
-        confidence: 0.8,
-        source: 'computed' as const,
-        createdAt: now,
-        generatedAt: now,
-        dismissed: false,
+        title: `${day.conditions} on ${dayLabel} may impact ${match.name ?? 'scheduled work'}`,
+        description: `${day.precip_probability}% precipitation chance.`,
+        affectedEntities: [{ type: 'schedule_phase', id: match.id, name: match.name ?? '' }],
+        suggestedAction: `Review ${match.name} and prepare contingency`,
+        confidence: 0.8, source: 'computed' as const,
+        createdAt: nowStr, generatedAt: nowStr, dismissed: false,
       });
       if (conflicts.length >= 2) break;
     }
     return conflicts;
   }, [forecastData, schedulePhases]);
 
-  // Merge AI insights with weather conflict insights
-  const mergedInsights = useMemo<AIInsight[]>(() => {
-    const aiInsights = insightsData?.insights ?? [];
-    return [...aiInsights, ...weatherConflictInsights];
-  }, [insightsData?.insights, weatherConflictInsights]);
-
-  // Stable "now" timestamp — captured once at mount so useMemos stay pure
   const [now] = useState(() => Date.now());
-
-  // Timeout: never show skeleton for more than 5 seconds
   const [skeletonTimedOut, setSkeletonTimedOut] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setSkeletonTimedOut(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => { const t = setTimeout(() => setSkeletonTimedOut(true), 5000); return () => clearTimeout(t); }, []);
 
-  // Merge: prefer materialized view, fall back to live counts
+  // ── Metrics ──────────────────────────────────────────
   const metrics = useMemo(() => {
     if (matViewMetrics) return matViewMetrics;
     if (!liveMetrics) return undefined;
     return {
-      project_id: projectId ?? '',
-      project_name: project?.name ?? '',
-      contract_value: project?.contract_value ?? null,
-      overall_progress: 0,
-      milestones_completed: 0,
-      milestones_total: 0,
-      schedule_variance_days: 0,
-      rfis_open: liveMetrics.rfis_open,
-      rfis_overdue: liveMetrics.rfis_overdue,
-      rfis_total: liveMetrics.rfis_total,
-      avg_rfi_response_days: 0,
-      punch_open: liveMetrics.punch_open,
-      punch_total: liveMetrics.punch_total,
-      budget_total: liveMetrics.budget_total,
-      budget_spent: liveMetrics.budget_spent,
-      budget_committed: 0,
-      crews_active: 0,
-      workers_onsite: 0,
-      safety_incidents_this_month: 0,
-      submittals_pending: liveMetrics.submittals_pending,
-      submittals_approved: 0,
-      submittals_total: liveMetrics.submittals_total,
+      project_id: projectId ?? '', project_name: project?.name ?? '', contract_value: project?.contract_value ?? null,
+      overall_progress: 0, milestones_completed: 0, milestones_total: 0, schedule_variance_days: 0,
+      rfis_open: liveMetrics.rfis_open, rfis_overdue: liveMetrics.rfis_overdue, rfis_total: liveMetrics.rfis_total,
+      avg_rfi_response_days: 0, punch_open: liveMetrics.punch_open, punch_total: liveMetrics.punch_total,
+      budget_total: liveMetrics.budget_total, budget_spent: liveMetrics.budget_spent, budget_committed: 0,
+      crews_active: 0, workers_onsite: 0, safety_incidents_this_month: 0,
+      submittals_pending: liveMetrics.submittals_pending, submittals_approved: 0, submittals_total: liveMetrics.submittals_total,
     } satisfies import('../../types/api').ProjectMetrics;
   }, [matViewMetrics, liveMetrics, projectId, project?.name, project?.contract_value]);
 
-  // ── Derived KPIs ──────────────────────────────────────
-
+  // ── Derived KPIs ─────────────────────────────────────
   const overallProgress = metrics?.overall_progress ?? 0;
-
   const scheduleHealth = useMemo(() => {
     const v = metrics?.schedule_variance_days ?? 0;
-    if (v >= 0) return { days: v, label: v === 0 ? 'On Track' : 'days ahead', positive: true };
-    return { days: Math.abs(v), label: 'days behind', positive: false };
+    if (v >= 0) return { days: v, label: v === 0 ? 'On Track' : `${v}d ahead`, positive: true };
+    return { days: Math.abs(v), label: `${Math.abs(v)}d behind`, positive: false };
   }, [metrics?.schedule_variance_days]);
 
   const budgetData = useMemo(() => {
@@ -286,233 +284,596 @@ const DashboardInner: React.FC = () => {
     return { spent, total, pct };
   }, [metrics?.budget_spent, metrics?.budget_total]);
 
-  const rfiData = useMemo(() => ({
-    open: metrics?.rfis_open ?? 0,
-    overdue: metrics?.rfis_overdue ?? 0,
-  }), [metrics?.rfis_open, metrics?.rfis_overdue]);
+  const rfiData = useMemo(() => ({ open: metrics?.rfis_open ?? 0, overdue: metrics?.rfis_overdue ?? 0 }), [metrics?.rfis_open, metrics?.rfis_overdue]);
+  const punchData = useMemo(() => ({ open: metrics?.punch_open ?? 0, total: metrics?.punch_total ?? 0, resolved: (metrics?.punch_total ?? 0) - (metrics?.punch_open ?? 0) }), [metrics?.punch_open, metrics?.punch_total]);
+  const safetyScore = useMemo(() => Math.max(0, Math.min(100, 98 - (metrics?.safety_incidents_this_month ?? 0) * 3)), [metrics?.safety_incidents_this_month]);
 
-  const discrepancyData = useMemo(() => {
-    const active = discrepancies.filter((d) => !d.is_false_positive);
-    const high = active.filter((d) => d.severity === 'high').length;
-    const medium = active.filter((d) => d.severity === 'medium').length;
-    const low = active.filter((d) => d.severity === 'low').length;
-    return { total: active.length, high, medium, low };
-  }, [discrepancies]);
-
-  const safetyScore = useMemo(() => {
-    const incidents = metrics?.safety_incidents_this_month ?? 0;
-    return Math.max(0, Math.min(100, 98 - incidents * 3));
-  }, [metrics?.safety_incidents_this_month]);
-
-  const punchData = useMemo(() => ({
-    open: metrics?.punch_open ?? 0,
-    total: metrics?.punch_total ?? 0,
-    resolved: (metrics?.punch_total ?? 0) - (metrics?.punch_open ?? 0),
-  }), [metrics?.punch_open, metrics?.punch_total]);
-
-  const fieldActivity = metrics?.workers_onsite ?? 0;
-
-  // Show onboarding checklist when project has no activity yet.
-  // Also shows when metrics are unavailable (new project not yet in materialized view).
-  const isEmptyProject = !metrics ||
-    ((metrics.rfis_total ?? 0) === 0 &&
-    (metrics.punch_total ?? 0) === 0 &&
-    (metrics.budget_total ?? 0) === 0);
+  const isEmptyProject = !metrics || ((metrics.rfis_total ?? 0) === 0 && (metrics.punch_total ?? 0) === 0 && (metrics.budget_total ?? 0) === 0);
 
   const targetCompletion = project?.target_completion ?? null;
-  const daysRemaining = useMemo(() =>
-    targetCompletion
-      ? Math.max(0, Math.ceil((new Date(targetCompletion).getTime() - now) / (1000 * 60 * 60 * 24)))
-      : 0,
-    [targetCompletion, now]
-  );
-
-  const missingWaivers = useMemo(() => {
-    const approvedAppIds = (payApps ?? [])
-      .filter((a) => a.status === 'approved' || a.status === 'paid')
-      .map((a) => a.id)
-    if (approvedAppIds.length === 0) return []
-    const waiversByApp = new Map<string, { status: string }[]>()
-    for (const w of (lienWaivers ?? []) as Array<{ pay_app_id: string; status: string }>) {
-      const existing = waiversByApp.get(w.pay_app_id) ?? []
-      existing.push(w)
-      waiversByApp.set(w.pay_app_id, existing)
-    }
-    return approvedAppIds.filter((id) => {
-      const appWaivers = waiversByApp.get(id) ?? []
-      return appWaivers.length === 0 || appWaivers.every((w) => w.status === 'pending')
-    })
-  }, [payApps, lienWaivers]);
-
+  const daysRemaining = useMemo(() => targetCompletion ? Math.max(0, Math.ceil((new Date(targetCompletion).getTime() - now) / 86400000)) : 0, [targetCompletion, now]);
   const startDateStr = project?.start_date ?? null;
-  const projectStartDate = useMemo(() =>
-    startDateStr
-      ? new Date(startDateStr)
-      : new Date(now - 247 * 24 * 60 * 60 * 1000),
-    [startDateStr, now]
-  );
-
-  const dayNumber = useMemo(() => {
-    const elapsed = now - projectStartDate.getTime();
-    return Math.max(1, Math.ceil(elapsed / (1000 * 60 * 60 * 24)));
-  }, [now, projectStartDate]);
-
+  const projectStartDate = useMemo(() => startDateStr ? new Date(startDateStr) : new Date(now - 247 * 86400000), [startDateStr, now]);
+  const dayNumber = useMemo(() => Math.max(1, Math.ceil((now - projectStartDate.getTime()) / 86400000)), [now, projectStartDate]);
   const totalDays = useMemo(() => dayNumber + daysRemaining, [dayNumber, daysRemaining]);
 
-  const projectAddress = useMemo(() =>
-    [project?.address, project?.city, project?.state].filter(Boolean).join(', ') || 'Dallas, TX',
-    [project?.address, project?.city, project?.state]
-  );
+  const missingWaivers = useMemo(() => {
+    const approvedAppIds = (payApps ?? []).filter((a) => a.status === 'approved' || a.status === 'paid').map((a) => a.id);
+    if (approvedAppIds.length === 0) return [];
+    const waiversByApp = new Map<string, { status: string }[]>();
+    for (const w of (lienWaivers ?? []) as Array<{ pay_app_id: string; status: string }>) {
+      const existing = waiversByApp.get(w.pay_app_id) ?? [];
+      existing.push(w);
+      waiversByApp.set(w.pay_app_id, existing);
+    }
+    return approvedAppIds.filter((id) => { const aw = waiversByApp.get(id) ?? []; return aw.length === 0 || aw.every((w) => w.status === 'pending'); });
+  }, [payApps, lienWaivers]);
 
-  // Animated numbers
   const animProgress = useAnimatedNumber(overallProgress);
-  const animBudgetPct = useAnimatedNumber(budgetData.pct);
-  const animSafety = useAnimatedNumber(safetyScore);
-  const animFieldActivity = useAnimatedNumber(fieldActivity);
 
-  // Show error state if the project query itself failed
+  // ── Focus Items ─────────────────────────────────────
+  const focusItems = useMemo(() => {
+    const items: { id: string; icon: React.ReactNode; label: string; detail: string; severity: 'critical' | 'warning' | 'info'; path: string }[] = [];
+    if (rfiData.overdue > 0) items.push({ id: 'rfi-overdue', icon: <HelpCircle size={14} />, label: `${rfiData.overdue} overdue RFI${rfiData.overdue === 1 ? '' : 's'}`, detail: 'Blocking field work', severity: 'critical', path: '/rfis' });
+    if (missingWaivers.length > 0) items.push({ id: 'waivers', icon: <Scale size={14} />, label: `${missingWaivers.length} missing lien waiver${missingWaivers.length === 1 ? '' : 's'}`, detail: 'Collect before release', severity: 'warning', path: '/payment-applications' });
+    if (budgetData.pct > 85) items.push({ id: 'budget-risk', icon: <DollarSign size={14} />, label: `Budget at ${budgetData.pct}%`, detail: budgetData.pct > 95 ? 'Over budget risk' : 'Monitor closely', severity: budgetData.pct > 95 ? 'critical' : 'warning', path: '/budget' });
+    if (!scheduleHealth.positive && scheduleHealth.days > 0) items.push({ id: 'schedule-behind', icon: <Calendar size={14} />, label: `${scheduleHealth.days}d behind schedule`, detail: 'Review critical path', severity: scheduleHealth.days > 14 ? 'critical' : 'warning', path: '/schedule' });
+    if (punchData.open > 5) items.push({ id: 'punch', icon: <ClipboardList size={14} />, label: `${punchData.open} open punch items`, detail: `${punchData.resolved}/${punchData.total} resolved`, severity: punchData.open > 15 ? 'warning' : 'info', path: '/punch-list' });
+    if ((metrics?.submittals_pending ?? 0) > 0) items.push({ id: 'submittals', icon: <Send size={14} />, label: `${metrics?.submittals_pending} pending submittal${(metrics?.submittals_pending ?? 0) === 1 ? '' : 's'}`, detail: 'Awaiting review', severity: 'info', path: '/submittals' });
+    for (const c of weatherConflictInsights.slice(0, 1)) items.push({ id: c.id, icon: <CloudSun size={14} />, label: c.title, detail: '', severity: c.severity as 'critical' | 'warning', path: '/schedule' });
+    const aiInsights = (insightsData?.insights ?? []).filter((i) => !i.dismissed).sort((a, b) => { const o: Record<string, number> = { critical: 0, warning: 1, info: 2 }; return (o[a.severity] ?? 2) - (o[b.severity] ?? 2); });
+    for (const insight of aiInsights.slice(0, 1)) { if (items.length >= 4) break; items.push({ id: insight.id, icon: <Sparkles size={14} />, label: insight.title, detail: insight.suggestedAction ?? '', severity: insight.severity as 'critical' | 'warning' | 'info', path: '/rfis' }); }
+    return items.slice(0, 4);
+  }, [rfiData, missingWaivers, budgetData, scheduleHealth, punchData, metrics?.submittals_pending, weatherConflictInsights, insightsData?.insights]);
+
+  // ── Time & User ──────────────────────────────────────
+  const today = useMemo(() => new Date(), []);
+  const greeting = getGreeting(today.getHours());
+  const firstName = getFirstName(user);
+  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const sevColor = (s: string) => s === 'critical' ? colors.statusCritical : s === 'warning' ? colors.statusPending : colors.textSecondary;
+  const sevBg = (s: string) => s === 'critical' ? colors.statusCriticalSubtle : s === 'warning' ? colors.statusPendingSubtle : colors.surfaceInset;
+
+  const m = (delay: number) => reducedMotion ? {} : fadeUp(delay);
+
+  // ── Progress Ring Math ───────────────────────────────
+  const ringSize = 72;
+  const ringStroke = 5;
+  const ringR = (ringSize / 2) - ringStroke;
+  const ringC = 2 * Math.PI * ringR;
+  const ringOffset = ringC * (1 - animProgress / 100);
+
+  // ── Error / Loading ──────────────────────────────────
   if (projectError) {
     return (
       <PageContainer>
-        <div
-          role="alert"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '40vh',
-            textAlign: 'center',
-            padding: spacing['8'],
-          }}
-        >
-          <AlertCircle size={40} color={colors.statusCritical} style={{ marginBottom: spacing['4'] }} />
-          <h2 style={{ margin: 0, marginBottom: spacing['2'], fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-            Unable to load project
-          </h2>
-          <p style={{ margin: 0, marginBottom: spacing['6'], fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: 400 }}>
-            {projectErrorObj?.message || 'Check your connection and try again.'}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: spacing['2'],
-              padding: `${spacing['3']} ${spacing['6']}`,
-              minHeight: 56,
-              backgroundColor: colors.primaryOrange,
-              color: colors.white,
-              border: 'none',
-              borderRadius: borderRadius.lg,
-              fontSize: typography.fontSize.sm,
-              fontWeight: typography.fontWeight.semibold,
-              fontFamily: typography.fontFamily,
-              cursor: 'pointer',
-            }}
-          >
-            Retry
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', textAlign: 'center', padding: spacing['8'] }}>
+          <AlertCircle size={32} color={colors.statusCritical} style={{ marginBottom: spacing['4'] }} />
+          <h2 style={{ margin: 0, marginBottom: spacing['2'], fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Unable to load project</h2>
+          <p style={{ margin: 0, marginBottom: spacing['6'], fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: 340 }}>{projectErrorObj?.message || 'Check your connection and try again.'}</p>
+          <button onClick={() => window.location.reload()} style={{ padding: `10px 24px`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.lg, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamily, cursor: 'pointer', transition: 'opacity 0.15s' }}>Retry</button>
         </div>
       </PageContainer>
     );
   }
-
-  // Show skeleton only while project is genuinely loading (not errored, not timed out)
   if (!project && !skeletonTimedOut) return <DashboardSkeleton />;
+
+  // ════════════════════════════════════════════════════════
+  // ══  RENDER                                           ══
+  // ════════════════════════════════════════════════════════
 
   return (
     <PageContainer>
-      {/* ── Morning Briefing ─────────────────────────────── */}
-      <MorningBriefing />
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: `${spacing['10']} 0 ${spacing['16']}` }}>
 
-      {/* ── Coordination Alerts (only when conflicts exist) ── */}
-      <CoordinationEngine compact maxItems={3} />
+        {/* ═══════════════════════════════════════════════════════════
+            HERO — The first thing you see. Sets the emotional tone.
+            Generous vertical rhythm. The project name is the anchor.
+        ═══════════════════════════════════════════════════════════ */}
+        <motion.header {...m(0)} style={{ marginBottom: spacing['8'] }}>
+          <p style={{
+            margin: 0, marginBottom: spacing['1.5'],
+            fontSize: typography.fontSize.caption,
+            color: colors.textTertiary,
+            letterSpacing: '0.3px',
+            fontWeight: typography.fontWeight.medium,
+          }}>
+            {greeting}, {firstName} · {dateStr}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing['6'] }}>
+            <h1 style={{
+              margin: 0,
+              fontSize: '32px',
+              fontWeight: typography.fontWeight.bold,
+              color: colors.textPrimary,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.15,
+            }}>
+              {project?.name ?? 'Project'}
+            </h1>
+            {/* Weather — minimal, ambient */}
+            {weatherData && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['1.5'], flexShrink: 0 }}>
+                <span style={{ fontSize: 18, lineHeight: 1, position: 'relative', top: 2 }}>{weatherData.icon}</span>
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
+                  {weatherData.temp_high}°
+                </span>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                  {weatherData.temp_low}°
+                </span>
+              </div>
+            )}
+          </div>
+        </motion.header>
 
-      {/* ── Hero Section ──────────────────────────────────── */}
-      <DashboardHero
-        projectName={project?.name ?? 'Project Dashboard'}
-        projectAddress={projectAddress}
-        dayNumber={dayNumber}
-        totalDays={totalDays}
-        daysRemaining={daysRemaining}
-        animProgress={animProgress}
-        reducedMotion={reducedMotion}
-      />
+        {/* ═══════════════════════════════════════════════════════════
+            METRICS — The heartbeat. 4 KPI tiles + Progress Ring.
+            Each tile is its own card with internal hierarchy:
+            LABEL → BIG NUMBER → context line
+            The ring sits at the end as a visual anchor.
+        ═══════════════════════════════════════════════════════════ */}
+        <motion.div {...m(0.05)} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: spacing['3'], marginBottom: spacing['8'], alignItems: 'stretch' }}>
+          <MetricTile
+            label="Schedule"
+            value={scheduleHealth.days === 0 ? '0' : `${scheduleHealth.positive ? '+' : '–'}${scheduleHealth.days}`}
+            unit="days"
+            context={scheduleHealth.label}
+            color={scheduleHealth.days === 0 ? colors.statusActive : scheduleHealth.positive ? colors.statusActive : colors.statusCritical}
+            onClick={() => navigate('/schedule')}
+          />
+          <MetricTile
+            label="Budget"
+            value={budgetData.spent === 0 && budgetData.total <= 1 ? '—' : compactDollars(budgetData.spent)}
+            context={budgetData.total <= 1 ? 'Not set' : `${budgetData.pct}% of ${compactDollars(budgetData.total)}`}
+            color={budgetData.total <= 1 ? colors.textTertiary : budgetData.pct > 95 ? colors.statusCritical : budgetData.pct > 80 ? colors.statusPending : colors.textPrimary}
+            onClick={() => navigate('/budget')}
+            bar={budgetData.total > 1 ? { pct: budgetData.pct, color: budgetData.pct > 95 ? colors.statusCritical : budgetData.pct > 80 ? colors.statusPending : colors.statusActive } : undefined}
+          />
+          <MetricTile
+            label="Open RFIs"
+            value={String(rfiData.open)}
+            context={rfiData.overdue > 0 ? `${rfiData.overdue} overdue` : rfiData.open > 0 ? 'None overdue' : 'All clear'}
+            color={rfiData.overdue > 0 ? colors.statusCritical : colors.textPrimary}
+            onClick={() => navigate('/rfis')}
+          />
+          <MetricTile
+            label="Safety"
+            value={String(safetyScore)}
+            unit="/100"
+            context={safetyScore >= 90 ? 'Excellent' : safetyScore >= 70 ? 'Good' : 'At risk'}
+            color={safetyScore >= 90 ? colors.statusActive : safetyScore >= 70 ? colors.statusPending : colors.statusCritical}
+            onClick={() => navigate('/safety')}
+          />
+          {/* Progress Ring — the anchor */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: `${spacing['4']} ${spacing['5']}`,
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: borderRadius.xl,
+            minWidth: 110,
+          }}>
+            <div style={{ position: 'relative', width: ringSize, height: ringSize }}>
+              <svg width={ringSize} height={ringSize} style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={ringSize / 2} cy={ringSize / 2} r={ringR} fill="none" stroke={colors.surfaceInset} strokeWidth={ringStroke} />
+                <circle
+                  cx={ringSize / 2} cy={ringSize / 2} r={ringR} fill="none"
+                  stroke={colors.brand400} strokeWidth={ringStroke}
+                  strokeDasharray={ringC} strokeDashoffset={ringOffset}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em' }}>
+                  {Math.round(animProgress)}%
+                </span>
+              </div>
+            </div>
+            <p style={{ margin: 0, marginTop: spacing['1.5'], fontSize: '10px', color: colors.textTertiary, fontWeight: typography.fontWeight.medium, textAlign: 'center', lineHeight: 1.3 }}>
+              {overallProgress === 0 ? `Day ${dayNumber}` : `Day ${dayNumber} / ${totalDays}`}
+            </p>
+          </div>
+        </motion.div>
 
-      {/* ── Weather Strip ─────────────────────────────────── */}
-      <DashboardWeather
-        weatherData={weatherData}
-        forecastData={forecastData}
-        weatherPending={weatherPending}
-        reducedMotion={reducedMotion}
-      />
-
-      {/* ── AI Insights (above the fold) ────────────────── */}
-      <AnimatePresence mode="wait">
-        {mergedInsights.length > 0 ? (
-          <motion.div
-            key="ai-insights"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-          >
-            <AIInsightsBanner insights={mergedInsights} navigate={navigate} />
+        {/* ═══════════════════════════════════════════════════════════
+            FOCUS — What needs your attention right now.
+            Elevated prominence. These are the reason you opened the app.
+            No header text needed — the visual weight speaks.
+        ═══════════════════════════════════════════════════════════ */}
+        {focusItems.length > 0 && (
+          <motion.div {...m(0.1)} style={{ marginBottom: spacing['8'] }}>
+            <div style={{
+              backgroundColor: colors.surfaceRaised,
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: borderRadius.xl,
+              overflow: 'hidden',
+            }}>
+              {focusItems.map((item, i) => (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(item.path)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: spacing['3'],
+                    padding: `${spacing['3']} ${spacing['5']}`,
+                    borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+                    borderBottom: i < focusItems.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                    background: 'none',
+                    cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
+                    width: '100%', transition: 'background-color 0.1s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <div style={{
+                    width: 28, height: 28, borderRadius: borderRadius.base, flexShrink: 0,
+                    backgroundColor: sevBg(item.severity),
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: sevColor(item.severity),
+                  }}>
+                    {item.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.label}</span>
+                    {item.detail && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: spacing['2'] }}>{item.detail}</span>}
+                  </div>
+                  <ArrowUpRight size={13} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+                </button>
+              ))}
+            </div>
           </motion.div>
-        ) : metrics ? (
-          <motion.div
-            key="det-insights"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
-            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-          >
-            <DeterministicInsightsBanner metrics={metrics} navigate={navigate} />
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+        )}
 
-      {/* ── Metric Strip ──────────────────────────────────── */}
-      <DashboardMetrics
-        scheduleHealth={scheduleHealth}
-        budgetData={budgetData}
-        animBudgetPct={animBudgetPct}
-        rfiData={rfiData}
-        safetyScore={safetyScore}
-        animSafety={animSafety}
-        animFieldActivity={animFieldActivity}
-        punchData={punchData}
-        discrepancyData={discrepancyData}
-        metrics={metrics}
-        reducedMotion={reducedMotion}
-        navigate={navigate}
-      />
+        {/* ═══════════════════════════════════════════════════════════
+            AI BRIEFING — Intelligence, not decoration
+        ═══════════════════════════════════════════════════════════ */}
+        {!isEmptyProject && (
+          <ErrorBoundary message="">
+            <DashboardBriefingAI />
+          </ErrorBoundary>
+        )}
 
-      {/* ── Proactive AI Alerts ───────────────────────────── */}
-      <ProactiveAlerts projectId={projectId} onNavigate={(path) => navigate(path)} />
+        {/* ═══════════════════════════════════════════════════════════
+            LOWER DECK — Adaptive layout: 2-col when both sides have
+            content, single column when only forecast/critical path exist.
+        ═══════════════════════════════════════════════════════════ */}
+        <LowerDeck
+          forecastData={forecastData}
+          isEmptyProject={isEmptyProject}
+          delay={0.15}
+          m={m}
+        />
 
-      {/* ── Owner Report Quick Access ─────────────────────── */}
-      <OwnerReportCard navigate={navigate} reducedMotion={reducedMotion} />
+        {/* Onboarding for empty projects — before quick nav so it's prominent */}
+        {isEmptyProject && <OnboardingChecklist navigate={navigate} reducedMotion={reducedMotion} />}
 
-      {/* ── Action Items ──────────────────────────────────── */}
-      <MissingWaiversAlert count={missingWaivers.length} navigate={navigate} reducedMotion={reducedMotion} />
+        {/* ═══════════════════════════════════════════════════════════
+            QUICK NAV — Ghost pills. Barely there until you need them.
+            Separated from content above with subtle breathing room.
+        ═══════════════════════════════════════════════════════════ */}
+        <motion.nav {...m(0.2)} style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', paddingTop: spacing['2'] }}>
+          {[
+            { label: 'Owner Report', icon: <Sparkles size={12} />, path: '/reports/owner', accent: true },
+            { label: 'Daily Log', icon: <FileText size={12} />, path: '/daily-log' },
+            { label: 'Submittals', icon: <Send size={12} />, path: '/submittals' },
+            { label: 'Drawings', icon: <FileText size={12} />, path: '/drawings' },
+            { label: 'Punch List', icon: <ClipboardList size={12} />, path: '/punch-list' },
+            { label: 'Schedule', icon: <Calendar size={12} />, path: '/schedule' },
+          ].map((a) => (
+            <button
+              key={a.path}
+              onClick={() => navigate(a.path)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 14px',
+                backgroundColor: a.accent ? colors.primaryOrange : 'transparent',
+                color: a.accent ? colors.white : colors.textTertiary,
+                border: a.accent ? 'none' : `1px solid ${colors.borderSubtle}`,
+                borderRadius: borderRadius.full,
+                fontSize: '12px',
+                fontWeight: typography.fontWeight.medium,
+                fontFamily: typography.fontFamily,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                letterSpacing: '0.1px',
+              }}
+              onMouseEnter={(e) => { if (!a.accent) { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.color = colors.textPrimary; e.currentTarget.style.backgroundColor = colors.surfaceHover; } }}
+              onMouseLeave={(e) => { if (!a.accent) { e.currentTarget.style.borderColor = colors.borderSubtle; e.currentTarget.style.color = colors.textTertiary; e.currentTarget.style.backgroundColor = 'transparent'; } }}
+            >
+              {a.icon}
+              {a.label}
+            </button>
+          ))}
+        </motion.nav>
 
-      {/* ── Onboarding Checklist (empty project state) ───── */}
-      {isEmptyProject && <OnboardingChecklist navigate={navigate} reducedMotion={reducedMotion} />}
-
-      {/* ── Widget Grid ───────────────────────────────────── */}
-      <motion.div
-        initial={reducedMotion ? undefined : { opacity: 0 }}
-        animate={reducedMotion ? undefined : { opacity: 1 }}
-        transition={reducedMotion ? undefined : { duration: duration.smooth / 1000, delay: 0.3, ease: easingArray.enter }}
-      >
-        <DashboardGrid />
-      </motion.div>
-
-      <Suspense fallback={null}>
-        <QuickRFIButton />
-      </Suspense>
+        <Suspense fallback={null}>
+          <QuickRFIButton />
+        </Suspense>
+      </div>
     </PageContainer>
   );
 };
+
+// ════════════════════════════════════════════════════════════════
+// ══  LOWER DECK — Adaptive layout                              ══
+// ══  Two columns when both sides have content.                 ══
+// ══  Full-width when only one side exists.                     ══
+// ════════════════════════════════════════════════════════════════
+
+interface LowerDeckProps {
+  forecastData: WeatherDay[] | undefined;
+  isEmptyProject: boolean;
+  delay: number;
+  m: (d: number) => Record<string, unknown>;
+}
+
+const LowerDeck: React.FC<LowerDeckProps> = React.memo(({ forecastData, isEmptyProject, delay, m }) => {
+  const projectId = useProjectId();
+  const { data: activities } = useActivityFeed(projectId);
+  const hasActivity = (activities ?? []).length > 0;
+  const hasForecast = forecastData && forecastData.length > 0;
+
+  if (isEmptyProject) {
+    // For empty projects, only show forecast if available (single column, full width)
+    if (!hasForecast) return null;
+    return (
+      <motion.div {...m(delay)} style={{ marginBottom: spacing['8'] }}>
+        <ForecastStrip forecastData={forecastData!} />
+      </motion.div>
+    );
+  }
+
+  // Two-column only when both sides have content
+  const hasBothColumns = hasForecast && hasActivity;
+
+  return (
+    <motion.div {...m(delay)} style={{
+      display: 'grid',
+      gridTemplateColumns: hasBothColumns ? '1fr 1fr' : '1fr',
+      gap: spacing['4'],
+      marginBottom: spacing['8'],
+    }}>
+      {/* Left: Forecast + Critical Path */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+        {hasForecast && <ForecastStrip forecastData={forecastData!} />}
+        <CriticalPathCard />
+      </div>
+
+      {/* Right: Activity Feed — only if it has content */}
+      {hasActivity && <ActivityFeedCard />}
+    </motion.div>
+  );
+});
+LowerDeck.displayName = 'LowerDeck';
+
+// ── Forecast Strip ────────────────────────────────────────
+
+const ForecastStrip: React.FC<{ forecastData: WeatherDay[] }> = ({ forecastData }) => (
+  <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}` }}>
+    <p style={{ margin: 0, marginBottom: spacing['3'], fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      5-Day Forecast
+    </p>
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      {forecastData.slice(0, 5).map((day) => {
+        const isRainy = day.precip_probability >= 60;
+        return (
+          <div key={day.date} style={{ textAlign: 'center', flex: 1 }}>
+            <p style={{ margin: 0, fontSize: '10px', color: colors.textTertiary, marginBottom: 4 }}>
+              {new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
+            </p>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>{day.icon}</span>
+            <p style={{ margin: 0, marginTop: 4, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
+              {day.temp_high}°
+            </p>
+            {isRainy && (
+              <p style={{ margin: 0, marginTop: 1, fontSize: '9px', color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
+                {day.precip_probability}%
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+// ════════════════════════════════════════════════════════════════
+// ══  METRIC TILE                                              ══
+// ══  The fundamental unit. Clean internal hierarchy:          ══
+// ══  muted label → bold number → context in tertiary.        ══
+// ══  Hover lifts subtly. Click navigates.                     ══
+// ════════════════════════════════════════════════════════════════
+
+interface MetricTileProps {
+  label: string;
+  value: string;
+  unit?: string;
+  context: string;
+  color: string;
+  onClick: () => void;
+  bar?: { pct: number; color: string };
+}
+
+const MetricTile: React.FC<MetricTileProps> = ({ label, value, unit, context, color, onClick, bar }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      padding: `${spacing['4']} ${spacing['4']}`,
+      backgroundColor: colors.surfaceRaised,
+      border: `1px solid ${colors.borderSubtle}`,
+      borderRadius: borderRadius.xl,
+      cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
+      transition: 'transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease, border-color 0.2s ease',
+      minHeight: 110,
+    }}
+    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = 'var(--color-borderDefault)'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--color-borderSubtle)'; }}
+  >
+    <span style={{ fontSize: '11px', fontWeight: typography.fontWeight.medium, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      {label}
+    </span>
+    <div style={{ marginTop: spacing['2'] }}>
+      <span style={{
+        fontSize: '24px', fontWeight: typography.fontWeight.bold, color,
+        fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em', lineHeight: 1,
+      }}>
+        {value}
+      </span>
+      {unit && <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, marginLeft: 2 }}>{unit}</span>}
+    </div>
+    <span style={{ fontSize: '11px', color: colors.textTertiary, marginTop: spacing['1.5'], lineHeight: 1.3 }}>
+      {context}
+    </span>
+    {bar && (
+      <div style={{ height: 2, borderRadius: 1, backgroundColor: colors.surfaceInset, marginTop: spacing['2'], overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.min(bar.pct, 100)}%`, backgroundColor: bar.color, borderRadius: 1, transition: 'width 1s ease' }} />
+      </div>
+    )}
+  </button>
+);
+
+// ════════════════════════════════════════════════════════════════
+// ══  CRITICAL PATH CARD                                       ══
+// ════════════════════════════════════════════════════════════════
+
+const CriticalPathCard: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const navigate = useNavigate();
+  const { data: phases } = useSchedulePhases(projectId);
+
+  const criticalItems = useMemo(() => {
+    if (!phases) return [];
+    return phases
+      .filter((p) => p.is_critical_path && (p.percent_complete ?? 0) < 100)
+      .sort((a, b) => (a.end_date ?? '9999').localeCompare(b.end_date ?? '9999'))
+      .slice(0, 3);
+  }, [phases]);
+
+  if (criticalItems.length === 0) return null;
+
+  return (
+    <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+        <p style={{ margin: 0, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Critical Path
+        </p>
+        <button onClick={() => navigate('/schedule')} style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: colors.textTertiary, fontFamily: typography.fontFamily, padding: 0, fontWeight: typography.fontWeight.medium }}>
+          View all <ChevronRight size={10} />
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2.5'] }}>
+        {criticalItems.map((phase) => {
+          const progress = phase.percent_complete ?? 0;
+          const endDate = phase.end_date ? new Date(phase.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+          const floatDays = phase.float_days;
+          return (
+            <div key={phase.id} style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: borderRadius.full, flexShrink: 0,
+                border: `2.5px solid ${progress >= 80 ? colors.statusActive : progress >= 40 ? colors.statusPending : colors.borderDefault}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '9px', fontWeight: typography.fontWeight.bold,
+                color: progress >= 80 ? colors.statusActive : progress >= 40 ? colors.statusPending : colors.textTertiary,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {progress}%
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {phase.name ?? 'Unnamed'}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginTop: 1 }}>
+                  {endDate && <span style={{ fontSize: '10px', color: colors.textTertiary }}><Clock size={8} style={{ marginRight: 2, verticalAlign: 'middle' }} />{endDate}</span>}
+                  {typeof floatDays === 'number' && floatDays <= 0 && (
+                    <span style={{ fontSize: '10px', color: colors.statusCritical, fontWeight: typography.fontWeight.semibold }}>Zero float</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+CriticalPathCard.displayName = 'CriticalPathCard';
+
+// ════════════════════════════════════════════════════════════════
+// ══  ACTIVITY FEED CARD                                       ══
+// ════════════════════════════════════════════════════════════════
+
+const TYPE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
+  rfi: { icon: HelpCircle, color: colors.statusInfo },
+  submittal: { icon: FileText, color: colors.statusReview },
+  change_order: { icon: DollarSign, color: colors.statusPending },
+  punch_item: { icon: AlertCircle, color: colors.statusCritical },
+  punch_list_item: { icon: AlertCircle, color: colors.statusCritical },
+  daily_log: { icon: Calendar, color: colors.textTertiary },
+  safety: { icon: Shield, color: colors.statusCritical },
+  task: { icon: ClipboardList, color: colors.statusActive },
+  drawing: { icon: FileText, color: colors.statusInfo },
+};
+
+const ENTITY_ROUTES: Record<string, string> = {
+  rfi: '/rfis', submittal: '/submittals', change_order: '/change-orders',
+  punch_item: '/punch-list', punch_list_item: '/punch-list', daily_log: '/daily-log',
+  task: '/schedule', drawing: '/drawings', meeting: '/meetings', safety: '/safety',
+};
+
+const ActivityFeedCard: React.FC = React.memo(() => {
+  const projectId = useProjectId();
+  const navigate = useNavigate();
+  const { data: activities } = useActivityFeed(projectId);
+  const items = useMemo(() => (activities ?? []).slice(0, 6), [activities]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, alignSelf: 'start' }}>
+      <p style={{ margin: 0, marginBottom: spacing['3'], fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        Recent Activity
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
+        {items.map((item) => {
+          const { icon: Icon, color: iconColor } = TYPE_ICONS[item.entityType] ?? { icon: FileText, color: colors.textTertiary };
+          const route = ENTITY_ROUTES[item.entityType];
+          const verb = item.verb.replace(/_/g, ' ').replace(/^(rfi|submittal|punch|change order|daily log|task|drawing|meeting)\s*/i, '').trim() || 'updated';
+          return (
+            <button
+              key={item.id}
+              onClick={route ? () => navigate(route) : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: spacing['2.5'],
+                padding: `${spacing['2']} ${spacing['2']}`,
+                borderRadius: borderRadius.base,
+                background: 'none', border: 'none',
+                width: '100%', textAlign: 'left', fontFamily: typography.fontFamily,
+                cursor: route ? 'pointer' : 'default', transition: 'background-color 0.1s ease',
+              }}
+              onMouseEnter={route ? (e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; } : undefined}
+              onMouseLeave={route ? (e) => { e.currentTarget.style.backgroundColor = 'transparent'; } : undefined}
+            >
+              <div style={{ width: 22, height: 22, borderRadius: borderRadius.full, backgroundColor: colors.surfaceInset, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon size={10} color={iconColor} />
+              </div>
+              <p style={{ margin: 0, flex: 1, fontSize: '11px', color: colors.textSecondary, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.actorName}</span>
+                {' '}{verb}
+                {item.entityLabel && <> <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.entityLabel}</span></>}
+              </p>
+              <span style={{ fontSize: '10px', color: colors.textTertiary, whiteSpace: 'nowrap', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                {relativeTime(item.createdAt)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+ActivityFeedCard.displayName = 'ActivityFeedCard';
+
+// ── Re-export for other files ──────────────��──────────
+export { ProgressRing } from './DashboardMetrics';

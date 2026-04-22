@@ -32,11 +32,13 @@ interface PageContainerProps {
 
 export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, actions, children, 'aria-label': ariaLabel }) => {
   return (
-    <main
-      aria-label={ariaLabel}
+    <div
+      role="region"
+      aria-label={ariaLabel ?? title ?? 'Page content'}
       style={{
         flex: 1,
         overflow: 'auto',
+        minHeight: 0,
         backgroundColor: colors.surfacePage,
       }}
     >
@@ -89,7 +91,7 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
         )}
         {children}
       </div>
-    </main>
+    </div>
   );
 };
 
@@ -504,16 +506,31 @@ export const Tag: React.FC<TagProps> = React.memo(({
 // ─── StatusTag ──────────────────────────────────────────────────────────────
 
 interface StatusTagProps {
-  status: 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval';
+  status:
+    | 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete'
+    | 'active' | 'closed' | 'pending_approval'
+    // Extended submittal lifecycle statuses
+    | 'draft' | 'submitted' | 'review_in_progress' | 'approved_as_noted'
+    | 'rejected' | 'gc_review' | 'architect_review' | 'resubmit'
+    // Permissive: any string (eg from DB) is accepted and falls back to 'pending'
+    | string;
   label?: string;
 }
 
 export const StatusTag: React.FC<StatusTagProps> = React.memo(({ status, label }) => {
   const statusConfig: Record<string, { bg: string; color: string; text: string }> = {
     pending: { bg: colors.statusPendingSubtle, color: colors.statusPending, text: 'Pending' },
-    approved: { bg: colors.statusActiveSubtle, color: colors.statusActive, text: 'Approved' },
+    draft: { bg: colors.statusNeutralSubtle, color: colors.statusNeutral, text: 'Draft' },
+    submitted: { bg: colors.statusInfoSubtle, color: colors.statusInfo, text: 'Submitted' },
     under_review: { bg: colors.statusInfoSubtle, color: colors.statusInfo, text: 'Under Review' },
+    review_in_progress: { bg: colors.statusInfoSubtle, color: colors.statusInfo, text: 'In Review' },
+    gc_review: { bg: colors.statusInfoSubtle, color: colors.statusInfo, text: 'GC Review' },
+    architect_review: { bg: colors.statusInfoSubtle, color: colors.statusInfo, text: 'Architect Review' },
+    approved: { bg: colors.statusActiveSubtle, color: colors.statusActive, text: 'Approved' },
+    approved_as_noted: { bg: colors.statusActiveSubtle, color: colors.statusActive, text: 'Approved as Noted' },
     revise_resubmit: { bg: colors.statusCriticalSubtle, color: colors.statusCritical, text: 'Revise & Resubmit' },
+    resubmit: { bg: colors.statusCriticalSubtle, color: colors.statusCritical, text: 'Resubmit' },
+    rejected: { bg: colors.statusCriticalSubtle, color: colors.statusCritical, text: 'Rejected' },
     complete: { bg: colors.statusActiveSubtle, color: colors.statusActive, text: 'Complete' },
     active: { bg: colors.statusActiveSubtle, color: colors.statusActive, text: 'Active' },
     closed: { bg: colors.statusNeutralSubtle, color: colors.statusNeutral, text: 'Closed' },
@@ -537,7 +554,9 @@ export const PriorityTag: React.FC<PriorityTagProps> = React.memo(({ priority, l
     high: { bg: colors.orangeSubtle, color: colors.orangeText, text: 'High' },
     critical: { bg: colors.statusCriticalSubtle, color: colors.statusCritical, text: 'Critical' },
   };
-  const config = priorityConfig[priority];
+  // Fallback for null/undefined/unknown priority so rows with unset priority
+  // don't crash the table render.
+  const config = priorityConfig[priority] || priorityConfig.medium;
   return <Tag label={label || config.text} color={config.color} backgroundColor={config.bg} />;
 });
 

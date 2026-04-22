@@ -2,11 +2,11 @@
 // Called by pg_cron to process due report schedules.
 // Generates report data, stores as PDF in Supabase Storage, emails to recipients.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { authenticateCron, handleCors, getCorsHeaders, errorResponse } from '../shared/auth.ts'
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 

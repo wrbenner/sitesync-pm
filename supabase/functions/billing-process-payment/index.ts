@@ -4,7 +4,7 @@
 // sitesyncai-backend-main/src/billing/billing.service.ts ::
 // payInvoice(). Integer cents throughout. No float math.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
@@ -49,7 +49,7 @@ async function stripeRequest(
   return payload
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

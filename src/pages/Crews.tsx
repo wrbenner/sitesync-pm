@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart3, MapPin, Award, AlertTriangle, RefreshCw, Users, Plus } from 'lucide-react';
-import { PageContainer, Card, Btn, ProgressBar, Skeleton, SectionHeader, EmptyState } from '../components/Primitives';
+import { useMutation } from '@tanstack/react-query';
+import { PageContainer, Card, Btn, ProgressBar, Skeleton, SectionHeader, EmptyState, Modal, InputField } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useCrewStore } from '../stores/crewStore';
 import { useProjectContext } from '../stores/projectContextStore';
@@ -14,7 +15,7 @@ import { useDeleteCrew } from '../hooks/mutations';
 
 interface AddCrewModalProps { onClose: () => void; projectId: string; onCreated: () => void }
 const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreated }) => {
-  const [form, setForm] = useState({ name: '', trade: '', foreman: '', size: '' });
+  const [form, setForm] = useState({ name: '', trade: '', size: '' });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const submit = async () => {
@@ -25,7 +26,7 @@ const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreat
         project_id: projectId,
         name: form.name,
         trade: form.trade || null,
-        foreman: form.foreman || null,
+        lead_id: null,
         size: form.size ? parseInt(form.size, 10) : 0,
         status: 'active',
       });
@@ -45,8 +46,6 @@ const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreat
         <input style={input} value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} />
         <label style={{ fontSize: 13, fontWeight: 500 }}>Trade</label>
         <input style={input} value={form.trade} onChange={(e) => setForm(p => ({ ...p, trade: e.target.value }))} />
-        <label style={{ fontSize: 13, fontWeight: 500 }}>Foreman</label>
-        <input style={input} value={form.foreman} onChange={(e) => setForm(p => ({ ...p, foreman: e.target.value }))} />
         <label style={{ fontSize: 13, fontWeight: 500 }}>Size</label>
         <input style={input} type="number" value={form.size} onChange={(e) => setForm(p => ({ ...p, size: e.target.value }))} />
         {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
@@ -88,6 +87,46 @@ export const Crews: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
   const [showAddCrew, setShowAddCrew] = useState(false);
+  const [editingCrew, setEditingCrew] = useState<any | null>(null);
+  const [editCrewForm, setEditCrewForm] = useState({ name: '', trade: '', size: '', lead_name: '', status: 'active' });
+
+  const updateCrewMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
+      const { data, error } = await supabase.from('crews').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Crew updated');
+      setEditingCrew(null);
+      if (activeProject?.id) loadCrews(activeProject.id);
+    },
+    onError: (err: Error) => { toast.error(err.message || 'Failed to update crew'); },
+  });
+
+  const openEditCrew = (crew: any) => {
+    setEditCrewForm({
+      name: crew.name ?? '',
+      trade: crew.trade ?? '',
+      size: String(crew.size ?? ''),
+      lead_name: crew.lead_name ?? '',
+      status: crew.status ?? 'active',
+    });
+    setEditingCrew(crew);
+  };
+
+  const handleEditCrewSave = () => {
+    if (!editingCrew) return;
+    updateCrewMutation.mutate({
+      id: editingCrew.id,
+      updates: {
+        name: editCrewForm.name || null,
+        trade: editCrewForm.trade || null,
+        size: editCrewForm.size ? parseInt(editCrewForm.size, 10) : 0,
+        status: editCrewForm.status,
+      },
+    });
+  };
 
   useEffect(() => {
     // REACT-04 FIX: include loadCrews in deps.
@@ -178,7 +217,8 @@ export const Crews: React.FC = () => {
           icon={<Users size={40} color={colors.textTertiary} />}
           title="No crews yet"
           description="Add crews to track workforce, productivity, and certifications across the project."
-          action={<PermissionGate permission="crews.manage" fallback={<span title="Your role doesn't allow adding crews. Request access from your admin."><Btn variant="primary" icon={<Plus size={14} />} disabled>Add Crew</Btn></span>}><Btn variant="primary" onClick={() => setShowAddCrew(true)}>Add Crew</Btn></PermissionGate>}
+          actionLabel="Add Crew"
+          onAction={() => setShowAddCrew(true)}
         />
         {showAddCrew && activeProject?.id && (
           <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
@@ -528,7 +568,14 @@ export const Crews: React.FC = () => {
                     )}
 
                     <PermissionGate permission="crews.manage">
-                      <div style={{ marginTop: spacing.md, display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ marginTop: spacing.md, display: 'flex', justifyContent: 'flex-end', gap: spacing['1'] }}>
+                        <Btn
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => openEditCrew(crew)}
+                        >
+                          Edit
+                        </Btn>
                         <Btn
                           size="sm"
                           variant="ghost"
@@ -627,6 +674,28 @@ export const Crews: React.FC = () => {
       {showAddCrew && activeProject?.id && (
         <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
       )}
+
+      <Modal open={!!editingCrew} onClose={() => setEditingCrew(null)} title="Edit Crew">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <InputField label="Name" value={editCrewForm.name} onChange={(v) => setEditCrewForm({ ...editCrewForm, name: v })} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField label="Trade" value={editCrewForm.trade} onChange={(v) => setEditCrewForm({ ...editCrewForm, trade: v })} />
+            <InputField label="Size" value={editCrewForm.size} onChange={(v) => setEditCrewForm({ ...editCrewForm, size: v })} type="number" />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Status</label>
+            <select value={editCrewForm.status} onChange={(e) => setEditCrewForm({ ...editCrewForm, status: e.target.value })} style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}>
+              <option value="active">Active</option>
+              <option value="standby">Standby</option>
+              <option value="off_site">Off Site</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
+            <Btn variant="secondary" onClick={() => setEditingCrew(null)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleEditCrewSave} loading={updateCrewMutation.isPending}>{updateCrewMutation.isPending ? 'Saving...' : 'Save'}</Btn>
+          </div>
+        </div>
+      </Modal>
     </PageContainer>
   );
 };

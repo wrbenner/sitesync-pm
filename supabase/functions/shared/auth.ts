@@ -68,7 +68,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key, X-Idempotency-Key',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key, X-Idempotency-Key, x-client-info, apikey',
     'Access-Control-Max-Age': '86400',
   }
 }
@@ -171,14 +171,34 @@ export async function authenticateRequest(req: Request): Promise<AuthResult> {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
+  // Validate the token by calling GoTrue directly. This bypasses
+  // supabase-js's local JWT verification, which does not support ES256
+  // (asymmetric) keys in older versions and would throw
+  // "Unsupported JWT algorithm ES256" for projects using the new
+  // asymmetric signing scheme. GoTrue itself signs the tokens, so it
+  // handles any algorithm the project is configured for.
+  const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: supabaseAnonKey,
+    },
   })
-
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) {
+  if (!userRes.ok) {
     throw new HttpError(401, 'Invalid or expired authentication token')
   }
+  const user = await userRes.json() as { id?: string; email?: string }
+  if (!user?.id) {
+    throw new HttpError(401, 'Invalid or expired authentication token')
+  }
+
+  // Build an RLS-scoped client for the caller. Postgres RLS uses its own
+  // JWT validation via PostgREST, which is configured server-side with
+  // the correct keys — so this path is unaffected by the client library's
+  // local verification quirks.
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 
   return {
     user: { id: user.id, email: user.email || '' },

@@ -1,7 +1,7 @@
 // liveblocks-auth: Issues Liveblocks room tokens for real-time collaboration.
 // LAW 12: User-initiated — authenticate, verify project membership + room access, rate limit.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   verifyProjectMembership,
@@ -63,7 +63,7 @@ function checkRateLimit(userId: string): void {
 
 // ── Handler ──────────────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const cors = getCorsHeaders(req)

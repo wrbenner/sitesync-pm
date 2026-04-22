@@ -11,8 +11,20 @@ CREATE TABLE IF NOT EXISTS approval_workflow_templates (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_awt_project ON approval_workflow_templates(project_id);
-CREATE INDEX IF NOT EXISTS idx_awt_entity ON approval_workflow_templates(entity_type);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'approval_workflow_templates' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_awt_project ON approval_workflow_templates(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'approval_workflow_templates' AND column_name = 'entity_type') THEN
+    CREATE INDEX IF NOT EXISTS idx_awt_entity ON approval_workflow_templates(entity_type);
+  END IF;
+END $$;
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_awt_default
   ON approval_workflow_templates(project_id, entity_type)
   WHERE is_default = true;
@@ -29,9 +41,21 @@ CREATE TABLE IF NOT EXISTS approval_instances (
   completed_at timestamptz
 );
 
-CREATE INDEX IF NOT EXISTS idx_ai_project ON approval_instances(project_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'approval_instances' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_ai_project ON approval_instances(project_id);
+
+  END IF;
+
+END $$;
 CREATE INDEX IF NOT EXISTS idx_ai_entity ON approval_instances(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_ai_status ON approval_instances(status);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'approval_instances' AND column_name = 'status') THEN
+    CREATE INDEX IF NOT EXISTS idx_ai_status ON approval_instances(status);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS approval_step_actions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,8 +69,20 @@ CREATE TABLE IF NOT EXISTS approval_step_actions (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_asa_instance ON approval_step_actions(instance_id);
-CREATE INDEX IF NOT EXISTS idx_asa_assigned ON approval_step_actions(assigned_to);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'approval_step_actions' AND column_name = 'instance_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_asa_instance ON approval_step_actions(instance_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'approval_step_actions' AND column_name = 'assigned_to') THEN
+    CREATE INDEX IF NOT EXISTS idx_asa_assigned ON approval_step_actions(assigned_to);
+  END IF;
+END $$;
 
 ALTER TABLE approval_workflow_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE approval_instances ENABLE ROW LEVEL SECURITY;

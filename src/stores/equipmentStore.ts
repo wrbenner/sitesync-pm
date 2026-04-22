@@ -111,8 +111,8 @@ export const useEquipmentStore = create<EquipmentState>()((set, get) => ({
           ? {
               ...e,
               status: 'active' as EquipmentStatus,
-              current_project_id: input.target_project_id,
-              assigned_to: input.assigned_to ?? e.assigned_to,
+              project_id: input.target_project_id,
+              assigned_crew_id: input.assigned_to ?? e.assigned_crew_id,
               checkout_date: new Date().toISOString(),
               checkin_date: null,
             }
@@ -131,7 +131,7 @@ export const useEquipmentStore = create<EquipmentState>()((set, get) => ({
           ? {
               ...e,
               status: 'idle' as EquipmentStatus,
-              assigned_to: null,
+              assigned_crew_id: null,
               checkin_date: new Date().toISOString(),
             }
           : e,

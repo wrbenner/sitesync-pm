@@ -22,6 +22,7 @@ const TABLE_TO_QUERY_KEYS: Record<string, (projectId: string) => readonly unknow
   files: (pid) => queryKeys.files.all(pid),
   directory_contacts: (pid) => queryKeys.directoryContacts.all(pid),
   field_captures: (pid) => queryKeys.fieldCaptures.all(pid),
+  closeout_items: (pid) => ['closeout_items', pid] as const,
 }
 
 const CRITICAL_TABLES = Object.keys(TABLE_TO_QUERY_KEYS)
@@ -42,40 +43,58 @@ export function useRealtimeInvalidation(activeProjectId?: string) {
   useEffect(() => {
     if (!projectId) return
 
-    const channelName = `project-${projectId}-changes`
-    const channel = supabase.channel(channelName)
+    // Use a unique suffix to avoid collisions with existing subscribed channels
+    // (React strict mode or multiple components using this hook)
+    const uid = Math.random().toString(36).slice(2, 8)
+    const channelName = `project-${projectId}-changes-${uid}`
 
-    CRITICAL_TABLES.forEach((table) => {
-      channel.on(
-        'postgres_changes' as const,
-        {
-          event: '*',
-          schema: 'public',
-          table,
-          filter: `project_id=eq.${projectId}`,
-        },
-        () => {
-          const keyFn = TABLE_TO_QUERY_KEYS[table]
-          if (keyFn) {
-            queryClient.invalidateQueries({ queryKey: keyFn(projectId) })
-          }
-          // Invalidate project metrics and activity feed on any change
-          queryClient.invalidateQueries({ queryKey: queryKeys.metrics.project(projectId) })
-          queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed.all(projectId) })
-        },
-      )
-    })
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    channel.subscribe()
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Realtime] Subscribed to', channelName)
+    try {
+      channel = supabase.channel(channelName)
+
+      for (const table of CRITICAL_TABLES) {
+        channel.on(
+          'postgres_changes' as const,
+          {
+            event: '*',
+            schema: 'public',
+            table,
+            filter: `project_id=eq.${projectId}`,
+          },
+          () => {
+            const keyFn = TABLE_TO_QUERY_KEYS[table]
+            if (keyFn) {
+              queryClient.invalidateQueries({ queryKey: keyFn(projectId) })
+            }
+            // Invalidate project metrics and activity feed on any change
+            queryClient.invalidateQueries({ queryKey: queryKeys.metrics.project(projectId) })
+            queryClient.invalidateQueries({ queryKey: queryKeys.activityFeed.all(projectId) })
+          },
+        )
+      }
+
+      channel.subscribe()
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Realtime] Subscribed to', channelName)
+      }
+    } catch (err) {
+      // Defensive: if channel creation or .on() fails (e.g. duplicate channel
+      // name from hot-reload race), log and continue without crashing the page.
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Realtime] Failed to subscribe, will retry on next render:', err)
+      }
+      if (channel) {
+        try { supabase.removeChannel(channel) } catch { /* ignore */ }
+      }
+      return
     }
 
     return () => {
       if (process.env.NODE_ENV === 'development') {
         console.log('[Realtime] Unsubscribed from', channelName)
       }
-      supabase.removeChannel(channel)
+      supabase.removeChannel(channel!)
     }
   }, [projectId])
 }

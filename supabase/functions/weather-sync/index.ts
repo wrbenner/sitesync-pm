@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -18,7 +18,7 @@ interface WeatherSyncResponse {
   forecast_days: number
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsCheck = handleCors(req)
   if (corsCheck) return corsCheck
 

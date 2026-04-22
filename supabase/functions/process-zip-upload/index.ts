@@ -8,7 +8,7 @@
 //
 // Adapted from sitesyncai-backend/src/extraction/extraction.service.ts.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import JSZip from 'https://esm.sh/jszip@3.10.1'
 import {
   authenticateRequest,
@@ -60,7 +60,7 @@ function sanitizeName(name: string): string {
   return name.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 128)
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

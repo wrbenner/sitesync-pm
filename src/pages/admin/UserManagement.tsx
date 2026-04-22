@@ -3,7 +3,8 @@ import { UserPlus, Mail, Search, Check } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase, fromTable } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import type { Profile, UserRole } from '../../types/database';
+import type { Profile } from '../../types/database';
+import type { UserRole } from '../../types/enums';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 
 const ROLE_LABELS: Record<UserRole, string> = {

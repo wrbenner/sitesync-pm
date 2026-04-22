@@ -81,8 +81,8 @@ export function useBenchmarkComparisons(projectType?: ProjectType, region?: stri
 
       // Fetch your project's metrics
       const [rfiResult, , budgetResult] = await Promise.all([
-        supabase.from('rfis').select('created_at, answered_at, status').eq('project_id', projectId),
-        supabase.from('tasks').select('planned_end, actual_end, status, percent_complete').eq('project_id', projectId),
+        supabase.from('rfis').select('created_at, closed_date, status').eq('project_id', projectId),
+        supabase.from('tasks').select('end_date, status, percent_complete').eq('project_id', projectId),
         supabase.from('budget_items').select('original_amount, actual_amount').eq('project_id', projectId),
       ])
 
@@ -91,10 +91,10 @@ export function useBenchmarkComparisons(projectType?: ProjectType, region?: stri
       const budget = budgetResult.data ?? []
 
       // Calculate your RFI turnaround
-      const answeredRfis = rfis.filter((r) => r.answered_at && r.created_at)
+      const answeredRfis = rfis.filter((r) => r.closed_date && r.created_at)
       const avgRfiDays = answeredRfis.length > 0
         ? answeredRfis.reduce((sum, r) => {
-            const days = (new Date(r.answered_at!).getTime() - new Date(r.created_at!).getTime()) / (1000 * 60 * 60 * 24)
+            const days = (new Date(r.closed_date!).getTime() - new Date(r.created_at!).getTime()) / (1000 * 60 * 60 * 24)
             return sum + days
           }, 0) / answeredRfis.length
         : 0

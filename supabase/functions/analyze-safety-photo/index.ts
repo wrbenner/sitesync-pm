@@ -1,7 +1,7 @@
 // analyze-safety-photo — OSHA-trained safety analysis of a construction job site photo.
 // Uses Gemini Vision with structured JSON output. Falls back to Claude vision if Gemini missing.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -156,7 +156,7 @@ function clampScore(n: unknown): number {
   return Math.max(0, Math.min(100, Math.round(num)))
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' }

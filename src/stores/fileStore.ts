@@ -90,7 +90,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
     // Upload to Supabase storage
     const storagePath = `${projectId}/${folderPath}/${Date.now()}_${file.name}`;
     const { error: uploadError } = await supabase.storage
-      .from('documents')
+      .from('project-files')
       .upload(storagePath, file);
 
     if (uploadError) return { error: uploadError.message, record: null };
@@ -120,7 +120,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
     // Get the file to find storage path
     const file = get().files.find((f) => f.id === fileId);
     if (file) {
-      await supabase.storage.from('documents').remove([file.storage_path]);
+      await supabase.storage.from('project-files').remove([file.storage_path]);
     }
 
     const { error } = await supabase.from('files').delete().eq('id', fileId);
@@ -137,7 +137,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
         .from('drawings')
         .select('*')
         .eq('project_id', projectId)
-        .order('set_number');
+        .order('sheet_number');
 
       if (error) throw error;
 
@@ -174,7 +174,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
     const { data: dwgData, error: dwgError } = await fromTable('drawings')
       .insert({
         project_id: projectId,
-        set_number: setNumber,
+        sheet_number: setNumber,
         title,
         discipline,
         current_revision: 'A',
@@ -192,7 +192,7 @@ export const useFileStore = create<FileState>()((set, get) => ({
       const file = files[i];
       const storagePath = `${projectId}/drawings/${setNumber}/${Date.now()}_${file.name}`;
 
-      const { error: uploadErr } = await supabase.storage.from('drawings').upload(storagePath, file);
+      const { error: uploadErr } = await supabase.storage.from('project-files').upload(storagePath, file);
       if (uploadErr) continue;
 
       // Create file record

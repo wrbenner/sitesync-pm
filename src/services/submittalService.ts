@@ -127,9 +127,9 @@ export const submittalService = {
 
     const updates: Record<string, unknown> = {
       status: newStatus,
-      updated_by: userId,
       updated_at: new Date().toISOString(),
     };
+    void userId;
 
     if (newStatus === 'submitted') {
       updates.submitted_date = new Date().toISOString();
@@ -155,13 +155,11 @@ export const submittalService = {
     submittalId: string,
     updates: Partial<Submittal>,
   ): Promise<Result> {
-    const userId = await getCurrentUserId();
-     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await supabase
       .from('submittals')
-      .update({ ...safeUpdates, updated_by: userId, updated_at: new Date().toISOString() })
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
       .eq('id', submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId }));
@@ -169,14 +167,9 @@ export const submittalService = {
   },
 
   async deleteSubmittal(submittalId: string): Promise<Result> {
-    const userId = await getCurrentUserId();
-
     const { error } = await supabase
       .from('submittals')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-      } as Record<string, unknown>)
+      .delete()
       .eq('id', submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId }));

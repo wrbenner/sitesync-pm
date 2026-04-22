@@ -146,7 +146,7 @@ export function useRFILogData() {
     data: {
       projectName: project.data.name ?? 'Project',
       rfis: (rfis.data ?? []).map((r) => ({
-        number: fmtRFINumber(r.rfi_number ?? r.number, r.id),
+        number: fmtRFINumber(r.number, r.id),
         title: r.title ?? '',
         priority: r.priority ?? 'medium',
         status: r.status ?? 'open',
@@ -173,7 +173,7 @@ export function useSubmittalLogData() {
     data: {
       projectName: project.data.name ?? 'Project',
       submittals: (submittals.data ?? []).map((s) => ({
-        number: fmtSubmittalNumber(s.submittal_number ?? s.number, s.id),
+        number: fmtSubmittalNumber(s.number, s.id),
         title: s.title ?? '',
         specSection: s.spec_section ?? '',
         subcontractor: s.subcontractor ?? s.created_by ?? '',

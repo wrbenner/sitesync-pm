@@ -27,6 +27,8 @@ import { useAuthStore } from '../../stores/authStore';
 import type { WeatherData } from '../../lib/weather';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { usePermissions } from '../../hooks/usePermissions';
+import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
+import { PageInsightBanners } from '../../components/ai/PredictiveAlert';
 import type { DailyLogState } from '../../machines/dailyLogMachine';
 import type { ExtendedDailyLog, ManpowerRow } from './types';
 import { DailyLogForm } from './DailyLogForm';
@@ -88,8 +90,8 @@ const DailyLogPage: React.FC = () => {
   const [showAddendumForm, setShowAddendumForm] = useState(false);
   const [addendumText, setAddendumText] = useState('');
   const [addendumSubmitting, setAddendumSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const isLoading = loading;
+  const error = logError ? ((logError as Error).message || 'Failed to load daily log data') : null;
 
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
   const [issuesDelays, setIssuesDelays] = useState('');
@@ -135,12 +137,14 @@ const DailyLogPage: React.FC = () => {
           }
         } catch { /* fall through to API */ }
       }
-      const apiWeather = await fetchWeather();
+      const lat = project?.latitude ? Number(project.latitude) : undefined;
+      const lon = project?.longitude ? Number(project.longitude) : undefined;
+      const apiWeather = await fetchWeather(lat, lon);
       setWeather(apiWeather);
       setWeatherIsAuto(false);
     };
     loadWeather();
-  }, [projectId]);
+  }, [projectId, project?.latitude, project?.longitude]);
 
   useEffect(() => {
     if (dailyLogHistory.length > 0 && !workSummary) {
@@ -268,6 +272,24 @@ const DailyLogPage: React.FC = () => {
     toast.success('Draft saved');
   }, []);
 
+  const persistCrewEntries = useCallback(async (
+    dailyLogId: string,
+    crewRows: Array<{ company?: string | null; trade?: string | null; headcount?: number | string | null; hours?: number | string | null }>,
+  ) => {
+    const rows = crewRows
+      .filter(r => (Number(r.headcount) || 0) > 0 || (Number(r.hours) || 0) > 0 || r.trade || r.company)
+      .map(r => ({
+        daily_log_id: dailyLogId,
+        type: 'crew',
+        company: r.company || null,
+        trade: r.trade || null,
+        headcount: Number(r.headcount) || 0,
+        hours: Number(r.hours) || 0,
+      }));
+    if (rows.length === 0) return;
+    await supabase.from('daily_log_entries').insert(rows);
+  }, []);
+
   const handleQuickSubmit = useCallback(async (data: QuickEntryData) => {
     try {
       // Validate crew hours with Zod (non-negative, max 24/day)
@@ -295,7 +317,7 @@ const DailyLogPage: React.FC = () => {
       }
       const totalWorkers = data.crew_entries.reduce((s, w) => s + w.headcount, 0);
       const totalHours = data.crew_entries.reduce((s, w) => s + w.hours, 0);
-      await createDailyLog.mutateAsync({
+      const created = await createDailyLog.mutateAsync({
         projectId: projectId!,
         data: {
           project_id: projectId!,
@@ -310,12 +332,15 @@ const DailyLogPage: React.FC = () => {
           submitted_at: new Date().toISOString(),
         },
       });
+      const createdId = created?.data?.id as string | undefined;
+      if (createdId) await persistCrewEntries(createdId, data.crew_entries);
       setShowQuickEntry(false);
+      refetch();
       addToast('success', 'Daily log submitted and locked');
     } catch {
       addToast('error', 'Failed to submit daily log');
     }
-  }, [createDailyLog, projectId, selectedDate, addToast]);
+  }, [createDailyLog, projectId, selectedDate, addToast, persistCrewEntries, refetch]);
 
   const handleOpenQuickEntry = useCallback(() => {
     if (dailyLogHistory.length > 0) {
@@ -351,22 +376,42 @@ const DailyLogPage: React.FC = () => {
     }
     setManpowerRows(seededRows);
     try {
-      if (dailyLogHistory[0]) {
+      const todaysLog = dailyLogHistory[0];
+      if (todaysLog) {
+        const crewRows = yesterdayCrewEntries.map((c) => ({
+          daily_log_id: todaysLog.id,
+          type: 'crew',
+          company: c.company ?? null,
+          trade: c.trade ?? null,
+          headcount: c.headcount ?? 0,
+          hours: c.hours ?? 0,
+        }));
+        const equipmentRows = yesterdayEquipment.map((e) => ({
+          daily_log_id: todaysLog.id,
+          type: 'equipment',
+          equipment_name: e.type ?? null,
+          headcount: e.count ?? 1,
+          equipment_hours: e.hours_operated ?? 0,
+        }));
+        const entryRows = [...crewRows, ...equipmentRows];
+        if (entryRows.length > 0) {
+          const { error: insertErr } = await supabase.from('daily_log_entries').insert(entryRows);
+          if (insertErr) throw insertErr;
+        }
         await updateDailyLog.mutateAsync({
-          id: dailyLogHistory[0].id,
+          id: todaysLog.id,
           updates: {
-            crew_entries: yesterdayCrewEntries,
-            equipment_entries: yesterdayEquipment,
             workers_onsite: yesterdayCrewEntries.reduce((s, c) => s + (c.headcount ?? 0), 0),
           },
           projectId: projectId!,
         });
       }
+      refetch();
       addToast('success', 'Crew and equipment copied from yesterday');
     } catch {
       addToast('error', 'Failed to copy from yesterday');
     }
-  }, [yesterday, dailyLogHistory, updateDailyLog, projectId, addToast]);
+  }, [yesterday, dailyLogHistory, updateDailyLog, projectId, addToast, refetch]);
 
   const handleWeatherUpdate = async (updated: WeatherData) => {
     setWeather(updated);
@@ -384,9 +429,36 @@ const DailyLogPage: React.FC = () => {
     }
   };
 
-  const handlePhotoCapture = () => {
-    addToast('info', 'Camera capture would open on mobile device');
-  };
+  const handlePhotoCapture = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file || !todayLogId) return;
+      const path = `${projectId}/${todayLogId}/${Date.now()}-${file.name}`;
+      try {
+        const { error: upErr } = await supabase.storage.from('daily-log-photos').upload(path, file);
+        if (upErr) { addToast('error', 'Photo upload failed'); return; }
+        const { data: pub } = supabase.storage.from('daily-log-photos').getPublicUrl(path);
+        const photoUrl = pub?.publicUrl ?? null;
+        if (!photoUrl) { addToast('error', 'Could not retrieve photo URL'); return; }
+        // Create a daily_log_entry with the photo attached
+        await supabase.from('daily_log_entries').insert({
+          daily_log_id: todayLogId,
+          type: 'photo',
+          description: file.name,
+          photos: [{ id: crypto.randomUUID(), url: photoUrl, caption: '', category: 'progress', timestamp: new Date().toISOString() }],
+        });
+        refetch();
+        addToast('success', 'Photo uploaded');
+      } catch {
+        addToast('error', 'Photo upload failed');
+      }
+    };
+    input.click();
+  }, [todayLogId, projectId, addToast, refetch]);
 
   const handleAiSummary = async () => {
     const log = dailyLogHistory[0];
@@ -437,10 +509,6 @@ const DailyLogPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    setIsLoading(loading);
-    setError(logError ? ((logError as Error).message || 'Failed to load daily log data') : null);
-  }, [loading, logError]);
 
   useEffect(() => {
     if (logError) {
@@ -565,9 +633,14 @@ const DailyLogPage: React.FC = () => {
                   status: 'draft',
                 },
               });
+              const createdId = created?.data?.id as string | undefined;
+              if (createdId && Array.isArray(data.crew_entries) && data.crew_entries.length > 0) {
+                await persistCrewEntries(createdId, data.crew_entries);
+              }
+              refetch();
               setShowCreateModal(false);
               addToast('success', 'Daily log created');
-              return { id: created?.data?.id as string | undefined };
+              return { id: createdId };
             }}
           />
         )}
@@ -635,7 +708,7 @@ const DailyLogPage: React.FC = () => {
           status: 'submitted',
           is_submitted: true,
           submitted_at: new Date().toISOString(),
-          addendum_of: today.id,
+          amended_from_id: today.id,
         } as Parameters<typeof createDailyLog.mutateAsync>[0]['data'],
       });
       setShowAddendumForm(false);
@@ -714,6 +787,7 @@ const DailyLogPage: React.FC = () => {
   return (
     <PageContainer title="Daily Log" subtitle={todayFormatted} actions={
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+        <PresenceAvatars page="daily-log" size={28} />
         <DailyLogPDFExport today={today} weather={weather} logStatus={logStatus} />
         <Btn variant="secondary" size="sm" icon={<Zap size={14} />} onClick={handleOpenQuickEntry}>Quick Entry</Btn>
         <div style={{ position: 'relative' }}>
@@ -803,42 +877,48 @@ const DailyLogPage: React.FC = () => {
           <Btn variant="ghost" size="sm" icon={<RefreshCw size={13} />} onClick={() => refetch()}>Retry</Btn>
         </div>
       )}
+      <PageInsightBanners page="daily-log" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['5'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['5'] }}>
         {[
-          { icon: <CalendarDays size={22} color={colors.primaryOrange} />, label: 'Total Logs', value: aggMetrics.totalLogs, sub: 'all time' },
-          { icon: <BookOpen size={22} color={colors.statusInfo} />, label: 'This Week', value: aggMetrics.thisWeekLogs, sub: 'logs this week' },
-          { icon: <Users size={22} color={colors.statusInfo} />, label: 'Avg Crew Size', value: aggMetrics.avgCrewSize, sub: 'this month' },
-          { icon: <ShieldCheck size={22} color={aggMetrics.daysWithoutIncident > 0 ? colors.statusActive : colors.statusCritical} />, label: 'Days Without Incident', value: aggMetrics.daysWithoutIncident, sub: 'consecutive days' },
+          { icon: <CalendarDays size={20} />, iconBg: colors.orangeSubtle, iconColor: colors.primaryOrange, label: 'Total Logs', value: aggMetrics.totalLogs, sub: 'all time' },
+          { icon: <BookOpen size={20} />, iconBg: colors.statusInfoSubtle, iconColor: colors.statusInfo, label: 'This Week', value: aggMetrics.thisWeekLogs, sub: 'logs this week' },
+          { icon: <Users size={20} />, iconBg: colors.statusInfoSubtle, iconColor: colors.statusInfo, label: 'Avg Crew Size', value: aggMetrics.avgCrewSize, sub: 'this month' },
+          { icon: <ShieldCheck size={20} />, iconBg: aggMetrics.daysWithoutIncident > 0 ? colors.statusActiveSubtle : colors.statusCriticalSubtle, iconColor: aggMetrics.daysWithoutIncident > 0 ? colors.statusActive : colors.statusCritical, label: 'Days Without Incident', value: aggMetrics.daysWithoutIncident, sub: 'consecutive days' },
         ].map((m) => (
-          <Card key={m.label} padding={spacing['5']}>
-            <div style={{ marginBottom: spacing['3'] }}>{m.icon}</div>
+          <Card key={m.label} padding={spacing['4']}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 36, height: 36, borderRadius: borderRadius.md,
+              backgroundColor: m.iconBg, color: m.iconColor, marginBottom: spacing['3'],
+            }}>{m.icon}</div>
             <p style={{ fontSize: typography.fontSize.label, color: colors.textTertiary, margin: 0, marginBottom: spacing['1'], fontWeight: typography.fontWeight.medium }}>{m.label}</p>
-            <p style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, lineHeight: 1 }}>{m.value}</p>
-            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: `${spacing['1']} 0 0` }}>{m.sub}</p>
+            <p style={{ fontSize: typography.fontSize.heading, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, lineHeight: 1 }}>{m.value}</p>
+            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: `${spacing['2']} 0 0` }}>{m.sub}</p>
           </Card>
         ))}
       </div>
 
-      <div style={{ display: 'flex', borderBottom: `1px solid ${colors.borderSubtle}`, marginBottom: spacing['5'], gap: 0 }}>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${colors.borderSubtle}`, marginBottom: spacing['5'], gap: spacing['1'] }}>
         {([['auto', 'Auto Log'], ['log', 'Manual Entry'], ['calendar', 'Calendar View']] as const).map(([view, label]) => (
           <button
             key={view}
             aria-pressed={activeView === view}
             onClick={() => setActiveView(view)}
             style={{
-              padding: `${spacing['3']} ${spacing['5']}`,
+              padding: `${spacing['2.5']} ${spacing['4']}`,
               background: 'none',
               border: 'none',
               borderBottom: activeView === view ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
-              color: activeView === view ? colors.primaryOrange : colors.textSecondary,
-              fontSize: typography.fontSize.body,
-              fontWeight: activeView === view ? typography.fontWeight.semibold : typography.fontWeight.normal,
+              color: activeView === view ? colors.textPrimary : colors.textTertiary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: activeView === view ? typography.fontWeight.semibold : typography.fontWeight.medium,
               fontFamily: typography.fontFamily,
               cursor: 'pointer',
               marginBottom: '-1px',
               transition: `color ${transitions.quick}, border-color ${transitions.quick}`,
-              minHeight: '56px',
+              height: 40,
+              borderRadius: `${borderRadius.sm} ${borderRadius.sm} 0 0`,
             }}
           >
             {label}
@@ -847,7 +927,11 @@ const DailyLogPage: React.FC = () => {
       </div>
 
       {activeView === 'auto' && (
-        <AutoDailyLog onCapturePress={() => setShowCaptureBar(true)} />
+        <AutoDailyLog
+          projectLat={project?.latitude ? Number(project.latitude) : undefined}
+          projectLon={project?.longitude ? Number(project.longitude) : undefined}
+          projectAddress={project?.address ?? project?.city ?? undefined}
+        />
       )}
 
       {activeView === 'calendar' && (
@@ -1006,12 +1090,7 @@ const DailyLogPage: React.FC = () => {
           </div>
         </>
       )}
-      {activeView === 'auto' && (
-        <DailyLogCapture
-          logId={todayLogId ?? null}
-          visible={showCaptureBar}
-        />
-      )}
+      {/* DailyLogCapture removed from auto view — capture is now inline */}
 
       {showCreateModal && (
         <CreateDailyLogModal

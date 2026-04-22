@@ -6,7 +6,7 @@
 // safety_incident, bid_submitted. Rich blocks include View/Assign/Dismiss
 // buttons routed back to the SiteSync app via the interactions handler.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   handleCors,
@@ -144,7 +144,7 @@ function buildBlocks(body: SlackRequest) {
   return { blocks, attachments: [{ color: meta.color }] }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

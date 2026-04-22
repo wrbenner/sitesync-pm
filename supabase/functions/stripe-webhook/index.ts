@@ -2,7 +2,7 @@
 // Processes payment events from Stripe and updates SiteSync payment status.
 // Handles: payment_intent.succeeded, payment_intent.failed, account.updated, transfer.created
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -50,7 +50,7 @@ async function verifyStripeSignature(
 
 // ── Handler ─────────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

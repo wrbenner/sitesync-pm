@@ -1,15 +1,19 @@
 import React from 'react';
-import { Upload, Loader2, X } from 'lucide-react';
-import { Btn, useToast } from '../../components/Primitives';
+import { Upload, Loader2, X, Sparkles } from 'lucide-react';
+import { Btn } from '../../components/Primitives';
 import { UploadZone } from '../../components/files/UploadZone';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
+type UploadSetType = 'working' | 'issued' | 'record' | 'ifc';
+
 interface DrawingUploadProps {
   pendingFiles: File[];
-  uploadDiscipline: string;
-  setUploadDiscipline: (d: string) => void;
   isUploading: boolean;
   uploadProgressText: string;
+  setName: string;
+  setSetName: (v: string) => void;
+  setType: UploadSetType;
+  setSetType: (v: UploadSetType) => void;
   onClose: () => void;
   onFileReady: (file: File) => void;
   onUpload: () => void;
@@ -17,16 +21,16 @@ interface DrawingUploadProps {
 
 export const DrawingUpload: React.FC<DrawingUploadProps> = ({
   pendingFiles,
-  uploadDiscipline,
-  setUploadDiscipline,
   isUploading,
   uploadProgressText,
+  setName,
+  setSetName,
+  setType,
+  setSetType,
   onClose,
   onFileReady,
   onUpload,
 }) => {
-  const { addToast } = useToast();
-  void addToast;
 
   return (
     <div
@@ -54,37 +58,66 @@ export const DrawingUpload: React.FC<DrawingUploadProps> = ({
           </button>
         </div>
 
-        <UploadZone onUpload={() => {}} onFileReady={onFileReady} />
-
-        {/* Discipline selector */}
-        <div style={{ marginTop: spacing['4'] }}>
-          <p style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Discipline</p>
-          <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
-            {['Architectural', 'Structural', 'Mechanical', 'Electrical', 'Plumbing', 'Fire Protection', 'Civil'].map((disc) => (
-              <button
-                key={disc}
-                onClick={() => setUploadDiscipline(disc)}
-                style={{
-                  padding: `${spacing['1']} ${spacing['3']}`,
-                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium,
-                  border: `1.5px solid ${uploadDiscipline === disc ? colors.primaryOrange : colors.borderDefault}`,
-                  borderRadius: borderRadius.full,
-                  backgroundColor: uploadDiscipline === disc ? `${colors.primaryOrange}12` : 'transparent',
-                  color: uploadDiscipline === disc ? colors.primaryOrange : colors.textSecondary,
-                  cursor: 'pointer', transition: `all ${transitions.instant}`,
-                }}
-              >
-                {disc}
-              </button>
-            ))}
+        {/* Set name + type — optional; groups the uploaded sheets into a Drawing Set */}
+        <div style={{ display: 'flex', gap: spacing['3'], marginBottom: spacing['4'] }}>
+          <div style={{ flex: 2 }}>
+            <label htmlFor="upload-set-name" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              Set name <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.normal }}>(optional)</span>
+            </label>
+            <input
+              id="upload-set-name"
+              type="text"
+              value={setName}
+              onChange={(e) => setSetName(e.target.value)}
+              placeholder="e.g. 50% DD — 2026-04-22"
+              style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label htmlFor="upload-set-type" style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing['1'] }}>
+              Type
+            </label>
+            <select
+              id="upload-set-type"
+              value={setType}
+              onChange={(e) => setSetType(e.target.value as UploadSetType)}
+              style={{ width: '100%', padding: `${spacing['2']} ${spacing['3']}`, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary, backgroundColor: colors.surfaceRaised, boxSizing: 'border-box' }}
+            >
+              <option value="working">Working</option>
+              <option value="issued">Issued</option>
+              <option value="record">Record</option>
+              <option value="ifc">IFC</option>
+            </select>
           </div>
         </div>
 
-        {/* Upload progress */}
+        <UploadZone onUpload={() => {}} onFileReady={onFileReady} />
+
+        {/* AI classification note */}
+        <div style={{ marginTop: spacing['4'], display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: `${colors.primaryOrange}08`, border: `1px solid ${colors.primaryOrange}20`, borderRadius: borderRadius.base }}>
+          <Sparkles size={14} color={colors.primaryOrange} style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>
+            AI will automatically classify discipline, sheet number, and plan type after upload.
+          </p>
+        </div>
+
+        {/* Upload progress with bar */}
         {(isUploading || uploadProgressText) && (
-          <div style={{ marginTop: spacing['4'], padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: `${colors.primaryOrange}0D`, border: `1px solid ${colors.primaryOrange}30`, borderRadius: borderRadius.base, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-            <Loader2 size={14} color={colors.primaryOrange} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.orangeText, margin: 0 }}>{uploadProgressText}</p>
+          <div style={{ marginTop: spacing['4'], padding: `${spacing['3']}`, backgroundColor: `${colors.primaryOrange}0D`, border: `1px solid ${colors.primaryOrange}30`, borderRadius: borderRadius.base }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['2'] }}>
+              <Loader2 size={14} color={colors.primaryOrange} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              <p style={{ fontSize: typography.fontSize.sm, color: colors.orangeText, margin: 0 }}>{uploadProgressText}</p>
+            </div>
+            {/* Progress bar — percentage is extracted from the progress text */}
+            {uploadProgressText.includes('%') && (() => {
+              const pctMatch = uploadProgressText.match(/(\d+)%/);
+              const pct = pctMatch ? Number(pctMatch[1]) : 0;
+              return (
+                <div style={{ height: 4, borderRadius: 2, backgroundColor: `${colors.primaryOrange}20`, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, backgroundColor: colors.primaryOrange, borderRadius: 2, transition: 'width 0.3s ease' }} />
+                </div>
+              );
+            })()}
           </div>
         )}
 

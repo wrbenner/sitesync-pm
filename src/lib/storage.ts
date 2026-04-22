@@ -34,8 +34,8 @@ export async function uploadProjectFile(projectId: string, file: File): Promise<
 }
 
 export async function uploadDrawing(projectId: string, file: File): Promise<{ url: string; error: string | null }> {
-  const path = `${projectId}/${Date.now()}_${file.name}`
-  return uploadFile('drawings', path, file)
+  const path = `${projectId}/drawings/${Date.now()}_${file.name}`
+  return uploadFile('project-files', path, file)
 }
 
 export async function uploadFieldCapture(projectId: string, file: File): Promise<{ url: string; error: string | null }> {
@@ -46,4 +46,15 @@ export async function uploadFieldCapture(projectId: string, file: File): Promise
 export async function uploadAvatar(userId: string, file: File): Promise<{ url: string; error: string | null }> {
   const path = `${userId}/avatar.${file.name.split('.').pop()}`
   return uploadFile('avatars', path, file)
+}
+
+export async function uploadCloseoutDocument(
+  projectId: string,
+  closeoutItemId: string,
+  file: File
+): Promise<{ url: string; path: string; error: string | null }> {
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `${projectId}/closeout/${closeoutItemId}/${Date.now()}_${sanitizedName}`
+  const result = await uploadFile('project-files', path, file)
+  return { ...result, path }
 }

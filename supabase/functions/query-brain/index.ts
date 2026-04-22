@@ -1,7 +1,7 @@
 // query-brain — Answer a question using RAG over project documents.
 // Flow: embed question → vector search → stuff top-K chunks into Claude/GPT → return answer + citations.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -105,7 +105,7 @@ RULES:
   return (block && block.type === 'text' ? block.text : '') || 'No answer produced.'
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' }

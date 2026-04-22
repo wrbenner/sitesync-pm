@@ -118,11 +118,11 @@ export const procoreProvider: IntegrationProvider = {
               title: rfi.subject,
               status: mapProcoreRFIStatus(rfi.status),
               priority: rfi.priority?.toLowerCase() || 'medium',
-              rfi_number: rfi.number,
+              number: rfi.number,
               assigned_to: rfi.assignee?.name || null,
               due_date: rfi.due_date || null,
               created_at: rfi.created_at,
-            }, { onConflict: 'rfi_number,project_id' })
+            }, { onConflict: 'number,project_id' })
             synced++
           } catch {
             failed++
@@ -141,10 +141,10 @@ export const procoreProvider: IntegrationProvider = {
             await supabase.from('submittals').upsert({
               title: sub.title,
               status: mapProcoreSubmittalStatus(sub.status.name),
-              submittal_number: sub.number,
+              number: sub.number,
               due_date: sub.due_date || null,
               created_at: sub.created_at,
-            }, { onConflict: 'submittal_number,project_id' })
+            }, { onConflict: 'number,project_id' })
             synced++
           } catch {
             failed++

@@ -49,10 +49,10 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
     useEntityStoreRoot.getState()._setSlice('punchItems', { loading: true, error: null });
     try {
       const { data, error } = await supabase
-        .from('punch_list_items')
+        .from('punch_items')
         .select('*')
         .eq('project_id', projectId)
-        .order('item_number');
+        .order('number');
 
       if (error) throw error;
       const items = (data ?? []) as PunchListItem[];
@@ -66,7 +66,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   },
 
   createItem: async (item) => {
-    const { error } = await fromTable('punch_list_items').insert(item);
+    const { error } = await fromTable('punch_items').insert(item);
     if (error) return { error: error.message };
     await get().loadItems(item.project_id);
     return { error: null };
@@ -75,7 +75,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   updateItemStatus: async (id, status) => {
     const updates: Partial<PunchListItem> = { status, updated_at: new Date().toISOString() };
 
-    const { error } = await fromTable('punch_list_items').update(updates).eq('id', id);
+    const { error } = await fromTable('punch_items').update(updates).eq('id', id);
     if (!error) {
       set((s) => ({
         items: s.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),
@@ -96,7 +96,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   },
 
   updateItem: async (id, updates) => {
-    const { error } = await fromTable('punch_list_items').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
+    const { error } = await fromTable('punch_items').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
     if (!error) {
       set((s) => ({
         items: s.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),
@@ -117,7 +117,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
   },
 
   deleteItem: async (id) => {
-    const { error } = await fromTable('punch_list_items').delete().eq('id', id);
+    const { error } = await fromTable('punch_items').delete().eq('id', id);
     if (!error) {
       set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
       useEntityStoreRoot.setState((s) => ({
@@ -154,6 +154,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
         author,
         initials,
         text,
+        content: text, // keep legacy `content` column populated
       })
       .select()
       .single();
@@ -184,12 +185,18 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
       .eq('punch_item_id', itemId)
       .order('created_at', { ascending: true });
     if (error) return;
-    set((s) => ({
-      comments: {
-        ...s.comments,
-        [itemId]: (data ?? []) as PunchComment[],
-      },
+    // Normalize across the two shapes (legacy `content`/`user_id` vs. added
+    // `text`/`author`/`initials`) so the UI never renders an empty bubble.
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    const normalized: PunchComment[] = rows.map((r) => ({
+      id: String(r.id),
+      punch_item_id: String(r.punch_item_id),
+      author: (r.author as string) || (r.user_id as string) || 'User',
+      initials: (r.initials as string) || ((r.author as string) ? (r.author as string).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'U'),
+      text: (r.text as string) || (r.content as string) || '',
+      created_at: (r.created_at as string) || new Date().toISOString(),
     }));
+    set((s) => ({ comments: { ...s.comments, [itemId]: normalized } }));
   },
 
   getComments: (itemId) => {

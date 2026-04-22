@@ -5,6 +5,7 @@ import { autoGenerateLienWaivers } from './lienWaivers'
 import { paymentService } from '../../services/paymentService'
 
 
+const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
 type LienWaiverType = typeof LIEN_WAIVER_TYPES[number]
 
 /**
@@ -112,8 +113,7 @@ export const getPayApplicationsWithMeta = async (
     supabase
       .from('budget_items')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .is('deleted_at', null),
+      .eq('project_id', projectId),
   ])
   const hasScheduleOfValues = (sovResult.count ?? 0) > 0
   return { payApps, hasScheduleOfValues }
@@ -133,8 +133,7 @@ export const getPayApplicationsWithContext = async (
     supabase
       .from('budget_items')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .is('deleted_at', null),
+      .eq('project_id', projectId),
   ])
   const hasScheduleOfValues = (sovResult.count ?? 0) > 0
   return { payApps, hasScheduleOfValues, isLoading: false }
@@ -160,9 +159,15 @@ export const createPayApplication = async (
   payload: CreatePayAppPayload,
 ): Promise<PayApplication> => {
   validateProjectId(projectId)
+  const dbPayload = sanitizePayAppPayload(payload as unknown as Record<string, unknown>)
+  const ocs = (dbPayload.original_contract_sum as number) ?? 0
+  const nco = (dbPayload.net_change_orders as number) ?? 0
+  if (dbPayload.contract_sum_to_date == null) {
+    dbPayload.contract_sum_to_date = ocs + nco
+  }
   const { data, error } = await supabase
     .from('pay_applications')
-    .insert({ ...payload, project_id: projectId, status: 'draft' })
+    .insert({ ...dbPayload, project_id: projectId, status: 'draft' })
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
@@ -173,10 +178,10 @@ export interface UpsertPayAppPayload {
   id?: string
   contract_id: string
   application_number?: number
-  period_from?: string | null
   period_to: string
   original_contract_sum?: number | null
   net_change_orders?: number | null
+  contract_sum_to_date?: number | null
   total_completed_and_stored?: number | null
   retainage?: number | null
   total_earned_less_retainage?: number | null
@@ -185,16 +190,32 @@ export interface UpsertPayAppPayload {
   balance_to_finish?: number | null
 }
 
+/**
+ * Strip fields that don't exist on the pay_applications table before sending to Supabase.
+ * The UI may pass `period_from` for display, but the DB table doesn't have it.
+ */
+function sanitizePayAppPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const { period_from: _pf, ...safe } = payload
+  return safe
+}
+
 export const upsertPayApplication = async (
   projectId: string,
   payload: UpsertPayAppPayload,
 ): Promise<PayApplication> => {
   validateProjectId(projectId)
   const { id, ...rest } = payload
+  const dbPayload = sanitizePayAppPayload(rest as Record<string, unknown>)
+  // Compute contract_sum_to_date if not provided
+  const ocs = (dbPayload.original_contract_sum as number) ?? 0
+  const nco = (dbPayload.net_change_orders as number) ?? 0
+  if (dbPayload.contract_sum_to_date == null) {
+    dbPayload.contract_sum_to_date = ocs + nco
+  }
   if (id) {
     const { data, error } = await supabase
       .from('pay_applications')
-      .update({ ...rest, updated_at: new Date().toISOString() })
+      .update({ ...dbPayload, updated_at: new Date().toISOString() })
       .eq('project_id', projectId)
       .eq('id', id)
       .select()
@@ -204,7 +225,7 @@ export const upsertPayApplication = async (
   }
   const { data, error } = await supabase
     .from('pay_applications')
-    .insert({ ...rest, project_id: projectId, status: 'draft' })
+    .insert({ ...dbPayload, project_id: projectId, status: 'draft' })
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
@@ -254,6 +275,34 @@ export const approvePayApplication = async (
   if (error) throw transformSupabaseError(error)
   const waivers = await autoGenerateLienWaivers(projectId, payAppId)
   return { payApp: data as PayApplication, waivers }
+}
+
+/**
+ * Marks an approved pay application as paid. Transitions via the payment state
+ * machine (approved → paid) and records the payment timestamp.
+ */
+export const markPayApplicationAsPaid = async (
+  projectId: string,
+  payAppId: string,
+): Promise<PayApplication> => {
+  await assertProjectAccess(projectId)
+  const transition = await paymentService.transitionStatus(payAppId, 'paid')
+  if (transition.error) {
+    throw new Error(transition.error.message)
+  }
+  // Record paid timestamp
+  await supabase
+    .from('pay_applications')
+    .update({ paid_at: new Date().toISOString() })
+    .eq('id', payAppId)
+  const { data, error } = await supabase
+    .from('pay_applications')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('id', payAppId)
+    .single()
+  if (error) throw transformSupabaseError(error)
+  return data as PayApplication
 }
 
 /**

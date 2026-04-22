@@ -2,7 +2,7 @@
 // LAW 12: Webhook endpoint — verify signature, validate payload, rate limit.
 // Uses SERVICE_ROLE_KEY (appropriate: webhook is system-to-system, not user-initiated).
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   handleCors,
@@ -96,7 +96,7 @@ const MAX_PAYLOAD_BYTES = 1024 * 1024 // 1 MB
 
 // ── Handler ──────────────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const cors = getCorsHeaders(req)

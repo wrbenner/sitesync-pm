@@ -39,7 +39,7 @@ export function useUpdateMeeting() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
-      const { error } = await from('meetings').update(updates).eq('id', id)
+      const { error } = await from('meetings').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -56,7 +56,7 @@ export function useDeleteMeeting() {
     entityType: 'meeting',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('meetings').delete().eq('id', id)
+      const { error } = await from('meetings').delete().eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

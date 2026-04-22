@@ -79,7 +79,7 @@ function usePageContext(): PageContext {
         } else if (path === 'tasks') {
           const { count: open } = await supabase.from('tasks')
             .select('*', { count: 'exact', head: true })
-            .eq('project_id', projectId).neq('status', 'complete')
+            .eq('project_id', projectId).neq('status', 'done')
           setStats({ openTasks: open ?? 0 })
         }
       } catch (err) {

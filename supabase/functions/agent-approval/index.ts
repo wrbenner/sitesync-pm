@@ -1,7 +1,7 @@
 // agent-approval: Human-in-the-loop approval/rejection of AI agent proposed actions.
 // LAW 12: User-initiated — authenticate, verify project membership, validate input.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   verifyProjectMembership,
@@ -55,7 +55,7 @@ function checkRateLimit(userId: string): void {
 
 // ── Handler ──────────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const cors = getCorsHeaders(req)

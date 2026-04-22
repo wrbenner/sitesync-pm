@@ -354,7 +354,7 @@ export const getDailyLogs = async (
       weather: l.weather,
       weather_am: l.weather_am,
       weather_pm: l.weather_pm,
-      weather_source: l.weather_source,
+      weather_source: (l as Record<string, unknown>).weather_source as string | null ?? null,
       wind_speed: l.wind_speed,
       workers_onsite: l.workers_onsite,
       is_submitted: l.is_submitted,

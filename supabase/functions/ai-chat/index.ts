@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -328,7 +328,7 @@ function isRoleAtLeast(userRole: string, minRole: string): boolean {
 
 // ── Main Handler ─────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 

@@ -15,8 +15,20 @@ CREATE TABLE IF NOT EXISTS wiki_pages (
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_wiki_pages_project ON wiki_pages(project_id);
-CREATE INDEX IF NOT EXISTS idx_wiki_pages_parent ON wiki_pages(parent_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wiki_pages' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_wiki_pages_project ON wiki_pages(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wiki_pages' AND column_name = 'parent_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_wiki_pages_parent ON wiki_pages(parent_id);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_wiki_pages_search ON wiki_pages USING GIN (to_tsvector('english', title || ' ' || content));
 
 ALTER TABLE wiki_pages ENABLE ROW LEVEL SECURITY;

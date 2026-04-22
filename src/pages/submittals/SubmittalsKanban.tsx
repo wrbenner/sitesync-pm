@@ -1,23 +1,22 @@
 import React, { useMemo } from 'react';
 import { PriorityTag } from '../../components/Primitives';
-import { colors, spacing, typography } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { KanbanBoard } from '../../components/shared/KanbanBoard';
 import type { KanbanColumn } from '../../components/shared/KanbanBoard';
-import { AIAnnotationIndicator } from '../../components/ai/AIAnnotation';
-import { getAnnotationsForEntity } from '../../data/aiAnnotations';
+import { Calendar, Clock, User } from 'lucide-react';
 import { isOverdue } from './types';
 
 interface SubmittalsKanbanProps {
   allSubmittals: Array<Record<string, unknown>>;
-  onSelectSubmittal: (id: number) => void;
+  onSelectSubmittal: (id: string) => void;
 }
 
 export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittals, onSelectSubmittal }) => {
   const kanbanColumns: KanbanColumn<Record<string, unknown>>[] = useMemo(() => [
-    { id: 'pending', label: 'Pending', color: colors.statusPending, items: allSubmittals.filter((s) => s.status === 'pending') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allSubmittals.filter((s) => s.status === 'under_review') },
-    { id: 'revise_resubmit', label: 'Revise & Resubmit', color: colors.statusCritical, items: allSubmittals.filter((s) => s.status === 'revise_resubmit') },
-    { id: 'approved', label: 'Approved', color: colors.statusActive, items: allSubmittals.filter((s) => s.status === 'approved') },
+    { id: 'pending', label: 'Pending', color: colors.statusPending, items: allSubmittals.filter((s) => s.status === 'pending' || s.status === 'draft') },
+    { id: 'under_review', label: 'Under Review', color: colors.statusInfo, items: allSubmittals.filter((s) => s.status === 'under_review' || s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'gc_review' || s.status === 'architect_review') },
+    { id: 'revise_resubmit', label: 'Revise & Resubmit', color: colors.statusCritical, items: allSubmittals.filter((s) => s.status === 'revise_resubmit' || s.status === 'rejected') },
+    { id: 'approved', label: 'Approved', color: colors.statusActive, items: allSubmittals.filter((s) => s.status === 'approved' || s.status === 'approved_as_noted') },
   ], [allSubmittals]);
 
   return (
@@ -26,47 +25,120 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
       getKey={(sub) => (sub as Record<string, unknown>).id as string | number}
       renderCard={(sub) => {
         const s = sub as Record<string, unknown>;
-        const subId = s.id as number;
+        const subId = s.id as string;
         const subNumber = s.submittalNumber as string;
         const title = s.title as string;
         const from = s.from as string;
         const dueDate = s.dueDate as string;
         const status = s.status as string;
+        const leadTime = s.lead_time_weeks as number | undefined;
+        const specSection = s.spec_section as string | undefined;
+        const overdue = dueDate && isOverdue(dueDate) && status !== 'approved';
+
         return (
           <div
-            style={{ padding: spacing.md, cursor: 'pointer' }}
+            style={{
+              padding: `${spacing['3']} ${spacing['4']}`,
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: spacing['2'],
+            }}
             onClick={() => onSelectSubmittal(subId)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSubmittal(subId); } }}
             role="button"
             tabIndex={0}
             aria-label={`View submittal ${subNumber}: ${title}`}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
-              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{subNumber}</span>
+            {/* Top row: number + priority */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{
+                fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.primaryOrange,
+                letterSpacing: '0.02em',
+              }}>
+                {subNumber}
+              </span>
               <PriorityTag priority={s.priority as 'low' | 'medium' | 'high' | 'critical'} />
             </div>
-            <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: typography.lineHeight.snug }}>
+
+            {/* Title */}
+            <div style={{
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+              color: colors.textPrimary,
+              lineHeight: typography.lineHeight.snug,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}>
               {title}
             </div>
-            <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, marginBottom: spacing.xs }}>
-              {from}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span
-                style={{
-                  fontSize: typography.fontSize.caption,
-                  color: isOverdue(dueDate) && status !== 'approved' ? colors.statusCritical : colors.textTertiary,
-                  fontWeight: isOverdue(dueDate) && status !== 'approved' ? typography.fontWeight.medium : typography.fontWeight.normal,
-                }}
-              >
-                {new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+
+            {/* Spec section badge */}
+            {specSection && (
+              <span style={{
+                alignSelf: 'flex-start',
+                fontSize: '10px',
+                fontFamily: 'monospace',
+                padding: '1px 6px',
+                borderRadius: borderRadius.sm,
+                backgroundColor: colors.statusInfoSubtle,
+                color: colors.statusInfo,
+                fontWeight: typography.fontWeight.medium,
+              }}>
+                {specSection}
               </span>
-              <div style={{ display: 'flex', gap: spacing.xs }}>
-                {getAnnotationsForEntity('submittal', subId).map((ann) => (
-                  <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                ))}
-              </div>
+            )}
+
+            {/* Bottom row: from + due date */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              paddingTop: spacing['1'],
+              borderTop: `1px solid ${colors.borderSubtle}`,
+              marginTop: spacing['1'],
+            }}>
+              {from ? (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: '11px', color: colors.textTertiary,
+                }}>
+                  <User size={10} />
+                  {from.length > 20 ? from.slice(0, 20) + '…' : from}
+                </span>
+              ) : (
+                <span />
+              )}
+
+              {dueDate && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  fontSize: '11px',
+                  color: overdue ? colors.statusCritical : colors.textTertiary,
+                  fontWeight: overdue ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                }}>
+                  <Calendar size={10} />
+                  {new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
             </div>
+
+            {/* Lead time indicator */}
+            {leadTime != null && leadTime >= 8 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3,
+                fontSize: '10px',
+                color: leadTime > 12 ? colors.statusCritical : colors.statusPending,
+                fontWeight: typography.fontWeight.medium,
+              }}>
+                <Clock size={9} />
+                {leadTime} wk lead
+              </span>
+            )}
           </div>
         );
       }}

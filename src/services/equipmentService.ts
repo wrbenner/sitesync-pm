@@ -178,8 +178,7 @@ export const equipmentService = {
     const { data, error } = await supabase
       .from('equipment')
       .select('*')
-      .eq('current_project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id', projectId)
       .order('name', { ascending: true })
 
     if (error) return fail(dbError(error.message, { projectId }))
@@ -193,24 +192,16 @@ export const equipmentService = {
       .from('equipment')
       .insert({
         project_id: input.project_id,
-        current_project_id: input.project_id,
         name: input.name,
         type: input.type ?? null,
         make: input.make ?? null,
-        model: input.model ?? null,
+        model_name: input.model ?? null,
         serial_number: input.serial_number ?? null,
-        year: input.year ?? null,
-        ownership: input.ownership ?? 'owned',
-        vendor: input.vendor ?? null,
-        rental_rate_daily: input.rental_rate_daily ?? null,
-        rental_rate_weekly: input.rental_rate_weekly ?? null,
-        rental_rate_monthly: input.rental_rate_monthly ?? null,
+        ownership_type: input.ownership ?? 'owned',
+        daily_rate: input.rental_rate_daily ?? null,
         status: 'idle' as EquipmentStatus,
-        current_location: input.current_location ?? null,
-        insurance_policy: input.insurance_policy ?? null,
-        insurance_expiry: input.insurance_expiry ?? null,
-        created_by: userId,
-        updated_by: userId,
+        location: input.current_location ?? null,
+        notes: null,
       } as Record<string, unknown>)
       .select()
       .single()
@@ -229,7 +220,7 @@ export const equipmentService = {
   ): Promise<Result> {
     const { data: eq, error: fetchError } = await supabase
       .from('equipment')
-      .select('status, current_project_id, project_id')
+      .select('status, project_id')
       .eq('id', equipmentId)
       .is('deleted_at', null)
       .single()
@@ -238,7 +229,7 @@ export const equipmentService = {
       return fail(notFoundError('Equipment', equipmentId))
     }
 
-    const projectId = (eq as Record<string, unknown>).current_project_id as string ?? (eq as Record<string, unknown>).project_id as string
+    const projectId = (eq as Record<string, unknown>).project_id as string
     if (!projectId) {
       return fail(permissionError('Equipment is not associated with any project'))
     }
@@ -262,13 +253,8 @@ export const equipmentService = {
 
     const updates: Record<string, unknown> = {
       status: newStatus,
-      updated_by: userId,
     }
-
-    if (newStatus === 'retired') {
-      updates.deleted_at = new Date().toISOString()
-      updates.deleted_by = userId
-    }
+    void userId
 
     const { error } = await supabase
       .from('equipment')
@@ -286,13 +272,12 @@ export const equipmentService = {
     equipmentId: string,
     updates: Partial<Omit<Equipment, 'id' | 'created_by' | 'deleted_at' | 'deleted_by'>>,
   ): Promise<Result> {
-    const userId = await getCurrentUserId()
     const safeUpdates = { ...(updates as Record<string, unknown>) }
     delete safeUpdates.status
 
     const { error } = await supabase
       .from('equipment')
-      .update({ ...safeUpdates, updated_by: userId } as Record<string, unknown>)
+      .update(safeUpdates as Record<string, unknown>)
       .eq('id', equipmentId)
 
     if (error) return fail(dbError(error.message, { equipmentId }))
@@ -300,15 +285,9 @@ export const equipmentService = {
   },
 
   async deleteEquipment(equipmentId: string): Promise<Result> {
-    const userId = await getCurrentUserId()
-
     const { error } = await supabase
       .from('equipment')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-        status: 'retired' as EquipmentStatus,
-      } as Record<string, unknown>)
+      .delete()
       .eq('id', equipmentId)
 
     if (error) return fail(dbError(error.message, { equipmentId }))
@@ -326,7 +305,7 @@ export const equipmentService = {
   ): Promise<Result> {
     const { data: eq, error: fetchError } = await supabase
       .from('equipment')
-      .select('status, current_project_id, project_id')
+      .select('status, project_id')
       .eq('id', equipmentId)
       .is('deleted_at', null)
       .single()
@@ -335,7 +314,7 @@ export const equipmentService = {
       return fail(notFoundError('Equipment', equipmentId))
     }
 
-    const projectId = (eq as Record<string, unknown>).current_project_id as string ?? (eq as Record<string, unknown>).project_id as string
+    const projectId = (eq as Record<string, unknown>).project_id as string
     const userId = await getCurrentUserId()
     const role = await resolveProjectRole(input.target_project_id || projectId, userId)
     if (!role) {
@@ -356,12 +335,11 @@ export const equipmentService = {
       .from('equipment')
       .update({
         status: 'active' as EquipmentStatus,
-        current_project_id: input.target_project_id,
+        project_id: input.target_project_id,
         assigned_to: input.assigned_to ?? userId,
         checkout_date: new Date().toISOString(),
         checkin_date: null,
         current_location: input.current_location ?? null,
-        updated_by: userId,
       } as Record<string, unknown>)
       .eq('id', equipmentId)
 
@@ -375,7 +353,7 @@ export const equipmentService = {
   async checkin(equipmentId: string): Promise<Result> {
     const { data: eq, error: fetchError } = await supabase
       .from('equipment')
-      .select('status, current_project_id, project_id, assigned_to')
+      .select('status, project_id, assigned_crew_id')
       .eq('id', equipmentId)
       .is('deleted_at', null)
       .single()
@@ -384,7 +362,7 @@ export const equipmentService = {
       return fail(notFoundError('Equipment', equipmentId))
     }
 
-    const projectId = (eq as Record<string, unknown>).current_project_id as string ?? (eq as Record<string, unknown>).project_id as string
+    const projectId = (eq as Record<string, unknown>).project_id as string
     const userId = await getCurrentUserId()
     const role = await resolveProjectRole(projectId, userId)
     if (!role) {
@@ -407,7 +385,6 @@ export const equipmentService = {
         status: 'idle' as EquipmentStatus,
         assigned_to: null,
         checkin_date: new Date().toISOString(),
-        updated_by: userId,
       } as Record<string, unknown>)
       .eq('id', equipmentId)
 
@@ -418,11 +395,11 @@ export const equipmentService = {
   // ── Maintenance workflows ─────────────────────────────────────────────────
 
   async loadMaintenanceRecords(projectId: string): Promise<Result<EquipmentMaintenance[]>> {
-    // Join through equipment to filter by current_project_id
+    // Join through equipment to filter by project_id
     const { data, error } = await supabase
       .from('equipment_maintenance')
-      .select('*, equipment!inner(current_project_id)')
-      .eq('equipment.current_project_id', projectId)
+      .select('*, equipment!inner(project_id)')
+      .eq('equipment.project_id', projectId)
       .is('deleted_at', null)
       .order('scheduled_date', { ascending: true })
 
@@ -457,7 +434,6 @@ export const equipmentService = {
         next_due_date: input.next_due_date ?? null,
         next_due_hours: input.next_due_hours ?? null,
         created_by: userId,
-        updated_by: userId,
       } as Record<string, unknown>)
       .select()
       .single()
@@ -504,7 +480,6 @@ export const equipmentService = {
         parts_used: input.parts_used ?? null,
         next_due_date: input.next_due_date ?? null,
         next_due_hours: input.next_due_hours ?? null,
-        updated_by: userId,
       } as Record<string, unknown>)
       .eq('id', maintenanceId)
 
@@ -524,8 +499,8 @@ export const equipmentService = {
     // Update last_service_date and next_service_due on equipment
     const serviceUpdates: Record<string, unknown> = {
       last_service_date: input.completed_date ?? new Date().toISOString().split('T')[0],
-      updated_by: userId,
     }
+    void userId
     if (input.next_due_date) {
       serviceUpdates.next_service_due = input.next_due_date
     }
@@ -574,9 +549,9 @@ export const equipmentService = {
         .from('equipment')
         .update({
           hours_meter: currentHours + input.hours_used,
-          updated_by: userId,
         } as Record<string, unknown>)
         .eq('id', input.equipment_id)
+      void userId
     }
 
     return ok(data as unknown as EquipmentLog)

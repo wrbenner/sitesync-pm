@@ -85,16 +85,16 @@ export const getAiInsights = async (
     const now = new Date().toISOString()
 
     // Query real project data with specific entities for rich insights
-    let overdueRfis: Array<{ id: string; rfi_number: string | null; subject: string | null; due_date: string | null; ball_in_court: string | null }> = []
+    let overdueRfis: Array<{ id: string; number: number | null; title: string | null; due_date: string | null; ball_in_court: string | null }> = []
     let openPunchCount = 0
-    let overBudgetItems: Array<{ id: string; description: string | null; division: string | null; spent_to_date: number; current_budget: number }> = []
+    let overBudgetItems: Array<{ id: string; description: string | null; division: string | null; actual_cost: number; revised_budget: number }> = []
     let pendingSubmittals: Array<{ id: string; number: string | null; title: string | null }> = []
     let atRiskPhases: Array<{ id: string; name: string | null; status: string | null }> = []
 
     try {
       const { data } = await supabase
         .from('rfis')
-        .select('id, rfi_number, subject, due_date, ball_in_court')
+        .select('id, number, title, due_date, ball_in_court')
         .eq('project_id', projectId)
         .neq('status', 'closed')
         .lt('due_date', now)
@@ -127,11 +127,11 @@ export const getAiInsights = async (
     try {
       const { data: budgetRows } = await supabase
         .from('budget_line_items')
-        .select('id, description, division, spent_to_date, current_budget')
+        .select('id, description, csi_code, actual_cost, revised_budget')
         .eq('project_id', projectId)
-      overBudgetItems = ((budgetRows ?? []) as typeof overBudgetItems).filter(
-        (row) => (row.spent_to_date ?? 0) > (row.current_budget ?? 0) && (row.current_budget ?? 0) > 0
-      )
+      overBudgetItems = ((budgetRows ?? []) as Array<{ id: string; description: string | null; csi_code: string | null; actual_cost: number; revised_budget: number }>).filter(
+        (row) => (row.actual_cost ?? 0) > (row.revised_budget ?? 0) && (row.revised_budget ?? 0) > 0
+      ).map(row => ({ id: row.id, description: row.description, division: row.csi_code, actual_cost: row.actual_cost, revised_budget: row.revised_budget }))
     } catch (err) {
       if (import.meta.env.DEV) console.error('[AI Endpoint] overBudgetItems query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -174,7 +174,7 @@ export const getAiInsights = async (
 
     // Cross-entity conflict detection: RFIs blocking upcoming schedule phases
     let upcomingPhases: Array<{ id: string; name: string | null; start_date: string | null; status: string | null }> = []
-    let openRfisWithDates: Array<{ id: string; rfi_number: string | null; subject: string | null; due_date: string | null; ball_in_court: string | null }> = []
+    let openRfisWithDates: Array<{ id: string; number: number | null; title: string | null; due_date: string | null; ball_in_court: string | null }> = []
     try {
       const sevenDaysOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
       const { data } = await supabase
@@ -199,7 +199,7 @@ export const getAiInsights = async (
       try {
         const { data } = await supabase
           .from('rfis')
-          .select('id, rfi_number, subject, due_date, ball_in_court')
+          .select('id, number, title, due_date, ball_in_court')
           .eq('project_id', projectId)
           .neq('status', 'closed')
           .not('due_date', 'is', null)
@@ -220,7 +220,7 @@ export const getAiInsights = async (
     if (overdueRfis.length > 0) {
       const count = overdueRfis.length
       const mostOverdue = overdueRfis[0]
-      const rfiLabel = mostOverdue.rfi_number ? `RFI ${mostOverdue.rfi_number}` : 'an RFI'
+      const rfiLabel = mostOverdue.number ? `RFI ${mostOverdue.number}` : 'an RFI'
       const daysPast = mostOverdue.due_date
         ? Math.ceil((Date.now() - new Date(mostOverdue.due_date).getTime()) / (1000 * 60 * 60 * 24))
         : 0
@@ -230,10 +230,10 @@ export const getAiInsights = async (
         type: 'risk',
         severity: count > 5 ? 'critical' : count > 2 ? 'warning' : 'info',
         title: `${count} overdue RFI${count === 1 ? '' : 's'}. ${rfiLabel} is ${daysPast} day${daysPast === 1 ? '' : 's'} past due`,
-        description: mostOverdue.subject
-          ? `"${mostOverdue.subject}" is the most overdue.${bicNote} Unresolved RFIs can block field work and push the schedule.`
+        description: mostOverdue.title
+          ? `"${mostOverdue.title}" is the most overdue.${bicNote} Unresolved RFIs can block field work and push the schedule.`
           : `${count} open RFI${count === 1 ? '' : 's'} passed their due date.${bicNote} Review and respond immediately.`,
-        affectedEntities: overdueRfis.map((r) => ({ type: 'rfi', id: r.id, name: r.rfi_number ? `RFI ${r.rfi_number}` : r.id })),
+        affectedEntities: overdueRfis.map((r) => ({ type: 'rfi', id: r.id, name: r.number ? `RFI ${r.number}` : r.id })),
         suggestedAction: 'Open RFIs to review overdue items',
         confidence: 0.9,
         source: 'computed' as const,
@@ -280,8 +280,8 @@ export const getAiInsights = async (
 
     if (overBudgetItems.length > 0) {
       const count = overBudgetItems.length
-      const worst = overBudgetItems.sort((a, b) => (b.spent_to_date - b.current_budget) - (a.spent_to_date - a.current_budget))[0]
-      const overrun = worst ? worst.spent_to_date - worst.current_budget : 0
+      const worst = overBudgetItems.sort((a, b) => (b.actual_cost - b.revised_budget) - (a.actual_cost - a.revised_budget))[0]
+      const overrun = worst ? worst.actual_cost - worst.revised_budget : 0
       const worstLabel = worst?.description ?? worst?.division ?? 'a line item'
       dynamicInsights.push({
         id: 'computed-budget-overrun',
@@ -333,7 +333,7 @@ export const getAiInsights = async (
 
           // RFI due date falls within 5 days before the phase start (or is already past due)
           if (daysBetween >= -7 && daysBetween <= 5) {
-            const rfiLabel = rfi.rfi_number ? `RFI ${rfi.rfi_number}` : 'An open RFI'
+            const rfiLabel = rfi.number ? `RFI ${rfi.number}` : 'An open RFI'
             const bicNote = rfi.ball_in_court ? ` Ball in court: ${rfi.ball_in_court}.` : ''
             const urgency = daysBetween <= 0
               ? `${rfiLabel} response is past due and ${phaseName} start date is imminent`
@@ -344,7 +344,7 @@ export const getAiInsights = async (
               type: 'risk',
               severity: daysBetween <= 0 ? 'critical' : 'warning',
               title: urgency,
-              description: `${rfi.subject ? `"${rfi.subject}" ` : ''}needs resolution before ${phaseName} can proceed.${bicNote} If the response slips, ${phaseName} is at risk of delay.`,
+              description: `${rfi.title ? `"${rfi.title}" ` : ''}needs resolution before ${phaseName} can proceed.${bicNote} If the response slips, ${phaseName} is at risk of delay.`,
               affectedEntities: [
                 { type: 'rfi', id: rfi.id, name: rfiLabel },
                 { type: 'schedule_phase', id: phase.id, name: phaseName },

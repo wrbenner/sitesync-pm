@@ -1,7 +1,7 @@
 // SiteSync Public REST API v1
 // Stripe-quality API: consistent naming, cursor pagination, idempotency, expand, versioning.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { HttpError, errorResponse, isValidUuid } from '../shared/auth.ts'
 import {
   authenticateApiKey,
@@ -77,7 +77,7 @@ const routes: Route[] = [
 
 // ── Main Handler ─────────────────────────────────────────
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: apiCorsHeaders })
   }

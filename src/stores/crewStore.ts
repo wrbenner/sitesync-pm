@@ -37,12 +37,12 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
         .order('name');
 
       if (error) throw error;
-      const crews: CrewWithDetails[] = (data ?? []).map((c: unknown) => ({
-        ...c,
-        location: c.location || 'TBD',
-        task: c.task || 'Unassigned',
-        productivity: c.productivity || 0,
-        eta: c.eta || 'TBD',
+      const crews: CrewWithDetails[] = (data ?? []).map((c: Record<string, unknown>) => ({
+        ...(c as Crew),
+        location: (c.location as string) || 'TBD',
+        task: (c.current_task as string) || 'Unassigned',
+        productivity: (c.productivity_score as number) || 0,
+        eta: 'TBD',
       }));
       set({ crews, loading: false });
     } catch (e) {
@@ -54,7 +54,7 @@ export const useCrewStore = create<CrewState>()((set, get) => ({
     const { error } = await supabase.from('crews').insert({
       project_id: crew.project_id,
       name: crew.name,
-      foreman_id: crew.foreman_id,
+      lead_id: crew.lead_id,
       trade: crew.trade,
       size: crew.size,
       status: crew.status,

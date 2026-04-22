@@ -3,7 +3,7 @@
 // Shows toast notifications for changes by other users.
 // Includes entity-level presence tracking for conflict prevention.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useId } from 'react'
 import { useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { supabase, fromTable } from '../lib/supabase'
 import { useAuth } from './useAuth'
@@ -54,6 +54,7 @@ export function useRealtimeQuery<T>(
   const { user } = useAuth()
   const projectId = useProjectId()
   const currentUserId = user?.id
+  const instanceId = useId()
   const pendingInvalidation = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const query = useQuery({
@@ -70,7 +71,9 @@ export function useRealtimeQuery<T>(
     const channels: ReturnType<typeof supabase.channel>[] = []
 
     for (const table of tables) {
-      const channelName = `rt_${table}_${projectId}_${queryKey.join('_')}`
+      // Use instanceId to prevent collisions when multiple components subscribe to the same table
+      const safeId = instanceId.replace(/:/g, '_')
+      const channelName = `rt_${table}_${projectId}_${safeId}`
 
       const channel = supabase
         .channel(channelName)

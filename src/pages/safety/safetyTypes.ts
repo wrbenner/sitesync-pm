@@ -1,7 +1,7 @@
 // Shared types and constants for the safety domain
 import { colors } from '../../styles/theme';
 
-export type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions' | 'ptp';
+export type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions' | 'ptp' | 'osha_logs' | 'jha' | 'sds' | 'permits';
 
 export const OSHA_SEVERITY: Record<string, { fg: string; bg: string; label: string }> = {
   near_miss:          { fg: colors.statusNeutral,   bg: colors.statusNeutralSubtle,   label: 'Near Miss' },

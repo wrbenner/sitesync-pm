@@ -3,7 +3,7 @@ import type { LienWaiverStatus } from '../../types/api'
 import type { G702Data } from '../../machines/paymentMachine'
 import type { WaiverState } from '../../components/export/LienWaiverPDF'
 
-export type TabKey = 'applications' | 'lien_waivers' | 'cash_flow'
+export type TabKey = 'applications' | 'lien_waivers' | 'cash_flow' | 'retainage'
 
 export const fmtCurrency = (n: number | null): string =>
   new Intl.NumberFormat('en-US', {

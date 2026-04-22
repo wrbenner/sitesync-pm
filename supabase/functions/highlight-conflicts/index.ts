@@ -8,7 +8,7 @@
 // polygons around mismatches on an SVG overlay, stores the overlay in
 // Supabase Storage, returns the public URLs plus per-conflict bounding boxes.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -185,7 +185,7 @@ async function uploadOverlay(
   return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const corsHeaders = getCorsHeaders(req)

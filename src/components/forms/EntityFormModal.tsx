@@ -101,6 +101,8 @@ interface EntityFormModalProps<T extends z.ZodObject<z.ZodRawShape>> {
   submittingLabel?: string
   draftKey?: string
   width?: number
+  /** Rendered after form fields, before submit button. Use for custom sections like file uploads. */
+  afterFields?: React.ReactNode
 }
 
 export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
@@ -115,6 +117,7 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
   submittingLabel,
   draftKey,
   width,
+  afterFields,
 }: EntityFormModalProps<T>) {
   type FormData = z.infer<T>
 
@@ -300,6 +303,9 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
             </div>
           )
         })}
+
+        {/* Custom content slot between fields and footer */}
+        {afterFields}
 
         <div style={{
           display: 'flex', justifyContent: 'flex-end', gap: spacing['3'],

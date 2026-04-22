@@ -21,8 +21,20 @@ CREATE TABLE IF NOT EXISTS precon_bid_packages (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_precon_bid_packages_project ON precon_bid_packages(project_id);
-CREATE INDEX IF NOT EXISTS idx_precon_bid_packages_status ON precon_bid_packages(status);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'precon_bid_packages' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_precon_bid_packages_project ON precon_bid_packages(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'precon_bid_packages' AND column_name = 'status') THEN
+    CREATE INDEX IF NOT EXISTS idx_precon_bid_packages_status ON precon_bid_packages(status);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS precon_bid_submissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -37,7 +49,15 @@ CREATE TABLE IF NOT EXISTS precon_bid_submissions (
   evaluation_score numeric
 );
 
-CREATE INDEX IF NOT EXISTS idx_precon_bid_submissions_package ON precon_bid_submissions(bid_package_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'precon_bid_submissions' AND column_name = 'bid_package_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_precon_bid_submissions_package ON precon_bid_submissions(bid_package_id);
+
+  END IF;
+
+END $$;
 
 ALTER TABLE precon_bid_packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE precon_bid_submissions ENABLE ROW LEVEL SECURITY;

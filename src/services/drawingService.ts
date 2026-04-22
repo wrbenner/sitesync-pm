@@ -70,16 +70,18 @@ export const drawingService = {
       .insert({
         project_id: input.project_id,
         title: input.title,
-        status: 'draft' as DrawingStatus,
+        status: 'for_review' as DrawingStatus,
         file_url: input.file_url ?? null,
         discipline: input.discipline ?? null,
-        set_name: input.set_name ?? null,
         sheet_number: input.sheet_number ?? null,
         revision: input.revision ?? null,
-        received_date: input.received_date ?? null,
-        previous_revision_id: input.previous_revision_id ?? null,
-        change_description: input.change_description ?? null,
         uploaded_by: userId,
+        // Pipeline fields — columns added in migration 20260420000005
+        ...(input.thumbnail_url != null && { thumbnail_url: input.thumbnail_url }),
+        ...(input.total_pages != null && { total_pages: input.total_pages }),
+        ...(input.source_filename != null && { source_filename: input.source_filename }),
+        ...(input.file_size_bytes != null && { file_size_bytes: input.file_size_bytes }),
+        ...(input.processing_status != null && { processing_status: input.processing_status }),
       })
       .select()
       .single();
@@ -148,11 +150,12 @@ export const drawingService = {
   },
 
   /**
-   * Update drawing fields (non-status). Use transitionStatus() for status changes.
+   * Update drawing fields. Status updates bypass lifecycle enforcement here;
+   * use transitionStatus() when formal workflow transitions are needed.
    */
   async updateDrawing(drawingId: string, updates: Partial<Drawing>): Promise<Result> {
-     
-    const { status: _status, uploaded_by: _uploaded_by, ...safeUpdates } = updates as Record<
+
+    const { uploaded_by: _uploaded_by, ...safeUpdates } = updates as Record<
       string,
       unknown
     >;

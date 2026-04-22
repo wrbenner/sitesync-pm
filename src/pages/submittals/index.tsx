@@ -1,32 +1,41 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
+import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
 import { MetricCardSkeleton } from '../../components/ui/Skeletons';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { useSubmittals, useSubmittalReviewers, useProject } from '../../hooks/queries';
+import { colors, spacing, typography, borderRadius, shadows, layout } from '../../styles/theme';
+import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
 import { ExportButton } from '../../components/shared/ExportButton';
-import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw, Search, Upload } from 'lucide-react';
 import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../../hooks/mutations';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { PredictiveAlertBanner } from '../../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
 import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal';
+import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard';
 import { toast } from 'sonner';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useCopilotStore } from '../../stores/copilotStore';
+import { supabase } from '../../lib/supabase';
 import { SubmittalsTable } from './SubmittalsTable';
 import { SubmittalsKanban } from './SubmittalsKanban';
 import { SubmittalDetail } from './SubmittalDetail';
+import { GroupedSubmittalsView, GroupBySelector } from './GroupedSubmittalsView';
+import type { GroupByMode } from './GroupedSubmittalsView';
 
 const SubmittalsPage: React.FC = () => {
-  const { setPageContext } = useCopilotStore();
+  // Selector-based access avoids re-rendering this page on every copilot state
+  // change (typing indicator, conversation updates, etc).
+  const setPageContext = useCopilotStore((s) => s.setPageContext);
   useEffect(() => { setPageContext('submittals'); }, [setPageContext]);
 
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [groupBy, setGroupBy] = useState<GroupByMode>('spec_section');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,15 +46,43 @@ const SubmittalsPage: React.FC = () => {
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
   const deleteSubmittal = useDeleteSubmittal();
+  const queryClient = useQueryClient();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
   const { data: project } = useProject(projectId);
+  const { data: aiInsights } = useAIInsights(projectId, 'submittals');
+  const specFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Real-time subscription for submittal changes
+  useEffect(() => {
+    if (!projectId) return;
+    const channel = supabase
+      .channel('submittals-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'submittals', filter: `project_id=eq.${projectId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['submittals', projectId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId, queryClient]);
+
+  const handleSpecImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    const storagePath = `${projectId}/${Date.now()}_${file.name}`;
+    const { error } = await supabase.storage.from('submittal-specs').upload(storagePath, file);
+    if (error) {
+      toast.error('Failed to upload spec: ' + error.message);
+    } else {
+      toast.success(`Spec uploaded: ${file.name}`);
+    }
+    e.target.value = '';
+  }, [projectId]);
 
   const handleExportXlsx = useCallback(() => {
     const projectName = project?.name ?? 'Project';
     const rows = (submittalsResult?.data ?? []).map((s) => {
       const rec = s as Record<string, unknown>;
       return {
-        number: String(rec.submittal_number ?? rec.number ?? rec.id ?? ''),
+        number: String(rec.number ?? rec.id ?? ''),
         title: (rec.title as string) ?? '',
         specSection: (rec.spec_section as string) ?? '',
         subcontractor: (rec.subcontractor as string) ?? (rec.assigned_to as string) ?? '',
@@ -57,8 +94,7 @@ const SubmittalsPage: React.FC = () => {
     });
     exportSubmittalLogXlsx(projectName, rows);
   }, [project?.name, submittalsResult?.data]);
-  const selectedIdStr = selectedId != null ? String(selectedId) : undefined;
-  const { data: reviewersData = [] } = useSubmittalReviewers(selectedIdStr);
+  const { data: reviewersData = [] } = useSubmittalReviewers(selectedId ?? undefined);
   const submittalsRaw = submittalsResult?.data ?? [];
 
   // Map API data to component shape
@@ -81,13 +117,13 @@ const SubmittalsPage: React.FC = () => {
     return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date();
   }).length, [allSubmittals]);
 
-  const STATUS_FILTER_TABS: Array<{ label: string; value: string | null }> = [
-    { label: 'All', value: null },
-    { label: 'Pending', value: 'pending' },
-    { label: 'In Review', value: 'in_review' },
-    { label: 'Approved', value: 'approved' },
-    { label: 'Rejected', value: 'rejected' },
-    { label: 'Resubmit', value: 'revise_resubmit' },
+  const STATUS_FILTER_TABS: Array<{ label: string; value: string | null; count: number }> = [
+    { label: 'All', value: null, count: totalCount },
+    { label: 'Pending', value: 'pending', count: pendingReviewCount },
+    { label: 'In Review', value: 'in_review', count: allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review').length },
+    { label: 'Approved', value: 'approved', count: approvedCount },
+    { label: 'Rejected', value: 'rejected', count: allSubmittals.filter((s) => s.status === 'rejected').length },
+    { label: 'Resubmit', value: 'revise_resubmit', count: allSubmittals.filter((s) => s.status === 'revise_resubmit').length },
   ];
 
   const filteredSubmittals = useMemo(() => {
@@ -103,7 +139,7 @@ const SubmittalsPage: React.FC = () => {
         const rec = s as Record<string, unknown>;
         return (
           String(rec.title ?? '').toLowerCase().includes(q) ||
-          String(rec.submittal_number ?? '').toLowerCase().includes(q) ||
+          String(rec.number ?? '').toLowerCase().includes(q) ||
           String(rec.spec_section ?? '').toLowerCase().includes(q)
         );
       });
@@ -112,21 +148,6 @@ const SubmittalsPage: React.FC = () => {
   }, [allSubmittals, statusFilter, searchQuery]);
 
   const selected = allSubmittals.find((s) => s.id === selectedId) || null;
-
-  const toggleBtnStyle = useCallback((active: boolean): React.CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 56,
-    minHeight: 56,
-    padding: `${spacing['3']} ${spacing['4']}`,
-    border: 'none',
-    cursor: 'pointer',
-    backgroundColor: active ? colors.primaryOrange : 'transparent',
-    color: active ? colors.white : colors.textTertiary,
-    transition: 'all 150ms ease',
-  }), []);
-
 
   if (!projectId) {
     return (
@@ -144,7 +165,7 @@ const SubmittalsPage: React.FC = () => {
     return (
       <PageContainer title="Submittals" subtitle="Loading...">
         <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['6'] }}>
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <MetricCardSkeleton key={i} />
           ))}
         </div>
@@ -222,36 +243,38 @@ const SubmittalsPage: React.FC = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: `${spacing['20']} ${spacing['8']}`,
-          gap: spacing['5'],
+          padding: `${spacing['24']} ${spacing['8']}`,
+          gap: spacing['4'],
         }}>
           <div style={{
-            width: 64,
-            height: 64,
-            borderRadius: borderRadius.xl,
+            width: 56,
+            height: 56,
+            borderRadius: borderRadius.full,
             backgroundColor: colors.orangeSubtle,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            <ClipboardList size={32} color={colors.primaryOrange} />
+            <ClipboardList size={28} color={colors.primaryOrange} />
           </div>
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-            <h3 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
+            <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
               No submittals yet
             </h3>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, maxWidth: 380 }}>
-              Track material approvals to keep procurement on schedule
+            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, maxWidth: 340 }}>
+              Track material approvals to keep procurement on schedule.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['2'] }}>
+          <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['3'] }}>
             <PermissionGate permission="submittals.create">
               <Btn variant="primary" onClick={() => setShowCreateModal(true)}>Create Submittal</Btn>
             </PermissionGate>
-            <Btn variant="secondary" onClick={() => {}}>Import from Spec</Btn>
+            <Btn variant="secondary" icon={<Upload size={14} />} onClick={() => specFileInputRef.current?.click()}>Import from Spec</Btn>
+            <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
           </div>
         </div>
-        <CreateSubmittalModal
+        <SubmittalCreateWizard
+          projectId={projectId!}
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSubmit={async (data) => {
@@ -267,139 +290,249 @@ const SubmittalsPage: React.FC = () => {
   return (
     <PageContainer
       title="Submittals"
-      subtitle={`${allSubmittals.length} total \u00b7 ${openCount} open`}
+      subtitle={`${allSubmittals.length} total`}
       actions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
-          <div style={{ display: 'flex', borderRadius: borderRadius.full, overflow: 'hidden', border: `1px solid ${colors.borderLight}` }}>
-            <button
-              style={{ ...toggleBtnStyle(viewMode === 'table'), borderRadius: `${borderRadius.full} 0 0 ${borderRadius.full}` }}
-              onClick={() => setViewMode('table')}
-              title="Table View"
-              aria-label="Table View"
-            >
-              <List size={16} />
-            </button>
-            <button
-              style={{ ...toggleBtnStyle(viewMode === 'kanban'), borderRadius: `0 ${borderRadius.full} ${borderRadius.full} 0` }}
-              onClick={() => setViewMode('kanban')}
-              title="Board View"
-              aria-label="Board View"
-            >
-              <LayoutGrid size={16} />
-            </button>
-          </div>
-          <PermissionGate permission="submittals.create">
-            <Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn>
-          </PermissionGate>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <PresenceAvatars page="submittals" size={28} />
+          <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
         </div>
       }
     >
-      {submittalsError && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: spacing['3'],
-          padding: `${spacing['3']} ${spacing['4']}`,
-          marginBottom: spacing['4'],
-          backgroundColor: colors.statusCriticalSubtle,
-          border: `1px solid ${colors.statusCritical}40`,
-          borderRadius: borderRadius.md,
-          color: colors.statusCritical,
-        }}>
-          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-            Unable to load submittals. Check your connection and try again.
-          </span>
-          <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
-        </div>
-      )}
-
+      {/* Predictive alerts - subtle placement */}
       {pageAlerts.map((alert) => (
-        <PredictiveAlertBanner key={alert.id} alert={alert} />
+        <div key={alert.id} style={{ marginBottom: spacing['3'] }}>
+          <PredictiveAlertBanner alert={alert} />
+        </div>
       ))}
 
-      {/* KPI Metric Cards */}
-      <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
+      {/* Hero Metric Bar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing['8'],
+        padding: `${spacing['5']} ${spacing['6']}`,
+        backgroundColor: colors.surfaceRaised,
+        borderRadius: borderRadius.xl,
+        border: `1px solid ${colors.borderSubtle}`,
+        marginBottom: spacing['5'],
+        boxShadow: shadows.sm,
+      }}>
         {[
-          { label: 'Total Submittals', value: totalCount, color: colors.textPrimary, bg: colors.white },
-          { label: 'Pending Review', value: pendingReviewCount, color: colors.statusPending, bg: colors.statusPendingSubtle },
-          { label: 'Approved', value: approvedCount, color: colors.statusActive, bg: colors.statusActiveSubtle },
-          { label: 'Overdue', value: overdueCount, color: colors.statusCritical, bg: colors.statusCriticalSubtle },
-        ].map(({ label, value, color, bg }) => (
-          <div key={label} style={{
-            flex: '1 1 140px',
-            padding: `${spacing['4']} ${spacing['5']}`,
-            backgroundColor: bg,
-            border: `1px solid ${colors.borderLight}`,
-            borderRadius: borderRadius.lg,
-          }}>
-            <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: spacing['2'] }}>{label}</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: typography.fontWeight.bold, color, lineHeight: 1 }}>{value}</div>
-          </div>
+          { label: 'Total', value: totalCount, color: colors.textPrimary },
+          { label: 'Pending Review', value: pendingReviewCount, color: colors.statusPending },
+          { label: 'Approved', value: approvedCount, color: colors.statusActive },
+          { label: 'Overdue', value: overdueCount, color: colors.statusCritical },
+        ].map(({ label, value, color }, idx) => (
+          <React.Fragment key={label}>
+            {idx > 0 && (
+              <div style={{ width: 1, height: 32, backgroundColor: colors.borderSubtle }} />
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['0.5'] }}>
+              <span style={{
+                fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.medium,
+                color: colors.textTertiary,
+                textTransform: 'uppercase',
+                letterSpacing: typography.letterSpacing.wider,
+              }}>
+                {label}
+              </span>
+              <span style={{
+                fontSize: typography.fontSize.large,
+                fontWeight: typography.fontWeight.semibold,
+                color,
+                lineHeight: typography.lineHeight.none,
+              }}>
+                {value}
+              </span>
+            </div>
+          </React.Fragment>
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: spacing['3'] }}>
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search submittals by title, number, or spec section…"
-          aria-label="Search submittals"
-          data-testid="search-submittals"
-          style={{
-            width: '100%',
-            maxWidth: 480,
-            padding: `${spacing['2']} ${spacing['3']}`,
-            border: `1px solid ${colors.borderDefault}`,
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.sm,
-            fontFamily: typography.fontFamily,
-          }}
-        />
+      {/* Unified Toolbar: Search + Filters + View Toggle + New Button */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing['3'],
+        marginBottom: spacing['5'],
+        flexWrap: 'wrap',
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '0 1 280px', minWidth: 200 }}>
+          <Search
+            size={15}
+            style={{
+              position: 'absolute',
+              left: spacing['3'],
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: colors.textTertiary,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search submittals..."
+            aria-label="Search submittals"
+            data-testid="search-submittals"
+            style={{
+              width: '100%',
+              padding: `${spacing['2']} ${spacing['3']} ${spacing['2']} ${spacing['8']}`,
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: borderRadius.full,
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              backgroundColor: colors.surfacePage,
+              color: colors.textPrimary,
+              outline: 'none',
+              transition: 'border-color 150ms ease, box-shadow 150ms ease',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = colors.primaryOrange;
+              e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.orangeSubtle}`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = colors.borderSubtle;
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          />
+        </div>
+
+        {/* Filter Pills */}
+        <div style={{ display: 'flex', gap: spacing['1'], alignItems: 'center', flex: '1 1 auto' }}>
+          {STATUS_FILTER_TABS.map(({ label, value, count }) => {
+            const active = statusFilter === value;
+            return (
+              <button
+                key={label}
+                onClick={() => setStatusFilter(value)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: spacing['1'],
+                  padding: `${spacing['1.5']} ${spacing['3']}`,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: typography.fontSize.label,
+                  fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                  color: active ? colors.white : colors.textSecondary,
+                  backgroundColor: active ? colors.primaryOrange : colors.surfaceInset,
+                  borderRadius: borderRadius.full,
+                  transition: 'all 150ms ease',
+                  whiteSpace: 'nowrap',
+                  lineHeight: typography.lineHeight.normal,
+                }}
+              >
+                {label}
+                {count > 0 && (
+                  <span style={{
+                    fontSize: typography.fontSize.caption,
+                    fontWeight: typography.fontWeight.medium,
+                    color: active ? 'rgba(255,255,255,0.8)' : colors.textTertiary,
+                    backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.borderSubtle,
+                    borderRadius: borderRadius.full,
+                    padding: `0 ${spacing['1.5']}`,
+                    minWidth: 18,
+                    textAlign: 'center',
+                    lineHeight: '18px',
+                  }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Group By (only shown in table mode) */}
+        {viewMode === 'table' && (
+          <GroupBySelector value={groupBy} onChange={setGroupBy} />
+        )}
+
+        {/* View Toggle (segmented control) */}
+        <div style={{
+          display: 'flex',
+          borderRadius: borderRadius.md,
+          overflow: 'hidden',
+          border: `1px solid ${colors.borderSubtle}`,
+          backgroundColor: colors.surfaceInset,
+          padding: spacing['0.5'],
+          gap: spacing['0.5'],
+        }}>
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 28,
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: borderRadius.base,
+              backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent',
+              color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary,
+              boxShadow: viewMode === 'table' ? shadows.sm : 'none',
+              transition: 'all 150ms ease',
+            }}
+            onClick={() => setViewMode('table')}
+            title="Table View"
+            aria-label="Table View"
+          >
+            <List size={14} />
+          </button>
+          <button
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 28,
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: borderRadius.base,
+              backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent',
+              color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary,
+              boxShadow: viewMode === 'kanban' ? shadows.sm : 'none',
+              transition: 'all 150ms ease',
+            }}
+            onClick={() => setViewMode('kanban')}
+            title="Board View"
+            aria-label="Board View"
+          >
+            <LayoutGrid size={14} />
+          </button>
+        </div>
+
+        {/* New Submittal Button */}
+        <PermissionGate permission="submittals.create">
+          <Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn>
+        </PermissionGate>
       </div>
 
-      {/* Status Filter Tabs */}
-      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderLight}`, paddingBottom: 0 }}>
-        {STATUS_FILTER_TABS.map(({ label, value }) => {
-          const active = statusFilter === value;
-          return (
-            <button
-              key={label}
-              onClick={() => setStatusFilter(value)}
-              style={{
-                padding: `${spacing['2']} ${spacing['4']}`,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: typography.fontSize.sm,
-                fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.normal,
-                color: active ? colors.primaryOrange : colors.textSecondary,
-                backgroundColor: 'transparent',
-                borderBottom: active ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
-                marginBottom: -1,
-                transition: 'color 150ms ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
+      {/* Content area */}
       {viewMode === 'table' ? (
-        <SubmittalsTable
-          filteredSubmittals={filteredSubmittals}
-          allSubmittals={allSubmittals}
-          selectedIds={selectedIds}
-          setSelectedIds={setSelectedIds}
-          loading={loading}
-          onRowClick={(sub) => navigate(`/projects/${projectId}/submittals/${(sub as Record<string, unknown>).id}`)}
-          clearFilters={clearFilters}
-          projectId={projectId}
-          updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
-        />
+        groupBy !== 'none' ? (
+          <GroupedSubmittalsView
+            filteredSubmittals={filteredSubmittals}
+            groupBy={groupBy}
+            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+          />
+        ) : (
+          <SubmittalsTable
+            filteredSubmittals={filteredSubmittals}
+            allSubmittals={allSubmittals}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
+            loading={loading}
+            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+            clearFilters={clearFilters}
+            projectId={projectId}
+            updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
+          />
+        )
       ) : (
         <SubmittalsKanban
           allSubmittals={allSubmittals}
@@ -417,7 +550,8 @@ const SubmittalsPage: React.FC = () => {
         deletePending={deleteSubmittal.isPending}
       />
 
-      <CreateSubmittalModal
+      <SubmittalCreateWizard
+        projectId={projectId!}
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={async (data) => {
@@ -428,6 +562,9 @@ const SubmittalsPage: React.FC = () => {
           toast.success('Submittal created: ' + (data.title || 'New Submittal'));
         }}
       />
+
+      {/* Hidden spec file input for import */}
+      <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
     </PageContainer>
   );
 };

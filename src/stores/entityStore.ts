@@ -154,24 +154,28 @@ export const useEntityStoreRoot = create<EntityStoreState>()((set, get) => ({
  * @example
  *   const { items, loading, error } = useEntityStore('rfis');
  */
-export function useEntityStore<T extends BaseEntity = BaseEntity>(key: string): EntitySlice<T> {
-  const { initSlice, slices } = useEntityStoreRoot((s) => ({
-    initSlice: s.initSlice,
-    slices: s.slices,
-  }));
+const EMPTY_SLICE: EntitySlice = {
+  items: [],
+  loading: false,
+  error: null,
+  selectedId: null,
+  filters: { ...DEFAULT_FILTERS, extra: {} },
+};
 
-  // Ensure the slice exists (idempotent)
-  if (!slices[key]) {
-    initSlice(key);
+export function useEntityStore<T extends BaseEntity = BaseEntity>(key: string): EntitySlice<T> {
+  // Use a stable selector that doesn't create a new object each render
+  const slice = useEntityStoreRoot((s) => s.slices[key]);
+
+  // Lazily init the slice outside the render path (synchronous but only once)
+  if (!slice) {
+    // Direct state check + mutation avoids calling setState during render
+    const state = useEntityStoreRoot.getState();
+    if (!state.slices[key]) {
+      state.initSlice(key);
+    }
   }
 
-  return (slices[key] ?? {
-    items: [],
-    loading: false,
-    error: null,
-    selectedId: null,
-    filters: { ...DEFAULT_FILTERS, extra: {} },
-  }) as EntitySlice<T>;
+  return (slice ?? EMPTY_SLICE) as EntitySlice<T>;
 }
 
 /**

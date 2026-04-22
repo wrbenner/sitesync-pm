@@ -17,8 +17,16 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding
   ON document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-CREATE INDEX IF NOT EXISTS idx_chunks_project ON document_chunks(project_id);
-CREATE INDEX IF NOT EXISTS idx_chunks_document ON document_chunks(document_id);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'document_chunks' AND column_name = 'project_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_chunks_project ON document_chunks(project_id);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'document_chunks' AND column_name = 'document_id') THEN
+    CREATE INDEX IF NOT EXISTS idx_chunks_document ON document_chunks(document_id);
+  END IF;
+END $$;
 
 ALTER TABLE document_chunks ENABLE ROW LEVEL SECURITY;
 

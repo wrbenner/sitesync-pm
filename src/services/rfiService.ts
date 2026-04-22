@@ -63,7 +63,7 @@ export const rfiService = {
       .select('*')
       .eq('project_id', projectId)
       .is('deleted_at', null)
-      .order('rfi_number', { ascending: false });
+      .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
     return ok((data ?? []) as RFI[]);
@@ -82,7 +82,7 @@ export const rfiService = {
         created_by: userId,
         assigned_to: input.assigned_to ?? null,
         due_date: input.due_date ?? null,
-        ball_in_court_id: input.assigned_to ?? null,
+        ball_in_court: input.assigned_to ?? null,
         linked_drawing_id: input.linked_drawing_id ?? null,
       })
       .select()
@@ -151,13 +151,11 @@ export const rfiService = {
    * Update RFI fields (non-status). Use transitionStatus() for status changes.
    */
   async updateRfi(rfiId: string, updates: Partial<RFI>): Promise<Result> {
-    const userId = await getCurrentUserId();
-     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await supabase
       .from('rfis')
-      .update({ ...safeUpdates, updated_by: userId })
+      .update(safeUpdates)
       .eq('id', rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId }));
@@ -165,14 +163,9 @@ export const rfiService = {
   },
 
   async deleteRfi(rfiId: string): Promise<Result> {
-    const userId = await getCurrentUserId();
-
     const { error } = await supabase
       .from('rfis')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-      })
+      .delete()
       .eq('id', rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId }));

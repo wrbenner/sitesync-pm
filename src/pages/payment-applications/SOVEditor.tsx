@@ -358,7 +358,7 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
             <Save size={13} /> {saveMutation.isPending ? 'Saving...' : 'Save Draft'}
           </Btn>
           {(appStatus === 'draft' || appStatus === 'in_review') && (
-            <PermissionGate permission="payments.create">
+            <PermissionGate permission="financials.edit">
               <Btn
                 variant="primary"
                 size="sm"
@@ -433,8 +433,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
       setLessPrevCerts(0)
       setRows(Array.from({ length: 4 }, (_, i) => newBlankRow(i + 1)))
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isEdit])
+  }, [open, isEdit, contracts, editApp])
 
   useEffect(() => {
     if (!existingSOV) return
@@ -526,9 +525,9 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
         ...(editApp?.id ? { id: editApp.id as string } : {}),
         contract_id: contractId,
         period_to: periodTo,
-        period_from: periodFrom || null,
         original_contract_sum: originalContractSum,
         net_change_orders: netChangeOrders,
+        contract_sum_to_date: originalContractSum + netChangeOrders,
         total_completed_and_stored: g702.totalCompletedAndStored,
         retainage: g702.retainageAmount,
         total_earned_less_retainage: g702.totalEarnedLessRetainage,
@@ -1018,7 +1017,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
             Cancel
           </Btn>
 
-          <PermissionGate permission="payments.create">
+          <PermissionGate permission="financials.edit">
             <Btn
               variant="primary"
               size="sm"

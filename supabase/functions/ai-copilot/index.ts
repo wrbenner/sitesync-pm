@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -23,7 +23,7 @@ interface CopilotResponse {
   tokens_used: number
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsCheck = handleCors(req)
   if (corsCheck) return corsCheck
 

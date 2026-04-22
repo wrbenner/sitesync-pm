@@ -6,14 +6,51 @@ import type { ActivityFeedRowWithProfile } from '../../types/api'
 
 export const getActivityFeed = async (projectId: string): Promise<ActivityFeedItem[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
+
+  // Try embedded profiles join first — falls back to a plain select if the FK
+  // relationship isn't configured in this environment (Supabase returns 400).
+  let rows: ActivityFeedRow[] = []
+  const joined = await supabase
     .from('activity_feed')
     .select('*, user:profiles(id, full_name, avatar_url)')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false })
     .limit(50)
-  if (error) throw transformSupabaseError(error)
-  const items = (data || []) as ActivityFeedRowWithProfile[]
+
+  if (joined.error) {
+    if (import.meta.env.DEV) console.warn('[ActivityFeed] profiles join unavailable, falling back:', joined.error.message)
+    const plain = await supabase
+      .from('activity_feed')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (plain.error) throw transformSupabaseError(plain.error)
+    rows = (plain.data || []) as ActivityFeedRow[]
+  } else {
+    rows = (joined.data || []) as ActivityFeedRow[]
+  }
+
+  // Best-effort: backfill missing user info from profiles in a second query.
+  const items = rows as ActivityFeedRowWithProfile[]
+  const missingUserIds = Array.from(new Set(
+    items
+      .filter((r) => !r.user && typeof (r as { user_id?: string | null }).user_id === 'string')
+      .map((r) => (r as unknown as { user_id: string }).user_id)
+      .filter(Boolean)
+  ))
+  if (missingUserIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', missingUserIds)
+    const byId = new Map((profiles ?? []).map((p) => [p.id, p]))
+    for (const r of items) {
+      const uid = (r as unknown as { user_id?: string | null }).user_id
+      if (!r.user && uid && byId.has(uid)) r.user = byId.get(uid)!
+    }
+  }
+
   const labelMap = await batchFetchEntityLabels(items, projectId)
   return Promise.all(items.map((item) => enrichActivityItem(item, projectId, labelMap)))
 }
@@ -47,12 +84,12 @@ async function batchFetchEntityLabels(
     fetches.push(
       supabase
         .from('rfis')
-        .select('id, rfi_number, subject')
+        .select('id, number, title')
         .eq('project_id', projectId)
         .in('id', grouped['rfi'])
         .then(({ data }) => {
           for (const row of data ?? []) {
-            const label = `RFI-${String(row.rfi_number).padStart(3, '0')} ${row.subject}`
+            const label = `RFI-${String(row.number).padStart(3, '0')} ${row.title}`
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:rfi:${row.id}`, label)
           }
@@ -65,12 +102,12 @@ async function batchFetchEntityLabels(
     fetches.push(
       supabase
         .from('submittals')
-        .select('id, submittal_number, title')
+        .select('id, number, title')
         .eq('project_id', projectId)
         .in('id', grouped['submittal'])
         .then(({ data }) => {
           for (const row of data ?? []) {
-            const label = `SUB-${String(row.submittal_number).padStart(3, '0')} ${row.title}`
+            const label = `SUB-${String(row.number).padStart(3, '0')} ${row.title}`
             labelMap.set(row.id, label)
             setCachedEntityLabel(`${projectId}:submittal:${row.id}`, label)
           }
@@ -82,7 +119,7 @@ async function batchFetchEntityLabels(
   if (grouped['punch_list_item']?.length) {
     fetches.push(
       supabase
-        .from('punch_list_items')
+        .from('punch_items')
         .select('id, title')
         .eq('project_id', projectId)
         .in('id', grouped['punch_list_item'])
@@ -259,11 +296,11 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
     try {
       const { data } = await supabase
         .from('rfis')
-        .select('rfi_number, subject')
+        .select('number, title')
         .eq('id', entityId)
         .eq('project_id', projectId)
         .single()
-      if (data) return `RFI-${String(data.rfi_number).padStart(3, '0')} ${data.subject}`
+      if (data) return `RFI-${String(data.number).padStart(3, '0')} ${data.title}`
     } catch {
       return ''
     }
@@ -271,11 +308,11 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
     try {
       const { data } = await supabase
         .from('submittals')
-        .select('submittal_number, title')
+        .select('number, title')
         .eq('id', entityId)
         .eq('project_id', projectId)
         .single()
-      if (data) return `SUB-${String(data.submittal_number).padStart(3, '0')} ${data.title}`
+      if (data) return `SUB-${String(data.number).padStart(3, '0')} ${data.title}`
     } catch {
       return ''
     }
@@ -283,11 +320,11 @@ async function fetchEntityLabel(entityType: string, entityId: string, projectId:
     try {
       const { data } = await supabase
         .from('change_orders')
-        .select('co_number, title')
+        .select('number, title')
         .eq('id', entityId)
         .eq('project_id', projectId)
         .single()
-      if (data) return `CO-${String(data.co_number).padStart(3, '0')} ${data.title}`
+      if (data) return `CO-${String(data.number).padStart(3, '0')} ${data.title}`
     } catch {
       return ''
     }

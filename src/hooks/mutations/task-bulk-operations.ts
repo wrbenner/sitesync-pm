@@ -18,7 +18,7 @@ const from = (table: AnyTableName) => supabase.from(table as keyof Database['pub
 export function useBulkUpdateTasks() {
   return useMutation({
     mutationFn: async ({ ids, updates, projectId }: { ids: string[]; updates: Record<string, unknown>; projectId: string }) => {
-      const { error } = await from('tasks').update(updates).in('id', ids)
+      const { error } = await from('tasks').update(updates).in('id', ids).eq('project_id', projectId)
       if (error) throw error
       return { projectId, count: ids.length }
     },
@@ -33,7 +33,7 @@ export function useBulkUpdateTasks() {
 export function useBulkDeleteTasks() {
   return useMutation({
     mutationFn: async ({ ids, projectId }: { ids: string[]; projectId: string }) => {
-      const { error } = await from('tasks').delete().in('id', ids)
+      const { error } = await from('tasks').delete().in('id', ids).eq('project_id', projectId)
       if (error) throw error
       return { projectId, count: ids.length }
     },
@@ -72,7 +72,7 @@ export function useReorderTasks() {
       } catch {
         // Fallback: individual updates (non-atomic, last resort)
         for (const { id, sort_order } of updates) {
-          const { error } = await from('tasks').update({ sort_order }).eq('id', id)
+          const { error } = await from('tasks').update({ sort_order }).eq('id', id).eq('project_id', projectId)
           if (error) throw error
         }
       }
@@ -96,7 +96,7 @@ export function useUpdateTaskDependencies() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ taskId, predecessorIds, projectId }: { taskId: string; predecessorIds: string[]; projectId: string }) => {
-      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds }).eq('id', taskId)
+      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds }).eq('id', taskId).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

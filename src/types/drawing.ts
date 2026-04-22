@@ -22,13 +22,19 @@ export interface CreateDrawingInput {
   project_id: string;
   title: string;
   file_url?: string;
-  discipline?: string;
+  discipline?: string | null;
   set_name?: string;
   sheet_number?: string;
   revision?: string;
   received_date?: string;
   previous_revision_id?: string;
   change_description?: string;
+  // Pipeline fields (added for PDF page splitting workflow)
+  thumbnail_url?: string;
+  total_pages?: number;
+  source_filename?: string;
+  file_size_bytes?: number;
+  processing_status?: string;
 }
 
 export interface CreateMarkupInput {

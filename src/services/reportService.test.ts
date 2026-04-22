@@ -87,8 +87,8 @@ const CHANGE_ORDERS = [
 ]
 
 const RFIS = [
-  { id: 'rfi-1', rfi_number: 1, status: 'open', due_date: '2026-04-01' }, // overdue
-  { id: 'rfi-2', rfi_number: 2, status: 'open', due_date: '2026-06-01' }, // not overdue
+  { id: 'rfi-1', number: 1, status: 'open', due_date: '2026-04-01' }, // overdue
+  { id: 'rfi-2', number: 2, status: 'open', due_date: '2026-06-01' }, // not overdue
 ]
 
 const SUBMITTALS = [
@@ -164,9 +164,9 @@ describe('generateOwnerReport', () => {
 
   it('generates RFI risk flags: critical when 3+ overdue', async () => {
     const overdueRfis = [
-      { id: 'r1', rfi_number: 1, status: 'open', due_date: '2026-01-01' },
-      { id: 'r2', rfi_number: 2, status: 'open', due_date: '2026-01-02' },
-      { id: 'r3', rfi_number: 3, status: 'open', due_date: '2026-01-03' },
+      { id: 'r1', number: 1, status: 'open', due_date: '2026-01-01' },
+      { id: 'r2', number: 2, status: 'open', due_date: '2026-01-02' },
+      { id: 'r3', number: 3, status: 'open', due_date: '2026-01-03' },
     ]
     setupFromMock({ rfis: overdueRfis, submittals: [], field_captures: [] })
     mockFunctionsInvoke.mockResolvedValue({ data: null, error: { message: 'error' } })
@@ -181,7 +181,7 @@ describe('generateOwnerReport', () => {
 
   it('generates warning (not critical) for fewer than 3 overdue RFIs', async () => {
     const overdueRfis = [
-      { id: 'r1', rfi_number: 1, status: 'open', due_date: '2026-01-01' },
+      { id: 'r1', number: 1, status: 'open', due_date: '2026-01-01' },
     ]
     setupFromMock({ rfis: overdueRfis, submittals: [] })
     mockFunctionsInvoke.mockResolvedValue({ data: null, error: {} })

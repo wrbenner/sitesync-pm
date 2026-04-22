@@ -9,7 +9,7 @@
 //   action: 'detach' - body: { organization_id, payment_method_id }
 //   action: 'set_default' - body: { organization_id, payment_method_id }
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
@@ -83,7 +83,7 @@ async function getStripeCustomerId(
   return data.stripe_customer_id as string
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

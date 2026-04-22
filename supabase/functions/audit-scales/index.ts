@@ -6,7 +6,7 @@
 // by a factor of 2), auto-creates an RFI draft with the specific correction
 // needed, saved to ai_rfi_drafts for user review.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   handleCors,
@@ -55,7 +55,7 @@ function severityOf(archRatio: number | null, structRatio: number | null): Misma
   return 'low'
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

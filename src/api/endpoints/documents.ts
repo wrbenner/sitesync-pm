@@ -2,17 +2,51 @@ import { supabase, transformSupabaseError } from '../client'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { DrawingRow, FileRow, DrawingRevision, MappedDrawing, MappedFile } from '../../types/api'
 
+// Kept in sync with src/pages/drawings/constants.ts — canonical palette lives there.
+// This lookup accepts either canonical snake_case (stored in DB) or human-readable
+// PascalCase (legacy data) so we don't lose rows inserted before normalization.
 const DISCIPLINE_COLORS: Record<string, string> = {
+  cover: '#8B5CF6',
+  hazmat: '#CA8A04',
+  demolition: '#78350F',
+  survey: '#78716C',
+  geotechnical: '#92400E',
+  civil: '#10B981',
+  landscape: '#166534',
+  structural: '#E74C3C',
+  architectural: '#3B82F6',
+  interior: '#DB2777',
+  fire_protection: '#E05252',
+  plumbing: '#4EC896',
+  mechanical: '#F47820',
+  electrical: '#F5A623',
+  telecommunications: '#06B6D4',
+  // Legacy PascalCase keys (pre-normalization data)
   Architectural: '#3B82F6',
   Structural: '#E74C3C',
   Mechanical: '#F47820',
   Electrical: '#F5A623',
   Plumbing: '#4EC896',
-  Civil: '#8B5CF6',
-  Landscape: '#10B981',
+  Civil: '#10B981',
+  Landscape: '#166534',
 }
 
 const DISCIPLINE_ICONS: Record<string, string> = {
+  cover: 'BookOpen',
+  hazmat: 'AlertTriangle',
+  demolition: 'Hammer',
+  survey: 'Compass',
+  geotechnical: 'Mountain',
+  civil: 'Map',
+  landscape: 'Leaf',
+  structural: 'Triangle',
+  architectural: 'Building2',
+  interior: 'Sofa',
+  fire_protection: 'Flame',
+  plumbing: 'Droplets',
+  mechanical: 'Wind',
+  electrical: 'Zap',
+  telecommunications: 'Wifi',
   Architectural: 'Building2',
   Structural: 'Triangle',
   Mechanical: 'Wind',
@@ -44,12 +78,20 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
   if (drawings.length === 0) return []
 
   const drawingIds = drawings.map((d: DrawingRow) => d.id)
-  const { data: revisionData, error: revisionError } = await supabase
+
+  // Fetch revisions — gracefully handle missing table so the page never crashes.
+  let revisionData: DrawingRevision[] | null = null
+  const { data: revData, error: revisionError } = await supabase
     .from('drawing_revisions')
-    .select('id, drawing_id, revision_number, issued_date, issued_by, change_description, file_url, superseded_at')
+    .select('*')
     .in('drawing_id', drawingIds)
     .order('revision_number', { ascending: false })
-  if (revisionError) throw transformSupabaseError(revisionError)
+  if (revisionError) {
+    // Log but don't crash — table may not exist yet (migration pending).
+    console.warn('[getDrawings] drawing_revisions query failed:', revisionError.message)
+  } else {
+    revisionData = revData as DrawingRevision[] | null
+  }
 
   // Group revisions by drawing_id (already sorted descending by revision_number)
   const revisionsByDrawing = new Map<string, DrawingRevision[]>()
@@ -82,7 +124,12 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
       disciplineLabel: d.discipline ?? '',
       disciplineIcon: getDisciplineIcon(d.discipline ?? ''),
       date: d.created_at?.slice(0, 10) ?? '',
-      sheetCount: 1,
+      sheetCount: (d as Record<string, unknown>).total_pages as number ?? 1,
+      thumbnail_url: (d as Record<string, unknown>).thumbnail_url as string | null ?? null,
+      file_url: d.file_url ?? null,
+      processing_status: (d as Record<string, unknown>).processing_status as string ?? null,
+      source_filename: (d as Record<string, unknown>).source_filename as string ?? null,
+      total_pages: (d as Record<string, unknown>).total_pages as number ?? 1,
       revisions,
       currentRevision,
       linkedRfiCount: rfiCountByDrawing.get(d.id) ?? 0,
@@ -96,7 +143,7 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
 export const getDrawingRevisionHistory = async (drawingId: string): Promise<DrawingRevision[]> => {
   const { data, error } = await supabase
     .from('drawing_revisions')
-    .select('id, drawing_id, revision_number, issued_date, issued_by, change_description, file_url, superseded_at')
+    .select('*')
     .eq('drawing_id', drawingId)
     .order('revision_number', { ascending: false })
   if (error) throw transformSupabaseError(error)

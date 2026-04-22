@@ -83,7 +83,18 @@ describe('useCreatePunchItem', () => {
     const { result } = renderMutation(() => useCreatePunchItem())
     await result.current.mutateAsync({ data: validItem, projectId: 'p1' })
     expect(h.supabase.from).toHaveBeenCalledWith('punch_items')
-    expect(h.chain.insert).toHaveBeenCalledWith(validItem)
+    // sanitizePunchData strips non-column fields (drawing_id) and converts empty
+    // strings to null. Assert the sanitized shape, not the raw input.
+    expect(h.chain.insert).toHaveBeenCalledWith({
+      title: 'Paint touch-up in lobby',
+      location: 'Lobby',
+      floor: '1',
+      trade: 'Painting',
+      assigned_to: null,
+      priority: 'medium',
+      due_date: null,
+      description: null,
+    })
     await waitFor(() => expect(h.invalidateEntity).toHaveBeenCalledWith('punch_item', 'test-project'))
   })
 })

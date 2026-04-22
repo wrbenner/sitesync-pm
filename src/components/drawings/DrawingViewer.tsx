@@ -20,6 +20,7 @@ import { supabase } from '../../api/client';
 import type { Database } from '../../types/database';
 import { useUiStore } from '../../stores';
 import { useAuthStore } from '../../stores/authStore';
+import { useDrawingAnnotations, useCreateDrawingAnnotation } from '../../hooks/queries/drawing-annotations';
 
 // Fabric tool type for annotation canvas
 type FabricTool = 'pen' | 'highlighter' | 'text' | 'rectangle' | 'circle' | 'arrow' | 'cloud' | null;
@@ -31,6 +32,7 @@ interface DrawingViewerProps {
   onCreateRFI?: () => void;
   annotations?: object;
   isEditable?: boolean;
+  projectId?: string;
 }
 
 interface MarkupItem {
@@ -68,11 +70,48 @@ const issuePins: IssuePin[] = [];
 
 // ── Outer wrapper: provides the Liveblocks room ─────────────────────────────
 
+// Check if Liveblocks is properly configured (not a placeholder key)
+const LIVEBLOCKS_CONFIGURED = !!(
+  import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY &&
+  !import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY.includes('placeholder')
+) || !!import.meta.env.VITE_LIVEBLOCKS_AUTH_ENDPOINT;
+
 export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
   const presenceUser = getPresenceUser(profile, user?.email);
   const roomId = `drawing:${props.drawing.id || props.drawing.setNumber}`;
+
+  // Load annotations from DB for this drawing
+  const drawingId = props.drawing.id;
+  const { data: dbAnnotations } = useDrawingAnnotations(drawingId);
+  const createAnnotation = useCreateDrawingAnnotation();
+
+  // Convert DB annotations to a fabric-compatible object if no explicit annotations prop
+  const resolvedAnnotations = props.annotations ?? (dbAnnotations && dbAnnotations.length > 0
+    ? { objects: dbAnnotations.map((a: Record<string, unknown>) => a.shape_data).filter(Boolean) }
+    : undefined);
+
+  const innerProps = {
+    ...props,
+    presenceUser,
+    annotations: resolvedAnnotations,
+    createAnnotationMutate: props.projectId && drawingId ? (shapeData: Record<string, unknown>) => {
+      createAnnotation.mutate({
+        project_id: props.projectId!,
+        drawing_id: drawingId!,
+        page_number: 1,
+        annotation_type: 'markup',
+        shape_data: shapeData,
+        color: '#F47820',
+      });
+    } : undefined,
+  };
+
+  // Skip Liveblocks wrapper if not configured — viewer works fine without collaboration
+  if (!LIVEBLOCKS_CONFIGURED) {
+    return <DrawingViewerInner {...innerProps} />;
+  }
 
   return (
     <RoomProvider
@@ -86,7 +125,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
         color: presenceUser.color,
       }}
     >
-      <DrawingViewerInner {...props} presenceUser={presenceUser} />
+      <DrawingViewerInner {...innerProps} />
     </RoomProvider>
   );
 };
@@ -95,6 +134,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
 
 interface DrawingViewerInnerProps extends DrawingViewerProps {
   presenceUser: { name: string; initials: string; color: string };
+  createAnnotationMutate?: (shapeData: Record<string, unknown>) => void;
 }
 
 const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
@@ -105,6 +145,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   onCreateRFI,
   annotations,
   isEditable = false,
+  createAnnotationMutate,
 }) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [zoom, setZoom] = useState(1);
@@ -141,28 +182,34 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   const announceStatus = useUiStore((s) => s.announceStatus);
 
-  // ── Liveblocks hooks ──────────────────────────────────────────────────────
-  const updateMyPresence = useUpdateMyPresence();
-  const others = useOthers();
-  const broadcastEvent = useBroadcastEvent();
+  // ── Liveblocks hooks (no-op when not configured) ──────────────────────────
+  const _updatePresence = LIVEBLOCKS_CONFIGURED ? useUpdateMyPresence() : null;
+  const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
+  const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
+  const updateMyPresence = _updatePresence ?? (() => {});
+  const broadcastEvent = _broadcastEvent ?? (() => {});
 
   // Update presence name/color once on mount
   useEffect(() => {
-    updateMyPresence({ name: presenceUser.name, initials: presenceUser.initials, color: presenceUser.color });
+    if (LIVEBLOCKS_CONFIGURED) {
+      updateMyPresence({ name: presenceUser.name, initials: presenceUser.initials, color: presenceUser.color });
+    }
   }, [presenceUser.name, presenceUser.initials, presenceUser.color, updateMyPresence]);
 
   // Receive remote markup events and apply to local state
-  useEventListener(({ event }) => {
-    if (event.type === 'MARKUP_ADD') {
-      setMarkups((prev) => {
-        // Ignore if already applied (duplicate event guard)
-        if (prev.some((m) => m.id === event.markup.id)) return prev;
-        return [...prev, event.markup as MarkupItem];
-      });
-    } else if (event.type === 'MARKUP_DELETE') {
-      setMarkups((prev) => prev.filter((m) => m.id !== event.id));
-    }
-  });
+  if (LIVEBLOCKS_CONFIGURED) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEventListener(({ event }) => {
+      if (event.type === 'MARKUP_ADD') {
+        setMarkups((prev) => {
+          if (prev.some((m) => m.id === event.markup.id)) return prev;
+          return [...prev, event.markup as MarkupItem];
+        });
+      } else if (event.type === 'MARKUP_DELETE') {
+        setMarkups((prev) => prev.filter((m) => m.id !== event.id));
+      }
+    });
+  }
 
   // ── Fabric.js annotation canvas ──────────────────────────────────────────
 
@@ -281,7 +328,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     } else if (fabricTool === 'text') {
       fc.isDrawingMode = false;
       fc.on('mouse:down', (opt) => {
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         const itext = new FabricIText('Type here', {
           left: pointer.x,
           top: pointer.y,
@@ -297,7 +344,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     } else if (fabricTool === 'rectangle') {
       fc.isDrawingMode = false;
       fc.on('mouse:down', (opt) => {
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         shapeOrigin.current = { x: pointer.x, y: pointer.y };
         const rect = new FabricRect({
           left: pointer.x, top: pointer.y,
@@ -312,7 +359,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       });
       fc.on('mouse:move', (opt) => {
         if (!shapeInProgress.current || !shapeOrigin.current) return;
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         const rect = shapeInProgress.current as InstanceType<typeof FabricRect>;
         const x = Math.min(pointer.x, shapeOrigin.current.x);
         const y = Math.min(pointer.y, shapeOrigin.current.y);
@@ -334,7 +381,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     } else if (fabricTool === 'circle') {
       fc.isDrawingMode = false;
       fc.on('mouse:down', (opt) => {
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         shapeOrigin.current = { x: pointer.x, y: pointer.y };
         const circle = new FabricCircle({
           left: pointer.x, top: pointer.y,
@@ -349,7 +396,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       });
       fc.on('mouse:move', (opt) => {
         if (!shapeInProgress.current || !shapeOrigin.current) return;
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         const dx = pointer.x - shapeOrigin.current.x;
         const dy = pointer.y - shapeOrigin.current.y;
         const radius = Math.sqrt(dx * dx + dy * dy) / 2;
@@ -372,7 +419,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     } else if (fabricTool === 'arrow') {
       fc.isDrawingMode = false;
       fc.on('mouse:down', (opt) => {
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         shapeOrigin.current = { x: pointer.x, y: pointer.y };
         const line = new FabricLine([pointer.x, pointer.y, pointer.x, pointer.y], {
           stroke: activeColor,
@@ -384,7 +431,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       });
       fc.on('mouse:move', (opt) => {
         if (!shapeInProgress.current || !shapeOrigin.current) return;
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         const line = shapeInProgress.current as InstanceType<typeof FabricLine>;
         line.set({ x2: pointer.x, y2: pointer.y });
         fc.renderAll();
@@ -405,7 +452,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       // Cloud renders as a rounded rectangle with dashed stroke
       fc.isDrawingMode = false;
       fc.on('mouse:down', (opt) => {
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         shapeOrigin.current = { x: pointer.x, y: pointer.y };
         const rect = new FabricRect({
           left: pointer.x, top: pointer.y,
@@ -422,7 +469,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       });
       fc.on('mouse:move', (opt) => {
         if (!shapeInProgress.current || !shapeOrigin.current) return;
-        const pointer = fc.getPointer(opt.e as MouseEvent);
+        const pointer = fc.getScenePoint(opt.e as MouseEvent);
         const rect = shapeInProgress.current as InstanceType<typeof FabricRect>;
         const x = Math.min(pointer.x, shapeOrigin.current.x);
         const y = Math.min(pointer.y, shapeOrigin.current.y);
@@ -556,9 +603,16 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     });
   };
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom((prev) => Math.max(0.25, Math.min(4, prev - e.deltaY * 0.001)));
+  // Wheel zoom — must use native listener to prevent scroll (React wheel is passive)
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom((prev) => Math.max(0.25, Math.min(4, prev - e.deltaY * 0.001)));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -634,6 +688,21 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       onSave(fc.toJSON() as object);
       return;
     }
+
+    // Persist each fabric object as a drawing_annotation via the mutation hook
+    if (fc && createAnnotationMutate) {
+      setIsSaving(true);
+      try {
+        const objects = fc.toJSON().objects as Record<string, unknown>[];
+        for (const obj of objects) {
+          createAnnotationMutate(obj);
+        }
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     if (markups.length === 0) return;
     setIsSaving(true);
     try {
@@ -796,7 +865,6 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
-              onWheel={handleWheel}
               style={{
                 position: 'absolute', inset: 0,
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,

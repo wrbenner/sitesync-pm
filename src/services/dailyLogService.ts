@@ -96,15 +96,16 @@ export const dailyLogService = {
   async loadTodayLog(projectId: string): Promise<DailyLogServiceResult<DailyLog>> {
     const today = new Date().toISOString().split('T')[0];
 
-    const { data: existing, error: fetchError } = await supabase
+    const { data: rows, error: fetchError } = await supabase
       .from('daily_logs')
       .select('*')
       .eq('project_id', projectId)
       .eq('log_date', today)
-      .maybeSingle();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
     if (fetchError) return { data: null, error: fetchError.message };
-    if (existing) return { data: existing as DailyLog, error: null };
+    if (rows && rows.length > 0) return { data: rows[0] as DailyLog, error: null };
 
     const userId = await getCurrentUserId();
     let weather: WeatherSnapshot | null = null;
@@ -126,7 +127,6 @@ export const dailyLogService = {
         temperature_low: weather?.temperature_low ?? null,
         wind_speed: weather ? `${weather.wind_speed} mph` : null,
         precipitation: weather ? `${weather.precipitation_probability}%` : null,
-        weather_source: weather?.weather_source ?? null,
       })
       .select()
       .single();
@@ -285,10 +285,10 @@ export const dailyLogService = {
     return { data: null, error: null };
   },
 
-  async refreshWeather(logId: string, projectId: string): Promise<DailyLogServiceResult<WeatherSnapshot>> {
+  async refreshWeather(logId: string, projectId: string, lat?: number, lon?: number): Promise<DailyLogServiceResult<WeatherSnapshot>> {
     let weather: WeatherSnapshot;
     try {
-      weather = await fetchWeatherForProject(projectId);
+      weather = await fetchWeatherForProject(projectId, lat, lon);
     } catch {
       return { data: null, error: 'Failed to fetch weather' };
     }
@@ -301,7 +301,6 @@ export const dailyLogService = {
         temperature_low: weather.temperature_low,
         wind_speed: `${weather.wind_speed} mph`,
         precipitation: `${weather.precipitation_probability}%`,
-        weather_source: weather.weather_source,
         updated_at: new Date().toISOString(),
       })
       .eq('id', logId);

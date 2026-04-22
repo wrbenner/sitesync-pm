@@ -19,8 +19,6 @@ interface SharedAuthState {
 let state: SharedAuthState = { user: null, session: null, loading: true, error: null }
 const listeners = new Set<() => void>()
 let initialized = false
-let subscriberCount = 0
-let authUnsubscribe: (() => void) | null = null
 // Stored by the hook so the module-level listener can navigate on session expiry
 let navigateFn: ((path: string) => void) | null = null
 
@@ -75,7 +73,7 @@ async function initAuth() {
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     }
   })
-  authUnsubscribe = () => subscription.unsubscribe()
+  // Subscription lives for the lifetime of the app — no cleanup needed
 }
 
 // ── Error mapping ───────────────────────────────────────────
@@ -109,20 +107,12 @@ export interface AuthState {
 export function useAuth(): AuthState {
   const navigate = useNavigate()
 
-  // Start auth initialization on first mount; clean up subscription when last consumer unmounts
+  // Start auth initialization on first mount.
+  // Auth state is global — never tear down the subscription just because
+  // individual components remount (especially under React 19 strict mode).
   useEffect(() => {
     navigateFn = navigate
-    subscriberCount++
     initAuth()
-    return () => {
-      subscriberCount--
-      if (subscriberCount === 0 && authUnsubscribe) {
-        authUnsubscribe()
-        authUnsubscribe = null
-        initialized = false
-        navigateFn = null
-      }
-    }
   }, [navigate])
 
   // All callers share the same snapshot

@@ -4,7 +4,6 @@
 // drawing_classifications. Prompt copied EXACTLY from the production
 // plan-classification-v2 microservice (combined_processor.py MASTER_PROMPT).
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import {
   authenticateRequest,
   handleCors,
@@ -209,28 +208,115 @@ function calculateCostCents(usage: GeminiUsage | undefined): number {
   return Math.round((inputUsd + outputUsd) * 100)
 }
 
-// ── Image fetch helpers ──────────────────────────────────────
-async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+// ── File fetch helper ───────────────────────────────────────
+
+// Edge function memory cap is ~150 MB. We allow files up to 100 MB
+// (construction drawing PDFs are commonly 20-80 MB). The Gemini File
+// API accepts up to 2 GB, so file size is no longer the bottleneck.
+const MAX_FILE_BYTES = 100 * 1024 * 1024
+
+async function fetchFileBuffer(url: string): Promise<{ buffer: ArrayBuffer; mimeType: string; sizeBytes: number }> {
   const response = await fetch(url)
   if (!response.ok) {
     throw new HttpError(400, `Failed to fetch page_image_url: ${response.status}`)
   }
+
+  const contentLength = response.headers.get('content-length')
+  if (contentLength && Number(contentLength) > MAX_FILE_BYTES) {
+    throw new HttpError(
+      413,
+      `File too large (${(Number(contentLength) / 1024 / 1024).toFixed(1)} MB). ` +
+      `Maximum is ${MAX_FILE_BYTES / 1024 / 1024} MB.`,
+    )
+  }
+
   const contentType = response.headers.get('content-type') ?? 'image/png'
   const mimeType = contentType.split(';')[0].trim() || 'image/png'
   const buffer = await response.arrayBuffer()
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-  const base64 = btoa(binary)
-  return { base64, mimeType }
+
+  if (buffer.byteLength > MAX_FILE_BYTES) {
+    throw new HttpError(
+      413,
+      `File too large (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB). ` +
+      `Maximum is ${MAX_FILE_BYTES / 1024 / 1024} MB.`,
+    )
+  }
+
+  return { buffer, mimeType, sizeBytes: buffer.byteLength }
 }
 
-// ── Gemini call ──────────────────────────────────────────────
+// ── Gemini File Upload API ──────────────────────────────────
+// Mirrors the production pattern from combined_processor.py:
+//   1. Upload file to Gemini via File API (supports up to 2 GB)
+//   2. Reference the uploaded file URI in generateContent
+// This eliminates the base64 inline_data 20 MB limit entirely.
+
+async function uploadToGeminiFileApi(
+  apiKey: string,
+  fileBuffer: ArrayBuffer,
+  mimeType: string,
+  displayName: string,
+): Promise<string> {
+  // Step 1: Initiate resumable upload to get an upload URI
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': String(fileBuffer.byteLength),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file: { display_name: displayName } }),
+    },
+  )
+
+  if (!initRes.ok) {
+    const text = await initRes.text()
+    throw new HttpError(502, `Gemini File API init failed (${initRes.status}): ${text.slice(0, 300)}`)
+  }
+
+  const uploadUrl = initRes.headers.get('x-goog-upload-url')
+  if (!uploadUrl) {
+    throw new HttpError(502, 'Gemini File API did not return an upload URL')
+  }
+
+  // Step 2: Upload the actual bytes
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Length': String(fileBuffer.byteLength),
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+    },
+    body: fileBuffer,
+  })
+
+  if (!uploadRes.ok) {
+    const text = await uploadRes.text()
+    throw new HttpError(502, `Gemini File API upload failed (${uploadRes.status}): ${text.slice(0, 300)}`)
+  }
+
+  const uploadResult = await uploadRes.json()
+  const fileUri = uploadResult?.file?.uri
+  if (!fileUri) {
+    throw new HttpError(502, 'Gemini File API upload succeeded but returned no file URI')
+  }
+
+  return fileUri as string
+}
+
+// ── Gemini generateContent call ─────────────────────────────
+// Uses file_data (File API reference) instead of inline_data (base64).
+// This is the same pattern as the production microservice.
+
 async function callGemini(
   apiKey: string,
   model: string,
-  imageBase64: string,
-  imageMime: string,
+  fileUri: string,
+  mimeType: string,
 ): Promise<GeminiResponse> {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
   const body = {
@@ -238,7 +324,7 @@ async function callGemini(
       {
         role: 'user',
         parts: [
-          { inline_data: { mime_type: imageMime, data: imageBase64 } },
+          { file_data: { mime_type: mimeType, file_uri: fileUri } },
           { text: '\n\n' + MASTER_PROMPT },
         ],
       },
@@ -263,7 +349,7 @@ async function callGemini(
 }
 
 // ── Handler ──────────────────────────────────────────────────
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsCheck = handleCors(req)
   if (corsCheck) return corsCheck
   const corsHeaders = getCorsHeaders(req)
@@ -308,8 +394,14 @@ serve(async (req) => {
     const classificationId = pendingInsert.data.id as string
 
     try {
-      const { base64, mimeType } = await fetchImageAsBase64(pageImageUrl)
-      const gemini = await callGemini(geminiKey, model, base64, mimeType)
+      // Production pattern (from combined_processor.py):
+      // 1. Download file bytes
+      // 2. Upload to Gemini File API (no size limit)
+      // 3. Reference file URI in generateContent
+      const { buffer, mimeType, sizeBytes } = await fetchFileBuffer(pageImageUrl)
+      const displayName = `drawing-${drawingId}-${Date.now()}`
+      const fileUri = await uploadToGeminiFileApi(geminiKey, buffer, mimeType, displayName)
+      const gemini = await callGemini(geminiKey, model, fileUri, mimeType)
 
       const textPart = gemini.candidates?.[0]?.content?.parts?.find((p) => typeof p.text === 'string')?.text
       if (!textPart) {
@@ -376,6 +468,7 @@ serve(async (req) => {
           scale_ratio: scaleRatio,
           confidence,
           ai_cost_cents: costCents,
+          file_size_bytes: sizeBytes,
           status: 'completed',
         }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },

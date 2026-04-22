@@ -14,7 +14,7 @@ export function useChangeOrders(projectId: string | undefined) {
         .from('change_orders')
         .select('*')
         .eq('project_id', projectId!)
-        .order('co_number', { ascending: false })
+        .order('number', { ascending: false })
       if (error) throw error
       return data as ChangeOrder[]
     },

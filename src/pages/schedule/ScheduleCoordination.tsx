@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, RefreshCw, Cloud } from 'lucide-react';
+import { Sparkles, AlertTriangle, ChevronDown, ChevronUp, CheckCircle2, RefreshCw, Cloud, Shield, Zap } from 'lucide-react';
 import { Skeleton } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { PredictedRisk } from '../../lib/predictions';
@@ -35,6 +35,20 @@ interface ScheduleCoordinationProps {
   setRecoveryExpanded: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+// ── Health badge colors ─────────────────────────────────
+function healthColors(status: string): { fg: string; bg: string; border: string; icon: React.ReactNode } {
+  if (status === 'green') return { fg: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0', icon: <Shield size={14} /> };
+  if (status === 'amber') return { fg: '#D97706', bg: '#FEF3C7', border: '#FDE68A', icon: <AlertTriangle size={14} /> };
+  return { fg: '#DC2626', bg: '#FEF2F2', border: '#FCA5A5', icon: <AlertTriangle size={14} /> };
+}
+
+// ── Risk severity color ─────────────────────────────────
+function riskColor(likelihood: number): { fg: string; bg: string } {
+  if (likelihood >= 70) return { fg: '#DC2626', bg: '#FEF2F2' };
+  if (likelihood >= 40) return { fg: '#D97706', bg: '#FEF3C7' };
+  return { fg: '#6B7280', bg: '#F3F4F6' };
+}
+
 export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
   risks,
   riskPanelOpen,
@@ -52,181 +66,160 @@ export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
   openCopilotWithRisk,
   recoveryExpanded,
   setRecoveryExpanded,
-}) => (
-  <>
-    {recoveryExpanded && (
-      <div style={{
-        padding: `${spacing['3']} ${spacing['4']}`, marginBottom: spacing['4'],
-        backgroundColor: `${colors.statusPending}06`, borderRadius: borderRadius.md,
-        border: `1px solid ${colors.statusPending}15`,
-        animation: 'slideInUp 200ms ease-out',
-      }}>
-        <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.statusPending, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Recovery Plan</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-          {[
-            'Authorize MEP overtime on floors 4 through 6 to recover 4 days of schedule float.',
-            'Redirect Exterior Crew D to secondary facade sections while RFI 004 is resolved.',
-            'Batch Tuesday RFI reviews with MEP consultant to reduce average response time by 40%.',
-          ].map((action, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'] }}>
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.semibold }}>{i + 1}.</span>
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>{action}</span>
-            </div>
-          ))}
-        </div>
-        <button onClick={() => setRecoveryExpanded(false)} style={{ marginTop: spacing['3'], padding: `${spacing['1']} ${spacing['3']}`, backgroundColor: 'transparent', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, color: colors.textTertiary, cursor: 'pointer' }}>
-          Collapse
-        </button>
-      </div>
-    )}
+}) => {
+  const hc = healthColors(overallHealthStatus.status);
+  const totalImpact = risks.reduce((s, r) => s + (r.impactDays ?? 0), 0);
 
-    {/* AI Risk Panel */}
+  return (
     <div style={{
       backgroundColor: colors.surfaceRaised,
-      borderRadius: borderRadius.lg,
-      border: `1px solid ${risks.length > 0 ? `${colors.primaryOrange}30` : colors.borderDefault}`,
-      marginBottom: spacing['5'],
+      borderRadius: borderRadius.xl,
+      border: `1px solid ${risks.length > 0 ? `${colors.primaryOrange}20` : colors.borderSubtle}`,
       overflow: 'hidden',
-      boxShadow: shadows.sm,
+      boxShadow: shadows.card,
     }}>
-      {/* Panel header */}
+      {/* ── Panel header ── */}
       <div
-        role="button"
-        tabIndex={0}
+        role="button" tabIndex={0}
         aria-expanded={riskPanelOpen}
         aria-label={`AI Risk Analysis panel, ${riskPanelOpen ? 'expanded' : 'collapsed'}`}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${spacing['3']} ${spacing['4']}`,
-          borderBottom: riskPanelOpen ? `1px solid ${colors.borderDefault}` : 'none',
+          padding: `${spacing['4']} ${spacing['5']}`,
+          borderBottom: riskPanelOpen ? `1px solid ${colors.borderSubtle}` : 'none',
           cursor: 'pointer',
-          backgroundColor: risks.length > 0 ? `${colors.primaryOrange}05` : 'transparent',
+          transition: `background-color ${transitions.quick}`,
         }}
         onClick={() => setRiskPanelOpen((v) => !v)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRiskPanelOpen((v) => !v); } }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-          <Sparkles size={15} color={risks.length > 0 ? colors.primaryOrange : colors.statusActive} />
-          <span style={{ fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
-            AI Risk Analysis
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: borderRadius.md,
+            background: risks.length > 0
+              ? 'linear-gradient(135deg, #FEF3C7, #FDE68A)'
+              : 'linear-gradient(135deg, #F0FDF4, #BBF7D0)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Sparkles size={16} color={risks.length > 0 ? '#D97706' : '#16A34A'} />
+          </div>
+          <div>
+            <span style={{
+              fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.body,
+              color: colors.textPrimary, display: 'block', lineHeight: 1,
+            }}>
+              AI Risk Analysis
+            </span>
+            {lastAnalyzed && !analyzing && (
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, lineHeight: 1 }}>
+                {minutesAgo === 0 ? 'Just analyzed' : `${minutesAgo}m ago`}
+              </span>
+            )}
+          </div>
           {risks.length > 0 && (
             <span style={{
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-              backgroundColor: `${colors.primaryOrange}18`, color: colors.primaryOrange,
-              padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
+              backgroundColor: '#FEF3C7', color: '#92400E',
+              padding: `2px ${spacing['2.5']}`, borderRadius: borderRadius.full,
             }}>
-              {risks.length} risk{risks.length > 1 ? 's' : ''} detected
+              {risks.length} risk{risks.length > 1 ? 's' : ''} · +{totalImpact}d impact
             </span>
           )}
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          {lastAnalyzed && !analyzing && (
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-              Last analyzed: {minutesAgo === 0 ? 'just now' : `${minutesAgo}m ago`}
-            </span>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); runAnalysis(); }}
+          {/* Health badge */}
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: spacing['1.5'],
+            fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+            padding: `${spacing['1']} ${spacing['3']}`, borderRadius: borderRadius.full,
+            backgroundColor: hc.bg, color: hc.fg, border: `1px solid ${hc.border}`,
+          }}>
+            {hc.icon}
+            {overallHealthStatus.status === 'green' ? 'Healthy' : overallHealthStatus.status === 'amber' ? 'Monitor' : 'At Risk'}
+          </span>
+
+          <button onClick={(e) => { e.stopPropagation(); runAnalysis(); }}
             disabled={analyzing}
             style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+              display: 'flex', alignItems: 'center', gap: spacing['1'],
+              fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
               color: analyzing ? colors.textTertiary : colors.primaryOrange,
               background: 'none', border: 'none', cursor: analyzing ? 'default' : 'pointer',
-              fontFamily: typography.fontFamily, padding: 0,
+              fontFamily: typography.fontFamily, padding: spacing['1'],
             }}
           >
-            <RefreshCw size={11} style={{ animation: analyzing ? 'spin 1s linear infinite' : 'none' }} />
-            Re-analyze
+            <RefreshCw size={13} style={{ animation: analyzing ? 'spin 1s linear infinite' : 'none' }} />
           </button>
-          {riskPanelOpen ? <ChevronUp size={14} color={colors.textTertiary} /> : <ChevronDown size={14} color={colors.textTertiary} />}
+          {riskPanelOpen ? <ChevronUp size={16} color={colors.textTertiary} /> : <ChevronDown size={16} color={colors.textTertiary} />}
         </div>
       </div>
 
-      {/* Panel body */}
+      {/* ── Panel body ── */}
       {riskPanelOpen && (
-        <div style={{ padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+        <div style={{ padding: spacing['5'], display: 'flex', flexDirection: 'column', gap: spacing['5'] }}>
 
-          {/* Section A: Overall Health */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary }}>
-              Overall Health
-            </span>
-            <span style={{
-              fontSize: typography.fontSize.sm,
-              fontWeight: typography.fontWeight.semibold,
-              padding: `2px ${spacing['3']}`,
-              borderRadius: borderRadius.full,
-              backgroundColor: overallHealthStatus.status === 'green'
-                ? `${colors.statusActive}18`
-                : overallHealthStatus.status === 'amber'
-                ? `${colors.statusPending}18`
-                : `${colors.statusCritical}18`,
-              color: overallHealthStatus.status === 'green'
-                ? colors.statusActive
-                : overallHealthStatus.status === 'amber'
-                ? colors.statusPending
-                : colors.statusCritical,
-            }}>
-              {overallHealthStatus.label}
-            </span>
+          {/* Summary row */}
+          <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap' }}>
+            {/* Critical path risks */}
+            {criticalPathAtRisk.length > 0 && (
+              <div style={{
+                flex: '1 1 300px', padding: spacing['4'],
+                backgroundColor: '#FEF2F2', borderRadius: borderRadius.lg,
+                border: '1px solid #FEE2E2',
+              }}>
+                <div style={{
+                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                  color: '#991B1B', textTransform: 'uppercase' as const,
+                  letterSpacing: typography.letterSpacing.wider, marginBottom: spacing['3'],
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                }}>
+                  <Zap size={12} />
+                  Critical Path Risks
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+                  {criticalPathAtRisk.map(activity => (
+                    <div key={activity.id} style={{
+                      display: 'flex', alignItems: 'center', gap: spacing['3'],
+                      fontSize: typography.fontSize.sm,
+                    }}>
+                      <span style={{
+                        width: 3, height: 16, borderRadius: 2, backgroundColor: '#EF4444', flexShrink: 0,
+                      }} />
+                      <span style={{ flex: 1, color: '#7F1D1D', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {activity.name}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.caption, color: '#991B1B', fontVariantNumeric: 'tabular-nums' }}>
+                        {activity.floatDays}d float
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Weather impact */}
+            {outdoorActivityCount > 0 && (
+              <div style={{
+                flex: '1 1 200px', padding: spacing['4'],
+                backgroundColor: '#FEF3C7', borderRadius: borderRadius.lg,
+                border: '1px solid #FDE68A',
+                display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
+              }}>
+                <Cloud size={18} color="#92400E" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: '#92400E', display: 'block' }}>
+                    {outdoorActivityCount} outdoor {outdoorActivityCount === 1 ? 'activity' : 'activities'}
+                  </span>
+                  <span style={{ fontSize: typography.fontSize.caption, color: '#A16207' }}>
+                    Check weather before committing
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Section B: Critical Path Risks */}
-          {criticalPathAtRisk.length > 0 && (
-            <div>
-              <p style={{ margin: `0 0 ${spacing['2']}`, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Critical Path Risks
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                {criticalPathAtRisk.map(activity => (
-                  <div key={activity.id} style={{
-                    display: 'flex', alignItems: 'center', gap: spacing['3'],
-                    padding: `${spacing['2']} ${spacing['3']}`,
-                    backgroundColor: `${colors.statusCritical}08`,
-                    borderRadius: borderRadius.md,
-                    border: `1px solid ${colors.statusCritical}20`,
-                  }}>
-                    <AlertTriangle size={13} color={colors.statusCritical} style={{ flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {activity.name}
-                    </span>
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' }}>
-                      {activity.floatDays}d float
-                    </span>
-                    <span style={{
-                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                      padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
-                      backgroundColor: activity.status === 'delayed' ? `${colors.statusCritical}15` : `${colors.statusPending}15`,
-                      color: activity.status === 'delayed' ? colors.statusCritical : colors.statusPending,
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {activity.status === 'delayed' ? 'Delayed' : 'Low Float'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Section C: Weather Impact */}
-          {outdoorActivityCount > 0 && (
-            <div style={{
-              padding: `${spacing['3']} ${spacing['3']}`,
-              backgroundColor: `${colors.statusPending}10`,
-              borderRadius: borderRadius.md,
-              border: `1px solid ${colors.statusPending}25`,
-              display: 'flex', alignItems: 'center', gap: spacing['3'],
-            }}>
-              <Cloud size={15} color={colors.statusPending} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                <strong style={{ color: colors.textPrimary }}>{outdoorActivityCount} outdoor {outdoorActivityCount === 1 ? 'activity' : 'activities'}</strong> scheduled this week. Check weather before committing.
-              </span>
-            </div>
-          )}
-
-          {/* Predictive risk items from local analysis */}
+          {/* Risk items */}
           {analyzing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
               {[1, 2].map((i) => (
@@ -240,115 +233,126 @@ export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
               ))}
             </div>
           ) : risks.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} 0` }}>
-              <CheckCircle size={16} color={colors.statusActive} />
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                No risks detected for the next 7 days. Schedule looks healthy.
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: spacing['3'],
+              padding: spacing['4'], backgroundColor: '#F0FDF4',
+              borderRadius: borderRadius.lg, border: '1px solid #BBF7D0',
+            }}>
+              <CheckCircle2 size={18} color="#16A34A" />
+              <span style={{ fontSize: typography.fontSize.sm, color: '#166534', fontWeight: typography.fontWeight.medium }}>
+                No risks detected. Schedule looks healthy for the next 7 days.
               </span>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-              {risks.map((risk) => (
-                <div key={risk.phaseId} style={{
-                  display: 'flex', gap: spacing['3'], alignItems: 'flex-start',
-                  padding: `${spacing['3']} ${spacing['3']}`,
-                  backgroundColor: `${colors.primaryOrange}06`,
-                  borderRadius: borderRadius.md,
-                  border: `1px solid ${colors.primaryOrange}15`,
-                }}>
-                  <div style={{ flexShrink: 0, paddingTop: 2 }}>
-                    <AlertTriangle size={15} color={colors.primaryOrange} fill={`${colors.primaryOrange}25`} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap', marginBottom: spacing['1'] }}>
-                      <span style={{ fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
-                        {risk.title}
-                      </span>
-                      <span style={{
-                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                        backgroundColor: risk.likelihoodPercent >= 70 ? `${colors.statusCritical}15` : `${colors.statusPending}15`,
-                        color: risk.likelihoodPercent >= 70 ? colors.statusCritical : colors.statusPending,
-                        padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
+              {risks.map((risk) => {
+                const rc = riskColor(risk.likelihoodPercent);
+                return (
+                  <div key={risk.phaseId} style={{
+                    display: 'flex', gap: spacing['4'], alignItems: 'flex-start',
+                    padding: spacing['4'], backgroundColor: colors.surfaceInset,
+                    borderRadius: borderRadius.lg,
+                    borderLeft: `3px solid ${rc.fg}`,
+                    transition: `background-color ${transitions.quick}`,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap', marginBottom: spacing['1.5'] }}>
+                        <span style={{
+                          fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm,
+                          color: colors.textPrimary,
+                        }}>
+                          {risk.title}
+                        </span>
+                        <span style={{
+                          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
+                          backgroundColor: rc.bg, color: rc.fg,
+                          padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
+                        }}>
+                          {risk.likelihoodPercent}%
+                        </span>
+                        <span style={{
+                          fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                          backgroundColor: '#FEF3C7', color: '#92400E',
+                          padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
+                        }}>
+                          +{risk.impactDays}d
+                        </span>
+                      </div>
+                      <p style={{
+                        margin: 0, fontSize: typography.fontSize.sm,
+                        color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed,
                       }}>
-                        {risk.likelihoodPercent}% likely
-                      </span>
-                      <span style={{
-                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                        backgroundColor: `${colors.primaryOrange}12`, color: colors.primaryOrange,
-                        padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
-                      }}>
-                        +{risk.impactDays} day{risk.impactDays > 1 ? 's' : ''}
-                      </span>
+                        {risk.reason}
+                      </p>
                     </div>
-                    <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                      {risk.reason}
-                    </p>
-                  </div>
-                  <div style={{ flexShrink: 0 }}>
                     <button
                       onClick={() => openCopilotWithRisk(risk)}
                       style={{
-                        padding: `${spacing['1']} ${spacing['3']}`,
+                        padding: `${spacing['2']} ${spacing['4']}`,
                         backgroundColor: colors.primaryOrange, color: colors.white,
-                        border: 'none', borderRadius: borderRadius.base,
-                        fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                        border: 'none', borderRadius: borderRadius.lg,
+                        fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
                         fontFamily: typography.fontFamily, cursor: 'pointer',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                        boxShadow: '0 1px 2px rgba(244,120,32,0.2)',
                         transition: `opacity ${transitions.quick}`,
                       }}
                     >
-                      View Recovery Plan
+                      Recovery Plan
                     </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          {/* AI Edge Function section */}
-          <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing['3'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
-                Deep AI analysis via cloud service
-              </span>
-              <button
-                onClick={runAiEdgeAnalysis}
-                disabled={aiEdgeLoading}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['2'],
-                  padding: `${spacing['1']} ${spacing['3']}`,
-                  backgroundColor: colors.primaryOrange, color: colors.white,
-                  border: 'none', borderRadius: borderRadius.base,
-                  fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                  fontFamily: typography.fontFamily,
-                  cursor: aiEdgeLoading ? 'default' : 'pointer',
-                  opacity: aiEdgeLoading ? 0.7 : 1,
-                  transition: `opacity ${transitions.quick}`,
-                }}
-              >
-                {aiEdgeLoading
-                  ? <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                  : <Sparkles size={12} />
-                }
-                {aiEdgeLoading ? 'Analyzing...' : 'Run AI Analysis'}
-              </button>
-            </div>
-            {aiEdgeText && (
-              <div style={{
-                padding: spacing['3'],
-                backgroundColor: `${colors.primaryOrange}06`,
-                borderRadius: borderRadius.md,
-                border: `1px solid ${colors.primaryOrange}20`,
-              }}>
-                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed }}>
-                  {aiEdgeText}
-                </p>
-              </div>
-            )}
+          {/* AI Deep Analysis */}
+          <div style={{
+            borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: spacing['4'],
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+              Deep AI analysis via cloud
+            </span>
+            <button onClick={runAiEdgeAnalysis} disabled={aiEdgeLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: spacing['2'],
+                padding: `${spacing['2']} ${spacing['4']}`,
+                backgroundColor: 'transparent', color: colors.primaryOrange,
+                border: `1px solid ${colors.primaryOrange}30`,
+                borderRadius: borderRadius.lg,
+                fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamily,
+                cursor: aiEdgeLoading ? 'default' : 'pointer',
+                opacity: aiEdgeLoading ? 0.6 : 1,
+                transition: transitions.quick,
+              }}
+            >
+              {aiEdgeLoading
+                ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Sparkles size={13} />
+              }
+              {aiEdgeLoading ? 'Analyzing...' : 'Run Deep Analysis'}
+            </button>
           </div>
-
+          {aiEdgeText && (
+            <div style={{
+              padding: spacing['4'], backgroundColor: colors.surfaceInset,
+              borderRadius: borderRadius.lg, border: `1px solid ${colors.borderSubtle}`,
+            }}>
+              <p style={{
+                margin: 0, fontSize: typography.fontSize.sm,
+                color: colors.textSecondary, lineHeight: typography.lineHeight.relaxed,
+                whiteSpace: 'pre-wrap',
+              }}>
+                {aiEdgeText}
+              </p>
+            </div>
+          )}
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
-  </>
-);
+  );
+};

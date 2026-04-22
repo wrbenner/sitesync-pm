@@ -8,7 +8,7 @@
 // - Re-send logic for existing pending invites
 // - Revoke action
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { create as createJwt, getNumericDate } from 'https://deno.land/x/djwt@v2.9.1/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
@@ -91,7 +91,7 @@ function inviteEmailHtml(opts: {
 </body></html>`
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

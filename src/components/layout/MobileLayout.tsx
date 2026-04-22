@@ -199,14 +199,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
               <ArrowLeft size={20} color={colors.textSecondary} />
             </button>
           ) : (
-            <div style={{
-              width: 28, height: 28,
-              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
-              borderRadius: borderRadius.sm, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.white,
-            }}>S</div>
+            <img src="/logos/sitesync-symbol.png" alt="" style={{ height: 30, width: 'auto', objectFit: 'contain' }} />
           )}
-          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
+          <span style={{ fontSize: typography.fontSize.title, fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em' }}>
             SiteSync
           </span>
         </div>

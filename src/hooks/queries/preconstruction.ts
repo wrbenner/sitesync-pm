@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 
 
@@ -82,6 +82,62 @@ export function useTakeoffItems(projectId: string | undefined) {
       return data
     },
     enabled: !!projectId,
+  })
+}
+
+// ── Mutations ───────────────────────────────────────────
+
+export function useCreateEstimate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data, error } = await supabase.from('estimates').insert(payload).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['estimates', (vars as any).project_id] })
+    },
+  })
+}
+
+export function useDeleteEstimate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { id: string; project_id: string }) => {
+      const { error } = await supabase.from('estimates').delete().eq('id', payload.id)
+      if (error) throw error
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['estimates', vars.project_id] })
+    },
+  })
+}
+
+export function useCreateEstimateLineItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data, error } = await supabase.from('estimate_line_items').insert(payload).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['estimate_line_items', (vars as any).estimate_id] })
+    },
+  })
+}
+
+export function useDeleteEstimateLineItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { id: string; estimate_id: string }) => {
+      const { error } = await supabase.from('estimate_line_items').delete().eq('id', payload.id)
+      if (error) throw error
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['estimate_line_items', vars.estimate_id] })
+    },
   })
 }
 

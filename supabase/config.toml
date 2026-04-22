@@ -368,6 +368,21 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# ── Per-function overrides ──────────────────────────────────
+# extract-schedule-pdf: the runtime's pre-invocation JWT validator does not
+# currently support ES256 (asymmetric keys). Authentication is handled
+# in-function via a direct fetch to /auth/v1/user (see shared/auth.ts),
+# so disabling the runtime pre-check is safe.
+[functions.extract-schedule-pdf]
+verify_jwt = false
+
+# extract-draw-report: same reason as extract-schedule-pdf — the user's
+# session access token lives in the request body (not Authorization header)
+# so the platform-level JWT validator must be disabled. Authentication is
+# still enforced in-function via a direct fetch to /auth/v1/user.
+[functions.extract-draw-report]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

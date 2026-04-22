@@ -38,8 +38,8 @@ describe('Submittals query', () => {
   it('queries submittals table with project_id filter', async () => {
     const PROJECT_ID = 'proj-sub-001'
     const mockSubmittals = [
-      { id: 's-1', submittal_number: 1, title: 'Concrete mix design', status: 'pending', project_id: PROJECT_ID },
-      { id: 's-2', submittal_number: 2, title: 'Rebar shop drawings', status: 'approved', project_id: PROJECT_ID },
+      { id: 's-1', number: 1, title: 'Concrete mix design', status: 'pending', project_id: PROJECT_ID },
+      { id: 's-2', number: 2, title: 'Rebar shop drawings', status: 'approved', project_id: PROJECT_ID },
     ]
     setupChain(mockSubmittals, 2)
 
@@ -54,13 +54,13 @@ describe('Submittals query', () => {
       .from('submittals')
       .select('*', { count: 'exact' })
       .eq('project_id', PROJECT_ID)
-      .order('submittal_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(from, to)
 
     expect(mockFrom).toHaveBeenCalledWith('submittals')
     expect(mockSelect).toHaveBeenCalledWith('*', { count: 'exact' })
     expect(mockEq).toHaveBeenCalledWith('project_id', PROJECT_ID)
-    expect(mockOrder).toHaveBeenCalledWith('submittal_number', { ascending: false })
+    expect(mockOrder).toHaveBeenCalledWith('number', { ascending: false })
     expect(data).toEqual(mockSubmittals)
     expect(error).toBeNull()
     expect(count).toBe(2)
@@ -75,7 +75,7 @@ describe('Submittals query', () => {
       .from('submittals')
       .select('*', { count: 'exact' })
       .eq('project_id', 'proj-empty')
-      .order('submittal_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(0, 49)
 
     expect(data).toEqual([])
@@ -96,7 +96,7 @@ describe('Submittals query', () => {
       .from('submittals')
       .select('*', { count: 'exact' })
       .eq('project_id', 'proj-broken')
-      .order('submittal_number', { ascending: false })
+      .order('number', { ascending: false })
       .range(0, 49)
 
     expect(data).toBeNull()

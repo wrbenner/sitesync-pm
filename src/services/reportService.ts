@@ -215,7 +215,7 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
       type: 'rfi',
       severity: overdueRfis.length >= 3 ? 'critical' : 'warning',
       title: `${overdueRfis.length} Overdue RFI${overdueRfis.length > 1 ? 's' : ''}`,
-      detail: `RFI${overdueRfis.length > 1 ? 's' : ''} ${overdueRfis.slice(0, 3).map((r) => `#${(r.rfi_number as number) ?? (r.number as number) ?? ''}`).join(', ')} past due date`,
+      detail: `RFI${overdueRfis.length > 1 ? 's' : ''} ${overdueRfis.slice(0, 3).map((r) => `#${(r.number as number) ?? ''}`).join(', ')} past due date`,
     })
   }
 

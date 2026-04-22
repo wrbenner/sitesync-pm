@@ -1,7 +1,7 @@
 // embed-document — Chunk a document and generate OpenAI embeddings for each chunk.
 // Flow: fetch PDF/text → extract text → split into ~500-token chunks → embed → store.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -80,7 +80,7 @@ async function embedBatch(texts: string[], apiKey: string): Promise<number[][]> 
   return data.data.map((d: { embedding: number[] }) => d.embedding)
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' }

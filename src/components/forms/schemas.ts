@@ -16,14 +16,18 @@ export { createDailyLogSchema } from '../../schemas/dailyLog'
 
 export const rfiSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
-  description: z.string().default(''),
+  description: z.string().nullable().default(''),
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
-  assigned_to: z.string().default(''),
-  spec_section: z.string().default(''),
-  drawing_reference: z.string().default(''),
-  due_date: z.string().default(''),
-  related_submittal_id: z.string().default(''),
-})
+  assigned_to: z.string().nullable().default(null),
+  ball_in_court: z.string().nullable().default(null),
+  spec_section: z.string().nullable().default(null),
+  drawing_reference: z.string().nullable().default(null),
+  due_date: z.string().nullable().default(null),
+  response_due_date: z.string().nullable().default(null),
+  cost_impact: z.string().nullable().default(null),
+  schedule_impact: z.string().nullable().default(null),
+  related_submittal_id: z.string().nullable().default(null),
+}).passthrough()
 
 export type RFIFormValues = z.infer<typeof rfiSchema>
 
@@ -31,13 +35,18 @@ export type RFIFormValues = z.infer<typeof rfiSchema>
 
 export const submittalSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
-  spec_section: z.string().default(''),
+  spec_section: z.string().nullable().default(null),
   type: z.enum(['shop_drawing', 'product_data', 'sample', 'design_data', 'test_report', 'certificate', 'closeout']).default('shop_drawing'),
-  subcontractor: z.string().default(''),
-  due_date: z.string().default(''),
-  description: z.string().default(''),
-  related_rfi_id: z.string().default(''),
-})
+  subcontractor: z.string().nullable().default(null),
+  assigned_to: z.string().nullable().default(null),
+  due_date: z.string().nullable().default(null),
+  required_onsite_date: z.string().nullable().default(null),
+  submit_by_date: z.string().nullable().default(null),
+  lead_time_weeks: z.union([z.string(), z.number()]).nullable().default(null),
+  revision_number: z.string().nullable().default(null),
+  description: z.string().nullable().default(null),
+  related_rfi_id: z.string().nullable().default(null),
+}).passthrough()
 
 export type SubmittalFormValues = z.infer<typeof submittalSchema>
 
@@ -57,7 +66,7 @@ export const punchItemSchema = z.object({
 
 export type PunchItemFormValues = z.infer<typeof punchItemSchema>
 
-// ── Daily Log Schema ────────────────────────────────────
+// ── Daily Log Schema (form-level, used by CreateDailyLogModal) ──
 
 export const dailyLogSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -72,6 +81,31 @@ export const dailyLogSchema = z.object({
 
 export type DailyLogFormValues = z.infer<typeof dailyLogSchema>
 
+// ── Daily Log DB Schema (DB-level, used by mutations) ──
+
+export const dailyLogDbSchema = z.object({
+  project_id: z.string().min(1, 'Project is required'),
+  log_date: z.string().min(1, 'Date is required'),
+  workers_onsite: z.coerce.number().default(0),
+  total_hours: z.coerce.number().default(0),
+  incidents: z.coerce.number().default(0),
+  weather: z.string().nullable().optional(),
+  temperature_high: z.coerce.number().nullable().optional(),
+  temperature_low: z.coerce.number().nullable().optional(),
+  wind_speed: z.string().nullable().optional(),
+  precipitation: z.string().nullable().optional(),
+  weather_source: z.string().nullable().optional(),
+  summary: z.string().optional().default(''),
+  work_summary: z.string().optional().default(''),
+  safety_notes: z.string().optional().default(''),
+  delays: z.string().optional().default(''),
+  status: z.enum(['draft', 'submitted', 'approved', 'rejected', 'amending']).default('draft'),
+  is_submitted: z.boolean().optional(),
+  submitted_at: z.string().nullable().optional(),
+  amended_from_id: z.string().nullable().optional(),
+  created_by: z.string().nullable().optional(),
+}).passthrough()
+
 // ── Change Order Schema ─────────────────────────────────
 
 export const changeOrderSchema = z.object({
@@ -79,10 +113,13 @@ export const changeOrderSchema = z.object({
   type: z.enum(['pco', 'cor', 'co']).default('pco'),
   description: z.string().min(1, 'Description is required'),
   amount: z.string().default(''),
+  reason: z.enum(['design_change', 'unforeseen_condition', 'owner_request', 'code_change', 'value_engineering', 'scope_addition', 'error_omission', 'other']).default('owner_request'),
+  schedule_impact: z.string().default(''),
   cost_codes: z.string().default(''),
   justification: z.string().default(''),
   requested_by: z.string().default(''),
   requested_date: z.string().default(''),
+  parent_co_id: z.string().default(''),
 })
 
 export type ChangeOrderFormValues = z.infer<typeof changeOrderSchema>
@@ -245,10 +282,10 @@ export type VendorFormValues = z.infer<typeof vendorSchema>
 export const payApplicationSchema = z.object({
   contract_id: z.string().min(1, 'Contract is required'),
   application_number: z.coerce.number().int().positive().optional(),
-  period_from: z.string().default(''),
   period_to: z.string().min(1, 'Period end date is required'),
   original_contract_sum: z.coerce.number().optional(),
   net_change_orders: z.coerce.number().optional(),
+  contract_sum_to_date: z.coerce.number().optional(),
   total_completed_and_stored: z.coerce.number().optional(),
   retainage: z.coerce.number().optional(),
   total_earned_less_retainage: z.coerce.number().optional(),

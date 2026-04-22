@@ -3,12 +3,16 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { initVitals } from './lib/vitals'
+import { registerServiceWorker } from './lib/registerSW'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 )
+
+// Register service worker for PWA / offline support
+registerServiceWorker()
 
 // Start Core Web Vitals + RUM tracking after first paint
 if (typeof requestIdleCallback !== 'undefined') {

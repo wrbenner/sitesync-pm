@@ -14,7 +14,15 @@ CREATE TABLE IF NOT EXISTS labor_rates (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_labor_rates_project ON labor_rates(project_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'labor_rates' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_labor_rates_project ON labor_rates(project_id);
+
+  END IF;
+
+END $$;
 
 CREATE TABLE IF NOT EXISTS material_rates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,7 +36,15 @@ CREATE TABLE IF NOT EXISTS material_rates (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_material_rates_project ON material_rates(project_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'material_rates' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_material_rates_project ON material_rates(project_id);
+
+  END IF;
+
+END $$;
 
 CREATE TABLE IF NOT EXISTS equipment_rates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,7 +58,15 @@ CREATE TABLE IF NOT EXISTS equipment_rates (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_equipment_rates_project ON equipment_rates(project_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'equipment_rates' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_equipment_rates_project ON equipment_rates(project_id);
+
+  END IF;
+
+END $$;
 
 ALTER TABLE labor_rates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE material_rates ENABLE ROW LEVEL SECURITY;

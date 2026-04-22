@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, Share2, FileText, Link, Send, ShieldCheck, Activity, DollarSign, Clock, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer, Card, SectionHeader, Btn, useToast, Skeleton } from '../components/Primitives';
 import { ProjectRiskSummary } from '../components/risk/ProjectRiskSummary';
@@ -16,6 +16,7 @@ import {
   useFiles,
   useDrawings,
 } from '../hooks/queries';
+import { useSafetyInspections } from '../hooks/queries/safety-inspections';
 
 interface HealthDimension {
   label: string;
@@ -25,6 +26,17 @@ interface HealthDimension {
   detail: string;
   fullDetail: string;
   route: string;
+}
+
+interface KPIMetric {
+  label: string;
+  value: string;
+  subLabel: string;
+  color: string;
+  bgColor: string;
+  icon: React.ElementType;
+  trend: 'up' | 'down' | 'flat';
+  trendValue: string;
 }
 
 function clamp(v: number, min: number, max: number): number {
@@ -64,6 +76,7 @@ export const ProjectHealth: React.FC = () => {
   const { data: meetingsResult } = useMeetings(projectId);
   const { data: files } = useFiles(projectId);
   const { data: drawingsResult } = useDrawings(projectId);
+  const { data: safetyInspections } = useSafetyInspections(projectId ?? undefined);
   const drawings = drawingsResult?.data;
 
   const isLoading = loadingSchedule || loadingBudget;
@@ -222,6 +235,90 @@ export const ProjectHealth: React.FC = () => {
     return { dimensions: dims, overallScore: overall };
   }, [schedulePhases, budgetItems, punchItemsResult, rfisResult, dailyLogsResult, meetingsResult, files, drawings]);
 
+  // KPI Metric Cards: SPI, CPI, Quality Score, Safety Score
+  const kpiMetrics = useMemo<KPIMetric[]>(() => {
+    // SPI - Schedule Performance Index
+    const phases = schedulePhases ?? [];
+    const totalPlanned = phases.length;
+    const completedOrOnTrack = phases.filter(
+      (p) => p.status === 'complete' || p.status === 'on_track'
+    ).length;
+    const spi = totalPlanned > 0 ? completedOrOnTrack / totalPlanned : 0;
+    const spiTrend: 'up' | 'down' | 'flat' = spi >= 0.95 ? 'up' : spi >= 0.8 ? 'flat' : 'down';
+
+    // CPI - Cost Performance Index
+    const items = budgetItems ?? [];
+    const totalOriginal = items.reduce((s, b) => s + (b.original_amount ?? 0), 0);
+    const totalActual = items.reduce((s, b) => s + (b.actual_amount ?? 0), 0);
+    const cpi = totalActual > 0 && totalOriginal > 0 ? totalOriginal / totalActual : totalOriginal > 0 ? 1.0 : 0;
+    const cpiTrend: 'up' | 'down' | 'flat' = cpi >= 1.0 ? 'up' : cpi >= 0.9 ? 'flat' : 'down';
+
+    // Quality Score from punch items
+    const punches = punchItemsResult?.data ?? [];
+    const resolvedPunches = punches.filter(
+      (p) => p.status === 'resolved' || p.status === 'verified'
+    );
+    const qualityPct = punches.length > 0 ? Math.round((resolvedPunches.length / punches.length) * 100) : 0;
+    const qualityTrend: 'up' | 'down' | 'flat' = qualityPct >= 80 ? 'up' : qualityPct >= 60 ? 'flat' : 'down';
+
+    // Safety Score from daily logs + safety inspections
+    const logs = dailyLogsResult?.data ?? [];
+    const inspections = safetyInspections ?? [];
+    const totalIncidents = logs.reduce((s, l) => s + (l.incidents ?? 0), 0);
+    const totalHours = logs.reduce((s, l) => s + (l.total_hours ?? 0), 0);
+    const incidentRate = totalHours > 0 ? (totalIncidents / totalHours) * 1000 : 0;
+    const passedInspections = inspections.filter((i: Record<string, unknown>) => i.result === 'pass' || i.status === 'passed').length;
+    const safetyPct = logs.length > 0
+      ? clamp(Math.round(100 - incidentRate * 20), 0, 100)
+      : inspections.length > 0
+        ? clamp(Math.round((passedInspections / inspections.length) * 100), 0, 100)
+        : 0;
+    const safetyTrend: 'up' | 'down' | 'flat' = safetyPct >= 90 ? 'up' : safetyPct >= 70 ? 'flat' : 'down';
+
+    return [
+      {
+        label: 'SPI',
+        value: totalPlanned > 0 ? spi.toFixed(2) : 'N/A',
+        subLabel: 'Schedule Performance Index',
+        color: spi >= 0.95 ? colors.statusActive : spi >= 0.8 ? colors.statusPending : colors.statusCritical,
+        bgColor: spi >= 0.95 ? colors.statusActiveSubtle : spi >= 0.8 ? colors.statusPendingSubtle : colors.statusCriticalSubtle,
+        icon: Clock,
+        trend: spiTrend,
+        trendValue: totalPlanned > 0 ? `${completedOrOnTrack}/${totalPlanned} on track` : 'No phases',
+      },
+      {
+        label: 'CPI',
+        value: items.length > 0 ? cpi.toFixed(2) : 'N/A',
+        subLabel: 'Cost Performance Index',
+        color: cpi >= 1.0 ? colors.statusActive : cpi >= 0.9 ? colors.statusPending : colors.statusCritical,
+        bgColor: cpi >= 1.0 ? colors.statusActiveSubtle : cpi >= 0.9 ? colors.statusPendingSubtle : colors.statusCriticalSubtle,
+        icon: DollarSign,
+        trend: cpiTrend,
+        trendValue: items.length > 0 ? (cpi >= 1.0 ? 'Under budget' : 'Over budget') : 'No data',
+      },
+      {
+        label: 'Quality',
+        value: punches.length > 0 ? `${qualityPct}%` : 'N/A',
+        subLabel: 'Punch Item Resolution',
+        color: qualityPct >= 80 ? colors.statusActive : qualityPct >= 60 ? colors.statusPending : colors.statusCritical,
+        bgColor: qualityPct >= 80 ? colors.statusActiveSubtle : qualityPct >= 60 ? colors.statusPendingSubtle : colors.statusCriticalSubtle,
+        icon: Activity,
+        trend: qualityTrend,
+        trendValue: punches.length > 0 ? `${resolvedPunches.length}/${punches.length} resolved` : 'No items',
+      },
+      {
+        label: 'Safety',
+        value: (logs.length > 0 || inspections.length > 0) ? `${safetyPct}%` : 'N/A',
+        subLabel: 'Safety Score',
+        color: safetyPct >= 90 ? colors.statusActive : safetyPct >= 70 ? colors.statusPending : colors.statusCritical,
+        bgColor: safetyPct >= 90 ? colors.statusActiveSubtle : safetyPct >= 70 ? colors.statusPendingSubtle : colors.statusCriticalSubtle,
+        icon: ShieldCheck,
+        trend: safetyTrend,
+        trendValue: logs.length > 0 ? `${totalIncidents} incident${totalIncidents !== 1 ? 's' : ''}` : inspections.length > 0 ? `${passedInspections}/${inspections.length} passed` : 'No data',
+      },
+    ];
+  }, [schedulePhases, budgetItems, punchItemsResult, dailyLogsResult, safetyInspections]);
+
   const percentile = overallScore != null ? Math.min(99, Math.max(1, overallScore - 5)) : 0;
 
 
@@ -300,9 +397,77 @@ export const ProjectHealth: React.FC = () => {
         </div>
       }
     >
+      {/* KPI Metric Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+        {kpiMetrics.map((kpi) => {
+          const Icon = kpi.icon;
+          const TrendIcon = kpi.trend === 'up' ? ArrowUpRight : kpi.trend === 'down' ? ArrowDownRight : Minus;
+          const trendColor = kpi.trend === 'up' ? colors.statusActive : kpi.trend === 'down' ? colors.statusCritical : colors.textTertiary;
+          return (
+            <Card key={kpi.label} padding={spacing['4']}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['2'] }}>
+                <div style={{ width: 36, height: 36, borderRadius: borderRadius.md, backgroundColor: kpi.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={18} color={kpi.color} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <TrendIcon size={14} color={trendColor} />
+                </div>
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: typography.fontWeight.semibold, color: kpi.color, lineHeight: 1, marginBottom: spacing['1'] }}>
+                {kpi.value}
+              </div>
+              <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: 2 }}>
+                {kpi.label}
+              </div>
+              <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>
+                {kpi.trendValue}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Risk Indicators */}
       <div style={{ marginBottom: spacing['6'] }}>
         <ProjectRiskSummary />
       </div>
+
+      {/* Risk Level Summary Bar */}
+      {overallScore != null && (
+        <Card padding={spacing['4']} style={{ marginBottom: spacing['6'] }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+              <AlertTriangle size={16} color={overallScore >= 75 ? colors.statusActive : overallScore >= 50 ? colors.statusPending : colors.statusCritical} />
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                Risk Level: {overallScore >= 85 ? 'Low' : overallScore >= 70 ? 'Moderate' : overallScore >= 50 ? 'Elevated' : 'High'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: spacing['4'] }}>
+              {dimensions.filter((d) => d.score != null && d.score < 70).map((d) => (
+                <span
+                  key={d.label}
+                  style={{
+                    fontSize: typography.fontSize.xs,
+                    padding: `${spacing['1']} ${spacing['2']}`,
+                    borderRadius: borderRadius.md,
+                    backgroundColor: d.score! < 50 ? colors.statusCriticalSubtle : colors.statusPendingSubtle,
+                    color: d.score! < 50 ? colors.statusCritical : colors.statusPending,
+                    fontWeight: typography.fontWeight.medium,
+                  }}
+                >
+                  {d.label}: {d.score}
+                </span>
+              ))}
+              {dimensions.filter((d) => d.score != null && d.score < 70).length === 0 && (
+                <span style={{ fontSize: typography.fontSize.xs, color: colors.statusActive, fontWeight: typography.fontWeight.medium }}>
+                  All dimensions healthy
+                </span>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: spacing['6'] }}>
         {/* Score ring */}
         <Card padding={spacing['6']}>

@@ -157,7 +157,7 @@ async function importSchedule(integrationId: string, projectId: string, xmlData:
           start_date: task.start ? task.start.slice(0, 10) : null,
           end_date: task.finish ? task.finish.slice(0, 10) : null,
           percent_complete: task.percentComplete,
-          status: task.percentComplete >= 100 ? 'complete' : task.percentComplete > 0 ? 'in_progress' : 'not_started',
+          status: task.percentComplete >= 100 ? 'completed' : task.percentComplete > 0 ? 'active' : 'upcoming',
         }, { onConflict: 'name,project_id' })
         synced++
       } catch {

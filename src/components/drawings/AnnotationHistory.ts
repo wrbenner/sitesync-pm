@@ -1,6 +1,6 @@
 export interface AnnotationShape {
   id: string;
-  type: 'rectangle' | 'text' | 'polygon' | 'pin' | 'measure' | 'highlight' | 'draw';
+  type: 'rectangle' | 'text' | 'polygon' | 'pin' | 'measure' | 'highlight' | 'draw' | 'area' | 'count' | 'path';
   coordinates: {
     x: number;
     y: number;
@@ -9,9 +9,15 @@ export interface AnnotationShape {
     endX?: number;
     endY?: number;
     points?: Array<[number, number]>;
+    /** Serialized fabric Path commands for 'draw' / 'highlight' strokes — preserves the real brush path. */
+    pathData?: unknown;
   };
   color: string;
   text?: string;
+  /** For 'count' markers — the group/label (e.g. "Receptacles"). */
+  countLabel?: string;
+  /** For 'count' markers — the sequential index within its label group. */
+  countIndex?: number;
   pageNumber: number;
   createdBy: string;
   createdAt: string;

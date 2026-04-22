@@ -36,7 +36,7 @@ describe('fetchEntityLabel project_id isolation', () => {
   })
 
   it('passes project_id eq filter for rfi queries', async () => {
-    const chain = makeChain({ rfi_number: 1, subject: 'Leak' })
+    const chain = makeChain({ number: 1, title: 'Leak' })
     vi.mocked(supabase.from).mockReturnValue(chain as never)
 
     await enrichActivityItem(
@@ -51,7 +51,7 @@ describe('fetchEntityLabel project_id isolation', () => {
   })
 
   it('passes project_id eq filter for submittal queries', async () => {
-    const chain = makeChain({ submittal_number: 2, title: 'Steel shop drawings' })
+    const chain = makeChain({ number: 2, title: 'Steel shop drawings' })
     vi.mocked(supabase.from).mockReturnValue(chain as never)
 
     await enrichActivityItem(
@@ -97,7 +97,7 @@ describe('fetchEntityLabel project_id isolation', () => {
   it('never queries without a project_id eq call', async () => {
     for (const entityType of ['rfi', 'submittal', 'change_order']) {
       vi.clearAllMocks()
-      const chain = makeChain({ rfi_number: 1, subject: 'x', submittal_number: 1, title: 'x', co_number: 1, description: 'x' })
+      const chain = makeChain({ number: 1, title: 'x', co_number: 1, description: 'x' })
       vi.mocked(supabase.from).mockReturnValue(chain as never)
 
       await enrichActivityItem(

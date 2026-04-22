@@ -44,7 +44,7 @@ export function useUpdateChangeOrder() {
       if (typeof updates.status === 'string') {
         await validateChangeOrderStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('change_orders').update(updates).eq('id', id)
+      const { error } = await from('change_orders').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -62,30 +62,25 @@ export function usePromoteChangeOrder() {
     getEntityId: (p) => p.sourceId,
     getAuditMetadata: (p) => ({ nextType: p.nextType }),
     mutationFn: async ({ sourceId, projectId, nextType }) => {
-      const { data: source, error: fetchError } = await supabase.from('change_orders').select('*').eq('id', sourceId).single()
-      if (fetchError) throw fetchError
-      const src = source as Record<string, unknown>
-      const { data: promoted, error: createError } = await from('change_orders').insert({
-        project_id: projectId,
-        type: nextType,
-        title: src.title || src.description,
-        description: src.description,
-        amount: src.amount,
-        estimated_cost: src.estimated_cost || src.amount,
-        submitted_cost: src.submitted_cost || src.amount,
-        reason_code: src.reason_code,
-        schedule_impact_days: src.schedule_impact_days,
-        cost_code: src.cost_code,
-        budget_line_item_id: src.budget_line_item_id,
-        promoted_from_id: sourceId,
-        status: 'draft',
-        requested_by: src.requested_by,
-      }).select().single()
-      if (createError) throw createError
-      await from('change_orders').update({ promoted_at: new Date().toISOString() }).eq('id', sourceId)
-      return { data: promoted, projectId }
+      // Promote in-place: mutate the original record's type to the next tier.
+      // This preserves a single source of truth — no duplicate rows.
+      // The promotion chain is PCO → COR → CO. Status resets to 'draft'
+      // so the promoted item goes through its own review cycle at the new tier.
+      const { data: updated, error: updateError } = await supabase
+        .from('change_orders')
+        .update({
+          type: nextType,
+          status: 'draft',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sourceId)
+        .eq('project_id', projectId)
+        .select()
+        .single()
+      if (updateError) throw updateError
+      return { data: updated, projectId }
     },
-    invalidateKeys: (p) => [['costData'], ['earned_value', p.projectId]],
+    invalidateKeys: (p) => [['costData'], [`costData-${p.projectId}`], ['earned_value', p.projectId]],
     analyticsEvent: 'change_order_promoted',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to promote change order',
@@ -101,11 +96,10 @@ export function useSubmitChangeOrder() {
     mutationFn: async ({ id, userId, projectId }) => {
       // State-machine gate: only allow draft → pending_review for eligible roles.
       await validateChangeOrderStatusTransition(id, projectId, 'pending_review')
+      void userId
       const { error } = await from('change_orders').update({
         status: 'pending_review',
-        submitted_by: userId,
-        submitted_at: new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },
@@ -122,20 +116,104 @@ export function useApproveChangeOrder() {
     action: 'approve_change_order',
     entityType: 'change_order',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => ({ status: 'approved', approved_by: p.userId, approved_cost: p.approvedCost }),
+    getNewValue: (p) => ({ status: 'approved', approved_amount: p.approvedCost }),
     mutationFn: async ({ id, userId, comments, approvedCost, projectId }) => {
+      void userId; void comments;
+      // 1. Fetch the CO so we know its amount and cost_code for budget propagation
+      const { data: co, error: fetchErr } = await supabase
+        .from('change_orders').select('amount, cost_code, approved_amount').eq('id', id).single()
+      if (fetchErr) throw fetchErr
+
+      // Determine the financial impact: explicit approvedCost param > existing approved_amount > amount
+      const impactAmount = approvedCost ?? ((co as Record<string, unknown>).approved_amount as number | null) ?? (co.amount as number | null) ?? 0
+
+      // 2. Mark the CO as approved
       const updates: Record<string, unknown> = {
-        status: 'approved', approved_by: userId,
-        approved_at: new Date().toISOString(),
+        status: 'approved',
         approved_date: new Date().toISOString().slice(0, 10),
       }
-      if (comments) updates.approval_comments = comments
-      if (approvedCost !== undefined) updates.approved_cost = approvedCost
-      const { error } = await from('change_orders').update(updates).eq('id', id)
+      if (approvedCost !== undefined) updates.approved_amount = approvedCost
+      const { error } = await from('change_orders').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
+
+      // 3. Propagate to budget: update the matching budget_items row by cost_code
+      if (impactAmount !== 0 && co.cost_code) {
+        const { data: budgetRow } = await supabase
+          .from('budget_items')
+          .select('id, forecast_amount, original_amount')
+          .eq('project_id', projectId)
+          .eq('cost_code', co.cost_code)
+          .limit(1)
+          .single()
+
+        if (budgetRow) {
+          const currentForecast = (budgetRow.forecast_amount as number | null) ?? (budgetRow.original_amount as number | null) ?? 0
+          await supabase
+            .from('budget_items')
+            .update({
+              forecast_amount: currentForecast + impactAmount,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', budgetRow.id)
+        }
+      }
+
+      // 4. Also update budget_line_items.approved_changes if a matching row exists
+      if (impactAmount !== 0 && co.cost_code) {
+        try {
+          const { data: lineRow } = await supabase
+            .from('budget_line_items')
+            .select('id, approved_changes, original_amount')
+            .eq('project_id', projectId)
+            .eq('csi_code', co.cost_code)
+            .limit(1)
+            .single()
+
+          if (lineRow) {
+            const prevChanges = (lineRow.approved_changes as number | null) ?? 0
+            const origAmt = (lineRow.original_amount as number | null) ?? 0
+            const newApproved = prevChanges + impactAmount
+            await supabase
+              .from('budget_line_items')
+              .update({
+                approved_changes: newApproved,
+                revised_budget: origAmt + newApproved,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', lineRow.id)
+          }
+        } catch {
+          // budget_line_items table may not exist — non-fatal
+        }
+      }
+
+      // 5. Update the project's contract_value by adding this CO's impact.
+      // contract_value is a running revised total — each approved CO increments it.
+      if (impactAmount !== 0) {
+        try {
+          const { data: proj } = await supabase
+            .from('projects').select('contract_value').eq('id', projectId).single()
+          if (proj) {
+            const currentValue = (proj.contract_value as number | null) ?? 0
+            await supabase
+              .from('projects')
+              .update({ contract_value: currentValue + impactAmount })
+              .eq('id', projectId)
+          }
+        } catch {
+          // Non-fatal — contract_value update is best-effort
+        }
+      }
+
       return { projectId }
     },
-    invalidateKeys: (_, r) => [['costData'], ['earned_value', r.projectId]],
+    invalidateKeys: (_, r) => [
+      ['costData'],
+      [`costData-${r.projectId}`],
+      ['earned_value', r.projectId],
+      ['projects'],
+      ['budget_line_items', r.projectId],
+    ],
     analyticsEvent: 'change_order_approved',
     errorMessage: 'Failed to approve change order',
   })
@@ -147,11 +225,12 @@ export function useRejectChangeOrder() {
     action: 'reject_change_order',
     entityType: 'change_order',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => ({ status: 'rejected', rejected_by: p.userId, comments: p.comments }),
+    getNewValue: (p) => ({ status: 'rejected', comments: p.comments }),
     mutationFn: async ({ id, userId, comments, projectId }) => {
+      void userId; void comments;
       const { error } = await from('change_orders').update({
-        status: 'rejected', rejected_by: userId, rejected_at: new Date().toISOString(), rejection_comments: comments,
-      }).eq('id', id)
+        status: 'rejected',
+      }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },
@@ -168,7 +247,7 @@ export function useDeleteChangeOrder() {
     entityType: 'change_order',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('change_orders').delete().eq('id', id)
+      const { error } = await from('change_orders').delete().eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

@@ -381,10 +381,9 @@ export const documentService = {
       .from('files')
       .update({
         document_status: newStatus,
-        updated_by: userId,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', documentId);
+    void userId;
 
     if (error) return fail(dbError(error.message, { documentId, newStatus }));
     return { data: null, error: null };
@@ -398,14 +397,12 @@ export const documentService = {
     documentId: string,
     updates: Partial<Omit<DocumentRecord, 'id' | 'project_id' | 'document_status' | 'created_by' | 'created_at'>>,
   ): Promise<Result> {
-    const userId = await getCurrentUserId();
-     
     const { document_status: _s, created_by: _c, created_at: _ca, ...safeUpdates } =
       updates as Record<string, unknown>;
 
     const { error } = await supabase
       .from('files')
-      .update({ ...safeUpdates, updated_by: userId, updated_at: new Date().toISOString() })
+      .update(safeUpdates)
       .eq('id', documentId);
 
     if (error) return fail(dbError(error.message, { documentId }));
@@ -413,19 +410,12 @@ export const documentService = {
   },
 
   /**
-   * Soft-delete a document. Sets deleted_at and deleted_by; never removes the row.
+   * Delete a document.
    */
   async deleteDocument(documentId: string): Promise<Result> {
-    const userId = await getCurrentUserId();
-
     const { error } = await supabase
       .from('files')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-        updated_by: userId,
-        updated_at: new Date().toISOString(),
-      })
+      .delete()
       .eq('id', documentId);
 
     if (error) return fail(dbError(error.message, { documentId }));

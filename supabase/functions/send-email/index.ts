@@ -6,7 +6,7 @@
 // integration plan: invoice, payment_receipt, drawing_analysis_complete,
 // discrepancy_alert. Falls back to raw html/text for ad hoc sends.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -160,7 +160,7 @@ function renderTemplate(
   throw new HttpError(400, `Unknown template: ${template}`, 'validation_error')
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

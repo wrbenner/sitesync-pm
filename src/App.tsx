@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { HardHat } from 'lucide-react';
-import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SidebarContext, ToastProvider } from './components/Primitives';
 import { CommandPalette } from './components/shared/CommandPalette';
@@ -9,6 +9,7 @@ import Sentry from './lib/sentry';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
+
 import { Toaster, toast } from 'sonner';
 import './lib/i18n';
 import { Sidebar } from './components/Sidebar';
@@ -26,6 +27,8 @@ import { useRealtimeSubscription, usePresence } from './hooks/useRealtimeSubscri
 import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
 import { useNotificationRealtime } from './hooks/useNotificationRealtime';
 import { useProjectId } from './hooks/useProjectId';
+import { useProjectInit } from './hooks/useProjectInit';
+import { ProjectGate } from './components/ProjectGate';
 import { useAuth } from './hooks/useAuth';
 import { SkipToContent } from './components/ui/SkipToContent';
 import { RouteAnnouncer } from './components/ui/RouteAnnouncer';
@@ -67,24 +70,25 @@ const ExportCenter = lazy(() => import('./components/export/ExportCenter').then(
 // Lazy loaded pages
 const Dashboard = lazyWithRetry(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })));
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
-const Drawings = lazy(() => import('./pages/drawings').then((m) => ({ default: m.Drawings })));
+const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
 const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
 const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
+const SubmittalDetailPage = lazy(() => import('./pages/submittals/SubmittalDetailPage'));
 const Schedule = lazyWithRetry(() => import('./pages/schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
 const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
 const FieldCapture = lazy(() => import('./pages/field-capture').then((m) => ({ default: m.FieldCapture })));
 const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => ({ default: m.PunchList })));
+const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetailPage'));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
 const Directory = lazy(() => import('./pages/Directory').then((m) => ({ default: m.Directory })));
 const Meetings = lazy(() => import('./pages/Meetings').then((m) => ({ default: m.Meetings })));
 const Files = lazy(() => import('./pages/files').then((m) => ({ default: m.Files })));
-const AICopilot = lazy(() => import('./pages/AICopilot').then((m) => ({ default: m.AICopilot })));
 const Lookahead = lazy(() => import('./pages/Lookahead').then((m) => ({ default: m.Lookahead })));
-const Activity = lazy(() => import('./pages/Activity').then((m) => ({ default: m.Activity })));
+const BIMViewerPage = lazy(() => import('./pages/bim/BIMViewerPage'));
+const SpecParserPage = lazy(() => import('./pages/submittals/SpecParserPage'));
 const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
-const ProjectHealth = lazy(() => import('./pages/ProjectHealth').then((m) => ({ default: m.ProjectHealth })));
 const Safety = lazy(() => import('./pages/safety').then((m) => ({ default: m.Safety })));
 const Estimating = lazy(() => import('./pages/Estimating'));
 const Procurement = lazy(() => import('./pages/Procurement'));
@@ -99,21 +103,18 @@ const Permits = lazy(() => import('./pages/Permits'));
 const Integrations = lazy(() => import('./pages/Integrations'));
 const Reports = lazy(() => import('./pages/Reports'));
 const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
-const LienWaivers = lazy(() => import('./pages/LienWaivers').then((m) => ({ default: m.LienWaivers })));
 const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default: m.Contracts })));
-const Transmittals = lazy(() => import('./pages/Transmittals').then((m) => ({ default: m.Transmittals })));
 const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m.Closeout })));
-const Specifications = lazy(() => import('./pages/Specifications').then((m) => ({ default: m.Specifications })));
-const Preconstruction = lazy(() => import('./pages/Preconstruction').then((m) => ({ default: m.Preconstruction })));
-const Resources = lazy(() => import('./pages/Resources').then((m) => ({ default: m.Resources })));
 const Vendors = lazy(() => import('./pages/Vendors').then((m) => ({ default: m.Vendors })));
 const CostManagement = lazy(() => import('./pages/CostManagement'));
 const TimeTracking = lazy(() => import('./pages/TimeTracking'));
-const Deliveries = lazy(() => import('./pages/Deliveries'));
 const Wiki = lazy(() => import('./pages/Wiki'));
 const SiteMap = lazy(() => import('./pages/SiteMap'));
 const CarbonDashboard = lazy(() => import('./pages/CarbonDashboard'));
+const HUDCompliancePage = lazy(() => import('./pages/compliance/HUDCompliancePage'));
+const AICopilot = lazy(() => import('./pages/AICopilot'));
 const WorkflowSettings = lazy(() => import('./pages/Settings/WorkflowSettings'));
+const RFIDetail = lazy(() => import('./pages/rfis/RFIDetail').then((m) => ({ default: m.RFIDetail })));
 const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
@@ -334,7 +335,9 @@ function AppRoutes() {
             <Route path="/tasks" element={<PageSuspense><ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute></PageSuspense>} />
             <Route path="/drawings" element={<PageSuspense><ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute></PageSuspense>} />
             <Route path="/rfis" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute></PageSuspense>} />
+            <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
             <Route path="/lookahead" element={<PageSuspense><ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><Lookahead /></ProtectedRoute></PageSuspense>} />
             <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
@@ -342,6 +345,7 @@ function AppRoutes() {
             <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
             <Route path="/field-capture" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute></PageSuspense>} />
             <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />
+            <Route path="/punch-list/:itemId" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch Item Detail"><PunchItemDetailPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/crews" element={<PageSuspense><ProtectedRoute moduleId="crews" moduleName="Crews"><Crews /></ProtectedRoute></PageSuspense>} />
             <Route path="/safety" element={<PageSuspense><ProtectedRoute moduleId="safety" moduleName="Safety"><Safety /></ProtectedRoute></PageSuspense>} />
             <Route path="/estimating" element={<PageSuspense><ProtectedRoute moduleId="estimating" moduleName="Estimating"><Estimating /></ProtectedRoute></PageSuspense>} />
@@ -350,10 +354,11 @@ function AppRoutes() {
             <Route path="/directory" element={<PageSuspense><ProtectedRoute moduleId="directory" moduleName="Directory"><Directory /></ProtectedRoute></PageSuspense>} />
             <Route path="/meetings" element={<PageSuspense><ProtectedRoute moduleId="meetings" moduleName="Meetings"><Meetings /></ProtectedRoute></PageSuspense>} />
             <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
-            <Route path="/copilot" element={<PageSuspense><ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute></PageSuspense>} />
-            <Route path="/activity" element={<PageSuspense><ProtectedRoute moduleId="activity" moduleName="Activity"><Activity /></ProtectedRoute></PageSuspense>} />
+            <Route path="/bim" element={<PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/spec-parser" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/activity" element={<Navigate to="/dashboard" replace />} />
             <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
-            <Route path="/project-health" element={<PageSuspense><ProtectedRoute moduleId="project-health" moduleName="Project Health"><ProjectHealth /></ProtectedRoute></PageSuspense>} />
+            <Route path="/project-health" element={<Navigate to="/dashboard" replace />} />
             <Route path="/financials" element={<PageSuspense><ProtectedRoute moduleId="financials" moduleName="Financials"><Financials /></ProtectedRoute></PageSuspense>} />
             <Route path="/pay-apps" element={<PageSuspense><ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute></PageSuspense>} />
             <Route path="/payment-applications" element={<PageSuspense><ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute></PageSuspense>} />
@@ -364,21 +369,24 @@ function AppRoutes() {
             <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/lien-waivers" element={<PageSuspense><ProtectedRoute moduleId="lien-waivers" moduleName="Lien Waivers"><LienWaivers /></ProtectedRoute></PageSuspense>} />
+            <Route path="/lien-waivers" element={<Navigate to="/pay-apps" replace />} />
             <Route path="/contracts" element={<PageSuspense><ProtectedRoute moduleId="contracts" moduleName="Contracts"><Contracts /></ProtectedRoute></PageSuspense>} />
-            <Route path="/transmittals" element={<PageSuspense><ProtectedRoute moduleId="transmittals" moduleName="Transmittals"><Transmittals /></ProtectedRoute></PageSuspense>} />
+            <Route path="/transmittals" element={<Navigate to="/files" replace />} />
             <Route path="/closeout" element={<PageSuspense><ProtectedRoute moduleId="closeout" moduleName="Closeout"><Closeout /></ProtectedRoute></PageSuspense>} />
-            <Route path="/specifications" element={<PageSuspense><ProtectedRoute moduleId="specifications" moduleName="Specifications"><Specifications /></ProtectedRoute></PageSuspense>} />
-            <Route path="/preconstruction" element={<PageSuspense><ProtectedRoute moduleId="preconstruction" moduleName="Preconstruction"><Preconstruction /></ProtectedRoute></PageSuspense>} />
-            <Route path="/resources" element={<PageSuspense><ProtectedRoute moduleId="resources" moduleName="Resources"><Resources /></ProtectedRoute></PageSuspense>} />
+            <Route path="/specifications" element={<Navigate to="/files" replace />} />
+            <Route path="/preconstruction" element={<Navigate to="/estimating" replace />} />
+            <Route path="/resources" element={<Navigate to="/estimating" replace />} />
             <Route path="/vendors" element={<PageSuspense><ProtectedRoute moduleId="vendors" moduleName="Vendors"><Vendors /></ProtectedRoute></PageSuspense>} />
             <Route path="/cost-management" element={<PageSuspense><ProtectedRoute moduleId="cost-management" moduleName="Cost Management"><CostManagement /></ProtectedRoute></PageSuspense>} />
             <Route path="/time-tracking" element={<PageSuspense><ProtectedRoute moduleId="time-tracking" moduleName="Time Tracking"><TimeTracking /></ProtectedRoute></PageSuspense>} />
-            <Route path="/deliveries" element={<PageSuspense><ProtectedRoute moduleId="deliveries" moduleName="Deliveries"><Deliveries /></ProtectedRoute></PageSuspense>} />
+            <Route path="/deliveries" element={<Navigate to="/procurement" replace />} />
             <Route path="/wiki" element={<PageSuspense><ProtectedRoute moduleId="wiki" moduleName="Wiki"><Wiki /></ProtectedRoute></PageSuspense>} />
             <Route path="/site-map" element={<PageSuspense><ProtectedRoute moduleId="site-map" moduleName="Site Map"><SiteMap /></ProtectedRoute></PageSuspense>} />
             <Route path="/carbon" element={<PageSuspense><ProtectedRoute moduleId="carbon" moduleName="Carbon"><CarbonDashboard /></ProtectedRoute></PageSuspense>} />
-            <Route path="/settings/workflows" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflows"><WorkflowSettings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/compliance" element={<PageSuspense><ProtectedRoute moduleId="compliance" moduleName="HUD & Tax Credits"><HUDCompliancePage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/site-intelligence" element={<Navigate to="/site-map" replace />} />
+            <Route path="/copilot" element={<PageSuspense><ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute></PageSuspense>} />
+            <Route path="/settings/workflows" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>
@@ -397,6 +405,7 @@ function AppContent() {
   useTheme();
 
   const projectId = useProjectId();
+  const { isLoading: projectsLoading } = useProjectInit(); // Sync React Query projects → Zustand store + auto-select first project
   const { user } = useAuth();
   usePrefetchRoutes(!!user);
   const { conflictCount } = useOfflineStatus();
@@ -497,7 +506,10 @@ function AppContent() {
         {/* key={pathname} resets the boundary on navigation so a crash on one page
             doesn't lock the user out of every other page. */}
         <ErrorBoundary key={location.pathname} fallback={<ErrorFallback />}>
-          <AppRoutes />
+          {!projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
+            ? <ProjectGate />
+            : <AppRoutes />
+          }
         </ErrorBoundary>
       </ChunkLoadErrorBoundary>
       <Suspense fallback={null}><FloatingAIButton /></Suspense>
@@ -519,9 +531,7 @@ function AppContent() {
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        <nav role="navigation" aria-label="Main navigation">
-          <Sidebar activeView={activeView} onNavigate={handleNavigate} />
-        </nav>
+        <Sidebar activeView={activeView} onNavigate={handleNavigate} />
 
         <main
           id="main-content"
@@ -532,7 +542,7 @@ function AppContent() {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            marginLeft: isMobile ? 0 : (sidebarCollapsed ? 64 : 240),
+            marginLeft: isMobile ? 0 : (sidebarCollapsed ? 64 : 252),
             overflow: 'auto',
             transition: 'margin-left 150ms ease-out',
           }}
@@ -542,7 +552,10 @@ function AppContent() {
             {/* key={pathname} resets the boundary on navigation so a crash on one page
                 doesn't lock the user out of every other page. */}
             <ErrorBoundary key={location.pathname}>
-              <AppRoutes />
+              {!projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
+                ? <ProjectGate />
+                : <AppRoutes />
+              }
             </ErrorBoundary>
           </ChunkLoadErrorBoundary>
         </main>
@@ -560,12 +573,11 @@ function AppContent() {
   );
 }
 
-function SentryFallback({ error }: { error?: Error }) {
+function SentryFallback() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', textAlign: 'center', padding: spacing['8'] }}>
       <h1 style={{ fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.semibold, margin: 0, marginBottom: spacing['2'] }}>Something went wrong</h1>
       <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, marginBottom: spacing['4'] }}>An unexpected error has been reported. Please reload to continue.</p>
-      {error && <pre style={{ fontSize: typography.fontSize.label, color: colors.statusCritical, margin: `0 0 ${spacing['4']}`, maxWidth: '600px', textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: colors.surfaceInset, padding: spacing['3'], borderRadius: borderRadius.base }}>{error.message}{'\n'}{error.stack}</pre>}
       <button onClick={() => window.location.reload()} style={{ padding: `${spacing['2']} ${spacing['6']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.base, fontSize: typography.fontSize.body, cursor: 'pointer' }}>
         Reload Page
       </button>
@@ -664,6 +676,8 @@ function ErrorFallback() {
 }
 
 function App() {
+  // Seed demo data into React Query cache when dev bypass is active
+
   useEffect(() => {
     const handler = (event: PromiseRejectionEvent) => {
       const reason = event.reason?.message || String(event.reason || '');
@@ -678,7 +692,7 @@ function App() {
   }, []);
 
   return (
-    <Sentry.ErrorBoundary fallback={({ error }: { error?: Error }) => <SentryFallback error={error} />}>
+    <Sentry.ErrorBoundary fallback={<SentryFallback />}>
       <style>{animationKeyframes}</style>
       <QueryClientProvider client={queryClient}>
         <OrganizationProvider>

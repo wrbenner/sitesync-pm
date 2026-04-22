@@ -1,7 +1,114 @@
-# FEEDBACK.md — 9-Day Enterprise Mission to April 15th
-*Walker returns April 15th. These priorities run in strict sequence. Each overnight run builds on the last.*
-*Last updated: April 6, 2026 by April 15th Mission Planner*
+# FEEDBACK.md — SiteSync PM Nightly Build Priorities
+*Walker is calling GCs this week. Every overnight build must make the product more demoable.*
+*Last updated: April 22, 2026 by Chief Product Strategist*
 *Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
+
+---
+
+## 🚨 CRITICAL: Builder Down FOUR Nights — Product Is Stalling
+
+The nightly builder has not executed a single commit since April 18. Commit `2a3a7df` disabled all scheduled workflow crons. This is now **night FOUR** with zero builder activity. 16 `Math.random()` calls still in production code. Zero WorkflowTimeline component. The strategist has written four consecutive nights of priorities that went nowhere. **Walker: this is the single biggest bottleneck. Re-enable `nightly-build.yml` or run the builder manually. No amount of strategy fixes a disabled execution pipeline.**
+
+---
+
+## Tonight's P0 Priorities (April 22 → April 23 2am CDT)
+
+### 1. MOCK DATA ELIMINATION — KILL ALL 16 Math.random() CALLS (CARRIED FORWARD — NIGHT 4)
+**SPEC ref:** P0-1 (Mock Data Elimination — 0% complete, blocks every investor demo and GC call)
+**Files to change (16 occurrences confirmed via grep):**
+- `src/components/budget/SCurve.tsx:282` — DEMO KILLER: fake budget variance
+- `src/pages/Procurement.tsx:1084` — DEMO KILLER: random PO numbers
+- `src/pages/payment-applications/index.tsx:235` — DEMO KILLER: random fallback ID
+- `src/components/drawings/MeasurementOverlay.tsx:83` — ID generation
+- `src/components/drawings/DrawingTiledViewer.tsx:330` — ID generation
+- `src/components/drawings/AnnotationCanvas.tsx:39` — ID generation
+- `src/components/shared/PhotoAnnotation.tsx:84` — ID generation
+- `src/components/shared/DrawingMarkup.tsx:100` — ID generation
+- `src/components/shared/Whiteboard.tsx:109` — ID generation
+- `src/components/shared/FileDropZone.tsx:32` — ID generation
+- `src/components/submittals/SubmittalCreateWizard.tsx:527` — ID generation
+- `src/components/punch-list/PunchItemCreateWizard.tsx:571,608` — ID generation (2 occurrences)
+- `src/hooks/useRealtimeInvalidation.ts:48` — ID generation
+- `src/lib/scheduleHealth.ts:86` — ID generation
+- `src/pages/whiteboard/WhiteboardPage.tsx:26` — ID generation
+**What to do:**
+1. **Three demo-killing fakes (FIX FIRST — these destroy credibility in GC calls this week):**
+   - `SCurve.tsx:282` — `0.95 + Math.random() * 0.1` generates fake budget variance that changes on every reload. Replace with: query real `actual_amount` from `budget_line_items` grouped by `period_date`. If no actuals exist, render only the planned line with label "Actuals will appear as costs are recorded." Use integer cents (LEARNINGS.md). A chart with one honest line beats two fabricated ones.
+   - `Procurement.tsx:1084` — `PO-${2045 + Math.floor(Math.random() * 10)}` generates random PO numbers. Replace with deterministic: `PO-${req.id.slice(0,8).toUpperCase()}`.
+   - `payment-applications/index.tsx:235` — `String(Math.random())` as fallback ID. Replace with `crypto.randomUUID()`.
+2. **Mechanical ID generation fix (13 remaining files):** Every `Math.random().toString(36).slice(2, 9)` → `crypto.randomUUID().slice(0, 8)`. Every `Math.random().toString(36).slice(2)` → `crypto.randomUUID()`. Every `Math.random().toString(36).slice(2, 7)` → `crypto.randomUUID().slice(0, 5)`. Every standalone `Math.random()` ID pattern → `crypto.randomUUID()`. Include `MeasurementOverlay.tsx:83`, `DrawingTiledViewer.tsx:330`, and `scheduleHealth.ts:86` which were missed in previous priority lists.
+3. **Exceptions:** `IntelligenceGraph.tsx` uses Math.random() for force-directed graph physics — visual algorithm, not mock data. Leave as-is.
+4. **Verify:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v "IntelligenceGraph"` returns 0 results.
+5. **Update `.quality-floor.json`:** set `mockCount` to 1 (IntelligenceGraph exception only).
+6. **Commit:** `git add -A && git commit -m "fix(P0-1): eliminate all 16 Math.random calls — crypto.randomUUID + real budget data [auto]"`
+**Done looks like:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v IntelligenceGraph | wc -l` returns 0. The S-Curve chart shows only the planned line when no actuals exist. PO numbers are deterministic. No ID changes between page reloads. mockCount in `.quality-floor.json` = 1.
+**WHY:** Night FOUR. Walker is calling GCs this week. The Budget S-Curve (Demo Step 5) generates visibly different fake numbers on every page reload — a CTO who opens the budget page twice will catch this in 10 seconds. The Procurement page creates different PO numbers for the same requisition on repeated conversions. These aren't edge cases; they're front-and-center credibility killers. This is the lowest-effort, highest-impact fix in the entire codebase: 13 of the 16 fixes are a mechanical find-and-replace that takes under 5 minutes total.
+
+### 2. RFI STATE MACHINE + WORKFLOWTIMELINE — DEMO STEP 3 MUST WORK END-TO-END
+**SPEC ref:** P0-6 (State Machine Handler Completion — 0% complete) + P1-2 (RFIs — 35% complete)
+**Files to change:** `src/machines/rfiMachine.ts`, `src/pages/RFIs.tsx` (or wherever the RFI detail/list view lives), `src/components/WorkflowTimeline.tsx` (CREATE — confirmed absent, 0 references in codebase)
+**What to do:**
+1. **Audit `src/machines/rfiMachine.ts`** — the machine exists with proper XState `setup()` and has SUBMIT, START_REVIEW, RESPOND, CLOSE, VOID events defined. Verify each transition has:
+   - A `guard` checking user permission via the role from context
+   - An `entry` action that calls `persistTransition` actor to update `status` and `ball_in_court` in the `rfis` table
+   - An `entry` action that writes to `activity_log` with `{ from_state, to_state, actor_id, timestamp }`
+   - Invalid transitions must throw a typed `InvalidTransitionError` — never silently no-op
+2. **Create `src/components/WorkflowTimeline.tsx`** — horizontal stepper component:
+   - Props: `states: string[]`, `currentState: string`, `completedStates: string[]`
+   - Renders each state as a step with connecting lines. Completed states show checkmarks (green). Current state is highlighted (brand blue). Future states are gray.
+   - Use inline styles with theme tokens (ADR-003). 56px minimum touch targets (LEARNINGS.md).
+   - This component is reusable across Submittals, Change Orders, Pay Apps — building it once enables 4 workflows.
+3. **Wire the RFI detail page:**
+   - Top: `<WorkflowTimeline states={['draft','submitted','under_review','responded','closed']} currentState={rfi.status} />`
+   - Action buttons computed from the machine's available events for current state. `draft` → "Submit" only. `submitted` → "Start Review" only. Never show unavailable transitions.
+   - Each button: fire machine event → optimistic UI → Supabase persist → rollback + toast on error
+   - Activity feed at bottom: query `activity_log WHERE resource_type='rfi' AND resource_id=rfi.id ORDER BY created_at DESC`
+4. **Unit tests:** `src/machines/__tests__/rfiMachine.test.ts` — test each valid transition (5 happy paths), each invalid transition (e.g., draft → closed throws), and verify activity_log write on each transition.
+5. **Commit:** `git add -A && git commit -m "feat(P0-6): complete RFI state machine + WorkflowTimeline component [auto]"`
+**Done looks like:** Open any RFI detail page. See the horizontal WorkflowTimeline showing progress. Click through the full lifecycle: draft → submitted → under_review → responded → closed. Each click transitions the status, updates the ball-in-court, and appends an activity log entry. Invalid transitions throw typed errors. `npm test src/machines/rfiMachine` passes. The WorkflowTimeline renders cleanly at 768px (iPad demo width).
+**WHY:** Demo Step 3 is the moment a superintendent sees their real workflow reflected in software. "I submit it, the architect reviews it, they respond, I close it." That's the daily reality. If the transitions silently fail or the status gets stuck, the superintendent thinks "this doesn't understand my job." The WorkflowTimeline is a force multiplier — it's one component that makes RFIs, Submittals, Change Orders, and Pay Apps all look more polished instantly. Building it now enables 4 demo steps with one piece of UI. Procore shows status as a dropdown. We show it as a visual journey. That visual difference is what makes a PM screenshot it and send it to their VP.
+
+### 3. ESLINT WARNINGS — CUT 607 → 300 BY FIXING AUTO-FIXABLE VIOLATIONS
+**SPEC ref:** Quality Gates (ESLint: ⚠️ Warnings present, target: 0)
+**Files to change:** Run `npx eslint --fix src/` across the codebase, then manually fix the highest-frequency warning categories
+**What to do:**
+1. **Run auto-fix first:** `npx eslint --fix src/ --ext .ts,.tsx` — this will handle all auto-fixable warnings (unused imports, formatting, simple type issues). Expect ~200-300 fixes for free.
+2. **Identify top warning categories:** `npx eslint src/ --ext .ts,.tsx --format json 2>/dev/null | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));const m={};d.forEach(f=>f.messages.forEach(msg=>{m[msg.ruleId]=(m[msg.ruleId]||0)+1}));Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([r,c])=>console.log(c,r))"` — fix the top 3 categories manually if they aren't auto-fixable.
+3. **Do NOT use `eslint-disable` comments** to suppress warnings. Fix the code or downgrade the rule in `eslint.config.js` if the rule is wrong for this project.
+4. **Update `.quality-floor.json`:** set `eslintWarnings` to the new count (target: ≤ 300).
+5. **Commit:** `git add -A && git commit -m "fix(quality): eslint auto-fix + top warning categories — 607 → N warnings [auto]"`
+**Done looks like:** `npx eslint src/ --ext .ts,.tsx 2>&1 | grep -c "warning"` returns ≤ 300. Zero new errors introduced. `npm run build` still passes. `.quality-floor.json` `eslintWarnings` updated to new floor.
+**WHY:** 607 ESLint warnings is a blinking red light for any CTO who runs `npm run lint`. It signals "this team doesn't clean up after themselves." More practically: warnings hide real bugs. Unused imports bloat the bundle. Missing return types cause runtime surprises. Cutting warnings in half is a 30-minute investment (most are auto-fixable) that immediately improves code health scores and makes the codebase more navigable for both humans and AI agents. The quality ratchet (ADR-010) means once we get to 300, we never go above 300 again — every future commit must maintain or improve. This is the kind of compounding hygiene that separates enterprise-grade codebases from prototypes. It also directly unblocks the "ESLint: zero warnings" quality gate in SPEC.md, moving us from ⚠️ to a measurable number.
+
+---
+
+## Completed Archive
+
+### April 19-22: FOUR CONSECUTIVE NIGHTS — BUILDER DISABLED, PRIORITIES UNEXECUTED
+- **Status:** All 3 priorities (mock data, RFI state machine, dashboard KPIs) carried forward for 4 consecutive nights. Zero builder commits since April 18.
+- **Root cause:** Commit `2a3a7df` disabled all scheduled workflow crons to halt API spend. The nightly builder has never re-triggered.
+- **Impact:** mockCount stuck at 7 (actually 16 — grep found additional occurrences in MeasurementOverlay, DrawingTiledViewer, scheduleHealth, and a second PunchItemCreateWizard call). Dashboard KPIs partially wired. RFI state machine exists but WorkflowTimeline component is absent (0 references). ESLint warnings at 607.
+- **What changed in tonight's priorities:** (1) Expanded mock data list from 12 to 16 files after fresh grep — 3 files were missed in previous scans. (2) Replaced Dashboard KPI priority #3 with ESLint cleanup — the dashboard queries may already partially work and the KPI tile wiring is complex enough to be a standalone night's work, while ESLint auto-fix is high-ROI mechanical work. (3) Added explicit WorkflowTimeline creation confirmation (0 references in codebase).
+- **Action needed:** Walker must re-enable `nightly-build.yml` or run the builder manually. Four nights of strategic direction have been written with zero execution. The product is falling behind the GC call schedule.
+
+### April 17-18: Test Coverage Foundation + UX Polish (Phase A/B)
+- **Completed:** 75 mutation hook tests, 51 page smoke tests, drift guard, CI workflow, vitest coverage config, skeleton loading states, 56px touch targets, no-hex-colors lint rule, harness detector
+- **Commits:** 0a42b2c (Phase A), a2ba759 (Phase B), ed64e09 through 4ba340d (Phase A substeps)
+- **Impact:** Coverage rose from ~20% to 43.2%. Touch targets now meet industrial gloved-use requirements.
+
+### April 16-17: Security Hardening + Platform Audit
+- **Completed:** Wrapped 26+ mutations in useAuditedMutation, 5 new Zod schemas, CO state machine guards, FormModal focus trap, platform-wide functional audit harness (55/55 pages @ 100% actionable)
+- **Commits:** a66535e, df4e26d, 84af4a9, 4b23cfe through d618aeb
+- **Impact:** Every mutation is now audited. Zod validation on core forms. Change order machine has proper guards.
+
+### April 15-16: Crash Fixes + Entity CRUD Completion
+- **Completed:** Fixed universal crash on project creation (null safety, auto-add creator to project_members, self-heal existing projects), scaffolded ChangeOrders page, completed CRUD for Vendors/Contracts/Permits/PayApps
+- **Commits:** 0ae50df through 61cc0fe, ffa1075 through 4b23cfe
+- **Impact:** App no longer crashes when creating a new project. All entity pages have full CRUD operations.
+
+---
+
+## Reference: Enterprise Demo Flow (unchanged from April 6 plan)
 
 ---
 

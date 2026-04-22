@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -20,7 +20,7 @@ const VALID_AGENT_TYPES = new Set([
 
 const MAX_RUNS_PER_HOUR = 10
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const cors = getCorsHeaders(req)

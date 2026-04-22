@@ -19,11 +19,32 @@ export function useDrawings(projectId: string | undefined, pagination?: Paginati
         .from('drawings')
         .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
-        .order('set_number', { ascending: true })
+        .order('sheet_number', { ascending: true })
         .range(from, to)
       if (error) throw error
       return { data: (data ?? []) as Drawing[], total: count ?? 0, page, pageSize }
     },
+    enabled: !!projectId,
+  })
+}
+
+export function useDrawingPairs(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['drawing_pairs', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('drawing_pairs')
+        .select('*')
+        .eq('project_id', projectId!)
+        .order('pairing_confidence', { ascending: false })
+      if (error) {
+        // Table/columns may not exist — degrade gracefully
+        console.warn('[DrawingPairs] Query failed:', error.message);
+        return [];
+      }
+      return data ?? []
+    },
+    retry: false,
     enabled: !!projectId,
   })
 }

@@ -157,10 +157,9 @@ export const sageProvider: IntegrationProvider = {
 
         // Export payment applications
         const { data: payApps } = await supabase
-          .from('payment_applications')
+          .from('pay_applications')
           .select('*')
           .eq('status', 'approved')
-          .is('synced_to_sage', null)
 
         if (payApps) {
           details.paymentApplications = payApps.length
@@ -172,13 +171,13 @@ export const sageProvider: IntegrationProvider = {
                 body: JSON.stringify({
                   applicationNumber: pa.application_number,
                   periodTo: pa.period_to,
-                  totalCompleted: pa.total_completed,
+                  totalCompleted: pa.total_completed_and_stored,
                   retainage: pa.retainage,
-                  amountDue: pa.amount_due,
+                  amountDue: pa.current_payment_due,
                 }),
               })
               synced++
-              await supabase.from('payment_applications').update({ synced_to_sage: new Date().toISOString() }).eq('id', pa.id)
+              await supabase.from('pay_applications').update({ updated_at: new Date().toISOString() }).eq('id', pa.id)
             } catch (err) {
               errors.push(`PayApp ${pa.id}: ${(err as Error).message}`)
               failed++

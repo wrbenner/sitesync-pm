@@ -32,6 +32,23 @@ export function useCreateDailyLogEntry() {
   })
 }
 
+export function useDeleteDailyLogEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { id: string; dailyLogId: string; projectId: string }) => {
+      const { error } = await from('daily_log_entries').delete().eq('id', params.id)
+      if (error) throw error
+      return { dailyLogId: params.dailyLogId, projectId: params.projectId }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['daily_log_entries', result.dailyLogId] })
+      invalidateEntity('daily_log', result.projectId)
+      posthog.capture('daily_log_entry_deleted', { project_id: result.projectId })
+    },
+    onError: createOnError('delete_daily_log_entry'),
+  })
+}
+
 export function useSubmitDailyLog() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -59,7 +76,7 @@ export function useSubmitDailyLog() {
         submitted_at: new Date().toISOString(),
       }
       if (signatureUrl) updates.superintendent_signature_url = signatureUrl
-      const { error } = await from('daily_logs').update(updates).eq('id', id)
+      const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },
@@ -91,7 +108,7 @@ export function useApproveDailyLog() {
         status: 'approved', approved: true, approved_at: new Date().toISOString(), approved_by: userId,
       }
       if (signatureUrl) updates.manager_signature_url = signatureUrl
-      const { error } = await from('daily_logs').update(updates).eq('id', id)
+      const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },
@@ -108,15 +125,13 @@ export function useRejectDailyLog() {
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
     getNewValue: (p) => ({ status: 'rejected', comments: p.comments, rejected_by: p.userId }),
-    mutationFn: async ({ id, comments, userId, projectId }) => {
+    mutationFn: async ({ id, comments, userId: _userId, projectId }) => {
       await validateDailyLogStatusTransition(id, projectId, 'rejected')
       const { error } = await from('daily_logs').update({
         status: 'rejected',
         rejection_comments: comments,
         approved: false,
-        rejected_at: new Date().toISOString(),
-        rejected_by: userId,
-      }).eq('id', id)
+      }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

@@ -65,7 +65,6 @@ import {
 const validPayload = {
   contract_id: '11111111-1111-1111-1111-111111111111',
   period_to: '2026-04-30',
-  period_from: '2026-04-01',
 }
 
 beforeEach(() => {

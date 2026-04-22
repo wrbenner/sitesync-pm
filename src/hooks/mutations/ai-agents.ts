@@ -22,7 +22,7 @@ export function useApproveAgentAction() {
         reviewed_at: new Date().toISOString(),
         applied: true,
         applied_at: new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },
@@ -42,7 +42,7 @@ export function useRejectAgentAction() {
         status: 'rejected',
         reviewed_by: userId,
         reviewed_at: new Date().toISOString(),
-      }).eq('id', id)
+      }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },
@@ -58,7 +58,7 @@ export function useUpdateAgentConfig() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
-      const { error } = await from('ai_agents').update(updates).eq('id', id)
+      const { error } = await from('ai_agents').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

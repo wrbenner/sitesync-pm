@@ -104,7 +104,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
         severity: form.severity,
         injured_party_name: form.injured_party_name,
         root_cause: form.root_cause || null,
-        photo_url: photoUrl,
+        photos: photoUrl ? [photoUrl] : null,
       });
       if (error) throw error;
 
@@ -112,7 +112,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
         await supabase.from('corrective_actions').insert({
           project_id: projectId,
           description: form.ca_description,
-          assignee: form.ca_assignee || null,
+          assigned_to: form.ca_assignee || null,
           due_date: form.ca_due_date || null,
           status: 'open',
         });

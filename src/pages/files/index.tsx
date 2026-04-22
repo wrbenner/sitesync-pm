@@ -92,15 +92,20 @@ const FilesPage: React.FC = () => {
     draggingFileIdRef.current = fileId;
   }, []);
 
-  const handleInternalDrop = useCallback((targetFolderId: string) => {
+  const handleInternalDrop = useCallback(async (targetFolderId: string) => {
     const sourceId = draggingFileIdRef.current;
     draggingFileIdRef.current = null;
     setDragOverFolderId(null);
     if (!sourceId || sourceId === targetFolderId) return;
     const source = files.find((f: FileItem) => f.id === sourceId);
     const target = files.find((f: FileItem) => f.id === targetFolderId);
-    if (source && target) addToast('success', `Moved "${source.name}" into "${target.name}"`);
-  }, [files, addToast]);
+    if (source && target) {
+      const { error } = await supabase.from('files').update({ parent_folder_id: targetFolderId }).eq('id', sourceId);
+      if (error) { addToast('error', `Failed to move "${source.name}"`); return; }
+      addToast('success', `Moved "${source.name}" into "${target.name}"`);
+      refetch();
+    }
+  }, [files, addToast, refetch]);
 
   const handleFileClick = useCallback((file: FileItem) => {
     if (file.type === 'folder') navigateToFolder(file.id, file.name);

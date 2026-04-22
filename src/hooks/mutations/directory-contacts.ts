@@ -38,7 +38,7 @@ export function useUpdateDirectoryContact() {
     getEntityId: (p) => p.id,
     getAfterState: (p) => p.updates,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').update(params.updates).eq('id', params.id)
+      const { error } = await from('directory_contacts').update(params.updates).eq('id', params.id).eq('project_id', params.projectId)
       if (error) throw error
       return { projectId: params.projectId, id: params.id }
     },
@@ -55,7 +55,7 @@ export function useDeleteDirectoryContact() {
     entityType: 'contact',
     getEntityId: (p) => p.id,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').delete().eq('id', params.id)
+      const { error } = await from('directory_contacts').delete().eq('id', params.id).eq('project_id', params.projectId)
       if (error) throw error
       return { projectId: params.projectId }
     },

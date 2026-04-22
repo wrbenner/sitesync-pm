@@ -12,6 +12,8 @@ import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../../components/ui/EditingLockBanner';
 import { isOverdue, ReviewerStepper } from './types';
 import type { ReviewerRow } from './types';
+import { submittalService } from '../../services/submittalService';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SubmittalDetailProps {
   selected: Record<string, unknown> | null;
@@ -34,9 +36,57 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
 }) => {
   const { addToast } = useToast();
   const appNavigate = useAppNavigate();
+  const queryClient = useQueryClient();
   const [editingDetail, setEditingDetail] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
 
-  const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
+  // Build timeline from real submittal data
+  const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = useMemo(() => {
+    if (!selected) return [];
+    const items: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = [];
+    // Created
+    if (selected.created_at) {
+      items.push({
+        date: new Date(selected.created_at as string).toLocaleDateString(),
+        event: 'Submittal Created',
+        by: (selected.created_by_name as string) || (selected.from as string) || 'System',
+        status: 'complete',
+      });
+    }
+    // Submitted
+    if (selected.submitted_date || selected.submitted_at) {
+      items.push({
+        date: new Date((selected.submitted_date as string) || (selected.submitted_at as string)).toLocaleDateString(),
+        event: 'Submitted for Review',
+        by: (selected.from as string) || 'Subcontractor',
+        status: 'complete',
+      });
+    }
+    // Reviewed / Approved / Rejected
+    if (selected.status === 'approved' && (selected.approved_date || selected.approved_at)) {
+      items.push({
+        date: new Date((selected.approved_date as string) || (selected.approved_at as string)).toLocaleDateString(),
+        event: 'Approved',
+        by: (selected.approved_by_name as string) || (selected.to as string) || 'Reviewer',
+        status: 'complete',
+      });
+    } else if (selected.status === 'revise_resubmit' || selected.status === 'rejected') {
+      items.push({
+        date: new Date().toLocaleDateString(),
+        event: selected.status === 'revise_resubmit' ? 'Revise & Resubmit' : 'Rejected',
+        by: (selected.to as string) || 'Reviewer',
+        status: 'complete',
+      });
+    } else if (['in_review', 'pending', 'open'].includes(selected.status as string)) {
+      items.push({
+        date: 'In Progress',
+        event: 'Under Review',
+        by: (selected.to as string) || 'Reviewer',
+        status: 'active',
+      });
+    }
+    return items;
+  }, [selected]);
 
   const approvalSteps: ApprovalStep[] = useMemo(() => selected ? [
     { id: 1, role: 'Subcontractor', name: (selected.from as string) || 'Contractor', initials: 'SC', status: 'approved', date: 'Submitted', comment: 'Initial submission' },
@@ -45,20 +95,65 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
     { id: 4, role: 'Owner', name: 'Owner', initials: 'OW', status: selected.status === 'approved' ? 'approved' : 'waiting' },
   ] : [], [selected]);
 
-  const handleApprove = useCallback(() => {
-    addToast('success', `${selected?.submittalNumber} approved successfully`);
-    onClose();
-  }, [selected, addToast, onClose]);
+  const handleApprove = useCallback(async () => {
+    if (!selected?.id) return;
+    setActionPending(true);
+    try {
+      const result = await submittalService.addApproval(String(selected.id), 'approved');
+      if (result.error) {
+        toast.error(result.error.userMessage || result.error.message || 'Failed to approve');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['submittals'] });
+      queryClient.invalidateQueries({ queryKey: ['submittal-approvals'] });
+      addToast('success', `${selected?.submittalNumber} approved successfully`);
+      onClose();
+    } catch (err) {
+      toast.error(`Failed to approve: ${(err as Error).message}`);
+    } finally {
+      setActionPending(false);
+    }
+  }, [selected, addToast, onClose, queryClient]);
 
-  const handleReject = useCallback(() => {
-    addToast('error', `${selected?.submittalNumber} has been rejected`);
-    onClose();
-  }, [selected, addToast, onClose]);
+  const handleReject = useCallback(async () => {
+    if (!selected?.id) return;
+    setActionPending(true);
+    try {
+      const reason = window.prompt('Rejection reason (optional):');
+      const result = await submittalService.addApproval(String(selected.id), 'rejected', reason || undefined);
+      if (result.error) {
+        toast.error(result.error.userMessage || result.error.message || 'Failed to reject');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['submittals'] });
+      queryClient.invalidateQueries({ queryKey: ['submittal-approvals'] });
+      addToast('error', `${selected?.submittalNumber} has been rejected`);
+      onClose();
+    } catch (err) {
+      toast.error(`Failed to reject: ${(err as Error).message}`);
+    } finally {
+      setActionPending(false);
+    }
+  }, [selected, addToast, onClose, queryClient]);
 
-  const handleRequestRevision = useCallback(() => {
-    addToast('warning', `Revision requested for ${selected?.submittalNumber}`);
-    onClose();
-  }, [selected, addToast, onClose]);
+  const handleRequestRevision = useCallback(async () => {
+    if (!selected?.id) return;
+    setActionPending(true);
+    try {
+      const result = await submittalService.createRevision(String(selected.id));
+      if (result.error) {
+        toast.error(result.error.userMessage || result.error.message || 'Failed to create revision');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['submittals'] });
+      addToast('warning', `Revision requested for ${selected?.submittalNumber} — Rev ${result.data?.revision_number ?? ''} created`);
+      onClose();
+    } catch (err) {
+      toast.error(`Failed to create revision: ${(err as Error).message}`);
+    } finally {
+      setActionPending(false);
+    }
+  }, [selected, addToast, onClose, queryClient]);
 
   const handleClose = () => {
     setEditingDetail(false);
@@ -164,6 +259,115 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
                 </div>
               }
             />
+            <EditableDetailField
+              label="Required On-Site"
+              value={selected.required_onsite_date ? String(selected.required_onsite_date).slice(0, 10) : ''}
+              editing={editingDetail}
+              type="date"
+              onSave={async (val) => {
+                await updateSubmittalMutateAsync({ id: String(selected.id), updates: { required_onsite_date: val || null }, projectId: projectId! });
+                toast.success('On-site date updated');
+              }}
+              displayContent={
+                selected.required_onsite_date ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <Calendar size={14} color={colors.textSecondary} />
+                    <span style={{ fontSize: typography.fontSize.base, color: colors.textPrimary }}>
+                      {new Date(selected.required_onsite_date as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                ) : undefined
+              }
+            />
+            <EditableDetailField
+              label="Submit By Date"
+              value={selected.submit_by_date ? String(selected.submit_by_date).slice(0, 10) : ''}
+              editing={editingDetail}
+              type="date"
+              onSave={async (val) => {
+                await updateSubmittalMutateAsync({ id: String(selected.id), updates: { submit_by_date: val || null }, projectId: projectId! });
+                toast.success('Submit by date updated');
+              }}
+              displayContent={
+                selected.submit_by_date ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+                    <Clock size={14} color={isOverdue(selected.submit_by_date as string) && selected.status !== 'approved' ? colors.statusCritical : colors.textSecondary} />
+                    <span style={{
+                      fontSize: typography.fontSize.base,
+                      color: isOverdue(selected.submit_by_date as string) && selected.status !== 'approved' ? colors.statusCritical : colors.textPrimary,
+                    }}>
+                      {new Date(selected.submit_by_date as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                ) : undefined
+              }
+            />
+            <EditableDetailField
+              label="Lead Time"
+              value={selected.lead_time_weeks != null ? String(selected.lead_time_weeks) : ''}
+              editing={editingDetail}
+              type="text"
+              onSave={async (val) => {
+                const numVal = val ? parseInt(val, 10) : null;
+                await updateSubmittalMutateAsync({ id: String(selected.id), updates: { lead_time_weeks: numVal }, projectId: projectId! });
+                toast.success('Lead time updated');
+              }}
+              displayContent={
+                selected.lead_time_weeks != null && Number(selected.lead_time_weeks) > 0 ? (() => {
+                  const wks = Number(selected.lead_time_weeks);
+                  const c = wks > 12 ? colors.statusCritical : wks >= 8 ? colors.statusPending : colors.statusActive;
+                  return <span style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: c }}>{wks} weeks</span>;
+                })() : undefined
+              }
+            />
+            <EditableDetailField
+              label="Revision"
+              value={selected.revision_number != null ? String(selected.revision_number) : '0'}
+              editing={editingDetail}
+              type="text"
+              onSave={async (val) => {
+                const numVal = val ? parseInt(val, 10) : 0;
+                await updateSubmittalMutateAsync({ id: String(selected.id), updates: { revision_number: numVal }, projectId: projectId! });
+                toast.success('Revision updated');
+              }}
+              displayContent={
+                <span style={{
+                  fontSize: typography.fontSize.base,
+                  fontWeight: Number(selected.revision_number ?? 0) > 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                  color: Number(selected.revision_number ?? 0) > 0 ? colors.statusCritical : colors.textSecondary,
+                }}>
+                  Rev {selected.revision_number ?? 0}
+                </span>
+              }
+            />
+            {selected.spec_section && (
+              <div>
+                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Spec Section</div>
+                <span style={{ fontSize: typography.fontSize.base, fontFamily: 'monospace', color: colors.textPrimary }}>{selected.spec_section as string}</span>
+              </div>
+            )}
+            {selected.stamp && (
+              <div>
+                <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stamp</div>
+                <span style={{
+                  display: 'inline-block',
+                  padding: '2px 10px',
+                  borderRadius: borderRadius.full,
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.semibold,
+                  backgroundColor: selected.stamp === 'approved' ? `${colors.statusActive}15` :
+                    selected.stamp === 'approved_as_noted' ? `${colors.statusPending}15` :
+                    selected.stamp === 'revise_resubmit' ? `${colors.statusCritical}15` :
+                    `${colors.textTertiary}15`,
+                  color: selected.stamp === 'approved' ? colors.statusActive :
+                    selected.stamp === 'approved_as_noted' ? colors.statusPending :
+                    selected.stamp === 'revise_resubmit' ? colors.statusCritical :
+                    colors.textTertiary,
+                }}>
+                  {String(selected.stamp).replace(/_/g, ' ').toUpperCase()}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Description */}
@@ -174,11 +378,21 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
             </p>
           </div>
 
-          {/* Attachments indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.base }}>
-            <Paperclip size={16} color={colors.textTertiary} />
-            <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>3 attachments (shop drawings, spec sheet, cover letter)</span>
-          </div>
+          {/* Attachments indicator — wired to real attachments jsonb column */}
+          {(() => {
+            const rawAttachments = selected.attachments;
+            const attachments: Array<{ name?: string; filename?: string }> = Array.isArray(rawAttachments) ? rawAttachments : [];
+            const count = attachments.length;
+            if (count === 0) return null;
+            const names = attachments.slice(0, 3).map(a => a.name || a.filename || 'file').join(', ');
+            const suffix = count > 3 ? ` +${count - 3} more` : '';
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.base }}>
+                <Paperclip size={16} color={colors.textTertiary} />
+                <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{count} attachment{count !== 1 ? 's' : ''} ({names}{suffix})</span>
+              </div>
+            );
+          })()}
 
           {/* Review Timeline */}
           <div>

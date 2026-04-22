@@ -1,7 +1,7 @@
-// Shared types for the drawings domain
+// Shared types and utilities for the drawings domain
 
 export interface DrawingItem {
-  id: number;
+  id: string;
   title: string;
   setNumber: string;
   discipline: string;
@@ -12,23 +12,15 @@ export interface DrawingItem {
   sheetCount?: number;
   currentRevision?: { revision_number: number; issued_date: string | null; issued_by?: string };
   revisions: import('../../types/api').DrawingRevision[];
+  /** Supabase storage path for the drawing file (image or PDF) */
+  file_url?: string;
+  /** Tile generation status: pending | processing | ready | failed */
+  tile_status?: 'pending' | 'processing' | 'ready' | 'failed';
+  /** Number of DZI tile levels when tile_status === 'ready' */
+  tile_levels?: number;
+  /** Tile format (jpeg, png) */
+  tile_format?: string;
 }
-
-export const aiChanges: Record<number, number> = {};
-
-export const linkedItems: Record<number, { rfis: number; submittals: number }> = {};
-
-export const lastViewed: Record<number, string> = {};
-
-export const gridColumns = '60px 80px 1fr 120px 80px 100px 80px 70px 120px 100px 70px 90px';
-
-export const coordinationConflicts = [
-  { id: 'c1', drawing1: 'A-201', rev1: 'Rev 3', drawing2: 'S-101', location: 'Grid Line C4', discipline1: 'Architectural', discipline2: 'Structural', confidence: 0.94 },
-  { id: 'c2', drawing1: 'M-301', rev1: 'Rev 2', drawing2: 'S-204', location: 'Level 3 ceiling plenum', discipline1: 'Mechanical', discipline2: 'Structural', confidence: 0.88 },
-  { id: 'c3', drawing1: 'E-101', rev1: 'Rev 1', drawing2: 'P-201', location: 'Mechanical room west wall', discipline1: 'Electrical', discipline2: 'Plumbing', confidence: 0.76 },
-  { id: 'c4', drawing1: 'FP-101', rev1: 'Rev 2', drawing2: 'A-301', location: 'Stairwell 3 soffit', discipline1: 'Fire Protection', discipline2: 'Architectural', confidence: 0.71 },
-  { id: 'c5', drawing1: 'M-401', rev1: 'Rev 1', drawing2: 'E-202', location: 'Roof drain area B7', discipline1: 'Mechanical', discipline2: 'Electrical', confidence: 0.68 },
-];
 
 export function formatRevDate(dateStr: string | null): string {
   if (!dateStr) return '—';

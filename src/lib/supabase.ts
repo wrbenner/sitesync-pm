@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Session } from '@supabase/supabase-js'
 import type { Database, Profile } from '../types/database'
-import { UserRole } from '../types/database'
+import { UserRole } from '../types/enums'
 
 // Supabase config: env vars are injected at build time by Vite.
 // Fallbacks exist because deployment pipelines (Vercel) may not always
 // have VITE_* vars configured. The anon key is designed to be public —
 // RLS policies enforce all access control server-side.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://hypxrmcppjfbtlwuoafc.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHhybWNwcGpmYnRsd3VvYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzMzNTMsImV4cCI6MjA1ODU0OTM1M30.gNMsHHCEYTkMMAuaJUBWJyXVDol76LkFh3DQ_MpGBnQ'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHhybWNwcGpmYnRsd3VvYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTM1MjQsImV4cCI6MjA5MDI4OTUyNH0.gI_zodUcFN1z5a9k4GC5At4fsPYgWi-99C0ZNcVgmYA'
 if (!import.meta.env.VITE_SUPABASE_URL) {
   console.warn('[SiteSync] VITE_SUPABASE_URL not set — using default. Configure in your deployment environment.')
 }
@@ -21,6 +21,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Disable gotrue-js's navigator-lock serialization. It's designed to coordinate auth
+    // refresh across multiple tabs, but in practice it causes 5s timeouts + "Lock stolen"
+    // errors when a page fires many concurrent data fetches (each one wants to read the
+    // session, each acquires the same lock). Pass-through is safe for single-tab usage.
+    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
   },
 })
 

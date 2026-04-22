@@ -11,6 +11,7 @@ const punchItemsState = {
   isLoading: false,
   error: null as unknown,
   refetch: vi.fn(),
+  fetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
 }
 
 vi.mock('../../../lib/supabase', () => ({
@@ -101,6 +102,7 @@ describe('PunchList', () => {
     punchItemsState.data = { data: [] }
     punchItemsState.isLoading = false
     punchItemsState.error = null
+    punchItemsState.fetchStatus = 'idle'
   })
 
   it('renders without crashing', () => {
@@ -110,6 +112,7 @@ describe('PunchList', () => {
 
   it('shows loading state', () => {
     punchItemsState.isLoading = true
+    punchItemsState.fetchStatus = 'fetching'
     const { container } = render(wrap(<PunchList />))
     // Loading subtitle appears in PageContainer
     expect(container.textContent).toMatch(/loading/i)

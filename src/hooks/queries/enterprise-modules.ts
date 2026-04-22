@@ -152,6 +152,40 @@ export function useUpdateCloseoutStatus() {
   })
 }
 
+export function useDeleteCloseoutItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
+      const { error } = await supabase.from('closeout_items').delete().eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['closeout_items', vars.projectId] })
+    },
+  })
+}
+
+export function usePunchItemsSummary(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['punch_items_summary', projectId],
+    queryFn: async () => {
+      const { data, error, count } = await supabase
+        .from('punch_items')
+        .select('id, status', { count: 'exact' })
+        .eq('project_id', projectId!)
+      if (error) throw error
+      const items = data ?? []
+      const total = count ?? items.length
+      const completed = items.filter((i: { status: string }) =>
+        i.status === 'closed' || i.status === 'verified' || i.status === 'resolved'
+      ).length
+      return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0 }
+    },
+    enabled: !!projectId,
+  })
+}
+
 // ── Pre-Task Plans ────────────────────────────────────────
 
 export function usePreTaskPlans(projectId: string | undefined) {
@@ -185,33 +219,5 @@ export function useCreatePreTaskPlan() {
 }
 
 // ── Specifications ────────────────────────────────────────
-
-export function useSpecifications(projectId: string | undefined) {
-  return useQuery({
-    queryKey: ['specifications', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('specifications')
-        .select('*')
-        .eq('project_id', projectId!)
-        .order('section_number')
-      if (error) throw error
-      return data
-    },
-    enabled: !!projectId,
-  })
-}
-
-export function useCreateSpecification() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('specifications').insert(payload).select().single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['specifications', (vars as Record<string, unknown>).project_id] })
-    },
-  })
-}
+// Moved to dedicated file: specifications.ts
+// Re-exported via barrel index.ts

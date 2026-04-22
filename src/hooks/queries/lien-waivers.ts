@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { getLienWaivers } from '../../api/endpoints/lienWaivers'
+import { toast } from 'sonner'
 
 
 
@@ -27,5 +28,56 @@ export function useLienWaiversByPayApp(payAppId: string | undefined) {
       return data
     },
     enabled: !!payAppId,
+  })
+}
+
+export function useCreateLienWaiver() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      project_id: string
+      contractor_name: string
+      waiver_state: string
+      amount: number | null
+      through_date: string | null
+      status: string
+      notes: string | null
+    }) => {
+      const { data, error } = await supabase
+        .from('lien_waivers')
+        .insert(payload as any)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['lien_waivers', variables.project_id] })
+      toast.success('Lien waiver created')
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to create lien waiver')
+    },
+  })
+}
+
+export function useDeleteLienWaiver() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
+      const { error } = await supabase
+        .from('lien_waivers')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+      return { projectId }
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['lien_waivers', variables.projectId] })
+      toast.success('Lien waiver deleted')
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to delete lien waiver')
+    },
   })
 }

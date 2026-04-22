@@ -15,9 +15,25 @@ CREATE TABLE IF NOT EXISTS specifications (
   UNIQUE (project_id, section_number)
 );
 
-CREATE INDEX IF NOT EXISTS idx_specs_project ON specifications(project_id);
-CREATE INDEX IF NOT EXISTS idx_specs_division ON specifications(division);
-CREATE INDEX IF NOT EXISTS idx_specs_section ON specifications(section_number);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'specifications' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_specs_project ON specifications(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'specifications' AND column_name = 'division') THEN
+    CREATE INDEX IF NOT EXISTS idx_specs_division ON specifications(division);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'specifications' AND column_name = 'section_number') THEN
+    CREATE INDEX IF NOT EXISTS idx_specs_section ON specifications(section_number);
+  END IF;
+END $$;
 
 ALTER TABLE specifications ENABLE ROW LEVEL SECURITY;
 

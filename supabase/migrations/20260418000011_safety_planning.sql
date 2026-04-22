@@ -16,9 +16,25 @@ CREATE TABLE IF NOT EXISTS pre_task_plans (
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_ptp_project ON pre_task_plans(project_id);
-CREATE INDEX IF NOT EXISTS idx_ptp_date ON pre_task_plans(date);
-CREATE INDEX IF NOT EXISTS idx_ptp_status ON pre_task_plans(status);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pre_task_plans' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_ptp_project ON pre_task_plans(project_id);
+
+  END IF;
+
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pre_task_plans' AND column_name = 'date') THEN
+    CREATE INDEX IF NOT EXISTS idx_ptp_date ON pre_task_plans(date);
+  END IF;
+END $$;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pre_task_plans' AND column_name = 'status') THEN
+    CREATE INDEX IF NOT EXISTS idx_ptp_status ON pre_task_plans(status);
+  END IF;
+END $$;
 
 ALTER TABLE pre_task_plans ENABLE ROW LEVEL SECURITY;
 

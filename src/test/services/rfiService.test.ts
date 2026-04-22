@@ -78,7 +78,7 @@ function makeChain(
 const RFI = {
   id: 'rfi-1',
   project_id: 'proj-1',
-  rfi_number: 42,
+  number: 42,
   title: 'Beam size clarification at grid A3',
   description: 'What is the correct beam size at grid A3?',
   status: 'draft',
@@ -86,7 +86,7 @@ const RFI = {
   created_by: 'user-1',
   assigned_to: null,
   due_date: null,
-  ball_in_court_id: 'user-1',
+  ball_in_court: 'user-1',
   linked_drawing_id: null,
   closed_date: null,
   deleted_at: null,
@@ -183,7 +183,7 @@ describe('rfiService.createRfi', () => {
     expect(insertCall.mock.calls[0][0].status).toBe('draft')
   })
 
-  it('sets optional fields and populates ball_in_court_id from assigned_to', async () => {
+  it('sets optional fields and populates ball_in_court from assigned_to', async () => {
     mockSession('user-1')
     const chain = makeChain([RFI], null, RFI)
     mockFrom.mockReturnValue(chain)
@@ -202,7 +202,7 @@ describe('rfiService.createRfi', () => {
     expect(payload.assigned_to).toBe('user-2')
     expect(payload.due_date).toBe('2026-05-01')
     expect(payload.linked_drawing_id).toBe('drawing-1')
-    expect(payload.ball_in_court_id).toBe('user-2')
+    expect(payload.ball_in_court).toBe('user-2')
   })
 
   it('returns DatabaseError when insert fails', async () => {
@@ -333,7 +333,7 @@ describe('rfiService.transitionStatus', () => {
     expect(typeof payload['closed_date']).toBe('string')
   })
 
-  it('updates ball_in_court_id on every transition', async () => {
+  it('updates ball_in_court on every transition', async () => {
     mockSession('pm-1')
     const fetchChain = makeChain([], null, {
       status: 'draft',

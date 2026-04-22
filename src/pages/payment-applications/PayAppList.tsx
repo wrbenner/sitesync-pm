@@ -1,6 +1,7 @@
-import React from 'react'
-import { Plus, Receipt, CreditCard, Send } from 'lucide-react'
+import React, { useState } from 'react'
+import { Plus, Receipt, CreditCard, Send, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, Btn, SectionHeader, EmptyState } from '../../components/Primitives'
 import { DataTable, createColumnHelper } from '../../components/shared/DataTable'
 import { PermissionGate } from '../../components/auth/PermissionGate'
@@ -10,10 +11,14 @@ import {
   getValidPaymentTransitions,
 } from '../../machines/paymentMachine'
 import type { PaymentStatus } from '../../machines/paymentMachine'
+import { submitPayApplication, markPayApplicationAsPaid } from '../../api/endpoints/payApplications'
+import { useProjectId } from '../../hooks/useProjectId'
+import type { PayApplication } from '../../types/api'
 import { fmtCurrency, fmtDate } from './types'
+import { DrawReportUpload } from '../../components/payApplications/DrawReportUpload'
 
 interface PayAppListProps {
-  apps: Array<Record<string, unknown>>
+  apps: Array<PayApplication | Record<string, unknown>>
   selectedAppId: string | null
   onSelectApp: (id: string | null) => void
   onCreateApp: () => void
@@ -23,6 +28,34 @@ interface PayAppListProps {
 export const PayAppList: React.FC<PayAppListProps> = ({
   apps, selectedAppId, onSelectApp, onCreateApp, onEditApp,
 }) => {
+  const projectId = useProjectId()
+  const queryClient = useQueryClient()
+  const [uploadOpen, setUploadOpen] = useState(false)
+
+  const submitMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      if (!projectId) throw new Error('No project selected')
+      return submitPayApplication(projectId, appId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
+      toast.success('Application submitted for review')
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to submit application'),
+  })
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      if (!projectId) throw new Error('No project selected')
+      return markPayApplicationAsPaid(projectId, appId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
+      toast.success('Payment recorded — pay app marked as paid')
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to record payment'),
+  })
+
   const columns = React.useMemo(() => {
     const col = createColumnHelper<Record<string, unknown>>()
     return [
@@ -101,7 +134,12 @@ export const PayAppList: React.FC<PayAppListProps> = ({
                 <button
                   aria-label="Pay subcontractor"
                   title="Pay subcontractor"
-                  onClick={() => toast.success('Payment flow initiated')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const appId = info.row.original.id as string
+                    markPaidMutation.mutate(appId)
+                  }}
+                  disabled={markPaidMutation.isPending}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
                     padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
@@ -117,7 +155,8 @@ export const PayAppList: React.FC<PayAppListProps> = ({
                 <button
                   aria-label="Submit application for review"
                   title="Submit application for review"
-                  onClick={() => toast.success('Application submitted for review')}
+                  onClick={(e) => { e.stopPropagation(); submitMutation.mutate(info.row.original.id as string) }}
+                  disabled={submitMutation.isPending}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
                     padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
@@ -134,12 +173,17 @@ export const PayAppList: React.FC<PayAppListProps> = ({
         },
       }),
     ]
-  }, [onEditApp])
+  }, [onEditApp, submitMutation, projectId])
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <PermissionGate permission="payments.create">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <PermissionGate permission="financials.edit">
+          <Btn variant="secondary" onClick={() => setUploadOpen(true)} size="sm">
+            <Upload size={14} /> Upload Draw Report
+          </Btn>
+        </PermissionGate>
+        <PermissionGate permission="financials.edit">
           <Btn onClick={onCreateApp} size="sm">
             <Plus size={14} /> New Pay Application
           </Btn>
@@ -163,16 +207,23 @@ export const PayAppList: React.FC<PayAppListProps> = ({
             icon={<Receipt size={32} color={colors.textTertiary} />}
             title="No payment applications"
             description="Create your first AIA G702 payment application from the schedule of values."
-            action={
-              <PermissionGate permission="payments.create">
-                <Btn onClick={onCreateApp} size="sm">
-                  <Plus size={14} /> Create Pay App
-                </Btn>
-              </PermissionGate>
-            }
+            actionLabel="Create Pay App"
+            onAction={onCreateApp}
           />
         )}
       </Card>
+
+      {projectId && (
+        <DrawReportUpload
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          projectId={projectId}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['pay_applications', projectId] })
+            toast.success('Draw report imported — pay app created from extracted line items')
+          }}
+        />
+      )}
     </>
   )
 }

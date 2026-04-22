@@ -8,7 +8,7 @@
 // (length, width, area, perimeter, aspect_ratio, building_type). This data
 // feeds BIM-lite features and area calculations.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -153,7 +153,7 @@ function classifyBuilding(points: Point[]): 'rectangular' | 'simple_polygon' | '
   return 'complex_shape'
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const corsHeaders = getCorsHeaders(req)

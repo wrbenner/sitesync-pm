@@ -48,12 +48,12 @@ export type CostTransaction = {
   id: string
   project_id: string
   cost_code_id: string
-  transaction_type: 'budget' | 'commitment' | 'actual' | 'forecast_adjustment'
+  type: 'committed' | 'actual' | 'forecast'
   amount: number
+  vendor: string | null
   description: string | null
-  source_type: string | null
-  source_id: string | null
-  transaction_date: string
+  date: string
+  reference: string | null
   created_by: string | null
   created_at: string
 }
@@ -64,7 +64,7 @@ export function useCostTransactions(projectId: string | undefined, costCodeId?: 
     queryFn: async () => {
       let q = supabase.from('cost_transactions').select('*').eq('project_id', projectId!)
       if (costCodeId) q = q.eq('cost_code_id', costCodeId)
-      const { data, error } = await q.order('transaction_date', { ascending: false })
+      const { data, error } = await q.order('date', { ascending: false })
       if (error) throw error
       return data as CostTransaction[]
     },
@@ -91,17 +91,23 @@ export function useCreateCostTransaction() {
 // ── Time Entries ──────────────────────────────────────────
 export type TimeEntry = {
   id: string
+  workforce_member_id: string
   project_id: string
-  user_id: string
   date: string
-  hours: number
-  cost_code_id: string | null
-  activity_description: string | null
-  classification: string | null
+  clock_in: string | null
+  clock_out: string | null
+  regular_hours: number
+  overtime_hours: number
+  double_time_hours: number
+  break_minutes: number
+  cost_code: string | null
+  task_description: string | null
   approved: boolean
   approved_by: string | null
-  daily_log_id: string | null
+  geolocation_in: string | null
+  geolocation_out: string | null
   created_at: string
+  updated_at: string
 }
 
 export function useTimeEntries(projectId: string | undefined, weekStart?: string, weekEnd?: string) {
@@ -153,27 +159,20 @@ export function useApproveTimeEntry() {
 }
 
 // ── Deliveries ────────────────────────────────────────────
-export type DeliveryItem = {
-  description: string
-  quantity_ordered: number
-  quantity_received: number
-  unit: string
-}
-
 export type Delivery = {
   id: string
   project_id: string
-  delivery_number: number
-  supplier: string
-  purchase_order_id: string | null
+  vendor: string
+  description: string | null
   expected_date: string
   actual_date: string | null
-  status: 'scheduled' | 'in_transit' | 'delivered' | 'partial' | 'rejected' | 'cancelled'
-  items: DeliveryItem[]
-  receiving_notes: string | null
-  photo_urls: string[] | null
-  received_by: string | null
+  status: 'scheduled' | 'in_transit' | 'delivered' | 'delayed' | 'cancelled'
+  location: string | null
+  po_number: string | null
+  notes: string | null
+  created_by: string | null
   created_at: string
+  updated_at: string
 }
 
 export function useDeliveries(projectId: string | undefined) {
@@ -232,8 +231,6 @@ export type WikiPage = {
   title: string
   content: string
   parent_id: string | null
-  sort_order: number
-  is_template: boolean
   created_by: string | null
   updated_by: string | null
   created_at: string
@@ -248,7 +245,7 @@ export function useWikiPages(projectId: string | undefined) {
         .from('wiki_pages')
         .select('*')
         .eq('project_id', projectId!)
-        .order('sort_order', { ascending: true })
+        .order('title', { ascending: true })
       if (error) throw error
       return data as WikiPage[]
     },

@@ -237,17 +237,17 @@ export interface LienWaiverInsert {
   received_at?: string | null
 }
 
-// Pay Application row (AIA G702 billing)
+// Pay Application row (AIA G702 billing) — matches pay_applications table
 export interface PayApplication {
   id: string
   project_id: string
   contract_id: string | null
   application_number: number
-  period_from: string | null
   period_to: string
-  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'gc_review' | 'owner_review' | 'paid' | 'void'
   original_contract_sum: number | null
   net_change_orders: number | null
+  contract_sum_to_date: number | null
   total_completed_and_stored: number | null
   retainage: number | null
   total_earned_less_retainage: number | null
@@ -255,7 +255,11 @@ export interface PayApplication {
   current_payment_due: number | null
   balance_to_finish: number | null
   submitted_date: string | null
-  approved_date: string | null
+  certified_date: string | null
+  certified_by: string | null
+  paid_date: string | null
+  paid_amount: number | null
+  signature_url: string | null
   created_at: string | null
   updated_at: string | null
 }
@@ -263,7 +267,6 @@ export interface PayApplication {
 export interface CreatePayAppPayload {
   contract_id: string
   application_number?: number
-  period_from?: string | null
   period_to: string
   original_contract_sum?: number | null
   net_change_orders?: number | null

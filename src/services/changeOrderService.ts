@@ -159,20 +159,13 @@ export const changeOrderService = {
     const now = new Date().toISOString();
     const updates: Record<string, unknown> = {
       status: newStatus,
-      updated_by: userId,
+      updated_at: now,
     };
+    void userId;
+    void comments;
 
-    if (newStatus === 'pending_review') {
-      updates.submitted_by = userId;
-      updates.submitted_at = now;
-    } else if (newStatus === 'approved') {
-      updates.approved_by = userId;
-      updates.approved_at = now;
-      if (comments) updates.approval_comments = comments;
-    } else if (newStatus === 'rejected') {
-      updates.rejected_by = userId;
-      updates.rejected_at = now;
-      if (comments) updates.rejection_comments = comments;
+    if (newStatus === 'approved') {
+      updates.approved_date = now;
     }
 
     const { error } = await supabase
@@ -191,13 +184,11 @@ export const changeOrderService = {
     coId: string,
     updates: Partial<ChangeOrder>,
   ): Promise<Result> {
-    const userId = await getCurrentUserId();
-     
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await supabase
       .from('change_orders')
-      .update({ ...safeUpdates, updated_by: userId })
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
       .eq('id', coId);
 
     if (error) return fail(dbError(error.message, { coId }));
@@ -205,14 +196,9 @@ export const changeOrderService = {
   },
 
   async deleteChangeOrder(coId: string): Promise<Result> {
-    const userId = await getCurrentUserId();
-
     const { error } = await supabase
       .from('change_orders')
-      .update({
-        deleted_at: new Date().toISOString(),
-        deleted_by: userId,
-      })
+      .delete()
       .eq('id', coId);
 
     if (error) return fail(dbError(error.message, { coId }));
@@ -258,17 +244,16 @@ export const changeOrderService = {
       description: co.description,
       title: co.title,
       amount: co.amount,
-      approved_amount: co.approved_amount,
+      approved_amount: (co as Record<string, unknown>).approved_amount as number | null,
       status: 'draft' as ChangeOrderState,
       type: nextType as string,
       reason: co.reason,
       cost_code: co.cost_code,
       schedule_impact: co.schedule_impact,
       parent_co_id: co.id,
-      created_by: userId,
-      promoted_from_id: coId,
-      promoted_at: now,
     };
+    void userId;
+    void now;
 
     const { data: promoted, error: insertError } = await supabase
       .from('change_orders')
@@ -277,12 +262,6 @@ export const changeOrderService = {
       .single();
 
     if (insertError) return fail(dbError(insertError.message, { coId, nextType }));
-
-    // Mark source as promoted — non-critical; failure doesn't block the caller
-    await supabase
-      .from('change_orders')
-      .update({ promoted_at: now, updated_by: userId } as Record<string, unknown>)
-      .eq('id', coId);
 
     return ok(promoted as ChangeOrder);
   },

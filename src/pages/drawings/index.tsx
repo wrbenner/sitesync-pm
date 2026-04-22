@@ -1,25 +1,38 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { Upload, Sparkles, ScanSearch } from 'lucide-react';
-import { aiService } from '../../lib/aiService';
-import type { DrawingAnalysis } from '../../types/ai';
-import type { DrawingRevision } from '../../types/api';
+import { Upload, ScanSearch, FolderOpen } from 'lucide-react';
 import { PageContainer, Btn, useToast } from '../../components/Primitives';
 import { colors, spacing } from '../../styles/theme';
 import { getDrawings, getDrawingRevisionHistory } from '../../api/endpoints/documents';
 import { useQuery } from '../../hooks/useQuery';
 import { useProjectId } from '../../hooks/useProjectId';
-import { DrawingViewer } from '../../components/drawings/DrawingViewer';
 import { PdfViewer } from '../../components/drawings/PdfViewer';
+import { DrawingTiledViewer } from '../../components/drawings/DrawingTiledViewer';
+import { useSignedUrl } from '../../hooks/useSignedUrl';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { supabase } from '../../lib/supabase';
+import { smartUpload } from '../../lib/resumableUpload';
 import { drawingService } from '../../services/drawingService';
-import { parseAiConflicts } from './types';
-import { DrawingList } from './DrawingList';
+import { isPdf, splitPdfToPages } from '../../lib/pdfPageSplitter';
+import { DrawingToolbar, type ViewMode, type ToolbarFilters } from './DrawingToolbar';
+import { type DrawingStatus } from './constants';
+import { DrawingList, type DrawingItem } from './DrawingList';
+import { DrawingCardGrid } from './DrawingCardGrid';
 import { DrawingDetail } from './DrawingDetail';
+import JSZip from 'jszip';
 import { DrawingUpload, RevisionUpload } from './DrawingUpload';
-import { VersionCompareModal, ComparisonModal } from './DrawingVersions';
-import { AiInsightsPanel } from './AiInsightsPanel';
+import { extractDrawingFilesFromZip } from '../../components/files/UploadZone';
+import {
+  classifyPdfByFilename,
+  parseCoverMetadata,
+  mergeCoverMetadata,
+  looksLikeCoverText,
+  type CoverMetadata,
+} from '../../lib/pdfClassifier';
+import { extractPdfFirstPageText, extractPdfTextFromPages } from '../../lib/pdfPageSplitter';
+import { extractSheetTitleBlock } from '../../lib/sheetTitleBlockParser';
+import { defaultTitleBlockRegion } from '../../lib/titleBlockDetector';
+import { cropPngToRegion } from '../../lib/imageCrop';
 import { RevisionOverlay } from '../../components/drawings/RevisionOverlay';
 import { AnnotationListPanel } from '../../components/drawings/AnnotationListPanel';
 import { useAIAnnotationStore } from '../../stores';
@@ -28,431 +41,239 @@ import {
   useDrawingIntelligence,
   useDiscrepanciesForDrawing,
 } from '../../hooks/useDrawingIntelligence';
-import { ClashDetectionPanel } from '../../components/drawings/ClashDetectionPanel';
 import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
-import { DiscrepancyDetailModal } from '../../components/drawings/DiscrepancyDetailModal';
+import { DrawingSetPanel, type DrawingSetItem, type SetType } from '../../components/drawings/DrawingSetPanel';
+import { TransmittalModal, type TransmittalData } from '../../components/drawings/TransmittalModal';
 import type { DrawingDiscrepancy } from '../../types/ai';
-import { useLogCorrection } from '../../hooks/useAITrainingCorrections';
-import type { DrawingClassification, DrawingDiscipline } from '../../types/ai';
 
-interface DrawingItem {
-  id: number;
-  title: string;
-  setNumber: string;
-  discipline: string;
-  disciplineColor?: string;
-  revision: string;
-  date: string;
-  status?: string;
-  sheetCount?: number;
-  currentRevision?: { revision_number: number; issued_date: string | null; issued_by?: string };
-  revisions: DrawingRevision[];
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * Parse a revision number out of a filename.
+ * Matches "Rev 06", "Rev_05", "_R06_", "Revision 2", etc.
+ * We normalize underscores to spaces first so `\b` boundaries actually
+ * fire (underscore is a regex word-char, which was the bug).
+ * Returns the raw revision string ("5", "06" → "6", "1.0") or null.
+ */
+function extractRevisionFromFilename(name: string): string | null {
+  const normalized = name.replace(/_+/g, ' ');
+  const m = normalized.match(/\b(?:rev(?:ision)?|r)[\s-]?(\d{1,3}(?:\.\d{1,2})?)\b/i);
+  if (!m) return null;
+  return m[1].replace(/^0+(?=\d)/, '');
 }
 
-const DISCIPLINE_BADGE_COLOR: Record<DrawingDiscipline, string> = {
-  architectural: '#3B82F6',
-  structural: '#E74C3C',
-  mechanical: '#F47820',
-  electrical: '#F5A623',
-  plumbing: '#4EC896',
-  mep: '#8B5CF6',
-  civil: '#10B981',
-  interior_design: '#DB2777',
-  unclassified: '#6B7280',
-};
+/**
+ * Clean a source filename down to a readable title.
+ * Hyphens in sheet numbers like "A-101" are preserved; underscores and
+ * leading dates are stripped; common tokens (IFC, stamped, Rev NN, RTG,
+ * Updated, "For Construction/Permit/…") are removed.
+ *
+ * "25.04.02_Merritt Crossing_Mechanical_IFC_stamped_Rev 05.pdf"
+ *   → "Merritt Crossing Mechanical"
+ * "A-101.pdf" → "A-101"
+ */
+function cleanFilenameTitle(name: string): string {
+  let s = name
+    .replace(/\.[^.]+$/, '')                                    // strip extension
+    .replace(/^\d{2,4}[.\-_]\d{1,2}[.\-_]\d{1,2}[_\-\s]*/, ''); // leading date
+  s = s.replace(/_+/g, ' ');                                     // only underscores → spaces; keep hyphens
+  s = s
+    .replace(/\brev(?:ision)?\s?\d{1,3}(?:\.\d{1,2})?\b/ig, '')
+    .replace(/\bifc\b/ig, '')
+    .replace(/\bfor\s+(?:construction|permit|bid|review)\b/ig, '')
+    .replace(/\bstamped\b/ig, '')
+    .replace(/\bupdated\b/ig, '')
+    .replace(/\brtg\b/ig, '')                                    // firm abbreviations
+    .replace(/\s+/g, ' ')
+    .trim();
+  return s;
+}
 
-const DISCIPLINE_LABEL: Record<DrawingDiscipline, string> = {
-  architectural: 'Architectural',
-  structural: 'Structural',
-  mechanical: 'Mechanical',
-  electrical: 'Electrical',
-  plumbing: 'Plumbing',
-  mep: 'MEP',
-  civil: 'Civil',
-  interior_design: 'Interior',
-  unclassified: 'Unclassified',
-};
+/**
+ * Infer discipline from a filename.
+ *
+ * Two-pass strategy — the filename can be either a raw sheet number like
+ * "A-101" OR a full source filename like
+ * "25.04.02_Merritt Crossing_Mechanical_IFC_stamped_Rev 05.pdf".
+ *
+ *   Pass 1: search the filename for explicit discipline words. This handles
+ *           descriptive filenames where the discipline is spelled out.
+ *   Pass 2: fall back to the single-letter sheet prefix (A-101 → arch).
+ *
+ * WHY: Synthetic sheet numbers like "P001" (our fallback when a real sheet
+ * number can't be parsed) used to hit the prefix map's `P: 'plumbing'` entry
+ * and tag everything as plumbing. Word-based detection runs first now, so
+ * a file whose name contains "Mechanical" returns 'mechanical' regardless
+ * of any stray leading `P`.
+ */
+function inferDisciplineFromFilename(name: string): string | null {
+  // Pass 1: discipline words
+  const normalized = name
+    .toLowerCase()
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_\-/\\.]+/g, ' ')
+    .replace(/\s+/g, ' ');
 
-const DISCIPLINE_OPTIONS: DrawingDiscipline[] = [
-  'architectural',
-  'structural',
-  'mechanical',
-  'electrical',
-  'plumbing',
-  'mep',
-  'civil',
-  'interior_design',
-  'unclassified',
-];
+  // Ordering matters: more specific patterns first so "cover sheet" doesn't
+  // get swallowed by another partial match, and compound terms like
+  // "fire protection" are checked before anything shorter might win.
+  const wordPatterns: Array<{ re: RegExp; discipline: string }> = [
+    // Meta / pre-construction
+    { re: /\b(covers?|title\s*sheet|cover\s*sheets?|project\s*data|code\s*(summary|analysis)|general\s*(notes|info))\b/, discipline: 'cover' },
+    { re: /\b(hazmat|hazardous\s*materials?|asbestos|lead\s*paint|environmental|swppp|erosion\s*control)\b/, discipline: 'hazmat' },
+    { re: /\b(demo(lition)?|existing\s*conditions)\b/, discipline: 'demolition' },
+    { re: /\b(survey|topo(graphic)?|alta)\b/, discipline: 'survey' },
+    { re: /\b(geotechnical|geotech|soils?\s*report)\b/, discipline: 'geotechnical' },
+    // Site + envelope
+    { re: /\b(civil)\b/, discipline: 'civil' },
+    { re: /\b(landscape)\b/, discipline: 'landscape' },
+    // Building
+    { re: /\b(structural|struct)\b/, discipline: 'structural' },
+    { re: /\b(architectural|architecture|arch)\b/, discipline: 'architectural' },
+    { re: /\b(interior(\s+design)?)\b/, discipline: 'interior' },
+    { re: /\b(id)\b/, discipline: 'interior' },
+    // Systems (order matters: FP before electrical/plumbing so "fire alarm" is caught correctly)
+    { re: /\b(fire\s*protection|fire\s*alarm|fp)\b/, discipline: 'fire_protection' },
+    { re: /\b(plumbing|plumb)\b/, discipline: 'plumbing' },
+    { re: /\b(mechanical|mech|hvac)\b/, discipline: 'mechanical' },
+    { re: /\b(electrical|elec)\b/, discipline: 'electrical' },
+    { re: /\b(telecommunications?|telecom|low\s*voltage|lv|tele\b)\b/, discipline: 'telecommunications' },
+  ];
+  for (const { re, discipline } of wordPatterns) {
+    if (re.test(normalized)) return discipline;
+  }
 
-const PLAN_TYPE_OPTIONS = [
-  'floor_plan',
-  'foundation',
-  'framing',
-  'roof',
-  'elevation',
-  'section',
-  'detail',
-  'schedule',
-  'site',
-] as const;
+  // Pass 2: sheet-prefix fallback per AIA US National CAD Standard.
+  // We omit `D` (ambiguous: Process/Demolition) — demolition must come from
+  // a word match, not a single-letter prefix.
+  const prefixMap: Record<string, string> = {
+    G: 'cover',          // General (cover, index, code summary)
+    H: 'hazmat',         // Hazmat / Environmental
+    V: 'survey',
+    B: 'geotechnical',
+    C: 'civil',
+    L: 'landscape',
+    S: 'structural',
+    A: 'architectural',
+    I: 'interior',
+    Q: 'interior',       // Equipment / FF&E — no dedicated bucket yet, closest is interior
+    F: 'fire_protection',
+    P: 'plumbing',
+    M: 'mechanical',
+    E: 'electrical',
+    T: 'telecommunications',
+  };
+  const m = name.match(/^([A-Z]{1,2})-?\d/i);
+  if (m) {
+    const prefix = m[1].toUpperCase();
+    // Two-letter prefix special cases (AIA + common industry conventions)
+    if (prefix === 'CS') return 'cover';               // Cover Sheet
+    if (prefix === 'ID') return 'interior';            // Interior Design
+    if (prefix === 'PF') return 'plumbing';            // Plumbing Fixtures
+    if (prefix === 'FA') return 'fire_protection';     // Fire Alarm
+    if (prefix === 'LV') return 'telecommunications';  // Low Voltage
+    return prefixMap[prefix[0]] ?? null;
+  }
+  return null;
+}
 
-const ClassificationBadge: React.FC<{
-  classification: DrawingClassification | null;
-  status: string | null;
-  classifying: boolean;
-  drawingId?: string | number | null;
-  projectId?: string | null;
-}> = ({ classification, status, classifying, drawingId, projectId }) => {
-  const [editOpen, setEditOpen] = useState(false);
-  const logCorrection = useLogCorrection();
-  if (classifying || status === 'processing' || status === 'pending') {
+// ─── Drawing File Viewer — single path through OpenSeadragon ──────────────
+// Every drawing goes through DrawingTiledViewer (OpenSeadragon):
+//  • DZI tiles when tile_status === 'ready' (deepest zoom)
+//  • Simple image source via signed URL (PNG/JPEG pages)
+//  • Handles loading states while URL signs
+
+const DrawingFileViewer: React.FC<{
+  drawing: DrawingItem;
+  drawings: DrawingItem[];
+  onClose: () => void;
+  onNavigate: (d: DrawingItem) => void;
+  onCreateRFI?: () => void;
+  projectId?: string;
+  scaleRatioText?: string | null;
+}> = ({ drawing, drawings, onClose, onNavigate, projectId, scaleRatioText }) => {
+  const signedUrl = useSignedUrl(drawing.file_url || null);
+
+  if (!drawing.file_url) {
     return (
-      <div
-        aria-live="polite"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: spacing.md,
-          marginBottom: spacing.md,
-          borderRadius: 8,
-          backgroundColor: `${colors.primaryOrange}14`,
-          border: `1px solid ${colors.primaryOrange}55`,
-          color: colors.textPrimary,
-          fontSize: 13,
-        }}
-      >
-        <Sparkles size={16} color={colors.primaryOrange} />
-        <span>AI classification in progress…</span>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1090, backgroundColor: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: '#fff' }}>
+          <p style={{ fontSize: 16, fontWeight: 600 }}>No file attached to this drawing</p>
+          <button onClick={onClose} style={{ marginTop: 16, padding: '8px 24px', backgroundColor: colors.primaryOrange, color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Close</button>
+        </div>
       </div>
     );
   }
 
-  if (status === 'failed') {
-    return (
-      <div
-        style={{
-          padding: spacing.md,
-          marginBottom: spacing.md,
-          borderRadius: 8,
-          backgroundColor: '#F443361A',
-          border: '1px solid #F4433655',
-          color: colors.textPrimary,
-          fontSize: 13,
-        }}
-      >
-        AI classification failed. Re-upload to retry.
-      </div>
-    );
-  }
-
-  if (!classification) {
-    return null;
-  }
-
-  const discipline = (classification.discipline ?? 'unclassified') as DrawingDiscipline;
-  const color = DISCIPLINE_BADGE_COLOR[discipline] ?? DISCIPLINE_BADGE_COLOR.unclassified;
-  const label = DISCIPLINE_LABEL[discipline] ?? DISCIPLINE_LABEL.unclassified;
-  const planType = classification.plan_type ?? null;
-  const scaleText = classification.scale_text ?? null;
-
+  // All drawings → OpenSeadragon viewer
+  // signedUrl may be null while loading — the viewer shows its own loading state
   return (
-    <div
-      style={{
-        padding: spacing.md,
-        marginBottom: spacing.md,
-        borderRadius: 8,
-        backgroundColor: colors.surfaceRaised,
-        border: `1px solid ${colors.borderSubtle}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-      }}
-    >
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '4px 10px',
-            borderRadius: 999,
-            backgroundColor: `${color}22`,
-            color,
-            fontSize: 12,
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: 0.4,
-          }}
-        >
-          <Sparkles size={12} />
-          {label}
-        </span>
-        {planType && (
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: 999,
-              backgroundColor: colors.surfacePage,
-              color: colors.textSecondary,
-              fontSize: 12,
-              fontWeight: 500,
-              textTransform: 'capitalize',
-            }}
-          >
-            {planType}
-          </span>
-        )}
-        {scaleText && (
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: 999,
-              backgroundColor: colors.surfacePage,
-              color: colors.textSecondary,
-              fontSize: 12,
-              fontWeight: 500,
-            }}
-          >
-            Scale {scaleText}
-          </span>
-        )}
-      </div>
-      {classification.drawing_title && (
-        <div style={{ fontSize: 12, color: colors.textSecondary }}>
-          {classification.drawing_title}
-        </div>
-      )}
-      {classification.id && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setEditOpen((v) => !v)}
-            aria-label="Correct AI classification"
-            style={{
-              minHeight: 56,
-              padding: '6px 12px',
-              borderRadius: 6,
-              backgroundColor: 'transparent',
-              border: `1px solid ${colors.borderSubtle}`,
-              color: colors.textSecondary,
-              fontSize: 12,
-              cursor: 'pointer',
-            }}
-          >
-            {editOpen ? 'Cancel' : 'Correct classification'}
-          </button>
-          {logCorrection.isPending && (
-            <span style={{ fontSize: 11, color: colors.textTertiary }}>Saving…</span>
-          )}
-          {logCorrection.isSuccess && !editOpen && (
-            <span style={{ fontSize: 11, color: colors.statusActive }}>Correction logged</span>
-          )}
-        </div>
-      )}
-      {editOpen && classification.id && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: 12,
-            backgroundColor: colors.surfacePage,
-            border: `1px solid ${colors.borderSubtle}`,
-            borderRadius: 6,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
-        >
-          <label style={{ fontSize: 11, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            Discipline
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {DISCIPLINE_OPTIONS.map((disc) => (
-              <button
-                key={disc}
-                type="button"
-                aria-label={`Set discipline to ${disc}`}
-                onClick={() => {
-                  logCorrection.mutate({
-                    correctionType: 'classification',
-                    projectId: projectId ?? null,
-                    drawingId: drawingId != null ? String(drawingId) : null,
-                    sourceTable: 'drawing_classifications',
-                    sourceRecordId: classification.id,
-                    originalValue: {
-                      discipline: classification.discipline,
-                      plan_type: classification.plan_type,
-                    },
-                    correctedValue: { discipline: disc },
-                  });
-                  setEditOpen(false);
-                }}
-                style={{
-                  minHeight: 56,
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: disc === discipline ? 600 : 400,
-                  border: `1px solid ${disc === discipline ? colors.primaryOrange : colors.borderSubtle}`,
-                  backgroundColor: disc === discipline ? `${colors.primaryOrange}22` : 'transparent',
-                  color: colors.textPrimary,
-                  cursor: 'pointer',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {DISCIPLINE_LABEL[disc]}
-              </button>
-            ))}
-          </div>
-          <label style={{ fontSize: 11, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            Plan type
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {PLAN_TYPE_OPTIONS.map((pt) => (
-              <button
-                key={pt}
-                type="button"
-                aria-label={`Set plan type to ${pt}`}
-                onClick={() => {
-                  logCorrection.mutate({
-                    correctionType: 'classification',
-                    projectId: projectId ?? null,
-                    drawingId: drawingId != null ? String(drawingId) : null,
-                    sourceTable: 'drawing_classifications',
-                    sourceRecordId: classification.id,
-                    originalValue: {
-                      discipline: classification.discipline,
-                      plan_type: classification.plan_type,
-                    },
-                    correctedValue: { plan_type: pt },
-                  });
-                  setEditOpen(false);
-                }}
-                style={{
-                  minHeight: 56,
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                  fontWeight: pt === planType ? 600 : 400,
-                  border: `1px solid ${pt === planType ? colors.primaryOrange : colors.borderSubtle}`,
-                  backgroundColor: pt === planType ? `${colors.primaryOrange}22` : 'transparent',
-                  color: colors.textPrimary,
-                  cursor: 'pointer',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {pt.replace('_', ' ')}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    <DrawingTiledViewer
+      drawing={drawing}
+      drawings={drawings}
+      onClose={onClose}
+      onNavigate={onNavigate}
+      projectId={projectId}
+      scaleRatioText={scaleRatioText}
+      signedUrl={signedUrl}
+    />
   );
 };
+
+// ─── Main Page ──────────────────────────────────────────────────────────────
 
 const DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
-  const { data: drawings, loading, error, refetch } = useQuery(`drawings-${projectId}`, () => getDrawings(projectId!), { enabled: !!projectId });
-
-  // ── Filter & sort ──────────────────────────────────────────
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
-  const [sortField, setSortField] = useState<string>('setNumber');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-
-  // ── Selected drawing ───────────────────────────────────────
-  const [selectedDrawing, setSelectedDrawing] = useState<DrawingItem | null>(null);
-  const [viewerDrawing, setViewerDrawing] = useState<DrawingItem | null>(null);
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const sortedDrawingsRef = useRef<DrawingItem[]>([]);
-
-  // ── Revision state ─────────────────────────────────────────
-  const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
-  const [showVersionCompare, setShowVersionCompare] = useState(false);
-  const [compareRevAIdx, setCompareRevAIdx] = useState(0);
-  const [compareRevBIdx, setCompareRevBIdx] = useState(1);
-  const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
-  const [openRevDropdownId, setOpenRevDropdownId] = useState<string | null>(null);
-  const [rowRevHistory, setRowRevHistory] = useState<Record<string, DrawingRevision[]>>({});
-  const [rowRevHistoryLoading, setRowRevHistoryLoading] = useState<string | null>(null);
-  const [detailDiscrepancy, setDetailDiscrepancy] = useState<DrawingDiscrepancy | null>(null);
-  const [selectedRevisions, setSelectedRevisions] = useState<DrawingRevision[]>([]);
-  const [comparisonMode, setComparisonMode] = useState(false);
-  const [compareOpacity, setCompareOpacity] = useState(100);
-  const [compareDrawingTitle, setCompareDrawingTitle] = useState('');
-
-  // ── AI state ───────────────────────────────────────────────
-  const [showConflicts, setShowConflicts] = useState(false);
-  const [analyzingId, setAnalyzingId] = useState<number | null>(null);
-  const [analysisResults, setAnalysisResults] = useState<Record<number, DrawingAnalysis>>({});
-  const [showAiPanel, setShowAiPanel] = useState(false);
-  const [aiPanelLoading, setAiPanelLoading] = useState(false);
-  const [aiPanelConflicts, setAiPanelConflicts] = useState<Array<{ severity: 'high' | 'medium' | 'low'; description: string; sheets: string[] }>>([]);
-  const [aiPanelError, setAiPanelError] = useState<string | null>(null);
-  const [aiPanelAnalyzed, setAiPanelAnalyzed] = useState(false);
-
-  // ── Annotation engine state ────────────────────────────────
-  const [showRevisionOverlay, setShowRevisionOverlay] = useState(false);
-  const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
-  const annotationsStore = useAIAnnotationStore();
-
-  // ── AI classification pipeline ─────────────────────────────
-  const processing = useDrawingProcessing(projectId);
-  const classifyMutation = processing.classify;
-
-  // ── Drawing intelligence (Phase 3: clash detection) ───────
-  const intelligence = useDrawingIntelligence(projectId ?? undefined);
-  const { data: drawingDiscrepancies = [], isLoading: discrepanciesLoading } =
-    useDiscrepanciesForDrawing(
-      selectedDrawing ? String(selectedDrawing.id) : undefined,
-      projectId ?? undefined,
-    );
-  const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
-
-  const handleAnalyzeDrawingSet = useCallback(async () => {
-    if (!projectId) return;
-    setShowAnalysisPanel(true);
-    try {
-      await intelligence.analyzeDrawingSet();
-      addToast('success', `Analysis complete — ${intelligence.state.discrepancyCount} discrepancies detected`);
-    } catch {
-      addToast('error', 'Drawing analysis failed.');
-    }
-  }, [projectId, intelligence, addToast]);
-
-  const handleCreateRFIFromDiscrepancy = useCallback(() => {
-    addToast('info', 'A draft RFI will be created from this discrepancy. Open RFIs to edit.');
-  }, [addToast]);
-
-  const triggerClassification = useCallback(
-    async (drawingId: string, pageImageUrl: string) => {
-      if (!projectId) return;
-      try {
-        await classifyMutation.mutateAsync({ projectId, drawingId, pageImageUrl });
-      } catch {
-        addToast('error', 'AI classification failed. The drawing is still uploaded.');
-      }
-    },
-    [projectId, classifyMutation, addToast],
+  const { data: drawings, loading, error, refetch } = useQuery(
+    `drawings-${projectId}`,
+    () => getDrawings(projectId!),
+    { enabled: !!projectId },
   );
 
-  const handleCreateRFIFromAnnotation = useCallback(() => {
-    if (!selectedDrawing) {
-      addToast('error', 'Select a drawing first to create an RFI from annotations.');
-      return;
+  // Surface persistent query errors
+  const errorToastShown = React.useRef(false);
+  React.useEffect(() => {
+    if (error && !errorToastShown.current) {
+      errorToastShown.current = true;
+      addToast('error', `Failed to load drawings: ${error}`);
     }
-    addToast('info', `RFI draft prefilled from ${selectedDrawing.setNumber}. Open the RFIs page to finish.`);
-  }, [selectedDrawing, addToast]);
+    if (!error) errorToastShown.current = false;
+  }, [error, addToast]);
 
-  // ── Upload state ───────────────────────────────────────────
+  // ── View & filter state ─────────────────────────────────
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [filters, setFilters] = useState<ToolbarFilters>({
+    search: '',
+    disciplines: new Set(),
+    statuses: new Set(),
+  });
+  const [sortField, setSortField] = useState('setNumber');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // ── Selection state ─────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedDrawing, setSelectedDrawing] = useState<DrawingItem | null>(null);
+  const [viewerDrawing, setViewerDrawing] = useState<DrawingItem | null>(null);
+
+  // ── Revision state ──────────────────────────────────────
+  const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
+  const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
+
+  // ── Overlay (any two drawings) ──────────────────────────
+  const [overlayPair, setOverlayPair] = useState<{
+    aUrl: string; aLabel: string;
+    bUrl: string; bLabel: string;
+  } | null>(null);
+  const [isPreparingOverlay, setIsPreparingOverlay] = useState(false);
+
+  // ── Upload state ────────────────────────────────────────
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadDiscipline, setUploadDiscipline] = useState('Architectural');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadSetName, setUploadSetName] = useState('');
+  const [uploadSetType, setUploadSetType] = useState<SetType>('working');
   const [pageIsDragging, setPageIsDragging] = useState(false);
   const [showRevUploadModal, setShowRevUploadModal] = useState(false);
   const [revUploadFile, setRevUploadFile] = useState<File | null>(null);
@@ -460,103 +281,337 @@ const DrawingsPage: React.FC = () => {
   const [revUploadDesc, setRevUploadDesc] = useState('');
   const [isRevUploading, setIsRevUploading] = useState(false);
 
-  // ── Revision history for detail panel ─────────────────────
+  // ── Annotation state ────────────────────────────────────
+  const [showAnnotationPanel, setShowAnnotationPanel] = useState(false);
+  const annotationsStore = useAIAnnotationStore();
+
+  // ── AI pipeline state ───────────────────────────────────
+  const processing = useDrawingProcessing(projectId);
+  const classifyMutation = processing.classify;
+  const intelligence = useDrawingIntelligence(projectId ?? undefined);
+  const { data: drawingDiscrepancies = [] } = useDiscrepanciesForDrawing(
+    selectedDrawing ? String(selectedDrawing.id) : undefined,
+    projectId ?? undefined,
+  );
+  const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
+
+  // ── Drawing Sets state ─────────────────────────────────
+  const [showSetsPanel, setShowSetsPanel] = useState(false);
+  const { data: drawingSets, refetch: refetchSets } = useQuery(
+    `drawing-sets-${projectId}`,
+    async () => {
+      try {
+        const { data, error: err } = await supabase
+          .from('drawing_sets')
+          .select('*')
+          .eq('project_id', projectId!)
+          .order('created_at', { ascending: false });
+        if (err) {
+          // Table may not exist yet if migration hasn't been applied
+          console.warn('[DrawingSets] Query failed (table may not exist):', err.message);
+          return [] as DrawingSetItem[];
+        }
+        return (data || []) as DrawingSetItem[];
+      } catch (e) {
+        console.warn('[DrawingSets] Query error:', e);
+        return [] as DrawingSetItem[];
+      }
+    },
+    { enabled: !!projectId },
+  );
+
+  const handleCreateSet = useCallback(async (setData: { name: string; set_type: SetType; description?: string; drawing_ids: string[] }) => {
+    if (!projectId) return;
+    const { error: err } = await supabase.from('drawing_sets').insert({
+      project_id: projectId,
+      name: setData.name,
+      set_type: setData.set_type,
+      description: setData.description || null,
+      drawing_ids: setData.drawing_ids,
+    });
+    if (err) { addToast('error', `Failed to create set: ${err.message}`); return; }
+    addToast('success', `Drawing set "${setData.name}" created.`);
+    refetchSets();
+  }, [projectId, addToast, refetchSets]);
+
+  const handleUpdateSet = useCallback(async (setId: string, data: { drawing_ids: string[] }) => {
+    const { error: err } = await supabase
+      .from('drawing_sets')
+      .update({ drawing_ids: data.drawing_ids })
+      .eq('id', setId);
+    if (err) { addToast('error', `Failed to update set: ${err.message}`); return; }
+    refetchSets();
+  }, [addToast, refetchSets]);
+
+  const [transmittalSetId, setTransmittalSetId] = useState<string | null>(null);
+  const [isIssuingTransmittal, setIsIssuingTransmittal] = useState(false);
+
+  const handleIssueSet = useCallback((setId: string) => {
+    setTransmittalSetId(setId);
+  }, []);
+
+  const handleSubmitTransmittal = useCallback(async (data: TransmittalData) => {
+    if (!projectId) return;
+    setIsIssuingTransmittal(true);
+    try {
+      // Create the transmittal record (matches 00019_document_enhancements schema)
+      const { error: transmittalErr } = await supabase.from('transmittals').insert({
+        project_id: projectId,
+        to_company: data.recipient_company,
+        to_contact: data.recipient_name,
+        to_email: data.recipient_email || null,
+        subject: `Drawing Set Issue — ${data.purpose.replace(/_/g, ' ')}`,
+        purpose: data.purpose,
+        notes: data.remarks || null,
+        document_ids: data.drawing_ids,
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+      });
+      if (transmittalErr) { addToast('error', `Failed to create transmittal: ${transmittalErr.message}`); return; }
+
+      // Update the set to issued
+      const { error: setErr } = await supabase
+        .from('drawing_sets')
+        .update({
+          set_type: 'issued',
+          issued_date: new Date().toISOString(),
+        })
+        .eq('id', data.set_id);
+      if (setErr) { addToast('error', `Failed to update set status: ${setErr.message}`); return; }
+
+      addToast('success', `Transmittal issued to ${data.recipient_company}.`);
+      setTransmittalSetId(null);
+      refetchSets();
+    } finally {
+      setIsIssuingTransmittal(false);
+    }
+  }, [projectId, addToast, refetchSets]);
+
+  const allDrawings: DrawingItem[] = drawings || [];
+
+  const handleOpenDrawingFromSet = useCallback((drawingId: string) => {
+    const drawing = allDrawings.find((d) => d.id === drawingId);
+    if (drawing) {
+      setViewerDrawing(drawing);
+      setShowSetsPanel(false);
+    }
+  }, [allDrawings]);
+
+  // ── Revision history for detail panel ───────────────────
   const { data: revisionHistory } = useQuery(
     `revision-history-${selectedDrawing?.id ?? 'none'}`,
     () => getDrawingRevisionHistory(String(selectedDrawing!.id)),
     { enabled: !!selectedDrawing?.id },
   );
 
+  // Reset revision view when selecting a different drawing
   React.useEffect(() => {
     setViewingRevisionNum(null);
-    setShowVersionCompare(false);
-    setCompareRevAIdx(0);
-    setCompareRevBIdx(1);
     setViewRevPdfUrl(null);
   }, [selectedDrawing?.id]);
 
-  const allDrawings = drawings || [];
-  const filteredDrawings = activeFilters.size === 0 ? allDrawings : allDrawings.filter((d) => activeFilters.has(d.discipline));
+  // ── Backfill disciplines from sheet prefix ──────────────
+  const backfillRan = React.useRef(false);
+  React.useEffect(() => {
+    if (!drawings || backfillRan.current) return;
+    const missing = drawings.filter((d) => !d.discipline && d.setNumber);
+    if (missing.length === 0) return;
+    backfillRan.current = true;
+    void (async () => {
+      let updated = 0;
+      for (const d of missing) {
+        const disc = inferDisciplineFromFilename(d.setNumber || d.title);
+        if (disc) {
+          await drawingService.updateDrawing(String(d.id), { discipline: disc } as Record<string, unknown>);
+          updated++;
+        }
+      }
+      if (updated > 0) {
+        refetch();
+        addToast('info', `Auto-classified ${updated} drawing${updated !== 1 ? 's' : ''} from sheet prefix.`);
+      }
+    })();
+  }, [drawings, refetch, addToast]);
+
+  // ── Derived data ────────────────────────────────────────
+  const availableDisciplines = useMemo(() => {
+    const set = new Set<string>();
+    allDrawings.forEach((d) => { if (d.discipline) set.add(d.discipline); });
+    return Array.from(set).sort();
+  }, [allDrawings]);
+
+  const filteredAndSorted = useMemo(() => {
+    let result = allDrawings;
+
+    if (filters.search.length >= 2) {
+      const q = filters.search.toLowerCase();
+      result = result.filter((d) =>
+        d.title.toLowerCase().includes(q) ||
+        d.setNumber?.toLowerCase().includes(q) ||
+        d.discipline?.toLowerCase().includes(q),
+      );
+    }
+
+    if (filters.disciplines.size > 0) {
+      result = result.filter((d) => filters.disciplines.has(d.discipline));
+    }
+
+    if (filters.statuses.size > 0) {
+      result = result.filter((d) => filters.statuses.has((d.status || 'for_review') as DrawingStatus));
+    }
+
+    result = [...result].sort((a, b) => {
+      const aVal = (a as Record<string, unknown>)[sortField];
+      const bVal = (b as Record<string, unknown>)[sortField];
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
+
+    return result;
+  }, [allDrawings, filters, sortField, sortDir]);
+
+  // ── Handlers ────────────────────────────────────────────
 
   const handleSort = useCallback((field: string) => {
     setSortField((prev) => {
       if (prev === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
-      else { setSortDir('asc'); }
+      else setSortDir('asc');
       return field;
     });
   }, []);
 
-  const sortedDrawings = [...filteredDrawings].sort((a, b) => {
-    const aVal = (a as Record<string, unknown>)[sortField];
-    const bVal = (b as Record<string, unknown>)[sortField];
-    if (aVal == null && bVal == null) return 0;
-    if (aVal == null) return 1;
-    if (bVal == null) return -1;
-    if (typeof aVal === 'string' && typeof bVal === 'string') return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-    return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
-  });
-  sortedDrawingsRef.current = sortedDrawings;
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
-  const handleGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const total = sortedDrawingsRef.current.length;
-    if (total === 0) return;
-    if (e.key === 'ArrowDown' || e.key === 'j') {
-      e.preventDefault();
-      const next = Math.min(focusedIndex + 1, total - 1);
-      setFocusedIndex(next);
-      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="listitem"]');
-      rows?.[next]?.focus();
-    } else if (e.key === 'ArrowUp' || e.key === 'k') {
-      e.preventDefault();
-      const prev = Math.max(focusedIndex - 1, 0);
-      setFocusedIndex(prev);
-      const rows = gridRef.current?.querySelectorAll<HTMLElement>('[role="listitem"]');
-      rows?.[prev]?.focus();
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      const drawing = sortedDrawingsRef.current[focusedIndex];
-      if (drawing) setSelectedDrawing(drawing);
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setSelectedDrawing(null);
-    }
-  }, [focusedIndex]);
+  const handleSelectAll = useCallback(() => {
+    const allIds = filteredAndSorted.map((d) => d.id);
+    const allSelected = allIds.every((id) => selectedIds.has(id));
+    setSelectedIds(allSelected ? new Set() : new Set(allIds));
+  }, [filteredAndSorted, selectedIds]);
 
-  const handleAnalyzeSheet = useCallback(async (e: React.MouseEvent, drawing: DrawingItem) => {
-    e.stopPropagation();
-    setAnalyzingId(drawing.id);
+  const handleClearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const handleBulkDownload = useCallback(() => {
+    addToast('info', `Downloading ${selectedIds.size} drawing${selectedIds.size !== 1 ? 's' : ''}...`);
+    setSelectedIds(new Set());
+  }, [selectedIds, addToast]);
+
+  const handleBulkStatusChange = useCallback(async (status: DrawingStatus) => {
+    const ids = Array.from(selectedIds);
     try {
-      const result = await aiService.analyzeDrawingSheet(String(drawing.id), '');
-      setAnalysisResults((prev) => ({ ...prev, [drawing.id]: result }));
-      addToast('success', `Analysis complete: ${result.drawingNumber} ${result.revision}`);
+      await Promise.all(ids.map((id) => drawingService.updateDrawing(String(id), { status })));
+      addToast('success', `Updated ${ids.length} drawing${ids.length !== 1 ? 's' : ''} to ${status.replace(/_/g, ' ')}`);
+      setSelectedIds(new Set());
+      refetch();
     } catch {
-      addToast('error', 'Sheet analysis failed. Try again.');
-    } finally {
-      setAnalyzingId(null);
+      addToast('error', 'Failed to update some drawings. Try again.');
     }
-  }, [addToast]);
+  }, [selectedIds, addToast, refetch]);
 
-  const handleAiAnalyze = useCallback(async () => {
-    if (!selectedDrawing || !projectId) return;
-    setAiPanelLoading(true);
-    setAiPanelError(null);
-    setAiPanelConflicts([]);
-    setAiPanelAnalyzed(false);
+  const handleBulkOverlay = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length !== 2) { addToast('info', 'Select exactly 2 drawings to overlay.'); return; }
+    const [aId, bId] = ids;
+    const a = allDrawings.find((d) => d.id === aId);
+    const b = allDrawings.find((d) => d.id === bId);
+    if (!a?.file_url || !b?.file_url) {
+      addToast('error', 'One or both drawings are missing a file.'); return;
+    }
+    setIsPreparingOverlay(true);
     try {
-      const sheetNumber = selectedDrawing.setNumber || selectedDrawing.title;
-      const { data, error: fnError } = await supabase.functions.invoke('ai-copilot', {
-        body: { project_id: projectId, message: `Analyze drawing ${sheetNumber} for coordination conflicts with other disciplines`, context: { entity_type: 'drawing', entity_id: String(selectedDrawing.id) } },
+      const [aSign, bSign] = await Promise.all([
+        supabase.storage.from('project-files').createSignedUrl(a.file_url, 3600),
+        supabase.storage.from('project-files').createSignedUrl(b.file_url, 3600),
+      ]);
+      const aUrl = aSign.data?.signedUrl;
+      const bUrl = bSign.data?.signedUrl;
+      if (!aUrl || !bUrl) { addToast('error', 'Could not sign URLs for the selected drawings.'); return; }
+      setOverlayPair({
+        aUrl,
+        bUrl,
+        aLabel: a.setNumber || a.title,
+        bLabel: b.setNumber || b.title,
       });
-      if (fnError) throw fnError;
-      const responseText: string = data?.response ?? data?.message ?? (typeof data === 'string' ? data : JSON.stringify(data));
-      setAiPanelConflicts(parseAiConflicts(responseText));
-      setAiPanelAnalyzed(true);
-    } catch {
-      setAiPanelError('AI analysis unavailable. Ensure the AI service is configured in project settings.');
     } finally {
-      setAiPanelLoading(false);
+      setIsPreparingOverlay(false);
     }
-  }, [selectedDrawing, projectId]);
+  }, [selectedIds, allDrawings, addToast]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map((id) => drawingService.updateDrawing(String(id), { status: 'archived' })));
+      addToast('success', `Archived ${ids.length} drawing${ids.length !== 1 ? 's' : ''}`);
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      addToast('error', 'Failed to archive some drawings.');
+    }
+  }, [selectedIds, addToast, refetch]);
+
+  const triggerClassification = useCallback(
+    async (drawingId: string, pageImageUrl: string, fileName?: string) => {
+      if (!projectId) return;
+      const VALID_DISCIPLINES = new Set([
+        'cover', 'hazmat', 'demolition', 'survey', 'geotechnical',
+        'civil', 'landscape', 'structural', 'architectural', 'interior',
+        'fire_protection', 'plumbing', 'mechanical', 'electrical', 'telecommunications',
+      ]);
+      const DISCIPLINE_REMAP: Record<string, string> = {
+        mep: 'mechanical',
+        hvac: 'mechanical',
+        interior_design: 'interior',
+        low_voltage: 'telecommunications',
+        telecom: 'telecommunications',
+        fire_alarm: 'fire_protection',
+        title: 'cover',
+        title_sheet: 'cover',
+        environmental: 'hazmat',
+      };
+      try {
+        const result = await classifyMutation.mutateAsync({ projectId, drawingId, pageImageUrl });
+        const updates: Record<string, unknown> = {};
+        if (result.discipline && result.discipline !== 'unclassified') {
+          const mapped = DISCIPLINE_REMAP[result.discipline] ?? result.discipline;
+          if (VALID_DISCIPLINES.has(mapped)) updates.discipline = mapped;
+        }
+        if (result.sheet_number) updates.sheet_number = result.sheet_number;
+        if (result.drawing_title) updates.title = result.drawing_title;
+        updates.processing_status = 'completed';
+        await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+        refetch();
+      } catch (err) {
+        const updates: Record<string, unknown> = { processing_status: 'failed' };
+        if (fileName) {
+          const fallbackDiscipline = inferDisciplineFromFilename(fileName);
+          if (fallbackDiscipline) updates.discipline = fallbackDiscipline;
+        }
+        await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+        refetch();
+        if (updates.discipline) {
+          addToast('info', 'AI unavailable — discipline set from sheet prefix.');
+        } else {
+          const msg = err instanceof Error ? err.message : '';
+          if (msg.includes('413') || msg.includes('too large')) {
+            addToast('warning', 'File exceeds size limit for AI. Drawing saved without AI metadata.');
+          } else {
+            addToast('warning', 'AI classification failed. Drawing saved successfully.');
+          }
+        }
+      }
+    },
+    [projectId, classifyMutation, addToast, refetch],
+  );
 
   const handleFileReady = useCallback((file: File) => {
     setPendingFiles((prev) => [...prev, file]);
@@ -565,44 +620,635 @@ const DrawingsPage: React.FC = () => {
   const handleUploadDrawings = async () => {
     if (!projectId || pendingFiles.length === 0) return;
     setIsUploading(true);
-    let completed = 0;
-    const total = pendingFiles.length;
-    const classificationTargets: Array<{ drawingId: string; pageImageUrl: string }> = [];
-    for (const file of pendingFiles) {
-      setUploadProgressText(`Uploading sheet ${completed + 1} of ${total}...`);
+    let drawingsUploaded = 0;
+    let specsUploaded = 0;
+    let coversUploaded = 0;
+    const createdDrawingIds: string[] = [];
+    const classificationTargets: Array<{ drawingId: string; pageImageUrl: string; fileName: string }> = [];
+    const coverFindings: Array<{ fileName: string; metadata: CoverMetadata }> = [];
+    // (sheet_number, sourcePdf) → drawing IDs. Used after upload to detect
+    // pages where text extraction collapsed multiple sheets to the same
+    // number (e.g. page 4 and page 6 both read "ID-2" because of a pdfjs
+    // tokenization bug). Flagged drawings get processing_status='needs_review'.
+    const sheetAssignments: Array<{ drawingId: string; sheetNumber: string; sourceFile: string }> = [];
+
+    // ── Build work queue: expand zips into per-entry items (manifest-only —
+    //    blobs are NOT decompressed here; they're read lazily one at a time
+    //    during processing so peak memory stays bounded). ────────────────
+    type WorkItem =
+      | { kind: 'file'; file: File }
+      | { kind: 'zip-entry'; zip: JSZip; entryName: string; displayName: string; sourceZipName: string };
+
+    const queue: WorkItem[] = [];
+    const zipsToClose: JSZip[] = [];
+
+    const flattenZip = async (zip: JSZip, sourceName: string, depth = 0, maxDepth = 3) => {
+      zipsToClose.push(zip);
+      for (const entry of Object.values(zip.files)) {
+        if (entry.dir) continue;
+        if (entry.name.startsWith('__MACOSX/') || entry.name.split('/').some((p) => p === '.DS_Store')) continue;
+        if (/\.zip$/i.test(entry.name) && depth < maxDepth) {
+          try {
+            const nestedBlob = await entry.async('blob');
+            const nestedZip = await JSZip.loadAsync(nestedBlob);
+            await flattenZip(nestedZip, entry.name, depth + 1, maxDepth);
+          } catch (err) {
+            console.warn('[upload] nested zip failed', entry.name, err);
+          }
+          continue;
+        }
+        if (!/\.(pdf|dwg|dxf|png|jpe?g|tiff?)$/i.test(entry.name)) continue;
+        const baseName = entry.name.split('/').pop() || entry.name;
+        queue.push({ kind: 'zip-entry', zip, entryName: entry.name, displayName: baseName, sourceZipName: sourceName });
+      }
+    };
+
+    for (const f of pendingFiles) {
+      if (/\.zip$/i.test(f.name) || f.type === 'application/zip' || f.type === 'application/x-zip-compressed') {
+        try {
+          const zip = await JSZip.loadAsync(f);
+          await flattenZip(zip, f.name);
+        } catch (err) {
+          console.error('[upload] zip open failed', f.name, err);
+          addToast('error', `Could not open "${f.name}": ${err instanceof Error ? err.message : 'unknown'}`);
+        }
+      } else {
+        queue.push({ kind: 'file', file: f });
+      }
+    }
+
+    if (queue.length === 0) {
+      setIsUploading(false);
+      setUploadProgressText('');
+      addToast('error', 'No supported files found to upload.');
+      return;
+    }
+
+    const total = queue.length;
+
+    // ── Per-item processing helpers ─────────────────────────────────────
+    const getFileForItem = async (item: WorkItem): Promise<File | null> => {
+      if (item.kind === 'file') return item.file;
+      const jszipEntry = item.zip.file(item.entryName);
+      if (!jszipEntry) return null;
+      try {
+        const blob = await jszipEntry.async('blob');
+        return new window.File([blob], item.displayName, { type: blob.type || 'application/octet-stream' });
+      } catch (err) {
+        console.error('[upload] could not extract', item.entryName, err);
+        return null;
+      }
+    };
+
+    const uploadAsSpec = async (file: File, idx: number) => {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" (${sizeMB} MB)...`);
+      const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const path = `${projectId}/specifications/${storageKey}-${file.name}`;
+      let fileUrl = path;
+      try {
+        const result = await smartUpload('project-files', path, file, (pct) => {
+          setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" — ${pct}%`);
+        });
+        if (result.error) { addToast('error', `Spec upload failed for ${file.name}: ${result.error}`); return false; }
+        fileUrl = result.storagePath || path;
+      } catch (err) {
+        console.error('[spec] upload failed', err);
+        addToast('error', `Spec upload failed for ${file.name}`);
+        return false;
+      }
+
+      // Insert into specifications table. Section number falls back to —; title
+      // gets filename cleanup so "2024.08.08_RTG_Merritt Crossing_Spec Book_Updated"
+      // becomes "Merritt Crossing Spec Book".
       const titleNoExt = file.name.replace(/\.[^.]+$/, '');
+      const sectionMatch = titleNoExt.match(/\b(\d{2}[\s_-]?\d{2}[\s_-]?\d{0,2})\b/);
+      const sectionNumber = sectionMatch ? sectionMatch[1].replace(/[\s_-]+/g, ' ').trim() : '—';
+      const cleanedTitle = cleanFilenameTitle(file.name) || titleNoExt;
+      const { error: specErr } = await supabase.from('specifications').insert({
+        project_id: projectId,
+        section_number: sectionNumber,
+        title: cleanedTitle,
+        status: 'active',
+        file_url: fileUrl,
+      });
+      if (specErr) {
+        addToast('warning', `Spec "${file.name}" uploaded to storage but the record couldn't be saved: ${specErr.message}`);
+        return false;
+      }
+      specsUploaded++;
+      return true;
+    };
+
+    // ── Core PDF → drawing pages flow (reused by both drawing & cover routes)
+    const uploadPdfAsDrawing = async (file: File, idx: number, opts: { isCover?: boolean } = {}) => {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      const titleNoExt = file.name.replace(/\.[^.]+$/, '');
+
+      setUploadProgressText(`[${idx + 1}/${total}] Splitting PDF "${file.name}" (${sizeMB} MB)...`);
+      let pages;
+      try {
+        pages = await splitPdfToPages(file, (p) => {
+          setUploadProgressText(`[${idx + 1}/${total}] Rendering page ${p.current}/${p.total} of "${file.name}"...`);
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'unknown';
+        if (msg.includes('memory') || msg.includes('RangeError') || msg.includes('allocation')) {
+          addToast('error', `"${file.name}" is too large to render in the browser (${sizeMB} MB). Try splitting it first.`);
+        } else {
+          addToast('error', `Failed to split PDF "${file.name}": ${msg}`);
+        }
+        return 0;
+      }
+
+      // Archive original PDF (non-fatal)
+      const origPath = `${projectId}/drawings/${Date.now()}-${file.name}`;
+      try {
+        const origResult = await smartUpload('project-files', origPath, file, () => {});
+        if (origResult.error) console.warn('[drawing] original PDF archive failed:', origResult.error);
+      } catch { /* non-fatal */ }
+
+      let localSucceeded = 0;
+      // Precomputed values reused across all pages of this PDF
+      const cleanedTitle = cleanFilenameTitle(file.name);
+      const revisionFromName = extractRevisionFromFilename(file.name) ?? '1';
+      const filenameSheetMatch = titleNoExt.match(/^([A-Z]{1,3}-?\d+)/i);
+
+      for (let pi = 0; pi < pages.length; pi++) {
+        const page = pages[pi];
+        setUploadProgressText(`[${idx + 1}/${total}] Uploading page ${pi + 1}/${pages.length} of "${file.name}"...`);
+
+        // ── Stage 1: Extract sheet number + title using vector-detected
+        //    title-block region when available. Region scoping makes
+        //    detail-callout garbage and body-text false positives
+        //    invisible to the parser — ~3x accuracy lift on real CAD
+        //    exports vs. full-page scanning.
+        const titleBlock = extractSheetTitleBlock(
+          page.text,
+          page.textItems,
+          page.pageWidth,
+          page.pageHeight,
+          page.titleBlockRegion ?? undefined,
+        );
+
+        // Sheet number priority: title-block text > filename prefix > synthetic.
+        // For covers we first try the title block (some title sheets have
+        // CS-001 / G-000 printed on them), then fall back to a per-page CS-###
+        // so each page of a multi-page cover set has a unique key.
+        const coverFallbackSheet = `CS-${String(page.pageNumber).padStart(3, '0')}`;
+        const sheetNumber = opts.isCover
+          ? (titleBlock.sheetNumber ?? coverFallbackSheet)
+          : (titleBlock.sheetNumber
+              ?? (filenameSheetMatch ? filenameSheetMatch[1].toUpperCase() : `P${String(page.pageNumber).padStart(3, '0')}`));
+
+        // ── Title selection ─────────────────────────────────
+        // Trust the parser ONLY when it matched a deterministic pattern
+        // (Strategy 0 = "SHEET NUMBER" label, Strategy 1 = drawing
+        // caption or explicit "DRAWING TITLE:" label). Those are
+        // structural matches — if they fire, the text genuinely IS the
+        // title. Strategy 2 (largest font) and 3 (proximity) are
+        // heuristics that regress more than they help on real drawings,
+        // so we fall back to the cleaned filename for those cases. User
+        // can correct via inline edit.
+        const filenameBasedLabel = opts.isCover
+          ? (pages.length === 1 ? `Cover Sheet — ${cleanedTitle}` : `Cover Sheet — ${cleanedTitle} (p${page.pageNumber})`)
+          : (pages.length === 1 ? cleanedTitle : `${cleanedTitle} — Page ${page.pageNumber}`);
+        const deterministicTitleMatch =
+          titleBlock.title !== undefined &&
+          (titleBlock.titleStrategy === 0 || titleBlock.titleStrategy === 1) &&
+          // Sanity: mostly letters, at least one real word
+          titleBlock.title.replace(/[^A-Za-z\s]/g, '').length / titleBlock.title.length >= 0.7 &&
+          /[A-Za-z]{4,}/.test(titleBlock.title);
+        const pageLabel = deterministicTitleMatch ? titleBlock.title! : filenameBasedLabel;
+
+        if (titleBlock.sheetNumber || titleBlock.title) {
+          console.info(`[title-block] page ${page.pageNumber}:`, {
+            sheet: titleBlock.sheetNumber,
+            title: titleBlock.title,
+            strategy: titleBlock.titleStrategy,
+            confidence: titleBlock.confidence,
+            regionScoped: titleBlock.regionScoped,
+            usedFilenameFallback: !deterministicTitleMatch,
+          });
+        }
+
+        // Unique storage key per page — UUID avoids Date.now() collisions
+        // across concurrent uploads from different users/tabs.
+        const pageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+          ? globalThis.crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const pageImagePath = `${projectId}/drawings/pages/${pageKey}-p${page.pageNumber}.png`;
+        const thumbPath = `${projectId}/drawings/thumbs/${pageKey}-p${page.pageNumber}-thumb.png`;
+        let pageImageStoragePath: string | null = null;
+        let thumbStoragePath: string | null = null;
+
+        try {
+          const pageFile = new window.File([page.blob], `page${page.pageNumber}.png`, { type: 'image/png' });
+          const pageResult = await smartUpload('project-files', pageImagePath, pageFile, (pct) => {
+            setUploadProgressText(`Uploading page ${pi + 1}/${pages.length} — ${pct}%`);
+          });
+          if (pageResult.error) { addToast('error', `Upload failed for page ${page.pageNumber}: ${pageResult.error}`); continue; }
+          pageImageStoragePath = pageResult.storagePath || pageImagePath;
+
+          const thumbFile = new window.File([page.thumbnailBlob], `thumb${page.pageNumber}.png`, { type: 'image/png' });
+          const thumbResult = await smartUpload('project-files', thumbPath, thumbFile, () => {});
+          if (!thumbResult.error) thumbStoragePath = thumbResult.storagePath || thumbPath;
+        } catch {
+          addToast('error', `Upload failed for page ${page.pageNumber} of "${file.name}"`);
+          continue;
+        }
+
+        const created = await drawingService.createDrawing({
+          project_id: projectId,
+          title: pageLabel,
+          // Pass the source filename (e.g. "…_Mechanical_IFC_…") so the
+          // word-based inferrer wins over the synthetic P### fallback.
+          discipline: opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name),
+          sheet_number: sheetNumber,
+          revision: revisionFromName,
+          file_url: pageImageStoragePath || pageImagePath,
+          thumbnail_url: thumbStoragePath || undefined,
+          total_pages: pages.length,
+          source_filename: file.name,
+          file_size_bytes: page.blob.size,
+          // Status meaning:
+          //   - 'completed'    — parser returned a high-confidence LABELED title; we trust it
+          //   - 'classifying'  — sheet number extracted but we're using filename fallback for title; AI fallback runs
+          //   - 'needs_review' — nothing reliable; user should edit
+          processing_status: opts.isCover
+            ? 'completed'
+            : (titleLooksReliable && titleBlock.sheetNumber
+                ? 'completed'
+                : (titleBlock.sheetNumber
+                    ? 'classifying'           // we have a sheet number; AI fallback may improve title
+                    : 'needs_review')),       // no sheet number either; fully manual
+        });
+        if (created.error) { addToast('error', `Failed to save page ${page.pageNumber}: ${created.error.message}`); continue; }
+
+        const createdId = created.data?.id;
+        if (createdId) {
+          createdDrawingIds.push(createdId);
+          sheetAssignments.push({
+            drawingId: createdId,
+            sheetNumber,
+            sourceFile: file.name,
+          });
+        }
+
+        // ── Stage 2: AI vision fallback on the cropped title-block ──
+        //
+        // Only runs when Stage 1 (text-layer extraction) wasn't fully
+        // confident: sheet number missing, title missing, or confidence
+        // below the bar. For those pages we crop the page image down to
+        // just the title-block region (or a sensible default if we
+        // don't have one) and feed THAT to classify-drawing — the
+        // smaller the image, the more accurate the model.
+        const stage1Trustworthy =
+          titleBlock.sheetNumber &&
+          titleBlock.title &&
+          titleBlock.confidence >= 0.7;
+        const needsAi = !opts.isCover && !stage1Trustworthy;
+
+        if (createdId && pageImageStoragePath && needsAi) {
+          let classifyUrl: string | null = null;
+          const cropRegion = page.titleBlockRegion ?? defaultTitleBlockRegion(page.pageWidth, page.pageHeight);
+
+          // Try to crop — if crop succeeds we upload the tiny cropped
+          // PNG and classify that. Much more accurate than full-page.
+          try {
+            const cropBlob = await cropPngToRegion(
+              page.blob,
+              cropRegion,
+              page.pageWidth,
+              page.pageHeight,
+            );
+            const cropKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+              ? globalThis.crypto.randomUUID()
+              : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+            const cropPath = `${projectId}/drawings/crops/${cropKey}.png`;
+            const cropFile = new window.File([cropBlob], `crop-${cropKey}.png`, { type: 'image/png' });
+            const cropUploadResult = await smartUpload('project-files', cropPath, cropFile, () => {});
+            if (!cropUploadResult.error) {
+              const { data: cropUrlData } = await supabase.storage
+                .from('project-files')
+                .createSignedUrl(cropUploadResult.storagePath || cropPath, 3600);
+              if (cropUrlData?.signedUrl) {
+                classifyUrl = cropUrlData.signedUrl;
+                console.info(`[ai-fallback] page ${page.pageNumber} — queued cropped title-block for AI (${Math.round(cropBlob.size / 1024)}KB)`);
+              }
+            }
+          } catch (err) {
+            console.warn(`[ai-fallback] crop failed for page ${page.pageNumber}, falling back to full page:`, err);
+          }
+
+          // If cropping failed for any reason, fall back to the full
+          // page image — AI can still usually handle it, just less well.
+          if (!classifyUrl) {
+            const { data: urlData } = await supabase.storage.from('project-files').createSignedUrl(pageImageStoragePath, 3600);
+            classifyUrl = urlData?.signedUrl ?? null;
+          }
+
+          if (classifyUrl) {
+            classificationTargets.push({
+              drawingId: createdId,
+              pageImageUrl: classifyUrl,
+              fileName: `${titleNoExt}-P${page.pageNumber}`,
+            });
+          }
+        }
+        localSucceeded++;
+      }
+      return localSucceeded;
+    };
+
+    const uploadNonPdfAsDrawing = async (file: File, idx: number) => {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      const titleNoExt = file.name.replace(/\.[^.]+$/, '');
+      const cleanedTitle = cleanFilenameTitle(file.name);
+      const revisionFromName = extractRevisionFromFilename(file.name) ?? '1';
+      setUploadProgressText(`[${idx + 1}/${total}] Uploading "${file.name}" (${sizeMB} MB)...`);
       const sheetMatch = titleNoExt.match(/^([A-Z]{1,3}-?\d+)/i);
       const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
-      const storagePath = `${projectId}/drawings/${Date.now()}-${file.name}`;
+      const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const storagePath = `${projectId}/drawings/${storageKey}-${file.name}`;
       let fileUrl = storagePath;
       let publicUrl: string | null = null;
+
       try {
-        const { data: storageData } = await supabase.storage.from('drawings').upload(storagePath, file);
-        if (storageData?.path) {
-          fileUrl = storageData.path;
-          const { data: urlData } = supabase.storage.from('drawings').getPublicUrl(storageData.path);
-          publicUrl = urlData?.publicUrl ?? null;
-        }
-      } catch { /* storage upload failed */ }
-      const created = await drawingService.createDrawing({ project_id: projectId, title: titleNoExt, discipline: uploadDiscipline, sheet_number: sheetNumber, revision: '1', file_url: fileUrl });
-      const createdId = created.data?.id;
-      if (createdId && publicUrl) {
-        classificationTargets.push({ drawingId: createdId, pageImageUrl: publicUrl });
+        const uploadResult = await smartUpload('project-files', storagePath, file, (pct) => {
+          setUploadProgressText(`[${idx + 1}/${total}] Uploading "${file.name}" — ${pct}%`);
+        });
+        if (uploadResult.error) { addToast('error', `Upload failed for ${file.name}: ${uploadResult.error}`); return false; }
+        fileUrl = uploadResult.storagePath || storagePath;
+        const { data: urlData } = await supabase.storage.from('project-files').createSignedUrl(fileUrl, 3600);
+        publicUrl = urlData?.signedUrl ?? null;
+      } catch {
+        addToast('error', `Upload failed for ${file.name}`);
+        return false;
       }
-      completed++;
+
+      const created = await drawingService.createDrawing({
+        project_id: projectId,
+        title: cleanedTitle || titleNoExt,
+        discipline: inferDisciplineFromFilename(file.name),
+        sheet_number: sheetNumber,
+        revision: revisionFromName,
+        file_url: fileUrl,
+        source_filename: file.name,
+        file_size_bytes: file.size,
+        processing_status: 'classifying',
+      });
+      if (created.error) { addToast('error', `Failed to save ${file.name}: ${created.error.message}`); return false; }
+      const createdId = created.data?.id;
+      if (createdId) createdDrawingIds.push(createdId);
+      if (createdId && publicUrl) {
+        classificationTargets.push({ drawingId: createdId, pageImageUrl: publicUrl, fileName: file.name });
+      }
+      return true;
+    };
+
+    // ── Main loop: process one item at a time, release memory between iterations ─
+    for (let idx = 0; idx < queue.length; idx++) {
+      const item = queue[idx];
+      const displayName = item.kind === 'file' ? item.file.name : item.displayName;
+      const route = /\.pdf$/i.test(displayName) ? classifyPdfByFilename(displayName) : 'drawing';
+
+      setUploadProgressText(`[${idx + 1}/${total}] Reading "${displayName}"...`);
+      const file = await getFileForItem(item);
+      if (!file) {
+        addToast('error', `Could not read "${displayName}"${item.kind === 'zip-entry' ? ` from ${item.sourceZipName}` : ''}`);
+        continue;
+      }
+
+      try {
+        if (route === 'spec') {
+          await uploadAsSpec(file, idx);
+        } else if (route === 'cover') {
+          // Upload cover as drawing (viewable), then extract metadata from the
+          // first several pages — cover SETS are commonly 2–4 pages where page 1
+          // is the title/consultants and page 2–3 carry the code summary,
+          // building areas, and sheet index.
+          const n = await uploadPdfAsDrawing(file, idx, { isCover: true });
+          if (n > 0) coversUploaded++;
+          try {
+            setUploadProgressText(`[${idx + 1}/${total}] Extracting project metadata from "${displayName}"...`);
+            const text = await extractPdfTextFromPages(file, 5);
+            if (text.trim()) {
+              const metadata = parseCoverMetadata(text);
+              console.info('[cover] metadata detected for', file.name, metadata);
+              coverFindings.push({ fileName: file.name, metadata });
+            } else {
+              console.info('[cover] no embedded text in', file.name, '— likely a scanned/image PDF. OCR would be needed.');
+            }
+          } catch (err) {
+            console.warn('[cover] text extraction failed', err);
+          }
+        } else {
+          // drawing
+          if (isPdf(file)) {
+            const n = await uploadPdfAsDrawing(file, idx, { isCover: false });
+            drawingsUploaded += n;
+
+            // ALSO peek at page 1 — the architectural title sheet inside a
+            // discipline PDF (e.g. Arch_IFC.pdf p1) often carries the real
+            // consultant block even when the filename says "drawing". If the
+            // text looks cover-like, collect it as a metadata finding too.
+            try {
+              const firstPageText = await extractPdfFirstPageText(file);
+              if (firstPageText.trim() && looksLikeCoverText(firstPageText)) {
+                const metadata = parseCoverMetadata(firstPageText);
+                if (metadata.confidence > 0.2) {
+                  console.info('[drawing-title-page] metadata detected on', file.name, metadata);
+                  coverFindings.push({ fileName: file.name, metadata });
+                }
+              }
+            } catch { /* non-fatal — metadata is best-effort */ }
+          } else if (await uploadNonPdfAsDrawing(file, idx)) {
+            drawingsUploaded++;
+          }
+        }
+      } catch (err) {
+        console.error('[upload] item failed', displayName, err);
+        addToast('error', `Failed to process "${displayName}": ${err instanceof Error ? err.message : 'unknown'}`);
+      }
+
+      // Help the GC — the large Blob inside `file` has no other references now
+      // (the zip still holds the compressed bytes but not the decompressed form).
     }
+
+    // ── Flag duplicate sheet numbers within the same source PDF so the user
+    //    knows which drawings need manual review. This catches pdfjs
+    //    tokenization failures where multiple sheets parsed to the same
+    //    number (e.g. pages 4, 6, 7 all getting "ID-2" because their ".0"
+    //    tail ended up on a separate text item).
+    if (sheetAssignments.length > 0) {
+      const groups = new Map<string, string[]>();
+      for (const a of sheetAssignments) {
+        const key = `${a.sourceFile}::${a.sheetNumber}`;
+        const arr = groups.get(key) ?? [];
+        arr.push(a.drawingId);
+        groups.set(key, arr);
+      }
+      const duplicateIds: string[] = [];
+      for (const [, ids] of groups) {
+        if (ids.length > 1) duplicateIds.push(...ids);
+      }
+      if (duplicateIds.length > 0) {
+        console.warn(`[upload] ${duplicateIds.length} drawings have duplicate sheet numbers — flagging for review`);
+        // Flag without blocking — AI classification may still fix them later.
+        await Promise.all(
+          duplicateIds.map((id) =>
+            drawingService.updateDrawing(id, { processing_status: 'needs_review' } as Record<string, unknown>),
+          ),
+        );
+        addToast(
+          'warning',
+          `${duplicateIds.length} drawing${duplicateIds.length !== 1 ? 's' : ''} have duplicate sheet numbers — look for the "needs review" badge and fix them manually.`,
+        );
+      }
+    }
+
+    // Persist a drawing set if the user named one at upload time
+    const trimmedSetName = uploadSetName.trim();
+    if (trimmedSetName && createdDrawingIds.length > 0) {
+      const { error: setErr } = await supabase.from('drawing_sets').insert({
+        project_id: projectId,
+        name: trimmedSetName,
+        set_type: uploadSetType,
+        drawing_ids: createdDrawingIds,
+      });
+      if (setErr) {
+        addToast('warning', `Drawings uploaded, but failed to create set "${trimmedSetName}": ${setErr.message}`);
+      } else {
+        addToast('success', `Set "${trimmedSetName}" created with ${createdDrawingIds.length} drawing${createdDrawingIds.length !== 1 ? 's' : ''}.`);
+        refetchSets();
+      }
+    }
+
     setIsUploading(false);
     setUploadProgressText('');
     setPendingFiles([]);
+    setUploadSetName('');
+    setUploadSetType('working');
     setShowUploadModal(false);
-    setUploadDiscipline('Architectural');
     refetch();
-    addToast('success', `${completed} drawing${completed !== 1 ? 's' : ''} uploaded successfully.`);
+
+    // Summary toast — show the breakdown so the user knows what went where.
+    const totalSucceeded = drawingsUploaded + specsUploaded + coversUploaded;
+    if (totalSucceeded > 0) {
+      const parts: string[] = [];
+      if (drawingsUploaded > 0) parts.push(`${drawingsUploaded} drawing sheet${drawingsUploaded !== 1 ? 's' : ''}`);
+      if (specsUploaded > 0) parts.push(`${specsUploaded} spec${specsUploaded !== 1 ? 's' : ''} → Specifications`);
+      if (coversUploaded > 0) parts.push(`${coversUploaded} cover sheet${coversUploaded !== 1 ? 's' : ''}`);
+      addToast('success', `Uploaded ${parts.join(', ')}.`);
+    } else if (pendingFiles.length > 0) {
+      addToast('error', 'No items were uploaded. Check file sizes and try again.');
+    }
+
+    // ── Cover + project-data metadata: merge + auto-fill empty project fields
+    //
+    // Safety contract: we ONLY set fields on the projects row that are
+    // currently null/empty. We NEVER overwrite user-entered data. The full
+    // parse is logged to the console for the user to review.
+    if (coverFindings.length > 0) {
+      const merged: CoverMetadata = coverFindings
+        .map((f) => f.metadata)
+        .reduce((acc, m) => mergeCoverMetadata(acc, m));
+
+      console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
+
+      // Fetch current project row to know which fields are already populated
+      const { data: currentProject } = await supabase
+        .from('projects')
+        .select('name, address, city, state, zip, architect_name, owner_name, general_contractor, building_area_sqft, num_floors')
+        .eq('id', projectId)
+        .single();
+
+      const updates: Record<string, unknown> = {};
+      const applied: string[] = [];
+
+      const setIfEmpty = (field: string, value: string | number | undefined | null, label: string) => {
+        if (value === undefined || value === null || value === '') return;
+        const cur = (currentProject as Record<string, unknown> | null)?.[field];
+        if (cur === undefined || cur === null || cur === '' || cur === 0) {
+          updates[field] = value;
+          applied.push(label);
+        }
+      };
+
+      setIfEmpty('address', merged.street, 'address');
+      setIfEmpty('city', merged.city, 'city');
+      setIfEmpty('state', merged.state, 'state');
+      setIfEmpty('zip', merged.zip, 'zip');
+      setIfEmpty('architect_name', merged.consultants.architect, 'architect');
+      setIfEmpty('owner_name', merged.consultants.owner, 'owner');
+      setIfEmpty('general_contractor', merged.consultants.contractor, 'general contractor');
+      setIfEmpty('building_area_sqft', merged.buildingAreaSqft, `${merged.buildingAreaSqft?.toLocaleString()} sqft`);
+      setIfEmpty('num_floors', merged.numFloors, `${merged.numFloors} floors`);
+
+      if (Object.keys(updates).length > 0) {
+        const { error: projErr } = await supabase
+          .from('projects')
+          .update(updates)
+          .eq('id', projectId);
+        if (projErr) {
+          console.error('[project-metadata] update failed', projErr);
+          addToast('warning', `Extracted project metadata but couldn't save: ${projErr.message}. Details in console.`);
+        } else {
+          addToast('success', `Project metadata auto-filled: ${applied.join(', ')}.`);
+        }
+      }
+
+      // Non-applied findings (because the field was already filled) — still
+      // surface them so the user sees everything that was detected.
+      const detectedExtras: string[] = [];
+      if (merged.projectName) detectedExtras.push(`Project: "${merged.projectName.slice(0, 60)}"`);
+      const unpushedConsultants = Object.entries(merged.consultants)
+        .filter(([k]) => !['architect', 'owner', 'contractor'].includes(k))
+        .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`);
+      if (unpushedConsultants.length > 0) {
+        detectedExtras.push(`${unpushedConsultants.length} other consultant${unpushedConsultants.length !== 1 ? 's' : ''}`);
+      }
+      if (merged.occupancyClassification) detectedExtras.push(`Occupancy ${merged.occupancyClassification}`);
+      if (merged.constructionType) detectedExtras.push(`Type ${merged.constructionType}`);
+      if (merged.codeEdition) detectedExtras.push(merged.codeEdition);
+      if (detectedExtras.length > 0) {
+        addToast('info', `Also detected (review in console): ${detectedExtras.join(' · ')}`);
+      }
+    }
+
     if (classificationTargets.length > 0) {
-      addToast('info', 'AI classification started in the background.');
-      void Promise.all(
-        classificationTargets.map((t) => triggerClassification(t.drawingId, t.pageImageUrl)),
-      );
+      void (async () => {
+        // Probe the classification service with the first drawing. If the
+        // service is up, we apply the result (title / sheet-number / discipline)
+        // to that drawing and proceed with the rest. If it's down, we mark
+        // everything with the filename-inferred discipline and bail out.
+        const probe = classificationTargets[0];
+        try {
+          await triggerClassification(probe.drawingId, probe.pageImageUrl, probe.fileName);
+        } catch {
+          addToast('warning', 'AI classification service unavailable. Drawings saved — discipline set from filename where possible.');
+          for (const t of classificationTargets) {
+            const fallback = inferDisciplineFromFilename(t.fileName);
+            if (fallback) {
+              await drawingService.updateDrawing(
+                t.drawingId,
+                { discipline: fallback, processing_status: 'failed' } as Record<string, unknown>,
+              );
+            }
+          }
+          refetch();
+          return;
+        }
+        addToast('info', `AI classification running for ${classificationTargets.length} sheet${classificationTargets.length !== 1 ? 's' : ''}...`);
+        for (let i = 1; i < classificationTargets.length; i++) {
+          await triggerClassification(classificationTargets[i].drawingId, classificationTargets[i].pageImageUrl, classificationTargets[i].fileName);
+        }
+      })();
     }
   };
 
@@ -613,12 +1259,19 @@ const DrawingsPage: React.FC = () => {
     if (revUploadFile) {
       const path = `${projectId}/drawings/rev-${Date.now()}-${revUploadFile.name}`;
       try {
-        const { data: storageData } = await supabase.storage.from('drawings').upload(path, revUploadFile);
+        const { data: storageData, error: storageErr } = await supabase.storage.from('project-files').upload(path, revUploadFile);
+        if (storageErr) { addToast('error', `Revision upload failed: ${storageErr.message}`); setIsRevUploading(false); return; }
         if (storageData?.path) fileUrl = storageData.path;
-      } catch { /* storage upload failed */ }
+      } catch { addToast('error', 'Revision upload failed'); setIsRevUploading(false); return; }
     }
     await supabase.from('drawing_revisions').update({ superseded_at: new Date().toISOString() }).eq('drawing_id', String(selectedDrawing.id)).is('superseded_at', null);
-    await supabase.from('drawing_revisions').insert({ drawing_id: String(selectedDrawing.id), revision_number: Number(revUploadNum), issued_date: new Date().toISOString().slice(0, 10), change_description: revUploadDesc || null, file_url: fileUrl });
+    await supabase.from('drawing_revisions').insert({
+      drawing_id: String(selectedDrawing.id),
+      revision_number: Number(revUploadNum),
+      issued_date: new Date().toISOString().slice(0, 10),
+      change_description: revUploadDesc || null,
+      file_url: fileUrl,
+    });
     setIsRevUploading(false);
     setShowRevUploadModal(false);
     setRevUploadFile(null);
@@ -628,83 +1281,151 @@ const DrawingsPage: React.FC = () => {
     addToast('success', `Revision ${revUploadNum} uploaded for ${selectedDrawing.title}.`);
   };
 
-  const handleRevDropdown = useCallback(async (e: React.MouseEvent, drawingId: string, drawingTitle: string, fallbackRevisions: DrawingRevision[]) => {
-    e.stopPropagation();
-    if (openRevDropdownId === drawingId) { setOpenRevDropdownId(null); return; }
-    setOpenRevDropdownId(drawingId);
-    if (!rowRevHistory[drawingId]) {
-      if (fallbackRevisions.length > 0) {
-        setRowRevHistory((prev) => ({ ...prev, [drawingId]: fallbackRevisions }));
-      } else {
-        setRowRevHistoryLoading(drawingId);
-        try {
-          const history = await getDrawingRevisionHistory(drawingId);
-          setRowRevHistory((prev) => ({ ...prev, [drawingId]: history }));
-        } catch { /* keep dropdown open with empty state */ } finally {
-          setRowRevHistoryLoading(null);
-        }
-      }
-    }
-    setCompareDrawingTitle(drawingTitle);
-  }, [openRevDropdownId, rowRevHistory]);
+  const handleAnalyzeDrawingSet = useCallback(async () => {
+    if (!projectId) return;
+    setShowAnalysisPanel(true);
+    try {
+      await intelligence.analyzeDrawingSet();
+      addToast('success', `Analysis complete — ${intelligence.state.discrepancyCount} discrepancies detected`);
+    } catch { addToast('error', 'Drawing analysis failed.'); }
+  }, [projectId, intelligence, addToast]);
 
+  const handleCreateRFIFromAnnotation = useCallback(() => {
+    if (!selectedDrawing) { addToast('error', 'Select a drawing first to create an RFI from annotations.'); return; }
+    addToast('info', `RFI draft prefilled from ${selectedDrawing.setNumber}. Open the RFIs page to finish.`);
+  }, [selectedDrawing, addToast]);
+
+  const handleCreateRFIFromDiscrepancy = useCallback(() => {
+    addToast('info', 'A draft RFI will be created from this discrepancy. Open RFIs to edit.');
+  }, [addToast]);
+
+  // ── Drag & drop ─────────────────────────────────────────
   const handlePageDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const hasFile = Array.from(e.dataTransfer.items).some((item) => item.kind === 'file');
-    if (hasFile) setPageIsDragging(true);
+    if (Array.from(e.dataTransfer.items).some(item => item.kind === 'file')) setPageIsDragging(true);
   }, []);
 
   const handlePageDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setPageIsDragging(false);
   }, []);
 
-  const handlePageDrop = useCallback((e: React.DragEvent) => {
+  const handlePageDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setPageIsDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => /\.(pdf|dwg|dxf)$/i.test(f.name));
-    if (files.length > 0) { setPendingFiles(files); setShowUploadModal(true); }
-  }, []);
 
+    const items = e.dataTransfer.items;
+    const rawFiles = Array.from(e.dataTransfer.files);
+
+    // Directory entries (dropped folders)
+    const entries: FileSystemEntry[] = [];
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry?.();
+        if (entry) entries.push(entry);
+      }
+    }
+
+    const collectFromDir = async (entry: FileSystemDirectoryEntry): Promise<File[]> => {
+      const reader = entry.createReader();
+      const out: File[] = [];
+      const readBatch = (): Promise<void> => new Promise((resolve) => {
+        reader.readEntries(async (children) => {
+          if (children.length === 0) { resolve(); return; }
+          for (const child of children) {
+            if (child.isFile) {
+              const f = await new Promise<File | null>((res) => {
+                (child as FileSystemFileEntry).file((ff) => res(ff), () => res(null));
+              });
+              if (f) out.push(f);
+            } else if (child.isDirectory) {
+              const nested = await collectFromDir(child as FileSystemDirectoryEntry);
+              out.push(...nested);
+            }
+          }
+          await readBatch();
+          resolve();
+        }, () => resolve());
+      });
+      await readBatch();
+      return out;
+    };
+
+    const drawingRe = /\.(pdf|dwg|dxf|png|jpe?g|tiff?)$/i;
+    const collected: File[] = [];
+
+    // Expand folders
+    for (const entry of entries) {
+      if (entry.isDirectory) {
+        const files = await collectFromDir(entry as FileSystemDirectoryEntry);
+        collected.push(...files.filter((f) => drawingRe.test(f.name)));
+      }
+    }
+
+    // Process top-level files: expand zips, keep drawing files
+    for (const f of rawFiles) {
+      if (/\.zip$/i.test(f.name) || f.type === 'application/zip' || f.type === 'application/x-zip-compressed') {
+        try {
+          addToast('info', `Extracting "${f.name}" — this may take a moment for large archives...`);
+          const { files, totalCandidates } = await extractDrawingFilesFromZip(f, 0, 3, (prog) => {
+            if (prog.phase === 'loading') {
+              setUploadProgressText(`Loading ZIP "${prog.zipName}"...`);
+            } else {
+              setUploadProgressText(`Extracting ${prog.current}/${prog.total}: ${prog.currentFile || '...'}`);
+            }
+          });
+          setUploadProgressText('');
+          if (files.length > 0) {
+            collected.push(...files);
+            addToast('success', `Extracted ${files.length} drawing file${files.length !== 1 ? 's' : ''} from "${f.name}".`);
+          } else if (totalCandidates === 0) {
+            addToast('warning', `${f.name}: no .pdf, .dwg, or .dxf files inside.`);
+          } else {
+            addToast('error', `${f.name}: found ${totalCandidates} drawings but none could be read.`);
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'unknown error';
+          console.error('[Drawings] zip extraction failed:', err);
+          addToast('error', `Failed to read ${f.name}: ${msg}`);
+          setUploadProgressText('');
+        }
+      } else if (drawingRe.test(f.name)) {
+        collected.push(f);
+      }
+    }
+
+    if (collected.length > 0) {
+      setPendingFiles(collected);
+      setShowUploadModal(true);
+    } else if (rawFiles.length > 0 || entries.length > 0) {
+      addToast('warning', 'No PDF, DWG, or DXF files found in the drop.');
+    }
+  }, [addToast]);
+
+  // ── Render ──────────────────────────────────────────────
   return (
     <PageContainer
       title="Drawings"
       actions={
         <>
-          <Btn
-            variant="secondary"
-            size="md"
-            aria-label="View annotations"
-            onClick={() => setShowAnnotationPanel(true)}
-          >
+          <Btn variant="secondary" size="md" icon={<FolderOpen size={16} />} onClick={() => setShowSetsPanel(true)}>
+            Sets
+          </Btn>
+          <Btn variant="secondary" size="md" onClick={() => setShowAnnotationPanel(true)}>
             Annotations
-          </Btn>
-          <Btn
-            variant="secondary"
-            size="md"
-            aria-label="Open revision overlay"
-            disabled={!selectedDrawing || !revisionHistory || revisionHistory.length < 2}
-            onClick={() => setShowRevisionOverlay(true)}
-          >
-            Revision Overlay
-          </Btn>
-          <Btn variant="secondary" size="md" icon={<Sparkles size={16} />} aria-label="Toggle AI insights panel" aria-pressed={showAiPanel} onClick={() => setShowAiPanel((v) => !v)}>
-            AI Insights
           </Btn>
           <PermissionGate permission="drawings.upload">
             <Btn
-              variant="secondary"
-              size="md"
+              variant="secondary" size="md"
               icon={<ScanSearch size={16} />}
-              aria-label="Analyze drawing set for clashes"
               disabled={intelligence.state.stage !== 'idle' && intelligence.state.stage !== 'complete' && intelligence.state.stage !== 'failed'}
               onClick={handleAnalyzeDrawingSet}
             >
-              Analyze Drawing Set
+              Analyze Set
             </Btn>
           </PermissionGate>
           <PermissionGate permission="drawings.upload">
-            <Btn variant="primary" size="md" icon={<Upload size={16} />} aria-label="Upload new drawing" onClick={() => setShowUploadModal(true)}>
-              Upload Drawings
+            <Btn variant="primary" size="md" icon={<Upload size={16} />} onClick={() => setShowUploadModal(true)}>
+              Upload
             </Btn>
           </PermissionGate>
         </>
@@ -712,144 +1433,177 @@ const DrawingsPage: React.FC = () => {
     >
       <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Drawings</h1>
       <style>{`
-        @media(max-width:768px){
-          .drawings-layout{grid-template-columns:1fr!important;}
-          .drawing-table-header{display:none!important;}
-          .drawings-list{display:grid;grid-template-columns:1fr;gap:8px;padding:8px;}
-          .drawing-row-desktop{display:none!important;}
-          .drawing-row-mobile{display:flex!important;}
-        }
-        @media(min-width:769px){.drawing-row-mobile{display:none!important;}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-        .drawing-row:focus-visible{outline:2px solid var(--color-primary,#F47820);outline-offset:-2px;}
+        @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
       `}</style>
+
       <div
         style={{ position: 'relative' }}
         onDragOver={handlePageDragOver}
         onDragLeave={handlePageDragLeave}
         onDrop={handlePageDrop}
       >
+        {/* Drop zone overlay */}
         {pageIsDragging && (
-          <div style={{ position: 'absolute', inset: 0, zIndex: 50, backgroundColor: `${colors.primaryOrange}10`, border: `2px dashed ${colors.primaryOrange}`, borderRadius: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: spacing['3'], pointerEvents: 'none' }}>
-            <Upload size={48} color={colors.primaryOrange} />
-            <p style={{ fontSize: 20, fontWeight: 600, color: colors.primaryOrange, margin: 0 }}>Drop drawings here</p>
-            <p style={{ fontSize: 14, color: colors.primaryOrange, margin: 0, opacity: 0.7 }}>.pdf, .dwg, .dxf files accepted</p>
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 50,
+            backgroundColor: colors.primaryOrange + '06',
+            border: `2px dashed ${colors.primaryOrange}`,
+            borderRadius: '12px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '12px',
+            pointerEvents: 'none',
+          }}>
+            <Upload size={40} color={colors.primaryOrange} />
+            <p style={{ fontSize: 17, fontWeight: 600, color: colors.primaryOrange, margin: 0 }}>Drop drawings here</p>
+            <p style={{ fontSize: 12, color: colors.primaryOrange, margin: 0, opacity: 0.7 }}>.pdf, .dwg, .dxf, .zip files accepted</p>
           </div>
         )}
-        <div className="drawings-layout" style={{ display: 'grid', gridTemplateColumns: selectedDrawing ? '1fr 380px' : '1fr', gap: spacing.xl }}>
+
+        {/* Toolbar — no metric cards, content goes edge-to-edge */}
+        <DrawingToolbar
+          filters={filters}
+          onFiltersChange={setFilters}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          totalCount={allDrawings.length}
+          filteredCount={filteredAndSorted.length}
+          selectedCount={selectedIds.size}
+          onBulkDownload={handleBulkDownload}
+          onBulkStatusChange={handleBulkStatusChange}
+          onBulkDelete={handleBulkDelete}
+          onBulkOverlay={handleBulkOverlay}
+          isOverlayBusy={isPreparingOverlay}
+          onSelectAll={handleSelectAll}
+          onClearSelection={handleClearSelection}
+          availableDisciplines={availableDisciplines}
+        />
+
+        {/* Content — full width, no sidebar column */}
+        {viewMode === 'table' ? (
           <DrawingList
-            drawings={sortedDrawings}
+            drawings={filteredAndSorted}
             loading={loading}
             error={error}
             refetch={refetch}
             sortField={sortField}
             sortDir={sortDir}
             onSort={handleSort}
-            activeFilters={activeFilters}
-            setActiveFilters={setActiveFilters}
-            allDrawings={allDrawings}
-            focusedIndex={focusedIndex}
-            setFocusedIndex={setFocusedIndex}
-            gridRef={gridRef}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
+            focusedId={selectedDrawing?.id ?? null}
             onSelectDrawing={setSelectedDrawing}
             onViewDrawing={setViewerDrawing}
-            analyzingId={analyzingId}
-            analysisResults={analysisResults}
-            onAnalyzeSheet={handleAnalyzeSheet}
-            openRevDropdownId={openRevDropdownId}
-            rowRevHistory={rowRevHistory}
-            rowRevHistoryLoading={rowRevHistoryLoading}
-            onRevDropdown={handleRevDropdown}
-            setOpenRevDropdownId={setOpenRevDropdownId}
-            setViewRevPdfUrl={setViewRevPdfUrl}
-            setViewingRevisionNum={setViewingRevisionNum}
-            setViewerDrawing={setViewerDrawing}
-            setSelectedRevisions={setSelectedRevisions}
-            setComparisonMode={setComparisonMode}
-            setShowUploadModal={setShowUploadModal}
-            showConflicts={showConflicts}
-            setShowConflicts={setShowConflicts}
-            handleGridKeyDown={handleGridKeyDown}
+            onUploadClick={() => setShowUploadModal(true)}
+            searchQuery={filters.search}
           />
-
-          {selectedDrawing && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-              <ClassificationBadge
-                classification={processing.byDrawing(String(selectedDrawing.id))}
-                status={processing.statusByDrawing(String(selectedDrawing.id))}
-                classifying={classifyMutation.isPending}
-                drawingId={selectedDrawing.id}
-                projectId={projectId}
-              />
-              {projectId && drawingDiscrepancies.length > 0 && (
-                <ClashDetectionPanel
-                  projectId={projectId}
-                  drawingId={String(selectedDrawing.id)}
-                  discrepancies={drawingDiscrepancies}
-                  loading={discrepanciesLoading}
-                  onCreateRFI={handleCreateRFIFromDiscrepancy}
-                  onViewDetail={(d) => setDetailDiscrepancy(d)}
-                />
-              )}
-              <DrawingDetail
-              drawing={selectedDrawing}
-              revisionHistory={revisionHistory}
-              viewingRevisionNum={viewingRevisionNum}
-              onClose={() => setSelectedDrawing(null)}
-              onOpenViewer={() => setViewerDrawing(selectedDrawing)}
-              onAiScan={() => addToast('info', 'AI Scan initiated for ' + selectedDrawing.setNumber)}
-              onUploadRevision={() => {
-                const nextRev = revisionHistory && revisionHistory.length > 0 ? String(revisionHistory[0].revision_number + 1) : '1';
-                setRevUploadNum(nextRev);
-                setRevUploadFile(null);
-                setRevUploadDesc('');
-                setShowRevUploadModal(true);
-              }}
-              onViewRevision={(rev) => {
-                if (rev.file_url) { setViewRevPdfUrl(rev.file_url); }
-                else {
-                  const isCurrent = !rev.superseded_at;
-                  setViewingRevisionNum(isCurrent ? null : rev.revision_number);
-                  if (!isCurrent) setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
-                }
-              }}
-              onCompareVersions={() => setShowVersionCompare(true)}
-              setViewingRevisionNum={setViewingRevisionNum}
-            />
-            </div>
-          )}
-        </div>
+        ) : (
+          <DrawingCardGrid
+            drawings={filteredAndSorted}
+            loading={loading}
+            error={error}
+            refetch={refetch}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onSelectDrawing={setSelectedDrawing}
+            onViewDrawing={setViewerDrawing}
+            onUploadClick={() => setShowUploadModal(true)}
+            searchQuery={filters.search}
+          />
+        )}
       </div>
 
-      {/* Viewers and modals */}
-      {viewerDrawing && (
-        <DrawingViewer
-          drawing={viewerDrawing}
-          onClose={() => setViewerDrawing(null)}
-          onCreateRFI={handleCreateRFIFromAnnotation}
+      {/* ── Detail slide-over panel (replaces fixed sidebar column) ── */}
+      {selectedDrawing && (
+        <DrawingDetail
+          drawing={selectedDrawing}
+          revisionHistory={revisionHistory}
+          viewingRevisionNum={viewingRevisionNum}
+          onClose={() => setSelectedDrawing(null)}
+          onOpenViewer={() => setViewerDrawing(selectedDrawing)}
+          onUploadRevision={() => {
+            const nextRev = revisionHistory && revisionHistory.length > 0
+              ? String(revisionHistory[0].revision_number + 1)
+              : '1';
+            setRevUploadNum(nextRev);
+            setRevUploadFile(null);
+            setRevUploadDesc('');
+            setShowRevUploadModal(true);
+          }}
+          onViewRevision={(rev) => {
+            if (rev.file_url) { setViewRevPdfUrl(rev.file_url); }
+            else {
+              const isCurrent = !rev.superseded_at;
+              setViewingRevisionNum(isCurrent ? null : rev.revision_number);
+              if (!isCurrent) setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
+            }
+          }}
+          onCompareVersions={() => {}}
+          setViewingRevisionNum={setViewingRevisionNum}
+          classification={processing.byDrawing(String(selectedDrawing.id))}
+          classificationStatus={processing.statusByDrawing(String(selectedDrawing.id))}
+          discrepancies={drawingDiscrepancies}
+          onCreateRFI={handleCreateRFIFromDiscrepancy}
+          onFieldUpdate={async (drawingId, patch) => {
+            // When the user corrects a sheet number or title, clear the
+            // needs_review flag — they've explicitly verified the data.
+            const fullPatch: Record<string, unknown> = { ...patch, processing_status: 'completed' };
+            const result = await drawingService.updateDrawing(drawingId, fullPatch);
+            if (result.error) {
+              addToast('error', `Failed to save: ${result.error.message}`);
+              return;
+            }
+            // Optimistically update the panel's view of the drawing so the
+            // user sees their edit immediately. The useQuery `drawings` list
+            // will also refresh via refetch() but React's render order means
+            // the detail panel would otherwise show the pre-edit values for
+            // one beat.
+            if (selectedDrawing && selectedDrawing.id === drawingId) {
+              setSelectedDrawing({
+                ...selectedDrawing,
+                ...(patch.sheet_number ? { setNumber: patch.sheet_number } : {}),
+                ...(patch.title ? { title: patch.title } : {}),
+              });
+            }
+            refetch();
+            addToast('success', 'Drawing updated.');
+          }}
         />
       )}
 
-      {showRevisionOverlay && selectedDrawing && revisionHistory && revisionHistory.length >= 2 && (
+      {/* ── Modals & overlays ──────────────────────────────── */}
+
+      {viewerDrawing && (
+        <DrawingFileViewer
+          drawing={viewerDrawing}
+          drawings={filteredAndSorted}
+          onClose={() => setViewerDrawing(null)}
+          onNavigate={(d) => setViewerDrawing(d)}
+          onCreateRFI={handleCreateRFIFromAnnotation}
+          projectId={projectId ?? undefined}
+          scaleRatioText={processing.byDrawing(String(viewerDrawing.id))?.scale_text ?? null}
+        />
+      )}
+
+      {overlayPair && (
         <div
           role="dialog"
-          aria-label="Revision overlay"
-          style={{ position: 'fixed', inset: 0, zIndex: 200, backgroundColor: colors.overlayBackdrop, padding: spacing.lg, overflowY: 'auto' }}
+          aria-label="Overlay two drawings"
+          style={{ position: 'fixed', inset: 0, zIndex: 200, backgroundColor: 'rgba(0,0,0,0.6)', padding: spacing['4'], overflowY: 'auto' }}
         >
-          <div style={{ maxWidth: 1400, margin: '0 auto', backgroundColor: colors.surfacePage, borderRadius: 12, padding: spacing.md }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <h2 style={{ margin: 0, color: colors.textPrimary, fontSize: 20 }}>
-                Revision Overlay — {selectedDrawing.setNumber}
+          <div style={{ maxWidth: 1400, margin: '0 auto', backgroundColor: colors.surfacePage, borderRadius: 12, padding: spacing['4'] }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['4'] }}>
+              <h2 style={{ margin: 0, color: colors.textPrimary, fontSize: 18, fontWeight: 600 }}>
+                Overlay — {overlayPair.aLabel} vs {overlayPair.bLabel}
               </h2>
-              <Btn variant="secondary" size="md" onClick={() => setShowRevisionOverlay(false)} aria-label="Close revision overlay">Close</Btn>
+              <Btn variant="secondary" size="sm" onClick={() => setOverlayPair(null)}>Close</Btn>
             </div>
             <RevisionOverlay
-              oldRevisionUrl={revisionHistory[1]?.file_url || null}
-              newRevisionUrl={revisionHistory[0]?.file_url || null}
-              oldLabel={`Rev ${revisionHistory[1]?.revision_number ?? 'old'}`}
-              newLabel={`Rev ${revisionHistory[0]?.revision_number ?? 'new'}`}
+              oldRevisionUrl={overlayPair.aUrl}
+              newRevisionUrl={overlayPair.bUrl}
+              oldLabel={overlayPair.aLabel}
+              newLabel={overlayPair.bLabel}
             />
           </div>
         </div>
@@ -866,6 +1620,48 @@ const DrawingsPage: React.FC = () => {
         error={annotationsStore.error}
       />
 
+      {showSetsPanel && projectId && (
+        <DrawingSetPanel
+          sets={drawingSets || []}
+          availableDrawings={allDrawings.map((d) => ({
+            id: d.id,
+            setNumber: d.setNumber || '',
+            title: d.title,
+            discipline: d.discipline || '',
+            revision: d.revision || '1',
+          }))}
+          projectId={projectId}
+          onClose={() => setShowSetsPanel(false)}
+          onCreateSet={handleCreateSet}
+          onUpdateSet={handleUpdateSet}
+          onIssueSet={handleIssueSet}
+          onOpenDrawing={handleOpenDrawingFromSet}
+        />
+      )}
+
+      {transmittalSetId && (() => {
+        const set = (drawingSets || []).find((s) => s.id === transmittalSetId);
+        if (!set) return null;
+        const setDrawings = allDrawings
+          .filter((d) => set.drawing_ids.includes(d.id))
+          .map((d) => ({
+            id: d.id,
+            setNumber: d.setNumber || '',
+            title: d.title,
+            revision: d.revision || '1',
+          }));
+        return (
+          <TransmittalModal
+            setName={set.name}
+            drawings={setDrawings}
+            setId={set.id}
+            onClose={() => setTransmittalSetId(null)}
+            onSubmit={handleSubmitTransmittal}
+            isSubmitting={isIssuingTransmittal}
+          />
+        );
+      })()}
+
       {viewRevPdfUrl && (
         <PdfViewer
           file={viewRevPdfUrl}
@@ -874,44 +1670,73 @@ const DrawingsPage: React.FC = () => {
         />
       )}
 
-      {showVersionCompare && selectedDrawing && revisionHistory && revisionHistory.length >= 2 && (
-        <VersionCompareModal
-          drawing={selectedDrawing}
-          revisionHistory={revisionHistory}
-          compareRevAIdx={compareRevAIdx}
-          compareRevBIdx={compareRevBIdx}
-          setCompareRevAIdx={setCompareRevAIdx}
-          setCompareRevBIdx={setCompareRevBIdx}
-          onClose={() => setShowVersionCompare(false)}
-        />
-      )}
-
-      {openRevDropdownId !== null && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setOpenRevDropdownId(null)} aria-hidden="true" />
-      )}
-
-      {comparisonMode && selectedRevisions.length === 2 && (
-        <ComparisonModal
-          compareDrawingTitle={compareDrawingTitle}
-          selectedRevisions={selectedRevisions as [DrawingRevision, DrawingRevision]}
-          compareOpacity={compareOpacity}
-          setCompareOpacity={setCompareOpacity}
-          onClose={() => setComparisonMode(false)}
-        />
-      )}
-
       {showUploadModal && (
         <DrawingUpload
           pendingFiles={pendingFiles}
-          uploadDiscipline={uploadDiscipline}
-          setUploadDiscipline={setUploadDiscipline}
           isUploading={isUploading}
           uploadProgressText={uploadProgressText}
-          onClose={() => { setShowUploadModal(false); setPendingFiles([]); }}
+          setName={uploadSetName}
+          setSetName={setUploadSetName}
+          setType={uploadSetType}
+          setSetType={setUploadSetType}
+          onClose={() => { setShowUploadModal(false); setPendingFiles([]); setUploadSetName(''); setUploadSetType('working'); }}
           onFileReady={handleFileReady}
           onUpload={handleUploadDrawings}
         />
       )}
+
+      {/* Floating background progress bar — visible when the modal is closed
+          mid-upload so the user keeps visibility while the work continues. */}
+      {isUploading && !showUploadModal && (() => {
+        const pctMatch = uploadProgressText.match(/\[(\d+)\/(\d+)\]/);
+        const cur = pctMatch ? Number(pctMatch[1]) : 0;
+        const tot = pctMatch ? Number(pctMatch[2]) : 0;
+        const pct = tot > 0 ? Math.round(((cur - 1) / tot) * 100) : 0;
+        return (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={`Uploading drawings. ${tot > 0 ? `${cur} of ${tot} complete.` : ''} Click to open full upload details.`}
+            onClick={() => setShowUploadModal(true)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowUploadModal(true); } }}
+            style={{
+              position: 'fixed',
+              right: 20,
+              bottom: 20,
+              zIndex: 1200,
+              minWidth: 320,
+              maxWidth: 420,
+              padding: '12px 14px',
+              backgroundColor: colors.surfaceRaised,
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: 10,
+              boxShadow: '0 12px 32px rgba(15, 22, 41, 0.18)',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+            title="Click to reopen the upload modal"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Upload size={14} color={colors.primaryOrange} style={{ animation: 'spin 2s linear infinite', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: colors.textPrimary }}>
+                  Uploading drawings {tot > 0 ? `(${cur}/${tot})` : ''}
+                </p>
+                <p style={{ margin: 0, marginTop: 2, fontSize: 11, color: colors.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {uploadProgressText || 'Preparing…'}
+                </p>
+              </div>
+            </div>
+            {tot > 0 && (
+              <div style={{ height: 3, borderRadius: 2, backgroundColor: `${colors.primaryOrange}20`, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, backgroundColor: colors.primaryOrange, borderRadius: 2, transition: 'width 200ms ease' }} />
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {showRevUploadModal && selectedDrawing && (
         <RevisionUpload
@@ -936,26 +1761,6 @@ const DrawingsPage: React.FC = () => {
           onClose={() => setShowAnalysisPanel(false)}
         />
       )}
-
-      <AiInsightsPanel
-        isOpen={showAiPanel}
-        onClose={() => setShowAiPanel(false)}
-        loading={aiPanelLoading}
-        error={aiPanelError}
-        analyzed={aiPanelAnalyzed}
-        conflicts={aiPanelConflicts}
-        hasSelectedDrawing={!!selectedDrawing}
-        onAnalyze={handleAiAnalyze}
-      />
-      <DiscrepancyDetailModal
-        open={detailDiscrepancy !== null}
-        discrepancy={detailDiscrepancy}
-        onClose={() => setDetailDiscrepancy(null)}
-        onCreateRFI={(d) => {
-          setDetailDiscrepancy(null);
-          handleCreateRFIFromDiscrepancy(d);
-        }}
-      />
     </PageContainer>
   );
 };

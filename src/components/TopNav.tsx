@@ -101,26 +101,15 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
             fontFamily: typography.fontFamily,
           }}
         >
-          <div
-            style={{
-              width: 30,
-              height: 30,
-              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
-              borderRadius: borderRadius.base,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: typography.fontSize.lg,
-              fontWeight: typography.fontWeight.bold,
-              color: colors.white,
-            }}
-          >
-            S
-          </div>
-          <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight }}>
+          <img
+            src="/logos/sitesync-symbol.png"
+            alt=""
+            style={{ height: 36, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+          />
+          <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em' }}>
             SiteSync
           </span>
-          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.orangeText, marginTop: `-${spacing['2']}` }}>
+          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, marginTop: `-${spacing['2']}`, letterSpacing: '0.03em' }}>
             AI
           </span>
         </button>

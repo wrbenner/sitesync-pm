@@ -146,7 +146,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
       .filter(s => s.assigned_to && s.status && SUBMITTAL_ACTIVE.has(s.status))
       .slice(0, 10)
       .map(s => ({
-        number: (s as unknown as { submittal_number?: string }).submittal_number ?? s.id.slice(0, 8),
+        number: (s as unknown as { number?: string }).number ?? s.id.slice(0, 8),
         title: s.title ?? '',
         assignedTo: s.assigned_to as string,
       }))

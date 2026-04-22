@@ -217,7 +217,7 @@ export function detectRFIBottlenecks(rfis: Array<{
   assigned_to: string | null
   due_date: string | null
   created_at: string | null
-  responded_at?: string | null
+  closed_date?: string | null
 }>): RFIBottleneck[] {
   const now = new Date()
   const reviewerMap = new Map<string, {
@@ -239,8 +239,8 @@ export function detectRFIBottlenecks(rfis: Array<{
     }
 
     // Calculate response time for resolved RFIs
-    if (rfi.responded_at && rfi.created_at) {
-      const days = Math.ceil((new Date(rfi.responded_at).getTime() - new Date(rfi.created_at).getTime()) / 86400000)
+    if (rfi.closed_date && rfi.created_at) {
+      const days = Math.ceil((new Date(rfi.closed_date).getTime() - new Date(rfi.created_at).getTime()) / 86400000)
       entry.responseTimes.push(days)
       allResponseTimes.push(days)
     }

@@ -1,9 +1,167 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Upload, File, CheckCircle, Sparkles, Folder, Tag, AlertCircle, RefreshCw } from 'lucide-react';
+import JSZip from 'jszip';
+import { Upload, File as FileIcon, CheckCircle, Sparkles, Folder, Tag, AlertCircle, RefreshCw, FileArchive } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { aiService } from '../../lib/aiService';
 
 let _uploadSeq = 0;
+
+const DRAWING_EXT_RE = /\.(pdf|dwg|dxf|png|jpe?g|tiff?)$/i;
+const isDrawingFile = (name: string) => DRAWING_EXT_RE.test(name);
+const isZipFile = (f: File) => /\.zip$/i.test(f.name) || f.type === 'application/zip' || f.type === 'application/x-zip-compressed';
+
+// Extract drawing files (PDF/DWG/DXF/images) from a zip into flat File objects.
+// Recurses into nested .zip entries up to `maxDepth` levels — sheet sets
+// commonly ship as a zip-of-zips (one per discipline).
+// Skips macOS metadata (__MACOSX/, .DS_Store) and directory entries.
+export interface ZipExtractionProgress {
+  phase: 'loading' | 'extracting';
+  /** Current entry index (1-based) during extracting phase */
+  current: number;
+  /** Total entries to process */
+  total: number;
+  /** Current file being extracted */
+  currentFile?: string;
+  /** Zip file name */
+  zipName: string;
+}
+
+export async function extractDrawingFilesFromZip(
+  zipFile: File,
+  depth = 0,
+  maxDepth = 3,
+  onProgress?: (progress: ZipExtractionProgress) => void,
+): Promise<{
+  files: File[];
+  skipped: Array<{ name: string; reason: string }>;
+  totalCandidates: number;
+}> {
+  let zip: JSZip;
+  try {
+    if (depth === 0) {
+      onProgress?.({ phase: 'loading', current: 0, total: 0, zipName: zipFile.name });
+    }
+    zip = await JSZip.loadAsync(zipFile);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('[zip] loadAsync failed for', zipFile.name, err);
+    throw new Error(`Could not open zip — ${detail || 'unknown error'}. The file may be corrupted, password-protected, or not a standard zip.`);
+  }
+
+  const files: File[] = [];
+  const skipped: Array<{ name: string; reason: string }> = [];
+  let totalCandidates = 0;
+  const allEntryNames: string[] = [];
+
+  // Filter to actionable entries only
+  const entries = Object.values(zip.files).filter((e) => {
+    if (e.dir) return false;
+    if (e.name.startsWith('__MACOSX/') || e.name.split('/').some((p) => p === '.DS_Store')) return false;
+    return true;
+  });
+  const entryCount = entries.length;
+  let processed = 0;
+
+  for (const entry of entries) {
+    allEntryNames.push(entry.name);
+    processed++;
+
+    const baseName = entry.name.split('/').pop() || entry.name;
+    if (depth === 0) {
+      onProgress?.({ phase: 'extracting', current: processed, total: entryCount, currentFile: baseName, zipName: zipFile.name });
+    }
+
+    // Nested zip — recurse.
+    if (/\.zip$/i.test(entry.name) && depth < maxDepth) {
+      try {
+        const nestedBlob = await entry.async('blob');
+        const nestedFile = new File([nestedBlob], baseName);
+        const nested = await extractDrawingFilesFromZip(nestedFile, depth + 1, maxDepth, onProgress);
+        files.push(...nested.files);
+        skipped.push(...nested.skipped);
+        totalCandidates += nested.totalCandidates;
+      } catch (err) {
+        console.warn('[zip] Nested zip failed', entry.name, err);
+        skipped.push({ name: entry.name, reason: 'nested zip could not be read' });
+      }
+      continue;
+    }
+
+    if (!isDrawingFile(entry.name)) {
+      skipped.push({ name: entry.name, reason: 'not a supported drawing/plan file' });
+      continue;
+    }
+    totalCandidates++;
+    try {
+      const blob = await entry.async('blob');
+      files.push(new File([blob], baseName, { type: blob.type || 'application/octet-stream' }));
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.warn('[zip] Failed to read entry', entry.name, err);
+      skipped.push({ name: entry.name, reason: detail });
+    }
+  }
+
+  if (depth === 0) {
+    if (files.length === 0) {
+      console.warn(
+        `[zip] "${zipFile.name}" — no drawings extracted. ${allEntryNames.length} direct entries:`,
+        allEntryNames.slice(0, 50),
+        allEntryNames.length > 50 ? `(+${allEntryNames.length - 50} more)` : '',
+      );
+      if (skipped.length > 0) {
+        console.warn('[zip] Skipped sample:', skipped.slice(0, 10));
+      }
+    } else {
+      console.info(`[zip] "${zipFile.name}" — extracted ${files.length} files (skipped ${skipped.length}).`);
+    }
+  }
+
+  return { files, skipped, totalCandidates };
+}
+
+/**
+ * Cheap manifest peek — reads the zip central directory only (no blob
+ * decompression) so the UI can show "N drawings inside" without loading
+ * every PDF into memory. Recurses nested zips up to `maxDepth`.
+ */
+export async function peekZipManifest(
+  zipFile: File,
+  depth = 0,
+  maxDepth = 3,
+): Promise<{ drawingCount: number; totalEntries: number; names: string[] }> {
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(zipFile);
+  } catch {
+    return { drawingCount: 0, totalEntries: 0, names: [] };
+  }
+  let drawingCount = 0;
+  let totalEntries = 0;
+  const names: string[] = [];
+  for (const entry of Object.values(zip.files)) {
+    if (entry.dir) continue;
+    if (entry.name.startsWith('__MACOSX/') || entry.name.split('/').some((p) => p === '.DS_Store')) continue;
+    totalEntries++;
+    names.push(entry.name);
+    if (/\.zip$/i.test(entry.name) && depth < maxDepth) {
+      try {
+        const nestedBlob = await entry.async('blob');
+        const nested = await peekZipManifest(
+          new File([nestedBlob], entry.name.split('/').pop() || entry.name),
+          depth + 1,
+          maxDepth,
+        );
+        drawingCount += nested.drawingCount;
+      } catch {
+        /* skip */
+      }
+      continue;
+    }
+    if (isDrawingFile(entry.name)) drawingCount++;
+  }
+  return { drawingCount, totalEntries, names };
+}
 
 interface UploadZoneProps {
   onUpload: (fileName: string) => void;
@@ -118,10 +276,36 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
       const entry = entries[i];
       if (entry.isDirectory) {
         const files = await collectEntries(entry);
-        simulateUpload(entry.name + '/', { isFolder: true, fileCount: files.length });
+        const drawingFiles = files.filter((f) => isDrawingFile(f.name));
+        drawingFiles.forEach((f) => onFileReady?.(f));
+        simulateUpload(entry.name + '/', { isFolder: true, fileCount: drawingFiles.length });
       } else {
-        if (rawFiles[i]) onFileReady?.(rawFiles[i]);
-        simulateUpload(entry.name);
+        const raw = rawFiles[i];
+        if (raw && isZipFile(raw)) {
+          // Hand the zip through intact — the uploader streams it entry-by-entry
+          // so we never hold all decompressed PDFs in memory at once.
+          try {
+            const { drawingCount, totalEntries } = await peekZipManifest(raw);
+            if (totalEntries === 0 || drawingCount === 0) {
+              setUploadError({
+                fileName: raw.name,
+                message: totalEntries === 0
+                  ? 'Zip appears to be empty or unreadable.'
+                  : 'No .pdf, .dwg, .dxf, or image files found in this zip.',
+              });
+              simulateUpload(raw.name, { isFolder: true, fileCount: 0 });
+            } else {
+              onFileReady?.(raw);
+              simulateUpload(raw.name, { isFolder: true, fileCount: drawingCount });
+            }
+          } catch (err) {
+            console.error('[UploadZone] zip peek failed:', err);
+            setUploadError({ fileName: raw.name, message: err instanceof Error ? err.message : 'Could not read zip' });
+          }
+        } else {
+          if (raw) onFileReady?.(raw);
+          simulateUpload(entry.name);
+        }
       }
     }
   }, [simulateUpload, onFileReady]);
@@ -159,20 +343,36 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
     setIsDraggingFolder(hasDir);
   }, []);
 
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     setUploadError(null);
-    try {
-      const fileArr = Array.from(files);
-      retryFilesRef.current = fileArr;
-      fileArr.forEach((f) => {
+    const fileArr = Array.from(files);
+    retryFilesRef.current = fileArr;
+    for (const f of fileArr) {
+      if (isZipFile(f)) {
+        try {
+          const { drawingCount, totalEntries } = await peekZipManifest(f);
+          if (totalEntries === 0 || drawingCount === 0) {
+            setUploadError({
+              fileName: f.name,
+              message: totalEntries === 0
+                ? 'Zip appears to be empty or unreadable.'
+                : 'No .pdf, .dwg, .dxf, or image files found in this zip.',
+            });
+            simulateUpload(f.name, { isFolder: true, fileCount: 0 });
+          } else {
+            onFileReady?.(f);
+            simulateUpload(f.name, { isFolder: true, fileCount: drawingCount });
+          }
+        } catch (err) {
+          console.error('[UploadZone] zip peek failed:', err);
+          setUploadError({ fileName: f.name, message: err instanceof Error ? err.message : 'Could not read zip' });
+        }
+      } else {
         onFileReady?.(f);
         simulateUpload(f.name);
-      });
-    } catch (err) {
-      const firstName = retryFilesRef.current[0]?.name ?? 'file';
-      setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
+      }
     }
     e.target.value = '';
   }, [simulateUpload, onFileReady]);
@@ -182,15 +382,18 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
     if (!files || files.length === 0) return;
     setUploadError(null);
     try {
-      retryFilesRef.current = Array.from(files);
-      // Group by top-level folder
-      const folderMap = new Map<string, number>();
-      Array.from(files).forEach((f) => {
-        const parts = (f as File & { webkitRelativePath: string }).webkitRelativePath.split('/');
-        const topFolder = parts[0];
-        folderMap.set(topFolder, (folderMap.get(topFolder) || 0) + 1);
+      const fileArr = Array.from(files);
+      retryFilesRef.current = fileArr;
+      // Group drawing files by top-level folder and forward each file to the caller
+      const folderCounts = new Map<string, number>();
+      fileArr.forEach((f) => {
+        if (!isDrawingFile(f.name)) return;
+        const rel = (f as File & { webkitRelativePath: string }).webkitRelativePath || f.name;
+        const topFolder = rel.split('/')[0] || f.name;
+        folderCounts.set(topFolder, (folderCounts.get(topFolder) || 0) + 1);
+        onFileReady?.(f);
       });
-      folderMap.forEach((count, folderName) => {
+      folderCounts.forEach((count, folderName) => {
         simulateUpload(folderName + '/', { isFolder: true, fileCount: count });
       });
     } catch (err) {
@@ -198,7 +401,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
       setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
     }
     e.target.value = '';
-  }, [simulateUpload]);
+  }, [simulateUpload, onFileReady]);
 
   const handleRetry = useCallback(() => {
     const files = retryFilesRef.current;
@@ -228,7 +431,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         ref={fileInputRef}
         type="file"
         multiple
-        accept=".pdf,.dwg,.dxf,.xlsx,.xls,.docx,.doc,.jpg,.jpeg,.png,.zip"
+        accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg,.tif,.tiff,.zip"
         style={{ display: 'none' }}
         onChange={handleFileInputChange}
       />
@@ -271,7 +474,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
           {isDraggingFolder ? 'Drop folder to upload entire tree' : isDragging ? 'Drop files here' : 'Drag and drop files or folders here'}
         </p>
         <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginBottom: spacing['3'] }}>
-          PDF, DWG, XLS, DOC, images up to 100MB
+          PDF, DWG, DXF, PNG, JPG, TIFF, ZIP, or folders. Spec books route to Specifications; cover sheets auto-extract project metadata.
         </p>
 
         {/* Action buttons */}
@@ -391,8 +594,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
               backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
             }}>
               {upload.isFolder
-                ? <Folder size={16} color={upload.status === 'done' ? colors.primaryOrange : colors.textTertiary} />
-                : <File size={16} color={upload.status === 'done' ? colors.statusActive : colors.textTertiary} />
+                ? (/\.zip$/i.test(upload.name)
+                    ? <FileArchive size={16} color={upload.status === 'done' ? colors.primaryOrange : colors.textTertiary} />
+                    : <Folder size={16} color={upload.status === 'done' ? colors.primaryOrange : colors.textTertiary} />)
+                : <FileIcon size={16} color={upload.status === 'done' ? colors.statusActive : colors.textTertiary} />
               }
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>

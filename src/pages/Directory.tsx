@@ -1,14 +1,17 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Search, Users, Phone, Mail, Building, Plus } from 'lucide-react';
+import { Search, Users, Phone, Mail, Building, Plus, ShieldCheck, FileText, Upload, MessageSquare, Clock, AlertTriangle } from 'lucide-react';
 import { PageContainer, Card, MetricBox, Avatar, Tag, Btn } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
 import { useDirectoryContacts, useCompanies } from '../hooks/queries/directory-contacts';
+import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import type { DirectoryContact } from '../types/database';
 
 interface ContactFormModalProps {
   projectId: string;
@@ -19,7 +22,7 @@ interface ContactFormModalProps {
 const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose, initial }) => {
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    contact_name: initial?.name ?? '',
+    name: initial?.name ?? '',
     company: initial?.company ?? '',
     role: initial?.role ?? '',
     trade: initial?.trade ?? '',
@@ -30,7 +33,7 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose,
   const [err, setErr] = useState<string | null>(null);
   const editing = !!initial?.id;
   const submit = async () => {
-    if (!form.contact_name.trim()) { setErr('Name required'); return; }
+    if (!form.name.trim()) { setErr('Name required'); return; }
     setSaving(true); setErr(null);
     try {
       const payload = { ...form, project_id: projectId };
@@ -51,9 +54,9 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose,
     <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: spacing['6'], width: '100%', maxWidth: 480 }}>
         <h2 style={{ margin: 0, marginBottom: spacing['4'], fontSize: 18 }}>{editing ? 'Edit Contact' : 'Add Contact'}</h2>
-        {(['contact_name', 'company', 'role', 'trade', 'phone', 'email'] as const).map(k => (
+        {(['name', 'company', 'role', 'trade', 'phone', 'email'] as const).map(k => (
           <div key={k}>
-            <label style={{ fontSize: 13, fontWeight: 500, textTransform: 'capitalize' }}>{k.replace('_', ' ')}{k === 'contact_name' ? ' *' : ''}</label>
+            <label style={{ fontSize: 13, fontWeight: 500, textTransform: 'capitalize' }}>{k}{k === 'name' ? ' *' : ''}</label>
             <input style={input} value={form[k]} onChange={(e) => setForm(p => ({ ...p, [k]: e.target.value }))} />
           </div>
         ))}
@@ -149,6 +152,36 @@ interface CompanyInfo {
   insuranceExpiry: string;
 }
 
+type PrequalStatus = 'not_started' | 'in_review' | 'approved' | 'rejected' | 'expired';
+
+interface PrequalInfo {
+  status: PrequalStatus;
+  bondingCapacity: string;
+  insuranceLimits: string;
+  emrRate: number;
+  yearsInBusiness: number;
+  licenseNumbers: string;
+  lastUpdated: string;
+}
+
+interface COIRecord {
+  type: 'GL' | 'Auto' | 'Workers Comp' | 'Umbrella' | 'Professional Liability';
+  carrier: string;
+  policyNumber: string;
+  coverageAmount: string;
+  expirationDate: string;
+  additionalInsured: boolean;
+}
+
+interface CommLogEntry {
+  id: string;
+  date: string;
+  type: 'email' | 'call' | 'meeting' | 'letter';
+  subject: string;
+  summary: string;
+  loggedBy: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
@@ -164,7 +197,265 @@ function getInsuranceDot(status: InsuranceStatus): { color: string; label: strin
   }
 }
 
+function getPrequalColor(status: PrequalStatus): { fg: string; bg: string; label: string } {
+  switch (status) {
+    case 'not_started': return { fg: colors.textTertiary, bg: colors.statusNeutralSubtle, label: 'Not Started' };
+    case 'in_review': return { fg: colors.statusPending, bg: colors.statusPendingSubtle, label: 'In Review' };
+    case 'approved': return { fg: colors.statusActive, bg: colors.statusActiveSubtle, label: 'Approved' };
+    case 'rejected': return { fg: colors.statusCritical, bg: colors.statusCriticalSubtle, label: 'Rejected' };
+    case 'expired': return { fg: colors.statusCritical, bg: colors.statusCriticalSubtle, label: 'Expired' };
+  }
+}
+
+function getCOIExpiryColor(expirationDate: string): { color: string; label: string } {
+  const now = new Date();
+  const exp = new Date(expirationDate);
+  const daysUntil = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysUntil < 0) return { color: colors.statusCritical, label: 'Expired' };
+  if (daysUntil <= 30) return { color: colors.statusPending, label: `Expires in ${daysUntil}d` };
+  return { color: colors.statusActive, label: 'Current' };
+}
+
+function isPrequalExpired(lastUpdated: string): boolean {
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  return new Date(lastUpdated) < oneYearAgo;
+}
+
+// ── Default empty states ────────────────────────────────────────────────────
+// TODO: Wire to Supabase tables: 'prequalifications', 'communication_logs'
+// These tables need to be created. For now, using local state with empty defaults.
+
+const DEFAULT_PREQUAL: PrequalInfo = {
+  status: 'not_started',
+  bondingCapacity: '',
+  insuranceLimits: '',
+  emrRate: 0,
+  yearsInBusiness: 0,
+  licenseNumbers: '',
+  lastUpdated: '',
+};
+
+function getDefaultPrequal(): PrequalInfo {
+  return { ...DEFAULT_PREQUAL };
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+const PrequalDetailPanel: React.FC<{ companyName: string; projectId?: string; onStatusChange?: (s: PrequalStatus) => void }> = ({ companyName, projectId, onStatusChange }) => {
+  const [pq, setPq] = useState<PrequalInfo>(getDefaultPrequal);
+  const [requesting, setRequesting] = useState(false);
+  const { fg, bg, label } = getPrequalColor(pq.status);
+  const expired = pq.lastUpdated ? isPrequalExpired(pq.lastUpdated) : false;
+  const fields = [
+    { label: 'Bonding Capacity', value: pq.bondingCapacity || '—' },
+    { label: 'Insurance Limits', value: pq.insuranceLimits || '—' },
+    { label: 'EMR Rate', value: pq.emrRate ? String(pq.emrRate) : '—' },
+    { label: 'Years in Business', value: pq.yearsInBusiness ? String(pq.yearsInBusiness) : '—' },
+    { label: 'License Numbers', value: pq.licenseNumbers || '—' },
+    { label: 'Last Updated', value: pq.lastUpdated || '—' },
+  ];
+
+  const requestPrequal = async () => {
+    if (!projectId) return;
+    setRequesting(true);
+    try {
+      // TODO: Insert into 'prequalifications' table once created
+      const newStatus: PrequalStatus = 'in_review';
+      const now = new Date().toISOString().slice(0, 10);
+      setPq(prev => ({ ...prev, status: newStatus, lastUpdated: now }));
+      onStatusChange?.(newStatus);
+      toast.success('Prequalification requested');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  return (
+    <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.lg, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <ShieldCheck size={16} style={{ color: fg }} />
+          <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Prequalification</span>
+        </div>
+        <Tag label={expired && pq.status !== 'expired' ? 'Expired' : label} color={expired ? colors.statusCritical : fg} backgroundColor={expired ? colors.statusCriticalSubtle : bg} fontSize={typography.fontSize.caption} />
+      </div>
+      {expired && pq.status !== 'expired' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: spacing['2'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.base, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
+          <AlertTriangle size={13} /> Prequalification expired (older than 1 year)
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['2'] }}>
+        {fields.map(f => (
+          <div key={f.label}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</p>
+            <p style={{ margin: 0, fontSize: typography.fontSize.body, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{f.value}</p>
+          </div>
+        ))}
+      </div>
+      {(pq.status === 'not_started' || pq.status === 'expired') && (
+        <Btn variant="secondary" onClick={requestPrequal} disabled={requesting} style={{ alignSelf: 'flex-start' }}>
+          <ShieldCheck size={13} /> {requesting ? 'Requesting...' : 'Request Prequalification'}
+        </Btn>
+      )}
+    </div>
+  );
+};
+
+const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ companyName, projectId }) => {
+  const [records, setRecords] = useState<COIRecord[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load COI records from insurance_certificates table
+  React.useEffect(() => {
+    if (!projectId || !companyName) return;
+    supabase
+      .from('insurance_certificates')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('company', companyName)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setRecords(data.map(r => ({
+            type: (r.policy_type || 'GL') as COIRecord['type'],
+            carrier: r.carrier || '',
+            policyNumber: r.policy_number || '',
+            coverageAmount: r.coverage_amount ? `$${r.coverage_amount.toLocaleString()}` : '',
+            expirationDate: r.expiration_date || '',
+            additionalInsured: r.additional_insured ?? false,
+          })));
+        }
+      });
+  }, [projectId, companyName]);
+
+  const handleCOIUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    setUploading(true);
+    try {
+      const filePath = `coi/${projectId}/${companyName}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
+      const { error: insertError } = await supabase.from('insurance_certificates').insert({
+        project_id: projectId,
+        company: companyName,
+        document_url: publicUrl,
+        policy_type: 'GL',
+      });
+      if (insertError) throw insertError;
+      toast.success('COI uploaded successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.lg, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <FileText size={16} style={{ color: colors.orangeText }} />
+          <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Certificates of Insurance</span>
+        </div>
+        <Btn variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{ fontSize: typography.fontSize.sm, padding: `${spacing['1']} ${spacing['2']}` }}>
+          <Upload size={13} /> {uploading ? 'Uploading...' : 'Upload COI'}
+        </Btn>
+        <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.png" style={{ display: 'none' }} onChange={handleCOIUpload} />
+      </div>
+      {records.map(r => {
+        const { color: expColor, label: expLabel } = getCOIExpiryColor(r.expirationDate);
+        return (
+          <div key={r.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{r.type}</p>
+              <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{r.carrier} &middot; {r.policyNumber} &middot; {r.coverageAmount}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexShrink: 0 }}>
+              {r.additionalInsured && <Tag label="Add'l Insured" color={colors.statusInfo} backgroundColor={colors.statusInfoSubtle} fontSize={typography.fontSize.caption} />}
+              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: expColor }}>{expLabel}</span>
+              <div style={{ width: 8, height: 8, borderRadius: borderRadius.full, backgroundColor: expColor }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const CommunicationLog: React.FC<{ contactId: string; contactName: string; projectId?: string }> = ({ contactId, contactName, projectId }) => {
+  const [comms, setComms] = useState<CommLogEntry[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [newEntry, setNewEntry] = useState({ type: 'email' as CommLogEntry['type'], subject: '', summary: '' });
+  const typeIcons: Record<string, React.ReactNode> = { email: <Mail size={12} />, call: <Phone size={12} />, meeting: <Users size={12} />, letter: <FileText size={12} /> };
+
+  // TODO: Load from 'communication_logs' table once created
+  // For now, comms start empty and new entries are added locally
+
+  const addEntry = async () => {
+    if (!newEntry.subject.trim()) return;
+    setSaving(true);
+    try {
+      const entry: CommLogEntry = { id: `${contactId}-c${Date.now()}`, date: new Date().toISOString().slice(0, 10), type: newEntry.type, subject: newEntry.subject, summary: newEntry.summary, loggedBy: 'Current User' };
+      // TODO: Once 'communication_logs' table exists, persist:
+      // await supabase.from('communication_logs').insert({ project_id: projectId, contact_id: contactId, ... });
+      setComms(prev => [entry, ...prev]);
+      setNewEntry({ type: 'email', subject: '', summary: '' });
+      setShowForm(false);
+      toast.success('Communication logged');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const inputSt: React.CSSProperties = { width: '100%', padding: '6px 10px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' };
+  return (
+    <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.lg, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <MessageSquare size={16} style={{ color: colors.statusInfo }} />
+          <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Communications</span>
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>({comms.length})</span>
+        </div>
+        <Btn variant="ghost" onClick={() => setShowForm(!showForm)} style={{ fontSize: typography.fontSize.sm, padding: `${spacing['1']} ${spacing['2']}` }}>
+          <Plus size={13} /> Add Entry
+        </Btn>
+      </div>
+      {showForm && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
+          <select style={{ ...inputSt, appearance: 'auto' }} value={newEntry.type} onChange={e => setNewEntry(p => ({ ...p, type: e.target.value as CommLogEntry['type'] }))}>
+            <option value="email">Email</option><option value="call">Call</option><option value="meeting">Meeting</option><option value="letter">Letter</option>
+          </select>
+          <input style={inputSt} placeholder="Subject *" value={newEntry.subject} onChange={e => setNewEntry(p => ({ ...p, subject: e.target.value }))} />
+          <textarea style={{ ...inputSt, resize: 'vertical', minHeight: 48 }} placeholder="Summary..." value={newEntry.summary} onChange={e => setNewEntry(p => ({ ...p, summary: e.target.value }))} />
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+            <Btn variant="ghost" onClick={() => setShowForm(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={addEntry} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Btn>
+          </div>
+        </div>
+      )}
+      {comms.map(c => (
+        <div key={c.id} style={{ display: 'flex', gap: spacing['3'], padding: `${spacing['2']} 0`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+          <span style={{ color: colors.textTertiary, marginTop: 2, flexShrink: 0 }}>{typeIcons[c.type]}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{c.subject}</span>
+              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{c.date}</span>
+            </div>
+            <p style={{ margin: `${spacing['0.5']} 0 0`, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{c.summary}</p>
+            <p style={{ margin: `${spacing['0.5']} 0 0`, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Logged by {c.loggedBy} &middot; {c.type}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const ViewToggle: React.FC<{
   view: 'people' | 'companies';
@@ -279,17 +570,18 @@ export const Directory: React.FC = () => {
   const qc = useQueryClient();
   const { data: contactsResult } = useDirectoryContacts(projectId);
   const { data: companiesData } = useCompanies(projectId);
+  useRealtimeInvalidation(projectId);
   const CONTACTS: Contact[] = useMemo(() => {
-    const rows = (contactsResult?.data ?? []) as unknown as Array<Record<string, unknown>>;
+    const rows: DirectoryContact[] = contactsResult?.data ?? [];
     return rows.map((r) => ({
-      id: String(r.id),
-      name: String(r.contact_name ?? r.name ?? ''),
-      company: String(r.company ?? ''),
-      role: String(r.role ?? ''),
-      trade: String(r.trade ?? ''),
-      phone: String(r.phone ?? ''),
-      email: String(r.email ?? ''),
-      status: (r.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
+      id: r.id,
+      name: r.name ?? '',
+      company: r.company ?? '',
+      role: r.role ?? '',
+      trade: r.trade ?? '',
+      phone: r.phone ?? '',
+      email: r.email ?? '',
+      status: 'active' as const,
     }));
   }, [contactsResult]);
 
@@ -311,6 +603,8 @@ export const Directory: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
+  const [prequalFilter, setPrequalFilter] = useState<PrequalStatus | 'all'>('all');
+  const [commFilter, setCommFilter] = useState<'all' | 'stale'>('all');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleDelete = async (id: string) => {
@@ -326,25 +620,33 @@ export const Directory: React.FC = () => {
   };
 
   const filteredContacts = useMemo(() => {
-    if (!searchQuery.trim()) return CONTACTS;
-    const q = searchQuery.toLowerCase();
-    return CONTACTS.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.company.toLowerCase().includes(q) ||
-      c.email.toLowerCase().includes(q) ||
-      c.phone.toLowerCase().includes(q) ||
-      c.trade.toLowerCase().includes(q) ||
-      c.role.toLowerCase().includes(q)
-    );
+    let result = CONTACTS;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.company.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q) ||
+        c.phone.toLowerCase().includes(q) ||
+        c.trade.toLowerCase().includes(q) ||
+        c.role.toLowerCase().includes(q)
+      );
+    }
+    // TODO: Filter by last contact date once communication_logs table exists
+    return result;
   }, [searchQuery, CONTACTS]);
 
   const filteredCompanies = useMemo(() => {
-    if (!searchQuery.trim()) return companies;
-    const q = searchQuery.toLowerCase();
-    return companies.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.trade.toLowerCase().includes(q)
-    );
+    let result = companies;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.trade.toLowerCase().includes(q)
+      );
+    }
+    // TODO: Filter by prequal status once prequalifications table exists
+    return result;
   }, [searchQuery, companies]);
 
   // Metrics
@@ -370,6 +672,7 @@ export const Directory: React.FC = () => {
         </div>
       }
     >
+      <PageInsightBanners page="directory" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
 
         {/* Metrics */}
@@ -387,6 +690,7 @@ export const Directory: React.FC = () => {
             colorOverride={missingInsurance > 0 ? 'danger' : undefined}
           />
         </div>
+        {/* TODO: Add prequal/COI/stale metrics once prequalifications and communication_logs tables exist */}
 
         {/* Search */}
         <div style={{
@@ -414,6 +718,45 @@ export const Directory: React.FC = () => {
               color: colors.textPrimary,
             }}
           />
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], flexWrap: 'wrap' }}>
+          {view === 'companies' && (
+            <>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Prequal:</span>
+              {(['all', 'not_started', 'in_review', 'approved', 'rejected', 'expired'] as const).map(s => {
+                const labels: Record<string, string> = { all: 'All', not_started: 'Not Started', in_review: 'In Review', approved: 'Approved', rejected: 'Rejected', expired: 'Expired' };
+                return (
+                  <button key={s} onClick={() => setPrequalFilter(s)} style={{
+                    padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${prequalFilter === s ? colors.primaryOrange : colors.borderSubtle}`,
+                    borderRadius: borderRadius.full, backgroundColor: prequalFilter === s ? colors.orangeSubtle : 'transparent',
+                    color: prequalFilter === s ? colors.orangeText : colors.textSecondary, fontSize: typography.fontSize.sm,
+                    cursor: 'pointer', fontFamily: typography.fontFamily, transition: `all ${transitions.quick}`,
+                  }}>{labels[s]}</button>
+                );
+              })}
+            </>
+          )}
+          {view === 'people' && (
+            <>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Filter:</span>
+              <button onClick={() => setCommFilter('all')} style={{
+                padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${commFilter === 'all' ? colors.primaryOrange : colors.borderSubtle}`,
+                borderRadius: borderRadius.full, backgroundColor: commFilter === 'all' ? colors.orangeSubtle : 'transparent',
+                color: commFilter === 'all' ? colors.orangeText : colors.textSecondary, fontSize: typography.fontSize.sm,
+                cursor: 'pointer', fontFamily: typography.fontFamily,
+              }}>All Contacts</button>
+              <button onClick={() => setCommFilter('stale')} style={{
+                padding: `${spacing['1']} ${spacing['3']}`, border: `1px solid ${commFilter === 'stale' ? colors.primaryOrange : colors.borderSubtle}`,
+                borderRadius: borderRadius.full, backgroundColor: commFilter === 'stale' ? colors.orangeSubtle : 'transparent',
+                color: commFilter === 'stale' ? colors.orangeText : colors.textSecondary, fontSize: typography.fontSize.sm,
+                cursor: 'pointer', fontFamily: typography.fontFamily,
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}><Clock size={12} /> Not Contacted 30+ Days</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Empty state */}
@@ -463,6 +806,7 @@ export const Directory: React.FC = () => {
                     <TH width="130px">Trade</TH>
                     <TH width="140px">Phone</TH>
                     <TH>Email</TH>
+                    <TH width="100px">Last Contact</TH>
                     <TH width="90px">Status</TH>
                   </tr>
                 </thead>
@@ -521,6 +865,10 @@ export const Directory: React.FC = () => {
                           >
                             {contact.email}
                           </a>
+                        </td>
+                        <td style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
+                          {/* TODO: Show last contact date once communication_logs table exists */}
+                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>—</span>
                         </td>
                         <td style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
                           <Tag
@@ -595,6 +943,12 @@ export const Directory: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Prequal badge — TODO: load from prequalifications table */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                    <ShieldCheck size={13} style={{ color: colors.textTertiary }} />
+                    <Tag label="Prequal: Not Started" color={colors.textTertiary} backgroundColor={colors.statusNeutralSubtle} fontSize={typography.fontSize.caption} />
+                  </div>
+
                   {/* Stats row */}
                   <div style={{ display: 'flex', gap: spacing['4'] }}>
                     <div>
@@ -643,6 +997,13 @@ export const Directory: React.FC = () => {
         title={selectedContact?.name ?? ''}
       >
         {selectedContact && <ContactDetailPanel contact={selectedContact} />}
+        {selectedContact && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'], padding: `${spacing['4']} 0` }}>
+            <PrequalDetailPanel companyName={selectedContact.company} projectId={projectId} onStatusChange={() => qc.invalidateQueries({ queryKey: ['companies'] })} />
+            <COISection companyName={selectedContact.company} projectId={projectId} />
+            <CommunicationLog contactId={selectedContact.id} contactName={selectedContact.name} projectId={projectId} />
+          </div>
+        )}
         {selectedContact && (
           <PermissionGate permission="directory.manage">
             <div style={{ display: 'flex', gap: 8, padding: spacing['4'] }}>

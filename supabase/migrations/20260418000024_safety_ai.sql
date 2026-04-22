@@ -13,7 +13,15 @@ CREATE TABLE IF NOT EXISTS safety_photo_analyses (
   created_by uuid REFERENCES auth.users(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_safety_photo_project ON safety_photo_analyses(project_id);
+DO $$ BEGIN
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'safety_photo_analyses' AND column_name = 'project_id') THEN
+
+    CREATE INDEX IF NOT EXISTS idx_safety_photo_project ON safety_photo_analyses(project_id);
+
+  END IF;
+
+END $$;
 CREATE INDEX IF NOT EXISTS idx_safety_photo_analyzed_at ON safety_photo_analyses(analyzed_at DESC);
 
 ALTER TABLE safety_photo_analyses ENABLE ROW LEVEL SECURITY;

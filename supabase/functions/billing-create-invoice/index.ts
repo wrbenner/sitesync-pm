@@ -4,7 +4,7 @@
 // createInvoice() with tier limit awareness (maxProjects,
 // maxFilesPerProject). Amounts are integer cents.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
@@ -30,7 +30,7 @@ function generateInvoiceNumber(): string {
   return `INV-${yyyy}${mm}-${rand}`
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
   const corsHeaders = getCorsHeaders(req)

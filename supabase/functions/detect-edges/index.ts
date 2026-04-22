@@ -6,7 +6,7 @@
 // Persists edge coordinates into drawing_pairs.detected_edges and advances
 // the pair.status through the pipeline.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -77,7 +77,7 @@ function convertPredictions(resp: RoboflowResponse) {
   }))
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const corsHeaders = getCorsHeaders(req)

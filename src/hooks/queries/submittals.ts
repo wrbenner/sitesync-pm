@@ -18,7 +18,7 @@ export function useSubmittals(projectId: string | undefined, pagination?: Pagina
         .from('submittals')
         .select('*', { count: 'exact' })
         .eq('project_id', projectId!)
-        .order('submittal_number', { ascending: false })
+        .order('number', { ascending: false })
         .range(from, to)
       if (error) throw error
       return { data: (data ?? []) as Submittal[], total: count ?? 0, page, pageSize }

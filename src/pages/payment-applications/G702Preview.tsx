@@ -20,12 +20,14 @@ interface G702PreviewProps {
   liveG702?: G702Data
   liveG703?: G703LineItem[]
   onApprove?: () => void
+  onMarkPaid?: () => void
   isApproving?: boolean
+  isMarkingPaid?: boolean
   hasPendingWaivers?: boolean
 }
 
 export const G702Preview = memo<G702PreviewProps>(({
-  app, liveG702, liveG703, onApprove, isApproving, hasPendingWaivers,
+  app, liveG702, liveG703, onApprove, onMarkPaid, isApproving, isMarkingPaid, hasPendingWaivers,
 }) => {
   const [isPdfExporting, setIsPdfExporting] = useState(false)
   // REACT-03 FIX: Shared hook replaces a per-page resize listener.
@@ -220,7 +222,7 @@ export const G702Preview = memo<G702PreviewProps>(({
 
       <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['4'], flexWrap: 'wrap' }}>
         {!isMobile && (['submitted', 'gc_review', 'owner_review'] as string[]).includes(app.status as string) && onApprove && (
-          <PermissionGate permission="payments.create">
+          <PermissionGate permission="financials.edit">
             <Btn
               variant="primary"
               size="sm"
@@ -233,11 +235,12 @@ export const G702Preview = memo<G702PreviewProps>(({
           </PermissionGate>
         )}
         {!isMobile && (app.status as string) === 'approved' && (
-          <PermissionGate permission="payments.create">
+          <PermissionGate permission="financials.edit">
             <Btn
               variant="primary"
               size="sm"
-              onClick={() => toast.success('Opening payment flow...')}
+              onClick={() => onMarkPaid?.()}
+              disabled={isMarkingPaid}
             >
               <CreditCard size={14} /> Process Payment
             </Btn>
@@ -257,8 +260,15 @@ export const G702Preview = memo<G702PreviewProps>(({
             </PDFDownloadLink>
           </Suspense>
         ) : (
-          <Btn variant="ghost" size="sm" onClick={() => toast.info('Load SOV data to export G702 PDF')}>
-            <FileText size={14} /> Export G702 PDF
+          <Btn variant="ghost" size="sm" onClick={async () => {
+            try {
+              setIsPdfExporting(true)
+              await handleExportG702G703()
+            } finally {
+              setIsPdfExporting(false)
+            }
+          }} disabled={isPdfExporting}>
+            <FileText size={14} /> {isPdfExporting ? 'Generating...' : 'Export G702 PDF'}
           </Btn>
         )}
         {liveG702 && liveG703 ? (
@@ -283,8 +293,15 @@ export const G702Preview = memo<G702PreviewProps>(({
             </PDFDownloadLink>
           </Suspense>
         ) : (
-          <Btn variant="ghost" size="sm" onClick={() => toast.info('Load SOV data to export G703')}>
-            <Receipt size={14} /> Export G703
+          <Btn variant="ghost" size="sm" onClick={async () => {
+            try {
+              setIsPdfExporting(true)
+              await handleExportG702G703()
+            } finally {
+              setIsPdfExporting(false)
+            }
+          }} disabled={isPdfExporting}>
+            <Receipt size={14} /> {isPdfExporting ? 'Generating...' : 'Export G703'}
           </Btn>
         )}
       </div>
@@ -302,7 +319,7 @@ export const G702Preview = memo<G702PreviewProps>(({
         zIndex: 10,
       }}>
         {(['submitted', 'gc_review', 'owner_review'] as string[]).includes(app.status as string) && onApprove && (
-          <PermissionGate permission="payments.create">
+          <PermissionGate permission="financials.edit">
             <Btn
               variant="primary"
               size="sm"
@@ -316,11 +333,12 @@ export const G702Preview = memo<G702PreviewProps>(({
           </PermissionGate>
         )}
         {(app.status as string) === 'approved' && (
-          <PermissionGate permission="payments.create">
+          <PermissionGate permission="financials.edit">
             <Btn
               variant="primary"
               size="sm"
-              onClick={() => toast.success('Opening payment flow...')}
+              onClick={() => onMarkPaid?.()}
+              disabled={isMarkingPaid}
               style={{ minHeight: 56, minWidth: 56 }}
             >
               <CreditCard size={14} /> Process Payment

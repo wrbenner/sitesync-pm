@@ -30,101 +30,122 @@ export const DashboardHero: React.FC<HeroProps> = ({
   daysRemaining,
   animProgress,
   reducedMotion,
-}) => (
-  <motion.div
-    initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
-    animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
-    transition={reducedMotion ? undefined : staggerTransition}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: spacing['6'],
-      backgroundColor: colors.surfaceRaised,
-      borderRadius: borderRadius.xl,
-      boxShadow: shadows.card,
-      marginBottom: spacing['5'],
-      border: `1px solid ${colors.borderSubtle}`,
-      borderLeft: `3px solid ${colors.primaryOrange}`,
-      overflow: 'hidden',
-    }}
-  >
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <p
-        style={{
-          fontSize: typography.fontSize.label,
-          color: colors.primaryOrange,
-          margin: 0,
-          textTransform: 'uppercase',
-          letterSpacing: typography.letterSpacing.wider,
-          fontWeight: typography.fontWeight.semibold,
-          marginBottom: spacing['1'],
-        }}
-      >
-        Active Project
-      </p>
-      <h1
-        style={{
-          fontSize: typography.fontSize.display,
-          fontWeight: typography.fontWeight.bold,
-          color: colors.textPrimary,
-          margin: 0,
-          letterSpacing: typography.letterSpacing.tighter,
-          lineHeight: typography.lineHeight.tight,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {projectName}
-      </h1>
-      <p
-        style={{
-          fontSize: typography.fontSize.sm,
-          color: colors.textTertiary,
-          margin: 0,
-          marginTop: spacing['1'],
-        }}
-      >
-        {projectAddress}
-      </p>
-    </div>
+}) => {
+  const today = new Date();
+  const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+  const dateStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    <div style={{ display: 'flex', alignItems: 'center', gap: spacing['6'], flexShrink: 0, marginLeft: spacing['6'] }}>
-      <div style={{ textAlign: 'right' }}>
-        <p
-          style={{
-            fontSize: typography.fontSize.label,
+  return (
+    <motion.div
+      initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
+      animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={reducedMotion ? undefined : staggerTransition}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: spacing['6'],
+        backgroundColor: colors.surfaceRaised,
+        borderRadius: borderRadius.xl,
+        boxShadow: shadows.card,
+        marginBottom: spacing['5'],
+        border: `1px solid ${colors.borderSubtle}`,
+        borderLeft: `3px solid ${colors.primaryOrange}`,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['1'] }}>
+          <p
+            style={{
+              fontSize: typography.fontSize.label,
+              color: colors.primaryOrange,
+              margin: 0,
+              textTransform: 'uppercase',
+              letterSpacing: typography.letterSpacing.wider,
+              fontWeight: typography.fontWeight.semibold,
+            }}
+          >
+            Active Project
+          </p>
+          <span style={{
+            fontSize: typography.fontSize.caption,
             color: colors.textTertiary,
-            margin: 0,
-            textTransform: 'uppercase',
-            letterSpacing: typography.letterSpacing.wider,
             fontWeight: typography.fontWeight.medium,
-          }}
-        >
-          Timeline
-        </p>
-        <p
+          }}>
+            ·
+          </span>
+          <span style={{
+            fontSize: typography.fontSize.caption,
+            color: colors.textSecondary,
+            fontWeight: typography.fontWeight.medium,
+          }}>
+            {dayName}, {dateStr}
+          </span>
+        </div>
+        <h1
           style={{
             fontSize: typography.fontSize.display,
             fontWeight: typography.fontWeight.bold,
             color: colors.textPrimary,
             margin: 0,
-            marginTop: spacing['0.5'],
-            fontVariantNumeric: 'tabular-nums',
             letterSpacing: typography.letterSpacing.tighter,
+            lineHeight: typography.lineHeight.tight,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
-          Day {dayNumber}
-        </p>
-        <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['0.5'] }}>
-          of {totalDays} · {daysRemaining}d remaining
+          {projectName}
+        </h1>
+        <p
+          style={{
+            fontSize: typography.fontSize.sm,
+            color: colors.textTertiary,
+            margin: 0,
+            marginTop: spacing['1'],
+          }}
+        >
+          {projectAddress}
         </p>
       </div>
-      <ProgressRing value={animProgress} size={80} />
-    </div>
-  </motion.div>
-);
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['6'], flexShrink: 0, marginLeft: spacing['6'] }}>
+        <div style={{ textAlign: 'right' }}>
+          <p
+            style={{
+              fontSize: typography.fontSize.label,
+              color: colors.textTertiary,
+              margin: 0,
+              textTransform: 'uppercase',
+              letterSpacing: typography.letterSpacing.wider,
+              fontWeight: typography.fontWeight.medium,
+            }}
+          >
+            Timeline
+          </p>
+          <p
+            style={{
+              fontSize: typography.fontSize.display,
+              fontWeight: typography.fontWeight.bold,
+              color: colors.textPrimary,
+              margin: 0,
+              marginTop: spacing['0.5'],
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: typography.letterSpacing.tighter,
+            }}
+          >
+            Day {dayNumber}
+          </p>
+          <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: spacing['0.5'] }}>
+            of {totalDays} · {daysRemaining}d remaining
+          </p>
+        </div>
+        <ProgressRing value={animProgress} size={80} />
+      </div>
+    </motion.div>
+  );
+};
 
 // ── Owner Report Quick Access ───────────────────────────
 

@@ -23,7 +23,7 @@ export function useRealtimeRFIs(projectId: string | undefined) {
     ['rfis', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).order('rfi_number', { ascending: false })
+      const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).order('number', { ascending: false })
       if (error) throw error
       return (data ?? []) as RFI[]
     },
@@ -38,7 +38,7 @@ export function useRealtimeSubmittals(projectId: string | undefined) {
     ['submittals', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('submittals').select('*').eq('project_id', projectId).order('submittal_number', { ascending: false })
+      const { data, error } = await supabase.from('submittals').select('*').eq('project_id', projectId).order('number', { ascending: false })
       if (error) throw error
       return (data ?? []) as Submittal[]
     },
@@ -143,7 +143,7 @@ export function useRealtimeDrawings(projectId: string | undefined) {
     ['drawings', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('drawings').select('*').eq('project_id', projectId).order('set_number')
+      const { data, error } = await supabase.from('drawings').select('*').eq('project_id', projectId).order('sheet_number')
       if (error) throw error
       return (data ?? []) as Drawing[]
     },
@@ -223,7 +223,7 @@ export function useRealtimeSchedulePhases(
     if (!projectId) return
 
     const channel = supabase
-      .channel(`schedule_phases_${projectId}`)
+      .channel(`rt_schedule_phases_${projectId}`)
       .on<SchedulePhase>(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'schedule_phases', filter: `project_id=eq.${projectId}` },

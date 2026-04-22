@@ -70,7 +70,7 @@ export function useDigitalTwin() {
       if (!projectId || !isSupabaseConfigured) return []
       const { data, error } = await supabase
         .from('rfis')
-        .select('id, rfi_number, subject, status, priority, location, assigned_to, due_date, created_at')
+        .select('id, number, title, status, priority, location, assigned_to, due_date, created_at')
         .eq('project_id', projectId)
         .in('status', ['open', 'under_review'])
       if (error) throw error
@@ -85,8 +85,8 @@ export function useDigitalTwin() {
         const pos = locationTo3DPosition(rfi.location)
         return {
           id: rfi.id,
-          rfiNumber: rfi.rfi_number ?? `RFI-${rfi.id.substring(0, 4)}`,
-          subject: rfi.subject ?? '',
+          rfiNumber: rfi.number ?? `RFI-${rfi.id.substring(0, 4)}`,
+          subject: rfi.title ?? '',
           status: rfi.status as RFIPin['status'],
           priority: (rfi.priority as RFIPin['priority']) ?? 'medium',
           position: pos,

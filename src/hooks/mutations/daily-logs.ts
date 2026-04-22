@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase'
 import { useAuditedMutation } from './createAuditedMutation'
-import { dailyLogSchema,
+import { dailyLogDbSchema,
 } from '../../components/forms/schemas'
 
 import type { Database } from '../../types/database'
@@ -13,7 +13,7 @@ const from = (table: AnyTableName) => supabase.from(table as keyof Database['pub
 export function useCreateDailyLog() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'daily_log.create',
-    schema: dailyLogSchema,
+    schema: dailyLogDbSchema,
     action: 'create_daily_log',
     entityType: 'daily_log',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
@@ -32,14 +32,14 @@ export function useCreateDailyLog() {
 export function useUpdateDailyLog() {
   return useAuditedMutation<{ id: string; updates: Record<string, unknown>; projectId: string }, { projectId: string; id: string }>({
     permission: 'daily_log.edit',
-    schema: dailyLogSchema.partial(),
+    schema: dailyLogDbSchema.partial(),
     schemaKey: 'updates',
     action: 'update_daily_log',
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
-      const { error } = await from('daily_logs').update(updates).eq('id', id)
+      const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -57,7 +57,7 @@ export function useDeleteDailyLog() {
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('daily_logs').delete().eq('id', id)
+      const { error } = await from('daily_logs').delete().eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
     },

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { PermissionGate } from '../../components/auth/PermissionGate';
-import { ScheduleImportModal } from './ScheduleUpload';
+import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
 import AddPhaseModal from '../../components/forms/AddPhaseModal';
 import { supabase } from '../../lib/supabase';
 import { useScheduleStore } from '../../stores/scheduleStore';
@@ -117,35 +117,53 @@ export const ScheduleEmptyState: React.FC<EmptyStateProps> = ({ showImportModal,
   const queryClient = useQueryClient();
   const { loadSchedule } = useScheduleStore();
 
-  const handleAddPhase = useCallback(async (data: { name: string; start_date: string; end_date: string }) => {
+  const handleAddPhase = useCallback(async (data: Record<string, unknown>) => {
     if (!projectId) {
       toast.error('No project selected');
       throw new Error('No project selected');
     }
-    const { error } = await supabase.from('schedule_phases').insert({
+
+    const insert: Record<string, unknown> = {
       project_id: projectId,
       name: data.name,
       start_date: data.start_date,
       end_date: data.end_date,
-      status: 'on_track',
-      progress: 0,
-    });
+      status: data.status ?? 'upcoming',
+      percent_complete: data.percent_complete ?? 0,
+    };
+    if (data.is_critical_path != null) insert.is_critical_path = data.is_critical_path;
+    if (data.assigned_crew_id) insert.assigned_crew_id = data.assigned_crew_id;
+    if (Array.isArray(data.predecessor_ids) && data.predecessor_ids.length > 0) {
+      insert.depends_on = data.predecessor_ids[0];
+      insert.predecessor_ids = data.predecessor_ids;
+    }
+
+    const { error } = await supabase.from('schedule_phases').insert(insert);
     if (error) {
       toast.error(error.message || 'Failed to create phase');
       throw error;
     }
     toast.success('Phase created');
+    queryClient.invalidateQueries({ queryKey: ['schedule', projectId] });
     queryClient.invalidateQueries({ queryKey: ['schedule_phases', projectId] });
     loadSchedule(projectId);
   }, [projectId, queryClient, loadSchedule]);
 
   return (
     <PageContainer title="Schedule" subtitle="">
-      <ScheduleImportModal
+      <ScheduleImportWizard
+        isModal
         open={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onImportComplete={() => setShowImportModal(false)}
         projectId={projectId}
+        onImportComplete={() => {
+          setShowImportModal(false);
+          if (projectId) {
+            queryClient.invalidateQueries({ queryKey: ['schedule', projectId] });
+            queryClient.invalidateQueries({ queryKey: ['schedule_phases', projectId] });
+            loadSchedule(projectId);
+          }
+        }}
       />
       <AddPhaseModal
         open={showAddPhase}

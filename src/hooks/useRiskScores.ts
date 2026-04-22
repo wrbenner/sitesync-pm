@@ -45,7 +45,7 @@ export function useRiskScores(projectId: string | null | undefined) {
         safeRun<{ id: string; title: string | null; created_at: string; status: string | null; priority: string | null }>(() =>
           fromTable('rfis').select('id,title,created_at,status,priority').eq('project_id', projectId!).limit(200)),
         safeRun<{ id: string; code: string | null; description: string | null; budget: number; actual: number; committed: number }>(() =>
-          fromTable('budget_line_items').select('id,code,description,budget,actual,committed').eq('project_id', projectId!).limit(200)),
+          fromTable('budget_items').select('id,cost_code,description,original_amount,actual_amount,committed_amount').eq('project_id', projectId!).limit(200)),
         safeRun<{ id: string; name: string; percent_complete: number; planned_start: string | null; planned_finish: string | null }>(() =>
           fromTable('schedule_activities').select('id,name,percent_complete,planned_start,planned_finish').eq('project_id', projectId!).limit(200)),
         safeRun<{ incident_date: string }>(() =>

@@ -52,20 +52,20 @@ function useProactiveAlerts(projectId: string | undefined) {
             .in('status', ['pending', 'under_review'])
             .lte('due_date', inSevenDays.toISOString())
             .gte('due_date', now.toISOString())),
-        safeRun<{ id: string; rfi_number: string | null; title: string | null; created_at: string; status: string | null }>(() =>
+        safeRun<{ id: string; number: number; title: string | null; created_at: string; status: string | null }>(() =>
           supabase.from('rfis')
-            .select('id, rfi_number, title, created_at, status')
+            .select('id, number, title, created_at, status')
             .eq('project_id', projectId)
             .eq('status', 'open')),
-        safeRun<{ id: string; certification_name: string; worker_name: string; expiration_date: string }>(() =>
+        safeRun<{ id: string; certification_type: string; worker_name: string; expiration_date: string }>(() =>
           supabase.from('safety_certifications')
-            .select('id, certification_name, worker_name, expiration_date')
+            .select('id, certification_type, worker_name, expiration_date')
             .eq('project_id', projectId)
             .lte('expiration_date', inThirtyDays.toISOString().split('T')[0])
             .gte('expiration_date', now.toISOString().split('T')[0])),
-        safeRun<{ id: string; division_code?: string; category?: string; budgeted_amount?: number; actual_amount?: number }>(() =>
+        safeRun<{ id: string; division?: string; original_amount?: number; actual_amount?: number }>(() =>
           supabase.from('budget_items')
-            .select('id, division_code, budgeted_amount, actual_amount, category')
+            .select('id, division, original_amount, actual_amount')
             .eq('project_id', projectId)),
       ]);
 
@@ -97,7 +97,7 @@ function useProactiveAlerts(projectId: string | undefined) {
           id: `stale_rfi_${rfi.id}`,
           severity: age > 30 ? 'critical' : 'warning',
           icon: AlertTriangle,
-          title: `RFI #${rfi.rfi_number ?? '?'} has been open for ${age} days`,
+          title: `RFI #${rfi.number ?? '?'} has been open for ${age} days`,
           description: `${factor}x average response time — ${rfi.title ?? 'untitled'}`,
           navigateTo: '/rfis',
         });
@@ -106,9 +106,9 @@ function useProactiveAlerts(projectId: string | undefined) {
       // Budget variance by division
       const byDivision: Record<string, { budgeted: number; actual: number; label: string }> = {};
       for (const b of budgetData) {
-        const key = b.division_code ?? b.category ?? 'Other';
+        const key = b.division ?? 'Other';
         if (!byDivision[key]) byDivision[key] = { budgeted: 0, actual: 0, label: key };
-        byDivision[key].budgeted += Number(b.budgeted_amount ?? 0);
+        byDivision[key].budgeted += Number(b.original_amount ?? 0);
         byDivision[key].actual += Number(b.actual_amount ?? 0);
       }
       for (const key of Object.keys(byDivision)) {
@@ -135,7 +135,7 @@ function useProactiveAlerts(projectId: string | undefined) {
           severity: expiringCount > 3 ? 'warning' : 'info',
           icon: Award,
           title: `${expiringCount} certification${expiringCount === 1 ? '' : 's'} expire within 30 days`,
-          description: certsData.slice(0, 3).map((c) => `${c.worker_name} — ${c.certification_name}`).join(', ') + (expiringCount > 3 ? '…' : ''),
+          description: certsData.slice(0, 3).map((c) => `${c.worker_name} — ${c.certification_type}`).join(', ') + (expiringCount > 3 ? '…' : ''),
           navigateTo: '/safety',
         });
       }

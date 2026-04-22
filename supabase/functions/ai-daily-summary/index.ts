@@ -1,4 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
   authenticateRequest,
@@ -22,7 +22,7 @@ interface DailySummaryResponse {
   concerns: string[]
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const corsCheck = handleCors(req)
   if (corsCheck) return corsCheck
 
@@ -139,7 +139,7 @@ Focus on:
 - Punch list activity and closeouts
 - Any delays, conflicts, or blockers`
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages/create', {
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': anthropicApiKey,

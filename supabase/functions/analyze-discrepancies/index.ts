@@ -17,7 +17,7 @@
 //   6. For any discrepancy with severity="high", auto-create a draft RFI
 //      linked back to the discrepancy.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   authenticateRequest,
   handleCors,
@@ -170,7 +170,7 @@ function extractPairs(raw: string): ParsedDimensionPair[] {
   return []
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const corsHeaders = getCorsHeaders(req)

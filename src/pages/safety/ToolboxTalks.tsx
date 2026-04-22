@@ -91,16 +91,20 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('toolbox_talks').insert({
+      const { data: inserted, error } = await supabase.from('toolbox_talks').insert({
         project_id: projectId,
         title: form.topic,
         topic: form.topic,
         date: form.date,
-        presenter: form.presenter,
         attendance_count: form.attendees.length,
-        attendees: form.attendees,
-      });
+      }).select('id').single();
       if (error) throw error;
+      const talkId = inserted?.id as string | undefined;
+      if (talkId && form.attendees.length > 0) {
+        await supabase.from('toolbox_talk_attendees').insert(
+          form.attendees.map((name) => ({ toolbox_talk_id: talkId, worker_name: name }))
+        );
+      }
       onClose();
     } catch (e) {
       setErrors({ topic: e instanceof Error ? e.message : 'Failed to save' });

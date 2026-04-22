@@ -56,7 +56,7 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: spacing['4'] }}>
         <MetricBox label="Total Waivers" value={totalWaivers} />
-        <MetricBox label="Received" value={receivedCount} change={1} />
+        <MetricBox label="Received" value={receivedCount} />
         <MetricBox label="Pending" value={pendingCount} change={pendingCount > 0 ? -1 : 0} />
         <MetricBox label="Active Subs" value={activeSubs.length} />
       </div>
@@ -154,7 +154,7 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
             </div>
 
             {waivers.map((waiver, i) => {
-              const isOverdue = waiver.status === 'pending' && new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < 0
+              const isOverdue = waiver.status === 'pending' && new Date(waiver.created_at).getTime() + 7 * 24 * 60 * 60 * 1000 < Date.now()
               const displayStatus: LienWaiverStatus | 'overdue' = isOverdue ? 'overdue' : waiver.status
               const statusCfg = LIEN_WAIVER_STATUS_CONFIG[displayStatus] ?? LIEN_WAIVER_STATUS_CONFIG.pending
               const payApp = payApps.find((a) => a.id === waiver.pay_application_id)

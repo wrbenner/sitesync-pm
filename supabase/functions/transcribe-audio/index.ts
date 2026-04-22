@@ -1,7 +1,7 @@
 // transcribe-audio — Transcribe an uploaded audio blob via OpenAI Whisper.
 // Accepts either { audio_url } pointing to a file in Storage, or a direct multipart upload.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+
 import {
   handleCors,
   getCorsHeaders,
@@ -35,7 +35,7 @@ async function fetchAudio(url: string): Promise<{ blob: Blob; filename: string }
   return { blob, filename: `audio.${ext}` }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
   const headers = { ...getCorsHeaders(req), 'Content-Type': 'application/json' }

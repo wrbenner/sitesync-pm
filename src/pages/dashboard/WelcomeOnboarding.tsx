@@ -57,14 +57,18 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
       return;
     }
 
-    // Add creator as project manager
+    // Add creator as project manager — critical for RBAC access
     if (user?.id && newProject) {
-      await supabase.from('project_members').insert({
+      const { error: memberError } = await supabase.from('project_members').insert({
         project_id: newProject.id,
         user_id: user.id,
         role: 'project_manager',
         accepted_at: new Date().toISOString(),
       });
+      if (memberError) {
+        console.error('Failed to add project member:', memberError);
+        toast.error('Project created but failed to set you as project manager. Please contact support.');
+      }
     }
 
     // Audit trail: project creation is a governance event
