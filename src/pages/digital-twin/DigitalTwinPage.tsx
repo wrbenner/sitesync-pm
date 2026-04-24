@@ -13,9 +13,9 @@ import {
   Columns, BarChart3, GitCompare,
   Building2, Layers,
 } from 'lucide-react';
-import { useProjectContext } from '../../stores/projectContextStore';
-import { useScheduleStore } from '../../stores/scheduleStore';
-import type { SchedulePhase as StorePhase } from '../../stores/scheduleStore';
+import { useProjectId } from '../../hooks/useProjectId';
+import { useSchedulePhases } from '../../hooks/queries/schedule-phases';
+import type { SchedulePhase } from '../../types/database';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -38,14 +38,14 @@ type ViewMode = '3d' | 'split' | 'timeline';
 
 const STATUS_COLORS: Record<PhaseStatus, string> = {
   'complete': '#4EC896',
-  'in-progress': '#3A7BC8',
+  'in-progress': '#F47820',
   'not-started': '#8B8680',
   'behind': '#E05252',
 };
 
 const STATUS_THREE_COLORS: Record<PhaseStatus, number> = {
   'complete': 0x4EC896,
-  'in-progress': 0x3A7BC8,
+  'in-progress': 0xF47820,
   'not-started': 0x8B8680,
   'behind': 0xE05252,
 };
@@ -75,19 +75,21 @@ const ELEMENT_KEYWORDS: Array<{ group: string; patterns: RegExp[] }> = [
   { group: 'exterior',   patterns: [/\bexterior\b/i, /\benvelope\b/i, /\bcladding\b/i, /\bfacade\b/i, /\bsiding\b/i, /\bstructur/i, /\bsteel\b/i, /\bframing\b/i] },
 ];
 
-function elementGroupFor(p: StorePhase): string | null {
-  const hay = `${p.name ?? ''} ${(p as unknown as Record<string, unknown>).wbs ?? ''}`;
+type DBPhase = SchedulePhase & { wbs?: string | null };
+
+function elementGroupFor(p: DBPhase): string | null {
+  const hay = `${p.name ?? ''} ${p.wbs ?? ''} ${p.description ?? ''}`;
   for (const { group, patterns } of ELEMENT_KEYWORDS) {
     if (patterns.some((re) => re.test(hay))) return group;
   }
   return null;
 }
 
-function normalizeStatus(p: StorePhase): string {
+function normalizeStatus(p: DBPhase): string {
   return (p.status ?? 'upcoming').toString();
 }
 
-function tradeFor(p: StorePhase): string {
+function tradeFor(p: DBPhase): string {
   const name = (p.name ?? '').toLowerCase();
   if (name.includes('mep') || name.includes('plumb') || name.includes('electric') || name.includes('hvac')) return 'MEP';
   if (name.includes('concrete') || name.includes('foundation') || name.includes('slab')) return 'Concrete';
@@ -98,18 +100,18 @@ function tradeFor(p: StorePhase): string {
   return 'General';
 }
 
-function toTwinPhase(p: StorePhase): TwinPhase | null {
-  const plannedStart = parseDateOrNull(p.startDate ?? p.start_date);
-  const plannedEnd = parseDateOrNull(p.endDate ?? p.end_date);
+function toTwinPhase(p: DBPhase): TwinPhase | null {
+  const plannedStart = parseDateOrNull(p.start_date);
+  const plannedEnd = parseDateOrNull(p.end_date);
   if (!plannedStart || !plannedEnd) return null;
   return {
     id: p.id,
     name: p.name ?? 'Untitled',
     plannedStart,
     plannedEnd,
-    actualStart: parseDateOrNull(p.actual_start ?? null),
-    actualEnd: parseDateOrNull(p.actual_end ?? null),
-    percentComplete: Math.max(0, Math.min(100, Math.round(p.progress ?? p.percent_complete ?? 0))),
+    actualStart: parseDateOrNull(p.actual_start),
+    actualEnd: parseDateOrNull(p.actual_end),
+    percentComplete: Math.max(0, Math.min(100, Math.round(p.percent_complete ?? 0))),
     dbStatus: normalizeStatus(p),
     trade: tradeFor(p),
     elementGroup: elementGroupFor(p),
@@ -264,7 +266,7 @@ function createBuildingScene(
       buildingElements[floorKey].push(sideWall);
     }
 
-    // Glass panes — flagged by low opacity so updateBuildingColors skips them.
+    // Glass panes — tagged via userData so updateBuildingColors leaves them alone.
     for (let w = 0; w < 3; w++) {
       const winGeo = new THREE.BoxGeometry(1.5, 1.2, 0.05);
       const winMat = new THREE.MeshStandardMaterial({
@@ -275,6 +277,7 @@ function createBuildingScene(
         metalness: 0.8,
       });
       const win = new THREE.Mesh(winGeo, winMat);
+      win.userData.isGlass = true;
       win.position.set(
         -BUILDING_WIDTH / 2 + 1.5 + w * (BUILDING_WIDTH - 2) / 3 + (BUILDING_WIDTH - 2) / 6,
         baseY + 0.15 + wallHeight / 2,
@@ -282,6 +285,17 @@ function createBuildingScene(
       );
       scene.add(win);
       buildingElements[floorKey].push(win);
+    }
+  }
+
+  // Enable transparency on every structural mesh so updateBuildingColors can
+  // animate opacity based on phase status without re-creating materials.
+  for (const meshes of Object.values(buildingElements)) {
+    for (const mesh of meshes) {
+      if (mesh.userData.isGlass) continue;
+      const mat = mesh.material as THREE.MeshStandardMaterial;
+      mat.transparent = true;
+      mat.opacity = 1;
     }
   }
 
@@ -381,6 +395,16 @@ function createBuildingScene(
   onReady(ctx);
 }
 
+function opacityFor(status: PhaseStatus, progressPct: number): number {
+  switch (status) {
+    case 'not-started': return 0.25;
+    case 'in-progress': return 0.4 + Math.max(0, Math.min(1, progressPct / 100)) * 0.6;
+    case 'complete':
+    case 'behind':
+      return 1;
+  }
+}
+
 function updateBuildingColors(
   elements: Record<string, THREE.Mesh[]>,
   phases: TwinPhase[],
@@ -391,6 +415,7 @@ function updateBuildingColors(
   };
 
   const groupStatus: Record<string, PhaseStatus> = {};
+  const groupProgress: Record<string, number> = {};
 
   for (const phase of phases) {
     if (!phase.elementGroup) continue;
@@ -398,16 +423,21 @@ function updateBuildingColors(
     const existing = groupStatus[phase.elementGroup];
     if (!existing || statusPriority[status] > statusPriority[existing]) {
       groupStatus[phase.elementGroup] = status;
+      groupProgress[phase.elementGroup] = phase.percentComplete;
     }
   }
 
   for (const [group, meshes] of Object.entries(elements)) {
     const status = groupStatus[group] ?? 'not-started';
+    const progress = groupProgress[group] ?? 0;
     const color = STATUS_THREE_COLORS[status];
+    const opacity = opacityFor(status, progress);
     for (const mesh of meshes) {
+      if (mesh.userData.isGlass) continue;
       const mat = mesh.material as THREE.MeshStandardMaterial;
-      if (mat.transparent && mat.opacity < 0.5) continue;
       mat.color.setHex(color);
+      mat.transparent = true;
+      mat.opacity = opacity;
       mat.needsUpdate = true;
     }
   }
@@ -502,25 +532,20 @@ const DigitalTwinPage: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneCtxRef = useRef<SceneContext | null>(null);
 
-  const { activeProject } = useProjectContext();
-  const { phases: storePhases, loading, loadSchedule } = useScheduleStore();
+  const projectId = useProjectId();
+  const { data: dbPhases = [], isLoading: loading } = useSchedulePhases(projectId);
 
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [timelineDay, setTimelineDay] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [compareBaseline, setCompareBaseline] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (activeProject?.id) loadSchedule(activeProject.id);
-  }, [activeProject?.id, loadSchedule]);
 
   const twinPhases = useMemo<TwinPhase[]>(() => {
-    return storePhases
+    return (dbPhases as DBPhase[])
       .map(toTwinPhase)
       .filter((p): p is TwinPhase => p !== null);
-  }, [storePhases]);
+  }, [dbPhases]);
 
   // Derive timeline bounds from the real schedule. Fall back to a 180d window
   // starting today when the project has no phases yet.
@@ -582,24 +607,29 @@ const DigitalTwinPage: React.FC = () => {
     }
   }, [currentDate, twinPhases]);
 
+  // Auto-advance the timeline from the current position to the end over ~10s.
+  // Uses rAF so the run time is constant regardless of schedule length.
   useEffect(() => {
-    if (isPlaying) {
-      playIntervalRef.current = setInterval(() => {
-        setTimelineDay((prev) => {
-          if (prev >= totalDays) {
-            setIsPlaying(false);
-            return totalDays;
-          }
-          return prev + 1;
-        });
-      }, 150);
-    } else if (playIntervalRef.current) {
-      clearInterval(playIntervalRef.current);
-      playIntervalRef.current = null;
-    }
-    return () => {
-      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
+    if (!isPlaying || totalDays <= 0) return;
+    const PLAY_DURATION_MS = 10000;
+    const startDay = timelineDay >= totalDays ? 0 : timelineDay;
+    const remainingDays = Math.max(1, totalDays - startDay);
+    const durationMs = (remainingDays / totalDays) * PLAY_DURATION_MS;
+    let startTs: number | null = null;
+    let raf = 0;
+    const tick = (ts: number) => {
+      if (startTs == null) startTs = ts;
+      const progress = Math.min(1, (ts - startTs) / durationMs);
+      setTimelineDay(Math.round(startDay + progress * remainingDays));
+      if (progress < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setIsPlaying(false);
+      }
     };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, totalDays]);
 
   const toggleFullscreen = useCallback(() => {
