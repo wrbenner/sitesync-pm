@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { captureException, addBreadcrumb } from '../lib/errorTracking';
+import Sentry from '../lib/sentry';
 
 interface Props {
   children: React.ReactNode;
@@ -33,6 +34,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     captureException(error, {
       action: 'react_error_boundary',
+      extra: { componentStack: errorInfo.componentStack || '' },
+    });
+    // Mirror the error directly to Sentry so consumers wiring <ErrorBoundary onError>
+    // see the same event that ships to our monitoring backend.
+    Sentry.captureException(error, {
+      tags: { component: 'ErrorBoundary' },
       extra: { componentStack: errorInfo.componentStack || '' },
     });
     addBreadcrumb('Error boundary caught error', 'error', { message: error.message });
@@ -170,7 +177,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 letterSpacing: '-0.5px',
               }}
             >
-              SiteSync AI
+              SiteSync PM
             </div>
             <div
               style={{
@@ -258,6 +265,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </div>
             {import.meta.env.DEV && this.state.error && (
               <pre
+                tabIndex={0}
+                role="region"
+                aria-label="Error details and stack trace"
                 style={{
                   fontSize: 12,
                   maxHeight: 240,
@@ -269,6 +279,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                   borderRadius: 6,
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
+                  color: colors.textPrimary,
                 }}
               >
                 {this.state.error.message}
