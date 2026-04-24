@@ -83,7 +83,7 @@ interface AgentResult {
 // ── Agent System Prompts ──────────────────────────────────────
 
 const AGENT_SYSTEM_PROMPTS: Record<AgentDomain, string> = {
-  schedule: `You are the Schedule Agent for SiteSync AI, a construction project management platform.
+  schedule: `You are the Schedule Agent for SiteSync PM, a construction project management platform.
 
 Your expertise:
 - Critical path analysis and float management
@@ -99,7 +99,7 @@ Respond with specific schedule data, dates, and durations. Use construction sche
 
 Never use hyphens in your text. Use commas, periods, or restructure sentences.`,
 
-  cost: `You are the Cost Agent for SiteSync AI, a construction project management platform.
+  cost: `You are the Cost Agent for SiteSync PM, a construction project management platform.
 
 Your expertise:
 - Earned Value Management (CPI, SPI, EAC, ETC, VAC, TCPI)
@@ -115,7 +115,7 @@ Respond with specific dollar amounts, percentages, and EVM metrics. When flaggin
 
 Never use hyphens in your text. Use commas, periods, or restructure sentences.`,
 
-  safety: `You are the Safety Agent for SiteSync AI, a construction project management platform.
+  safety: `You are the Safety Agent for SiteSync PM, a construction project management platform.
 
 Your expertise:
 - OSHA compliance (29 CFR 1926) verification
@@ -132,7 +132,7 @@ Safety is the highest priority on every construction project. Be direct and urge
 
 Never use hyphens in your text. Use commas, periods, or restructure sentences.`,
 
-  quality: `You are the Quality Agent for SiteSync AI, a construction project management platform.
+  quality: `You are the Quality Agent for SiteSync PM, a construction project management platform.
 
 Your expertise:
 - Punch list management and trend analysis
@@ -148,7 +148,7 @@ Focus on quantifiable quality metrics. Track deficiency rates by trade, location
 
 Never use hyphens in your text. Use commas, periods, or restructure sentences.`,
 
-  compliance: `You are the Compliance Agent for SiteSync AI, a construction project management platform.
+  compliance: `You are the Compliance Agent for SiteSync PM, a construction project management platform.
 
 Your expertise:
 - Davis Bacon Act and prevailing wage compliance
@@ -164,7 +164,7 @@ Compliance failures can shut down a project. Be thorough and precise about deadl
 
 Never use hyphens in your text. Use commas, periods, or restructure sentences.`,
 
-  document: `You are the Document Agent for SiteSync AI, a construction project management platform.
+  document: `You are the Document Agent for SiteSync PM, a construction project management platform.
 
 Your expertise:
 - Specification section lookup (CSI MasterFormat)
@@ -192,7 +192,9 @@ const TOOLS_BY_DOMAIN: Record<AgentDomain, Anthropic.Messages.Tool[]> = {
   ],
   cost: [
     { name: 'query_budget', description: 'Query budget data by division, cost code, or date range', input_schema: { type: 'object' as const, properties: { division: { type: 'string' }, cost_code: { type: 'string' } } } },
-    { name: 'query_change_orders', description: 'Query change orders with filters', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, min_amount: { type: 'number' } } } },
+    { name: 'query_change_orders', description: 'Query change orders with filters', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, min_amount: { type: 'number' }, limit: { type: 'number' } } } },
+    { name: 'create_change_order', description: 'Create a new change order. Requires approval. Status must be one of: pending, approved, rejected.', input_schema: { type: 'object' as const, properties: { description: { type: 'string', description: 'Required. What the change order covers.' }, status: { type: 'string', enum: ['pending', 'approved', 'rejected'] }, amount: { type: 'number' }, requested_by: { type: 'string' }, requested_date: { type: 'string', description: 'ISO date (YYYY-MM-DD)' } }, required: ['description'] } },
+    { name: 'update_change_order', description: 'Update an existing change order by id. Requires approval.', input_schema: { type: 'object' as const, properties: { id: { type: 'string' }, status: { type: 'string', enum: ['pending', 'approved', 'rejected'] }, amount: { type: 'number' }, description: { type: 'string' }, approved_date: { type: 'string' } }, required: ['id'] } },
     { name: 'earned_value_analysis', description: 'Calculate EVM metrics (CPI, SPI, EAC, ETC)', input_schema: { type: 'object' as const, properties: { as_of_date: { type: 'string' } } } },
     { name: 'forecast_costs', description: 'Project final cost with confidence intervals', input_schema: { type: 'object' as const, properties: { method: { type: 'string' } } } },
   ],
@@ -203,8 +205,12 @@ const TOOLS_BY_DOMAIN: Record<AgentDomain, Anthropic.Messages.Tool[]> = {
     { name: 'track_corrective_actions', description: 'Query open corrective actions', input_schema: { type: 'object' as const, properties: { status: { type: 'string' } } } },
   ],
   quality: [
-    { name: 'query_punch_items', description: 'Query punch list items with filters', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, location: { type: 'string' }, trade: { type: 'string' }, priority: { type: 'string' } } } },
-    { name: 'query_submittals', description: 'Query submittals with status filters', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, spec_section: { type: 'string' } } } },
+    { name: 'query_punch_items', description: 'Query punch list items with filters', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, location: { type: 'string' }, trade: { type: 'string' }, priority: { type: 'string' }, limit: { type: 'number' } } } },
+    { name: 'create_punch_item', description: 'Create a new punch item. Requires approval. Status: open|in_progress|resolved|verified. Priority: low|medium|high|critical.', input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, description: { type: 'string' }, status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'verified'] }, priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] }, location: { type: 'string' }, floor: { type: 'string' }, area: { type: 'string' }, trade: { type: 'string' }, assigned_to: { type: 'string', description: 'auth.users UUID' }, due_date: { type: 'string' } }, required: ['title'] } },
+    { name: 'update_punch_item', description: 'Update an existing punch item by id. Requires approval.', input_schema: { type: 'object' as const, properties: { id: { type: 'string' }, status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'verified'] }, priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] }, description: { type: 'string' }, assigned_to: { type: 'string' }, due_date: { type: 'string' }, resolved_date: { type: 'string' } }, required: ['id'] } },
+    { name: 'query_submittals', description: 'Query submittals with status filters', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, spec_section: { type: 'string' }, limit: { type: 'number' } } } },
+    { name: 'create_submittal', description: 'Create a new submittal. Requires approval. Status: pending|under_review|approved|rejected|resubmit.', input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, status: { type: 'string', enum: ['pending', 'under_review', 'approved', 'rejected', 'resubmit'] }, spec_section: { type: 'string' }, subcontractor: { type: 'string' }, lead_time_weeks: { type: 'number' }, submitted_date: { type: 'string' }, due_date: { type: 'string' } }, required: ['title'] } },
+    { name: 'update_submittal', description: 'Update an existing submittal by id. Requires approval.', input_schema: { type: 'object' as const, properties: { id: { type: 'string' }, status: { type: 'string', enum: ['pending', 'under_review', 'approved', 'rejected', 'resubmit'] }, subcontractor: { type: 'string' }, due_date: { type: 'string' }, approved_date: { type: 'string' } }, required: ['id'] } },
     { name: 'analyze_rework', description: 'Analyze rework patterns and rates', input_schema: { type: 'object' as const, properties: { trade: { type: 'string' }, location: { type: 'string' } } } },
     { name: 'predict_rework_risk', description: 'Predict rework risk for upcoming activities', input_schema: { type: 'object' as const, properties: { activity: { type: 'string' } } } },
   ],
@@ -216,10 +222,46 @@ const TOOLS_BY_DOMAIN: Record<AgentDomain, Anthropic.Messages.Tool[]> = {
   ],
   document: [
     { name: 'search_documents', description: 'Search project documents by keyword', input_schema: { type: 'object' as const, properties: { query: { type: 'string' }, type: { type: 'string' } }, required: ['query'] } },
+    { name: 'query_rfis', description: 'Query RFIs (Requests For Information) with filters and pagination', input_schema: { type: 'object' as const, properties: { status: { type: 'string' }, assigned_to: { type: 'string' }, search: { type: 'string' }, limit: { type: 'number' } } } },
+    { name: 'create_rfi', description: 'Draft a new RFI. Requires approval. Status: open|under_review|answered|closed. Priority: low|medium|high|critical.', input_schema: { type: 'object' as const, properties: { title: { type: 'string' }, description: { type: 'string', description: 'The question / issue the RFI is asking about.' }, status: { type: 'string', enum: ['open', 'under_review', 'answered', 'closed'] }, priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] }, assigned_to: { type: 'string' }, ball_in_court: { type: 'string' }, due_date: { type: 'string' }, drawing_reference: { type: 'string' } }, required: ['title'] } },
+    { name: 'update_rfi', description: 'Update an RFI by id. For responses use the create_rfi_response tool (not this one).', input_schema: { type: 'object' as const, properties: { id: { type: 'string' }, status: { type: 'string', enum: ['open', 'under_review', 'answered', 'closed'] }, priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] }, assigned_to: { type: 'string' }, ball_in_court: { type: 'string' }, due_date: { type: 'string' }, closed_date: { type: 'string' }, description: { type: 'string' } }, required: ['id'] } },
     { name: 'cross_reference_specs', description: 'Cross reference specification sections with drawings', input_schema: { type: 'object' as const, properties: { spec_section: { type: 'string' }, drawing_number: { type: 'string' } } } },
     { name: 'find_spec_sections', description: 'Find relevant spec sections for a topic', input_schema: { type: 'object' as const, properties: { topic: { type: 'string' } }, required: ['topic'] } },
     { name: 'generate_report', description: 'Generate a project report', input_schema: { type: 'object' as const, properties: { type: { type: 'string' }, date_range: { type: 'string' } } } },
   ],
+}
+
+// ── Mutation classification ───────────────────────────────────
+// Tools that WRITE to the database must be gated behind the approval
+// flow. When the model invokes one of these during a chat turn, the
+// orchestrator does NOT execute it — it surfaces a suggestedAction the
+// user must approve. The mutation only runs when the client posts the
+// approved action back via the executeAction path.
+
+const MUTATION_TOOLS = new Set<string>([
+  'create_rfi', 'update_rfi',
+  'create_punch_item', 'update_punch_item',
+  'create_submittal', 'update_submittal',
+  'create_change_order', 'update_change_order',
+])
+
+function isMutation(toolName: string): boolean {
+  return MUTATION_TOOLS.has(toolName)
+}
+
+function describeMutation(toolName: string, input: Record<string, unknown>): string {
+  const title = (input.title || input.subject || input.description || input.id || '') as string
+  switch (toolName) {
+    case 'create_rfi': return `Create RFI: ${title || 'new RFI'}`
+    case 'update_rfi': return `Update RFI ${input.id ?? ''}`
+    case 'create_punch_item': return `Create punch item: ${title || 'new item'}`
+    case 'update_punch_item': return `Update punch item ${input.id ?? ''}`
+    case 'create_submittal': return `Create submittal: ${title || 'new submittal'}`
+    case 'update_submittal': return `Update submittal ${input.id ?? ''}`
+    case 'create_change_order': return `Create change order: ${title || 'new CO'}`
+    case 'update_change_order': return `Update change order ${input.id ?? ''}`
+    default: return `Run ${toolName}`
+  }
 }
 
 // ── Intent Classification ─────────────────────────────────────
@@ -320,28 +362,52 @@ async function executeAgent(
     if (block.type === 'text') {
       contentText += block.text
     } else if (block.type === 'tool_use') {
-      // Execute tool against Supabase
+      const toolInput = block.input as Record<string, unknown>
+
+      if (isMutation(block.name)) {
+        // Mutations are never auto-executed. Surface them as a
+        // pending suggestedAction so the client can show the user an
+        // approval prompt. The actual write happens on executeAction.
+        const description = describeMutation(block.name, toolInput)
+        suggestedActions.push({
+          id: `action-${Date.now()}-${domain}-${suggestedActions.length}`,
+          domain,
+          description,
+          tool: block.name,
+          input: toolInput,
+          confidence: 90,
+          impact: 'medium',
+          requiresApproval: true,
+        })
+        toolCalls.push({
+          tool: block.name,
+          input: toolInput,
+          result: { pending_approval: true, description },
+        })
+        continue
+      }
+
+      // Read-only tool: execute immediately.
       const result = await executeToolCall(
         block.name,
-        block.input as Record<string, unknown>,
+        toolInput,
         domain,
         projectContext,
         supabaseClient,
       )
       toolCalls.push({
         tool: block.name,
-        input: block.input as Record<string, unknown>,
+        input: toolInput,
         result,
       })
 
-      // Check if tool result suggests an action
       if (result._suggested_action) {
         suggestedActions.push({
           id: `action-${Date.now()}-${domain}-${suggestedActions.length}`,
           domain,
           description: result._suggested_action as string,
           tool: block.name,
-          input: block.input as Record<string, unknown>,
+          input: toolInput,
           confidence: (result._confidence as number) || 85,
           impact: (result._impact as 'low' | 'medium' | 'high' | 'critical') || 'medium',
           requiresApproval: true,
@@ -396,14 +462,56 @@ async function executeToolCall(
     }
 
     case 'query_change_orders': {
+      const limit = Math.min(Number(input.limit) || 50, 100)
       let query = supabaseClient
         .from('change_orders')
         .select('*')
         .eq('project_id', projectId)
       if (input.status) query = query.eq('status', input.status)
-      const { data, error } = await query
+      if (input.min_amount !== undefined) query = query.gte('amount', Number(input.min_amount))
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(limit)
       if (error) return { error: error.message }
       return { count: data?.length || 0, change_orders: data || [] }
+    }
+
+    case 'create_change_order': {
+      // Real columns: description (required), amount, status (pending|approved|rejected),
+      // requested_by (text), requested_date, approved_date. No title/type/reason/cost_code.
+      const description = String(input.description ?? input.title ?? '').trim()
+      if (!description) return { error: 'description is required' }
+      const payload: Record<string, unknown> = {
+        project_id: projectId,
+        description,
+        status: input.status ?? 'pending',
+        amount: input.amount ?? null,
+        requested_by: input.requested_by ?? null,
+        requested_date: input.requested_date ?? null,
+      }
+      const { data, error } = await supabaseClient
+        .from('change_orders')
+        .insert(payload)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { created: true, change_order: data }
+    }
+
+    case 'update_change_order': {
+      const id = String(input.id || '')
+      if (!id) return { error: 'id is required' }
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      for (const k of ['status', 'amount', 'description', 'approved_date'] as const) {
+        if (input[k] !== undefined) updates[k] = input[k]
+      }
+      const { data, error } = await supabaseClient
+        .from('change_orders')
+        .update(updates)
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { updated: true, change_order: data }
     }
 
     case 'query_incidents': {
@@ -429,6 +537,7 @@ async function executeToolCall(
     }
 
     case 'query_punch_items': {
+      const limit = Math.min(Number(input.limit) || 50, 100)
       let query = supabaseClient
         .from('punch_items')
         .select('*')
@@ -436,20 +545,169 @@ async function executeToolCall(
       if (input.status) query = query.eq('status', input.status)
       if (input.priority) query = query.eq('priority', input.priority)
       if (input.location) query = query.ilike('location', `%${escapeIlike(String(input.location))}%`)
-      const { data, error } = await query.limit(50)
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(limit)
       if (error) return { error: error.message }
       return { count: data?.length || 0, punch_items: data || [] }
     }
 
+    case 'create_punch_item': {
+      // priority enum: low|medium|high|critical (NO 'normal').
+      // status enum: open|in_progress|resolved|verified.
+      const payload: Record<string, unknown> = {
+        project_id: projectId,
+        title: input.title,
+        description: input.description ?? null,
+        status: input.status ?? 'open',
+        priority: input.priority ?? 'medium',
+        location: input.location ?? null,
+        floor: input.floor ?? null,
+        area: input.area ?? null,
+        trade: input.trade ?? null,
+        assigned_to: input.assigned_to ?? null,
+        due_date: input.due_date ?? null,
+      }
+      const { data, error } = await supabaseClient
+        .from('punch_items')
+        .insert(payload)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { created: true, punch_item: data }
+    }
+
+    case 'update_punch_item': {
+      const id = String(input.id || '')
+      if (!id) return { error: 'id is required' }
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      for (const k of ['status', 'priority', 'description', 'assigned_to', 'due_date', 'resolved_date'] as const) {
+        if (input[k] !== undefined) updates[k] = input[k]
+      }
+      const { data, error } = await supabaseClient
+        .from('punch_items')
+        .update(updates)
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { updated: true, punch_item: data }
+    }
+
     case 'query_submittals': {
+      const limit = Math.min(Number(input.limit) || 50, 100)
       let query = supabaseClient
         .from('submittals')
         .select('*')
         .eq('project_id', projectId)
       if (input.status) query = query.eq('status', input.status)
-      const { data, error } = await query
+      if (input.spec_section) query = query.ilike('spec_section', `%${escapeIlike(String(input.spec_section))}%`)
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(limit)
       if (error) return { error: error.message }
       return { count: data?.length || 0, submittals: data || [] }
+    }
+
+    case 'create_submittal': {
+      // Real columns: title, spec_section, subcontractor, status,
+      // revision_number, lead_time_weeks, submitted_date, due_date,
+      // approved_date. NO description / required_on_site columns.
+      const payload: Record<string, unknown> = {
+        project_id: projectId,
+        title: input.title,
+        status: input.status ?? 'pending',
+        spec_section: input.spec_section ?? null,
+        subcontractor: input.subcontractor ?? null,
+        lead_time_weeks: input.lead_time_weeks ?? null,
+        submitted_date: input.submitted_date ?? null,
+        due_date: input.due_date ?? null,
+      }
+      const { data, error } = await supabaseClient
+        .from('submittals')
+        .insert(payload)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { created: true, submittal: data }
+    }
+
+    case 'update_submittal': {
+      const id = String(input.id || '')
+      if (!id) return { error: 'id is required' }
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      for (const k of ['status', 'subcontractor', 'due_date', 'approved_date'] as const) {
+        if (input[k] !== undefined) updates[k] = input[k]
+      }
+      const { data, error } = await supabaseClient
+        .from('submittals')
+        .update(updates)
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { updated: true, submittal: data }
+    }
+
+    case 'query_rfis': {
+      // Real columns: title, description, priority, status, assigned_to (uuid),
+      // ball_in_court (uuid), drawing_reference, due_date. NO subject column.
+      const limit = Math.min(Number(input.limit) || 20, 100)
+      let query = supabaseClient
+        .from('rfis')
+        .select('*')
+        .eq('project_id', projectId)
+      if (input.status) query = query.eq('status', input.status)
+      if (input.assigned_to) query = query.eq('assigned_to', String(input.assigned_to))
+      if (input.search) {
+        const s = escapeIlike(String(input.search))
+        query = query.or(`title.ilike.%${s}%,description.ilike.%${s}%`)
+      }
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(limit)
+      if (error) return { error: error.message }
+      return { count: data?.length || 0, rfis: data || [] }
+    }
+
+    case 'create_rfi': {
+      // status enum: open|under_review|answered|closed.
+      // priority enum: low|medium|high|critical.
+      // Responses live in rfi_responses (separate table) — never set 'response' here.
+      const payload: Record<string, unknown> = {
+        project_id: projectId,
+        title: input.title,
+        description: input.description ?? null,
+        status: input.status ?? 'open',
+        priority: input.priority ?? 'medium',
+        assigned_to: input.assigned_to ?? null,
+        ball_in_court: input.ball_in_court ?? null,
+        due_date: input.due_date ?? null,
+        drawing_reference: input.drawing_reference ?? null,
+      }
+      const { data, error } = await supabaseClient
+        .from('rfis')
+        .insert(payload)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { created: true, rfi: data }
+    }
+
+    case 'update_rfi': {
+      const id = String(input.id || '')
+      if (!id) return { error: 'id is required' }
+      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+      for (const k of ['status', 'priority', 'assigned_to', 'ball_in_court', 'due_date', 'closed_date', 'description'] as const) {
+        if (input[k] !== undefined) updates[k] = input[k]
+      }
+      const { data, error } = await supabaseClient
+        .from('rfis')
+        .update(updates)
+        .eq('id', id)
+        .eq('project_id', projectId)
+        .select()
+        .single()
+      if (error) return { error: error.message }
+      return { updated: true, rfi: data }
     }
 
     case 'query_insurance': {
@@ -646,7 +904,7 @@ Deno.serve(async (req) => {
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 512,
-        system: `You are the SiteSync AI Coordinator, managing a team of 6 specialist agents (Schedule, Cost, Safety, Quality, Compliance, Document) for construction project management. Answer general questions, greetings, and meta questions about the system. If the user's question would benefit from a specialist, suggest they ask a more specific question or use @mention. Never use hyphens in text.`,
+        system: `You are the SiteSync PM Coordinator, managing a team of 6 specialist agents (Schedule, Cost, Safety, Quality, Compliance, Document) for construction project management. Answer general questions, greetings, and meta questions about the system. If the user's question would benefit from a specialist, suggest they ask a more specific question or use @mention. Never use hyphens in text.`,
         messages: [{ role: 'user', content: message }],
       })
 

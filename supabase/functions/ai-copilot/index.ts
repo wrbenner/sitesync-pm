@@ -14,7 +14,8 @@ import {
 interface CopilotRequest {
   message: string
   conversation_id?: string
-  project_id: string
+  project_id?: string | null
+  page_context?: string | null
 }
 
 interface CopilotResponse {
@@ -31,14 +32,24 @@ Deno.serve(async (req) => {
     const { user, supabase } = await authenticateRequest(req)
     const body = await parseJsonBody<CopilotRequest>(req)
 
-    const projectId = requireUuid(body.project_id, 'project_id')
+    // project_id is optional — the copilot chat panel can be invoked from
+    // pages that have no project context (e.g. global dashboard). When
+    // present it must be a valid UUID and the user must be a member.
+    const projectId: string | null = body.project_id
+      ? requireUuid(body.project_id, 'project_id')
+      : null
+    const pageContext = body.page_context
+      ? sanitizeForPrompt(body.page_context, 200)
+      : null
     const message = sanitizeForPrompt(body.message, 5000)
 
     if (!message || message.length < 1) {
       throw new HttpError(400, 'message must be a non-empty string')
     }
 
-    await verifyProjectMembership(supabase, user.id, projectId)
+    if (projectId) {
+      await verifyProjectMembership(supabase, user.id, projectId)
+    }
 
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
     if (!anthropicApiKey) {
@@ -51,13 +62,13 @@ Deno.serve(async (req) => {
     if (conversationId) {
       conversationId = requireUuid(conversationId, 'conversation_id')
 
-      const { data: conversation, error: convError } = await supabase
+      let convQuery = supabase
         .from('ai_conversations')
         .select('id')
         .eq('id', conversationId)
         .eq('user_id', user.id)
-        .eq('project_id', projectId)
-        .maybeSingle()
+      if (projectId) convQuery = convQuery.eq('project_id', projectId)
+      const { data: conversation, error: convError } = await convQuery.maybeSingle()
 
       if (convError || !conversation) {
         throw new HttpError(404, 'Conversation not found')
@@ -82,70 +93,77 @@ Deno.serve(async (req) => {
       conversationId = crypto.randomUUID()
     }
 
-    const [
-      { data: recentRfis },
-      { data: scheduleStatus },
-      { data: budgetSummary },
-      { data: weatherData },
-      { data: projectInfo },
-    ] = await Promise.all([
-      supabase
-        .from('rfis')
-        .select('id, subject, status, due_date')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
-        .limit(5),
-      supabase
-        .from('schedule_phases')
-        .select('name, status, scheduled_start, scheduled_end')
-        .eq('project_id', projectId)
-        .eq('status', 'at_risk')
-        .limit(3),
-      supabase
-        .from('budget_items')
-        .select('division, original_amount, actual_amount')
-        .eq('project_id', projectId)
-        .limit(10),
-      supabase
-        .from('weather_cache')
-        .select('forecast_data, cached_at')
-        .eq('project_id', projectId)
-        .order('cached_at', { ascending: false })
-        .limit(1)
-        .single(),
-      supabase.from('projects').select('name, location, start_date').eq('id', projectId).single(),
-    ])
-
     const contextParts: string[] = []
 
-    if (projectInfo) {
-      contextParts.push(`Project: ${projectInfo.name} in ${projectInfo.location}`)
+    if (projectId) {
+      const [
+        { data: recentRfis },
+        { data: scheduleStatus },
+        { data: budgetSummary },
+        weatherResult,
+        { data: projectInfo },
+      ] = await Promise.all([
+        supabase
+          .from('rfis')
+          .select('id, subject, status, due_date')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('schedule_phases')
+          .select('name, status, scheduled_start, scheduled_end')
+          .eq('project_id', projectId)
+          .eq('status', 'at_risk')
+          .limit(3),
+        supabase
+          .from('budget_items')
+          .select('division, original_amount, actual_amount')
+          .eq('project_id', projectId)
+          .limit(10),
+        supabase
+          .from('weather_cache')
+          .select('forecast_data, cached_at')
+          .eq('project_id', projectId)
+          .order('cached_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from('projects').select('name, location, start_date').eq('id', projectId).maybeSingle(),
+      ])
+      const weatherData = weatherResult.data
+
+      if (projectInfo) {
+        contextParts.push(`Project: ${projectInfo.name} in ${projectInfo.location}`)
+      }
+
+      if (recentRfis && recentRfis.length > 0) {
+        contextParts.push(
+          `Recent RFIs:\n${recentRfis.map((r) => `- ${r.subject} (${r.status})`).join('\n')}`,
+        )
+      }
+
+      if (scheduleStatus && scheduleStatus.length > 0) {
+        contextParts.push(
+          `At-Risk Activities:\n${scheduleStatus.map((s) => `- ${s.name}`).join('\n')}`,
+        )
+      }
+
+      if (budgetSummary && budgetSummary.length > 0) {
+        const totalOriginal = budgetSummary.reduce((sum, b) => sum + (b.original_amount || 0), 0)
+        const totalActual = budgetSummary.reduce((sum, b) => sum + (b.actual_amount || 0), 0)
+        const percentSpent = totalOriginal > 0 ? Math.round((totalActual / totalOriginal) * 100) : 0
+        contextParts.push(`Budget: ${percentSpent}% spent (${totalActual} of ${totalOriginal})`)
+      }
+
+      if (weatherData?.forecast_data) {
+        contextParts.push(`Weather context: ${JSON.stringify(weatherData.forecast_data).substring(0, 200)}`)
+      }
     }
 
-    if (recentRfis && recentRfis.length > 0) {
-      contextParts.push(
-        `Recent RFIs:\n${recentRfis.map((r) => `- ${r.subject} (${r.status})`).join('\n')}`,
-      )
+    if (pageContext) {
+      contextParts.push(`Current page: ${pageContext}`)
     }
 
-    if (scheduleStatus && scheduleStatus.length > 0) {
-      contextParts.push(
-        `At-Risk Activities:\n${scheduleStatus.map((s) => `- ${s.name}`).join('\n')}`,
-      )
-    }
-
-    if (budgetSummary && budgetSummary.length > 0) {
-      const totalOriginal = budgetSummary.reduce((sum, b) => sum + (b.original_amount || 0), 0)
-      const totalActual = budgetSummary.reduce((sum, b) => sum + (b.actual_amount || 0), 0)
-      const percentSpent = totalOriginal > 0 ? Math.round((totalActual / totalOriginal) * 100) : 0
-      contextParts.push(`Budget: ${percentSpent}% spent (${totalActual} of ${totalOriginal})`)
-    }
-
-    if (weatherData?.forecast_data) {
-      contextParts.push(`Weather context: ${JSON.stringify(weatherData.forecast_data).substring(0, 200)}`)
-    }
-
-    const systemPrompt = `You are SiteSync AI, an intelligent construction project assistant integrated into a project management platform. You understand the complexities of construction, including scheduling, budgeting, RFIs, submittals, and field operations.
+    const systemPrompt = `You are SiteSync PM, an intelligent construction project assistant integrated into a project management platform. You understand the complexities of construction, including scheduling, budgeting, RFIs, submittals, and field operations.
 
 You help construction professionals by:
 - Answering questions about project status, schedules, and budgets
@@ -165,7 +183,7 @@ Be concise, practical, and construction industry appropriate. Avoid unnecessary 
       { role: 'user', content: message },
     ]
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages/create', {
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': anthropicApiKey,
@@ -194,12 +212,12 @@ Be concise, practical, and construction industry appropriate. Avoid unnecessary 
     const tokensUsed = (anthropicData.usage?.input_tokens || 0) + (anthropicData.usage?.output_tokens || 0)
 
     await Promise.all([
-      supabase.from('ai_conversations').insert({
+      supabase.from('ai_conversations').upsert({
         id: conversationId,
         project_id: projectId,
         user_id: user.id,
         last_message_at: new Date().toISOString(),
-      }).select(),
+      }, { onConflict: 'id' }).select(),
       supabase.from('ai_messages').insert([
         {
           conversation_id: conversationId,

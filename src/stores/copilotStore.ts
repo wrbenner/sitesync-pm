@@ -12,6 +12,9 @@ export interface Conversation {
   id: string;
   title: string;
   messages: CopilotMessage[];
+  // The UUID returned by the ai-copilot edge function after the first
+  // round trip. Used to maintain conversation continuity server-side.
+  serverConversationId?: string;
   created_at: string;
   updated_at: string;
 }
@@ -20,11 +23,10 @@ interface CopilotState {
   conversations: Conversation[];
   activeConversationId: string | null;
   isTyping: boolean;
-  apiKey: string | null;
   isOpen: boolean;
   currentPageContext: string;
+  currentProjectId: string | null;
 
-  setApiKey: (key: string) => void;
   getActiveConversation: () => Conversation | null;
   createConversation: (title?: string) => string;
   setActiveConversation: (id: string) => void;
@@ -33,20 +35,21 @@ interface CopilotState {
   openCopilot: () => void;
   closeCopilot: () => void;
   setPageContext: (context: string) => void;
+  setProjectId: (projectId: string | null) => void;
 }
 
 export const useCopilotStore = create<CopilotState>()((set, get) => ({
   conversations: [],
   activeConversationId: null,
   isTyping: false,
-  apiKey: null,
   isOpen: false,
   currentPageContext: 'dashboard',
+  currentProjectId: null,
 
-  setApiKey: (key) => set({ apiKey: key }),
   openCopilot: () => set({ isOpen: true }),
   closeCopilot: () => set({ isOpen: false }),
   setPageContext: (context) => set({ currentPageContext: context }),
+  setProjectId: (projectId) => set({ currentProjectId: projectId }),
 
   getActiveConversation: () => {
     const { conversations, activeConversationId } = get();
@@ -72,7 +75,7 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
   setActiveConversation: (id) => set({ activeConversationId: id }),
 
   sendMessage: async (text) => {
-    const { activeConversationId, apiKey } = get();
+    const { activeConversationId, currentPageContext, currentProjectId } = get();
     if (!activeConversationId) return;
 
     const userMsg: CopilotMessage = {
@@ -91,65 +94,28 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
       isTyping: true,
     }));
 
+    const conversation = get().conversations.find((c) => c.id === activeConversationId);
+    const serverConversationId = conversation?.serverConversationId;
+
     let responseText: string;
+    let newServerConversationId: string | undefined;
 
-    if (apiKey) {
-      // Real Claude API call via direct browser access
-      try {
-        const conversation = get().conversations.find((c) => c.id === activeConversationId);
-        const apiMessages = (conversation?.messages ?? []).map((m) => ({
-          role: m.role === 'assistant' ? 'assistant' as const : 'user' as const,
-          content: m.content,
-        }));
-        apiMessages.push({ role: 'user', content: text });
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-copilot', {
+        body: {
+          message: text,
+          conversation_id: serverConversationId,
+          project_id: currentProjectId,
+          page_context: currentPageContext,
+        },
+      });
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1024,
-            system: 'You are SiteSync AI Copilot, an AI assistant for construction project management. You help with RFIs, submittals, budgets, schedules, and field operations. Be concise, practical, and speak like a construction professional. Never use hyphens in text. Use commas, periods, or restructure sentences instead.',
-            messages: apiMessages,
-          }),
-        });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const errBody = errData as { error?: { message?: string } };
-          throw new Error(errBody.error?.message || `API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const body = data as { content?: Array<{ text?: string }> };
-        responseText = body.content?.[0]?.text ?? 'I was unable to generate a response.';
-      } catch (err) {
-        responseText = `I encountered an error connecting to the AI service: ${(err as Error).message}. Please check your API key and try again.`;
-      }
-    } else {
-      // Call the Supabase edge function for AI chat
-      try {
-        const conversation = get().conversations.find((c) => c.id === activeConversationId);
-        const messages = (conversation?.messages ?? []).map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
-        messages.push({ role: 'user', content: text });
-
-        const { data, error } = await supabase.functions.invoke('ai-chat', {
-          body: { messages },
-        });
-
-        if (error) throw error;
-        responseText = data?.response ?? 'I was unable to generate a response. Please try again.';
-      } catch (err) {
-        responseText = `I encountered an error connecting to the AI service: ${(err as Error).message}. Please ensure the ai-chat edge function is deployed.`;
-      }
+      if (error) throw error;
+      const payload = data as { response?: string; conversation_id?: string } | null;
+      responseText = payload?.response ?? 'I was unable to generate a response. Please try again.';
+      newServerConversationId = payload?.conversation_id;
+    } catch (err) {
+      responseText = `I encountered an error connecting to the AI service: ${(err as Error).message}. Please ensure the ai-copilot edge function is deployed.`;
     }
 
     // Auto set conversation title from first user message
@@ -171,7 +137,12 @@ export const useCopilotStore = create<CopilotState>()((set, get) => ({
     set((s) => ({
       conversations: s.conversations.map((c) =>
         c.id === activeConversationId
-          ? { ...c, messages: [...c.messages, botMsg], updated_at: new Date().toISOString() }
+          ? {
+              ...c,
+              messages: [...c.messages, botMsg],
+              serverConversationId: newServerConversationId ?? c.serverConversationId,
+              updated_at: new Date().toISOString(),
+            }
           : c
       ),
       isTyping: false,

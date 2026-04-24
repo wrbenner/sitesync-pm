@@ -1,11 +1,11 @@
 // ── AI Copilot Tools — Function Definitions ──────────────────
-// Adapted from SiteSync AI production chatbot:
+// Adapted from SiteSync PM production chatbot:
 //   sitesyncai-backend/src/chatbot/openai/function-definitions.ts
 //
 // These tool schemas are fed to Claude / OpenAI for function-calling in the
 // AI Copilot. The function NAMES and ARGUMENT SHAPES are battle-tested; the
 // DESCRIPTIONS are mapped to SiteSync PM's data model (projects, drawings,
-// discrepancies, pairs, entities) instead of SiteSync AI's file-centric one.
+// discrepancies, pairs, entities) instead of SiteSync PM's file-centric one.
 //
 // Each tool handler runs server-side via supabase edge functions — this
 // module is the SHARED SCHEMA + CLIENT-SIDE DISPATCHER.
@@ -285,29 +285,70 @@ export const AI_COPILOT_TOOLS: AiCopilotTool[] = [
 ]
 
 // ── Dispatcher ────────────────────────────────────────────────
-// Maps a tool call into a supabase edge function + args. Callers should
-// pass the result to supabase.functions.invoke(...) or fetch it directly.
+// Invokes the agent-orchestrator edge function's executeAction path
+// to actually run a tool against Supabase, and returns the real result.
+//
+// Note: mutations (create_*, update_*) run immediately here and
+// bypass the chat-time approval flow. User-facing copilot UIs should
+// route mutations through useMultiAgentChat's approveAction instead of
+// calling dispatchTool directly.
 
-export interface ToolDispatch {
-  edgeFunction: string
-  body: Record<string, unknown>
+import { supabase } from './supabase'
+
+export interface ToolDispatchResult {
+  success: boolean
+  result?: Record<string, unknown>
+  error?: string
 }
 
-export function dispatchTool(name: ToolName, args: Record<string, unknown>): ToolDispatch {
+// Map a client-facing ToolName to the agent domain the orchestrator
+// expects. These domains gate which tool handlers are reachable.
+function domainForTool(name: ToolName): string {
   switch (name) {
     case 'get_sheet_metadata':
     case 'get_pair_relationships':
     case 'get_unpaired_drawings':
     case 'get_paired_drawings':
+    case 'search_entities':
+    case 'get_entity_stats':
+      return 'document'
     case 'get_project_stats':
     case 'get_discrepancy_stats':
     case 'audit_cross_modal_scales':
-    case 'search_entities':
-    case 'get_entity_stats':
     case 'list_projects':
     case 'get_project_info':
-      return { edgeFunction: 'ai-copilot', body: { tool: name, args } }
+      return 'document'
     case 'trigger_platform_action':
-      return { edgeFunction: 'ai-copilot', body: { tool: name, args } }
+      return 'document'
+  }
+}
+
+export async function dispatchTool(
+  name: ToolName,
+  args: Record<string, unknown>,
+  projectId?: string,
+): Promise<ToolDispatchResult> {
+  const resolvedProjectId = (args.project_id as string | undefined) ?? projectId ?? ''
+
+  try {
+    const { data, error } = await supabase.functions.invoke('agent-orchestrator', {
+      body: {
+        executeAction: {
+          actionId: `dispatch-${Date.now()}`,
+          tool: name,
+          input: args,
+          domain: domainForTool(name),
+        },
+        projectContext: { projectId: resolvedProjectId },
+      },
+    })
+    if (error) return { success: false, error: error.message }
+    const payload = data as { success?: boolean; result?: Record<string, unknown> } | null
+    return {
+      success: payload?.success !== false,
+      result: payload?.result,
+    }
+  } catch (err) {
+    return { success: false, error: (err as Error).message }
   }
 }
