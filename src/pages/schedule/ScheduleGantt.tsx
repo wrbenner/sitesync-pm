@@ -10,7 +10,7 @@ import { ScheduleMobileList } from './ScheduleMobileList';
 
 type ViewMode = 'gantt' | 'list';
 type ZoomLevel = 'day' | 'week' | 'month' | 'quarter';
-type MobileFilter = 'all' | 'in_progress' | 'delayed' | 'critical_path';
+type MobileFilter = 'all' | 'active' | 'delayed' | 'critical_path';
 
 interface ScheduleGanttProps {
   schedulePhases: SchedulePhase[];
@@ -379,11 +379,13 @@ export const ScheduleGantt: React.FC<ScheduleGanttProps> = ({
 
                   const statusColors: Record<string, { fg: string; bg: string }> = {
                     completed: { fg: '#16A34A', bg: '#F0FDF4' },
-                    in_progress: { fg: '#2563EB', bg: '#EFF6FF' },
-                    delayed: { fg: '#D97706', bg: '#FEF3C7' },
-                    planned: { fg: '#6B7280', bg: '#F3F4F6' },
+                    active: { fg: '#2563EB', bg: '#EFF6FF' },
+                    on_track: { fg: '#16A34A', bg: '#F0FDF4' },
+                    at_risk: { fg: '#D97706', bg: '#FEF3C7' },
+                    delayed: { fg: '#DC2626', bg: '#FEF2F2' },
+                    upcoming: { fg: '#6B7280', bg: '#F3F4F6' },
                   };
-                  const sc = statusColors[phase.status ?? 'planned'] ?? statusColors.planned;
+                  const sc = statusColors[phase.status ?? 'upcoming'] ?? statusColors.upcoming;
                   const isCP = phase.is_critical_path === true;
                   const isMilestone = phase.startDate === phase.endDate;
 
@@ -454,10 +456,10 @@ export const ScheduleGantt: React.FC<ScheduleGanttProps> = ({
                       <td role="gridcell" style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                           <div style={{
-                            width: 48, height: 4, borderRadius: 2,
+                            width: 72, height: 6, borderRadius: 3,
                             backgroundColor: colors.surfaceInset, overflow: 'hidden',
                           }}>
-                            <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: sc.fg, borderRadius: 2 }} />
+                            <div style={{ height: '100%', width: `${phase.progress ?? 0}%`, backgroundColor: sc.fg, borderRadius: 3, transition: 'width 0.3s ease' }} />
                           </div>
                           <span style={{
                             fontSize: typography.fontSize.caption, color: colors.textSecondary,
@@ -469,11 +471,24 @@ export const ScheduleGantt: React.FC<ScheduleGanttProps> = ({
                       </td>
                       <td role="gridcell" style={{
                         padding: `${spacing['3']} ${spacing['4']}`,
-                        color: Number(floatDays) === 0 ? '#DC2626' : colors.textTertiary,
-                        fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
                         fontVariantNumeric: 'tabular-nums',
                       }}>
-                        {floatDays}d
+                        {(() => {
+                          const fd = Number(floatDays);
+                          const hasFloat = phase.float_days != null;
+                          if (!hasFloat && fd === 0) {
+                            return <span style={{ color: colors.textTertiary }}>—</span>;
+                          }
+                          const floatColor = fd === 0 ? '#DC2626' : fd <= 5 ? '#D97706' : fd <= 14 ? colors.textSecondary : colors.textTertiary;
+                          return (
+                            <span style={{
+                              color: floatColor,
+                              fontWeight: fd === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                            }}>
+                              {fd}d
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
@@ -513,9 +528,11 @@ export const ScheduleGantt: React.FC<ScheduleGanttProps> = ({
             <ScheduleCanvas
               phases={schedulePhases}
               zoom={zoomLevel}
+              showBaseline={showBaseline}
               onSelectPhase={(phase) => {
                 setScheduleAnnouncement(`Selected: ${phase.name} — ${(phase.status ?? 'not started').replace(/_/g, ' ')}`);
               }}
+              onPhaseUpdate={_onPhaseUpdate}
             />
           </ErrorBoundary>
         )}

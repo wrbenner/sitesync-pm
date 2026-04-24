@@ -22,6 +22,7 @@ import { ScheduleCoordination } from './ScheduleCoordination';
 import { ScheduleGantt } from './ScheduleGantt';
 import { ScheduleKPIs } from './ScheduleKPIs';
 import { ScheduleAIRiskPanel } from './ScheduleAIRiskPanel';
+import { ScheduleLookahead } from './ScheduleLookahead';
 import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
 import { ScheduleErrorState, ScheduleLoadingState, ScheduleEmptyState } from './ScheduleStates';
 import { ScheduleHeaderActions, ScheduleSkipLink, ScheduleErrorBanner } from './ScheduleShellParts';
@@ -123,12 +124,8 @@ const SchedulePage: React.FC = () => {
   const [viewTab, setViewTab] = useState<ViewTab>('timeline');
 
   const handleTabChange = useCallback((tab: ViewTab) => {
-    if (tab === 'lookahead') {
-      navigate('/lookahead');
-      return;
-    }
     setViewTab(tab);
-  }, [navigate]);
+  }, []);
 
   const [zoomLevel, setZoomLevel] = useState<'day' | 'week' | 'month' | 'quarter'>('week');
   const [whatIfMode, setWhatIfMode] = useState(false);
@@ -619,34 +616,45 @@ const SchedulePage: React.FC = () => {
         />
       )}
 
+      {/* ── Lookahead tab ── */}
+      {viewTab === 'lookahead' && (
+        <ScheduleLookahead
+          projectId={activeProject?.id}
+          projectName={activeProject?.name}
+          schedulePhases={schedulePhases}
+        />
+      )}
+
       {/* ── 3. Gantt / List (hero) ── */}
-      <ScheduleGantt
-        schedulePhases={visiblePhases}
-        loading={loading}
-        error={error}
-        refetch={refetch}
-        isMobile={isMobile}
-        viewMode={viewMode}
-        setViewMode={(m) => setViewTab(m === 'list' ? 'list' : 'timeline')}
-        zoomLevel={zoomLevel}
-        setZoomLevel={setZoomLevel}
-        whatIfMode={whatIfMode}
-        setWhatIfMode={setWhatIfMode}
-        showBaseline={showBaseline}
-        setShowBaseline={setShowBaseline}
-        hasBaselineData={hasBaselineData}
-        mobileFilter={mobileFilter}
-        setMobileFilter={setMobileFilter}
-        weatherRecords={weatherRecords}
-        initialForecast={INITIAL_FORECAST}
-        risks={risks}
-        setShowImportModal={setShowImportModal}
-        setScheduleAnnouncement={setScheduleAnnouncement}
-        onPhaseUpdate={handlePhaseUpdate}
-      />
+      {viewTab !== 'lookahead' && (
+        <ScheduleGantt
+          schedulePhases={visiblePhases}
+          loading={loading}
+          error={error}
+          refetch={refetch}
+          isMobile={isMobile}
+          viewMode={viewMode}
+          setViewMode={(m) => setViewTab(m === 'list' ? 'list' : 'timeline')}
+          zoomLevel={zoomLevel}
+          setZoomLevel={setZoomLevel}
+          whatIfMode={whatIfMode}
+          setWhatIfMode={setWhatIfMode}
+          showBaseline={showBaseline}
+          setShowBaseline={setShowBaseline}
+          hasBaselineData={hasBaselineData}
+          mobileFilter={mobileFilter}
+          setMobileFilter={setMobileFilter}
+          weatherRecords={weatherRecords}
+          initialForecast={INITIAL_FORECAST}
+          risks={risks}
+          setShowImportModal={setShowImportModal}
+          setScheduleAnnouncement={setScheduleAnnouncement}
+          onPhaseUpdate={handlePhaseUpdate}
+        />
+      )}
 
       {/* ── Schedule Intelligence (structural findings + AI risk_predictions) ── */}
-      {schedulePhases.length > 0 && (
+      {viewTab !== 'lookahead' && schedulePhases.length > 0 && (
         <div style={{ marginTop: spacing['4'] }}>
           <ScheduleAIRiskPanel
             schedulePhases={schedulePhases}
@@ -656,7 +664,7 @@ const SchedulePage: React.FC = () => {
       )}
 
       {/* ── AI Risk Analysis ── */}
-      {risks.length > 0 && (
+      {viewTab !== 'lookahead' && risks.length > 0 && (
         <div style={{ marginTop: spacing['4'] }}>
           <ScheduleCoordination
             risks={risks}

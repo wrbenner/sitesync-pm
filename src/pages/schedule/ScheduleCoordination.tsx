@@ -248,12 +248,21 @@ export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
               {risks.map((risk) => {
                 const rc = riskColor(risk.likelihoodPercent);
                 return (
-                  <div key={risk.phaseId} style={{
+                  <div key={risk.phaseId}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = colors.surfaceHover;
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = colors.surfaceInset;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    style={{
                     display: 'flex', gap: spacing['4'], alignItems: 'flex-start',
                     padding: spacing['4'], backgroundColor: colors.surfaceInset,
                     borderRadius: borderRadius.lg,
                     borderLeft: `3px solid ${rc.fg}`,
-                    transition: `background-color ${transitions.quick}`,
+                    transition: `background-color ${transitions.quick}, box-shadow ${transitions.quick}`,
                   }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap', marginBottom: spacing['1.5'] }}>
@@ -287,6 +296,14 @@ export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
                     </div>
                     <button
                       onClick={() => openCopilotWithRisk(risk)}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
+                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 3px 8px rgba(244,120,32,0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.transform = 'none';
+                        (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 2px rgba(244,120,32,0.2)';
+                      }}
                       style={{
                         padding: `${spacing['2']} ${spacing['4']}`,
                         backgroundColor: colors.primaryOrange, color: colors.white,
@@ -295,7 +312,7 @@ export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
                         fontFamily: typography.fontFamily, cursor: 'pointer',
                         whiteSpace: 'nowrap', flexShrink: 0,
                         boxShadow: '0 1px 2px rgba(244,120,32,0.2)',
-                        transition: `opacity ${transitions.quick}`,
+                        transition: `transform ${transitions.quick}, box-shadow ${transitions.quick}`,
                       }}
                     >
                       Recovery Plan
