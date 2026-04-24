@@ -424,10 +424,12 @@ function buildTicks(bounds: TimelineBounds, zoom: ZoomLevel): { date: string; x:
 interface ScheduleCanvasProps {
   phases: SchedulePhase[];
   zoom: ZoomLevel;
+  showBaseline?: boolean;
   onSelectPhase?: (phase: SchedulePhase) => void;
+  onPhaseUpdate?: (id: string, updates: { start_date?: string; end_date?: string }) => void;
 }
 
-export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, onSelectPhase }) => {
+export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, showBaseline = false, onSelectPhase, onPhaseUpdate }) => {
   const groups = useMemo(() => groupPhases(phases), [phases]);
   const bounds = useMemo(() => computeBounds(phases, zoom), [phases, zoom]);
 
@@ -440,6 +442,44 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, on
       return next;
     });
   }, []);
+
+  // Tooltip state
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; seg: Segment; row: ActivityRow } | null>(null);
+
+  // Build a lookup: phaseId → { rowIndex, segIndex, y position } for dependency arrows.
+  const segmentPositions = useMemo(() => {
+    const map = new Map<string, { x: number; xEnd: number; y: number }>();
+    if (!bounds) return map;
+    let y = 0;
+    for (const g of groups) {
+      y += GROUP_HEADER_H;
+      if (!collapsed.has(g.key)) {
+        for (const r of g.rows) {
+          for (const seg of r.segments) {
+            const sx = xOf(seg.startDate, bounds);
+            const ex = xOf(addDays(seg.endDate, 1), bounds);
+            map.set(seg.id, { x: sx, xEnd: Math.max(sx + 6, ex), y: y + ROW_H / 2 });
+          }
+          y += ROW_H;
+        }
+      }
+    }
+    return map;
+  }, [groups, bounds, collapsed]);
+
+  // Build dependency edges: predecessor → successor
+  const depEdges = useMemo(() => {
+    const edges: Array<{ fromId: string; toId: string }> = [];
+    for (const p of phases) {
+      const preds = p.predecessorIds ?? p.predecessor_ids ?? [];
+      if (preds && preds.length > 0) {
+        for (const predId of preds) {
+          if (predId) edges.push({ fromId: predId, toId: p.id });
+        }
+      }
+    }
+    return edges;
+  }, [phases]);
 
   // Scroll container ref (the right-hand timeline body) + sticky header refs.
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -465,7 +505,6 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, on
     const today = new Date().toISOString().split('T')[0];
     const target = today >= bounds.min && today <= bounds.max ? today : bounds.min;
     const x = xOf(target, bounds);
-    // Center the target on screen.
     const el = bodyRef.current;
     el.scrollLeft = Math.max(0, x - el.clientWidth / 2);
   }, [bounds]);
@@ -498,6 +537,7 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, on
       overflow: 'hidden', backgroundColor: colors.white,
       height: 'calc(100vh - 220px)', minHeight: 520,
       fontFamily: typography.fontFamily,
+      position: 'relative',
     }}>
       {/* ── Corner (top-left, above rail) ── */}
       <div style={{
@@ -607,25 +647,87 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, on
           overflow: 'auto',
           position: 'relative',
         }}
+        onMouseLeave={() => setTooltip(null)}
       >
         <div style={{ width: bounds.width, height: Math.max(totalBodyH, 400), position: 'relative' }}>
+          {/* Weekend shading — subtle columns for Sat/Sun in day & week zoom */}
+          {(zoom === 'day' || zoom === 'week') && (() => {
+            const weekends: React.ReactNode[] = [];
+            const startDate = new Date(bounds.min);
+            const endDate = new Date(bounds.max);
+            const cur = new Date(startDate);
+            while (cur <= endDate) {
+              const dow = cur.getUTCDay();
+              if (dow === 0 || dow === 6) {
+                const iso = cur.toISOString().split('T')[0];
+                const wx = xOf(iso, bounds);
+                weekends.push(
+                  <div key={`we-${iso}`} style={{
+                    position: 'absolute', left: wx, top: 0,
+                    width: bounds.pxPerDay, height: '100%',
+                    backgroundColor: '#F8F6F4',
+                    opacity: 0.5,
+                    pointerEvents: 'none',
+                  }} />,
+                );
+              }
+              cur.setUTCDate(cur.getUTCDate() + 1);
+            }
+            return weekends;
+          })()}
+
+          {/* Alternating row stripes for readability */}
+          {(() => {
+            let y = 0;
+            const stripes: React.ReactNode[] = [];
+            let rowIdx = 0;
+            for (const g of groups) {
+              y += GROUP_HEADER_H;
+              if (!collapsed.has(g.key)) {
+                for (const r of g.rows) {
+                  if (rowIdx % 2 === 1) {
+                    stripes.push(
+                      <div key={`stripe-${r.key}`} style={{
+                        position: 'absolute', left: 0, top: y, width: '100%', height: ROW_H,
+                        backgroundColor: colors.surfaceInset, opacity: 0.3, pointerEvents: 'none',
+                      }} />,
+                    );
+                  }
+                  y += ROW_H;
+                  rowIdx++;
+                }
+              }
+            }
+            return stripes;
+          })()}
+
           {/* Vertical month gridlines */}
           {ticks.filter((t) => t.major).map((t) => (
             <div key={`gl-${t.date}`} style={{
               position: 'absolute', left: t.x, top: 0, bottom: 0, width: 1,
-              backgroundColor: colors.borderSubtle, opacity: 0.5, pointerEvents: 'none',
+              backgroundColor: colors.borderSubtle, opacity: 0.4, pointerEvents: 'none',
             }} />
           ))}
 
-          {/* Today line */}
+          {/* Today line — prominent orange with soft gradient glow */}
           {todayX !== null && (
-            <div style={{
-              position: 'absolute', left: todayX - 1, top: 0, bottom: 0, width: 2,
-              backgroundColor: '#F97316', opacity: 0.7, pointerEvents: 'none',
-            }} />
+            <>
+              {/* Glow halo */}
+              <div style={{
+                position: 'absolute', left: todayX - 12, top: 0, bottom: 0, width: 24,
+                background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.08), transparent)',
+                pointerEvents: 'none',
+              }} />
+              {/* Crisp line */}
+              <div style={{
+                position: 'absolute', left: todayX - 1, top: 0, bottom: 0, width: 2,
+                backgroundColor: '#F97316', pointerEvents: 'none',
+                boxShadow: '0 0 6px rgba(249,115,22,0.3)',
+              }} />
+            </>
           )}
 
-          {/* Rows */}
+          {/* Rows with baseline + actual bars */}
           {(() => {
             let y = 0;
             const nodes: React.ReactNode[] = [];
@@ -643,7 +745,16 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, on
                       y={y}
                       bounds={bounds}
                       width={bounds.width}
+                      showBaseline={showBaseline}
                       onSelect={onSelectPhase}
+                      onPhaseUpdate={onPhaseUpdate}
+                      onHover={(seg, rect) => {
+                        if (seg && rect) {
+                          setTooltip({ x: rect.x, y: rect.y, seg, row: r });
+                        } else {
+                          setTooltip(null);
+                        }
+                      }}
                     />,
                   );
                   y += ROW_H;
@@ -652,8 +763,178 @@ export const ScheduleCanvas: React.FC<ScheduleCanvasProps> = ({ phases, zoom, on
             }
             return nodes;
           })()}
+
+          {/* ── Dependency arrows (SVG overlay) ── */}
+          <svg
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: bounds.width, height: Math.max(totalBodyH, 400),
+              pointerEvents: 'none', overflow: 'visible',
+            }}
+          >
+            <defs>
+              <marker
+                id="dep-arrow"
+                viewBox="0 0 10 10"
+                refX="8" refY="5"
+                markerWidth="5" markerHeight="5"
+                orient="auto-start-reverse"
+              >
+                <path d="M2 1L8 5L2 9" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </marker>
+              <marker
+                id="dep-arrow-critical"
+                viewBox="0 0 10 10"
+                refX="8" refY="5"
+                markerWidth="5" markerHeight="5"
+                orient="auto-start-reverse"
+              >
+                <path d="M2 1L8 5L2 9" fill="none" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </marker>
+            </defs>
+            {depEdges.map((edge) => {
+              const from = segmentPositions.get(edge.fromId);
+              const to = segmentPositions.get(edge.toId);
+              if (!from || !to) return null;
+
+              // Check if both source and target are on the critical path
+              const fromPhase = phases.find(p => p.id === edge.fromId);
+              const toPhase = phases.find(p => p.id === edge.toId);
+              const isCriticalEdge = fromPhase?.is_critical_path && toPhase?.is_critical_path;
+
+              // L-shaped connector: from right edge of predecessor → left edge of successor
+              const x1 = from.xEnd;
+              const y1 = from.y;
+              const x2 = to.x;
+              const y2 = to.y;
+              const midX = x1 + Math.max(8, (x2 - x1) * 0.3);
+
+              return (
+                <path
+                  key={`dep-${edge.fromId}-${edge.toId}`}
+                  d={y1 === y2
+                    ? `M${x1} ${y1} L${x2} ${y2}`
+                    : `M${x1} ${y1} L${midX} ${y1} L${midX} ${y2} L${x2} ${y2}`
+                  }
+                  fill="none"
+                  stroke={isCriticalEdge ? '#DC2626' : '#9CA3AF'}
+                  strokeWidth={isCriticalEdge ? 1.5 : 1}
+                  strokeDasharray={isCriticalEdge ? 'none' : '4 3'}
+                  opacity={isCriticalEdge ? 0.7 : 0.45}
+                  markerEnd={isCriticalEdge ? 'url(#dep-arrow-critical)' : 'url(#dep-arrow)'}
+                />
+              );
+            })}
+          </svg>
         </div>
       </div>
+
+      {/* ── Hover tooltip ── */}
+      {tooltip && (
+        <div style={{
+          position: 'fixed',
+          left: tooltip.x + 12,
+          top: tooltip.y - 8,
+          zIndex: 50,
+          backgroundColor: colors.surfaceRaised,
+          border: `1px solid ${colors.borderDefault}`,
+          borderRadius: borderRadius.lg,
+          padding: `${spacing['3']} ${spacing['4']}`,
+          minWidth: 220, maxWidth: 320,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)',
+          fontFamily: typography.fontFamily,
+          pointerEvents: 'none',
+        }}>
+          <div style={{
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary,
+            marginBottom: spacing['1'],
+          }}>
+            {tooltip.row.name}
+          </div>
+          {tooltip.seg.sectionLabel && (
+            <div style={{
+              fontSize: typography.fontSize.caption,
+              color: colors.textTertiary,
+              marginBottom: spacing['2'],
+            }}>
+              {tooltip.seg.sectionLabel}
+            </div>
+          )}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: `${spacing['1']} ${spacing['4']}`,
+            fontSize: typography.fontSize.sm,
+          }}>
+            <div>
+              <span style={{ color: colors.textTertiary }}>Start</span>
+              <div style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
+                {new Date(tooltip.seg.startDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: colors.textTertiary }}>Finish</span>
+              <div style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
+                {new Date(tooltip.seg.endDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+              </div>
+            </div>
+            <div>
+              <span style={{ color: colors.textTertiary }}>Duration</span>
+              <div style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                {daysBetween(tooltip.seg.startDate, tooltip.seg.endDate)}d
+              </div>
+            </div>
+            <div>
+              <span style={{ color: colors.textTertiary }}>Progress</span>
+              <div style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                {tooltip.seg.percentComplete}%
+              </div>
+            </div>
+          </div>
+          {/* Progress micro-bar */}
+          <div style={{
+            marginTop: spacing['2'],
+            height: 4, borderRadius: 2, backgroundColor: colors.surfaceInset,
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%', borderRadius: 2,
+              width: `${tooltip.seg.percentComplete}%`,
+              backgroundColor: paletteFor(tooltip.seg).progressFill,
+              transition: 'width 0.3s ease',
+            }} />
+          </div>
+          {/* Critical path / float info */}
+          {tooltip.seg.raw.is_critical_path && (
+            <div style={{
+              marginTop: spacing['2'],
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '2px 8px', borderRadius: borderRadius.full,
+              backgroundColor: '#FEF2F2', color: '#DC2626',
+              fontSize: 10, fontWeight: typography.fontWeight.bold,
+              letterSpacing: '0.04em', textTransform: 'uppercase',
+            }}>
+              <AlertTriangle size={10} /> Critical path · {tooltip.seg.raw.floatDays ?? 0}d float
+            </div>
+          )}
+          {/* Baseline variance */}
+          {tooltip.seg.raw.baselineEndDate && tooltip.seg.raw.endDate && (
+            <div style={{
+              marginTop: spacing['1'],
+              fontSize: typography.fontSize.caption,
+              color: tooltip.seg.raw.slippageDays > 0 ? '#DC2626' : '#16A34A',
+              fontWeight: typography.fontWeight.medium,
+            }}>
+              {tooltip.seg.raw.slippageDays > 0
+                ? `${tooltip.seg.raw.slippageDays}d behind baseline`
+                : tooltip.seg.raw.slippageDays < 0
+                  ? `${Math.abs(tooltip.seg.raw.slippageDays)}d ahead of baseline`
+                  : 'On baseline'}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -733,6 +1014,8 @@ const LeftRow: React.FC<{ row: ActivityRow }> = ({ row }) => {
   })();
   const Icon = STATUS_ICON[overallStatus];
   const color = STATUS_BAR[overallStatus].progressFill;
+  const isCritical = row.segments.some(s => s.raw.is_critical_path === true);
+  const floatDays = row.segments[0]?.raw.floatDays ?? null;
 
   return (
     <div style={{
@@ -740,7 +1023,12 @@ const LeftRow: React.FC<{ row: ActivityRow }> = ({ row }) => {
       padding: `0 ${spacing['4']}`,
       borderBottom: `1px solid ${colors.borderSubtle}40`,
       fontFamily: typography.fontFamily,
-    }}>
+      borderLeft: isCritical ? '2px solid #DC2626' : '2px solid transparent',
+      transition: `background-color ${transitions.quick}`,
+    }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+    >
       <Icon size={12} color={color} />
       <span style={{
         fontSize: typography.fontSize.sm,
@@ -750,12 +1038,26 @@ const LeftRow: React.FC<{ row: ActivityRow }> = ({ row }) => {
       }}>
         {row.name}
       </span>
-      <span style={{
-        fontSize: 10, color: colors.textTertiary,
-        fontVariantNumeric: 'tabular-nums',
-      }}>
-        {row.segments.length > 1 ? `${row.segments.length}×` : ''}
-      </span>
+      {row.segments.length > 1 && (
+        <span style={{
+          fontSize: 10, color: colors.textTertiary,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {row.segments.length}×
+        </span>
+      )}
+      {/* Float indicator — only show when meaningful */}
+      {floatDays !== null && floatDays >= 0 && overallStatus !== 'completed' && (
+        <span style={{
+          fontSize: 10,
+          fontVariantNumeric: 'tabular-nums',
+          fontWeight: typography.fontWeight.medium,
+          color: floatDays === 0 ? '#DC2626' : floatDays <= 5 ? '#D97706' : colors.textTertiary,
+          minWidth: 20, textAlign: 'right',
+        }}>
+          {floatDays}d
+        </span>
+      )}
       <span style={{
         fontSize: typography.fontSize.caption, color: colors.textSecondary,
         fontVariantNumeric: 'tabular-nums',
@@ -779,25 +1081,82 @@ const BodyGroupHeader: React.FC<{ y: number; width: number }> = ({ y, width }) =
   }} />
 );
 
+const BASELINE_H = 6;
+
 const BodyRow: React.FC<{
   row: ActivityRow;
   y: number;
   bounds: TimelineBounds;
   width: number;
+  showBaseline?: boolean;
   onSelect?: (p: SchedulePhase) => void;
-}> = ({ row, y, bounds, width, onSelect }) => (
+  onPhaseUpdate?: (id: string, updates: { start_date?: string; end_date?: string }) => void;
+  onHover?: (seg: Segment | null, rect: { x: number; y: number } | null) => void;
+}> = ({ row, y, bounds, width, showBaseline, onSelect, onPhaseUpdate, onHover }) => {
+  const [dragDx, setDragDx] = useState<Record<string, number>>({});
+
+  const handleBarMouseDown = (seg: Segment, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    if (!onPhaseUpdate) {
+      onSelect?.(seg.raw);
+      return;
+    }
+    e.preventDefault();
+    const startX = e.clientX;
+    const pxPerDay = bounds.pxPerDay;
+    let lastDelta = 0;
+    let moved = false;
+
+    const onMove = (me: MouseEvent) => {
+      const dx = me.clientX - startX;
+      if (Math.abs(dx) > 3) moved = true;
+      lastDelta = dx;
+      setDragDx((prev) => ({ ...prev, [seg.id]: dx }));
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      setDragDx((prev) => {
+        const next = { ...prev };
+        delete next[seg.id];
+        return next;
+      });
+      if (!moved) {
+        onSelect?.(seg.raw);
+        return;
+      }
+      const daysDelta = Math.round(lastDelta / pxPerDay);
+      if (daysDelta === 0) return;
+      const newStart = addDays(seg.startDate, daysDelta);
+      const newEnd = addDays(seg.endDate, daysDelta);
+      onPhaseUpdate(seg.id, { start_date: newStart, end_date: newEnd });
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  return (
   <div style={{
     position: 'absolute', top: y, left: 0, width, height: ROW_H,
     borderBottom: `1px solid ${colors.borderSubtle}30`,
   }}>
     {row.segments.map((seg) => {
-      const x = xOf(seg.startDate, bounds);
-      // End is inclusive visually — bar covers startDate through endDate.
-      const w = Math.max(6, xOf(addDays(seg.endDate, 1), bounds) - x);
+      const baseX = xOf(seg.startDate, bounds);
+      const offsetPx = dragDx[seg.id] ?? 0;
+      const x = baseX + offsetPx;
+      const w = Math.max(6, xOf(addDays(seg.endDate, 1), bounds) - baseX);
       const tokens = paletteFor(seg);
       const showChip = w >= 44 && seg.sectionLabel.length > 0;
-      // Completed segments fade back slightly — they're context, not focus.
       const barOpacity = seg.status === 'completed' ? 0.85 : 1;
+      const isCritical = seg.raw.is_critical_path === true;
+      const showPercentText = w >= 60 && seg.percentComplete > 0;
+
+      // Baseline ghost bar (shown beneath the actual bar when enabled)
+      const hasBaseline = showBaseline && seg.raw.baselineStartDate && seg.raw.baselineEndDate;
+      const baselineX = hasBaseline ? xOf(seg.raw.baselineStartDate!, bounds) : 0;
+      const baselineW = hasBaseline ? Math.max(6, xOf(addDays(seg.raw.baselineEndDate!, 1), bounds) - baselineX) : 0;
 
       if (seg.isMilestone) {
         return (
@@ -806,55 +1165,131 @@ const BodyRow: React.FC<{
             role="button"
             tabIndex={0}
             onClick={() => onSelect?.(seg.raw)}
-            title={`${row.name} — ${seg.sectionLabel} — milestone`}
+            aria-label={`${row.name} milestone`}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              el.style.transform = 'rotate(45deg) scale(1.25)';
+              el.style.boxShadow = isCritical
+                ? '0 0 10px rgba(220,38,38,0.5)'
+                : `0 0 8px ${tokens.progressFill}60`;
+              const rect = el.getBoundingClientRect();
+              onHover?.(seg, { x: rect.right, y: rect.top });
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              el.style.transform = 'rotate(45deg)';
+              el.style.boxShadow = isCritical ? '0 0 6px rgba(220,38,38,0.4)' : 'none';
+              onHover?.(null, null);
+            }}
             style={{
-              position: 'absolute', left: x - 7, top: (ROW_H - 14) / 2, width: 14, height: 14,
-              backgroundColor: tokens.progressFill,
+              position: 'absolute', left: x - 8, top: (ROW_H - 16) / 2, width: 16, height: 16,
+              backgroundColor: isCritical ? '#DC2626' : tokens.progressFill,
               transform: 'rotate(45deg)', cursor: 'pointer',
-              transition: transitions.quick,
+              transition: `transform 200ms cubic-bezier(0.16,1,0.3,1), box-shadow 200ms ease`,
+              boxShadow: isCritical ? '0 0 6px rgba(220,38,38,0.4)' : 'none',
+              border: isCritical ? '1.5px solid #DC2626' : 'none',
             }}
           />
         );
       }
 
       return (
-        <div
-          key={seg.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => onSelect?.(seg.raw)}
-          title={`${row.name} — ${seg.sectionLabel || 'Site'} — ${seg.startDate} → ${seg.endDate} — ${seg.percentComplete}%`}
-          style={{
-            position: 'absolute', left: x, top: BAR_TOP, width: w, height: BAR_H,
-            backgroundColor: tokens.fill, borderRadius: 4,
-            cursor: 'pointer', overflow: 'hidden', opacity: barOpacity,
-            transition: transitions.quick,
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.96)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.filter = 'none'; }}
-        >
-          {/* Progress fill inside the bar — darker shade of the building color */}
-          {seg.percentComplete > 0 && (
-            <div style={{
-              position: 'absolute', left: 0, top: 0, bottom: 0,
-              width: `${seg.percentComplete}%`,
-              backgroundColor: tokens.progressFill, opacity: 0.75,
-            }} />
+        <React.Fragment key={seg.id}>
+          {/* ── Baseline ghost bar ── */}
+          {hasBaseline && (
+            <div
+              style={{
+                position: 'absolute',
+                left: baselineX,
+                top: BAR_TOP + BAR_H - 2,
+                width: baselineW,
+                height: BASELINE_H,
+                backgroundColor: '#9CA3AF',
+                borderRadius: 3,
+                opacity: 0.35,
+                pointerEvents: 'none',
+              }}
+            />
           )}
-          {/* Section chip */}
-          {showChip && (
-            <span style={{
-              position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
-              fontSize: 9, fontWeight: typography.fontWeight.bold,
-              letterSpacing: typography.letterSpacing.wider,
-              color: tokens.text, zIndex: 2,
-              textTransform: 'uppercase',
-            }}>
-              {seg.sectionLabel}
-            </span>
-          )}
-        </div>
+
+          {/* ── Actual bar ── */}
+          <div
+            role="button"
+            tabIndex={0}
+            onMouseDown={(e) => handleBarMouseDown(seg, e)}
+            aria-label={`${row.name} — ${seg.startDate} to ${seg.endDate} — ${seg.percentComplete}%`}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              el.style.filter = 'brightness(0.96)';
+              el.style.transform = 'scaleY(1.12)';
+              el.style.boxShadow = isCritical
+                ? '0 2px 8px rgba(220,38,38,0.25), inset 0 0 0 1px rgba(220,38,38,0.15)'
+                : '0 2px 8px rgba(0,0,0,0.1)';
+              el.style.zIndex = '5';
+              const rect = el.getBoundingClientRect();
+              onHover?.(seg, { x: rect.right, y: rect.top });
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              el.style.filter = 'none';
+              el.style.transform = 'none';
+              el.style.boxShadow = isCritical
+                ? '0 0 0 1px rgba(220,38,38,0.2), inset 0 0 0 1px rgba(220,38,38,0.1)'
+                : '0 1px 2px rgba(0,0,0,0.04)';
+              el.style.zIndex = '0';
+              onHover?.(null, null);
+            }}
+            style={{
+              position: 'absolute', left: x, top: BAR_TOP, width: w, height: BAR_H,
+              backgroundColor: tokens.fill,
+              borderRadius: 5,
+              cursor: 'pointer', overflow: 'hidden', opacity: barOpacity,
+              transition: `filter ${transitions.quick}, transform ${transitions.quick}, box-shadow ${transitions.quick}`,
+              // Critical path bars get a left accent + subtle glow
+              borderLeft: isCritical ? '3px solid #DC2626' : 'none',
+              boxShadow: isCritical
+                ? '0 0 0 1px rgba(220,38,38,0.2), inset 0 0 0 1px rgba(220,38,38,0.1)'
+                : `0 1px 2px rgba(0,0,0,0.04)`,
+              transformOrigin: 'center',
+            }}
+          >
+            {/* Progress fill inside the bar */}
+            {seg.percentComplete > 0 && (
+              <div style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0,
+                width: `${seg.percentComplete}%`,
+                backgroundColor: tokens.progressFill, opacity: 0.7,
+                borderRadius: seg.percentComplete >= 100 ? 5 : '5px 0 0 5px',
+                transition: `width ${transitions.smooth}`,
+              }} />
+            )}
+            {/* Section chip */}
+            {showChip && (
+              <span style={{
+                position: 'absolute', left: isCritical ? 8 : 6, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 9, fontWeight: typography.fontWeight.bold,
+                letterSpacing: typography.letterSpacing.wider,
+                color: tokens.text, zIndex: 2,
+                textTransform: 'uppercase',
+              }}>
+                {seg.sectionLabel}
+              </span>
+            )}
+            {/* Percent text inside bar (right-aligned) */}
+            {showPercentText && (
+              <span style={{
+                position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 10, fontWeight: typography.fontWeight.semibold,
+                color: seg.percentComplete >= 50 ? 'rgba(255,255,255,0.85)' : tokens.text,
+                zIndex: 2, fontVariantNumeric: 'tabular-nums',
+              }}>
+                {seg.percentComplete}%
+              </span>
+            )}
+          </div>
+        </React.Fragment>
       );
     })}
   </div>
-);
+  );
+};

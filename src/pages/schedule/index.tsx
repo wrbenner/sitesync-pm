@@ -20,10 +20,13 @@ import { ScheduleHealthPanel } from '../../components/schedule/ScheduleHealthPan
 import { BuildingOverview, buildingOf } from '../../components/schedule/BuildingOverview';
 import { ScheduleCoordination } from './ScheduleCoordination';
 import { ScheduleGantt } from './ScheduleGantt';
+import { ScheduleKPIs } from './ScheduleKPIs';
+import { ScheduleAIRiskPanel } from './ScheduleAIRiskPanel';
 import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
 import { ScheduleErrorState, ScheduleLoadingState, ScheduleEmptyState } from './ScheduleStates';
 import { ScheduleHeaderActions, ScheduleSkipLink, ScheduleErrorBanner } from './ScheduleShellParts';
 import AddPhaseModal from '../../components/forms/AddPhaseModal';
+import { ScheduleCommandPalette, KeyboardShortcutsOverlay } from './ScheduleCommandPalette';
 import { toast } from 'sonner';
 
 // Compact schedule-health chip that sits inline above the Gantt. Clicking it
@@ -133,6 +136,8 @@ const SchedulePage: React.FC = () => {
   const [scheduleAnnouncement, setScheduleAnnouncement] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddPhaseModal, setShowAddPhaseModal] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const handleAddPhase = useCallback(async (data: Record<string, unknown>) => {
     const projectId = activeProject?.id;
@@ -170,7 +175,7 @@ const SchedulePage: React.FC = () => {
     loadSchedule(projectId);
   }, [activeProject?.id, queryClient, loadSchedule]);
 
-  const [mobileFilter, setMobileFilter] = useState<'all' | 'in_progress' | 'delayed' | 'critical_path'>('all');
+  const [mobileFilter, setMobileFilter] = useState<'all' | 'active' | 'delayed' | 'critical_path'>('all');
   const [healthCollapsed, setHealthCollapsed] = useState(true);
   const [activeBuilding, setActiveBuilding] = useState<string | null>(null);
 
@@ -351,7 +356,16 @@ const SchedulePage: React.FC = () => {
     const ZOOM_ORDER = ['day', 'week', 'month', 'quarter'] as const;
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
+
+      // ⌘K / Ctrl+K — open command palette (works even in inputs)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+        return;
+      }
+
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
       if (e.key === '+' || e.key === '=') {
         e.preventDefault();
         setZoomLevel(prev => {
@@ -366,13 +380,20 @@ const SchedulePage: React.FC = () => {
         });
       } else if (e.key === 'b' || e.key === 'B') {
         setShowBaseline(prev => !prev);
+      } else if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+      } else if (e.key === '1') {
+        handleTabChange('timeline');
+      } else if (e.key === '3') {
+        handleTabChange('list');
       } else if (e.key === 'Escape') {
         setWhatIfMode(false);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleTabChange]);
 
   const overallHealthStatus = useMemo(() => {
     if (schedulePhases.length === 0) return { status: 'green', label: 'On Track' };
@@ -548,10 +569,19 @@ const SchedulePage: React.FC = () => {
         ))}
       </nav>
 
-      {/* KPI strip + full Health panel intentionally removed from the
-          Schedule page — they belonged on the project dashboard. The
-          Health score surfaces as a compact pill in the toolbar instead,
-          and expanding a per-finding overlay happens via the slide-over. */}
+      {/* ── KPI Strip ── */}
+      {schedulePhases.length > 0 && (
+        <ScheduleKPIs
+          activityMetrics={activityMetrics}
+          metrics={metrics}
+          projectMetrics={projectMetrics}
+          isMobile={isMobile}
+          isNarrow={isNarrow}
+          compact
+        />
+      )}
+
+      {/* Health panel */}
       {schedulePhases.length > 0 && !healthCollapsed && (
         <div style={{ marginBottom: spacing['4'] }}>
           <ScheduleHealthPanel
@@ -615,31 +645,19 @@ const SchedulePage: React.FC = () => {
         onPhaseUpdate={handlePhaseUpdate}
       />
 
-      {/* AI Risk Analysis is now opt-in — it's a power-user feature that
-          shouldn't compete with the Gantt for attention. Click to reveal. */}
-      <details style={{ marginTop: spacing['4'] }}>
-        <summary style={{
-          cursor: 'pointer', userSelect: 'none' as const,
-          display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
-          padding: `${spacing['2']} ${spacing['3']}`,
-          fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
-          color: colors.textSecondary,
-          border: `1px solid ${colors.borderSubtle}`,
-          borderRadius: borderRadius.full,
-          fontFamily: typography.fontFamily,
-        }}>
-          AI Risk Analysis
-          {risks.length > 0 && (
-            <span style={{
-              padding: '1px 8px', borderRadius: borderRadius.full,
-              backgroundColor: '#FAE1E1', color: '#7A1F1F',
-              fontSize: 10, fontWeight: typography.fontWeight.bold,
-            }}>
-              {risks.length}
-            </span>
-          )}
-        </summary>
-        <div style={{ marginTop: spacing['3'] }}>
+      {/* ── Schedule Intelligence (structural findings + AI risk_predictions) ── */}
+      {schedulePhases.length > 0 && (
+        <div style={{ marginTop: spacing['4'] }}>
+          <ScheduleAIRiskPanel
+            schedulePhases={schedulePhases}
+            projectId={activeProject?.id}
+          />
+        </div>
+      )}
+
+      {/* ── AI Risk Analysis ── */}
+      {risks.length > 0 && (
+        <div style={{ marginTop: spacing['4'] }}>
           <ScheduleCoordination
             risks={risks}
             riskPanelOpen={riskPanelOpen}
@@ -659,7 +677,7 @@ const SchedulePage: React.FC = () => {
             setRecoveryExpanded={() => {}}
           />
         </div>
-      </details>
+      )}
 
       {/* Modals */}
       <ScheduleImportWizard
@@ -681,6 +699,33 @@ const SchedulePage: React.FC = () => {
         open={showAddPhaseModal}
         onClose={() => setShowAddPhaseModal(false)}
         onSubmit={handleAddPhase}
+      />
+
+      {/* Command palette (⌘K) */}
+      <ScheduleCommandPalette
+        open={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        phases={schedulePhases}
+        onSelectPhase={(phase) => {
+          setScheduleAnnouncement(`Selected: ${phase.name} — ${(phase.status ?? 'not started').replace(/_/g, ' ')}`);
+        }}
+        onAction={(action) => {
+          if (action.startsWith('filter:')) {
+            const filter = action.replace('filter:', '') as 'all' | 'active' | 'delayed' | 'critical_path';
+            setMobileFilter(filter);
+          } else if (action.startsWith('zoom:')) {
+            const zoom = action.replace('zoom:', '') as 'day' | 'week' | 'month' | 'quarter';
+            setZoomLevel(zoom);
+          } else if (action === 'toggle:baseline') {
+            setShowBaseline(prev => !prev);
+          }
+        }}
+      />
+
+      {/* Keyboard shortcuts overlay (?) */}
+      <KeyboardShortcutsOverlay
+        open={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
       />
     </PageContainer>
   );
