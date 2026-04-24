@@ -1,52 +1,59 @@
 # FEEDBACK.md — SiteSync PM Nightly Build Priorities
 *Walker is calling GCs this week. Every overnight build must make the product more demoable.*
-*Last updated: April 22, 2026 by Chief Product Strategist*
+*Last updated: April 24, 2026 by Chief Product Strategist*
 *Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
 
 ---
 
-## 🚨 CRITICAL: Builder Down FOUR Nights — Product Is Stalling
+## 🚨 CRITICAL: Builder Down SIX Nights — Mock Data Getting WORSE
 
-The nightly builder has not executed a single commit since April 18. Commit `2a3a7df` disabled all scheduled workflow crons. This is now **night FOUR** with zero builder activity. 16 `Math.random()` calls still in production code. Zero WorkflowTimeline component. The strategist has written four consecutive nights of priorities that went nowhere. **Walker: this is the single biggest bottleneck. Re-enable `nightly-build.yml` or run the builder manually. No amount of strategy fixes a disabled execution pipeline.**
+The nightly builder has not executed a single automated commit since April 18. Commit `2a3a7df` disabled all scheduled workflow crons. This is now **night SIX** with zero builder activity. The Math.random() count has gone from 16 to **26** — the manual Gantt canvas commit (`cc43d21`) added 10 NEW mock data occurrences in ScheduleKPIs.tsx (4), BudgetKPIs.tsx (2), and drawings/index.tsx (4). The product is actively regressing on the single most important quality metric. Zero WorkflowTimeline component. Six consecutive nights of strategy with zero automated execution. **Walker: re-enable `nightly-build.yml` or run the builder manually tonight. The product is moving backward.**
 
 ---
 
-## Tonight's P0 Priorities (April 22 → April 23 2am CDT)
+## Tonight's P0 Priorities (April 24 → April 25 2am CDT)
 
-### 1. MOCK DATA ELIMINATION — KILL ALL 16 Math.random() CALLS (CARRIED FORWARD — NIGHT 4)
+### 1. MOCK DATA ELIMINATION — KILL ALL 26 Math.random() CALLS (CARRIED FORWARD — NIGHT 6, COUNT GREW)
 **SPEC ref:** P0-1 (Mock Data Elimination — 0% complete, blocks every investor demo and GC call)
-**Files to change (16 occurrences confirmed via grep):**
-- `src/components/budget/SCurve.tsx:282` — DEMO KILLER: fake budget variance
-- `src/pages/Procurement.tsx:1084` — DEMO KILLER: random PO numbers
-- `src/pages/payment-applications/index.tsx:235` — DEMO KILLER: random fallback ID
-- `src/components/drawings/MeasurementOverlay.tsx:83` — ID generation
-- `src/components/drawings/DrawingTiledViewer.tsx:330` — ID generation
-- `src/components/drawings/AnnotationCanvas.tsx:39` — ID generation
-- `src/components/shared/PhotoAnnotation.tsx:84` — ID generation
-- `src/components/shared/DrawingMarkup.tsx:100` — ID generation
-- `src/components/shared/Whiteboard.tsx:109` — ID generation
-- `src/components/shared/FileDropZone.tsx:32` — ID generation
-- `src/components/submittals/SubmittalCreateWizard.tsx:527` — ID generation
-- `src/components/punch-list/PunchItemCreateWizard.tsx:571,608` — ID generation (2 occurrences)
-- `src/hooks/useRealtimeInvalidation.ts:48` — ID generation
-- `src/lib/scheduleHealth.ts:86` — ID generation
-- `src/pages/whiteboard/WhiteboardPage.tsx:26` — ID generation
+**Files to change (26 occurrences confirmed via fresh grep — up from 16 on April 22):**
+**DEMO KILLERS (fix first — these are visible in the 6-step demo flow):**
+- `src/components/budget/SCurve.tsx:282` — fake budget variance changes on every reload
+- `src/pages/budget/BudgetKPIs.tsx:134,139` — NEW: fake spend/committed trend data with random noise
+- `src/pages/schedule/ScheduleKPIs.tsx:95-98` — NEW: 4 lines of fake schedule forecast data
+- `src/pages/Procurement.tsx:1084` — random PO numbers on conversion
+- `src/pages/payment-applications/index.tsx:235` — `String(Math.random())` as fallback ID
+**ID GENERATION (mechanical fix — 17 files):**
+- `src/components/drawings/MeasurementOverlay.tsx:83`
+- `src/components/drawings/DrawingTiledViewer.tsx:330`
+- `src/components/drawings/AnnotationCanvas.tsx:39`
+- `src/components/shared/PhotoAnnotation.tsx:84`
+- `src/components/shared/DrawingMarkup.tsx:100`
+- `src/components/shared/Whiteboard.tsx:109`
+- `src/components/shared/FileDropZone.tsx:32`
+- `src/components/submittals/SubmittalCreateWizard.tsx:527`
+- `src/components/punch-list/PunchItemCreateWizard.tsx:573,608` (2 occurrences)
+- `src/hooks/useRealtimeInvalidation.ts:48`
+- `src/lib/scheduleHealth.ts:86`
+- `src/pages/whiteboard/WhiteboardPage.tsx:26`
+- `src/pages/drawings/index.tsx:775,904,1016,1075` (4 NEW occurrences)
 **What to do:**
-1. **Three demo-killing fakes (FIX FIRST — these destroy credibility in GC calls this week):**
-   - `SCurve.tsx:282` — `0.95 + Math.random() * 0.1` generates fake budget variance that changes on every reload. Replace with: query real `actual_amount` from `budget_line_items` grouped by `period_date`. If no actuals exist, render only the planned line with label "Actuals will appear as costs are recorded." Use integer cents (LEARNINGS.md). A chart with one honest line beats two fabricated ones.
-   - `Procurement.tsx:1084` — `PO-${2045 + Math.floor(Math.random() * 10)}` generates random PO numbers. Replace with deterministic: `PO-${req.id.slice(0,8).toUpperCase()}`.
-   - `payment-applications/index.tsx:235` — `String(Math.random())` as fallback ID. Replace with `crypto.randomUUID()`.
-2. **Mechanical ID generation fix (13 remaining files):** Every `Math.random().toString(36).slice(2, 9)` → `crypto.randomUUID().slice(0, 8)`. Every `Math.random().toString(36).slice(2)` → `crypto.randomUUID()`. Every `Math.random().toString(36).slice(2, 7)` → `crypto.randomUUID().slice(0, 5)`. Every standalone `Math.random()` ID pattern → `crypto.randomUUID()`. Include `MeasurementOverlay.tsx:83`, `DrawingTiledViewer.tsx:330`, and `scheduleHealth.ts:86` which were missed in previous priority lists.
+1. **Demo-killing fakes (7 occurrences across 4 files — fix these FIRST):**
+   - `SCurve.tsx:282` — `0.95 + Math.random() * 0.1` generates fake budget variance. Replace with: query real `actual_amount` from `budget_line_items` grouped by `period_date`. If no actuals exist, render only the planned line with label "Actuals will appear as costs are recorded." Use integer cents (LEARNINGS.md).
+   - `BudgetKPIs.tsx:134,139` — NEW from recent commit. Fake spend/committed trend lines with `Math.random() * spent * 0.02`. Replace with: query actual monthly spend from `budget_line_items` grouped by month. If insufficient data, show only data points that exist — no synthetic noise. A chart with 2 real data points beats 7 fake ones.
+   - `ScheduleKPIs.tsx:95-98` — NEW from Gantt commit. 4 lines generating fake schedule forecast data. Replace with: query real task completion data from `tasks` or `schedule_activities` grouped by week. If no data, show empty state: "Schedule data will appear as activities are tracked."
+   - `Procurement.tsx:1084` — random PO numbers. Replace with deterministic: `PO-${req.id.slice(0,8).toUpperCase()}`.
+   - `payment-applications/index.tsx:235` — `String(Math.random())` fallback. Replace with `crypto.randomUUID()`.
+2. **Mechanical ID generation fix (19 remaining occurrences across 13 files):** Every `Math.random().toString(36).slice(...)` → `crypto.randomUUID().slice(0, N)` where N matches the original slice length. Every standalone `Math.random()` for ID purposes → `crypto.randomUUID()`. The 4 new occurrences in `drawings/index.tsx` follow the same pattern as the existing ones — same mechanical fix.
 3. **Exceptions:** `IntelligenceGraph.tsx` uses Math.random() for force-directed graph physics — visual algorithm, not mock data. Leave as-is.
-4. **Verify:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v "IntelligenceGraph"` returns 0 results.
+4. **Verify:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v "IntelligenceGraph" | wc -l` returns 0.
 5. **Update `.quality-floor.json`:** set `mockCount` to 1 (IntelligenceGraph exception only).
-6. **Commit:** `git add -A && git commit -m "fix(P0-1): eliminate all 16 Math.random calls — crypto.randomUUID + real budget data [auto]"`
-**Done looks like:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v IntelligenceGraph | wc -l` returns 0. The S-Curve chart shows only the planned line when no actuals exist. PO numbers are deterministic. No ID changes between page reloads. mockCount in `.quality-floor.json` = 1.
-**WHY:** Night FOUR. Walker is calling GCs this week. The Budget S-Curve (Demo Step 5) generates visibly different fake numbers on every page reload — a CTO who opens the budget page twice will catch this in 10 seconds. The Procurement page creates different PO numbers for the same requisition on repeated conversions. These aren't edge cases; they're front-and-center credibility killers. This is the lowest-effort, highest-impact fix in the entire codebase: 13 of the 16 fixes are a mechanical find-and-replace that takes under 5 minutes total.
+6. **Commit:** `git add -A && git commit -m "fix(P0-1): eliminate all 26 Math.random calls — crypto.randomUUID + real data queries [auto]"`
+**Done looks like:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v IntelligenceGraph | wc -l` returns 0. Budget S-Curve shows only planned line when no actuals exist. BudgetKPIs and ScheduleKPIs show real data or clean empty states — no random noise. PO numbers are deterministic. `.quality-floor.json` `mockCount` = 1.
+**WHY:** Night SIX. The count went UP, not down. The manual Gantt commit introduced 10 new Math.random() calls — proving that without automated enforcement, every commit risks adding more fakes. The Budget page (Demo Step 5) and Schedule page now have ADDITIONAL fake data that changes on every reload. A GC CTO who opens the budget page and sees different trend lines each time will walk. This is the most urgent fix in the codebase. 19 of the 26 fixes are a 30-second find-and-replace per file. The 7 demo-killers require replacing fake data with real queries or honest empty states — still under 2 hours total. Every night this isn't fixed is a night the demo gets worse, not better.
 
-### 2. RFI STATE MACHINE + WORKFLOWTIMELINE — DEMO STEP 3 MUST WORK END-TO-END
+### 2. RFI STATE MACHINE + WORKFLOWTIMELINE — THE CORE WORKFLOW DEMO MOMENT
 **SPEC ref:** P0-6 (State Machine Handler Completion — 0% complete) + P1-2 (RFIs — 35% complete)
-**Files to change:** `src/machines/rfiMachine.ts`, `src/pages/RFIs.tsx` (or wherever the RFI detail/list view lives), `src/components/WorkflowTimeline.tsx` (CREATE — confirmed absent, 0 references in codebase)
+**Files to change:** `src/machines/rfiMachine.ts`, `src/pages/RFIs.tsx` (or wherever the RFI detail/list view lives), `src/components/WorkflowTimeline.tsx` (CREATE — still absent after 6 nights, 0 references in codebase)
 **What to do:**
 1. **Audit `src/machines/rfiMachine.ts`** — the machine exists with proper XState `setup()` and has SUBMIT, START_REVIEW, RESPOND, CLOSE, VOID events defined. Verify each transition has:
    - A `guard` checking user permission via the role from context
@@ -57,7 +64,7 @@ The nightly builder has not executed a single commit since April 18. Commit `2a3
    - Props: `states: string[]`, `currentState: string`, `completedStates: string[]`
    - Renders each state as a step with connecting lines. Completed states show checkmarks (green). Current state is highlighted (brand blue). Future states are gray.
    - Use inline styles with theme tokens (ADR-003). 56px minimum touch targets (LEARNINGS.md).
-   - This component is reusable across Submittals, Change Orders, Pay Apps — building it once enables 4 workflows.
+   - This component is reusable across Submittals, Change Orders, Pay Apps — building it once enables 4 workflows. That's the compounding play.
 3. **Wire the RFI detail page:**
    - Top: `<WorkflowTimeline states={['draft','submitted','under_review','responded','closed']} currentState={rfi.status} />`
    - Action buttons computed from the machine's available events for current state. `draft` → "Submit" only. `submitted` → "Start Review" only. Never show unavailable transitions.
@@ -66,30 +73,43 @@ The nightly builder has not executed a single commit since April 18. Commit `2a3
 4. **Unit tests:** `src/machines/__tests__/rfiMachine.test.ts` — test each valid transition (5 happy paths), each invalid transition (e.g., draft → closed throws), and verify activity_log write on each transition.
 5. **Commit:** `git add -A && git commit -m "feat(P0-6): complete RFI state machine + WorkflowTimeline component [auto]"`
 **Done looks like:** Open any RFI detail page. See the horizontal WorkflowTimeline showing progress. Click through the full lifecycle: draft → submitted → under_review → responded → closed. Each click transitions the status, updates the ball-in-court, and appends an activity log entry. Invalid transitions throw typed errors. `npm test src/machines/rfiMachine` passes. The WorkflowTimeline renders cleanly at 768px (iPad demo width).
-**WHY:** Demo Step 3 is the moment a superintendent sees their real workflow reflected in software. "I submit it, the architect reviews it, they respond, I close it." That's the daily reality. If the transitions silently fail or the status gets stuck, the superintendent thinks "this doesn't understand my job." The WorkflowTimeline is a force multiplier — it's one component that makes RFIs, Submittals, Change Orders, and Pay Apps all look more polished instantly. Building it now enables 4 demo steps with one piece of UI. Procore shows status as a dropdown. We show it as a visual journey. That visual difference is what makes a PM screenshot it and send it to their VP.
+**WHY:** Demo Step 3 is the moment a superintendent sees their real workflow reflected in software. "I submit it, the architect reviews it, they respond, I close it." That's the daily reality. Procore shows status as a dropdown. We show it as a visual journey — a horizontal stepper that makes the workflow tangible. The WorkflowTimeline component is a force multiplier: one piece of UI that instantly improves RFIs, Submittals, Change Orders, and Pay Apps. Four demo steps for the price of one component. This is the highest-leverage UI work in the codebase right now.
 
-### 3. ESLINT WARNINGS — CUT 607 → 300 BY FIXING AUTO-FIXABLE VIOLATIONS
-**SPEC ref:** Quality Gates (ESLint: ⚠️ Warnings present, target: 0)
-**Files to change:** Run `npx eslint --fix src/` across the codebase, then manually fix the highest-frequency warning categories
+### 3. DASHBOARD KPI TILES — WIRE REAL SUPABASE QUERIES (DEMO STEP 1)
+**SPEC ref:** P1-1 (Dashboard — 40% complete) + P0-1 (Mock Data)
+**Files to change:** `src/pages/Dashboard.tsx` (or `src/pages/dashboard/index.tsx`), `src/hooks/useDashboardKPIs.ts` (create if absent)
 **What to do:**
-1. **Run auto-fix first:** `npx eslint --fix src/ --ext .ts,.tsx` — this will handle all auto-fixable warnings (unused imports, formatting, simple type issues). Expect ~200-300 fixes for free.
-2. **Identify top warning categories:** `npx eslint src/ --ext .ts,.tsx --format json 2>/dev/null | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));const m={};d.forEach(f=>f.messages.forEach(msg=>{m[msg.ruleId]=(m[msg.ruleId]||0)+1}));Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,10).forEach(([r,c])=>console.log(c,r))"` — fix the top 3 categories manually if they aren't auto-fixable.
-3. **Do NOT use `eslint-disable` comments** to suppress warnings. Fix the code or downgrade the rule in `eslint.config.js` if the rule is wrong for this project.
-4. **Update `.quality-floor.json`:** set `eslintWarnings` to the new count (target: ≤ 300).
-5. **Commit:** `git add -A && git commit -m "fix(quality): eslint auto-fix + top warning categories — 607 → N warnings [auto]"`
-**Done looks like:** `npx eslint src/ --ext .ts,.tsx 2>&1 | grep -c "warning"` returns ≤ 300. Zero new errors introduced. `npm run build` still passes. `.quality-floor.json` `eslintWarnings` updated to new floor.
-**WHY:** 607 ESLint warnings is a blinking red light for any CTO who runs `npm run lint`. It signals "this team doesn't clean up after themselves." More practically: warnings hide real bugs. Unused imports bloat the bundle. Missing return types cause runtime surprises. Cutting warnings in half is a 30-minute investment (most are auto-fixable) that immediately improves code health scores and makes the codebase more navigable for both humans and AI agents. The quality ratchet (ADR-010) means once we get to 300, we never go above 300 again — every future commit must maintain or improve. This is the kind of compounding hygiene that separates enterprise-grade codebases from prototypes. It also directly unblocks the "ESLint: zero warnings" quality gate in SPEC.md, moving us from ⚠️ to a measurable number.
+1. **Create `src/hooks/useDashboardKPIs.ts`** — a React Query hook that fetches real KPI data:
+   ```ts
+   // Open RFIs: SELECT COUNT(*) FROM rfis WHERE project_id = ? AND status NOT IN ('closed', 'void')
+   // Overdue Submittals: SELECT COUNT(*) FROM submittals WHERE project_id = ? AND required_date < NOW() AND status NOT IN ('approved', 'rejected')
+   // Budget Variance: SELECT SUM(actual_amount - budgeted_amount) FROM budget_line_items WHERE project_id = ?
+   // Schedule SPI: computed from tasks where is_critical_path = true
+   ```
+   Each query uses `supabase.from(...).select(...)` with `.eq('project_id', projectId)`. Return `{ openRFIs, overdueSubmittals, budgetVariance, scheduleSPI, isLoading, error }`.
+2. **Wire KPI tiles on Dashboard.tsx** to use the hook. Each tile must have:
+   - Loading skeleton (shimmer, not spinner — per LEARNINGS.md loading state rules)
+   - Error state (red border, "Failed to load" + retry button)
+   - Empty state ("No data yet" when count is 0 — not a blank tile)
+   - Real number from the hook when data loads
+3. **Activity feed:** Query `activity_log` for the project, ordered by `created_at DESC`, limit 20. Render each entry as: `[Actor] [action] [resource_type] #[resource_id] — [relative timestamp]`. Example: "Walker submitted RFI #047 — 2 hours ago."
+4. **Subscribe to realtime:** Use Supabase Realtime on `activity_log` inserts for this project. New activities prepend to the feed without page refresh.
+5. **Verify:** Load `/dashboard` with the Riverside Tower project. KPI tiles show real numbers from the database. Activity feed shows real actions. No hardcoded values. `grep -rn "MOCK_\|mockData\|hardcoded" src/pages/Dashboard.tsx src/pages/dashboard/ | wc -l` returns 0.
+6. **Commit:** `git add -A && git commit -m "feat(P1-1): wire Dashboard KPIs to real Supabase queries + live activity feed [auto]"`
+**Done looks like:** Dashboard loads in under 3 seconds. Four KPI tiles show real counts/values from Supabase. Activity feed shows last 20 real actions with actor names and relative timestamps. Creating an RFI from another tab causes the "Open RFIs" count to increment and the activity feed to update in real-time. Zero mock data on the page.
+**WHY:** The Dashboard is Demo Step 1 — the very first thing a GC CTO sees. Right now it's a mix of hardcoded placeholders and stale data. Every number on this page must come from a live Supabase query. A CTO will ask "is this real data?" and the answer must be an unqualified yes. The activity feed with realtime updates is the "wow moment" — creating an RFI in another tab and watching it appear on the dashboard instantly shows this is a living system, not a static mockup. This is also the foundational query pattern that every other page will follow. Getting Dashboard right first means every subsequent page is faster to wire up.
 
 ---
 
 ## Completed Archive
 
-### April 19-22: FOUR CONSECUTIVE NIGHTS — BUILDER DISABLED, PRIORITIES UNEXECUTED
-- **Status:** All 3 priorities (mock data, RFI state machine, dashboard KPIs) carried forward for 4 consecutive nights. Zero builder commits since April 18.
+### April 19-24: SIX CONSECUTIVE NIGHTS — BUILDER DISABLED, MOCK DATA REGRESSING
+- **Status:** All priorities carried forward for 6 consecutive nights. Zero automated builder commits since April 18.
 - **Root cause:** Commit `2a3a7df` disabled all scheduled workflow crons to halt API spend. The nightly builder has never re-triggered.
-- **Impact:** mockCount stuck at 7 (actually 16 — grep found additional occurrences in MeasurementOverlay, DrawingTiledViewer, scheduleHealth, and a second PunchItemCreateWizard call). Dashboard KPIs partially wired. RFI state machine exists but WorkflowTimeline component is absent (0 references). ESLint warnings at 607.
-- **What changed in tonight's priorities:** (1) Expanded mock data list from 12 to 16 files after fresh grep — 3 files were missed in previous scans. (2) Replaced Dashboard KPI priority #3 with ESLint cleanup — the dashboard queries may already partially work and the KPI tile wiring is complex enough to be a standalone night's work, while ESLint auto-fix is high-ROI mechanical work. (3) Added explicit WorkflowTimeline creation confirmation (0 references in codebase).
-- **Action needed:** Walker must re-enable `nightly-build.yml` or run the builder manually. Four nights of strategic direction have been written with zero execution. The product is falling behind the GC call schedule.
+- **One manual commit occurred:** `cc43d21` (April 22) — "feat(schedule): AI PDF import + world-class Gantt canvas" — but this commit ADDED 10 new Math.random() calls (ScheduleKPIs.tsx: 4, BudgetKPIs.tsx: 2, drawings/index.tsx: 4), increasing the mock data count from 16 to 26. The product actively regressed on P0-1.
+- **Impact:** mockCount at 26 (up from 7 in .quality-floor.json, which is stale). WorkflowTimeline still absent (0 references). ESLint warnings at 607. Dashboard KPIs still not wired to real queries.
+- **What changed in tonight's priorities:** (1) Mock data count updated from 16 to 26 after fresh grep — new Gantt commit added 10 more fakes. (2) Replaced ESLint priority #3 with Dashboard KPI wiring — the dashboard is Demo Step 1 and has higher impact than lint cleanup for GC calls this week. ESLint is important but not demo-blocking. (3) Added BudgetKPIs.tsx and ScheduleKPIs.tsx to the demo-killer list — these are new regressions from the Gantt commit.
+- **Action needed:** Walker must re-enable `nightly-build.yml` or run the builder manually. Six nights of strategic direction have been written with zero execution. Every manual commit without the quality ratchet risks making things worse, as the Gantt commit proved.
 
 ### April 17-18: Test Coverage Foundation + UX Polish (Phase A/B)
 - **Completed:** 75 mutation hook tests, 51 page smoke tests, drift guard, CI workflow, vitest coverage config, skeleton loading states, 56px touch targets, no-hex-colors lint rule, harness detector
