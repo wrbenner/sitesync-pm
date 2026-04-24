@@ -42,6 +42,12 @@ export function useCreateRFI() {
     analyticsEvent: 'rfi_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create RFI',
+    offlineQueue: {
+      table: 'rfis',
+      operation: 'insert',
+      getData: (p) => ({ ...(p.data as Record<string, unknown>), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...(p.data as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+    },
   })
 }
 
@@ -79,6 +85,12 @@ export function useUpdateRFI() {
     analyticsEvent: 'rfi_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update RFI',
+    offlineQueue: {
+      table: 'rfis',
+      operation: 'update',
+      getData: (p) => ({ id: p.id, ...p.updates }),
+      getStubResult: (p) => ({ id: p.id, updates: p.updates, projectId: p.projectId }),
+    },
   })
 }
 
@@ -96,6 +108,12 @@ export function useDeleteRFI() {
     analyticsEvent: 'rfi_deleted',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to delete RFI',
+    offlineQueue: {
+      table: 'rfis',
+      operation: 'delete',
+      getData: (p) => ({ id: p.id }),
+      getStubResult: (p) => ({ id: p.id, projectId: p.projectId }),
+    },
   })
 }
 

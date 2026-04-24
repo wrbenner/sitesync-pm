@@ -70,6 +70,12 @@ export function useCreateSubmittal() {
     analyticsEvent: 'submittal_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create submittal',
+    offlineQueue: {
+      table: 'submittals',
+      operation: 'insert',
+      getData: (p) => ({ ...sanitizeSubmittalData(p.data), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...sanitizeSubmittalData(p.data), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+    },
   })
 }
 
@@ -96,6 +102,12 @@ export function useUpdateSubmittal() {
     analyticsEvent: 'submittal_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update submittal',
+    offlineQueue: {
+      table: 'submittals',
+      operation: 'update',
+      getData: (p) => ({ id: p.id, ...sanitizeSubmittalData(p.updates) }),
+      getStubResult: (p) => ({ id: p.id, projectId: p.projectId }),
+    },
   })
 }
 
@@ -113,5 +125,11 @@ export function useDeleteSubmittal() {
     analyticsEvent: 'submittal_deleted',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to delete submittal',
+    offlineQueue: {
+      table: 'submittals',
+      operation: 'delete',
+      getData: (p) => ({ id: p.id }),
+      getStubResult: (p) => ({ projectId: p.projectId }),
+    },
   })
 }

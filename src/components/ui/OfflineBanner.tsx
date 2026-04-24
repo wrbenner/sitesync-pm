@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef} from 'react';
 import { WifiOff, RefreshCw, Check, AlertTriangle, Cloud, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getPendingMutations, retryMutation, type PendingMutation } from '../../lib/offlineDb';
@@ -25,6 +26,20 @@ export const OfflineBanner: React.FC = () => {
   const hasConflicts = conflictCount > 0;
   const hasPending = pendingChanges > 0;
   const hasActivity = hasPending || hasConflicts || isSyncing || isCaching;
+
+  // Fire a toast when a new conflict appears (delta on conflictCount). We track
+  // the previous count in a ref so the toast only fires for NEW conflicts, not
+  // for the steady-state count that persists until the user resolves them.
+  const prevConflictCount = useRef(conflictCount);
+  useEffect(() => {
+    if (conflictCount > prevConflictCount.current) {
+      const newOnes = conflictCount - prevConflictCount.current;
+      toast.error(`Conflict — review and resubmit${newOnes > 1 ? ` (${newOnes} items)` : ''}`, {
+        description: 'Your offline change conflicts with the server. Open the sync panel to resolve.',
+      });
+    }
+    prevConflictCount.current = conflictCount;
+  }, [conflictCount]);
 
   // Show green checkmark for 3 seconds after sync clears
   useEffect(() => {
@@ -63,11 +78,14 @@ export const OfflineBanner: React.FC = () => {
   } else if (isSyncing) {
     const progress = syncProgress;
     const progressText = progress ? ` (${progress.completed}/${progress.total})` : '';
+    const queuedPrefix = hasPending
+      ? `${pendingChanges} queued, `
+      : '';
     config = {
       bg: colors.statusInfoSubtle,
       border: colors.statusInfo,
       icon: <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />,
-      text: `Syncing${progressText}...`,
+      text: `${queuedPrefix}syncing${progressText}...`,
       iconColor: colors.statusInfo,
     };
   } else if (isCaching) {

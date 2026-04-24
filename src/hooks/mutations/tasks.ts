@@ -28,6 +28,12 @@ export function useCreateTask() {
     analyticsEvent: 'task_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create task',
+    offlineQueue: {
+      table: 'tasks',
+      operation: 'insert',
+      getData: (p) => ({ ...(p.data as Record<string, unknown>), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...(p.data as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+    },
   })
 }
 
@@ -51,6 +57,12 @@ export function useUpdateTask() {
     analyticsEvent: 'task_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update task',
+    offlineQueue: {
+      table: 'tasks',
+      operation: 'update',
+      getData: (p) => ({ id: p.id, ...p.updates }),
+      getStubResult: (p) => ({ id: p.id, projectId: p.projectId }),
+    },
   })
 }
 
@@ -68,5 +80,11 @@ export function useDeleteTask() {
     analyticsEvent: 'task_deleted',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to delete task',
+    offlineQueue: {
+      table: 'tasks',
+      operation: 'delete',
+      getData: (p) => ({ id: p.id }),
+      getStubResult: (p) => ({ projectId: p.projectId }),
+    },
   })
 }

@@ -17,6 +17,7 @@ import posthog from '../../lib/analytics'
 import Sentry from '../../lib/sentry'
 import { invalidateEntity, type EntityType } from '../../api/invalidation'
 import { logAuditEntry } from '../../lib/auditLogger'
+import { syncManager } from '../../lib/syncManager'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -74,6 +75,20 @@ interface AuditedMutationConfig<TParams, TResult> {
 
   // Additional onSuccess callback
   onSuccess?: (result: TResult, params: TParams) => void
+
+  // Offline queue configuration. When the device is offline AND this is set,
+  // the mutation is routed through the Dexie-backed offline queue instead of
+  // hitting Supabase. `getData` must return the exact row shape the queue
+  // will replay on reconnect (see src/lib/offlineDb.ts::processSyncQueue).
+  // `getStubResult` produces the synchronous return value callers still
+  // expect — optimistic updates will already have been applied via `onMutate`.
+  offlineQueue?: {
+    table: string
+    operation: 'insert' | 'update' | 'delete'
+    getData: (params: TParams) => Record<string, unknown>
+    getStubResult: (params: TParams) => TResult
+    offlineMessage?: string
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────
@@ -128,6 +143,24 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
           }
           throw err
         }
+      }
+
+      // Step 3a: If offline and this mutation declares offline-queue support,
+      // short-circuit: push the row onto the sync queue, surface a toast, and
+      // return a stub result. The optimistic update applied in onMutate keeps
+      // the UI consistent; the sync engine replays on reconnect with retry +
+      // exponential backoff (see processSyncQueue in offlineDb.ts).
+      if (config.offlineQueue && typeof navigator !== 'undefined' && !navigator.onLine) {
+        const { table, operation, getData, getStubResult, offlineMessage } = config.offlineQueue
+        try {
+          await syncManager.queueOfflineMutation(table, operation, getData(params))
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Could not save for offline sync'
+          toast.error(msg)
+          throw err
+        }
+        toast.info(offlineMessage ?? 'Saved locally — will sync when online')
+        return getStubResult(params)
       }
 
       // Step 3: Execute the actual mutation

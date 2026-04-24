@@ -50,6 +50,12 @@ export function useCreatePunchItem() {
     analyticsEvent: 'punch_item_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to create punch item',
+    offlineQueue: {
+      table: 'punch_items',
+      operation: 'insert',
+      getData: (p) => ({ ...sanitizePunchData(p.data), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...sanitizePunchData(p.data), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+    },
   })
 }
 
@@ -74,6 +80,12 @@ export function useUpdatePunchItem() {
     analyticsEvent: 'punch_item_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update punch item',
+    offlineQueue: {
+      table: 'punch_items',
+      operation: 'update',
+      getData: (p) => ({ id: p.id, ...sanitizePunchData(p.updates) }),
+      getStubResult: (p) => ({ id: p.id, projectId: p.projectId }),
+    },
   })
 }
 
@@ -91,5 +103,11 @@ export function useDeletePunchItem() {
     analyticsEvent: 'punch_item_deleted',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to delete punch item',
+    offlineQueue: {
+      table: 'punch_items',
+      operation: 'delete',
+      getData: (p) => ({ id: p.id }),
+      getStubResult: (p) => ({ projectId: p.projectId }),
+    },
   })
 }
