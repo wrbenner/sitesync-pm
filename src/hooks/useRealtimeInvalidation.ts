@@ -98,3 +98,67 @@ export function useRealtimeInvalidation(activeProjectId?: string) {
     }
   }, [projectId])
 }
+
+/**
+ * Subscribe to realtime changes on a single row so two users editing the
+ * same RFI / punch item / submittal / change order see each other's updates.
+ *
+ * @param table  Supabase table name (rfis, punch_items, submittals, change_orders)
+ * @param rowId  Primary-key id of the row to subscribe to; skip when undefined
+ * @param queryKeys Additional React Query keys to invalidate on any UPDATE/DELETE
+ */
+export function useRealtimeRowInvalidation(
+  table: string,
+  rowId: string | undefined,
+  queryKeys: ReadonlyArray<readonly unknown[]> = [],
+) {
+  useEffect(() => {
+    if (!rowId) return
+
+    const uid = Math.random().toString(36).slice(2, 8)
+    const channelName = `row-${table}-${rowId}-${uid}`
+
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    try {
+      channel = supabase.channel(channelName)
+      channel.on(
+        'postgres_changes' as const,
+        {
+          event: '*',
+          schema: 'public',
+          table,
+          filter: `id=eq.${rowId}`,
+        },
+        () => {
+          for (const key of queryKeys) {
+            queryClient.invalidateQueries({ queryKey: key })
+          }
+        },
+      )
+      channel.subscribe()
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Realtime] Subscribed to', channelName)
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[Realtime] Row subscription failed:', err)
+      }
+      if (channel) {
+        try { supabase.removeChannel(channel) } catch { /* ignore */ }
+      }
+      return
+    }
+
+    return () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Realtime] Unsubscribed from', channelName)
+      }
+      supabase.removeChannel(channel!)
+    }
+    // queryKeys is intentionally omitted from deps; callers should pass a stable
+    // memoized reference when they want to change the invalidation set, which
+    // is very rarely needed for detail pages.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, rowId])
+}

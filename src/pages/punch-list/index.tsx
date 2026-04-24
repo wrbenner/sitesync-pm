@@ -12,9 +12,11 @@ import {
   Plus, Map, X,
 } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAuth } from '../../hooks/useAuth';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
 import { toast } from 'sonner';
 import { useProjectId } from '../../hooks/useProjectId';
+import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation';
 import { useCreatePunchItem, useUpdatePunchItem, useDeletePunchItem } from '../../hooks/mutations';
 import PunchItemCreateWizard from '../../components/punch-list/PunchItemCreateWizard';
 import { PermissionGate } from '../../components/auth/PermissionGate';
@@ -33,6 +35,9 @@ import { PunchListFilters } from './PunchListFilters';
 import { PunchListKanban } from './PunchListKanban';
 import { PunchListPlanView } from './PunchListPlanView';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
+
+// Stable empty array to avoid infinite re-render with Zustand + useSyncExternalStore
+const EMPTY_COMMENTS: Array<{ author: string; initials: string; created_at?: string; text: string }> = [];
 
 const PunchListPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
@@ -103,6 +108,7 @@ const PunchListPage: React.FC = () => {
 
   const { addToast } = useToast();
   const { hasPermission } = usePermissions();
+  const { user } = useAuth();
   const projectId = useProjectId();
   const createPunchItem = useCreatePunchItem();
   const updatePunchItem = useUpdatePunchItem();
@@ -112,6 +118,7 @@ const PunchListPage: React.FC = () => {
   const { data: punchListResult, isLoading: queryLoading, error: punchError, refetch, fetchStatus } = usePunchItems(projectId);
   const punchListRaw = punchListResult?.data ?? [];
   const { data: project } = useProject(projectId);
+  useRealtimeInvalidation(projectId);
   const loading = queryLoading && fetchStatus === 'fetching';
 
   const handleExportXlsx = useCallback(() => {
@@ -221,23 +228,29 @@ const PunchListPage: React.FC = () => {
   const selected = punchListItems.find(p => p.id === selectedId) || null;
 
   // ── Comments ──────────────────────────────────────────
-  const { loadComments } = usePunchListStore();
+  const { loadComments, addComment } = usePunchListStore();
   useEffect(() => {
     if (selectedId) loadComments(String(selectedId));
   }, [selectedId, loadComments]);
   const selectedKey = String(selectedId ?? '');
   const storeComments = usePunchListStore(
-    useCallback((s: { comments: Record<string, Array<{ author: string; initials: string; created_at?: string; text: string }>> }) => s.comments[selectedKey], [selectedKey])
+    useCallback((s: { comments: Record<string, Array<{ author: string; initials: string; created_at?: string; text: string }>> }) => s.comments[selectedKey] ?? EMPTY_COMMENTS, [selectedKey])
   );
-  const EMPTY_COMMENTS: Array<{ author: string; initials: string; created_at?: string; text: string }> = useMemo(() => [], []);
-  const resolvedComments = storeComments ?? EMPTY_COMMENTS;
   const comments: Comment[] = useMemo(() => {
-    return resolvedComments.map((c) => ({
+    return storeComments.map((c) => ({
       author: c.author, initials: c.initials,
       time: c.created_at ? new Date(c.created_at).toLocaleDateString() : '',
       text: c.text,
     }));
-  }, [resolvedComments]);
+  }, [storeComments]);
+
+  const handleAddComment = useCallback(async (text: string) => {
+    if (!selected) return;
+    const name = user?.user_metadata?.full_name || user?.email || 'You';
+    const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+    const result = await addComment(String(selected.id), name, initials, text);
+    if (result.error) throw new Error(result.error);
+  }, [selected, user, addComment]);
 
   // ── Photo analysis ────────────────────────────────────
   const { analyzePhoto, state: photoAnalysisState, result: photoAnalysisResult, error: photoAnalysisError } = usePhotoAnalysis();
@@ -278,8 +291,8 @@ const PunchListPage: React.FC = () => {
 
   const handleRejectById = useCallback(async (item: PunchItem, reason: string) => {
     try {
-      await updatePunchItem.mutateAsync({ id: String(item.id), updates: { verification_status: 'open', rejection_reason: reason || undefined }, projectId: projectId! });
-      toast.success(`${item.itemNumber} rejected — returned to open`);
+      await updatePunchItem.mutateAsync({ id: String(item.id), updates: { verification_status: 'in_progress', rejection_reason: reason || undefined }, projectId: projectId! });
+      toast.success(`${item.itemNumber} rejected — returned to sub for rework`);
       setAriaAnnouncement(`${item.itemNumber} rejected`);
       setInlineRejectId(null);
       setInlineRejectNote('');
@@ -317,8 +330,8 @@ const PunchListPage: React.FC = () => {
   const handleReject = useCallback(async () => {
     if (!selected) return;
     try {
-      await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { verification_status: 'open', rejection_reason: rejectNote || undefined }, projectId: projectId! });
-      toast.error(`${selected.itemNumber} rejected — sub notified`);
+      await updatePunchItem.mutateAsync({ id: String(selected.id), updates: { verification_status: 'in_progress', rejection_reason: rejectNote || undefined }, projectId: projectId! });
+      toast.error(`${selected.itemNumber} rejected — returned to sub for rework`);
       setRejectNote(''); setShowRejectNote(false); setSelectedId(null);
     } catch { toast.error('Failed to reject'); }
   }, [selected, updatePunchItem, projectId, rejectNote]);
@@ -426,7 +439,20 @@ const PunchListPage: React.FC = () => {
           icon={CheckSquare}
           title="No punch list items yet"
           description="Items will appear here as deficiencies are identified during inspections. Snap a photo to get started."
-          action={{ label: 'Add Punch Item', onClick: () => setShowCreateModal(true) }}
+          action={hasPermission('punch_list.create')
+            ? { label: 'Add Punch Item', onClick: () => setShowCreateModal(true) }
+            : { label: 'Add Punch Item', onClick: () => toast.error("You don't have permission to create items") }
+          }
+        />
+
+        <PunchItemCreateWizard
+          projectId={projectId!}
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={async (data) => {
+            await createPunchItem.mutateAsync({ projectId: projectId!, data });
+            toast.success('Punch item created: ' + ((data.title as string) || 'New Item'));
+          }}
         />
       </PageContainer>
     );
@@ -587,6 +613,7 @@ const PunchListPage: React.FC = () => {
         handleVerify={handleVerify}
         handleReject={handleReject}
         handleAddPhoto={handleAddPhoto}
+        onAddComment={handleAddComment}
       />
 
       <PunchItemCreateWizard

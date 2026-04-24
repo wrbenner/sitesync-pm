@@ -86,3 +86,24 @@ export function formatDate(dateStr: string): string {
   const day = d.getDate();
   return `${month}/${day}`;
 }
+
+/**
+ * Ball-in-court: determines who needs to act next on this item.
+ * This is a key Procore/Fieldwire concept that shows accountability.
+ */
+export function getBallInCourt(item: PunchItem): { label: string; role: string } {
+  switch (item.verification_status) {
+    case 'open':
+      return { label: item.assigned || 'Unassigned', role: 'Subcontractor' };
+    case 'in_progress':
+      return { label: item.assigned || 'Subcontractor', role: 'Subcontractor' };
+    case 'sub_complete':
+      return { label: 'Superintendent', role: 'GC / Super' };
+    case 'verified':
+      return { label: 'Closed', role: 'Complete' };
+    case 'rejected':
+      return { label: item.assigned || 'Subcontractor', role: 'Rework needed' };
+    default:
+      return { label: item.assigned || 'Unassigned', role: '' };
+  }
+}

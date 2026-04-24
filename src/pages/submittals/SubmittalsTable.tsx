@@ -46,9 +46,9 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
 
   const subColumns = useMemo(() => [
     subColHelper.accessor('submittalNumber', {
-      header: 'Submittal #',
+      header: '#',
       size: 100,
-      cell: (info) => <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.orangeText }}>{info.getValue() as string}</span>,
+      cell: (info) => <span style={{ fontFamily: typography.fontFamilyMono, fontSize: 11, fontWeight: 600, color: colors.orangeText, letterSpacing: '0.02em' }}>{info.getValue() as string}</span>,
     }),
     subColHelper.accessor('title', {
       header: 'Title',
@@ -115,7 +115,8 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
         const val = info.getValue() as number;
         return (
           <span style={{
-            fontSize: typography.fontSize.sm,
+            fontSize: 11,
+            fontFamily: typography.fontFamilyMono,
             fontWeight: val > 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
             color: val > 0 ? colors.statusCritical : colors.textTertiary,
             fontVariantNumeric: 'tabular-nums' as const,
@@ -132,14 +133,14 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       cell: (info) => {
         const sub = info.getValue() as Record<string, unknown>;
         const daysRemaining = calcBusinessDaysRemaining((sub.due_date as string) || (sub.dueDate as string));
-        if (daysRemaining === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        if (daysRemaining === null) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>&mdash;</span>;
         const overdue = daysRemaining < 0;
         const color = overdue ? colors.statusCritical : daysRemaining <= 7 ? colors.statusPending : colors.statusActive;
         const label = overdue
-          ? `${Math.abs(daysRemaining)} days overdue`
-          : `${daysRemaining} days remaining`;
+          ? `${Math.abs(daysRemaining)}d overdue`
+          : `${daysRemaining}d left`;
         return (
-          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
             {label}
           </span>
         );
@@ -150,10 +151,10 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       size: 160,
       cell: (info) => {
         const val = info.getValue() as string | null;
-        if (!val) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>Unassigned</span>;
+        if (!val) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>;
         return (
-          <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusInfo, flexShrink: 0, display: 'inline-block' }} />
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusInfo, flexShrink: 0, display: 'inline-block', opacity: 0.7 }} />
             <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{val}</span>
           </span>
         );
@@ -166,7 +167,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
         const sub = info.row.original as Record<string, unknown>;
         const val = info.getValue() as string;
         return (
-          <span style={{ fontSize: typography.fontSize.sm, color: isOverdue(val) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>
+          <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: isOverdue(val) && sub.status !== 'approved' ? colors.statusCritical : colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const, fontWeight: isOverdue(val) && sub.status !== 'approved' ? 600 : 400 }}>
             {new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         );
@@ -184,20 +185,23 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       cell: (info) => {
         const sub = info.getValue() as Record<string, unknown>;
         const days = calcDaysInReview(sub);
-        if (days === null) return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>&mdash;</span>;
+        if (days === null) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>&mdash;</span>;
         const color = days > 14 ? colors.statusCritical : days > 7 ? colors.statusPending : colors.textSecondary;
         return (
-          <span style={{ fontSize: typography.fontSize.sm, color, fontWeight: days > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color, fontWeight: days > 14 ? typography.fontWeight.semibold : typography.fontWeight.normal, fontVariantNumeric: 'tabular-nums' as const, whiteSpace: 'nowrap' }}>
             {days}d
           </span>
         );
       },
     }),
-    subColHelper.accessor('status', {
+    subColHelper.accessor((row: Record<string, unknown>) => row, {
       id: 'approval_chain',
       header: 'Chain',
       size: 80,
-      cell: (info) => <MiniApprovalChain status={info.getValue() as string} />,
+      cell: (info) => {
+        const sub = info.getValue() as Record<string, unknown>;
+        return <MiniApprovalChain status={sub.status as string} approvalChain={sub.approval_chain} />;
+      },
     }),
   ], []);
 
@@ -250,7 +254,6 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
           <Btn variant="secondary" size="sm" onClick={clearFilters}>Clear Filters</Btn>
         </div>
       ) : (
-        <Card padding="0">
           <VirtualDataTable
             data={filteredSubmittals}
             columns={allSubColumns}
@@ -272,7 +275,6 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
               });
             }}
           />
-        </Card>
       )}
 
       <BulkActionBar

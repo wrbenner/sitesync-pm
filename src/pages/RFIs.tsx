@@ -5,14 +5,17 @@ import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
 import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, EmptyState } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
+import { RFIKPIs } from './rfis/RFIKPIs';
+import { RFITabBar, type RFIStatusFilter } from './rfis/RFITabBar';
 import { useRFIs, useRFI, useProject } from '../hooks/queries';
 import { exportRFILogXlsx } from '../lib/exportXlsx';
 import { ExportButton } from '../components/shared/ExportButton';
-import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, TrendingUp, CircleDot, Timer, CheckCircle2, AlertCircle, ArrowUpRight, ChevronRight } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, TrendingUp, CircleDot, Timer, CheckCircle2, AlertCircle, ArrowUpRight, ChevronRight, DollarSign } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
+import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useNavigate } from 'react-router-dom';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -87,62 +90,7 @@ const formatShortDate = (dateStr: string | null | undefined): string => {
 
 const rfiColHelper = createColumnHelper<RFIRow>();
 
-// ─── Metric Card (Apple-level design) ────────────────────
-
-const MetricCard: React.FC<{
-  label: string;
-  value: number | string;
-  icon: React.ReactNode;
-  trend?: string;
-  alert?: boolean;
-  subtitle?: string;
-}> = React.memo(({ label, value, icon, trend, alert, subtitle }) => (
-  <div style={{
-    display: 'flex', alignItems: 'center', gap: '14px',
-    padding: '16px 20px',
-    backgroundColor: colors.surfaceRaised,
-    border: `1px solid ${alert ? `${colors.statusCritical}25` : colors.borderSubtle}`,
-    borderRadius: '14px',
-    transition: 'all 0.2s ease',
-    cursor: 'default',
-    position: 'relative',
-    overflow: 'hidden',
-  }}>
-    {alert && (
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
-        background: `linear-gradient(90deg, ${colors.statusCritical}, ${colors.statusCritical}80)`,
-      }} />
-    )}
-    <div style={{
-      width: 40, height: 40, borderRadius: '12px',
-      backgroundColor: alert ? `${colors.statusCritical}08` : colors.surfaceInset,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      {icon}
-    </div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{
-        fontSize: '11px', fontWeight: 500, color: colors.textTertiary,
-        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px',
-      }}>
-        {label}
-      </div>
-      <div style={{
-        fontSize: '22px', fontWeight: 700, color: alert ? colors.statusCritical : colors.textPrimary,
-        lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
-      }}>
-        {value}
-      </div>
-      {(trend || subtitle) && (
-        <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '2px' }}>
-          {trend || subtitle}
-        </div>
-      )}
-    </div>
-  </div>
-));
+// MetricCard replaced by RFIKPIs component
 
 // ─── Ball In Court Badge ─────────────────────────────────
 
@@ -150,13 +98,13 @@ const BicBadge: React.FC<{ party: string }> = React.memo(({ party }) => {
   const color = getBicColor(party);
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '5px',
-      padding: '3px 10px', borderRadius: '20px',
-      backgroundColor: `${color}0C`, fontSize: '12px',
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      padding: '2px 8px', borderRadius: '9999px',
+      backgroundColor: `${color}12`, fontSize: '11px',
       fontWeight: 500, color,
-      border: `1px solid ${color}18`,
+      letterSpacing: '0.01em',
     }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block' }} />
+      <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block', opacity: 0.8 }} />
       {party}
     </span>
   );
@@ -166,8 +114,8 @@ const BallInCourtCell: React.FC<{ rfi: RFIRow }> = React.memo(({ rfi }) => {
   const party = rfi.assigned_to || null;
   if (!party) {
     return (
-      <span style={{ fontSize: '12px', color: colors.textTertiary, fontStyle: 'italic' }}>
-        Unassigned
+      <span style={{ fontSize: '11px', color: colors.textTertiary, fontStyle: 'normal', opacity: 0.5 }}>
+        —
       </span>
     );
   }
@@ -184,6 +132,7 @@ const RFIsPage: React.FC = () => {
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
   const rfisRaw = rfisResult?.data ?? [];
   const { data: project } = useProject(projectId);
+  useRealtimeInvalidation(projectId);
 
   const handleExportXlsx = React.useCallback(() => {
     const projectName = project?.name ?? 'Project';
@@ -231,7 +180,7 @@ const RFIsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<RFIStatusFilter>('all');
   const [announcement, setAnnouncement] = useState('');
   const announcedLoadRef = useRef(false);
   const { addToast } = useToast();
@@ -367,11 +316,12 @@ const RFIsPage: React.FC = () => {
   const rfiColumns = useMemo(() => [
     rfiColHelper.accessor('rfiNumber', {
       header: '#',
-      size: 80,
+      size: 90,
       cell: (info) => (
         <span style={{
-          fontSize: '13px', fontWeight: 600, color: colors.primaryOrange,
-          fontVariantNumeric: 'tabular-nums',
+          fontSize: '11px', fontWeight: 600, color: colors.primaryOrange,
+          fontFamily: typography.fontFamilyMono,
+          letterSpacing: '0.02em',
         }}>
           {info.getValue()}
         </span>
@@ -454,8 +404,9 @@ const RFIsPage: React.FC = () => {
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.textTertiary;
         return (
           <span style={{
-            fontSize: '12px', fontWeight: 600, color: dColor,
+            fontSize: '11px', fontWeight: 600, color: dColor,
             fontVariantNumeric: 'tabular-nums',
+            fontFamily: typography.fontFamilyMono,
           }}>
             {days}d
           </span>
@@ -470,10 +421,11 @@ const RFIsPage: React.FC = () => {
         const overdue = !!info.getValue() && new Date(info.getValue()) < new Date() && rfi.status !== 'closed';
         return (
           <span style={{
-            fontSize: '12px',
+            fontSize: '11px',
             color: overdue ? colors.statusCritical : colors.textTertiary,
             fontWeight: overdue ? 600 : 400,
             fontVariantNumeric: 'tabular-nums',
+            fontFamily: typography.fontFamilyMono,
           }}>
             {formatShortDate(info.getValue())}
           </span>
@@ -488,9 +440,10 @@ const RFIsPage: React.FC = () => {
         if (!val) return <span style={{ color: colors.textTertiary, fontSize: '12px' }}>—</span>;
         return (
           <span style={{
-            fontSize: '12px', fontWeight: 600,
+            fontSize: '11px', fontWeight: 600,
             color: val > 0 ? colors.statusCritical : colors.statusActive,
             fontVariantNumeric: 'tabular-nums',
+            fontFamily: typography.fontFamilyMono,
           }}>
             {val > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, notation: 'compact' }).format(val)}
           </span>
@@ -542,14 +495,15 @@ const RFIsPage: React.FC = () => {
 
   const allRfis = rfis || [];
 
-  const STATUS_TABS = [
-    { key: 'all', label: 'All', icon: null },
-    { key: 'open', label: 'Open', icon: <CircleDot size={12} /> },
-    { key: 'under_review', label: 'In Review', icon: <Timer size={12} /> },
-    { key: 'answered', label: 'Answered', icon: <CheckCircle2 size={12} /> },
-    { key: 'overdue', label: 'Overdue', icon: <AlertCircle size={12} /> },
-    { key: 'closed', label: 'Closed', icon: <XCircle size={12} /> },
-  ];
+  // Tab counts for the sliding tab bar
+  const tabCounts = useMemo(() => ({
+    all: allRfis.length,
+    open: allRfis.filter((r) => r.status === 'open').length,
+    under_review: allRfis.filter((r) => r.status === 'under_review').length,
+    answered: allRfis.filter((r) => r.status === 'answered').length,
+    overdue: allRfis.filter((r) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length,
+    closed: allRfis.filter((r) => r.status === 'closed').length,
+  }), [allRfis]);
 
   const filteredRfis = useMemo(() => {
     if (statusFilter === 'all') return allRfis;
@@ -582,28 +536,63 @@ const RFIsPage: React.FC = () => {
   if (rfisLoading) {
     return (
       <PageContainer title="RFIs" subtitle="Loading...">
-        <style>{`@keyframes rfi-skeleton-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }`}</style>
+        <style>{`
+          @keyframes rfi-skeleton-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+          @keyframes rfi-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+          .rfi-skeleton-shimmer {
+            background: linear-gradient(90deg, ${colors.surfaceInset} 25%, ${colors.surfaceHover} 50%, ${colors.surfaceInset} 75%);
+            background-size: 200% 100%;
+            animation: rfi-shimmer 1.8s ease-in-out infinite;
+          }
+        `}</style>
+        {/* KPI Skeleton */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} style={{
-              backgroundColor: colors.surfaceRaised, borderRadius: '14px',
-              border: `1px solid ${colors.borderSubtle}`, padding: '16px 20px',
-              height: 88,
+              backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
+              border: `1px solid ${colors.borderSubtle}`, padding: '18px 20px',
+              display: 'flex', alignItems: 'flex-start', gap: '14px',
               animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite',
               animationDelay: `${i * 0.12}s`,
-            }} />
+            }}>
+              <div className="rfi-skeleton-shimmer" style={{ width: 40, height: 40, borderRadius: borderRadius.lg, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div className="rfi-skeleton-shimmer" style={{ width: '50%', height: 10, borderRadius: 4, marginBottom: 8 }} />
+                <div className="rfi-skeleton-shimmer" style={{ width: '70%', height: 20, borderRadius: 4, marginBottom: 6 }} />
+                <div className="rfi-skeleton-shimmer" style={{ width: '60%', height: 10, borderRadius: 4 }} />
+              </div>
+            </div>
           ))}
         </div>
+        {/* Section header skeleton */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+          <div className="rfi-skeleton-shimmer" style={{ width: 140, height: 18, borderRadius: 4 }} />
+          <div className="rfi-skeleton-shimmer" style={{ width: 120, height: 16, borderRadius: 4 }} />
+        </div>
+        {/* Table Skeleton */}
         <div style={{
-          backgroundColor: colors.surfaceRaised, borderRadius: '14px',
+          backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
           border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden',
         }}>
+          {/* Tab bar skeleton */}
+          <div style={{ padding: '10px 16px', borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', gap: 8 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rfi-skeleton-shimmer" style={{ width: 60 + i * 8, height: 28, borderRadius: borderRadius.md }} />
+            ))}
+          </div>
+          {/* Row skeletons */}
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} style={{
-              height: 48, borderBottom: `1px solid ${colors.borderSubtle}`,
-              animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite',
-              animationDelay: `${i * 0.06}s`,
-            }} />
+              height: 52, borderBottom: `1px solid ${colors.borderSubtle}`,
+              display: 'flex', alignItems: 'center', gap: 16, padding: '0 16px',
+            }}>
+              <div className="rfi-skeleton-shimmer" style={{ width: 16, height: 16, borderRadius: 3 }} />
+              <div className="rfi-skeleton-shimmer" style={{ width: 60, height: 12, borderRadius: 4 }} />
+              <div className="rfi-skeleton-shimmer" style={{ width: 180 + (i % 3) * 40, height: 12, borderRadius: 4, flex: 1 }} />
+              <div className="rfi-skeleton-shimmer" style={{ width: 50, height: 18, borderRadius: 10 }} />
+              <div className="rfi-skeleton-shimmer" style={{ width: 60, height: 18, borderRadius: 10 }} />
+              <div className="rfi-skeleton-shimmer" style={{ width: 80, height: 12, borderRadius: 4 }} />
+            </div>
           ))}
         </div>
       </PageContainer>
@@ -758,10 +747,9 @@ const RFIsPage: React.FC = () => {
       <style>{`
         @keyframes rfi-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .rfi-interactive:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-        .rfi-metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-        @media (max-width: 900px) { .rfi-metric-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 480px) { .rfi-metric-grid { grid-template-columns: 1fr; } }
-        .rfi-tab:hover { background-color: ${colors.surfaceHover} !important; }
+        .rfi-table-row:hover .rfi-row-accent { opacity: 1 !important; }
+        .rfi-table-row:hover .rfi-row-action { opacity: 1 !important; }
+        .rfi-kanban-card:hover { box-shadow: ${shadows.cardHover}; transform: translateY(-1px); }
       `}</style>
 
       {pageAlerts.map((alert) => (
@@ -773,40 +761,61 @@ const RFIsPage: React.FC = () => {
         {announcement}
       </div>
 
-      {/* ─── Metrics Dashboard ─────────────────────────── */}
+      {/* ─── Premium KPI Dashboard ─────────────────────── */}
       <motion.div
-        className="rfi-metric-grid"
-        style={{ gap: '12px', marginBottom: '20px' }}
         initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
         animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        <MetricCard
-          label="Active"
-          value={totalOpen}
-          icon={<CircleDot size={18} color={colors.statusInfo} />}
-          subtitle={`${openCount} open, ${totalOpen - openCount} in progress`}
+        <RFIKPIs
+          totalOpen={totalOpen}
+          openCount={openCount}
+          overdueCount={overdueCount}
+          avgDaysToClose={avgDaysToClose}
+          closedThisWeek={closedThisWeek}
+          totalCostImpact={totalCostImpact}
+          totalRfis={rfis.length}
+          closedCount={rfis.filter((r) => r.status === 'closed').length}
         />
-        <MetricCard
-          label="Overdue"
-          value={overdueCount}
-          icon={<AlertCircle size={18} color={overdueCount > 0 ? colors.statusCritical : colors.textTertiary} />}
-          alert={overdueCount > 0}
-          subtitle={overdueCount > 0 ? 'Requires attention' : 'All on track'}
-        />
-        <MetricCard
-          label="Avg Resolution"
-          value={`${avgDaysToClose}d`}
-          icon={<Timer size={18} color={colors.statusPending} />}
-          subtitle={closedThisWeek > 0 ? `${closedThisWeek} closed this week` : 'No closures this week'}
-        />
-        <MetricCard
-          label="Cost Impact"
-          value={totalCostImpact ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, notation: 'compact' }).format(totalCostImpact) : '$0'}
-          icon={<TrendingUp size={18} color={totalCostImpact > 0 ? colors.statusCritical : colors.statusActive} />}
-          alert={totalCostImpact > 50000}
-          subtitle={totalCostImpact > 0 ? 'Potential exposure' : 'No cost impact'}
-        />
+      </motion.div>
+
+      {/* ─── Section Header ─────────────────────────────── */}
+      <motion.div
+        initial={reducedMotion ? undefined : { opacity: 0, y: 6 }}
+        animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1, ease: 'easeOut' }}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: spacing['3'],
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+          <h2 style={{
+            margin: 0, fontSize: typography.fontSize.title, fontWeight: 600,
+            color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight,
+          }}>
+            RFI Register
+          </h2>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            minWidth: 22, height: 22, padding: '0 6px',
+            borderRadius: borderRadius.full,
+            backgroundColor: colors.surfaceInset,
+            color: colors.textTertiary,
+            fontSize: 12, fontWeight: 600,
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {rfis.length}
+          </span>
+        </div>
+        <span style={{
+          fontSize: 11, color: colors.textTertiary, fontWeight: 500,
+          padding: `2px ${spacing['2']}`, backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.sm,
+          fontFamily: typography.fontFamily,
+        }}>
+          ↑/↓ navigate · Enter open
+        </span>
       </motion.div>
 
       {/* ─── Table / Kanban ────────────────────────────── */}
@@ -822,59 +831,20 @@ const RFIsPage: React.FC = () => {
         <div style={{
           backgroundColor: colors.surfaceRaised,
           border: `1px solid ${colors.borderSubtle}`,
-          borderRadius: '14px',
+          borderRadius: borderRadius.xl,
           overflow: 'hidden',
         }}>
-          {/* Status Filter Tabs */}
-          <div
-            role="tablist"
-            aria-label="Filter RFIs by status"
-            style={{
-              display: 'flex', gap: '2px', padding: '10px 16px',
-              borderBottom: `1px solid ${colors.borderSubtle}`,
-              overflowX: 'auto',
-            }}
-          >
-            {STATUS_TABS.map((tab) => {
-              const count = tab.key === 'all' ? allRfis.length
-                : tab.key === 'overdue' ? allRfis.filter((r) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length
-                : allRfis.filter((r) => r.status === tab.key).length;
-              const isSelected = statusFilter === tab.key;
-              const isOverdueTab = tab.key === 'overdue' && count > 0;
-              return (
-                <button
-                  key={tab.key}
-                  role="tab"
-                  className="rfi-interactive rfi-tab"
-                  aria-selected={isSelected}
-                  onClick={() => setStatusFilter(tab.key)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '5px',
-                    padding: '6px 12px', border: 'none', borderRadius: '8px',
-                    backgroundColor: isSelected ? colors.primaryOrange : 'transparent',
-                    color: isSelected ? colors.white : isOverdueTab ? colors.statusCritical : colors.textSecondary,
-                    fontSize: '12px',
-                    fontWeight: isSelected ? 600 : 500,
-                    fontFamily: typography.fontFamily,
-                    cursor: 'pointer', whiteSpace: 'nowrap',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {tab.icon && <span style={{ opacity: isSelected ? 1 : 0.7, display: 'flex' }}>{tab.icon}</span>}
-                  {tab.label}
-                  {count > 0 && (
-                    <span style={{
-                      fontSize: '10px', fontWeight: 600,
-                      backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : colors.surfaceInset,
-                      color: isSelected ? colors.white : isOverdueTab ? colors.statusCritical : colors.textTertiary,
-                      borderRadius: '10px', padding: '1px 6px', minWidth: 18, textAlign: 'center',
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* Premium Status Filter Tabs */}
+          <div style={{
+            padding: '10px 16px',
+            borderBottom: `1px solid ${colors.borderSubtle}`,
+            overflowX: 'auto',
+          }}>
+            <RFITabBar
+              activeTab={statusFilter}
+              onTabChange={setStatusFilter}
+              counts={tabCounts}
+            />
           </div>
 
           {/* Table Content */}
@@ -937,63 +907,101 @@ const RFIsPage: React.FC = () => {
           columns={kanbanColumns}
           getKey={(rfi) => rfi.id}
           onMoveItem={handleKanbanMove}
-          renderCard={(rfi) => (
-            <motion.div
-              whileHover={{ y: -1, boxShadow: shadows.cardHover }}
-              transition={{ duration: 0.12, ease: 'easeOut' }}
-              style={{
-                padding: '14px', cursor: 'pointer',
-                borderRadius: '10px',
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`Open RFI ${rfi.rfiNumber}: ${rfi.title}`}
-              onClick={() => setSelectedRfi(rfi)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRfi(rfi); } }}
-            >
-              {/* Card Header */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                marginBottom: '8px',
-              }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: colors.primaryOrange }}>
-                  {rfi.rfiNumber}
-                </span>
-                <PriorityTag priority={rfi.priority} />
-                {rfi.is_auto_generated && (
-                  <Sparkles size={10} color={colors.primaryOrange} style={{ opacity: 0.7 }} />
-                )}
-              </div>
-
-              {/* Card Title */}
-              <p style={{
-                fontSize: '13px', fontWeight: 500, color: colors.textPrimary,
-                margin: '0 0 10px', lineHeight: 1.4,
-                display: '-webkit-box', WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical', overflow: 'hidden',
-              } as React.CSSProperties}>
-                {rfi.title}
-              </p>
-
-              {/* Card Footer */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <BicBadge party={deriveBic(rfi)} />
-                <span style={{
-                  fontSize: '11px',
-                  color: isOverdue(rfi.dueDate) ? colors.statusCritical : colors.textTertiary,
-                  fontWeight: isOverdue(rfi.dueDate) ? 600 : 400,
+          renderCard={(rfi) => {
+            const cardOverdue = isOverdue(rfi.dueDate) && rfi.status !== 'closed';
+            const daysOpen = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
+            return (
+              <div
+                className="rfi-kanban-card"
+                style={{
+                  padding: '16px', cursor: 'pointer',
+                  borderRadius: borderRadius.lg,
+                  position: 'relative',
+                  transition: `all 200ms cubic-bezier(0.16, 1, 0.3, 1)`,
+                  borderLeft: cardOverdue ? `3px solid ${colors.statusCritical}` : '3px solid transparent',
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open RFI ${rfi.rfiNumber}: ${rfi.title}`}
+                onClick={() => setSelectedRfi(rfi)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRfi(rfi); } }}
+              >
+                {/* Card Header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  marginBottom: '8px',
                 }}>
-                  {formatShortDate(rfi.dueDate)}
-                </span>
-              </div>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 700, color: colors.primaryOrange,
+                    fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em',
+                  }}>
+                    {rfi.rfiNumber}
+                  </span>
+                  <PriorityTag priority={rfi.priority} />
+                  {rfi.is_auto_generated && (
+                    <Sparkles size={10} color={colors.primaryOrange} style={{ opacity: 0.7 }} />
+                  )}
+                  <span style={{
+                    marginLeft: 'auto',
+                    fontSize: '10px', fontWeight: 600,
+                    color: daysOpen > 10 ? colors.statusCritical : daysOpen > 5 ? colors.statusPending : colors.textTertiary,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {daysOpen}d
+                  </span>
+                </div>
 
-              {getAnnotationsForEntity('rfi', rfi.id).map((ann) => (
-                <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-              ))}
-            </motion.div>
-          )}
+                {/* Card Title */}
+                <p style={{
+                  fontSize: '13px', fontWeight: 500, color: colors.textPrimary,
+                  margin: '0 0 12px', lineHeight: 1.4,
+                  display: '-webkit-box', WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                } as React.CSSProperties}>
+                  {rfi.title}
+                </p>
+
+                {/* Card Footer */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <BicBadge party={deriveBic(rfi)} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Calendar size={10} color={cardOverdue ? colors.statusCritical : colors.textTertiary} />
+                    <span style={{
+                      fontSize: '11px',
+                      color: cardOverdue ? colors.statusCritical : colors.textTertiary,
+                      fontWeight: cardOverdue ? 600 : 400,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {formatShortDate(rfi.dueDate)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cost impact micro-badge */}
+                {rfi.cost_impact != null && Number(rfi.cost_impact) > 0 && (
+                  <div style={{
+                    marginTop: '8px', paddingTop: '8px',
+                    borderTop: `1px solid ${colors.borderSubtle}`,
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                  }}>
+                    <DollarSign size={10} color={colors.statusCritical} />
+                    <span style={{
+                      fontSize: '11px', fontWeight: 600, color: colors.statusCritical,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      +{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, notation: 'compact' }).format(Number(rfi.cost_impact))}
+                    </span>
+                  </div>
+                )}
+
+                {getAnnotationsForEntity('rfi', rfi.id).map((ann) => (
+                  <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
+                ))}
+              </div>
+            );
+          }}
         />
         </motion.div>
       )}
@@ -1086,11 +1094,18 @@ const RFIsPage: React.FC = () => {
       >
         {selectedRfi && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Header */}
+            {/* Premium Header */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: colors.primaryOrange }}>{selectedRfi.rfiNumber}</span>
+                  <span style={{
+                    fontSize: '12px', fontWeight: 700, color: colors.primaryOrange,
+                    fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em',
+                    padding: '2px 8px', backgroundColor: `${colors.primaryOrange}08`,
+                    borderRadius: borderRadius.sm, border: `1px solid ${colors.primaryOrange}15`,
+                  }}>
+                    {selectedRfi.rfiNumber}
+                  </span>
                   <StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />
                   <PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />
                 </div>
@@ -1106,9 +1121,38 @@ const RFIsPage: React.FC = () => {
               <h3 style={{
                 margin: 0, fontSize: '18px', fontWeight: 600,
                 color: colors.textPrimary, lineHeight: 1.35,
+                letterSpacing: typography.letterSpacing.tight,
               }}>
                 {selectedRfi.title}
               </h3>
+              {/* Days open indicator */}
+              {(() => {
+                const daysOpen = Math.floor((Date.now() - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
+                const overdue = isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed';
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 600,
+                      color: daysOpen > 10 ? colors.statusCritical : daysOpen > 5 ? colors.statusPending : colors.textTertiary,
+                    }}>
+                      {daysOpen}d open
+                    </span>
+                    {overdue && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        fontSize: '11px', fontWeight: 600, color: colors.statusCritical,
+                      }}>
+                        <AlertCircle size={10} /> Overdue
+                      </span>
+                    )}
+                    {selectedRfi.dueDate && !overdue && selectedRfi.status !== 'closed' && (
+                      <span style={{ fontSize: '11px', color: colors.textTertiary }}>
+                        Due {formatShortDate(selectedRfi.dueDate)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <EditingLockBanner entityType="RFI" entityId={String(selectedRfi.id)} isEditing={editingDetail} />

@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
-import { MetricCardSkeleton } from '../../components/ui/Skeletons';
-import { colors, spacing, typography, borderRadius, shadows, layout } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions, layout } from '../../styles/theme';
 import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
 import { ExportButton } from '../../components/shared/ExportButton';
 import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw, Search, Upload } from 'lucide-react';
 import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../../hooks/mutations';
 import { useProjectId } from '../../hooks/useProjectId';
+import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { PermissionGate } from '../../components/auth/PermissionGate';
@@ -25,6 +26,9 @@ import { SubmittalsKanban } from './SubmittalsKanban';
 import { SubmittalDetail } from './SubmittalDetail';
 import { GroupedSubmittalsView, GroupBySelector } from './GroupedSubmittalsView';
 import type { GroupByMode } from './GroupedSubmittalsView';
+import { SubmittalKPIs } from './SubmittalKPIs';
+import { SubmittalTabBar } from './SubmittalTabBar';
+import type { SubmittalStatusFilter } from './SubmittalTabBar';
 
 const SubmittalsPage: React.FC = () => {
   // Selector-based access avoids re-rendering this page on every copilot state
@@ -37,10 +41,10 @@ const SubmittalsPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [groupBy, setGroupBy] = useState<GroupByMode>('spec_section');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<SubmittalStatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const hasActiveFilters = statusFilter !== null || searchQuery.trim() !== '';
-  const clearFilters = () => { setStatusFilter(null); setSearchQuery(''); };
+  const hasActiveFilters = statusFilter !== 'all' || searchQuery.trim() !== '';
+  const clearFilters = () => { setStatusFilter('all'); setSearchQuery(''); };
   const navigate = useNavigate();
   const projectId = useProjectId();
   const createSubmittal = useCreateSubmittal();
@@ -52,17 +56,8 @@ const SubmittalsPage: React.FC = () => {
   const { data: aiInsights } = useAIInsights(projectId, 'submittals');
   const specFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Real-time subscription for submittal changes
-  useEffect(() => {
-    if (!projectId) return;
-    const channel = supabase
-      .channel('submittals-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'submittals', filter: `project_id=eq.${projectId}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['submittals', projectId] });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [projectId, queryClient]);
+  // Real-time subscription for all project tables (submittals + adjacent entities).
+  useRealtimeInvalidation(projectId);
 
   const handleSpecImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,20 +112,45 @@ const SubmittalsPage: React.FC = () => {
     return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date();
   }).length, [allSubmittals]);
 
-  const STATUS_FILTER_TABS: Array<{ label: string; value: string | null; count: number }> = [
-    { label: 'All', value: null, count: totalCount },
-    { label: 'Pending', value: 'pending', count: pendingReviewCount },
-    { label: 'In Review', value: 'in_review', count: allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review').length },
-    { label: 'Approved', value: 'approved', count: approvedCount },
-    { label: 'Rejected', value: 'rejected', count: allSubmittals.filter((s) => s.status === 'rejected').length },
-    { label: 'Resubmit', value: 'revise_resubmit', count: allSubmittals.filter((s) => s.status === 'revise_resubmit').length },
-  ];
+  const inReviewCount = useMemo(() => allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review').length, [allSubmittals]);
+  const rejectedCount = useMemo(() => allSubmittals.filter((s) => s.status === 'rejected').length, [allSubmittals]);
+  const resubmitCount = useMemo(() => allSubmittals.filter((s) => s.status === 'revise_resubmit').length, [allSubmittals]);
+
+  const tabCounts = useMemo<Record<SubmittalStatusFilter, number>>(() => ({
+    all: totalCount,
+    pending: pendingReviewCount,
+    in_review: inReviewCount,
+    approved: approvedCount,
+    rejected: rejectedCount,
+    revise_resubmit: resubmitCount,
+  }), [totalCount, pendingReviewCount, inReviewCount, approvedCount, rejectedCount, resubmitCount]);
+
+  // Compute average days in review for KPIs
+  const avgDaysInReview = useMemo(() => {
+    const reviewed = allSubmittals.filter((s) => s.status === 'approved' || s.status === 'approved_as_noted');
+    if (reviewed.length === 0) return 0;
+    const totalDays = reviewed.reduce((sum, s) => {
+      const start = new Date((s.submission_date || s.submitted_at || s.created_at) as string);
+      const end = new Date((s.updated_at || s.approval_date) as string);
+      return sum + Math.max(0, Math.round((end.getTime() - start.getTime()) / 86400000));
+    }, 0);
+    return Math.round(totalDays / reviewed.length);
+  }, [allSubmittals]);
+
+  const approvedThisWeek = useMemo(() => {
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    return allSubmittals.filter((s) => {
+      if (s.status !== 'approved' && s.status !== 'approved_as_noted') return false;
+      const d = new Date((s.updated_at || s.approval_date) as string);
+      return d >= weekAgo;
+    }).length;
+  }, [allSubmittals]);
 
   const filteredSubmittals = useMemo(() => {
     let rows = allSubmittals;
     if (statusFilter === 'in_review') {
       rows = rows.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
-    } else if (statusFilter) {
+    } else if (statusFilter !== 'all') {
       rows = rows.filter((s) => s.status === statusFilter);
     }
     const q = searchQuery.trim().toLowerCase();
@@ -140,7 +160,8 @@ const SubmittalsPage: React.FC = () => {
         return (
           String(rec.title ?? '').toLowerCase().includes(q) ||
           String(rec.number ?? '').toLowerCase().includes(q) ||
-          String(rec.spec_section ?? '').toLowerCase().includes(q)
+          String(rec.spec_section ?? '').toLowerCase().includes(q) ||
+          String(rec.subcontractor ?? '').toLowerCase().includes(q)
         );
       });
     }
@@ -162,43 +183,85 @@ const SubmittalsPage: React.FC = () => {
   }
 
   if (loading) {
+    const shimmerBg = `linear-gradient(90deg, ${colors.surfaceInset} 25%, ${colors.surfaceHover} 50%, ${colors.surfaceInset} 75%)`;
+    const shimmerStyle = (w: number | string, h: number) => ({
+      width: typeof w === 'number' ? w : w,
+      height: h,
+      borderRadius: borderRadius.sm,
+      background: shimmerBg,
+      backgroundSize: '200% 100%',
+      animation: 'sub-shimmer 1.5s ease-in-out infinite',
+    } as React.CSSProperties);
+
     return (
       <PageContainer title="Submittals" subtitle="Loading...">
-        <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['6'] }}>
+        <style>{`@keyframes sub-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+        {/* KPI card skeletons */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
           {Array.from({ length: 4 }).map((_, i) => (
-            <MetricCardSkeleton key={i} />
-          ))}
-        </div>
-        <Card padding="0">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                height: 52,
-                borderBottom: `1px solid ${colors.borderLight}`,
-                padding: `0 ${spacing['4']}`,
-                display: 'grid',
-                gridTemplateColumns: '100px 1fr 140px 100px 90px',
-                alignItems: 'center',
-                gap: spacing['4'],
-                animation: 'submittals-pulse 1.5s ease-in-out infinite',
-                animationDelay: `${i * 0.08}s`,
-              }}
-            >
-              <div style={{ width: 76, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
-              <div style={{ height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
-              <div style={{ width: 110, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
-              <div style={{ width: 80, height: 22, borderRadius: borderRadius.full, backgroundColor: colors.border }} />
-              <div style={{ width: 72, height: 14, borderRadius: borderRadius.sm, backgroundColor: colors.border }} />
+            <div key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px',
+              backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: borderRadius.xl,
+            }}>
+              <div style={{ ...shimmerStyle(40, 40), borderRadius: borderRadius.lg }} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={shimmerStyle(80, 10)} />
+                <div style={shimmerStyle(48, 20)} />
+                <div style={shimmerStyle(100, 9)} />
+              </div>
+              <div style={{ ...shimmerStyle(56, 22), alignSelf: 'center' }} />
             </div>
           ))}
+        </div>
+
+        {/* Section header skeleton */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={shimmerStyle(130, 18)} />
+            <div style={{ ...shimmerStyle(24, 18), borderRadius: borderRadius.full }} />
+          </div>
+          <div style={{ ...shimmerStyle(170, 22), borderRadius: borderRadius.full }} />
+        </div>
+
+        {/* Tab bar skeleton */}
+        <Card padding="0">
+          <div style={{ padding: '16px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: 4, padding: 3, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg }}>
+              {[60, 55, 62, 65, 55, 62].map((w, i) => (
+                <div key={i} style={{ ...shimmerStyle(w, 28), borderRadius: borderRadius.md }} />
+              ))}
+            </div>
+            <div style={shimmerStyle(240, 32)} />
+          </div>
+          {/* Row skeletons */}
+          <div style={{ padding: '12px 0' }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{
+                display: 'grid', gridTemplateColumns: '40px 90px 1fr 90px 100px 120px 80px',
+                alignItems: 'center', gap: 12, padding: '10px 20px',
+                borderBottom: i < 5 ? `1px solid ${colors.borderSubtle}` : 'none',
+              }}>
+                <div style={{ ...shimmerStyle(16, 16), borderRadius: 3 }} />
+                <div style={shimmerStyle(70, 13)} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={shimmerStyle('80%', 13)} />
+                  <div style={shimmerStyle('50%', 10)} />
+                </div>
+                <div style={shimmerStyle(60, 13)} />
+                <div style={{ ...shimmerStyle(72, 20), borderRadius: borderRadius.full }} />
+                <div style={shimmerStyle(90, 13)} />
+                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  <div style={{ ...shimmerStyle(10, 10), borderRadius: '50%' }} />
+                  <div style={{ ...shimmerStyle(8, 1) }} />
+                  <div style={{ ...shimmerStyle(10, 10), borderRadius: '50%' }} />
+                  <div style={{ ...shimmerStyle(8, 1) }} />
+                  <div style={{ ...shimmerStyle(10, 10), borderRadius: '50%' }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
-        <style>{`
-          @keyframes submittals-pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.7; }
-          }
-        `}</style>
       </PageContainer>
     );
   }
@@ -290,255 +353,208 @@ const SubmittalsPage: React.FC = () => {
   return (
     <PageContainer
       title="Submittals"
-      subtitle={`${allSubmittals.length} total`}
+      subtitle={`${openCount} active · ${overdueCount > 0 ? `${overdueCount} overdue` : 'none overdue'}`}
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <PresenceAvatars page="submittals" size={28} />
+          {/* View Toggle */}
+          <div style={{
+            display: 'flex',
+            borderRadius: borderRadius.md,
+            overflow: 'hidden',
+            border: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surfaceInset,
+            padding: spacing['0.5'],
+            gap: spacing['0.5'],
+          }}>
+            <button
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 28, border: 'none', cursor: 'pointer',
+                borderRadius: borderRadius.base,
+                backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent',
+                color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary,
+                boxShadow: viewMode === 'table' ? shadows.sm : 'none',
+                transition: `all ${transitions.quick}`,
+              }}
+              onClick={() => setViewMode('table')}
+              title="List View" aria-label="List View"
+            >
+              <List size={14} />
+            </button>
+            <button
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 28, border: 'none', cursor: 'pointer',
+                borderRadius: borderRadius.base,
+                backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent',
+                color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary,
+                boxShadow: viewMode === 'kanban' ? shadows.sm : 'none',
+                transition: `all ${transitions.quick}`,
+              }}
+              onClick={() => setViewMode('kanban')}
+              title="Board View" aria-label="Board View"
+            >
+              <LayoutGrid size={14} />
+            </button>
+          </div>
+
           <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
+          <PresenceAvatars page="submittals" size={28} />
+
+          {/* New Submittal */}
+          <PermissionGate permission="submittals.create">
+            <Btn onClick={() => setShowCreateModal(true)}>+ New Submittal</Btn>
+          </PermissionGate>
         </div>
       }
     >
-      {/* Predictive alerts - subtle placement */}
+      {/* Predictive alerts */}
       {pageAlerts.map((alert) => (
         <div key={alert.id} style={{ marginBottom: spacing['3'] }}>
           <PredictiveAlertBanner alert={alert} />
         </div>
       ))}
 
-      {/* Hero Metric Bar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: spacing['8'],
-        padding: `${spacing['5']} ${spacing['6']}`,
-        backgroundColor: colors.surfaceRaised,
-        borderRadius: borderRadius.xl,
-        border: `1px solid ${colors.borderSubtle}`,
-        marginBottom: spacing['5'],
-        boxShadow: shadows.sm,
-      }}>
-        {[
-          { label: 'Total', value: totalCount, color: colors.textPrimary },
-          { label: 'Pending Review', value: pendingReviewCount, color: colors.statusPending },
-          { label: 'Approved', value: approvedCount, color: colors.statusActive },
-          { label: 'Overdue', value: overdueCount, color: colors.statusCritical },
-        ].map(({ label, value, color }, idx) => (
-          <React.Fragment key={label}>
-            {idx > 0 && (
-              <div style={{ width: 1, height: 32, backgroundColor: colors.borderSubtle }} />
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['0.5'] }}>
-              <span style={{
-                fontSize: typography.fontSize.caption,
-                fontWeight: typography.fontWeight.medium,
-                color: colors.textTertiary,
-                textTransform: 'uppercase',
-                letterSpacing: typography.letterSpacing.wider,
-              }}>
-                {label}
-              </span>
-              <span style={{
-                fontSize: typography.fontSize.large,
-                fontWeight: typography.fontWeight.semibold,
-                color,
-                lineHeight: typography.lineHeight.none,
-              }}>
-                {value}
-              </span>
-            </div>
-          </React.Fragment>
-        ))}
-      </div>
-
-      {/* Unified Toolbar: Search + Filters + View Toggle + New Button */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: spacing['3'],
-        marginBottom: spacing['5'],
-        flexWrap: 'wrap',
-      }}>
-        {/* Search */}
-        <div style={{ position: 'relative', flex: '0 1 280px', minWidth: 200 }}>
-          <Search
-            size={15}
-            style={{
-              position: 'absolute',
-              left: spacing['3'],
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: colors.textTertiary,
-              pointerEvents: 'none',
-            }}
-          />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search submittals..."
-            aria-label="Search submittals"
-            data-testid="search-submittals"
-            style={{
-              width: '100%',
-              padding: `${spacing['2']} ${spacing['3']} ${spacing['2']} ${spacing['8']}`,
-              border: `1px solid ${colors.borderSubtle}`,
-              borderRadius: borderRadius.full,
-              fontSize: typography.fontSize.sm,
-              fontFamily: typography.fontFamily,
-              backgroundColor: colors.surfacePage,
-              color: colors.textPrimary,
-              outline: 'none',
-              transition: 'border-color 150ms ease, box-shadow 150ms ease',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = colors.primaryOrange;
-              e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.orangeSubtle}`;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = colors.borderSubtle;
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          />
-        </div>
-
-        {/* Filter Pills */}
-        <div style={{ display: 'flex', gap: spacing['1'], alignItems: 'center', flex: '1 1 auto' }}>
-          {STATUS_FILTER_TABS.map(({ label, value, count }) => {
-            const active = statusFilter === value;
-            return (
-              <button
-                key={label}
-                onClick={() => setStatusFilter(value)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: spacing['1'],
-                  padding: `${spacing['1.5']} ${spacing['3']}`,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: typography.fontSize.label,
-                  fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
-                  color: active ? colors.white : colors.textSecondary,
-                  backgroundColor: active ? colors.primaryOrange : colors.surfaceInset,
-                  borderRadius: borderRadius.full,
-                  transition: 'all 150ms ease',
-                  whiteSpace: 'nowrap',
-                  lineHeight: typography.lineHeight.normal,
-                }}
-              >
-                {label}
-                {count > 0 && (
-                  <span style={{
-                    fontSize: typography.fontSize.caption,
-                    fontWeight: typography.fontWeight.medium,
-                    color: active ? 'rgba(255,255,255,0.8)' : colors.textTertiary,
-                    backgroundColor: active ? 'rgba(255,255,255,0.2)' : colors.borderSubtle,
-                    borderRadius: borderRadius.full,
-                    padding: `0 ${spacing['1.5']}`,
-                    minWidth: 18,
-                    textAlign: 'center',
-                    lineHeight: '18px',
-                  }}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Group By (only shown in table mode) */}
-        {viewMode === 'table' && (
-          <GroupBySelector value={groupBy} onChange={setGroupBy} />
-        )}
-
-        {/* View Toggle (segmented control) */}
-        <div style={{
-          display: 'flex',
-          borderRadius: borderRadius.md,
-          overflow: 'hidden',
-          border: `1px solid ${colors.borderSubtle}`,
-          backgroundColor: colors.surfaceInset,
-          padding: spacing['0.5'],
-          gap: spacing['0.5'],
-        }}>
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 28,
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: borderRadius.base,
-              backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent',
-              color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary,
-              boxShadow: viewMode === 'table' ? shadows.sm : 'none',
-              transition: 'all 150ms ease',
-            }}
-            onClick={() => setViewMode('table')}
-            title="Table View"
-            aria-label="Table View"
-          >
-            <List size={14} />
-          </button>
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 28,
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: borderRadius.base,
-              backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent',
-              color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary,
-              boxShadow: viewMode === 'kanban' ? shadows.sm : 'none',
-              transition: 'all 150ms ease',
-            }}
-            onClick={() => setViewMode('kanban')}
-            title="Board View"
-            aria-label="Board View"
-          >
-            <LayoutGrid size={14} />
-          </button>
-        </div>
-
-        {/* New Submittal Button */}
-        <PermissionGate permission="submittals.create">
-          <Btn onClick={() => setShowCreateModal(true)}>New Submittal</Btn>
-        </PermissionGate>
-      </div>
-
-      {/* Content area */}
-      {viewMode === 'table' ? (
-        groupBy !== 'none' ? (
-          <GroupedSubmittalsView
-            filteredSubmittals={filteredSubmittals}
-            groupBy={groupBy}
-            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
-          />
-        ) : (
-          <SubmittalsTable
-            filteredSubmittals={filteredSubmittals}
-            allSubmittals={allSubmittals}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-            loading={loading}
-            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
-            clearFilters={clearFilters}
-            projectId={projectId}
-            updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
-          />
-        )
-      ) : (
-        <SubmittalsKanban
-          allSubmittals={allSubmittals}
-          onSelectSubmittal={(id) => setSelectedId(id)}
+      {/* ─── Premium KPI Cards ────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
+        <SubmittalKPIs
+          totalCount={totalCount}
+          pendingReviewCount={pendingReviewCount}
+          overdueCount={overdueCount}
+          approvedCount={approvedCount}
+          avgDaysInReview={avgDaysInReview}
+          closedThisWeek={approvedThisWeek}
         />
-      )}
+      </motion.div>
+
+      {/* ─── Section Header: "Submittal Register" ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h2 style={{
+            margin: 0, fontSize: typography.fontSize.subtitle,
+            fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
+            letterSpacing: typography.letterSpacing.tight,
+          }}>
+            Submittal Register
+          </h2>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            minWidth: 22, height: 22, padding: '0 7px',
+            borderRadius: borderRadius.full,
+            backgroundColor: colors.primaryOrange + '14',
+            color: colors.primaryOrange,
+            fontSize: 12, fontWeight: 700,
+          }}>
+            {totalCount}
+          </span>
+        </div>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px', borderRadius: borderRadius.full,
+          backgroundColor: colors.surfaceInset,
+          fontSize: 11, fontWeight: 500, color: colors.textTertiary,
+          letterSpacing: '0.01em',
+        }}>
+          ↑/↓ navigate · Enter open
+        </span>
+      </motion.div>
+
+      {/* ─── Table / Kanban Card ────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Card padding="0">
+          {/* Toolbar inside card: Tab Bar + Search + GroupBy */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '14px 20px', borderBottom: `1px solid ${colors.borderSubtle}`,
+            flexWrap: 'wrap', gap: 12,
+          }}>
+            <SubmittalTabBar activeTab={statusFilter} onTabChange={setStatusFilter} counts={tabCounts} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+              {/* Search */}
+              <div style={{ position: 'relative', width: 240 }}>
+                <Search
+                  size={15}
+                  style={{
+                    position: 'absolute', left: spacing['3'], top: '50%',
+                    transform: 'translateY(-50%)', color: colors.textTertiary,
+                    pointerEvents: 'none',
+                  }}
+                />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search submittals..."
+                  aria-label="Search submittals"
+                  data-testid="search-submittals"
+                  style={{
+                    width: '100%',
+                    padding: `6px ${spacing['3']} 6px ${spacing['8']}`,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: borderRadius.full,
+                    fontSize: 13, fontFamily: typography.fontFamily,
+                    backgroundColor: colors.surfacePage, color: colors.textPrimary,
+                    outline: 'none',
+                    transition: `border-color ${transitions.quick}, box-shadow ${transitions.quick}`,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.primaryOrange;
+                    e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.orangeSubtle}`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderSubtle;
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                />
+              </div>
+              {/* Group By (table mode only) */}
+              {viewMode === 'table' && (
+                <GroupBySelector value={groupBy} onChange={setGroupBy} />
+              )}
+            </div>
+          </div>
+
+          {/* Content area */}
+          {viewMode === 'table' ? (
+            groupBy !== 'none' ? (
+              <GroupedSubmittalsView
+                filteredSubmittals={filteredSubmittals}
+                groupBy={groupBy}
+                onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+              />
+            ) : (
+              <SubmittalsTable
+                filteredSubmittals={filteredSubmittals}
+                allSubmittals={allSubmittals}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                loading={loading}
+                onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+                clearFilters={clearFilters}
+                projectId={projectId}
+                updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
+              />
+            )
+          ) : (
+            <SubmittalsKanban
+              allSubmittals={filteredSubmittals}
+              onSelectSubmittal={(id) => setSelectedId(id)}
+            />
+          )}
+        </Card>
+      </motion.div>
 
       <SubmittalDetail
         selected={selected as Record<string, unknown> | null}

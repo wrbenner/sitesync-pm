@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { PriorityTag } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { KanbanBoard } from '../../components/shared/KanbanBoard';
 import type { KanbanColumn } from '../../components/shared/KanbanBoard';
 import { Calendar, Clock, User } from 'lucide-react';
-import { isOverdue } from './types';
+import { isOverdue, MiniApprovalChain } from './types';
 
 interface SubmittalsKanbanProps {
   allSubmittals: Array<Record<string, unknown>>;
@@ -20,6 +20,7 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
   ], [allSubmittals]);
 
   return (
+    <>
     <KanbanBoard
       columns={kanbanColumns}
       getKey={(sub) => (sub as Record<string, unknown>).id as string | number}
@@ -37,12 +38,15 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
 
         return (
           <div
+            className="sub-kanban-card"
             style={{
               padding: `${spacing['3']} ${spacing['4']}`,
               cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
               gap: spacing['2'],
+              borderLeft: overdue ? `3px solid ${colors.statusCritical}` : 'none',
+              transition: `box-shadow 200ms ease, transform 200ms ease`,
             }}
             onClick={() => onSelectSubmittal(subId)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectSubmittal(subId); } }}
@@ -50,19 +54,22 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
             tabIndex={0}
             aria-label={`View submittal ${subNumber}: ${title}`}
           >
-            {/* Top row: number + priority */}
+            {/* Top row: number + priority + age */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
               <span style={{
-                fontSize: typography.fontSize.caption,
-                fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamilyMono,
+                fontSize: 11,
+                fontWeight: 700,
                 color: colors.primaryOrange,
                 letterSpacing: '0.02em',
               }}>
                 {subNumber}
               </span>
-              <PriorityTag priority={s.priority as 'low' | 'medium' | 'high' | 'critical'} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <PriorityTag priority={s.priority as 'low' | 'medium' | 'high' | 'critical'} />
+              </div>
             </div>
 
             {/* Title */}
@@ -79,21 +86,23 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
               {title}
             </div>
 
-            {/* Spec section badge */}
-            {specSection && (
-              <span style={{
-                alignSelf: 'flex-start',
-                fontSize: '10px',
-                fontFamily: 'monospace',
-                padding: '1px 6px',
-                borderRadius: borderRadius.sm,
-                backgroundColor: colors.statusInfoSubtle,
-                color: colors.statusInfo,
-                fontWeight: typography.fontWeight.medium,
-              }}>
-                {specSection}
-              </span>
-            )}
+            {/* Spec section badge + Approval chain */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {specSection && (
+                <span style={{
+                  fontSize: '10px',
+                  fontFamily: typography.fontFamilyMono,
+                  padding: '1px 6px',
+                  borderRadius: borderRadius.sm,
+                  backgroundColor: colors.statusInfoSubtle,
+                  color: colors.statusInfo,
+                  fontWeight: typography.fontWeight.medium,
+                }}>
+                  {specSection}
+                </span>
+              )}
+              <MiniApprovalChain status={status} approvalChain={s.approval_chain} />
+            </div>
 
             {/* Bottom row: from + due date */}
             <div style={{
@@ -114,34 +123,36 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
                 <span />
               )}
 
-              {dueDate && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3,
-                  fontSize: '11px',
-                  color: overdue ? colors.statusCritical : colors.textTertiary,
-                  fontWeight: overdue ? typography.fontWeight.semibold : typography.fontWeight.normal,
-                }}>
-                  <Calendar size={10} />
-                  {new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {leadTime != null && leadTime >= 8 && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    fontSize: '10px',
+                    color: leadTime > 12 ? colors.statusCritical : colors.statusPending,
+                    fontWeight: typography.fontWeight.medium,
+                  }}>
+                    <Clock size={9} />
+                    {leadTime}wk
+                  </span>
+                )}
+                {dueDate && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    fontSize: '11px',
+                    color: overdue ? colors.statusCritical : colors.textTertiary,
+                    fontWeight: overdue ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                  }}>
+                    <Calendar size={10} />
+                    {new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+              </div>
             </div>
-
-            {/* Lead time indicator */}
-            {leadTime != null && leadTime >= 8 && (
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3,
-                fontSize: '10px',
-                color: leadTime > 12 ? colors.statusCritical : colors.statusPending,
-                fontWeight: typography.fontWeight.medium,
-              }}>
-                <Clock size={9} />
-                {leadTime} wk lead
-              </span>
-            )}
           </div>
         );
       }}
     />
+    <style>{`.sub-kanban-card:hover { box-shadow: ${shadows.cardHover}; transform: translateY(-1px); }`}</style>
+    </>
   );
 };

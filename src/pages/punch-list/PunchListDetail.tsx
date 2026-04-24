@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Btn, DetailPanel, Avatar, PriorityTag } from '../../components/Primitives';
 import {
   Camera, CheckCircle, MessageSquare, RefreshCw, XCircle,
   MapPin, Wrench, Calendar, User, Clock, ChevronRight,
-  Play, Eye, Shield, AlertTriangle,
+  Play, Eye, Shield, AlertTriangle, Send,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { EditableDetailField } from '../../components/forms/EditableField';
@@ -20,6 +20,7 @@ import {
   formatDate,
   getDueDateColor,
   getDaysRemaining,
+  getBallInCourt,
 } from './types';
 import { StatusDot } from './PunchListTable';
 
@@ -156,6 +157,7 @@ interface PunchListDetailProps {
   handleVerify: () => void;
   handleReject: () => void;
   handleAddPhoto: () => void;
+  onAddComment?: (text: string) => Promise<void>;
 }
 
 export const PunchListDetail: React.FC<PunchListDetailProps> = ({
@@ -177,8 +179,25 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
   handleVerify,
   handleReject,
   handleAddPhoto,
+  onAddComment,
 }) => {
   const appNavigate = useAppNavigate();
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  const handleSubmitComment = useCallback(async () => {
+    if (!commentText.trim() || !onAddComment) return;
+    setIsSubmittingComment(true);
+    try {
+      await onAddComment(commentText.trim());
+      setCommentText('');
+      toast.success('Comment added');
+    } catch {
+      toast.error('Failed to add comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  }, [commentText, onAddComment]);
 
   const handleDelete = React.useCallback(async () => {
     if (!selected || !projectId || !deletePunchItem) return;
@@ -353,6 +372,36 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
                 />
               )}
             </div>
+
+            {/* Ball-in-Court indicator */}
+            {selected.verification_status !== 'verified' && (() => {
+              const bic = getBallInCourt(selected);
+              return (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 16px', borderRadius: 12,
+                  backgroundColor: colors.orangeSubtle,
+                  border: `1px solid ${colors.primaryOrange}20`,
+                }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: '50%',
+                    backgroundColor: colors.primaryOrange,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <User size={14} style={{ color: colors.white }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: colors.primaryOrange, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Ball in Court
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary }}>
+                      {bic.label}
+                      {bic.role && <span style={{ fontSize: 11, color: colors.textTertiary, marginLeft: 6 }}>({bic.role})</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Rejection Banner */}
             {selected.rejection_reason && selected.verification_status !== 'verified' && (
@@ -648,11 +697,11 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
                 <MessageSquare size={12} /> Comments ({comments.length})
               </div>
               {comments.length === 0 ? (
-                <p style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center', padding: '16px 0', margin: 0 }}>
+                <p style={{ fontSize: 13, color: colors.textTertiary, textAlign: 'center', padding: '8px 0', margin: 0 }}>
                   No comments yet
                 </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
                   {comments.map((c, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: 10 }}>
                       <Avatar initials={c.initials} size={28} />
@@ -671,6 +720,54 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              {/* Comment input */}
+              {onAddComment && (
+                <div style={{
+                  display: 'flex', gap: 8, alignItems: 'flex-end',
+                  borderTop: comments.length > 0 ? `1px solid ${colors.borderSubtle}` : 'none',
+                  paddingTop: comments.length > 0 ? 12 : 0,
+                }}>
+                  <textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Add a comment..."
+                    rows={1}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        handleSubmitComment();
+                      }
+                    }}
+                    style={{
+                      flex: 1, padding: '8px 12px', fontSize: 13,
+                      fontFamily: 'inherit', lineHeight: 1.5,
+                      border: `1.5px solid ${colors.borderDefault}`,
+                      borderRadius: 10, resize: 'none', outline: 'none',
+                      color: colors.textPrimary,
+                      backgroundColor: colors.surface,
+                      boxSizing: 'border-box',
+                      minHeight: 36,
+                    }}
+                    onFocus={(e) => { (e.target as HTMLTextAreaElement).style.borderColor = colors.primaryOrange; }}
+                    onBlur={(e) => { (e.target as HTMLTextAreaElement).style.borderColor = colors.borderDefault; }}
+                  />
+                  <button
+                    onClick={handleSubmitComment}
+                    disabled={!commentText.trim() || isSubmittingComment}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      border: 'none', cursor: commentText.trim() ? 'pointer' : 'not-allowed',
+                      backgroundColor: commentText.trim() ? colors.primaryOrange : colors.surfaceInset,
+                      color: commentText.trim() ? colors.white : colors.textTertiary,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0, transition: 'all 0.15s',
+                    }}
+                    title="Send comment (⌘+Enter)"
+                  >
+                    <Send size={14} />
+                  </button>
                 </div>
               )}
             </div>
