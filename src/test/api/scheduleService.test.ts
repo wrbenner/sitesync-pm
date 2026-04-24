@@ -64,8 +64,8 @@ describe('scheduleService', () => {
   describe('loadPhases', () => {
     it('queries schedule_phases filtered by project and active only', async () => {
       const mockPhases = [
-        { id: 'ph-1', name: 'Foundation', project_id: 'proj-1', status: 'in_progress' },
-        { id: 'ph-2', name: 'Structure', project_id: 'proj-1', status: 'planned' },
+        { id: 'ph-1', name: 'Foundation', project_id: 'proj-1', status: 'active' },
+        { id: 'ph-2', name: 'Structure', project_id: 'proj-1', status: 'upcoming' },
       ];
       resetChain({ data: mockPhases, error: null });
 
@@ -107,8 +107,8 @@ describe('scheduleService', () => {
   });
 
   describe('createPhase', () => {
-    it('inserts with planned status and created_by from session', async () => {
-      const newPhase = { id: 'ph-new', name: 'Excavation', status: 'planned', project_id: 'proj-1' };
+    it('inserts with upcoming status and created_by from session', async () => {
+      const newPhase = { id: 'ph-new', name: 'Excavation', status: 'upcoming', project_id: 'proj-1' };
       mockSingle.mockResolvedValue({ data: newPhase, error: null });
       mockSelect.mockReturnValue(chain);
       mockInsert.mockReturnValue(chain);
@@ -127,7 +127,7 @@ describe('scheduleService', () => {
         expect.objectContaining({
           project_id: 'proj-1',
           name: 'Excavation',
-          status: 'planned',
+          status: 'upcoming',
           created_by: 'user-99',
         }),
       );
@@ -173,7 +173,7 @@ describe('scheduleService', () => {
       mockSingle
         .mockImplementationOnce(() => {
           phaseCall++;
-          return Promise.resolve({ data: { status: 'planned', project_id: 'p1' }, error: null });
+          return Promise.resolve({ data: { status: 'upcoming', project_id: 'p1' }, error: null });
         })
         .mockImplementationOnce(() => {
           memberCall++;
@@ -184,7 +184,7 @@ describe('scheduleService', () => {
       mockFrom.mockReturnValue(chain);
 
       const { scheduleService } = await importService();
-      const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+      const result = await scheduleService.transitionStatus('ph-1', 'active');
 
       expect(result.error).toContain('Invalid transition');
       expect(phaseCall).toBe(1);
@@ -198,7 +198,7 @@ describe('scheduleService', () => {
       mockFrom.mockReturnValue(chain);
 
       const { scheduleService } = await importService();
-      const result = await scheduleService.transitionStatus('ph-ghost', 'in_progress');
+      const result = await scheduleService.transitionStatus('ph-ghost', 'active');
 
       expect(result.data).toBeNull();
       expect(result.error).toBe('row not found');
@@ -206,14 +206,14 @@ describe('scheduleService', () => {
 
     it('returns error when user has no project membership', async () => {
       mockSingle
-        .mockResolvedValueOnce({ data: { status: 'planned', project_id: 'p1' }, error: null })
+        .mockResolvedValueOnce({ data: { status: 'upcoming', project_id: 'p1' }, error: null })
         .mockResolvedValueOnce({ data: null, error: null }); // no membership row
       mockEq.mockReturnValue(chain);
       mockSelect.mockReturnValue(chain);
       mockFrom.mockReturnValue(chain);
 
       const { scheduleService } = await importService();
-      const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+      const result = await scheduleService.transitionStatus('ph-1', 'active');
 
       expect(result.error).toBe('User is not a member of this project');
     });

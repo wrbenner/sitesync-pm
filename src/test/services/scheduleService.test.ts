@@ -49,7 +49,7 @@ const PHASE = {
   id: 'ph-1',
   project_id: 'proj-1',
   name: 'Foundation Work',
-  status: 'planned',
+  status: 'upcoming',
   start_date: '2026-05-01',
   end_date: '2026-06-15',
   baseline_start: '2026-05-01',
@@ -169,7 +169,7 @@ describe('scheduleService.loadMilestones', () => {
 describe('scheduleService.createPhase', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('creates phase with planned status and created_by from session', async () => {
+  it('creates phase with upcoming status and created_by from session', async () => {
     mockSession('user-1')
     const chain = makeChain([PHASE], null, PHASE)
     mockFrom.mockReturnValue(chain)
@@ -185,7 +185,7 @@ describe('scheduleService.createPhase', () => {
 
     const insertCall = chain.insert as ReturnType<typeof vi.fn>
     const payload = insertCall.mock.calls[0][0]
-    expect(payload.status).toBe('planned')
+    expect(payload.status).toBe('upcoming')
     expect(payload.created_by).toBe('user-1')
     expect(payload.project_id).toBe('proj-1')
   })
@@ -270,9 +270,9 @@ describe('scheduleService.createPhase', () => {
 describe('scheduleService.transitionStatus', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('superintendent can transition planned to in_progress', async () => {
+  it('superintendent can transition upcoming to active', async () => {
     mockSession('super-1')
-    const fetchChain = makeChain([], null, { status: 'planned', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'upcoming', project_id: 'proj-1' })
     const roleChain = makeChain([], null, { role: 'superintendent' })
     const updateEq = vi.fn().mockResolvedValue({ error: null })
     const updateFn = vi.fn().mockReturnValue({ eq: updateEq })
@@ -282,17 +282,17 @@ describe('scheduleService.transitionStatus', () => {
       .mockReturnValueOnce(roleChain)
       .mockReturnValueOnce({ update: updateFn })
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-1', 'active')
 
     expect(result.error).toBeNull()
     expect(updateFn).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'in_progress' }),
+      expect.objectContaining({ status: 'active' }),
     )
   })
 
   it('completing a phase automatically sets percent_complete to 100', async () => {
     mockSession('pm-1')
-    const fetchChain = makeChain([], null, { status: 'in_progress', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'active', project_id: 'proj-1' })
     const roleChain = makeChain([], null, { role: 'project_manager' })
     const updateEq = vi.fn().mockResolvedValue({ error: null })
     const updateFn = vi.fn().mockReturnValue({ eq: updateEq })
@@ -310,9 +310,9 @@ describe('scheduleService.transitionStatus', () => {
     )
   })
 
-  it('in_progress percent_complete is NOT set to 100 on non-completed transitions', async () => {
+  it('active percent_complete is NOT set to 100 on non-completed transitions', async () => {
     mockSession('super-1')
-    const fetchChain = makeChain([], null, { status: 'in_progress', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'active', project_id: 'proj-1' })
     const roleChain = makeChain([], null, { role: 'superintendent' })
     const updateEq = vi.fn().mockResolvedValue({ error: null })
     const updateFn = vi.fn().mockReturnValue({ eq: updateEq })
@@ -330,24 +330,24 @@ describe('scheduleService.transitionStatus', () => {
 
   it('viewer role cannot transition phase status', async () => {
     mockSession('viewer-1')
-    const fetchChain = makeChain([], null, { status: 'planned', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'upcoming', project_id: 'proj-1' })
     const roleChain = makeChain([], null, { role: 'viewer' })
 
     mockFrom.mockReturnValueOnce(fetchChain).mockReturnValueOnce(roleChain)
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-1', 'active')
 
     expect(result.error).toContain('Invalid transition')
   })
 
   it('subcontractor role cannot transition phase status', async () => {
     mockSession('sub-1')
-    const fetchChain = makeChain([], null, { status: 'planned', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'upcoming', project_id: 'proj-1' })
     const roleChain = makeChain([], null, { role: 'subcontractor' })
 
     mockFrom.mockReturnValueOnce(fetchChain).mockReturnValueOnce(roleChain)
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-1', 'active')
 
     expect(result.error).toContain('Invalid transition')
   })
@@ -356,7 +356,7 @@ describe('scheduleService.transitionStatus', () => {
     mockSession()
     mockFrom.mockReturnValue(makeChain(null, { message: 'row not found' }))
 
-    const result = await scheduleService.transitionStatus('ph-ghost', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-ghost', 'active')
 
     expect(result.data).toBeNull()
     expect(result.error).toBe('row not found')
@@ -364,12 +364,12 @@ describe('scheduleService.transitionStatus', () => {
 
   it('returns error when user has no project membership', async () => {
     mockSession('outsider')
-    const fetchChain = makeChain([], null, { status: 'planned', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'upcoming', project_id: 'proj-1' })
     const roleChain = makeChain([], null, null)
 
     mockFrom.mockReturnValueOnce(fetchChain).mockReturnValueOnce(roleChain)
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-1', 'active')
 
     expect(result.error).toBe('User is not a member of this project')
   })
@@ -386,7 +386,7 @@ describe('scheduleService.transitionStatus', () => {
       .mockReturnValueOnce(roleChain)
       .mockReturnValueOnce({ update: updateFn })
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-1', 'active')
 
     expect(result.error).toBeNull()
   })
@@ -398,14 +398,14 @@ describe('scheduleService.transitionStatus', () => {
 
     mockFrom.mockReturnValueOnce(fetchChain).mockReturnValueOnce(roleChain)
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress')
+    const result = await scheduleService.transitionStatus('ph-1', 'active')
 
     expect(result.error).toContain('Invalid transition')
   })
 
   it('sets updated_by on every successful transition', async () => {
     mockSession('pm-1')
-    const fetchChain = makeChain([], null, { status: 'planned', project_id: 'proj-1' })
+    const fetchChain = makeChain([], null, { status: 'upcoming', project_id: 'proj-1' })
     const roleChain = makeChain([], null, { role: 'project_manager' })
     const updateEq = vi.fn().mockResolvedValue({ error: null })
     const updateFn = vi.fn().mockReturnValue({ eq: updateEq })
@@ -415,7 +415,7 @@ describe('scheduleService.transitionStatus', () => {
       .mockReturnValueOnce(roleChain)
       .mockReturnValueOnce({ update: updateFn })
 
-    await scheduleService.transitionStatus('ph-1', 'in_progress')
+    await scheduleService.transitionStatus('ph-1', 'active')
 
     const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
     expect(payload['updated_by']).toBe('pm-1')

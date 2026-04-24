@@ -10,37 +10,37 @@ import {
 
 describe('Schedule State Machine', () => {
   describe('XState machine', () => {
-    it('starts in planned', () => {
+    it('starts in upcoming', () => {
       const actor = createActor(scheduleMachine);
       actor.start();
-      expect(actor.getSnapshot().value).toBe('planned');
+      expect(actor.getSnapshot().value).toBe('upcoming');
       actor.stop();
     });
 
-    it('planned → in_progress → completed (happy path)', () => {
+    it('upcoming → active → completed (happy path)', () => {
       const actor = createActor(scheduleMachine);
       actor.start();
       actor.send({ type: 'START' });
-      expect(actor.getSnapshot().value).toBe('in_progress');
+      expect(actor.getSnapshot().value).toBe('active');
       actor.send({ type: 'COMPLETE' });
       expect(actor.getSnapshot().value).toBe('completed');
       actor.stop();
     });
 
-    it('in_progress → delayed → in_progress → completed', () => {
+    it('active → delayed → active → completed', () => {
       const actor = createActor(scheduleMachine);
       actor.start();
       actor.send({ type: 'START' });
       actor.send({ type: 'MARK_DELAYED' });
       expect(actor.getSnapshot().value).toBe('delayed');
       actor.send({ type: 'RESUME' });
-      expect(actor.getSnapshot().value).toBe('in_progress');
+      expect(actor.getSnapshot().value).toBe('active');
       actor.send({ type: 'COMPLETE' });
       expect(actor.getSnapshot().value).toBe('completed');
       actor.stop();
     });
 
-    it('planned → delayed (direct delay without starting)', () => {
+    it('upcoming → delayed (direct delay without starting)', () => {
       const actor = createActor(scheduleMachine);
       actor.start();
       actor.send({ type: 'MARK_DELAYED' });
@@ -48,13 +48,13 @@ describe('Schedule State Machine', () => {
       actor.stop();
     });
 
-    it('completed → in_progress (reopen)', () => {
+    it('completed → active (reopen)', () => {
       const actor = createActor(scheduleMachine);
       actor.start();
       actor.send({ type: 'START' });
       actor.send({ type: 'COMPLETE' });
       actor.send({ type: 'REOPEN', userId: 'u1' });
-      expect(actor.getSnapshot().value).toBe('in_progress');
+      expect(actor.getSnapshot().value).toBe('active');
       actor.stop();
     });
 
@@ -71,31 +71,31 @@ describe('Schedule State Machine', () => {
 
   describe('getValidScheduleTransitions', () => {
     it('viewer gets no transitions from any state', () => {
-      const states: ScheduleStatus[] = ['planned', 'in_progress', 'delayed', 'completed'];
+      const states: ScheduleStatus[] = ['upcoming', 'active', 'delayed', 'completed', 'on_track', 'at_risk'];
       for (const s of states) {
         expect(getValidScheduleTransitions(s, 'viewer')).toEqual([]);
       }
     });
 
     it('default role (no arg) gets no transitions', () => {
-      expect(getValidScheduleTransitions('planned')).toEqual([]);
+      expect(getValidScheduleTransitions('upcoming')).toEqual([]);
     });
 
-    it('superintendent can start and delay from planned', () => {
-      const t = getValidScheduleTransitions('planned', 'superintendent');
-      expect(t).toContain('in_progress');
+    it('superintendent can start and delay from upcoming', () => {
+      const t = getValidScheduleTransitions('upcoming', 'superintendent');
+      expect(t).toContain('active');
       expect(t).toContain('delayed');
     });
 
-    it('superintendent can complete and delay from in_progress', () => {
-      const t = getValidScheduleTransitions('in_progress', 'superintendent');
+    it('superintendent can complete and delay from active', () => {
+      const t = getValidScheduleTransitions('active', 'superintendent');
       expect(t).toContain('completed');
       expect(t).toContain('delayed');
     });
 
     it('superintendent can resume and complete from delayed', () => {
       const t = getValidScheduleTransitions('delayed', 'superintendent');
-      expect(t).toContain('in_progress');
+      expect(t).toContain('active');
       expect(t).toContain('completed');
     });
 
@@ -105,25 +105,25 @@ describe('Schedule State Machine', () => {
 
     it('project_manager can reopen completed phases', () => {
       const t = getValidScheduleTransitions('completed', 'project_manager');
-      expect(t).toContain('in_progress');
+      expect(t).toContain('active');
     });
 
     it('admin can reopen completed phases', () => {
-      expect(getValidScheduleTransitions('completed', 'admin')).toContain('in_progress');
+      expect(getValidScheduleTransitions('completed', 'admin')).toContain('active');
     });
 
     it('owner can reopen completed phases', () => {
-      expect(getValidScheduleTransitions('completed', 'owner')).toContain('in_progress');
+      expect(getValidScheduleTransitions('completed', 'owner')).toContain('active');
     });
 
     it('subcontractor gets no transitions', () => {
-      expect(getValidScheduleTransitions('in_progress', 'subcontractor')).toEqual([]);
+      expect(getValidScheduleTransitions('active', 'subcontractor')).toEqual([]);
     });
   });
 
   describe('getScheduleStatusConfig', () => {
     it('all statuses have config with CSS variable colors', () => {
-      const statuses: ScheduleStatus[] = ['planned', 'in_progress', 'delayed', 'completed'];
+      const statuses: ScheduleStatus[] = ['upcoming', 'active', 'delayed', 'completed', 'on_track', 'at_risk'];
       for (const s of statuses) {
         const c = getScheduleStatusConfig(s);
         expect(c.label).toBeTruthy();
@@ -132,8 +132,8 @@ describe('Schedule State Machine', () => {
       }
     });
 
-    it('planned is neutral', () => {
-      expect(getScheduleStatusConfig('planned').label).toBe('Planned');
+    it('upcoming is neutral', () => {
+      expect(getScheduleStatusConfig('upcoming').label).toBe('Upcoming');
     });
 
     it('delayed is critical red', () => {
@@ -147,19 +147,19 @@ describe('Schedule State Machine', () => {
 
   describe('deriveStatusFromProgress', () => {
     it('100% percent becomes completed', () => {
-      expect(deriveStatusFromProgress(100, 'planned')).toBe('completed');
+      expect(deriveStatusFromProgress(100, 'upcoming')).toBe('completed');
     });
 
-    it('partial progress on planned becomes in_progress', () => {
-      expect(deriveStatusFromProgress(50, 'planned')).toBe('in_progress');
+    it('partial progress on upcoming becomes active', () => {
+      expect(deriveStatusFromProgress(50, 'upcoming')).toBe('active');
     });
 
     it('partial progress on delayed stays delayed', () => {
       expect(deriveStatusFromProgress(50, 'delayed')).toBe('delayed');
     });
 
-    it('0% on planned stays planned', () => {
-      expect(deriveStatusFromProgress(0, 'planned')).toBe('planned');
+    it('0% on upcoming stays upcoming', () => {
+      expect(deriveStatusFromProgress(0, 'upcoming')).toBe('upcoming');
     });
   });
 });
