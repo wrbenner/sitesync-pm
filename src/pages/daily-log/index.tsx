@@ -34,6 +34,9 @@ import type { ExtendedDailyLog, ManpowerRow } from './types';
 import { DailyLogForm } from './DailyLogForm';
 import { DailyLogPDFExport } from './DailyLogPDFExport';
 import { createDailyLogSchema, crewHoursEntrySchema } from '../../schemas/dailyLog';
+import { FieldCaptureModal } from '../../components/field-capture/FieldCaptureModal';
+import { useFieldCapture } from '../../hooks/useFieldCapture';
+import { Camera } from 'lucide-react';
 
 const DailyLogPage: React.FC = () => {
   const { addToast } = useToast();
@@ -104,6 +107,8 @@ const DailyLogPage: React.FC = () => {
 
   const { hasPermission } = usePermissions();
   const isOnline = useIsOnline();
+  const [showFieldCapture, setShowFieldCapture] = useState(false);
+  const fieldCapture = useFieldCapture();
 
   const manpowerSeeded = React.useRef(false);
   const [manpowerRows, setManpowerRows] = useState<ManpowerRow[]>([]);
@@ -328,8 +333,7 @@ const DailyLogPage: React.FC = () => {
           weather: data.weather ? formatWeatherSummary(data.weather) : null,
           summary: data.workPerformed,
           status: 'submitted',
-          is_submitted: true,
-          submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
       });
       const createdId = created?.data?.id as string | undefined;
@@ -346,7 +350,7 @@ const DailyLogPage: React.FC = () => {
     if (dailyLogHistory.length > 0) {
       const log = dailyLogHistory[0];
       const status = log.status;
-      const locked = log.is_submitted === true || status === 'approved';
+      const locked = status === 'submitted' || status === 'approved';
       if (locked) { setShowAmendmentModal(true); return; }
     }
     setShowQuickEntry(true);
@@ -522,6 +526,22 @@ const DailyLogPage: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Flush queued field-capture photos whenever we regain connectivity.
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (fieldCapture.pendingCount === 0) return;
+      const { synced, remaining } = await fieldCapture.flushQueue();
+      if (synced > 0) {
+        toast.success(`Synced ${synced} queued photo${synced === 1 ? '' : 's'}${remaining > 0 ? ` (${remaining} still pending)` : ''}`);
+        refetch();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    // Also attempt a drain when the page mounts online with queued items.
+    if (navigator.onLine && fieldCapture.pendingCount > 0) handleOnline();
+    return () => window.removeEventListener('online', handleOnline);
+  }, [fieldCapture, refetch]);
+
   const authUserId = useAuthStore((s) => s.user?.id);
 
   if (!projectId) {
@@ -666,11 +686,12 @@ const DailyLogPage: React.FC = () => {
   });
 
   const logStatus: DailyLogState = (today.status as DailyLogState) || (today.approved ? 'approved' : 'draft');
-  const isLocked = today.is_submitted === true || logStatus === 'approved';
+  const isLocked = logStatus === 'submitted' || logStatus === 'approved';
   const isApproved = logStatus === 'approved';
   const isSubmittedOnly = logStatus === 'submitted';
   const isRejected = logStatus === 'rejected';
-  const submittedAt: string | null = today.submitted_at ?? null;
+  // submitted_at doesn't exist as a DB column; use updated_at as the submission timestamp
+  const submittedAt: string | null = (logStatus === 'submitted' || logStatus === 'approved') ? (today.updated_at ?? null) : null;
   const approvedAt: string | null = today.approved_at ?? null;
   const rejectionComments = today.rejection_comments;
 
@@ -681,7 +702,7 @@ const DailyLogPage: React.FC = () => {
     try {
       await updateDailyLog.mutateAsync({
         id: today.id,
-        updates: { status: 'draft', is_submitted: false, rejection_comments: returnToDraftNote },
+        updates: { status: 'draft', approved: false, rejection_comments: returnToDraftNote },
         projectId: projectId!,
       });
       setShowReturnToDraftModal(false);
@@ -706,10 +727,8 @@ const DailyLogPage: React.FC = () => {
           incidents: 0,
           summary: addendumText,
           status: 'submitted',
-          is_submitted: true,
-          submitted_at: new Date().toISOString(),
-          amended_from_id: today.id,
-        } as Parameters<typeof createDailyLog.mutateAsync>[0]['data'],
+          updated_at: new Date().toISOString(),
+        },
       });
       setShowAddendumForm(false);
       setAddendumText('');
@@ -722,13 +741,15 @@ const DailyLogPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Persist work summary before changing status.
+    // The summary field lives in React state and would be lost without this save.
     if (!navigator.onLine) {
       try {
         await syncManager.queueOfflineMutation('daily_logs', 'update', {
           id: today.id,
+          summary: workSummary || undefined,
           status: 'submitted',
-          is_submitted: true,
-          submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         });
         toast.info('Saved offline \u2014 will sync when connected');
       } catch {
@@ -737,6 +758,14 @@ const DailyLogPage: React.FC = () => {
       return;
     }
     try {
+      // Save work summary before submitting so the text isn't lost
+      if (workSummary) {
+        await updateDailyLog.mutateAsync({
+          id: today.id,
+          updates: { summary: workSummary },
+          projectId: projectId!,
+        });
+      }
       await submitDailyLog.mutateAsync({ id: today.id, projectId: projectId! });
       addToast('success', 'Daily log submitted for approval');
     } catch {
@@ -790,6 +819,14 @@ const DailyLogPage: React.FC = () => {
         <PresenceAvatars page="daily-log" size={28} />
         <DailyLogPDFExport today={today} weather={weather} logStatus={logStatus} />
         <Btn variant="secondary" size="sm" icon={<Zap size={14} />} onClick={handleOpenQuickEntry}>Quick Entry</Btn>
+        <Btn
+          variant="secondary"
+          size="sm"
+          icon={<Camera size={14} />}
+          onClick={() => setShowFieldCapture(true)}
+        >
+          Field Capture{fieldCapture.pendingCount > 0 ? ` (${fieldCapture.pendingCount})` : ''}
+        </Btn>
         <div style={{ position: 'relative' }}>
           <Btn variant="secondary" size="sm" icon={<BarChart3 size={14} />} onClick={() => setCompareDropdownOpen(!compareDropdownOpen)}>
             Compare Days
@@ -1091,6 +1128,14 @@ const DailyLogPage: React.FC = () => {
         </>
       )}
       {/* DailyLogCapture removed from auto view — capture is now inline */}
+
+      <FieldCaptureModal
+        open={showFieldCapture}
+        onClose={() => setShowFieldCapture(false)}
+        projectId={projectId!}
+        dailyLogId={todayLogId}
+        onCaptured={() => refetch()}
+      />
 
       {showCreateModal && (
         <CreateDailyLogModal
