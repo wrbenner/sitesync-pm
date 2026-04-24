@@ -162,7 +162,7 @@ export const DailyLogPDF: React.FC<{ data: DailyLogPDFData }> = ({ data }) => {
         {/* ── Header ── */}
         <View style={s.header}>
           <View>
-            <Text style={s.logo}>SiteSync AI</Text>
+            <Text style={s.logo}>SiteSync PM</Text>
             <Text style={s.logoSub}>{data.contractorName ?? 'General Contractor'}</Text>
             {data.projectAddress && <Text style={s.logoSub}>{data.projectAddress}</Text>}
           </View>
@@ -408,7 +408,7 @@ export const DailyLogPDF: React.FC<{ data: DailyLogPDFData }> = ({ data }) => {
 
         {/* ── Footer ── */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>SiteSync AI  |  {data.projectName}  |  Daily Report {formatDate(data.logDate)}</Text>
+          <Text style={s.footerText}>SiteSync PM  |  {data.projectName}  |  Daily Report {formatDate(data.logDate)}</Text>
           <Text style={s.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
 
