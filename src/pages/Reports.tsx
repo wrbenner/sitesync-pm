@@ -206,6 +206,54 @@ export const Reports: React.FC = () => {
         <MetricBox label="Recent Runs" value={recentRunCount} />
       </div>
 
+      {/* Owner Portal featured card */}
+      <div
+        onClick={() => navigate('/reports/owner')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/reports/owner') }}
+        style={{
+          background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
+          borderRadius: borderRadius.lg,
+          padding: spacing['5'],
+          marginBottom: spacing['5'],
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing['4'],
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: borderRadius.md,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: colors.white, flexShrink: 0,
+          }}>
+            <Sparkles size={22} />
+          </div>
+          <div>
+            <div style={{
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+              color: colors.white, letterSpacing: typography.letterSpacing.wider,
+              textTransform: 'uppercase', opacity: 0.9, marginBottom: spacing['1'],
+            }}>
+              Owner Portal
+            </div>
+            <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.white, marginBottom: spacing['1'] }}>
+              Interactive Owner Report
+            </div>
+            <div style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.9)' }}>
+              Progress ring, milestone timeline, owner updates — everything the owner needs in one place.
+            </div>
+          </div>
+        </div>
+        <Btn variant="secondary" size="sm" icon={<Sparkles size={14} />} onClick={() => navigate('/reports/owner')}>
+          Open Portal
+        </Btn>
+      </div>
+
       {/* Tabs */}
       <div style={{ marginBottom: spacing['5'] }}>
         <TabBar

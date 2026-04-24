@@ -503,28 +503,30 @@ export const Procurement: React.FC = () => {
 
   // ── Delivery Form ──────────────────────────────────────────
   const [deliveryForm, setDeliveryForm] = useState({
-    purchase_order_id: '', delivery_date: '', carrier: '',
-    tracking_number: '', status: 'scheduled', inspection_notes: '',
+    purchase_order_id: '', expected_date: '', vendor: '',
+    po_number: '', status: 'scheduled', receiving_notes: '',
   })
 
   const handleCreateDelivery = async () => {
-    if (!projectId || !deliveryForm.purchase_order_id) {
-      toast.error('Purchase order is required')
+    if (!projectId || !deliveryForm.vendor.trim()) {
+      toast.error('Vendor is required')
       return
     }
     try {
+      const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === deliveryForm.purchase_order_id) as Record<string, unknown> | undefined
       await createDelivery.mutateAsync({
         project_id: projectId,
-        purchase_order_id: deliveryForm.purchase_order_id,
-        delivery_date: deliveryForm.delivery_date || null,
-        carrier: deliveryForm.carrier || null,
-        tracking_number: deliveryForm.tracking_number || null,
+        purchase_order_id: deliveryForm.purchase_order_id || null,
+        vendor: deliveryForm.vendor.trim(),
+        po_number: deliveryForm.po_number || (selectedPO?.po_number ? String(selectedPO.po_number) : null),
+        expected_date: deliveryForm.expected_date || new Date().toISOString().split('T')[0],
         status: deliveryForm.status,
-        inspection_notes: deliveryForm.inspection_notes || null,
+        receiving_notes: deliveryForm.receiving_notes || null,
+        created_by: user?.id,
       })
       toast.success('Delivery logged')
       setDeliveryModalOpen(false)
-      setDeliveryForm({ purchase_order_id: '', delivery_date: '', carrier: '', tracking_number: '', status: 'scheduled', inspection_notes: '' })
+      setDeliveryForm({ purchase_order_id: '', expected_date: '', vendor: '', po_number: '', status: 'scheduled', receiving_notes: '' })
     } catch (err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
@@ -668,25 +670,67 @@ export const Procurement: React.FC = () => {
 
   const deliveryCol = createColumnHelper<Record<string, unknown>>()
   const deliveryColumns = useMemo(() => [
-    deliveryCol.accessor('delivery_date', {
-      header: 'Date',
-      cell: (info) => (
-        <span style={{ color: colors.textSecondary }}>
-          {info.getValue() ? new Date(info.getValue() as string).toLocaleDateString() : ''}
-        </span>
-      ),
-    }),
-    deliveryCol.accessor('carrier', {
-      header: 'Carrier',
+    deliveryCol.accessor((row) => (row.vendor as string) || (row.supplier as string) || (row.carrier as string) || '—', {
+      id: 'vendor',
+      header: 'Vendor',
       cell: (info) => <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{info.getValue() as string}</span>,
     }),
-    deliveryCol.accessor('tracking_number', {
-      header: 'Tracking',
-      cell: (info) => (
-        <span style={{ color: colors.textTertiary, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>
-          {(info.getValue() as string) || 'N/A'}
-        </span>
-      ),
+    deliveryCol.accessor('po_number', {
+      header: 'PO #',
+      cell: (info) => {
+        const row = info.row.original
+        const poNum = (info.getValue() as string) || (row.purchase_order_id ? String(row.purchase_order_id).slice(0, 8) : '')
+        return (
+          <span style={{ color: colors.textTertiary, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>
+            {poNum || '—'}
+          </span>
+        )
+      },
+    }),
+    deliveryCol.accessor((row) => (row.expected_date as string) || (row.delivery_date as string), {
+      id: 'eta',
+      header: 'ETA',
+      cell: (info) => {
+        const v = info.getValue() as string | undefined
+        return (
+          <span style={{ color: colors.textSecondary }}>
+            {v ? new Date(v).toLocaleDateString() : '—'}
+          </span>
+        )
+      },
+    }),
+    deliveryCol.accessor((row) => (row.actual_date as string) || (row.delivery_date as string), {
+      id: 'received',
+      header: 'Received',
+      cell: (info) => {
+        const row = info.row.original
+        const status = String(row.status || '').toLowerCase()
+        const received = (row.actual_date as string) || (status === 'delivered' || status === 'received' ? (row.delivery_date as string) : null)
+        if (received) {
+          return <span style={{ color: colors.statusActive, fontWeight: typography.fontWeight.medium }}>{new Date(received).toLocaleDateString()}</span>
+        }
+        const expected = (row.expected_date as string) || (row.delivery_date as string)
+        if (expected) {
+          const exp = new Date(expected)
+          exp.setHours(0, 0, 0, 0)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          if (today.getTime() > exp.getTime() && status !== 'cancelled') {
+            const daysLate = Math.round((today.getTime() - exp.getTime()) / 86400000)
+            return (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+                fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                color: colors.statusCritical, backgroundColor: colors.statusCriticalSubtle,
+              }}>
+                <AlertTriangle size={10} /> Missing · {daysLate}d late
+              </span>
+            )
+          }
+        }
+        return <span style={{ color: colors.textTertiary }}>—</span>
+      },
     }),
     deliveryCol.accessor('status', {
       header: 'Status',
@@ -1201,9 +1245,22 @@ export const Procurement: React.FC = () => {
       <Modal open={deliveryModalOpen} onClose={() => setDeliveryModalOpen(false)} title="Log Delivery" width="600px">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
           <div>
-            <label style={labelStyle}>Purchase Order</label>
-            <select value={deliveryForm.purchase_order_id} onChange={(e) => setDeliveryForm({ ...deliveryForm, purchase_order_id: e.target.value })} style={selectStyle}>
-              <option value="">Select a PO...</option>
+            <label style={labelStyle}>Purchase Order (optional)</label>
+            <select
+              value={deliveryForm.purchase_order_id}
+              onChange={(e) => {
+                const poId = e.target.value
+                const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === poId) as Record<string, unknown> | undefined
+                setDeliveryForm({
+                  ...deliveryForm,
+                  purchase_order_id: poId,
+                  vendor: selectedPO?.vendor_name ? String(selectedPO.vendor_name) : deliveryForm.vendor,
+                  po_number: selectedPO?.po_number ? String(selectedPO.po_number) : deliveryForm.po_number,
+                })
+              }}
+              style={selectStyle}
+            >
+              <option value="">No PO — ad-hoc delivery</option>
               {(pos || []).map((po: Record<string, unknown>) => (
                 <option key={po.id as string} value={po.id as string}>
                   PO #{po.po_number} - {po.vendor_name as string}
@@ -1211,25 +1268,24 @@ export const Procurement: React.FC = () => {
               ))}
             </select>
           </div>
+          <InputField label="Vendor" value={deliveryForm.vendor} onChange={(v) => setDeliveryForm({ ...deliveryForm, vendor: v })} placeholder="ABC Supply Co." required />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
-            <InputField label="Delivery Date" type="date" value={deliveryForm.delivery_date} onChange={(v) => setDeliveryForm({ ...deliveryForm, delivery_date: v })} />
+            <InputField label="ETA (Expected Date)" type="date" value={deliveryForm.expected_date} onChange={(v) => setDeliveryForm({ ...deliveryForm, expected_date: v })} />
             <div>
               <label style={labelStyle}>Status</label>
               <select value={deliveryForm.status} onChange={(e) => setDeliveryForm({ ...deliveryForm, status: e.target.value })} style={selectStyle}>
                 <option value="scheduled">Scheduled</option>
                 <option value="in_transit">In Transit</option>
                 <option value="delivered">Delivered</option>
-                <option value="rejected">Rejected</option>
+                <option value="delayed">Delayed</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
-            <InputField label="Carrier" value={deliveryForm.carrier} onChange={(v) => setDeliveryForm({ ...deliveryForm, carrier: v })} placeholder="UPS, FedEx, etc." />
-            <InputField label="Tracking Number" value={deliveryForm.tracking_number} onChange={(v) => setDeliveryForm({ ...deliveryForm, tracking_number: v })} placeholder="1Z999..." />
-          </div>
+          <InputField label="PO Number (if no PO selected above)" value={deliveryForm.po_number} onChange={(v) => setDeliveryForm({ ...deliveryForm, po_number: v })} placeholder="Manual PO reference" />
           <div>
-            <label style={labelStyle}>Inspection Notes</label>
-            <textarea value={deliveryForm.inspection_notes} onChange={(e) => setDeliveryForm({ ...deliveryForm, inspection_notes: e.target.value })} rows={3} style={textareaStyle} placeholder="Condition of materials, any damage noted..." />
+            <label style={labelStyle}>Receiving Notes</label>
+            <textarea value={deliveryForm.receiving_notes} onChange={(e) => setDeliveryForm({ ...deliveryForm, receiving_notes: e.target.value })} rows={3} style={textareaStyle} placeholder="Condition of materials, any damage noted..." />
           </div>
           <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end', marginTop: spacing['2'] }}>
             <Btn variant="secondary" onClick={() => setDeliveryModalOpen(false)}>Cancel</Btn>

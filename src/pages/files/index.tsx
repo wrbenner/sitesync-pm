@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive } from 'lucide-react';
-import { Btn, useToast, PageContainer, EmptyState } from '../../components/Primitives';
+import { Btn, useToast, PageContainer, EmptyState, TabBar } from '../../components/Primitives';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography } from '../../styles/theme';
@@ -12,6 +12,18 @@ import { type FileItem, formatBytes } from './fileTypes';
 import { FileGrid } from './FileGrid';
 import { FileUpload } from './FileUpload';
 import { FilePreviewPanel } from './FilePreviewPanel';
+import { TransmittalsPanel } from './TransmittalsPanel';
+import { SpecificationsPanel } from './SpecificationsPanel';
+import { WikiPanel } from './WikiPanel';
+
+type FilesTabId = 'files' | 'transmittals' | 'specs' | 'wiki';
+
+const FILES_TABS = [
+  { id: 'files', label: 'Files' },
+  { id: 'transmittals', label: 'Transmittals' },
+  { id: 'specs', label: 'Specifications' },
+  { id: 'wiki', label: 'Wiki' },
+];
 
 type ViewMode = 'list' | 'grid';
 
@@ -289,21 +301,7 @@ const FilesPage: React.FC = () => {
     }, 0);
   }, [searchQuery, displayFiles.length]);
 
-  if (isError) {
-    const message = error instanceof Error ? error.message : 'Failed to load documents';
-    return (
-      <PageContainer title="Files">
-        <div aria-live="polite" role="status">
-          <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 24 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
-              <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0 }}>{message}</p>
-              <Btn variant="primary" size="sm" onClick={() => refetch()}>Retry</Btn>
-            </div>
-          </div>
-        </div>
-      </PageContainer>
-    );
-  }
+  const [activeTab, setActiveTab] = useState<FilesTabId>('files');
 
   if (!projectId) {
     return (
@@ -317,10 +315,24 @@ const FilesPage: React.FC = () => {
     );
   }
 
-  if (loading) {
-    const skeletonPulse: React.CSSProperties = { backgroundColor: '#E5E7EB', animation: 'pulse 1.5s ease-in-out infinite', borderRadius: 4, opacity: 0.6 };
-    return (
-      <PageContainer title="Files">
+  const renderFilesTab = () => {
+    if (isError) {
+      const message = error instanceof Error ? error.message : 'Failed to load documents';
+      return (
+        <div aria-live="polite" role="status">
+          <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: `${spacing['6']} ${spacing['4']}`, textAlign: 'center' }}>
+              <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0 }}>{message}</p>
+              <Btn variant="primary" size="sm" onClick={() => refetch()}>Retry</Btn>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (loading) {
+      const skeletonPulse: React.CSSProperties = { backgroundColor: '#E5E7EB', animation: 'pulse 1.5s ease-in-out infinite', borderRadius: 4, opacity: 0.6 };
+      return (
         <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12 }} aria-hidden="true">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} style={{ height: 48, display: 'flex', alignItems: 'center', gap: spacing['4'], padding: `0 ${spacing['4']}`, borderBottom: '1px solid #F0EDE9' }}>
@@ -331,21 +343,10 @@ const FilesPage: React.FC = () => {
             </div>
           ))}
         </div>
-      </PageContainer>
-    );
-  }
+      );
+    }
 
-  return (
-    <PageContainer
-      title="Files"
-      actions={
-        <PermissionGate permission="files.upload">
-          <Btn icon={<UploadIcon size={14} />} onClick={() => setShowUpload(!showUpload)} variant={showUpload ? 'secondary' : 'primary'} size="sm">
-            Upload
-          </Btn>
-        </PermissionGate>
-      }
-    >
+    return (
       <main role="main" aria-label="Document management" onDragEnter={handlePageDragEnter}>
         {/* Summary metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: spacing.md, marginBottom: spacing['4'] }}>
@@ -394,6 +395,30 @@ const FilesPage: React.FC = () => {
 
         <FilePreviewPanel file={selectedFile} onClose={() => setSelectedFile(null)} />
       </main>
+    );
+  };
+
+  return (
+    <PageContainer
+      title="Files"
+      actions={
+        activeTab === 'files' ? (
+          <PermissionGate permission="files.upload">
+            <Btn icon={<UploadIcon size={14} />} onClick={() => setShowUpload(!showUpload)} variant={showUpload ? 'secondary' : 'primary'} size="sm">
+              Upload
+            </Btn>
+          </PermissionGate>
+        ) : null
+      }
+    >
+      <div style={{ marginBottom: spacing['5'], borderBottom: `1px solid ${colors.borderLight}` }}>
+        <TabBar tabs={FILES_TABS} activeTab={activeTab} onChange={(id) => setActiveTab(id as FilesTabId)} />
+      </div>
+
+      {activeTab === 'files' && renderFilesTab()}
+      {activeTab === 'transmittals' && <TransmittalsPanel />}
+      {activeTab === 'specs' && <SpecificationsPanel />}
+      {activeTab === 'wiki' && <WikiPanel />}
     </PageContainer>
   );
 };
