@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Upload, ScanSearch, FolderOpen } from 'lucide-react';
 import { PageContainer, Btn, useToast } from '../../components/Primitives';
@@ -18,6 +19,7 @@ import { DrawingToolbar, type ViewMode, type ToolbarFilters } from './DrawingToo
 import { type DrawingStatus } from './constants';
 import { DrawingList, type DrawingItem } from './DrawingList';
 import { DrawingCardGrid } from './DrawingCardGrid';
+// KPIs intentionally omitted — drawings page is visual-first, content-first
 import { DrawingDetail } from './DrawingDetail';
 import JSZip from 'jszip';
 import { DrawingUpload, RevisionUpload } from './DrawingUpload';
@@ -31,7 +33,7 @@ import {
 } from '../../lib/pdfClassifier';
 import { extractPdfFirstPageText, extractPdfTextFromPages } from '../../lib/pdfPageSplitter';
 import { extractSheetTitleBlock } from '../../lib/sheetTitleBlockParser';
-import { defaultTitleBlockRegion } from '../../lib/titleBlockDetector';
+import { rightEdgeStripRegion } from '../../lib/titleBlockDetector';
 import { cropPngToRegion } from '../../lib/imageCrop';
 import { RevisionOverlay } from '../../components/drawings/RevisionOverlay';
 import { AnnotationListPanel } from '../../components/drawings/AnnotationListPanel';
@@ -44,7 +46,9 @@ import {
 import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
 import { DrawingSetPanel, type DrawingSetItem, type SetType } from '../../components/drawings/DrawingSetPanel';
 import { TransmittalModal, type TransmittalData } from '../../components/drawings/TransmittalModal';
-import type { DrawingDiscrepancy } from '../../types/ai';
+import { DiscrepancyDetailModal } from '../../components/drawings/DiscrepancyDetailModal';
+import { useProjectDrawingPairs } from '../../hooks/useDrawingIntelligence';
+import type { DrawingDiscrepancy, DrawingPair } from '../../types/ai';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -293,7 +297,37 @@ const DrawingsPage: React.FC = () => {
     selectedDrawing ? String(selectedDrawing.id) : undefined,
     projectId ?? undefined,
   );
+  const { data: drawingPairs } = useProjectDrawingPairs(projectId ?? undefined);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
+  const [openDiscrepancy, setOpenDiscrepancy] = useState<DrawingDiscrepancy | null>(null);
+
+  const openDiscrepancyPair = useMemo<DrawingPair | null>(() => {
+    if (!openDiscrepancy || !drawingPairs) return null;
+    return drawingPairs.find((p) => p.id === openDiscrepancy.pair_id) ?? null;
+  }, [openDiscrepancy, drawingPairs]);
+
+  // ── Deep-link handling: /drawings?id=<drawingId> auto-opens the detail
+  //    panel for that drawing. React-Router's top-level /drawings route is
+  //    parameterless, so we surface deep-links via search params.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkedId = searchParams.get('id');
+  React.useEffect(() => {
+    if (!deepLinkedId || !drawings) return;
+    if (selectedDrawing?.id === deepLinkedId) return;
+    const target = drawings.find((d) => String(d.id) === deepLinkedId);
+    if (target) setSelectedDrawing(target);
+  }, [deepLinkedId, drawings, selectedDrawing?.id]);
+
+  // Keep URL in sync with the active detail panel so links are shareable.
+  React.useEffect(() => {
+    const current = searchParams.get('id');
+    const desired = selectedDrawing ? String(selectedDrawing.id) : null;
+    if (current === desired) return;
+    const next = new URLSearchParams(searchParams);
+    if (desired) next.set('id', desired);
+    else next.delete('id');
+    setSearchParams(next, { replace: true });
+  }, [selectedDrawing?.id, searchParams, setSearchParams, selectedDrawing]);
 
   // ── Drawing Sets state ─────────────────────────────────
   const [showSetsPanel, setShowSetsPanel] = useState(false);
@@ -433,6 +467,9 @@ const DrawingsPage: React.FC = () => {
     })();
   }, [drawings, refetch, addToast]);
 
+  // (AI-backfill effect moved below — must run AFTER triggerClassification
+  // is defined, otherwise the dependency-array read hits a TDZ.)
+
   // ── Derived data ────────────────────────────────────────
   const availableDisciplines = useMemo(() => {
     const set = new Set<string>();
@@ -560,17 +597,18 @@ const DrawingsPage: React.FC = () => {
   }, [selectedIds, addToast, refetch]);
 
   const triggerClassification = useCallback(
-    async (drawingId: string, pageImageUrl: string, fileName?: string) => {
+    async (drawingId: string, pageImageUrl: string, fileName?: string, fullPageUrl?: string) => {
       if (!projectId) return;
+      // Must match the 18-value CHECK constraint on drawings.discipline
+      // (see migration 20260422200000_fix_drawing_constraints.sql).
       const VALID_DISCIPLINES = new Set([
-        'cover', 'hazmat', 'demolition', 'survey', 'geotechnical',
-        'civil', 'landscape', 'structural', 'architectural', 'interior',
-        'fire_protection', 'plumbing', 'mechanical', 'electrical', 'telecommunications',
+        'architectural', 'structural', 'mechanical', 'electrical', 'plumbing',
+        'civil', 'fire_protection', 'landscape', 'interior', 'interior_design',
+        'mep', 'unclassified', 'cover', 'demolition', 'survey', 'geotechnical',
+        'hazmat', 'telecommunications',
       ]);
       const DISCIPLINE_REMAP: Record<string, string> = {
-        mep: 'mechanical',
         hvac: 'mechanical',
-        interior_design: 'interior',
         low_voltage: 'telecommunications',
         telecom: 'telecommunications',
         fire_alarm: 'fire_protection',
@@ -579,16 +617,41 @@ const DrawingsPage: React.FC = () => {
         environmental: 'hazmat',
       };
       try {
-        const result = await classifyMutation.mutateAsync({ projectId, drawingId, pageImageUrl });
+        const result = await classifyMutation.mutateAsync({ projectId, drawingId, pageImageUrl, fullPageUrl });
         const updates: Record<string, unknown> = {};
         if (result.discipline && result.discipline !== 'unclassified') {
           const mapped = DISCIPLINE_REMAP[result.discipline] ?? result.discipline;
           if (VALID_DISCIPLINES.has(mapped)) updates.discipline = mapped;
         }
+        // Always prefer AI-extracted sheet_number and title over text
+        // extraction or filename fallbacks. The production AI codebase
+        // sends every page to Gemini and achieves 99%+ accuracy — we
+        // match that by always trusting AI results here.
         if (result.sheet_number) updates.sheet_number = result.sheet_number;
         if (result.drawing_title) updates.title = result.drawing_title;
+        // Revision as read from the title block's REVISIONS table by Gemini.
+        // Overwrites the filename-derived rev — the title block is authoritative
+        // when it's readable.
+        if ((result as Record<string, unknown>).revision) {
+          updates.revision = String((result as Record<string, unknown>).revision);
+        }
         updates.processing_status = 'completed';
         await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+
+        // Also update the drawing_pages row so both tables stay in sync
+        if (result.sheet_number || result.drawing_title || updates.discipline) {
+          const pageUpdates: Record<string, unknown> = {
+            classification: 'completed',
+            classification_confidence: result.confidence ?? 1.0,
+          };
+          if (result.sheet_number) pageUpdates.sheet_number = result.sheet_number;
+          if (result.drawing_title) pageUpdates.drawing_title = result.drawing_title;
+          if (updates.discipline) pageUpdates.discipline = updates.discipline;
+          await supabase
+            .from('drawing_pages')
+            .update(pageUpdates)
+            .eq('drawing_id', drawingId);
+        }
         refetch();
       } catch (err) {
         const updates: Record<string, unknown> = { processing_status: 'failed' };
@@ -613,6 +676,43 @@ const DrawingsPage: React.FC = () => {
     [projectId, classifyMutation, addToast, refetch],
   );
 
+  // ── Backfill AI classification for drawings that never got AI ──
+  // Detects drawings with filename-derived titles (the "— Page N" pattern
+  // or titles that exactly match the source filename) and re-runs Gemini.
+  // Catches data uploaded before we switched to always-AI mode.
+  // MUST sit after triggerClassification's useCallback — the dependency
+  // array is read during render, so referencing it before its declaration
+  // hits a TDZ ReferenceError.
+  const aiBackfillRan = React.useRef(false);
+  React.useEffect(() => {
+    if (!drawings || !projectId || aiBackfillRan.current) return;
+    const needsReclassify = drawings.filter((d) => {
+      if (!d.file_url) return false;
+      if (d.processing_status === 'completed') return false;
+      if (['classifying', 'needs_review', 'pending', 'failed'].includes(d.processing_status ?? '')) return true;
+      if (!d.processing_status) return true;
+      return false;
+    });
+    if (needsReclassify.length === 0) return;
+    aiBackfillRan.current = true;
+    const batch = needsReclassify.slice(0, 20);
+    addToast('info', `Re-classifying ${batch.length} drawing${batch.length !== 1 ? 's' : ''} with AI...`);
+    void (async () => {
+      for (const d of batch) {
+        try {
+          const { data: urlData } = await supabase.storage
+            .from('project-files')
+            .createSignedUrl(d.file_url!, 3600);
+          if (urlData?.signedUrl) {
+            await triggerClassification(String(d.id), urlData.signedUrl, d.source_filename ?? d.title);
+          }
+        } catch {
+          /* per-drawing failure already handled inside triggerClassification */
+        }
+      }
+    })();
+  }, [drawings, projectId, addToast, triggerClassification]);
+
   const handleFileReady = useCallback((file: File) => {
     setPendingFiles((prev) => [...prev, file]);
   }, []);
@@ -624,7 +724,7 @@ const DrawingsPage: React.FC = () => {
     let specsUploaded = 0;
     let coversUploaded = 0;
     const createdDrawingIds: string[] = [];
-    const classificationTargets: Array<{ drawingId: string; pageImageUrl: string; fileName: string }> = [];
+    const classificationTargets: Array<{ drawingId: string; pageImageUrl: string; fullPageUrl?: string; fileName: string }> = [];
     const coverFindings: Array<{ fileName: string; metadata: CoverMetadata }> = [];
     // (sheet_number, sourcePdf) → drawing IDs. Used after upload to detect
     // pages where text extraction collapsed multiple sheets to the same
@@ -793,44 +893,40 @@ const DrawingsPage: React.FC = () => {
           page.titleBlockRegion ?? undefined,
         );
 
-        // Sheet number priority: title-block text > filename prefix > synthetic.
-        // For covers we first try the title block (some title sheets have
-        // CS-001 / G-000 printed on them), then fall back to a per-page CS-###
-        // so each page of a multi-page cover set has a unique key.
+        // Sheet number: for NON-cover pages we deliberately ignore the
+        // text-layer parser's guess and use a safe placeholder (filename
+        // match or synthetic "P###"). Text-layer extraction against a
+        // page full of cross-reference callouts ("06/ID4.0", "B2",
+        // unit labels) picks wrong tokens too often — e.g. "B2" instead
+        // of "P3B.3" on a Merritt Crossing plumbing sheet. AI on the
+        // right-strip crop fills in the authoritative sheet_number.
+        //
+        // For cover sheets text-layer is more reliable (title sheets
+        // have clean layouts) and AI doesn't run, so we still use it.
         const coverFallbackSheet = `CS-${String(page.pageNumber).padStart(3, '0')}`;
         const sheetNumber = opts.isCover
           ? (titleBlock.sheetNumber ?? coverFallbackSheet)
-          : (titleBlock.sheetNumber
-              ?? (filenameSheetMatch ? filenameSheetMatch[1].toUpperCase() : `P${String(page.pageNumber).padStart(3, '0')}`));
+          : (filenameSheetMatch ? filenameSheetMatch[1].toUpperCase() : `P${String(page.pageNumber).padStart(3, '0')}`);
 
-        // ── Title selection ─────────────────────────────────
-        // Trust the parser ONLY when it matched a deterministic pattern
-        // (Strategy 0 = "SHEET NUMBER" label, Strategy 1 = drawing
-        // caption or explicit "DRAWING TITLE:" label). Those are
-        // structural matches — if they fire, the text genuinely IS the
-        // title. Strategy 2 (largest font) and 3 (proximity) are
-        // heuristics that regress more than they help on real drawings,
-        // so we fall back to the cleaned filename for those cases. User
-        // can correct via inline edit.
+        // Title: filename-based placeholder until AI returns. Same
+        // reasoning — text-layer pulls body-text garbage on many sheets,
+        // and AI is running on every non-cover page, so we'd rather
+        // show an obvious placeholder than a confident wrong answer.
         const filenameBasedLabel = opts.isCover
           ? (pages.length === 1 ? `Cover Sheet — ${cleanedTitle}` : `Cover Sheet — ${cleanedTitle} (p${page.pageNumber})`)
           : (pages.length === 1 ? cleanedTitle : `${cleanedTitle} — Page ${page.pageNumber}`);
-        const deterministicTitleMatch =
-          titleBlock.title !== undefined &&
-          (titleBlock.titleStrategy === 0 || titleBlock.titleStrategy === 1) &&
-          // Sanity: mostly letters, at least one real word
-          titleBlock.title.replace(/[^A-Za-z\s]/g, '').length / titleBlock.title.length >= 0.7 &&
-          /[A-Za-z]{4,}/.test(titleBlock.title);
-        const pageLabel = deterministicTitleMatch ? titleBlock.title! : filenameBasedLabel;
+        const pageLabel = opts.isCover && titleBlock.title
+          ? titleBlock.title
+          : filenameBasedLabel;
 
         if (titleBlock.sheetNumber || titleBlock.title) {
-          console.info(`[title-block] page ${page.pageNumber}:`, {
-            sheet: titleBlock.sheetNumber,
-            title: titleBlock.title,
+          console.info(`[text-layer-validator] page ${page.pageNumber}:`, {
+            parserSheet: titleBlock.sheetNumber,
+            parserTitle: titleBlock.title,
             strategy: titleBlock.titleStrategy,
             confidence: titleBlock.confidence,
             regionScoped: titleBlock.regionScoped,
-            usedFilenameFallback: !deterministicTitleMatch,
+            note: 'text-layer is validator-only for non-cover pages; AI output wins',
           });
         }
 
@@ -860,12 +956,14 @@ const DrawingsPage: React.FC = () => {
           continue;
         }
 
+        const pageDiscipline = opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name);
+
         const created = await drawingService.createDrawing({
           project_id: projectId,
           title: pageLabel,
           // Pass the source filename (e.g. "…_Mechanical_IFC_…") so the
           // word-based inferrer wins over the synthetic P### fallback.
-          discipline: opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name),
+          discipline: pageDiscipline,
           sheet_number: sheetNumber,
           revision: revisionFromName,
           file_url: pageImageStoragePath || pageImagePath,
@@ -874,16 +972,12 @@ const DrawingsPage: React.FC = () => {
           source_filename: file.name,
           file_size_bytes: page.blob.size,
           // Status meaning:
-          //   - 'completed'    — parser returned a high-confidence LABELED title; we trust it
-          //   - 'classifying'  — sheet number extracted but we're using filename fallback for title; AI fallback runs
-          //   - 'needs_review' — nothing reliable; user should edit
+          //   - 'completed'    — cover sheet, no AI needed
+          //   - 'classifying'  — AI will process this page and overwrite with final values
+          //   - 'needs_review' — cover sheet with no sheet number; user should edit
           processing_status: opts.isCover
-            ? 'completed'
-            : (titleLooksReliable && titleBlock.sheetNumber
-                ? 'completed'
-                : (titleBlock.sheetNumber
-                    ? 'classifying'           // we have a sheet number; AI fallback may improve title
-                    : 'needs_review')),       // no sheet number either; fully manual
+            ? (titleBlock.sheetNumber ? 'completed' : 'needs_review')
+            : 'classifying',  // always AI — matches production pipeline
         });
         if (created.error) { addToast('error', `Failed to save page ${page.pageNumber}: ${created.error.message}`); continue; }
 
@@ -895,40 +989,66 @@ const DrawingsPage: React.FC = () => {
             sheetNumber,
             sourceFile: file.name,
           });
+
+          // Also persist per-page metadata to drawing_pages. Carries fields
+          // that aren't on drawings (scale_ratio, viewport_details,
+          // pairing_tokens, design_description) and gives the classification
+          // pipeline a stable per-page target.
+          const { error: pageErr } = await supabase.from('drawing_pages').insert({
+            drawing_id: createdId,
+            project_id: projectId,
+            page_number: page.pageNumber,
+            image_url: pageImageStoragePath || pageImagePath,
+            thumbnail_url: thumbStoragePath,
+            width: page.width,
+            height: page.height,
+            sheet_number: sheetNumber,
+            drawing_title: pageLabel,
+            discipline: pageDiscipline,
+            classification: opts.isCover ? 'completed' : 'pending',  // AI will update to 'completed'
+            classification_confidence: titleBlock.confidence ?? null,
+          });
+          if (pageErr) {
+            console.warn(`[drawing_pages] insert failed for page ${page.pageNumber}: ${pageErr.message}`);
+          }
         }
 
-        // ── Stage 2: AI vision fallback on the cropped title-block ──
+        // ── Stage 2: AI vision classification on a TIGHT RIGHT-STRIP CROP ──
         //
-        // Only runs when Stage 1 (text-layer extraction) wasn't fully
-        // confident: sheet number missing, title missing, or confidence
-        // below the bar. For those pages we crop the page image down to
-        // just the title-block region (or a sensible default if we
-        // don't have one) and feed THAT to classify-drawing — the
-        // smaller the image, the more accurate the model.
-        const stage1Trustworthy =
-          titleBlock.sheetNumber &&
-          titleBlock.title &&
-          titleBlock.confidence >= 0.7;
-        const needsAi = !opts.isCover && !stage1Trustworthy;
+        // Always run Gemini on every non-cover page. The crop is the right
+        // 20% of the page, full height — this covers both common title-block
+        // layouts in one crop:
+        //   (a) traditional bottom-right ARCH-D title block
+        //   (b) right-edge vertical strip (common on multifamily residential
+        //       drawings — Cross Architects, AOS Engineering layouts)
+        //
+        // Why crop instead of sending the full page: the full page contains
+        // dozens of sheet-number-lookalike tokens (unit labels "B2", "A1",
+        // detail callouts "06/ID4.0", grid bubbles) that Gemini has to
+        // disambiguate. A tight right-strip crop eliminates those entirely
+        // — Gemini sees ONLY title-block text and hits sheet_number reliably.
+        //
+        // If cropping fails (e.g. image decode error on an exotic PDF), we
+        // fall back to sending the full page so we still get A classification
+        // — better than skipping the page.
+        const needsAi = !opts.isCover;
 
         if (createdId && pageImageStoragePath && needsAi) {
           let classifyUrl: string | null = null;
-          const cropRegion = page.titleBlockRegion ?? defaultTitleBlockRegion(page.pageWidth, page.pageHeight);
 
-          // Try to crop — if crop succeeds we upload the tiny cropped
-          // PNG and classify that. Much more accurate than full-page.
           try {
+            const stripRegion = rightEdgeStripRegion(page.pageWidth, page.pageHeight);
             const cropBlob = await cropPngToRegion(
               page.blob,
-              cropRegion,
+              stripRegion,
               page.pageWidth,
               page.pageHeight,
             );
             const cropKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
               ? globalThis.crypto.randomUUID()
               : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-            const cropPath = `${projectId}/drawings/crops/${cropKey}.png`;
-            const cropFile = new window.File([cropBlob], `crop-${cropKey}.png`, { type: 'image/png' });
+            const cropPath = `${projectId}/drawings/crops/${cropKey}-strip-p${page.pageNumber}.png`;
+            const cropFile = new window.File([cropBlob], `strip-${cropKey}.png`, { type: 'image/png' });
             const cropUploadResult = await smartUpload('project-files', cropPath, cropFile, () => {});
             if (!cropUploadResult.error) {
               const { data: cropUrlData } = await supabase.storage
@@ -936,24 +1056,36 @@ const DrawingsPage: React.FC = () => {
                 .createSignedUrl(cropUploadResult.storagePath || cropPath, 3600);
               if (cropUrlData?.signedUrl) {
                 classifyUrl = cropUrlData.signedUrl;
-                console.info(`[ai-fallback] page ${page.pageNumber} — queued cropped title-block for AI (${Math.round(cropBlob.size / 1024)}KB)`);
+                console.info(`[ai-primary] page ${page.pageNumber} — right-strip crop queued for Gemini (${Math.round(cropBlob.size / 1024)}KB)`);
               }
             }
           } catch (err) {
-            console.warn(`[ai-fallback] crop failed for page ${page.pageNumber}, falling back to full page:`, err);
+            console.warn(`[ai-primary] right-strip crop failed for page ${page.pageNumber}, falling back to full page:`, err);
           }
 
-          // If cropping failed for any reason, fall back to the full
-          // page image — AI can still usually handle it, just less well.
+          // Fallback: full page URL if crop/upload failed
           if (!classifyUrl) {
             const { data: urlData } = await supabase.storage.from('project-files').createSignedUrl(pageImageStoragePath, 3600);
             classifyUrl = urlData?.signedUrl ?? null;
+          }
+
+          // Also sign the FULL-PAGE URL separately so Gemini sees both
+          // images in one call. The crop covers title-block fields (sheet,
+          // title, revision); the full page covers fields that live with
+          // the drawing viewport (scale, plan_type, viewport details).
+          let fullPageSignedUrl: string | undefined;
+          {
+            const { data: fullUrlData } = await supabase.storage
+              .from('project-files')
+              .createSignedUrl(pageImageStoragePath, 3600);
+            if (fullUrlData?.signedUrl) fullPageSignedUrl = fullUrlData.signedUrl;
           }
 
           if (classifyUrl) {
             classificationTargets.push({
               drawingId: createdId,
               pageImageUrl: classifyUrl,
+              fullPageUrl: fullPageSignedUrl,
               fileName: `${titleNoExt}-P${page.pageNumber}`,
             });
           }
@@ -1229,7 +1361,7 @@ const DrawingsPage: React.FC = () => {
         // everything with the filename-inferred discipline and bail out.
         const probe = classificationTargets[0];
         try {
-          await triggerClassification(probe.drawingId, probe.pageImageUrl, probe.fileName);
+          await triggerClassification(probe.drawingId, probe.pageImageUrl, probe.fileName, probe.fullPageUrl);
         } catch {
           addToast('warning', 'AI classification service unavailable. Drawings saved — discipline set from filename where possible.');
           for (const t of classificationTargets) {
@@ -1246,7 +1378,18 @@ const DrawingsPage: React.FC = () => {
         }
         addToast('info', `AI classification running for ${classificationTargets.length} sheet${classificationTargets.length !== 1 ? 's' : ''}...`);
         for (let i = 1; i < classificationTargets.length; i++) {
-          await triggerClassification(classificationTargets[i].drawingId, classificationTargets[i].pageImageUrl, classificationTargets[i].fileName);
+          await triggerClassification(classificationTargets[i].drawingId, classificationTargets[i].pageImageUrl, classificationTargets[i].fileName, classificationTargets[i].fullPageUrl);
+        }
+
+        // Auto-chain the downstream pipeline: pairing → edge detection →
+        // overlap → discrepancy analysis. Previously gated behind a manual
+        // "Analyze" button that most users never found; now it runs on
+        // its own once classification finishes. Failures surface in the
+        // intelligence panel state — no extra toast needed here.
+        try {
+          await intelligence.analyzeDrawingSet();
+        } catch {
+          /* per-pair failures already handled inside analyzeDrawingSet */
         }
       })();
     }
@@ -1407,15 +1550,15 @@ const DrawingsPage: React.FC = () => {
       title="Drawings"
       actions={
         <>
-          <Btn variant="secondary" size="md" icon={<FolderOpen size={16} />} onClick={() => setShowSetsPanel(true)}>
+          <Btn variant="ghost" size="md" icon={<FolderOpen size={16} />} onClick={() => setShowSetsPanel(true)}>
             Sets
           </Btn>
-          <Btn variant="secondary" size="md" onClick={() => setShowAnnotationPanel(true)}>
+          <Btn variant="ghost" size="md" onClick={() => setShowAnnotationPanel(true)}>
             Annotations
           </Btn>
           <PermissionGate permission="drawings.upload">
             <Btn
-              variant="secondary" size="md"
+              variant="ghost" size="md"
               icon={<ScanSearch size={16} />}
               disabled={intelligence.state.stage !== 'idle' && intelligence.state.stage !== 'complete' && intelligence.state.stage !== 'failed'}
               onClick={handleAnalyzeDrawingSet}
@@ -1460,7 +1603,6 @@ const DrawingsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Toolbar — no metric cards, content goes edge-to-edge */}
         <DrawingToolbar
           filters={filters}
           onFiltersChange={setFilters}
@@ -1544,6 +1686,8 @@ const DrawingsPage: React.FC = () => {
           classification={processing.byDrawing(String(selectedDrawing.id))}
           classificationStatus={processing.statusByDrawing(String(selectedDrawing.id))}
           discrepancies={drawingDiscrepancies}
+          projectId={projectId ?? undefined}
+          onOpenDiscrepancy={(d) => setOpenDiscrepancy(d)}
           onCreateRFI={handleCreateRFIFromDiscrepancy}
           onFieldUpdate={async (drawingId, patch) => {
             // When the user corrects a sheet number or title, clear the
@@ -1761,6 +1905,15 @@ const DrawingsPage: React.FC = () => {
           onClose={() => setShowAnalysisPanel(false)}
         />
       )}
+
+      <DiscrepancyDetailModal
+        open={!!openDiscrepancy}
+        discrepancy={openDiscrepancy}
+        pair={openDiscrepancyPair}
+        archOverlayUrl={openDiscrepancyPair?.overlap_image_url ?? null}
+        onClose={() => setOpenDiscrepancy(null)}
+        onCreateRFI={handleCreateRFIFromDiscrepancy}
+      />
     </PageContainer>
   );
 };

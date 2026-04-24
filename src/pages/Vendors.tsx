@@ -415,7 +415,12 @@ export const Vendors: React.FC = () => {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: spacing['3'] }}>
                 {filtered.map((v) => {
-                  const expired = v.insurance_expiry && new Date(v.insurance_expiry) < new Date()
+                  const now = new Date()
+                  const expiry = v.insurance_expiry ? new Date(v.insurance_expiry) : null
+                  const expired = expiry ? expiry < now : false
+                  const daysToExpiry = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
+                  const expiringSoon = !expired && daysToExpiry != null && daysToExpiry <= 30
+                  const insuranceColor = expired ? colors.statusCritical : expiringSoon ? colors.statusPending : colors.textSecondary
                   const palette = STATUS_COLORS[v.status]
                   return (
                     <div key={v.id} onClick={() => { setSelectedVendor(v); setEvalOpen(true) }} style={{
@@ -461,9 +466,11 @@ export const Vendors: React.FC = () => {
                           {v.performance_score != null ? v.performance_score.toFixed(1) : '—'}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], fontSize: typography.fontSize.caption, color: expired ? colors.statusCritical : colors.textSecondary }}>
-                        {expired ? <ShieldAlert size={14} /> : <Shield size={14} />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], fontSize: typography.fontSize.caption, color: insuranceColor }}>
+                        {expired || expiringSoon ? <ShieldAlert size={14} /> : <Shield size={14} />}
                         Insurance: {v.insurance_expiry ? `exp ${new Date(v.insurance_expiry).toLocaleDateString()}` : '—'}
+                        {expired && <span style={{ fontWeight: typography.fontWeight.medium }}>· expired</span>}
+                        {expiringSoon && <span style={{ fontWeight: typography.fontWeight.medium }}>· {daysToExpiry}d left</span>}
                       </div>
                       {v.email && <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{v.email}</div>}
                       <PermissionGate permission="directory.manage">

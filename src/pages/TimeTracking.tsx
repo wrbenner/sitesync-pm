@@ -16,6 +16,8 @@ import {
   useCostCodes,
   type TimeEntry,
 } from '../hooks/queries/enterprise-capabilities'
+import { useTimesheets, useTimesheetHoursByActivity } from '../hooks/queries/timesheets'
+import { useCreateTimesheet, useDeleteTimesheet } from '../hooks/mutations/timesheets'
 
 function startOfWeek(d: Date): Date {
   const copy = new Date(d)
@@ -52,6 +54,83 @@ const TimeTracking: React.FC = () => {
   const { data: workforceMembers } = useWorkforceMembers(projectId ?? undefined)
   const createEntry = useCreateTimeEntry()
   const approve = useApproveTimeEntry()
+
+  // Daily-hours entry against the `timesheets` table, scoped to the current week.
+  const weekFromISO = useMemo(() => toISODate(weekStart), [weekStart])
+  const weekToISO = useMemo(() => toISODate(weekEnd), [weekEnd])
+  const { data: timesheetRows = [], isLoading: timesheetsLoading } = useTimesheets(
+    projectId ?? undefined,
+    { from: weekFromISO, to: weekToISO },
+  )
+  const { data: hoursByActivity = [] } = useTimesheetHoursByActivity(projectId ?? undefined)
+  const createTimesheet = useCreateTimesheet()
+  const deleteTimesheet = useDeleteTimesheet()
+  const [tsModalOpen, setTsModalOpen] = useState(false)
+  const [tsForm, setTsForm] = useState({
+    worker_id: '',
+    work_date: toISODate(new Date()),
+    hours: '8',
+    activity: '',
+  })
+  const submitTimesheet = async () => {
+    if (!projectId) { toast.error('No active project'); return }
+    if (!tsForm.worker_id) { toast.error('Pick a worker'); return }
+    const hours = Number(tsForm.hours)
+    if (!Number.isFinite(hours) || hours <= 0 || hours > 24) {
+      toast.error('Hours must be between 0 and 24'); return
+    }
+    try {
+      await createTimesheet.mutateAsync({
+        project_id: projectId,
+        worker_id: tsForm.worker_id,
+        work_date: tsForm.work_date,
+        hours,
+        activity: tsForm.activity.trim(),
+      })
+      toast.success('Hours logged')
+      setTsModalOpen(false)
+      setTsForm({ worker_id: '', work_date: toISODate(new Date()), hours: '8', activity: '' })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to log hours')
+    }
+  }
+  const removeTimesheet = async (row: { id: string; worker_name?: string; work_date: string; hours: number }) => {
+    if (!projectId) return
+    if (!window.confirm(`Delete ${row.hours}h for ${row.worker_name ?? 'this worker'} on ${row.work_date}?`)) return
+    try {
+      await deleteTimesheet.mutateAsync({ id: row.id, project_id: projectId })
+      toast.success('Entry removed')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete')
+    }
+  }
+  const maxActivityHours = Math.max(1, ...hoursByActivity.map((x) => x.hours))
+
+  // Build worker × day-of-week matrix from the week-scoped timesheet rows.
+  const { weekWorkers, dailyTotals, weekTotal } = useMemo(() => {
+    type WorkerRow = { id: string; name: string; trade: string; daily: number[]; total: number }
+    const byWorker = new Map<string, WorkerRow>()
+    for (const t of timesheetRows) {
+      let row = byWorker.get(t.worker_id)
+      if (!row) {
+        row = { id: t.worker_id, name: t.worker_name ?? 'Unknown', trade: t.worker_trade ?? '', daily: [0, 0, 0, 0, 0, 0, 0], total: 0 }
+        byWorker.set(t.worker_id, row)
+      }
+      const dayIdx = weekDays.findIndex((d) => toISODate(d) === t.work_date)
+      if (dayIdx >= 0) {
+        row.daily[dayIdx] += t.hours
+        row.total += t.hours
+      }
+    }
+    const workers = Array.from(byWorker.values()).sort((a, b) => a.name.localeCompare(b.name))
+    const totals = [0, 0, 0, 0, 0, 0, 0]
+    let grand = 0
+    for (const w of workers) {
+      for (let i = 0; i < 7; i++) totals[i] += w.daily[i]
+      grand += w.total
+    }
+    return { weekWorkers: workers, dailyTotals: totals, weekTotal: grand }
+  }, [timesheetRows, weekDays])
 
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ date: toISODate(new Date()), regular_hours: '', overtime_hours: '', double_time_hours: '', cost_code: '', task_description: '' })
@@ -372,6 +451,146 @@ const TimeTracking: React.FC = () => {
         <Btn variant="ghost" onClick={() => setWeekStart(startOfWeek(new Date()))}>Today</Btn>
         <Btn variant="ghost" onClick={() => setWeekStart(addDays(weekStart, 7))}>Next Week →</Btn>
       </div>
+
+      {/* Week-at-a-glance: workers × days, backed by the `timesheets` table */}
+      <Card padding={spacing['5']}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
+          <SectionHeader title={`Week at a Glance — ${weekFromISO} to ${weekToISO}`} />
+          <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setTsModalOpen(true)}>Enter Hours</Btn>
+        </div>
+        {timesheetsLoading ? (
+          <Skeleton height="240px" />
+        ) : weekWorkers.length === 0 ? (
+          <EmptyState
+            icon={<Clock size={32} color={colors.textTertiary} />}
+            title="No hours logged this week"
+            description="Click Enter Hours to log a worker's daily hours against an activity."
+            actionLabel="Enter Hours"
+            onAction={() => setTsModalOpen(true)}
+          />
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr repeat(7, 1fr) 1fr',
+              gap: spacing['2'],
+              padding: `${spacing['2']} 0`,
+              borderBottom: `1px solid ${colors.borderSubtle}`,
+              fontSize: typography.fontSize.xs,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.textTertiary,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}>
+              <div>Worker</div>
+              {weekDays.map((d, i) => (
+                <div key={i} style={{ textAlign: 'center' }}>{DAY_LABELS[i]} {d.getDate()}</div>
+              ))}
+              <div style={{ textAlign: 'right' }}>Week Total</div>
+            </div>
+            {weekWorkers.map((w) => (
+              <div key={w.id} style={{
+                display: 'grid',
+                gridTemplateColumns: '2fr repeat(7, 1fr) 1fr',
+                gap: spacing['2'],
+                padding: `${spacing['2']} 0`,
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                fontSize: typography.fontSize.sm,
+                alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{w.name}</div>
+                  <div style={{ color: colors.textTertiary, fontSize: typography.fontSize.xs }}>{w.trade || '—'}</div>
+                </div>
+                {w.daily.map((h, i) => (
+                  <div key={i} style={{ textAlign: 'center', color: h > 0 ? colors.textPrimary : colors.textTertiary }}>
+                    {h > 0 ? h.toFixed(2) : '—'}
+                  </div>
+                ))}
+                <div style={{ textAlign: 'right', color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>
+                  {w.total.toFixed(2)}
+                </div>
+              </div>
+            ))}
+            {/* Daily totals summary row */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr repeat(7, 1fr) 1fr',
+              gap: spacing['2'],
+              padding: `${spacing['3']} ${spacing['2']}`,
+              background: colors.surfaceInset,
+              marginTop: spacing['2'],
+              borderRadius: borderRadius.base,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+            }}>
+              <div style={{ color: colors.textPrimary }}>Daily Total</div>
+              {dailyTotals.map((h, i) => (
+                <div key={i} style={{ textAlign: 'center', color: h > 0 ? colors.textPrimary : colors.textTertiary }}>
+                  {h > 0 ? h.toFixed(2) : '—'}
+                </div>
+              ))}
+              <div style={{ textAlign: 'right', color: colors.brand }}>{weekTotal.toFixed(2)}</div>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card padding={spacing['5']} style={{ marginTop: spacing['4'] }}>
+        <SectionHeader title="Entries this week" />
+        {timesheetsLoading ? (
+          <Skeleton height="120px" />
+        ) : timesheetRows.length === 0 ? (
+          <div style={{ padding: spacing['3'], fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+            No entries this week yet.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', marginBottom: spacing['4'] }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 0.7fr 2fr auto', gap: spacing['2'], padding: spacing['2'], fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <div>Worker</div>
+              <div>Date</div>
+              <div>Hours</div>
+              <div>Activity</div>
+              <div></div>
+            </div>
+            {timesheetRows.map((t) => (
+              <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 0.7fr 2fr auto', gap: spacing['2'], padding: spacing['3'], alignItems: 'center', borderTop: `1px solid ${colors.borderSubtle}`, fontSize: typography.fontSize.sm }}>
+                <div>
+                  <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{t.worker_name}</div>
+                  <div style={{ color: colors.textTertiary, fontSize: typography.fontSize.xs }}>{t.worker_trade}</div>
+                </div>
+                <div style={{ color: colors.textSecondary }}>{t.work_date}</div>
+                <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{t.hours}</div>
+                <div style={{ color: colors.textSecondary }}>{t.activity || '—'}</div>
+                <Btn variant="ghost" size="sm" onClick={() => removeTimesheet(t)} disabled={deleteTimesheet.isPending} aria-label="Delete entry">Delete</Btn>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {hoursByActivity.length > 0 && (
+          <>
+            <SectionHeader title="Hours by activity" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
+              {hoursByActivity.slice(0, 8).map((r) => {
+                const pct = (r.hours / maxActivityHours) * 100
+                return (
+                  <div key={r.activity}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: typography.fontSize.sm, marginBottom: 4 }}>
+                      <span style={{ color: colors.textPrimary }}>{r.activity}</span>
+                      <span style={{ color: colors.textSecondary, fontWeight: typography.fontWeight.semibold }}>{r.hours}h</span>
+                    </div>
+                    <div style={{ height: 6, background: colors.surfaceInset, borderRadius: borderRadius.base }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: colors.primaryOrange, borderRadius: borderRadius.base }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </Card>
+      <div style={{ marginTop: spacing['4'] }} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
         <MetricBox label="Total Hours" value={totals.hours.toFixed(1)} icon={Clock} />
@@ -830,6 +1049,33 @@ const TimeTracking: React.FC = () => {
           </Card>
         </div>
       )}
+
+      <Modal open={tsModalOpen} onClose={() => setTsModalOpen(false)} title="Enter Hours">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+          <div>
+            <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Worker *</label>
+            <select
+              value={tsForm.worker_id}
+              onChange={(e) => setTsForm((p) => ({ ...p, worker_id: e.target.value }))}
+              style={{ width: '100%', padding: spacing['3'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minHeight: 56 }}
+            >
+              <option value="">Select worker</option>
+              {(workforceMembers ?? []).map((w: Record<string, unknown>) => (
+                <option key={w.id as string} value={w.id as string}>
+                  {((w.name as string) ?? 'Unnamed')}{w.trade ? ` — ${w.trade as string}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <InputField label="Date *" type="date" value={tsForm.work_date} onChange={(v) => setTsForm((p) => ({ ...p, work_date: v }))} />
+          <InputField label="Hours *" type="number" value={tsForm.hours} onChange={(v) => setTsForm((p) => ({ ...p, hours: v }))} />
+          <InputField label="Activity" value={tsForm.activity} onChange={(v) => setTsForm((p) => ({ ...p, activity: v }))} placeholder="e.g. Foundation pour, Drywall L3" />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['2'], marginTop: spacing['2'] }}>
+            <Btn variant="secondary" onClick={() => setTsModalOpen(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={submitTimesheet} loading={createTimesheet.isPending}>Log Hours</Btn>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Log Time">
         <InputField label="Date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} type="date" />

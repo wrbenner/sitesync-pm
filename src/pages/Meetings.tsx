@@ -6,8 +6,8 @@ import {
 } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
-import { useMeetings } from '../hooks/queries';
-import { useDeleteMeeting } from '../hooks/mutations';
+import { useMeetings, useMeetingAttendees, useMeetingAttendeeCounts } from '../hooks/queries';
+import { useDeleteMeeting, useAddAttendee, useRemoveAttendee } from '../hooks/mutations';
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
@@ -323,10 +323,33 @@ const MeetingDetailView: React.FC<{
   const queryClient = useQueryClient();
   const { data: agendaItems = [], isPending: agendaLoading } = useMeetingAgendaItems(meetingId);
   const { data: participants = [], isPending: participantsLoading } = useMeetingParticipants(meetingId);
+  const { data: attendees = [], isPending: attendeesLoading } = useMeetingAttendees(meetingId);
   const createAgendaItem = useCreateAgendaItem();
   const deleteAgendaItem = useDeleteAgendaItem();
   const addParticipant = useAddParticipant();
   const toggleAttendance = useToggleAttendance();
+  const addAttendee = useAddAttendee();
+  const removeAttendee = useRemoveAttendee();
+  const [showAttendeeForm, setShowAttendeeForm] = useState(false);
+  const [attendeeForm, setAttendeeForm] = useState({ role: '', company: '' });
+
+  const handleAddAttendee = () => {
+    const role = attendeeForm.role.trim();
+    const company = attendeeForm.company.trim();
+    if (!role && !company) {
+      toast.error('Enter a name or role for the attendee');
+      return;
+    }
+    addAttendee.mutate(
+      { meeting_id: meetingId, role: role || null, company: company || null, attended: false },
+      {
+        onSuccess: () => {
+          setAttendeeForm({ role: '', company: '' });
+          setShowAttendeeForm(false);
+        },
+      },
+    );
+  };
 
   // Fetch full meeting detail for notes and minutes_published
   const { data: meetingDetail } = useQuery<MeetingDetail>({
@@ -692,6 +715,90 @@ const MeetingDetailView: React.FC<{
         )}
       </div>
 
+      {/* Attendees (meeting_attendees table) */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
+          <p style={sectionTitleStyle}>
+            <Users size={18} /> Attendees ({attendees.length})
+          </p>
+          <Btn variant="secondary" icon={<UserPlus size={14} />} onClick={() => setShowAttendeeForm(true)}>
+            Add Attendee
+          </Btn>
+        </div>
+        {attendeesLoading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.sm }}>
+            {[0, 1].map((i) => <Skeleton key={i} style={{ height: 36 }} />)}
+          </div>
+        ) : attendees.length === 0 ? (
+          <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, padding: spacing.lg, textAlign: 'center' }}>
+            No attendees added yet.
+          </p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th style={detailThStyle}>Name / Role</th>
+                <th style={detailThStyle}>Company</th>
+                <th style={detailThStyle}>Attended</th>
+                <th style={detailThStyle}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {attendees.map((a, idx) => {
+                const isLast = idx === attendees.length - 1;
+                const rowBorder = isLast ? 'none' : `1px solid ${colors.borderSubtle}`;
+                return (
+                  <tr key={a.id}>
+                    <td style={{ ...detailTdStyle, borderBottom: rowBorder, fontWeight: typography.fontWeight.medium as number }}>
+                      {a.role ?? (a.user_id ? `User ${a.user_id.slice(0, 8)}` : '—')}
+                    </td>
+                    <td style={{ ...detailTdStyle, borderBottom: rowBorder, color: colors.textSecondary }}>
+                      {a.company ?? '—'}
+                    </td>
+                    <td style={{ ...detailTdStyle, borderBottom: rowBorder, textAlign: 'center' }}>
+                      <span style={{ color: a.attended ? colors.statusActive : colors.textTertiary }}>
+                        {a.attended ? <CheckCircle size={16} /> : '—'}
+                      </span>
+                    </td>
+                    <td style={{ ...detailTdStyle, borderBottom: rowBorder, textAlign: 'right' }}>
+                      <button
+                        onClick={() => removeAttendee.mutate({ id: a.id, meeting_id: meetingId })}
+                        disabled={removeAttendee.isPending}
+                        aria-label="Remove attendee"
+                        style={{
+                          padding: `${spacing.xs} ${spacing.sm}`,
+                          border: 'none',
+                          background: 'transparent',
+                          color: colors.textTertiary,
+                          cursor: removeAttendee.isPending ? 'not-allowed' : 'pointer',
+                          fontSize: typography.fontSize.sm,
+                          fontFamily: typography.fontFamily,
+                          borderRadius: borderRadius.sm,
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+        {showAttendeeForm && (
+          <div style={{ marginTop: spacing.md, padding: spacing.md, background: colors.surfaceInset, borderRadius: borderRadius.lg }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm, marginBottom: spacing.sm }}>
+              <InputField label="Name / Role" value={attendeeForm.role} onChange={(v) => setAttendeeForm({ ...attendeeForm, role: v })} placeholder="e.g. Jane Smith — PM" />
+              <InputField label="Company" value={attendeeForm.company} onChange={(v) => setAttendeeForm({ ...attendeeForm, company: v })} placeholder="e.g. Acme Construction" />
+            </div>
+            <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end' }}>
+              <Btn variant="secondary" onClick={() => { setShowAttendeeForm(false); setAttendeeForm({ role: '', company: '' }); }}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleAddAttendee} loading={addAttendee.isPending}>Add</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Participants */}
       <div style={sectionStyle}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md }}>
@@ -950,6 +1057,7 @@ interface MeetingListItem {
   date: string;
   location: string | null;
   attendees: Array<{ id: string; name: string }>;
+  attendeeCount: number;
 }
 
 interface ActionItem {
@@ -1046,6 +1154,10 @@ const MeetingCard: React.FC<{
               {meeting.location}
             </span>
           )}
+          <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+            <Users size={12} />
+            {meeting.attendeeCount} {meeting.attendeeCount === 1 ? 'attendee' : 'attendees'}
+          </span>
         </div>
       </div>
       <Tag
@@ -1163,6 +1275,8 @@ export const Meetings: React.FC = () => {
     }
   };
   const { data: actionItemsData } = useProjectActionItems(projectId);
+  const meetingIds = (meetingsResult?.data ?? []).map((m) => m.id);
+  const { data: attendeeCounts = {} } = useMeetingAttendeeCounts(meetingIds);
   const allMeetings: MeetingListItem[] = (meetingsResult?.data ?? []).map((m) => ({
     id: m.id,
     title: m.title,
@@ -1171,6 +1285,7 @@ export const Meetings: React.FC = () => {
     date: m.date ?? '',
     location: m.location ?? null,
     attendees: [],
+    attendeeCount: attendeeCounts[m.id] ?? 0,
   }));
 
   if (!projectId) {
@@ -1224,7 +1339,7 @@ export const Meetings: React.FC = () => {
   });
   const openActionItemsCount = allActionItems.filter((ai) => ai.status === 'open').length;
   const meetingsThisWeek = upcomingMeetings.length;
-  const totalAttendees = allMeetings.reduce((sum, m) => sum + (m.attendees?.length ?? 0), 0);
+  const totalAttendees = allMeetings.reduce((sum, m) => sum + (m.attendeeCount ?? 0), 0);
   const avgAttendance = allMeetings.length > 0 ? Math.round(totalAttendees / allMeetings.length) : 0;
 
   const filteredActionItems = showOpenOnly

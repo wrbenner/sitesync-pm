@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   X, Upload, Eye, Sparkles, Clock, User, FileText, History,
-  Link2, AlertTriangle, ChevronRight, MessageSquare, Check, Pencil,
+  Link2, AlertTriangle, MessageSquare, Check, Pencil, Plus, Trash2,
 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Btn } from '../../components/Primitives';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
@@ -10,6 +11,10 @@ import { DISCIPLINE_COLORS, DISCIPLINE_LABELS, STATUS_CONFIG } from './constants
 import type { DrawingRevision } from '../../types/api';
 import type { DrawingClassification, DrawingDiscrepancy } from '../../types/ai';
 import { formatRevDate } from './types';
+import { useLinkedEntities } from '../../hooks/useLinkedEntities';
+import { createEntityLink, removeEntityLink } from '../../services/entityLinkService';
+import { supabase } from '../../lib/supabase';
+import type { EntityType, LinkedItem } from '../../components/shared/LinkedEntities';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +48,10 @@ interface DrawingDetailProps {
   classificationStatus?: string | null;
   discrepancies?: DrawingDiscrepancy[];
   onCreateRFI?: () => void;
+  /** Project ID — required to fetch and write entity_links. */
+  projectId?: string;
+  /** Called when the user clicks a discrepancy row to open the side-by-side modal. */
+  onOpenDiscrepancy?: (discrepancy: DrawingDiscrepancy) => void;
   /**
    * Commit an edit to the drawing row. The parent handles persistence
    * (drawingService.updateDrawing) + refetch. Used by the inline-edit UI
@@ -119,8 +128,8 @@ const S = {
   } as React.CSSProperties,
   title: {
     margin: 0,
-    fontSize: '16px',
-    fontWeight: 700,
+    fontSize: '15px',
+    fontWeight: 600,
     color: colors.textPrimary,
     lineHeight: 1.3,
     letterSpacing: '-0.2px',
@@ -137,22 +146,25 @@ const S = {
   disciplineBadge: (color: string) => ({
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '4px',
+    gap: '5px',
     padding: '2px 8px',
-    borderRadius: '100px',
-    backgroundColor: color + '10',
+    borderRadius: '4px',
+    backgroundColor: color + '0c',
     color,
     fontSize: '10px',
     fontWeight: 600,
     textTransform: 'capitalize' as const,
+    letterSpacing: '0.02em',
   } as React.CSSProperties),
   statusBadge: (bg: string, color: string) => ({
     padding: '2px 8px',
-    borderRadius: '100px',
-    backgroundColor: bg,
+    borderRadius: '4px',
+    backgroundColor: `${bg}cc`,
     color,
     fontSize: '10px',
-    fontWeight: 600,
+    fontWeight: 500,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.03em',
   } as React.CSSProperties),
   revLabel: {
     fontSize: '11px',
@@ -206,17 +218,17 @@ const S = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '4px',
-    padding: '10px 8px',
+    gap: '5px',
+    padding: '11px 8px',
     border: 'none',
     cursor: 'pointer',
     backgroundColor: 'transparent',
-    borderBottom: isActive ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
-    color: isActive ? colors.primaryOrange : colors.textTertiary,
-    fontSize: '11px',
-    fontWeight: isActive ? 600 : 500,
+    borderBottom: isActive ? `2px solid ${colors.textPrimary}` : '2px solid transparent',
+    color: isActive ? colors.textPrimary : colors.textTertiary,
+    fontSize: '12px',
+    fontWeight: isActive ? 600 : 400,
     fontFamily: typography.fontFamily,
-    transition: 'all 150ms ease-out',
+    transition: 'color 150ms ease-out, border-color 150ms ease-out',
   } as React.CSSProperties),
   tabBadge: (bg: string, color: string) => ({
     minWidth: '14px',
@@ -243,13 +255,14 @@ const S = {
   metaRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    padding: '8px 0',
+    gap: '14px',
+    padding: '10px 0',
+    borderBottom: `1px solid ${colors.borderSubtle}`,
   } as React.CSSProperties,
   metaIcon: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '6px',
+    width: '28px',
+    height: '28px',
+    borderRadius: '8px',
     backgroundColor: colors.surfaceInset,
     display: 'flex',
     alignItems: 'center',
@@ -263,14 +276,14 @@ const S = {
     color: colors.textTertiary,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.4px',
-    fontWeight: 600,
+    fontWeight: 500,
   } as React.CSSProperties,
   metaValue: {
     margin: 0,
     fontSize: '13px',
     color: colors.textPrimary,
-    fontWeight: 500,
-    textTransform: 'capitalize' as const,
+    fontWeight: 600,
+    letterSpacing: '-0.01em',
   } as React.CSSProperties,
 
   // Revision timeline
@@ -305,7 +318,7 @@ const S = {
   // Empty state
   empty: {
     textAlign: 'center' as const,
-    padding: '40px 20px',
+    padding: '60px 20px',
     color: colors.textTertiary,
   } as React.CSSProperties,
 
@@ -360,6 +373,8 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
   discrepancies = [],
   onCreateRFI,
   onFieldUpdate,
+  projectId,
+  onOpenDiscrepancy,
 }) => {
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const discColor = DISCIPLINE_COLORS[drawing.discipline] || DISCIPLINE_COLORS.unclassified;
@@ -545,11 +560,11 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
 
           {/* Action buttons */}
           <div style={S.actions}>
-            <Btn variant="primary" size="sm" icon={<Eye size={13} />} onClick={onOpenViewer} fullWidth>
+            <Btn variant="primary" size="sm" icon={<Eye size={13} />} onClick={onOpenViewer} style={{ flex: 1 }}>
               Open Viewer
             </Btn>
             <PermissionGate permission="drawings.upload">
-              <Btn variant="secondary" size="sm" icon={<Upload size={13} />} onClick={onUploadRevision}>
+              <Btn variant="ghost" size="sm" icon={<Upload size={13} />} onClick={onUploadRevision}>
                 New Rev
               </Btn>
             </PermissionGate>
@@ -563,7 +578,7 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
               {tab.icon}
               {tab.label}
               {tab.key === 'revisions' && revisionHistory && revisionHistory.length > 0 && (
-                <span style={S.tabBadge(activeTab === tab.key ? colors.primaryOrange + '20' : colors.surfaceInset, activeTab === tab.key ? colors.primaryOrange : colors.textTertiary)}>
+                <span style={S.tabBadge(colors.surfaceInset, activeTab === tab.key ? colors.textPrimary : colors.textTertiary)}>
                   {revisionHistory.length}
                 </span>
               )}
@@ -586,13 +601,16 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
               onCompareVersions={onCompareVersions}
             />
           )}
-          {activeTab === 'linked' && <LinkedTab />}
+          {activeTab === 'linked' && (
+            <LinkedTab drawingId={String(drawing.id)} projectId={projectId} />
+          )}
           {activeTab === 'ai' && (
             <AITab
               classification={classification}
               classificationStatus={classificationStatus}
               discrepancies={discrepancies}
               onCreateRFI={onCreateRFI}
+              onOpenDiscrepancy={onOpenDiscrepancy}
             />
           )}
         </div>
@@ -603,14 +621,24 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
 
 // ─── Tab: Overview ──────────────────────────────────────────────────────────
 
+/** Format a raw date string into a clean human-readable form */
+function formatDateHuman(raw: string | null | undefined): string {
+  if (!raw) return '—';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return raw; }
+}
+
 const OverviewTab: React.FC<{ drawing: DrawingItem; discColor: string }> = ({ drawing, discColor }) => {
+  const issuedRaw = drawing.currentRevision?.issued_date || drawing.date;
   const metadata = [
     { label: 'Sheet Number', value: drawing.setNumber, icon: <FileText size={12} /> },
     { label: 'Discipline', value: DISCIPLINE_LABELS[drawing.discipline] || drawing.discipline?.replace(/_/g, ' ') || 'Unclassified', icon: <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: discColor, display: 'inline-block' }} /> },
     { label: 'Current Revision', value: `Rev ${drawing.currentRevision?.revision_number ?? drawing.revision}`, icon: <History size={12} /> },
-    { label: 'Issued Date', value: drawing.currentRevision?.issued_date ? formatRevDate(drawing.currentRevision.issued_date) : drawing.date || '—', icon: <Clock size={12} /> },
+    { label: 'Issued Date', value: formatDateHuman(issuedRaw), icon: <Clock size={12} /> },
     { label: 'Issued By', value: drawing.currentRevision?.issued_by || '—', icon: <User size={12} /> },
-    { label: 'Sheet Count', value: drawing.sheetCount ? String(drawing.sheetCount) : '1', icon: <FileText size={12} /> },
   ];
 
   return (
@@ -694,17 +722,265 @@ const RevisionsTab: React.FC<{
 
 // ─── Tab: Linked Items ──────────────────────────────────────────────────────
 
-const LinkedTab: React.FC = () => (
-  <div style={S.empty}>
-    <Link2 size={20} style={{ marginBottom: '8px', opacity: 0.4 }} />
-    <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: colors.textPrimary, marginBottom: '4px' }}>
-      No linked items yet
-    </p>
-    <p style={{ margin: 0, fontSize: '11px', color: colors.textTertiary, maxWidth: '240px', marginLeft: 'auto', marginRight: 'auto' }}>
-      Create markups on this drawing to link RFIs, punch items, and submittals.
-    </p>
-  </div>
-);
+type PickerKind = 'rfi' | 'punch_item' | null;
+
+interface PickerRow {
+  id: string;
+  label: string;
+  sub?: string;
+}
+
+const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawingId, projectId }) => {
+  const qc = useQueryClient();
+  const linked = useLinkedEntities(projectId ?? null, 'drawing', drawingId);
+  const [pickerKind, setPickerKind] = useState<PickerKind>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ['entity_links', projectId, 'drawing', drawingId] });
+
+  const pickerQuery = useQuery<PickerRow[]>({
+    queryKey: ['drawing-linker-picker', projectId, pickerKind],
+    enabled: !!projectId && pickerKind !== null,
+    queryFn: async () => {
+      if (!projectId || !pickerKind) return [];
+      if (pickerKind === 'rfi') {
+        const { data, error } = await supabase
+          .from('rfis')
+          .select('id, number, subject, title, status')
+          .eq('project_id', projectId)
+          .order('number', { ascending: false })
+          .limit(50);
+        if (error) throw error;
+        return (data ?? []).map((r: Record<string, unknown>) => ({
+          id: String(r.id),
+          label: `RFI #${r.number ?? '?'} — ${String(r.subject ?? r.title ?? 'Untitled')}`,
+          sub: String(r.status ?? ''),
+        }));
+      }
+      const { data, error } = await supabase
+        .from('punch_items')
+        .select('id, item_number, description, status')
+        .eq('project_id', projectId)
+        .order('item_number', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []).map((r: Record<string, unknown>) => ({
+        id: String(r.id),
+        label: `Punch #${r.item_number ?? '?'} — ${String(r.description ?? 'No description')}`,
+        sub: String(r.status ?? ''),
+      }));
+    },
+  });
+
+  const linkedIds = useMemo(() => {
+    const set = new Set<string>();
+    (linked.data ?? []).forEach((l) => set.add(`${l.type}:${l.id}`));
+    return set;
+  }, [linked.data]);
+
+  const handleLink = async (targetType: EntityType, targetId: string) => {
+    if (!projectId) return;
+    setBusyId(targetId);
+    setErrorMsg(null);
+    try {
+      const result = await createEntityLink({
+        project_id: projectId,
+        source_type: 'drawing',
+        source_id: drawingId,
+        target_type: targetType,
+        target_id: targetId,
+      });
+      if (!result) {
+        setErrorMsg('Could not create link. Check your project permissions.');
+        return;
+      }
+      await invalidate();
+      setPickerKind(null);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleUnlink = async (item: LinkedItem) => {
+    if (!projectId) return;
+    // Find the entity_links row id (source or target direction).
+    const { data: rows } = await supabase
+      .from('entity_links')
+      .select('id')
+      .eq('project_id', projectId)
+      .or(
+        `and(source_type.eq.drawing,source_id.eq.${drawingId},target_type.eq.${item.type},target_id.eq.${item.id}),` +
+        `and(source_type.eq.${item.type},source_id.eq.${item.id},target_type.eq.drawing,target_id.eq.${drawingId})`,
+      )
+      .limit(1);
+    const linkId = rows?.[0]?.id as string | undefined;
+    if (!linkId) return;
+    setBusyId(item.id);
+    try {
+      const ok = await removeEntityLink(linkId);
+      if (ok) await invalidate();
+      else setErrorMsg('Could not remove link.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (!projectId) {
+    return (
+      <div style={S.empty}>
+        <Link2 size={20} style={{ marginBottom: '8px', opacity: 0.4 }} />
+        <p style={{ margin: 0, fontSize: '13px' }}>Select a project to manage links</p>
+      </div>
+    );
+  }
+
+  const items = linked.data ?? [];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+        <Btn size="sm" variant="secondary" icon={<Plus size={12} />} onClick={() => setPickerKind('rfi')}>
+          Link RFI
+        </Btn>
+        <Btn size="sm" variant="secondary" icon={<Plus size={12} />} onClick={() => setPickerKind('punch_item')}>
+          Link Punch Item
+        </Btn>
+      </div>
+
+      {errorMsg && (
+        <div style={{
+          padding: '8px 12px', borderRadius: '8px',
+          backgroundColor: '#FEF2F2', border: '1px solid #FECACA',
+          color: '#991B1B', fontSize: '11px', marginBottom: '12px',
+        }}>{errorMsg}</div>
+      )}
+
+      {pickerKind && (
+        <div style={{
+          border: `1px solid ${colors.borderSubtle}`,
+          borderRadius: '8px',
+          marginBottom: '12px',
+          maxHeight: '280px',
+          overflow: 'auto',
+          backgroundColor: colors.surfaceRaised,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px',
+            borderBottom: `1px solid ${colors.borderSubtle}`,
+            fontSize: '11px', fontWeight: 600, color: colors.textSecondary,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+          }}>
+            <span>Pick {pickerKind === 'rfi' ? 'an RFI' : 'a punch item'}</span>
+            <button
+              onClick={() => setPickerKind(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary }}
+              aria-label="Close picker"
+            ><X size={12} /></button>
+          </div>
+          {pickerQuery.isLoading && (
+            <div style={{ padding: '16px', fontSize: '11px', color: colors.textTertiary, textAlign: 'center' }}>Loading…</div>
+          )}
+          {pickerQuery.error && (
+            <div style={{ padding: '16px', fontSize: '11px', color: '#991B1B', textAlign: 'center' }}>
+              Failed to load options.
+            </div>
+          )}
+          {pickerQuery.data && pickerQuery.data.length === 0 && (
+            <div style={{ padding: '16px', fontSize: '11px', color: colors.textTertiary, textAlign: 'center' }}>
+              No {pickerKind === 'rfi' ? 'RFIs' : 'punch items'} yet.
+            </div>
+          )}
+          {pickerQuery.data?.map((row) => {
+            const kindKey = pickerKind === 'rfi' ? 'rfi' : 'punch_item';
+            const alreadyLinked = linkedIds.has(`${kindKey}:${row.id}`);
+            const isBusy = busyId === row.id;
+            return (
+              <button
+                key={row.id}
+                disabled={alreadyLinked || isBusy}
+                onClick={() => handleLink(kindKey, row.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: '8px', width: '100%', textAlign: 'left',
+                  padding: '8px 12px', border: 'none', borderBottom: `1px solid ${colors.borderSubtle}`,
+                  background: alreadyLinked ? colors.surfaceInset : 'transparent',
+                  cursor: alreadyLinked || isBusy ? 'default' : 'pointer',
+                  fontFamily: typography.fontFamily, fontSize: '11px', color: colors.textPrimary,
+                  opacity: alreadyLinked ? 0.6 : 1,
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.label}</span>
+                {alreadyLinked ? (
+                  <span style={{ fontSize: '10px', color: colors.textTertiary }}>Linked</span>
+                ) : isBusy ? (
+                  <span style={{ fontSize: '10px', color: colors.textTertiary }}>Linking…</span>
+                ) : (
+                  <Plus size={12} color={colors.primaryOrange} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {linked.isLoading && (
+        <div style={S.empty}>
+          <p style={{ margin: 0, fontSize: '12px' }}>Loading links…</p>
+        </div>
+      )}
+
+      {!linked.isLoading && items.length === 0 && (
+        <div style={S.empty}>
+          <Link2 size={20} style={{ marginBottom: '8px', opacity: 0.4 }} />
+          <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: colors.textPrimary, marginBottom: '4px' }}>
+            No linked items yet
+          </p>
+          <p style={{ margin: 0, fontSize: '11px', color: colors.textTertiary, maxWidth: '240px', marginLeft: 'auto', marginRight: 'auto' }}>
+            Link RFIs or punch items above to cross-reference them on this drawing.
+          </p>
+        </div>
+      )}
+
+      {items.map((item) => (
+        <div
+          key={`${item.type}:${item.id}`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '10px 12px', borderRadius: '8px',
+            border: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surfaceRaised, marginBottom: '6px',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item.type === 'rfi' ? `RFI #${item.number}` :
+               item.type === 'punch_item' ? `Punch #${item.number}` :
+               `${item.type} ${item.number}`} — {item.title}
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: '10px', color: colors.textTertiary }}>{item.status}</p>
+          </div>
+          <button
+            onClick={() => handleUnlink(item)}
+            disabled={busyId === item.id}
+            aria-label="Remove link"
+            style={{
+              width: '24px', height: '24px', borderRadius: '6px',
+              border: 'none', background: 'transparent',
+              cursor: busyId === item.id ? 'default' : 'pointer',
+              color: colors.textTertiary,
+            }}
+            title="Remove link"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // ─── Tab: AI ────────────────────────────────────────────────────────────────
 
@@ -713,7 +989,8 @@ const AITab: React.FC<{
   classificationStatus?: string | null;
   discrepancies?: DrawingDiscrepancy[];
   onCreateRFI?: () => void;
-}> = ({ classification, classificationStatus, discrepancies = [], onCreateRFI }) => {
+  onOpenDiscrepancy?: (d: DrawingDiscrepancy) => void;
+}> = ({ classification, classificationStatus, discrepancies = [], onCreateRFI, onOpenDiscrepancy }) => {
   const isProcessing = classificationStatus === 'processing' || classificationStatus === 'pending';
   const hasFailed = classificationStatus === 'failed';
 
@@ -790,25 +1067,42 @@ const AITab: React.FC<{
       {discrepancies.length > 0 && (
         <div style={S.aiSection}>
           <p style={S.aiSectionLabel}>Discrepancies ({discrepancies.length})</p>
-          {discrepancies.slice(0, 5).map((d, i) => (
-            <div key={d.id || i} style={S.discrepancyCard}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <AlertTriangle
-                  size={11}
-                  color={d.severity === 'high' ? '#EF4444' : d.severity === 'medium' ? '#F59E0B' : '#6B7280'}
-                  style={{ marginTop: '2px', flexShrink: 0 }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: '11px', color: colors.textPrimary, fontWeight: 500, lineHeight: 1.4 }}>
-                    {d.description || 'Coordination conflict detected'}
-                  </p>
-                  {d.location && (
-                    <p style={{ margin: '2px 0 0', fontSize: '10px', color: colors.textTertiary }}>at {d.location}</p>
-                  )}
+          {discrepancies.slice(0, 5).map((d, i) => {
+            const clickable = !!onOpenDiscrepancy;
+            const loc = (d as unknown as { location?: string }).location;
+            return (
+              <button
+                key={d.id || i}
+                type="button"
+                onClick={clickable ? () => onOpenDiscrepancy!(d) : undefined}
+                disabled={!clickable}
+                style={{
+                  ...S.discrepancyCard,
+                  width: '100%', textAlign: 'left',
+                  border: `1px solid ${colors.borderSubtle}`,
+                  cursor: clickable ? 'pointer' : 'default',
+                  fontFamily: typography.fontFamily,
+                }}
+                title={clickable ? 'View side-by-side details' : undefined}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <AlertTriangle
+                    size={11}
+                    color={d.severity === 'high' ? '#EF4444' : d.severity === 'medium' ? '#F59E0B' : '#6B7280'}
+                    style={{ marginTop: '2px', flexShrink: 0 }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '11px', color: colors.textPrimary, fontWeight: 500, lineHeight: 1.4 }}>
+                      {d.description || 'Coordination conflict detected'}
+                    </p>
+                    {loc && (
+                      <p style={{ margin: '2px 0 0', fontSize: '10px', color: colors.textTertiary }}>at {loc}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
           {onCreateRFI && (
             <button
               onClick={onCreateRFI}

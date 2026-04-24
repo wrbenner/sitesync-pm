@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react'
-import { ClipboardCheck, Calendar, Plus, FileText } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { ClipboardCheck, Calendar, Plus, FileText, AlertTriangle } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { usePermits, useCreatePermit, useDeletePermit } from '../hooks/queries/permits'
+import { usePermits } from '../hooks/queries/permits'
+import { useCreatePermit, useUpdatePermit, useDeletePermit } from '../hooks/mutations/permits'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { EntityFormModal, type FieldConfig } from '../components/forms/EntityFormModal'
 import { permitSchema } from '../components/forms/schemas'
-import { supabase } from '../lib/supabase'
 
 type TabKey = 'permits' | 'inspections'
 
@@ -131,9 +130,28 @@ const permitColumns = [
       const v = info.getValue()
       if (!v) return <span style={{ color: colors.textTertiary }}>N/A</span>
       const exp = new Date(v)
-      const daysUntil = (exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      const expColor = daysUntil < 0 ? colors.statusCritical : daysUntil <= 30 ? colors.statusPending : colors.textSecondary
-      return <span style={{ color: expColor }}>{exp.toLocaleDateString()}</span>
+      const daysUntil = Math.floor((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      const expired = daysUntil < 0
+      const expiringSoon = !expired && daysUntil <= 30
+      const labelColor = expired ? colors.statusCritical : expiringSoon ? colors.statusPending : colors.textSecondary
+      const labelBg = expired ? colors.statusCriticalSubtle : expiringSoon ? colors.statusPendingSubtle : 'transparent'
+      const tag = expired ? 'Expired' : expiringSoon ? `Expiring in ${daysUntil}d` : null
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
+          <span style={{ color: labelColor }}>{exp.toLocaleDateString()}</span>
+          {tag && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+              padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full,
+              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+              color: labelColor, backgroundColor: labelBg,
+            }}>
+              {expired && <AlertTriangle size={10} aria-hidden="true" />}
+              {tag}
+            </span>
+          )}
+        </div>
+      )
     },
   }),
   permitCol.accessor('fee', {
@@ -162,24 +180,10 @@ export const Permits: React.FC = () => {
   const [editingPermit, setEditingPermit] = useState<Record<string, unknown> | null>(null)
   const [editForm, setEditForm] = useState({ type: '', permit_number: '', jurisdiction: '', status: '', fee: '', applied_date: '', expiration_date: '', notes: '' })
   const projectId = useProjectId()
-  const queryClient = useQueryClient()
   const { data: permits, isLoading } = usePermits(projectId)
   const createPermit = useCreatePermit()
+  const updatePermit = useUpdatePermit()
   const deletePermit = useDeletePermit()
-
-  const updatePermitMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await supabase.from('permits').update(updates).eq('id', id).select().single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['permits', projectId] })
-      toast.success('Permit updated')
-      setEditingPermit(null)
-    },
-    onError: (err: Error) => { toast.error(err.message || 'Failed to update permit') },
-  })
 
   const openEditPermit = (permit: Record<string, unknown>) => {
     setEditForm({
@@ -196,33 +200,39 @@ export const Permits: React.FC = () => {
   }
 
   const handleEditPermitSave = () => {
-    if (!editingPermit) return
-    updatePermitMutation.mutate({
-      id: String(editingPermit.id),
-      updates: {
-        type: editForm.type || null,
-        permit_number: editForm.permit_number || null,
-        jurisdiction: editForm.jurisdiction || null,
-        status: editForm.status || null,
-        fee: editForm.fee ? parseFloat(editForm.fee) : null,
-        applied_date: editForm.applied_date || null,
-        expiration_date: editForm.expiration_date || null,
-        notes: editForm.notes || null,
+    if (!editingPermit || !projectId) return
+    updatePermit.mutate(
+      {
+        id: String(editingPermit.id),
+        projectId,
+        updates: {
+          type: editForm.type || null,
+          permit_number: editForm.permit_number || null,
+          jurisdiction: editForm.jurisdiction || null,
+          status: editForm.status || null,
+          fee: editForm.fee ? parseFloat(editForm.fee) : null,
+          applied_date: editForm.applied_date || null,
+          expiration_date: editForm.expiration_date || null,
+          notes: editForm.notes || null,
+        },
       },
-    })
+      { onSuccess: () => setEditingPermit(null) },
+    )
   }
 
   const totalPermits = permits?.length || 0
   const activePermits = permits?.filter((p: unknown) => p.status === 'approved').length || 0
   const pendingReview = permits?.filter((p: unknown) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
 
-  // Count permits with upcoming inspections (use expiration within 60 days as proxy)
   const now = new Date()
-  const upcomingInspections = permits?.filter((p: unknown) => {
+  const expiringSoonCount = permits?.filter((p: unknown) => {
     if (!p.expiration_date) return false
-    const exp = new Date(p.expiration_date)
-    const daysUntil = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    return daysUntil > 0 && daysUntil <= 60
+    const daysUntil = (new Date(p.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    return daysUntil >= 0 && daysUntil <= 30
+  }).length || 0
+  const expiredCount = permits?.filter((p: unknown) => {
+    if (!p.expiration_date) return false
+    return new Date(p.expiration_date).getTime() < now.getTime()
   }).length || 0
 
   const handleAdd = () => {
@@ -235,12 +245,12 @@ export const Permits: React.FC = () => {
 
   const handleCreate = async (data: Record<string, unknown>) => {
     if (!projectId) return
+    const type = typeof data.type === 'string' && data.type ? data.type : 'building'
     try {
-      await createPermit.mutateAsync({ projectId, data })
-      toast.success('Permit created')
+      await createPermit.mutateAsync({ ...data, project_id: projectId, type })
       setModalOpen(false)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create permit')
+    } catch {
+      // hook surfaces the toast + Sentry capture
     }
   }
 
@@ -250,9 +260,8 @@ export const Permits: React.FC = () => {
     if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
     try {
       await deletePermit.mutateAsync({ id: String(permit.id), projectId })
-      toast.success('Permit deleted')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete permit')
+    } catch {
+      // hook surfaces the toast + Sentry capture
     }
   }
 
@@ -359,7 +368,18 @@ export const Permits: React.FC = () => {
           <MetricBox label="Total Permits" value={totalPermits} />
           <MetricBox label="Active" value={activePermits} change={activePermits > 0 ? 1 : 0} />
           <MetricBox label="Pending Review" value={pendingReview} change={pendingReview > 3 ? -1 : 0} />
-          <MetricBox label="Upcoming Inspections" value={upcomingInspections} changeLabel="within 60 days" />
+          <MetricBox
+            label="Expiring Soon"
+            value={expiringSoonCount}
+            change={expiringSoonCount > 0 ? -1 : 0}
+            changeLabel="within 30 days"
+          />
+          <MetricBox
+            label="Expired"
+            value={expiredCount}
+            change={expiredCount > 0 ? -1 : 0}
+            changeLabel={expiredCount > 0 ? 'needs renewal' : 'all current'}
+          />
         </div>
       )}
 
@@ -485,7 +505,7 @@ export const Permits: React.FC = () => {
           </div>
           <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
             <Btn variant="secondary" onClick={() => setEditingPermit(null)}>Cancel</Btn>
-            <Btn variant="primary" onClick={handleEditPermitSave} loading={updatePermitMutation.isPending}>{updatePermitMutation.isPending ? 'Saving...' : 'Save'}</Btn>
+            <Btn variant="primary" onClick={handleEditPermitSave} loading={updatePermit.isPending}>{updatePermit.isPending ? 'Saving...' : 'Save'}</Btn>
           </div>
         </div>
       </Modal>
