@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  DollarSign, Plus, Scale, Receipt, ShieldCheck, FileText, X, ArrowRight, CheckCircle2, Clock, ClipboardCheck, Unlock, Lock, AlertTriangle,
+  DollarSign, Plus, Scale, Receipt, ShieldCheck, FileText, X, ArrowRight, CheckCircle2, Clock, ClipboardCheck, Unlock, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
@@ -14,11 +14,13 @@ import { useReleaseRetainageEntry } from '../../hooks/mutations/retainage'
 import { useGenerateLienWaiver, WAIVER_TYPE_LABELS, type WaiverType } from '../../hooks/mutations/lien-waivers'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useAuth } from '../../hooks/useAuth'
+import { useActivePeriod } from '../../hooks/queries/financial-periods'
 import type { LienWaiverRow } from '../../types/api'
 import { approvePayApplication, markPayApplicationAsPaid } from '../../api/endpoints/payApplications'
 import { updateLienWaiverStatus, generateWaiversFromPayApp } from '../../api/endpoints/lienWaivers'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
+import { PeriodClosedBanner } from '../../components/ui/PeriodClosedBanner'
 import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { PageInsightBanners } from '../../components/ai/PredictiveAlert'
 import { useCopilotStore } from '../../stores/copilotStore'
@@ -28,45 +30,6 @@ import { PayAppDetail } from './PayAppDetail'
 import { LienWaiverPanel, CashFlowPanel } from './LienWaiverPanel'
 import { CreateEditPayAppDrawer } from './SOVEditor'
 import { useIsMobile } from '../../hooks/useWindowSize'
-
-// Period-closed banner. Lazy + null-safe because W2-1 may not have committed
-// financial-periods yet; if the module is missing, the banner renders nothing
-// rather than breaking this page.
-const _periodModulePath = '../../hooks/queries/financial-periods'
-const PeriodClosedBanner = React.lazy(async () => {
-  try {
-    const mod: unknown = await import(/* @vite-ignore */ _periodModulePath)
-    const hookFn = (mod as { useActivePeriod?: unknown } | null)?.useActivePeriod
-    if (typeof hookFn !== 'function') return { default: () => null }
-    const useActivePeriod = hookFn as (projectId: string | undefined) => {
-      data?: { status?: string | null; label?: string | number | null; name?: string | null } | null
-    }
-    const Banner: React.FC<{ projectId: string | undefined }> = ({ projectId }) => {
-      const result = useActivePeriod(projectId) ?? { data: null }
-      const period = result?.data
-      if (!period || period.status !== 'closed') return null
-      const label = period.label ?? period.name ?? 'current'
-      return (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: spacing['3'],
-          padding: `${spacing['3']} ${spacing['4']}`,
-          backgroundColor: colors.statusPendingSubtle,
-          borderRadius: borderRadius.base,
-          borderLeft: `3px solid ${colors.statusPending}`,
-          marginBottom: spacing['4'],
-        }}>
-          <Lock size={14} color={colors.statusPending} />
-          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
-            Period {String(label)} is closed — edits restricted
-          </span>
-        </div>
-      )
-    }
-    return { default: Banner }
-  } catch {
-    return { default: () => null }
-  }
-})
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'applications', label: 'Pay Applications', icon: Receipt },
@@ -204,6 +167,17 @@ const PaymentApplicationsPage: React.FC = () => {
   const { role } = usePermissions()
   const { user } = useAuth()
   const canReleaseRetainage = role === 'owner' || role === 'admin' || role === 'project_manager'
+
+  // Period-close gating: when the current financial period is closed, lock
+  // writes for everyone except owner/admin. The banner renders for all roles
+  // so the state is visible; only the disabled flag varies.
+  const { data: activePeriod } = useActivePeriod(projectId ?? undefined)
+  const periodClosed = activePeriod?.status === 'closed'
+  const canBypassPeriodLock = role === 'owner' || role === 'admin'
+  const writesLocked = periodClosed && !canBypassPeriodLock
+  const lockTooltip = writesLocked
+    ? 'Current period is closed — edits restricted to owner/admin'
+    : undefined
 
   // Generate Waiver modal state
   const [genWaiverOpen, setGenWaiverOpen] = useState(false)
@@ -469,9 +443,7 @@ const PaymentApplicationsPage: React.FC = () => {
         </div>
       )}
 
-      <Suspense fallback={null}>
-        <PeriodClosedBanner projectId={projectId ?? undefined} />
-      </Suspense>
+      <PeriodClosedBanner projectId={projectId ?? undefined} />
 
       <PageInsightBanners page="payment_applications" />
 
@@ -575,6 +547,9 @@ const PaymentApplicationsPage: React.FC = () => {
                 size="sm"
                 icon={<Plus size={14} />}
                 onClick={() => setGenWaiverOpen(true)}
+                disabled={writesLocked}
+                aria-disabled={writesLocked}
+                title={lockTooltip}
               >
                 Generate Waiver
               </Btn>
@@ -668,6 +643,9 @@ const PaymentApplicationsPage: React.FC = () => {
                             size="sm"
                             variant="secondary"
                             icon={<Unlock size={12} />}
+                            disabled={writesLocked}
+                            aria-disabled={writesLocked}
+                            title={lockTooltip}
                             onClick={() => {
                               setReleaseTarget({
                                 id: e.id,

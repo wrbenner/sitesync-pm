@@ -16,8 +16,11 @@ import {
 } from '../hooks/mutations';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { PeriodClosedBanner } from '../components/ui/PeriodClosedBanner';
 import CreateChangeOrderModal from '../components/forms/CreateChangeOrderModal';
 import { useAuth } from '../hooks/useAuth';
+import { usePermissions } from '../hooks/usePermissions';
+import { useActivePeriod } from '../hooks/queries/financial-periods';
 import { useNavigate } from 'react-router-dom';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useLinkedEntities } from '../hooks/useLinkedEntities';
@@ -140,8 +143,8 @@ const ApprovalChain: React.FC<{ steps: ApprovalStep[]; coId: string; onAdvance?:
             }}>
               <ApprovalStepIcon status={step.status} />
               <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: approvalStepColor[step.status], textAlign: 'center' }}>{step.label}</span>
-              <span style={{ fontSize: '11px', color: colors.textTertiary, textAlign: 'center' }}>{step.approver}</span>
-              {step.date && <span style={{ fontSize: '10px', color: colors.textTertiary }}>{step.date}</span>}
+              <span style={{ fontSize: 11, color: colors.textTertiary, textAlign: 'center' }}>{step.approver}</span>
+              {step.date && <span style={{ fontSize: 10, fontFamily: typography.fontFamilyMono, color: colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>{step.date}</span>}
               {step.comments && <span style={{ fontSize: '10px', color: colors.textSecondary, fontStyle: 'italic', textAlign: 'center', maxWidth: 110 }}>{step.comments}</span>}
             </div>
             {i < steps.length - 1 && (
@@ -228,11 +231,11 @@ const MarkupCalculator: React.FC<{ directCost: number }> = ({ directCost }) => {
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing['2'], fontSize: typography.fontSize.sm }}>
-        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Direct Cost</span><div style={{ fontWeight: typography.fontWeight.medium }}>{fmtCurrency(directCost)}</div></div>
-        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>OH Amount</span><div>{fmtCurrency(ohAmt)}</div></div>
-        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Subtotal</span><div>{fmtCurrency(subtotal)}</div></div>
-        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Profit Amount</span><div>{fmtCurrency(profitAmt)}</div></div>
-        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Bond + Insurance</span><div>{fmtCurrency(bondAmt + insuranceAmt)}</div></div>
+        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Direct Cost</span><div style={{ fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(directCost)}</div></div>
+        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>OH Amount</span><div style={{ fontFamily: typography.fontFamilyMono, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(ohAmt)}</div></div>
+        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Subtotal</span><div style={{ fontFamily: typography.fontFamilyMono, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(subtotal)}</div></div>
+        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Profit Amount</span><div style={{ fontFamily: typography.fontFamilyMono, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(profitAmt)}</div></div>
+        <div><span style={{ color: colors.textTertiary, fontSize: '11px' }}>Bond + Insurance</span><div style={{ fontFamily: typography.fontFamilyMono, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(bondAmt + insuranceAmt)}</div></div>
         <div style={{ backgroundColor: `${colors.statusActive}10`, padding: spacing['1'], borderRadius: borderRadius.sm }}>
           <span style={{ color: colors.statusActive, fontSize: '11px', fontWeight: typography.fontWeight.semibold }}>Total w/ Markup</span>
           <div style={{ fontWeight: typography.fontWeight.bold, color: colors.statusActive }}>{fmtCurrency(total)}</div>
@@ -247,64 +250,36 @@ const MarkupCalculator: React.FC<{ directCost: number }> = ({ directCost }) => {
 
 // ── GMP Impact Tracking ─────────────────────
 
-const GMPImpactCard: React.FC<{ approvedAmount: number; approvedCOs: ChangeOrder[]; contractValue: number; contingencyBudget: number }> = ({ approvedAmount, approvedCOs, contractValue, contingencyBudget }) => {
+const GMPImpactCard: React.FC<{ approvedAmount: number; approvedCOs: ChangeOrder[]; contractValue: number; contingencyBudget: number }> = ({ approvedAmount, contractValue, contingencyBudget }) => {
   const gmpOriginal = contractValue;
-  const gmpContingencyOriginal = contingencyBudget;
   const currentGMP = gmpOriginal + approvedAmount;
-  const contingencyUsed = approvedAmount;
-  const contingencyRemaining = gmpContingencyOriginal - contingencyUsed;
-  const pctUsed = gmpContingencyOriginal > 0 ? (contingencyUsed / gmpContingencyOriginal) * 100 : 0;
+  const contingencyRemaining = contingencyBudget - approvedAmount;
+  const pctUsed = contingencyBudget > 0 ? (approvedAmount / contingencyBudget) * 100 : 0;
   const gaugeColor = pctUsed < 50 ? colors.statusActive : pctUsed < 80 ? colors.statusPending : colors.statusCritical;
 
   return (
-    <Card padding={spacing['4']} style={{ marginBottom: spacing['4'] }}>
-      <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary, marginBottom: spacing['3'], textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-        <DollarSign size={14} /> GMP Impact Summary
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: spacing['3'], marginBottom: spacing['3'] }}>
+    <Card padding={spacing['4']} style={{ marginBottom: spacing['3'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['3'] }}>
         <div>
-          <div style={{ fontSize: '11px', color: colors.textTertiary, marginBottom: 2 }}>Original GMP</div>
-          <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmtCurrency(gmpOriginal)}</div>
+          <div style={{ fontSize: 11, color: colors.textTertiary, marginBottom: 2 }}>Original GMP</div>
+          <div style={{ fontSize: typography.fontSize.base, fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(gmpOriginal)}</div>
         </div>
         <div>
-          <div style={{ fontSize: '11px', color: colors.textTertiary, marginBottom: 2 }}>Approved Changes</div>
-          <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: approvedAmount >= 0 ? colors.statusCritical : colors.statusActive }}>{approvedAmount >= 0 ? '+' : ''}{fmtCurrency(approvedAmount)}</div>
+          <div style={{ fontSize: 11, color: colors.textTertiary, marginBottom: 2 }}>Changes</div>
+          <div style={{ fontSize: typography.fontSize.base, fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.semibold, color: approvedAmount >= 0 ? colors.statusCritical : colors.statusActive, fontVariantNumeric: 'tabular-nums' as const }}>{approvedAmount >= 0 ? '+' : ''}{fmtCurrency(approvedAmount)}</div>
         </div>
         <div>
-          <div style={{ fontSize: '11px', color: colors.textTertiary, marginBottom: 2 }}>Current GMP</div>
-          <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmtCurrency(currentGMP)}</div>
+          <div style={{ fontSize: 11, color: colors.textTertiary, marginBottom: 2 }}>Current GMP</div>
+          <div style={{ fontSize: typography.fontSize.base, fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(currentGMP)}</div>
         </div>
         <div>
-          <div style={{ fontSize: '11px', color: colors.textTertiary, marginBottom: 2 }}>Remaining Contingency</div>
-          <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: contingencyRemaining > 0 ? colors.statusActive : colors.statusCritical }}>{fmtCurrency(contingencyRemaining)}</div>
+          <div style={{ fontSize: 11, color: colors.textTertiary, marginBottom: 2 }}>Contingency Left</div>
+          <div style={{ fontSize: typography.fontSize.base, fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.semibold, color: contingencyRemaining > 0 ? colors.statusActive : colors.statusCritical, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(contingencyRemaining)}</div>
         </div>
       </div>
-      {/* Gauge bar */}
-      <div style={{ marginBottom: spacing['2'] }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: colors.textTertiary, marginBottom: 4 }}>
-          <span>Contingency Used</span>
-          <span style={{ color: gaugeColor, fontWeight: typography.fontWeight.semibold }}>{pctUsed.toFixed(1)}%</span>
-        </div>
-        <div style={{ height: 8, borderRadius: borderRadius.full, backgroundColor: `${colors.borderLight}`, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.min(pctUsed, 100)}%`, borderRadius: borderRadius.full, backgroundColor: gaugeColor, transition: 'width 300ms ease' }} />
-        </div>
+      <div style={{ height: 4, borderRadius: borderRadius.full, backgroundColor: colors.borderLight, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.min(pctUsed, 100)}%`, borderRadius: borderRadius.full, backgroundColor: gaugeColor, transition: 'width 300ms ease' }} />
       </div>
-      {/* Approved CO list */}
-      {approvedCOs.length > 0 && (
-        <div style={{ marginTop: spacing['2'] }}>
-          <div style={{ fontSize: '11px', color: colors.textTertiary, marginBottom: spacing['1'] }}>Approved changes contributing to GMP:</div>
-          <div style={{ display: 'flex', gap: spacing['1'], flexWrap: 'wrap' }}>
-            {approvedCOs.slice(0, 6).map(co => (
-              <span key={co.id} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px',
-                borderRadius: borderRadius.full, fontSize: '11px', backgroundColor: `${colors.statusActive}10`, color: colors.statusActive,
-              }}>
-                {co.number || co.id.slice(0, 6)}: {fmtCurrency(co.approved_amount ?? co.amount ?? 0)}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </Card>
   );
 };
@@ -339,10 +314,10 @@ const LinkedEntities: React.FC<{ entities: LinkedEntity[]; navigate: (path: stri
               key={entity.number}
               onClick={(e) => { e.stopPropagation(); navigate(entityRoute[entity.type]); }}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px',
-                borderRadius: borderRadius.full, fontSize: '12px', cursor: 'pointer',
-                backgroundColor: `${cfg.color}10`, color: cfg.color, border: `1px solid ${cfg.color}25`,
-                transition: 'background-color 150ms ease',
+                display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px',
+                borderRadius: borderRadius.full, fontSize: 11, cursor: 'pointer',
+                backgroundColor: `${cfg.color}10`, color: cfg.color,
+                transition: 'opacity 150ms ease',
               }}
               title={entity.title}
             >
@@ -375,8 +350,8 @@ const PipelineStage: React.FC<{ label: string; count: number; amount: number; co
     transition: 'all 150ms ease',
   }}>
     <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-    <span style={{ fontSize: '1.5rem', fontWeight: typography.fontWeight.bold, color: colors.textPrimary, lineHeight: 1 }}>{count}</span>
-    <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{fmtCurrency(amount)}</span>
+    <span style={{ fontSize: '1.5rem', fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>{count}</span>
+    <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textTertiary, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(amount)}</span>
   </div>
 );
 
@@ -402,7 +377,7 @@ const KpiCard: React.FC<{ label: string; value: string | number; sub?: string; i
       <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
       <span style={{ color, opacity: 0.7 }}>{icon}</span>
     </div>
-    <div style={{ fontSize: '1.5rem', fontWeight: typography.fontWeight.bold, color, lineHeight: 1 }}>{value}</div>
+    <div style={{ fontSize: '1.5rem', fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.bold, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>{value}</div>
     {sub && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{sub}</span>}
   </div>
 );
@@ -410,10 +385,19 @@ const KpiCard: React.FC<{ label: string; value: string | number; sub?: string; i
 const ChangeOrdersPage: React.FC = () => {
   const projectId = useProjectId();
   const { user } = useAuth();
+  const { role } = usePermissions();
   const navigate = useNavigate();
   const { data: changeOrders = [], isPending, error, refetch } = useChangeOrders(projectId);
   const { data: project } = useProject(projectId);
+  const { data: activePeriod } = useActivePeriod(projectId);
   useRealtimeInvalidation(projectId);
+
+  // Period-close gating: when the current financial period is closed, lock
+  // writes for everyone except owner/admin. The banner renders for all roles
+  // so the state is visible; only the disabled flag varies.
+  const periodClosed = activePeriod?.status === 'closed';
+  const canBypassPeriodLock = role === 'owner' || role === 'admin';
+  const writesLocked = periodClosed && !canBypassPeriodLock;
   const createChangeOrder = useCreateChangeOrder();
   const deleteChangeOrder = useDeleteChangeOrder();
   const submitChangeOrder = useSubmitChangeOrder();
@@ -655,13 +639,23 @@ const ChangeOrdersPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <PresenceAvatars page="change-orders" size={28} />
           <PermissionGate permission="change_orders.create">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowCreate(true)} data-testid="create-change-order-button">
+            <Btn
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={() => setShowCreate(true)}
+              disabled={writesLocked}
+              aria-disabled={writesLocked}
+              title={writesLocked ? 'Current period is closed — edits restricted to owner/admin' : undefined}
+              data-testid="create-change-order-button"
+            >
               New Change Order
             </Btn>
           </PermissionGate>
         </div>
       }
     >
+      <PeriodClosedBanner projectId={projectId ?? undefined} />
+
       {error ? (
         <Card padding={spacing['6']}>
           <div role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
@@ -671,15 +665,11 @@ const ChangeOrdersPage: React.FC = () => {
         </Card>
       ) : null}
 
-      {/* AI Insights */}
-      <PageInsightBanners page="change_orders" />
+      {/* AI Insights — hidden for cleaner layout */}
 
       {/* Pipeline Flow Visualization */}
       {!isPending && metrics.total > 0 && (
-        <Card padding={spacing['4']} style={{ marginBottom: spacing['4'] }}>
-          <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary, marginBottom: spacing['3'], textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Cost Change Pipeline
-          </div>
+        <Card padding={spacing['4']} style={{ marginBottom: spacing['3'] }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
             <PipelineStage label="PCO" count={metrics.pcoCount} amount={metrics.pcoAmount} color={typeColors.pco} isActive={typeFilter === 'pco'} />
             <PipelineArrow />
@@ -702,21 +692,7 @@ const ChangeOrdersPage: React.FC = () => {
         />
       )}
 
-      {/* KPI Cards */}
-      {!isPending && metrics.total > 0 && (
-        <div style={{ display: 'flex', gap: spacing['3'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
-          <KpiCard label="Pending Review" value={metrics.pendingCount} icon={<Clock size={16} />} color={colors.statusPending} bgColor={colors.statusPendingSubtle} />
-          <KpiCard label="Approved Value" value={fmtCurrency(metrics.approvedAmount)} icon={<DollarSign size={16} />} color={colors.statusActive} bgColor={colors.statusActiveSubtle} />
-          <KpiCard
-            label="Schedule Impact"
-            value={`${metrics.totalScheduleImpact > 0 ? '+' : ''}${metrics.totalScheduleImpact} days`}
-            icon={<Calendar size={16} />}
-            color={metrics.totalScheduleImpact > 0 ? colors.statusCritical : colors.statusActive}
-            bgColor={metrics.totalScheduleImpact > 0 ? colors.statusCriticalSubtle : colors.statusActiveSubtle}
-          />
-          <KpiCard label="Rejected" value={metrics.rejectedCount} icon={<AlertTriangle size={16} />} color={colors.statusCritical} bgColor={colors.statusCriticalSubtle} />
-        </div>
-      )}
+      {/* KPI Cards removed — pipeline + GMP already convey the key info */}
 
       {/* Search + filters */}
       <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['3'], flexWrap: 'wrap' }}>
@@ -835,7 +811,7 @@ const ChangeOrdersPage: React.FC = () => {
                   }}
                   onClick={() => setExpandedRow(isExpanded ? null : co.id)}
                 >
-                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
+                  <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, fontWeight: 600, color: colors.orangeText, letterSpacing: '0.02em' }}>
                     {co.number ?? co.id.slice(0, 6)}
                   </span>
                   <span>
@@ -860,18 +836,20 @@ const ChangeOrdersPage: React.FC = () => {
                       label={String(co.status ?? '').replace('_', ' ') || 'draft'}
                     />
                   </span>
-                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>
+                  <span style={{ fontSize: 11, color: colors.textSecondary }}>
                     {reasonLabels[co.reason ?? ''] || co.reason || '—'}
                   </span>
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
+                  <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const }}>
                     {fmtCurrency(Number(co.amount ?? 0))}
                   </span>
                   <span style={{
-                    fontSize: typography.fontSize.sm,
+                    fontSize: 11,
+                    fontFamily: typography.fontFamilyMono,
+                    fontVariantNumeric: 'tabular-nums' as const,
                     color: scheduleImpact > 0 ? colors.statusCritical : scheduleImpact < 0 ? colors.statusActive : colors.textTertiary,
                     fontWeight: scheduleImpact !== 0 ? typography.fontWeight.medium : typography.fontWeight.normal,
                   }}>
-                    {co.schedule_impact ? `${scheduleImpact > 0 ? '+' : ''}${scheduleImpact} days` : '—'}
+                    {co.schedule_impact ? `${scheduleImpact > 0 ? '+' : ''}${scheduleImpact}d` : '—'}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                     {isExpanded ? <ChevronUp size={14} color={colors.textTertiary} /> : <ChevronDown size={14} color={colors.textTertiary} />}
@@ -912,19 +890,19 @@ const ChangeOrdersPage: React.FC = () => {
                       {co.requested_date && (
                         <div>
                           <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: 2 }}>Requested Date</div>
-                          <div style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{co.requested_date?.slice(0, 10)}</div>
+                          <div style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' as const }}>{co.requested_date?.slice(0, 10)}</div>
                         </div>
                       )}
                       {co.approved_amount != null && Number(co.approved_amount) > 0 && (
                         <div>
                           <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: 2 }}>Approved Amount</div>
-                          <div style={{ fontSize: typography.fontSize.sm, color: colors.statusActive, fontWeight: typography.fontWeight.semibold }}>{fmtCurrency(Number(co.approved_amount))}</div>
+                          <div style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.statusActive, fontWeight: typography.fontWeight.semibold, fontVariantNumeric: 'tabular-nums' as const }}>{fmtCurrency(Number(co.approved_amount))}</div>
                         </div>
                       )}
                       {co.approved_date && (
                         <div>
                           <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: 2 }}>Approved Date</div>
-                          <div style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{co.approved_date?.slice(0, 10)}</div>
+                          <div style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' as const }}>{co.approved_date?.slice(0, 10)}</div>
                         </div>
                       )}
                     </div>
@@ -963,7 +941,16 @@ const ChangeOrdersPage: React.FC = () => {
 
                     {/* Actions bar */}
                     <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', paddingTop: spacing['2'], borderTop: `1px solid ${colors.borderLight}` }}>
-                      <Btn size="sm" variant="secondary" onClick={() => openEditCO(co)}>Edit</Btn>
+                      <Btn
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openEditCO(co)}
+                        disabled={writesLocked}
+                        aria-disabled={writesLocked}
+                        title={writesLocked ? 'Current period is closed — edits restricted to owner/admin' : undefined}
+                      >
+                        Edit
+                      </Btn>
                       {canPromote && (
                         confirmPromoteId === co.id ? (
                           <>
@@ -993,7 +980,15 @@ const ChangeOrdersPage: React.FC = () => {
                       <PermissionGate permission="change_orders.delete">
                         {confirmDeleteId === co.id ? (
                           <>
-                            <Btn size="sm" variant="primary" onClick={() => handleDelete(co)} disabled={deleteChangeOrder.isPending} data-testid="confirm-delete-button">
+                            <Btn
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handleDelete(co)}
+                              disabled={deleteChangeOrder.isPending || writesLocked}
+                              aria-disabled={writesLocked}
+                              title={writesLocked ? 'Current period is closed — edits restricted to owner/admin' : undefined}
+                              data-testid="confirm-delete-button"
+                            >
                               Confirm Delete
                             </Btn>
                             <Btn size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>Cancel</Btn>
@@ -1003,8 +998,10 @@ const ChangeOrdersPage: React.FC = () => {
                             size="sm"
                             variant="ghost"
                             onClick={() => handleDelete(co)}
-                            disabled={deleteChangeOrder.isPending}
+                            disabled={deleteChangeOrder.isPending || writesLocked}
+                            aria-disabled={writesLocked}
                             aria-label="Delete this change order"
+                            title={writesLocked ? 'Current period is closed — edits restricted to owner/admin' : undefined}
                             data-testid="delete-change-order-button"
                           >
                             Delete
@@ -1061,7 +1058,14 @@ const ChangeOrdersPage: React.FC = () => {
           </div>
           <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
             <Btn variant="secondary" onClick={() => setEditingCO(null)}>Cancel</Btn>
-            <Btn variant="primary" onClick={handleEditSave} loading={updateCOMutation.isPending}>
+            <Btn
+              variant="primary"
+              onClick={handleEditSave}
+              loading={updateCOMutation.isPending}
+              disabled={writesLocked}
+              aria-disabled={writesLocked}
+              title={writesLocked ? 'Current period is closed — edits restricted to owner/admin' : undefined}
+            >
               {updateCOMutation.isPending ? 'Saving...' : 'Save'}
             </Btn>
           </div>
