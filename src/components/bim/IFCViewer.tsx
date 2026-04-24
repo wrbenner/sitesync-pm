@@ -25,9 +25,11 @@ interface IFCViewerProps {
   result?: IFCParseResult | null
   onParse?: (result: IFCParseResult) => void
   modelId?: string
+  /** Hide the built-in upload button. Use when the parent already handles upload. */
+  hideUpload?: boolean
 }
 
-export const IFCViewer: React.FC<IFCViewerProps> = ({ result, onParse, modelId }) => {
+export const IFCViewer: React.FC<IFCViewerProps> = ({ result, onParse, modelId, hideUpload }) => {
   const [parsing, setParsing] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['building']))
 
@@ -66,22 +68,24 @@ export const IFCViewer: React.FC<IFCViewerProps> = ({ result, onParse, modelId }
       <SectionHeader
         title="BIM / IFC Viewer"
         action={
-          <label style={{ display: 'inline-flex' }}>
-            <input
-              type="file"
-              accept=".ifc,.IFC"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) handleUpload(f)
-              }}
-              style={{ display: 'none' }}
-            />
-            <span>
-              <Btn variant="primary" onClick={() => { /* triggered by input click via label */ }} disabled={parsing}>
-                <Upload size={14} /> {parsing ? 'Parsing…' : 'Upload IFC'}
-              </Btn>
-            </span>
-          </label>
+          hideUpload ? undefined : (
+            <label style={{ display: 'inline-flex' }}>
+              <input
+                type="file"
+                accept=".ifc,.IFC"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) handleUpload(f)
+                }}
+                style={{ display: 'none' }}
+              />
+              <span>
+                <Btn variant="primary" onClick={() => { /* triggered by input click via label */ }} disabled={parsing}>
+                  <Upload size={14} /> {parsing ? 'Parsing…' : 'Upload IFC'}
+                </Btn>
+              </span>
+            </label>
+          )
         }
       />
 
