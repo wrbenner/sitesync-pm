@@ -1,12 +1,13 @@
 // Scale Audit Report PDF
-// Adapted from SiteSync AI:
+// Adapted from SiteSync PM:
 //   sitesyncai-backend/src/discrepancy-export/report-pdf.service.ts
 // Compares scales across paired drawings and highlights mismatches.
 // Output: a per-pair table showing arch scale, struct scale, and whether they
 // match, grouped by status (mismatches first).
 
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer'
+import { supabase } from '../../lib/supabase'
 
 export interface ScaleAuditRow {
   pairId: string
@@ -201,3 +202,120 @@ export const ScaleAuditReport: React.FC<{ data: ScaleAuditReportData }> = ({ dat
 }
 
 export default ScaleAuditReport
+
+// ── Data fetch + generator ────────────────────────────────
+// Loads paired drawings with their arch/struct classifications and
+// compares detected scales. Flags mismatches by comparing the
+// `scale_ratio` numeric field (falling back to string equality on
+// `scale_text` when ratios are missing).
+
+export interface ScaleAuditReportOptions {
+  preparedBy?: string
+  drawingIds?: string[] | 'all'
+}
+
+type PairWithClassifications = {
+  id: string
+  drawing_a_id: string | null
+  drawing_b_id: string | null
+}
+
+type ClassificationForScale = {
+  drawing_id: string | null
+  scale_text: string | null
+  scale_ratio: number | null
+}
+
+type DrawingForScale = {
+  id: string
+  sheet_number: string | null
+}
+
+function scalesDisagree(
+  archRatio: number | null,
+  structRatio: number | null,
+  archText: string | null,
+  structText: string | null,
+): boolean {
+  if (archRatio != null && structRatio != null && archRatio > 0 && structRatio > 0) {
+    const larger = Math.max(archRatio, structRatio)
+    const smaller = Math.min(archRatio, structRatio)
+    return larger / smaller > 1.02
+  }
+  if (archText && structText) {
+    return archText.trim() !== structText.trim()
+  }
+  return false
+}
+
+export async function generateScaleAuditReport(
+  projectId: string,
+  opts: ScaleAuditReportOptions = {},
+): Promise<{ blob: Blob; filename: string; data: ScaleAuditReportData }> {
+  const [projectRes, pairsRes, drawingsRes, classificationsRes] = await Promise.all([
+    supabase.from('projects').select('name, location').eq('id', projectId).maybeSingle(),
+    supabase.from('drawing_pairs').select('id, drawing_a_id, drawing_b_id').eq('project_id', projectId),
+    supabase.from('drawings').select('id, sheet_number').eq('project_id', projectId),
+    supabase.from('drawing_classifications').select('drawing_id, scale_text, scale_ratio').eq('project_id', projectId),
+  ])
+
+  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
+  const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
+
+  const pairs: PairWithClassifications[] = (pairsRes.data ?? []) as PairWithClassifications[]
+  const drawings: DrawingForScale[] = (drawingsRes.data ?? []) as DrawingForScale[]
+  const classifications: ClassificationForScale[] = (classificationsRes.data ?? []) as ClassificationForScale[]
+
+  const drawingById = new Map(drawings.map((d) => [d.id, d]))
+  const classByDrawing = new Map<string, ClassificationForScale>()
+  for (const c of classifications) {
+    if (c.drawing_id) classByDrawing.set(c.drawing_id, c)
+  }
+
+  const selected = opts.drawingIds && opts.drawingIds !== 'all' ? new Set(opts.drawingIds) : null
+
+  const rows: ScaleAuditRow[] = pairs
+    .filter((p) => {
+      if (!selected) return true
+      return (p.drawing_a_id && selected.has(p.drawing_a_id)) ||
+             (p.drawing_b_id && selected.has(p.drawing_b_id))
+    })
+    .map((p) => {
+      const arch = p.drawing_a_id ? drawingById.get(p.drawing_a_id) : undefined
+      const struct = p.drawing_b_id ? drawingById.get(p.drawing_b_id) : undefined
+      const archClass = p.drawing_a_id ? classByDrawing.get(p.drawing_a_id) : undefined
+      const structClass = p.drawing_b_id ? classByDrawing.get(p.drawing_b_id) : undefined
+      const mismatch = scalesDisagree(
+        archClass?.scale_ratio ?? null,
+        structClass?.scale_ratio ?? null,
+        archClass?.scale_text ?? null,
+        structClass?.scale_text ?? null,
+      )
+      return {
+        pairId: p.id,
+        archSheet: arch?.sheet_number ?? '—',
+        structSheet: struct?.sheet_number ?? '—',
+        archScale: archClass?.scale_text ?? null,
+        structScale: structClass?.scale_text ?? null,
+        archScaleRatio: archClass?.scale_ratio ?? null,
+        structScaleRatio: structClass?.scale_ratio ?? null,
+        isMismatch: mismatch,
+        note: mismatch
+          ? 'Detected scales disagree beyond tolerance — confirm before issuing for construction.'
+          : null,
+      }
+    })
+
+  const reportData: ScaleAuditReportData = {
+    projectName,
+    projectAddress,
+    generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+    preparedBy: opts.preparedBy,
+    rows,
+  }
+
+  const blob = await pdf(<ScaleAuditReport data={reportData} />).toBlob()
+  const safeName = projectName.replace(/[^\w-]+/g, '_').slice(0, 40) || 'Project'
+  const filename = `Scale_Audit_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`
+  return { blob, filename, data: reportData }
+}

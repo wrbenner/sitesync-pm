@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { X, FileText, Download, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   colors,
   spacing,
@@ -9,8 +10,11 @@ import {
   zIndex,
 } from '../../styles/theme'
 import { Btn } from '../Primitives'
+import { generateDiscrepancyReport } from './DiscrepancyReport'
+import { generateDrawingAnalysisReport } from './DrawingAnalysisReport'
+import { generateScaleAuditReport } from './ScaleAuditReport'
 
-// Adapted from SiteSync AI:
+// Adapted from SiteSync PM:
 //   sitesyncai-web/app/components/ReportGenerationModal/ReportGenerationModal.tsx
 // Rewritten to use SiteSync PM's inline theme system and to wire into the PDF
 // components we already have (DiscrepancyReport, DrawingAnalysisReport,
@@ -44,8 +48,58 @@ interface ReportGenerationModalProps {
   projectName: string
   drawings: DrawingSummary[]
   onClose: () => void
-  onGenerate: (opts: ReportGenerationOptions) => Promise<void> | void
+  /**
+   * Optional custom generator. When omitted, the modal uses built-in
+   * generators (requires `projectId`). When provided, this overrides
+   * the default and receives the user's selections.
+   */
+  onGenerate?: (opts: ReportGenerationOptions) => Promise<void> | void
+  /**
+   * Required when `onGenerate` is not provided — used by the built-in
+   * generators to query Supabase for the project's data.
+   */
+  projectId?: string
   defaultPreparedBy?: string
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+async function runBuiltInGenerator(
+  projectId: string,
+  opts: ReportGenerationOptions,
+): Promise<{ blob: Blob; filename: string }> {
+  const drawingIds = opts.drawingIds
+  const preparedBy = opts.preparedBy
+  switch (opts.reportType) {
+    case 'discrepancy':
+      return generateDiscrepancyReport(projectId, { drawingIds, preparedBy })
+    case 'classification':
+      return generateDrawingAnalysisReport(projectId, { drawingIds, preparedBy })
+    case 'scale_audit':
+      return generateScaleAuditReport(projectId, { drawingIds, preparedBy })
+    case 'full_analysis': {
+      // Full analysis = classification + discrepancies + scale audit.
+      // Produce three downloads in sequence so the user gets everything.
+      const [cls, disc, sa] = await Promise.all([
+        generateDrawingAnalysisReport(projectId, { drawingIds, preparedBy }),
+        generateDiscrepancyReport(projectId, { drawingIds, preparedBy }),
+        generateScaleAuditReport(projectId, { drawingIds, preparedBy }),
+      ])
+      triggerDownload(cls.blob, cls.filename)
+      triggerDownload(disc.blob, disc.filename)
+      return sa
+    }
+  }
 }
 
 const REPORT_TYPES: Array<{ value: ReportType; label: string; description: string }> = [
@@ -77,6 +131,7 @@ export const ReportGenerationModal: React.FC<ReportGenerationModalProps> = ({
   drawings,
   onClose,
   onGenerate,
+  projectId,
   defaultPreparedBy,
 }) => {
   const [reportType, setReportType] = useState<ReportType>('discrepancy')
@@ -110,20 +165,34 @@ export const ReportGenerationModal: React.FC<ReportGenerationModalProps> = ({
   const handleGenerate = async () => {
     setBusy(true)
     setError(null)
+    const options: ReportGenerationOptions = {
+      reportType,
+      dateRange: {
+        start: startDate || null,
+        end: endDate || null,
+      },
+      drawingIds: allSelected ? 'all' : Array.from(selectedIds),
+      includeImages,
+      preparedBy: preparedBy || undefined,
+    }
+
+    const toastId = toast.loading('Generating report PDF…')
     try {
-      await onGenerate({
-        reportType,
-        dateRange: {
-          start: startDate || null,
-          end: endDate || null,
-        },
-        drawingIds: allSelected ? 'all' : Array.from(selectedIds),
-        includeImages,
-        preparedBy: preparedBy || undefined,
-      })
+      if (onGenerate) {
+        await onGenerate(options)
+      } else {
+        if (!projectId) {
+          throw new Error('projectId is required to generate a report')
+        }
+        const { blob, filename } = await runBuiltInGenerator(projectId, options)
+        triggerDownload(blob, filename)
+      }
+      toast.success('Report PDF downloaded', { id: toastId })
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Report generation failed')
+      const msg = e instanceof Error ? e.message : 'Report generation failed'
+      setError(msg)
+      toast.error(`Report generation failed: ${msg}`, { id: toastId })
     } finally {
       setBusy(false)
     }

@@ -4,7 +4,8 @@
 // discrepancy across a drawing set with annotated images and severity grouping.
 
 import React from 'react'
-import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer'
+import { supabase } from '../../lib/supabase'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -219,7 +220,7 @@ const TableOfContentsPage: React.FC<{ items: DiscrepancyItem[] }> = ({ items }) 
       style={styles.pageFooter}
       render={({ pageNumber, totalPages }) => (
         <>
-          <Text>SiteSync AI</Text>
+          <Text>SiteSync PM</Text>
           <Text>
             Page {pageNumber} of {totalPages}
           </Text>
@@ -263,7 +264,7 @@ const SummaryStatsPage: React.FC<{ data: DiscrepancyReportData }> = ({ data }) =
         style={styles.pageFooter}
         render={({ pageNumber, totalPages }) => (
           <>
-            <Text>SiteSync AI</Text>
+            <Text>SiteSync PM</Text>
             <Text>
               Page {pageNumber} of {totalPages}
             </Text>
@@ -357,7 +358,7 @@ export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ d
           style={styles.pageFooter}
           render={({ pageNumber, totalPages }) => (
             <>
-              <Text>SiteSync AI — {data.projectName}</Text>
+              <Text>SiteSync PM — {data.projectName}</Text>
               <Text>
                 Page {pageNumber} of {totalPages}
               </Text>
@@ -370,3 +371,119 @@ export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ d
 )
 
 export default DiscrepancyReport
+
+// ── Data fetch + generator ────────────────────────────────
+// Pulls real project data from Supabase, assembles the
+// DiscrepancyReportData shape, and returns a downloadable PDF blob
+// along with a sensible filename.
+
+export interface DiscrepancyReportOptions {
+  preparedBy?: string
+  drawingIds?: string[] | 'all'
+}
+
+type DiscrepancyRow = {
+  id: string
+  description: string | null
+  severity: string | null
+  confidence: number | null
+  arch_dimension: string | null
+  struct_dimension: string | null
+  drawing_id: string | null
+  drawing_pair_id: string | null
+  auto_rfi_id: string | null
+}
+
+type PairRow = {
+  id: string
+  drawing_a_id: string | null
+  drawing_b_id: string | null
+  overlap_image_url: string | null
+}
+
+type DrawingRow = {
+  id: string
+  sheet_number: string | null
+  thumbnail_url: string | null
+}
+
+type RfiRow = { id: string; number: number | null }
+
+export async function generateDiscrepancyReport(
+  projectId: string,
+  opts: DiscrepancyReportOptions = {},
+): Promise<{ blob: Blob; filename: string; data: DiscrepancyReportData }> {
+  const [projectRes, pairsRes, discRes, drawingsRes] = await Promise.all([
+    supabase.from('projects').select('name, location').eq('id', projectId).maybeSingle(),
+    supabase.from('drawing_pairs').select('id, drawing_a_id, drawing_b_id, overlap_image_url').eq('project_id', projectId),
+    supabase.from('drawing_discrepancies').select('id, description, severity, confidence, arch_dimension, struct_dimension, drawing_id, drawing_pair_id, auto_rfi_id').eq('project_id', projectId).eq('is_false_positive', false),
+    supabase.from('drawings').select('id, sheet_number, thumbnail_url').eq('project_id', projectId),
+  ])
+
+  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
+  const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
+
+  const pairs: PairRow[] = (pairsRes.data ?? []) as PairRow[]
+  const drawings: DrawingRow[] = (drawingsRes.data ?? []) as DrawingRow[]
+  const rawDiscrepancies: DiscrepancyRow[] = (discRes.data ?? []) as DiscrepancyRow[]
+
+  const drawingById = new Map(drawings.map((d) => [d.id, d]))
+  const pairById = new Map(pairs.map((p) => [p.id, p]))
+
+  // Optional RFI lookup for linked auto-RFI numbers
+  const rfiIds = Array.from(new Set(rawDiscrepancies.map((d) => d.auto_rfi_id).filter(Boolean))) as string[]
+  let rfiById = new Map<string, RfiRow>()
+  if (rfiIds.length > 0) {
+    const { data: rfis } = await supabase.from('rfis').select('id, number').in('id', rfiIds)
+    rfiById = new Map(((rfis ?? []) as RfiRow[]).map((r) => [r.id, r]))
+  }
+
+  const selected = opts.drawingIds && opts.drawingIds !== 'all' ? new Set(opts.drawingIds) : null
+
+  const items: DiscrepancyItem[] = rawDiscrepancies
+    .map((d) => {
+      const pair = d.drawing_pair_id ? pairById.get(d.drawing_pair_id) : undefined
+      const archDraw = pair?.drawing_a_id ? drawingById.get(pair.drawing_a_id) : undefined
+      const structDraw = pair?.drawing_b_id ? drawingById.get(pair.drawing_b_id) : undefined
+      const rfi = d.auto_rfi_id ? rfiById.get(d.auto_rfi_id) : undefined
+      return {
+        id: d.id,
+        description: d.description ?? 'Dimensional mismatch detected',
+        archSheet: archDraw?.sheet_number ?? '—',
+        structSheet: structDraw?.sheet_number ?? '—',
+        archDimension: d.arch_dimension,
+        structDimension: d.struct_dimension,
+        severity: (d.severity === 'high' || d.severity === 'medium' || d.severity === 'low' ? d.severity : 'medium') as DiscrepancyItem['severity'],
+        confidence: d.confidence ?? 0,
+        archImageUrl: archDraw?.thumbnail_url ?? null,
+        structImageUrl: structDraw?.thumbnail_url ?? null,
+        overlapImageUrl: pair?.overlap_image_url ?? null,
+        autoRfiNumber: rfi?.number != null ? `RFI-${String(rfi.number).padStart(3, '0')}` : null,
+        _archDrawingId: archDraw?.id,
+        _structDrawingId: structDraw?.id,
+      } as DiscrepancyItem & { _archDrawingId?: string; _structDrawingId?: string }
+    })
+    .filter((item) => {
+      if (!selected) return true
+      return (item._archDrawingId && selected.has(item._archDrawingId)) ||
+             (item._structDrawingId && selected.has(item._structDrawingId))
+    })
+    .map(({ _archDrawingId: _a, _structDrawingId: _b, ...rest }) => {
+      void _a; void _b
+      return rest
+    })
+
+  const reportData: DiscrepancyReportData = {
+    projectName,
+    projectAddress,
+    generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+    preparedBy: opts.preparedBy,
+    totalPairs: pairs.length,
+    discrepancies: items,
+  }
+
+  const blob = await pdf(<DiscrepancyReport data={reportData} />).toBlob()
+  const safeName = projectName.replace(/[^\w-]+/g, '_').slice(0, 40) || 'Project'
+  const filename = `Discrepancy_Report_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`
+  return { blob, filename, data: reportData }
+}

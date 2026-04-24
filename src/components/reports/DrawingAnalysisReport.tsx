@@ -3,7 +3,8 @@
 // plan type, scale, pairing status, and AI confidence.
 
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer'
+import { supabase } from '../../lib/supabase'
 
 export interface ClassificationRow {
   sheetNumber: string
@@ -157,7 +158,7 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
           style={styles.footer}
           render={({ pageNumber, totalPages }) => (
             <>
-              <Text>SiteSync AI — {data.projectName}</Text>
+              <Text>SiteSync PM — {data.projectName}</Text>
               <Text>
                 Page {pageNumber} of {totalPages}
               </Text>
@@ -170,3 +171,100 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
 }
 
 export default DrawingAnalysisReport
+
+// ── Data fetch + generator ────────────────────────────────
+// Pulls drawings + classifications + pair info from Supabase and
+// returns a downloadable PDF blob with the classification summary.
+
+export interface DrawingAnalysisReportOptions {
+  preparedBy?: string
+  drawingIds?: string[] | 'all'
+}
+
+type DrawingLite = {
+  id: string
+  sheet_number: string | null
+  title: string | null
+  discipline: string | null
+}
+
+type ClassificationLite = {
+  drawing_id: string | null
+  discipline: string | null
+  plan_type: string | null
+  floor_level: string | null
+  scale_text: string | null
+  classification_confidence: number | null
+  drawing_title: string | null
+  sheet_number: string | null
+}
+
+type PairLite = {
+  drawing_a_id: string | null
+  drawing_b_id: string | null
+}
+
+export async function generateDrawingAnalysisReport(
+  projectId: string,
+  opts: DrawingAnalysisReportOptions = {},
+): Promise<{ blob: Blob; filename: string; data: DrawingAnalysisReportData }> {
+  const [projectRes, drawingsRes, classificationsRes, pairsRes] = await Promise.all([
+    supabase.from('projects').select('name').eq('id', projectId).maybeSingle(),
+    supabase.from('drawings').select('id, sheet_number, title, discipline').eq('project_id', projectId).order('sheet_number', { ascending: true }),
+    supabase.from('drawing_classifications').select('drawing_id, discipline, plan_type, floor_level, scale_text, classification_confidence, drawing_title, sheet_number').eq('project_id', projectId),
+    supabase.from('drawing_pairs').select('drawing_a_id, drawing_b_id').eq('project_id', projectId),
+  ])
+
+  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
+  const drawings: DrawingLite[] = (drawingsRes.data ?? []) as DrawingLite[]
+  const classifications: ClassificationLite[] = (classificationsRes.data ?? []) as ClassificationLite[]
+  const pairs: PairLite[] = (pairsRes.data ?? []) as PairLite[]
+
+  const classByDrawing = new Map<string, ClassificationLite>()
+  for (const c of classifications) {
+    if (c.drawing_id) classByDrawing.set(c.drawing_id, c)
+  }
+
+  const pairPartner = new Map<string, string>() // drawing id -> partner sheet number
+  const drawingById = new Map(drawings.map((d) => [d.id, d]))
+  for (const p of pairs) {
+    if (p.drawing_a_id && p.drawing_b_id) {
+      const a = drawingById.get(p.drawing_a_id)
+      const b = drawingById.get(p.drawing_b_id)
+      if (a && b) {
+        if (b.sheet_number) pairPartner.set(a.id, b.sheet_number)
+        if (a.sheet_number) pairPartner.set(b.id, a.sheet_number)
+      }
+    }
+  }
+
+  const selected = opts.drawingIds && opts.drawingIds !== 'all' ? new Set(opts.drawingIds) : null
+  const rows: ClassificationRow[] = drawings
+    .filter((d) => !selected || selected.has(d.id))
+    .map((d) => {
+      const c = classByDrawing.get(d.id)
+      const partner = pairPartner.get(d.id)
+      return {
+        sheetNumber: d.sheet_number ?? c?.sheet_number ?? '—',
+        drawingTitle: d.title ?? c?.drawing_title ?? '—',
+        discipline: d.discipline ?? c?.discipline ?? 'Unknown',
+        planType: c?.plan_type ?? null,
+        floorLevel: c?.floor_level ?? null,
+        scaleText: c?.scale_text ?? null,
+        confidence: c?.classification_confidence ?? 0,
+        paired: !!partner,
+        pairedWith: partner ?? null,
+      }
+    })
+
+  const reportData: DrawingAnalysisReportData = {
+    projectName,
+    generatedAt: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
+    rows,
+  }
+
+  const blob = await pdf(<DrawingAnalysisReport data={reportData} />).toBlob()
+  const safeName = projectName.replace(/[^\w-]+/g, '_').slice(0, 40) || 'Project'
+  const filename = `Drawing_Analysis_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`
+  return { blob, filename, data: reportData }
+}
