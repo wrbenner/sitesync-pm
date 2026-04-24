@@ -22,7 +22,7 @@ export function useToggleCloseoutItemComplete() {
   return useMutation({
     mutationFn: async ({
       id,
-      projectId,
+      projectId: _projectId,
       complete,
     }: {
       id: string
@@ -139,7 +139,8 @@ export function useRecordSignOff() {
         signature: signatureDataUrl ?? null,
       })
 
-      let itemId = existing?.[0]?.id as string | undefined
+      const existingRows = (existing as unknown as { id: string }[] | null) ?? []
+      let itemId: string | undefined = existingRows[0]?.id
       if (!itemId) {
         const { data: created, error: createErr } = await supabase
           .from('closeout_items')
@@ -155,7 +156,7 @@ export function useRecordSignOff() {
           .select()
           .single()
         if (createErr) throw createErr
-        itemId = (created as { id: string }).id
+        itemId = (created as unknown as { id: string }).id
       } else {
         const { error: updErr } = await supabase
           .from('closeout_items')

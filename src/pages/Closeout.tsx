@@ -348,7 +348,7 @@ const WarrantyRow: React.FC<{ w: WarrantyWithStatus; onEdit: () => void; onDelet
       <td style={{ padding: `${spacing['2']} ${spacing['3']}`, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
         {w.item}
         {w.manufacturer && (
-          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.regular }}>
+          <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.normal }}>
             {w.manufacturer}
           </div>
         )}

@@ -517,7 +517,7 @@ function SignatureStatusBadge({ status }: { status: string }) {
       color: c, backgroundColor: bg,
     }}>
       <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: c }} />
-      {status.replace(/_/g, ' ').replace(/\b\w/g, (ch: string) => ch.toUpperCase())}
+      {(status ?? 'draft').replace(/_/g, ' ').replace(/\b\w/g, (ch: string) => ch.toUpperCase())}
     </span>
   )
 }
@@ -1397,6 +1397,7 @@ const baseColumns = [
     header: 'Type',
     cell: (info) => {
       const v = info.getValue()
+      if (!v) return <span style={{ color: colors.textTertiary }}>{'\u2014'}</span>
       return (
         <span style={{
           display: 'inline-flex', alignItems: 'center',
@@ -1437,7 +1438,7 @@ const baseColumns = [
         completed: { c: colors.statusInfo, bg: colors.statusInfoSubtle },
         terminated: { c: colors.statusCritical, bg: colors.statusCriticalSubtle },
       }
-      const { c, bg } = colorMap[v] || colorMap.draft
+      const { c, bg } = colorMap[v ?? 'draft'] || colorMap.draft
       return (
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
@@ -1446,7 +1447,7 @@ const baseColumns = [
           color: c, backgroundColor: bg,
         }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: c }} />
-          {v.replace(/_/g, ' ').replace(/\b\w/g, (ch: string) => ch.toUpperCase())}
+          {(v ?? 'draft').replace(/_/g, ' ').replace(/\b\w/g, (ch: string) => ch.toUpperCase())}
         </span>
       )
     },

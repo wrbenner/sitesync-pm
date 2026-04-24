@@ -1,7 +1,8 @@
 // XLSX export utility for all report types.
 // Generates professional Excel workbooks with formatted headers and typed columns.
-
-import * as XLSX from 'xlsx'
+//
+// xlsx is loaded lazily — the ~140 KB gzipped vendor bundle is fetched the first
+// time an export is triggered, not on any route that imports this module.
 
 // ── Types ────────────────────────────────────────────────
 
@@ -20,7 +21,8 @@ interface ExportOptions {
 
 // ── Core Export ──────────────────────────────────────────
 
-export function exportToXlsx(options: ExportOptions) {
+export async function exportToXlsx(options: ExportOptions) {
+  const XLSX = await import('xlsx')
   const wb = XLSX.utils.book_new()
 
   for (const sheet of options.sheets) {
