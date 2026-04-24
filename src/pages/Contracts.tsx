@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { FileText, Plus, Briefcase, Users, FileSignature, ShoppingCart, X, Trash2, ChevronDown, ChevronUp, Send, Clock, CheckCircle, PenTool, Shield, AlertTriangle, BookOpen, DollarSign, Search, Eye, EyeOff } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
+import { Link } from 'react-router-dom'
+import { FileText, Plus, Briefcase, Users, FileSignature, ShoppingCart, X, Trash2, ChevronDown, ChevronUp, Send, Clock, CheckCircle, PenTool, Shield, AlertTriangle, BookOpen, DollarSign, Search, Eye, EyeOff, ExternalLink, UserCheck } from 'lucide-react'
+import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState, Tag } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { useContracts } from '../hooks/queries/contracts'
+import { useContracts, useContractRetainageTotals } from '../hooks/queries/contracts'
 import { useCreateContract, useDeleteContract, useUpdateContract } from '../hooks/mutations/contracts'
 import { useInsuranceCertificates, useInsuranceCertificatesByCompany, getCOIStatus, type InsuranceCertificate } from '../hooks/queries/insurance-certificates'
-import { useUploadInsuranceCertificate, useDeleteInsuranceCertificate } from '../hooks/mutations/insurance-certificates'
+import { useUpdateInsuranceCertificate, useUploadInsuranceCertificate, useDeleteInsuranceCertificate } from '../hooks/mutations/insurance-certificates'
+import { useVendors, type Vendor } from '../hooks/queries/vendors'
+import { useChangeOrders } from '../hooks/useSupabase'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -1462,7 +1465,453 @@ const baseColumns = [
   }),
 ]
 
+// ── Top-level wrapper tabs: Contracts absorbs Vendors ──────
+
+type TopTabKey = 'contracts' | 'vendors' | 'insurance' | 'change_orders'
+
+const topTabs: { key: TopTabKey; label: string; icon: React.ElementType }[] = [
+  { key: 'contracts', label: 'Contracts', icon: FileText },
+  { key: 'vendors', label: 'Vendors', icon: Users },
+  { key: 'insurance', label: 'Insurance', icon: Shield },
+  { key: 'change_orders', label: 'Change Orders', icon: FileSignature },
+]
+
+const VENDOR_STATUS_COLORS: Record<Vendor['status'], { c: string; bg: string }> = {
+  active: { c: colors.statusActive, bg: colors.statusActiveSubtle },
+  probation: { c: colors.statusPending, bg: colors.statusPendingSubtle },
+  suspended: { c: colors.statusCritical, bg: colors.statusCriticalSubtle },
+  blacklisted: { c: colors.statusCritical, bg: colors.statusCriticalSubtle },
+}
+
+// ── Vendors Tab ─────────────────────────────────────────────
+
+const VendorsTab: React.FC<{ projectId: string; search: string }> = ({ projectId, search }) => {
+  const { data: vendors = [], isLoading } = useVendors(projectId)
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return vendors
+    return vendors.filter((v) =>
+      [v.company_name, v.contact_name, v.email, v.trade, v.license_number]
+        .some((f) => f && f.toLowerCase().includes(q)),
+    )
+  }, [vendors, search])
+
+  const counts = useMemo(() => {
+    const base: Record<Vendor['status'], number> = { active: 0, probation: 0, suspended: 0, blacklisted: 0 }
+    for (const v of vendors) base[v.status] = (base[v.status] ?? 0) + 1
+    return base
+  }, [vendors])
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <MetricBox label="Total Vendors" value={vendors.length} />
+        <MetricBox label="Active" value={counts.active} />
+        <MetricBox label="Probation" value={counts.probation} />
+        <MetricBox label="Suspended / Blacklisted" value={counts.suspended + counts.blacklisted} />
+      </div>
+
+      <Card padding={spacing['4']}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+          <SectionHeader title="Vendors" />
+          <Link
+            to="/directory"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+              fontSize: typography.fontSize.sm, color: colors.orangeText, textDecoration: 'none',
+            }}
+          >
+            Open full directory <ExternalLink size={14} />
+          </Link>
+        </div>
+
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Users size={48} />}
+            title="No vendors"
+            description={search ? 'No vendors match your search.' : 'Add vendors from the directory.'}
+          />
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: colors.textSecondary }}>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Company</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Trade</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Contact</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Status</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Score</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((v) => {
+                  const sc = VENDOR_STATUS_COLORS[v.status]
+                  return (
+                    <tr key={v.id}>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>{v.company_name}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{v.trade ?? '—'}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
+                        {v.contact_name ?? '—'}{v.email ? ` · ${v.email}` : ''}
+                      </td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                        <Tag label={v.status} color={sc.c} backgroundColor={sc.bg} />
+                      </td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
+                        {v.performance_score != null ? v.performance_score.toFixed(1) : '—'}
+                      </td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>
+                        <Link
+                          to="/directory"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+                            fontSize: typography.fontSize.caption, color: colors.orangeText, textDecoration: 'none',
+                          }}
+                        >
+                          Prequal <ExternalLink size={12} />
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  )
+}
+
+// ── Insurance Tab with Verify COI ──────────────────────────
+
+const InsuranceTab: React.FC<{ projectId: string; search: string; userId: string | undefined }> = ({ projectId, search, userId }) => {
+  const { data: certs = [], isLoading } = useInsuranceCertificates(projectId)
+  const updateCert = useUpdateInsuranceCertificate()
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return certs
+    return certs.filter((c) =>
+      [c.company, c.carrier, c.policy_number, c.policy_type]
+        .some((f) => f && f.toLowerCase().includes(q)),
+    )
+  }, [certs, search])
+
+  const summary = useMemo(() => {
+    let expired = 0, expiring = 0, current = 0, verified = 0
+    for (const c of certs) {
+      const s = getCOIStatus(c.expiration_date)
+      if (s.severity === 'expired') expired++
+      else if (s.severity === 'expiring') expiring++
+      else if (s.severity === 'current') current++
+      if (c.verified) verified++
+    }
+    return { expired, expiring, current, verified }
+  }, [certs])
+
+  const verifyCert = async (cert: InsuranceCertificate) => {
+    try {
+      await updateCert.mutateAsync({
+        id: cert.id,
+        updates: {
+          verified: true,
+          verified_by: userId ?? null,
+          verified_at: new Date().toISOString(),
+        },
+      })
+      toast.success(`Verified COI for ${cert.company}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to verify COI')
+    }
+  }
+
+  const unverifyCert = async (cert: InsuranceCertificate) => {
+    try {
+      await updateCert.mutateAsync({
+        id: cert.id,
+        updates: { verified: false, verified_by: null, verified_at: null },
+      })
+      toast.success(`Marked ${cert.company} COI as unverified`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update COI')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <MetricBox label="Total COIs" value={certs.length} />
+        <MetricBox label="Current" value={summary.current} />
+        <MetricBox label="Expiring ≤30d" value={summary.expiring} />
+        <MetricBox label="Expired" value={summary.expired} />
+        <MetricBox label="Verified" value={summary.verified} />
+      </div>
+
+      <Card padding={spacing['4']}>
+        <SectionHeader title="Insurance Certificates" />
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Shield size={48} />}
+            title="No certificates"
+            description={search ? 'No certificates match your search.' : 'COIs uploaded to this project will appear here.'}
+          />
+        ) : (
+          <div style={{ overflowX: 'auto', marginTop: spacing['3'] }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: colors.textSecondary }}>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Company</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Policy</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Carrier</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Coverage</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Expiry</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Verified</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((c) => {
+                  const s = getCOIStatus(c.expiration_date)
+                  const expiryColor = s.severity === 'expired'
+                    ? colors.statusCritical
+                    : s.severity === 'expiring'
+                      ? colors.statusPending
+                      : colors.textSecondary
+                  return (
+                    <tr key={c.id}>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>{c.company}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
+                        {c.policy_type ? c.policy_type.replace(/_/g, ' ') : '—'}
+                      </td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{c.carrier ?? '—'}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
+                        {c.coverage_amount != null ? `$${c.coverage_amount.toLocaleString()}` : '—'}
+                      </td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: expiryColor }}>{s.label}</td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                        {c.verified ? (
+                          <Tag label="Verified" color={colors.statusActive} backgroundColor={colors.statusActiveSubtle} />
+                        ) : (
+                          <Tag label="Unverified" color={colors.textTertiary} backgroundColor={colors.surfaceInset} />
+                        )}
+                      </td>
+                      <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>
+                        {c.verified ? (
+                          <Btn
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => unverifyCert(c)}
+                            disabled={updateCert.isPending}
+                            aria-label={`Unverify COI for ${c.company}`}
+                          >
+                            Unverify
+                          </Btn>
+                        ) : (
+                          <Btn
+                            size="sm"
+                            variant="primary"
+                            icon={<UserCheck size={14} />}
+                            onClick={() => verifyCert(c)}
+                            disabled={updateCert.isPending}
+                            aria-label={`Verify COI for ${c.company}`}
+                          >
+                            Verify COI
+                          </Btn>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  )
+}
+
+// ── Change Orders Tab (per-contract breakdown) ──────────────
+
+const ChangeOrdersTab: React.FC<{ projectId: string; contracts: Contract[]; search: string }> = ({ projectId, contracts, search }) => {
+  const { data: changeOrders = [], isLoading } = useChangeOrders(projectId)
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return changeOrders
+    return changeOrders.filter((co) =>
+      [co.title, co.description, co.status, String(co.number)]
+        .some((f) => f != null && String(f).toLowerCase().includes(q)),
+    )
+  }, [changeOrders, search])
+
+  // Per-contract breakdown. We don't have a hard FK from change_orders →
+  // contracts, so we surface the contract-level delta (revised_value -
+  // original_value) which IS each contract's aggregate CO exposure.
+  const breakdown = useMemo(() => {
+    return contracts.map((c) => {
+      const original = c.original_value ?? c.contract_amount ?? 0
+      const revised = c.revised_value ?? original
+      const delta = revised - original
+      return { contract: c, original, revised, delta }
+    })
+  }, [contracts])
+
+  const totals = useMemo(() => {
+    const approved = changeOrders.filter((co) => co.status === 'approved').reduce((s, co) => s + (co.approved_cost ?? co.amount ?? 0), 0)
+    const pending = changeOrders.filter((co) => co.status === 'pending' || co.status === 'submitted' || co.status === 'in_review').reduce((s, co) => s + (co.submitted_cost ?? co.amount ?? 0), 0)
+    const rejected = changeOrders.filter((co) => co.status === 'rejected').length
+    return { approved, pending, rejected, total: changeOrders.length }
+  }, [changeOrders])
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <MetricBox label="Total COs" value={totals.total} />
+        <MetricBox label="Approved $" value={`$${totals.approved.toLocaleString()}`} />
+        <MetricBox label="Pending $" value={`$${totals.pending.toLocaleString()}`} />
+        <MetricBox label="Rejected" value={totals.rejected} />
+      </div>
+
+      <Card padding={spacing['4']}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+          <SectionHeader title="Per-contract delta" />
+          <Link
+            to="/change-orders"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+              fontSize: typography.fontSize.sm, color: colors.orangeText, textDecoration: 'none',
+            }}
+          >
+            Open /change-orders <ExternalLink size={14} />
+          </Link>
+        </div>
+        {breakdown.length === 0 ? (
+          <EmptyState icon={<FileSignature size={48} />} title="No contracts" description="Create a contract to see its CO delta here." />
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: colors.textSecondary }}>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Contract</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Counterparty</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>Original</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>CO Delta</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>Revised</th>
+                </tr>
+              </thead>
+              <tbody>
+                {breakdown.map(({ contract, original, revised, delta }) => (
+                  <tr key={contract.id}>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>{contract.title}</td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>{contract.counterparty_name ?? contract.counterparty ?? '—'}</td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right', color: colors.textSecondary }}>
+                      ${original.toLocaleString()}
+                    </td>
+                    <td style={{
+                      padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right',
+                      color: delta > 0 ? colors.statusCritical : delta < 0 ? colors.statusActive : colors.textSecondary,
+                      fontWeight: delta !== 0 ? typography.fontWeight.medium : typography.fontWeight.normal,
+                    }}>
+                      {delta > 0 ? '+' : ''}${delta.toLocaleString()}
+                    </td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right', fontWeight: typography.fontWeight.medium }}>
+                      ${revised.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card padding={spacing['4']}>
+        <SectionHeader title="All change orders (project)" />
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<FileSignature size={48} />}
+            title="No change orders"
+            description={search ? 'No COs match your search.' : 'Submit change orders from the /change-orders page.'}
+          />
+        ) : (
+          <div style={{ overflowX: 'auto', marginTop: spacing['3'] }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: typography.fontSize.sm }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: colors.textSecondary }}>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>CO #</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Description</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}>Status</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>Amount</th>
+                  <th style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}` }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0, 50).map((co) => (
+                  <tr key={co.id}>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontFamily: typography.fontFamily, color: colors.textSecondary }}>
+                      CO-{String(co.number).padStart(3, '0')}
+                    </td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, fontWeight: typography.fontWeight.medium }}>
+                      {co.title ?? co.description}
+                    </td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, color: colors.textSecondary }}>
+                      {(co.status ?? '—').replace(/_/g, ' ')}
+                    </td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>
+                      ${((co.approved_cost ?? co.amount ?? 0) as number).toLocaleString()}
+                    </td>
+                    <td style={{ padding: spacing['2'], borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: 'right' }}>
+                      <Link
+                        to={`/change-orders/${co.id}`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
+                          fontSize: typography.fontSize.caption, color: colors.orangeText, textDecoration: 'none',
+                        }}
+                      >
+                        Open <ExternalLink size={12} />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  )
+}
+
 export const Contracts: React.FC = () => {
+  const [topTab, setTopTab] = useState<TopTabKey>('contracts')
+  const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<TabKey>('all')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null)
@@ -1479,6 +1928,16 @@ export const Contracts: React.FC = () => {
 
   // Single typed reference — eliminates repeated `as Contract[]` casts (#6)
   const typedContracts = useMemo<Contract[]>(() => (contracts ?? []) as Contract[], [contracts])
+
+  // Roll retainage (from schedule_of_values) up per contract so the
+  // list can show actual retained amounts, not just the contract's
+  // configured percentage.
+  const contractIdList = useMemo(() => typedContracts.map((c) => c.id), [typedContracts])
+  const { data: retainageByContract = {} } = useContractRetainageTotals(contractIdList)
+  const totalRetainage = useMemo(
+    () => Object.values(retainageByContract).reduce((s, v) => s + (v ?? 0), 0),
+    [retainageByContract],
+  )
 
   const selectedContract = useMemo(() => {
     if (!selectedContractId) return null
@@ -1602,9 +2061,16 @@ export const Contracts: React.FC = () => {
   })
 
   const filtered = useMemo<Contract[]>(() => {
-    if (activeTab === 'all') return typedContracts
-    return typedContracts.filter((c) => c.contract_type === activeTab)
-  }, [typedContracts, activeTab])
+    const byTab = activeTab === 'all'
+      ? typedContracts
+      : typedContracts.filter((c) => c.contract_type === activeTab)
+    const q = search.trim().toLowerCase()
+    if (!q) return byTab
+    return byTab.filter((c) =>
+      [c.title, c.contract_number, c.counterparty_name, c.counterparty, c.counterparty_email]
+        .some((f) => f && f.toLowerCase().includes(q)),
+    )
+  }, [typedContracts, activeTab, search])
 
   const totalValue = typedContracts.reduce((s, c) => s + (c.contract_amount || 0), 0) / 100
   const activeCount = typedContracts.filter((c) => c.status === 'active').length
@@ -1673,6 +2139,77 @@ export const Contracts: React.FC = () => {
         </PermissionGate>
       }
     >
+      {/* ── Top-level tabs (Contracts absorbs Vendors) ── */}
+      <div style={{
+        display: 'flex', gap: spacing['2'],
+        alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: spacing['lg'], flexWrap: 'wrap',
+      }}>
+        <div style={{
+          display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg, padding: spacing['1'], overflowX: 'auto',
+        }}>
+          {topTabs.map((tab) => {
+            const isActive = topTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setTopTab(tab.key)}
+                aria-pressed={isActive}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
+                  borderRadius: borderRadius.base, cursor: 'pointer',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                }}
+              >
+                {React.createElement(tab.icon, { size: 14 })}
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        <div style={{
+          position: 'relative', display: 'flex', alignItems: 'center',
+          width: 'min(320px, 100%)',
+        }}>
+          <Search
+            size={14}
+            style={{ position: 'absolute', left: spacing['3'], color: colors.textTertiary, pointerEvents: 'none' }}
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search ${topTabs.find((t) => t.key === topTab)?.label.toLowerCase() ?? ''}…`}
+            aria-label="Search"
+            style={{
+              flex: 1,
+              padding: `${spacing['2']} ${spacing['3']} ${spacing['2']} ${spacing['8']}`,
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: borderRadius.base,
+              backgroundColor: colors.surfaceRaised,
+              color: colors.textPrimary,
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              outline: 'none',
+            }}
+          />
+        </div>
+      </div>
+
+      {topTab === 'vendors' && projectId ? (
+        <VendorsTab projectId={projectId} search={search} />
+      ) : topTab === 'insurance' && projectId ? (
+        <InsuranceTab projectId={projectId} search={search} userId={user?.id} />
+      ) : topTab === 'change_orders' && projectId ? (
+        <ChangeOrdersTab projectId={projectId} contracts={typedContracts} search={search} />
+      ) : (
+      <>
       <div style={{
         display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
         borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
@@ -1754,6 +2291,7 @@ export const Contracts: React.FC = () => {
               const avg = withRetainage.reduce((s, c) => s + (c.retainage_percent ?? 0), 0) / withRetainage.length
               return `${avg.toFixed(1)}%`
             })()} />
+            <MetricBox label="Retainage Held" value={totalRetainage > 0 ? `$${totalRetainage.toLocaleString()}` : 'N/A'} />
           </div>
 
           <Card padding={spacing['4']}>
@@ -1824,6 +2362,9 @@ export const Contracts: React.FC = () => {
             </>
           )}
         </>
+      )}
+
+      </>
       )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="New Contract" width="640px">

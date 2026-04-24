@@ -50,6 +50,30 @@ export function useContracts(projectId: string | undefined) {
   })
 }
 
+// Sums schedule_of_values.retainage per contract_id for a set of
+// contracts. Returns a Record<contractId, totalRetainage>. Rows with
+// null retainage contribute 0.
+export function useContractRetainageTotals(contractIds: string[]) {
+  const key = [...contractIds].sort().join(',')
+  return useQuery({
+    queryKey: ['contracts', 'retainage_totals', key],
+    queryFn: async (): Promise<Record<string, number>> => {
+      if (contractIds.length === 0) return {}
+      const { data, error } = await supabase
+        .from('schedule_of_values')
+        .select('contract_id, retainage')
+        .in('contract_id', contractIds)
+      if (error) throw error
+      const totals: Record<string, number> = {}
+      for (const row of (data ?? []) as Array<{ contract_id: string; retainage: number | null }>) {
+        totals[row.contract_id] = (totals[row.contract_id] ?? 0) + (row.retainage ?? 0)
+      }
+      return totals
+    },
+    enabled: contractIds.length > 0,
+  })
+}
+
 export function useContract(id: string | undefined) {
   return useQuery({
     queryKey: ['contracts', 'detail', id],
