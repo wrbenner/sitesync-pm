@@ -23,13 +23,7 @@ export function useDrawingClassification(drawingId: string | undefined) {
         .select('*')
         .eq('drawing_id', drawingId!)
         .order('created_at', { ascending: false })
-      // Table may not exist yet (migration not applied) — return empty gracefully
-      if (error) {
-        if (error.code === 'PGRST204' || error.message?.includes('404') || (error as unknown as { status?: number }).status === 404) {
-          return []
-        }
-        throw error
-      }
+      if (error) throw error
       return (data ?? []) as unknown as DrawingClassification[]
     },
   })
@@ -46,13 +40,7 @@ export function useProjectClassifications(projectId: string | undefined) {
         .select('*')
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false })
-      // Table may not exist yet (migration not applied) — return empty gracefully
-      if (error) {
-        if (error.code === 'PGRST204' || error.message?.includes('404') || (error as unknown as { status?: number }).status === 404) {
-          return []
-        }
-        throw error
-      }
+      if (error) throw error
       return (data ?? []) as unknown as DrawingClassification[]
     },
   })
@@ -62,19 +50,23 @@ export function useProjectClassifications(projectId: string | undefined) {
 interface ClassifyInput {
   projectId: string
   drawingId: string
+  /** Primary image — the right-strip title-block crop. */
   pageImageUrl: string
+  /** Optional full-page image for scale / plan_type / viewport fields. */
+  fullPageUrl?: string
 }
 
 export function useClassifyDrawing() {
   const queryClient = useQueryClient()
   return useMutation<ClassifyDrawingResult, Error, ClassifyInput>({
     retry: false,
-    mutationFn: async ({ projectId, drawingId, pageImageUrl }) => {
+    mutationFn: async ({ projectId, drawingId, pageImageUrl, fullPageUrl }) => {
       const { data, error } = await supabase.functions.invoke('classify-drawing', {
         body: {
           project_id: projectId,
           drawing_id: drawingId,
           page_image_url: pageImageUrl,
+          ...(fullPageUrl ? { full_page_url: fullPageUrl } : {}),
         },
       })
       if (error) {

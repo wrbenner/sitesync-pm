@@ -48,11 +48,7 @@ export function useProjectDrawingPairs(projectId: string | undefined) {
         .select('*')
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false })
-      if (error) {
-        // Table may not exist yet — degrade gracefully
-        if (error.code === '42P01' || error.message?.includes('does not exist') || String((error as Record<string, unknown>).code) === 'PGRST204') return []
-        throw error
-      }
+      if (error) throw error
       return (data ?? []) as unknown as DrawingPair[]
     },
   })
@@ -68,10 +64,7 @@ export function useProjectDiscrepancies(projectId: string | undefined) {
         .select('*')
         .eq('project_id', projectId!)
         .order('created_at', { ascending: false })
-      if (error) {
-        if (error.code === '42P01' || error.message?.includes('does not exist') || String((error as Record<string, unknown>).code) === 'PGRST204') return []
-        throw error
-      }
+      if (error) throw error
       return (data ?? []) as unknown as DrawingDiscrepancy[]
     },
   })
@@ -91,11 +84,7 @@ export function useDiscrepanciesForDrawing(
         .select('id')
         .or(`arch_drawing_id.eq.${drawingId!},struct_drawing_id.eq.${drawingId!}`)
         .eq('project_id', projectId!)
-      if (pairErr) {
-        // Table/columns may not exist yet — return empty
-        console.warn('[useDiscrepanciesForDrawing] drawing_pairs query failed:', pairErr.message)
-        return []
-      }
+      if (pairErr) throw pairErr
       const pairIds = (pairs ?? []).map((p: { id: string }) => p.id)
       if (pairIds.length === 0) return []
       const { data, error } = await supabase
