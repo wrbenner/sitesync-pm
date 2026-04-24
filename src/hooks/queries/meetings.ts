@@ -27,6 +27,59 @@ export function useMeetings(projectId: string | undefined, pagination?: Paginati
   })
 }
 
+// ── Attendees ─────────────────────────────────────────────
+
+export interface MeetingAttendeeRow {
+  id: string
+  meeting_id: string
+  user_id: string | null
+  role: string | null
+  company: string | null
+  attended: boolean | null
+  sign_in_time: string | null
+  signature_url: string | null
+}
+
+export function useMeetingAttendees(meetingId: string | undefined) {
+  return useQuery({
+    queryKey: ['meeting_attendees', meetingId],
+    queryFn: async (): Promise<MeetingAttendeeRow[]> => {
+      const { data, error } = await supabase
+        .from('meeting_attendees')
+        .select('id, meeting_id, user_id, role, company, attended, sign_in_time, signature_url')
+        .eq('meeting_id', meetingId!)
+      if (error) throw error
+      return (data ?? []) as MeetingAttendeeRow[]
+    },
+    enabled: !!meetingId,
+  })
+}
+
+/**
+ * Attendee counts for many meetings in one round trip. Used on the list
+ * view to render "X attendees" without fetching every attendee row.
+ */
+export function useMeetingAttendeeCounts(meetingIds: string[]) {
+  const key = [...meetingIds].sort().join(',')
+  return useQuery({
+    queryKey: ['meeting_attendee_counts', key],
+    queryFn: async (): Promise<Record<string, number>> => {
+      if (meetingIds.length === 0) return {}
+      const { data, error } = await supabase
+        .from('meeting_attendees')
+        .select('meeting_id')
+        .in('meeting_id', meetingIds)
+      if (error) throw error
+      const counts: Record<string, number> = {}
+      for (const row of (data ?? []) as Array<{ meeting_id: string }>) {
+        counts[row.meeting_id] = (counts[row.meeting_id] ?? 0) + 1
+      }
+      return counts
+    },
+    enabled: meetingIds.length > 0,
+  })
+}
+
 export function useMeeting(id: string | undefined) {
   return useQuery({
     queryKey: ['meetings', 'detail', id],

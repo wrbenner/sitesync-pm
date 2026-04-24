@@ -1,4 +1,6 @@
 import { supabase } from '../../lib/supabase'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { useAuditedMutation } from './createAuditedMutation'
 import { meetingSchema,
 } from '../../components/forms/schemas'
@@ -46,6 +48,72 @@ export function useUpdateMeeting() {
     analyticsEvent: 'meeting_updated',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
     errorMessage: 'Failed to update meeting',
+  })
+}
+
+// ── Attendees ─────────────────────────────────────────────
+
+export interface AddAttendeeInput {
+  meeting_id: string
+  user_id?: string | null
+  role?: string | null
+  company?: string | null
+  attended?: boolean
+}
+
+export function useAddAttendee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: AddAttendeeInput) => {
+      const payload = {
+        meeting_id: input.meeting_id,
+        user_id: input.user_id ?? null,
+        role: input.role ?? null,
+        company: input.company ?? null,
+        attended: input.attended ?? false,
+      }
+      const { data, error } = await from('meeting_attendees').insert(payload).select().single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['meeting_attendees', vars.meeting_id] })
+      qc.invalidateQueries({ queryKey: ['meeting_attendee_counts'] })
+      toast.success('Attendee added')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to add attendee'),
+  })
+}
+
+export function useRemoveAttendee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, meeting_id }: { id: string; meeting_id: string }) => {
+      const { error } = await from('meeting_attendees').delete().eq('id', id)
+      if (error) throw error
+      return { meeting_id }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['meeting_attendees', vars.meeting_id] })
+      qc.invalidateQueries({ queryKey: ['meeting_attendee_counts'] })
+      toast.success('Attendee removed')
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to remove attendee'),
+  })
+}
+
+export function useUpdateAttendee() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, meeting_id, updates }: { id: string; meeting_id: string; updates: Partial<Omit<AddAttendeeInput, 'meeting_id'>> }) => {
+      const { error } = await from('meeting_attendees').update(updates).eq('id', id)
+      if (error) throw error
+      return { meeting_id }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['meeting_attendees', vars.meeting_id] })
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to update attendee'),
   })
 }
 
