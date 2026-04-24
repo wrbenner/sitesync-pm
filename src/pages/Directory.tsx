@@ -7,6 +7,17 @@ import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
 import { useDirectoryContacts, useCompanies } from '../hooks/queries/directory-contacts';
+import {
+  usePrequalifications,
+  useCommunicationLogs,
+  useLastContactMap,
+  type PrequalStatus as PrequalStatusRemote,
+  type CommunicationChannel,
+} from '../hooks/queries/directory';
+import {
+  useUpsertPrequalification,
+  useCreateCommunicationLog,
+} from '../hooks/mutations/directory';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -242,9 +253,23 @@ function getDefaultPrequal(): PrequalInfo {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-const PrequalDetailPanel: React.FC<{ companyName: string; projectId?: string; onStatusChange?: (s: PrequalStatus) => void }> = ({ companyName, projectId, onStatusChange }) => {
-  const [pq, setPq] = useState<PrequalInfo>(getDefaultPrequal);
-  const [requesting, setRequesting] = useState(false);
+const PrequalDetailPanel: React.FC<{ companyContactId: string; projectId?: string; onStatusChange?: (s: PrequalStatus) => void }> = ({ companyContactId, projectId, onStatusChange }) => {
+  const { data: prequalRows } = usePrequalifications(projectId);
+  const upsert = useUpsertPrequalification();
+  const row = useMemo(
+    () => (prequalRows ?? []).find(r => r.company_id === companyContactId) ?? null,
+    [prequalRows, companyContactId],
+  );
+  const pq: PrequalInfo = useMemo(() => ({
+    status: (row?.status ?? 'not_started') as PrequalStatus,
+    bondingCapacity: row?.bonding_capacity ?? '',
+    insuranceLimits: row?.insurance_limits ?? '',
+    emrRate: row?.emr_rate ?? 0,
+    yearsInBusiness: row?.years_in_business ?? 0,
+    licenseNumbers: row?.license_numbers ?? '',
+    lastUpdated: row?.updated_at ? row.updated_at.slice(0, 10) : '',
+  }), [row]);
+
   const { fg, bg, label } = getPrequalColor(pq.status);
   const expired = pq.lastUpdated ? isPrequalExpired(pq.lastUpdated) : false;
   const fields = [
@@ -257,19 +282,22 @@ const PrequalDetailPanel: React.FC<{ companyName: string; projectId?: string; on
   ];
 
   const requestPrequal = async () => {
-    if (!projectId) return;
-    setRequesting(true);
+    if (!projectId || !companyContactId) return;
     try {
-      // TODO: Insert into 'prequalifications' table once created
-      const newStatus: PrequalStatus = 'in_review';
-      const now = new Date().toISOString().slice(0, 10);
-      setPq(prev => ({ ...prev, status: newStatus, lastUpdated: now }));
-      onStatusChange?.(newStatus);
+      const newStatus: PrequalStatusRemote = 'in_review';
+      await upsert.mutateAsync({
+        projectId,
+        companyId: companyContactId,
+        status: newStatus,
+        submittedAt: new Date().toISOString(),
+      });
+      onStatusChange?.(newStatus as PrequalStatus);
       toast.success('Prequalification requested');
-    } finally {
-      setRequesting(false);
+    } catch {
+      /* toast surfaced by mutation onError */
     }
   };
+  const requesting = upsert.isPending;
 
   return (
     <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.lg, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
@@ -389,31 +417,47 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
   );
 };
 
-const CommunicationLog: React.FC<{ contactId: string; contactName: string; projectId?: string }> = ({ contactId, contactName, projectId }) => {
-  const [comms, setComms] = useState<CommLogEntry[]>([]);
+const CommunicationLog: React.FC<{ contactId: string; contactName: string; projectId?: string }> = ({ contactId, projectId }) => {
+  const { data: rows } = useCommunicationLogs(projectId, contactId);
+  const createLog = useCreateCommunicationLog();
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [newEntry, setNewEntry] = useState({ type: 'email' as CommLogEntry['type'], subject: '', summary: '' });
-  const typeIcons: Record<string, React.ReactNode> = { email: <Mail size={12} />, call: <Phone size={12} />, meeting: <Users size={12} />, letter: <FileText size={12} /> };
-
-  // TODO: Load from 'communication_logs' table once created
-  // For now, comms start empty and new entries are added locally
+  const [newEntry, setNewEntry] = useState<{ channel: CommunicationChannel; subject: string; summary: string }>({ channel: 'email', subject: '', summary: '' });
+  const typeIcons: Record<CommLogEntry['type'], React.ReactNode> = {
+    email: <Mail size={12} />,
+    call: <Phone size={12} />,
+    meeting: <Users size={12} />,
+    letter: <FileText size={12} />,
+  };
+  const comms: CommLogEntry[] = useMemo(
+    () => (rows ?? []).map(r => ({
+      id: r.id,
+      date: r.occurred_at.slice(0, 10),
+      type: (r.channel === 'phone' ? 'call' : r.channel === 'note' ? 'letter' : r.channel) as CommLogEntry['type'],
+      subject: r.subject ?? '',
+      summary: r.summary,
+      loggedBy: r.logged_by ? 'Team member' : 'System',
+    })),
+    [rows],
+  );
 
   const addEntry = async () => {
-    if (!newEntry.subject.trim()) return;
-    setSaving(true);
+    if (!newEntry.subject.trim() || !projectId) return;
     try {
-      const entry: CommLogEntry = { id: `${contactId}-c${Date.now()}`, date: new Date().toISOString().slice(0, 10), type: newEntry.type, subject: newEntry.subject, summary: newEntry.summary, loggedBy: 'Current User' };
-      // TODO: Once 'communication_logs' table exists, persist:
-      // await supabase.from('communication_logs').insert({ project_id: projectId, contact_id: contactId, ... });
-      setComms(prev => [entry, ...prev]);
-      setNewEntry({ type: 'email', subject: '', summary: '' });
+      await createLog.mutateAsync({
+        projectId,
+        contactId,
+        channel: newEntry.channel,
+        subject: newEntry.subject.trim(),
+        summary: newEntry.summary,
+      });
+      setNewEntry({ channel: 'email', subject: '', summary: '' });
       setShowForm(false);
       toast.success('Communication logged');
-    } finally {
-      setSaving(false);
+    } catch {
+      /* mutation toasts on error */
     }
   };
+  const saving = createLog.isPending;
   const inputSt: React.CSSProperties = { width: '100%', padding: '6px 10px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' };
   return (
     <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.lg, padding: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
@@ -429,8 +473,8 @@ const CommunicationLog: React.FC<{ contactId: string; contactName: string; proje
       </div>
       {showForm && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
-          <select style={{ ...inputSt, appearance: 'auto' }} value={newEntry.type} onChange={e => setNewEntry(p => ({ ...p, type: e.target.value as CommLogEntry['type'] }))}>
-            <option value="email">Email</option><option value="call">Call</option><option value="meeting">Meeting</option><option value="letter">Letter</option>
+          <select style={{ ...inputSt, appearance: 'auto' }} value={newEntry.channel} onChange={e => setNewEntry(p => ({ ...p, channel: e.target.value as CommunicationChannel }))}>
+            <option value="email">Email</option><option value="phone">Phone</option><option value="meeting">Meeting</option><option value="note">Note</option>
           </select>
           <input style={inputSt} placeholder="Subject *" value={newEntry.subject} onChange={e => setNewEntry(p => ({ ...p, subject: e.target.value }))} />
           <textarea style={{ ...inputSt, resize: 'vertical', minHeight: 48 }} placeholder="Summary..." value={newEntry.summary} onChange={e => setNewEntry(p => ({ ...p, summary: e.target.value }))} />
@@ -594,6 +638,29 @@ export const Directory: React.FC = () => {
     }));
   }, [companiesData]);
 
+  const { data: prequalRows } = usePrequalifications(projectId);
+  const { data: lastContactMap } = useLastContactMap(projectId);
+  const createCommLog = useCreateCommunicationLog();
+
+  // Map company name → prequal status via any contact from that company.
+  // prequal.company_id FK is directory_contacts(id) — so we resolve status
+  // by walking contacts → find one with the same company name → look up its prequal row.
+  const companyPrequalStatus = useMemo(() => {
+    const contactByCompany = new Map<string, string>();
+    for (const c of CONTACTS) {
+      if (c.company && !contactByCompany.has(c.company)) contactByCompany.set(c.company, c.id);
+    }
+    const statusByContact = new Map<string, PrequalStatus>();
+    for (const row of prequalRows ?? []) {
+      statusByContact.set(row.company_id, row.status as PrequalStatus);
+    }
+    const out = new Map<string, PrequalStatus>();
+    for (const [companyName, contactId] of contactByCompany) {
+      out.set(companyName, statusByContact.get(contactId) ?? 'not_started');
+    }
+    return out;
+  }, [CONTACTS, prequalRows]);
+
   const [view, setView] = useState<'people' | 'companies'>('people');
   const [rawSearch, setRawSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -619,6 +686,17 @@ export const Directory: React.FC = () => {
     searchTimer.current = setTimeout(() => setSearchQuery(val), 200);
   };
 
+  const [tradeFilter, setTradeFilter] = useState<string>('all');
+  const tradeOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of CONTACTS) if (c.trade) set.add(c.trade);
+    for (const c of companies) if (c.trade) set.add(c.trade);
+    return Array.from(set).sort();
+  }, [CONTACTS, companies]);
+
+  const STALE_DAYS = 30;
+  const staleThresholdMs = STALE_DAYS * 24 * 60 * 60 * 1000;
+
   const filteredContacts = useMemo(() => {
     let result = CONTACTS;
     if (searchQuery.trim()) {
@@ -632,9 +710,19 @@ export const Directory: React.FC = () => {
         c.role.toLowerCase().includes(q)
       );
     }
-    // TODO: Filter by last contact date once communication_logs table exists
+    if (tradeFilter !== 'all') {
+      result = result.filter(c => c.trade === tradeFilter);
+    }
+    if (commFilter === 'stale' && lastContactMap) {
+      const now = Date.now();
+      result = result.filter(c => {
+        const last = lastContactMap.get(c.id);
+        if (!last) return true; // never contacted
+        return now - new Date(last).getTime() > staleThresholdMs;
+      });
+    }
     return result;
-  }, [searchQuery, CONTACTS]);
+  }, [searchQuery, CONTACTS, tradeFilter, commFilter, lastContactMap, staleThresholdMs]);
 
   const filteredCompanies = useMemo(() => {
     let result = companies;
@@ -645,9 +733,41 @@ export const Directory: React.FC = () => {
         c.trade.toLowerCase().includes(q)
       );
     }
-    // TODO: Filter by prequal status once prequalifications table exists
+    if (tradeFilter !== 'all') {
+      result = result.filter(c => c.trade === tradeFilter);
+    }
+    if (prequalFilter !== 'all') {
+      result = result.filter(c => (companyPrequalStatus.get(c.name) ?? 'not_started') === prequalFilter);
+    }
     return result;
-  }, [searchQuery, companies]);
+  }, [searchQuery, companies, tradeFilter, prequalFilter, companyPrequalStatus]);
+
+  const formatLastContact = (contactId: string): string => {
+    const iso = lastContactMap?.get(contactId);
+    if (!iso) return '—';
+    const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+    if (days === 0) return 'Today';
+    if (days === 1) return '1d ago';
+    if (days < 30) return `${days}d ago`;
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+    return `${Math.floor(days / 365)}y ago`;
+  };
+
+  const logContactQuick = async (contactId: string) => {
+    if (!projectId) return;
+    try {
+      await createCommLog.mutateAsync({
+        projectId,
+        contactId,
+        channel: 'note',
+        subject: 'Contact logged',
+        summary: '',
+      });
+      toast.success('Contact logged');
+    } catch {
+      /* mutation toasts on error */
+    }
+  };
 
   // Metrics
   const totalContacts = CONTACTS.length;
@@ -722,6 +842,25 @@ export const Directory: React.FC = () => {
 
         {/* Filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], flexWrap: 'wrap' }}>
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Trade:</span>
+          <select
+            value={tradeFilter}
+            onChange={e => setTradeFilter(e.target.value)}
+            aria-label="Filter by trade"
+            style={{
+              padding: `${spacing['1']} ${spacing['3']}`,
+              border: `1px solid ${tradeFilter !== 'all' ? colors.primaryOrange : colors.borderSubtle}`,
+              borderRadius: borderRadius.full,
+              backgroundColor: tradeFilter !== 'all' ? colors.orangeSubtle : 'transparent',
+              color: tradeFilter !== 'all' ? colors.orangeText : colors.textSecondary,
+              fontSize: typography.fontSize.sm,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">All trades</option>
+            {tradeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
           {view === 'companies' && (
             <>
               <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>Prequal:</span>
@@ -867,16 +1006,36 @@ export const Directory: React.FC = () => {
                           </a>
                         </td>
                         <td style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
-                          {/* TODO: Show last contact date once communication_logs table exists */}
-                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>—</span>
+                          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>{formatLastContact(contact.id)}</span>
                         </td>
                         <td style={{ padding: `${spacing['3']} ${spacing['4']}` }}>
-                          <Tag
-                            label={contact.status === 'active' ? 'Active' : 'Inactive'}
-                            color={contact.status === 'active' ? colors.statusActive : colors.textTertiary}
-                            backgroundColor={contact.status === 'active' ? colors.statusActiveSubtle : colors.statusNeutralSubtle}
-                            fontSize={typography.fontSize.caption}
-                          />
+                          <span style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                            <Tag
+                              label={contact.status === 'active' ? 'Active' : 'Inactive'}
+                              color={contact.status === 'active' ? colors.statusActive : colors.textTertiary}
+                              backgroundColor={contact.status === 'active' ? colors.statusActiveSubtle : colors.statusNeutralSubtle}
+                              fontSize={typography.fontSize.caption}
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); logContactQuick(contact.id); }}
+                              title="Log a contact interaction"
+                              aria-label={`Log contact for ${contact.name}`}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                                padding: `${spacing['1']} ${spacing['2']}`,
+                                border: `1px solid ${colors.borderSubtle}`,
+                                borderRadius: borderRadius.base,
+                                backgroundColor: 'transparent',
+                                color: colors.textSecondary,
+                                fontSize: typography.fontSize.caption,
+                                cursor: 'pointer',
+                                fontFamily: typography.fontFamily,
+                              }}
+                            >
+                              <MessageSquare size={11} /> Log
+                            </button>
+                          </span>
                         </td>
                       </tr>
                     );
@@ -943,11 +1102,16 @@ export const Directory: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Prequal badge — TODO: load from prequalifications table */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                    <ShieldCheck size={13} style={{ color: colors.textTertiary }} />
-                    <Tag label="Prequal: Not Started" color={colors.textTertiary} backgroundColor={colors.statusNeutralSubtle} fontSize={typography.fontSize.caption} />
-                  </div>
+                  {(() => {
+                    const status = companyPrequalStatus.get(company.name) ?? 'not_started';
+                    const { fg, bg, label } = getPrequalColor(status);
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
+                        <ShieldCheck size={13} style={{ color: fg }} />
+                        <Tag label={`Prequal: ${label}`} color={fg} backgroundColor={bg} fontSize={typography.fontSize.caption} />
+                      </div>
+                    );
+                  })()}
 
                   {/* Stats row */}
                   <div style={{ display: 'flex', gap: spacing['4'] }}>
@@ -999,7 +1163,7 @@ export const Directory: React.FC = () => {
         {selectedContact && <ContactDetailPanel contact={selectedContact} />}
         {selectedContact && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'], padding: `${spacing['4']} 0` }}>
-            <PrequalDetailPanel companyName={selectedContact.company} projectId={projectId} onStatusChange={() => qc.invalidateQueries({ queryKey: ['companies'] })} />
+            <PrequalDetailPanel companyContactId={selectedContact.id} projectId={projectId} onStatusChange={() => qc.invalidateQueries({ queryKey: ['companies'] })} />
             <COISection companyName={selectedContact.company} projectId={projectId} />
             <CommunicationLog contactId={selectedContact.id} contactName={selectedContact.name} projectId={projectId} />
           </div>

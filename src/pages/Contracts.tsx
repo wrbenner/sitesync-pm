@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { FileText, Plus, Briefcase, Users, FileSignature, ShoppingCart, X, Trash2, ChevronDown, ChevronUp, Send, Clock, CheckCircle, PenTool, Shield, AlertTriangle, BookOpen, DollarSign, Search, Mail, Eye, EyeOff } from 'lucide-react'
+import { FileText, Plus, Briefcase, Users, FileSignature, ShoppingCart, X, Trash2, ChevronDown, ChevronUp, Send, Clock, CheckCircle, PenTool, Shield, AlertTriangle, BookOpen, DollarSign, Search, Eye, EyeOff } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { useContracts } from '../hooks/queries/financials'
-import { useCreateContract, useDeleteContract, useUpdateContract } from '../hooks/queries/enterprise-modules'
+import { useContracts } from '../hooks/queries/contracts'
+import { useCreateContract, useDeleteContract, useUpdateContract } from '../hooks/mutations/contracts'
+import { useInsuranceCertificates, useInsuranceCertificatesByCompany, getCOIStatus, type InsuranceCertificate } from '../hooks/queries/insurance-certificates'
+import { useUploadInsuranceCertificate, useDeleteInsuranceCertificate } from '../hooks/mutations/insurance-certificates'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -901,109 +903,168 @@ const ClauseLibraryTab: React.FC<{ contracts: Contract[]; onAddClause: (clauseId
 
 // ── Insurance Certificate Tracking ─────────────────────────
 
-interface InsuranceCert {
-  id: string
-  contractId: string
-  type: 'GL' | 'Auto' | 'Workers Comp' | 'Umbrella' | 'Professional Liability'
+const COI_SEVERITY_STYLES: Record<string, { color: string; bg: string }> = {
+  expired: { color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+  expiring: { color: colors.statusPending, bg: colors.statusPendingSubtle },
+  current: { color: colors.statusActive, bg: colors.statusActiveSubtle },
+  unknown: { color: colors.textTertiary, bg: colors.surfaceInset },
+}
+
+const POLICY_TYPE_LABELS: Record<string, string> = {
+  general_liability: 'General Liability',
+  workers_comp: 'Workers Comp',
+  auto: 'Auto',
+  umbrella: 'Umbrella',
+  professional_liability: 'Professional Liability',
+  pollution: 'Pollution',
+}
+
+interface UploadCOIForm {
+  policy_type: string
   carrier: string
-  policyNumber: string
-  coverageAmount: number
-  expirationDate: string
-  certificateHolder: string
-  additionalInsured: boolean
+  policy_number: string
+  coverage_amount: string
+  aggregate_limit: string
+  effective_date: string
+  expiration_date: string
+  additional_insured: boolean
+  waiver_of_subrogation: boolean
+  file: File | null
 }
 
-
-function getInsuranceStatus(expirationDate: string): { label: string; color: string; bg: string } {
-  const now = new Date()
-  const exp = new Date(expirationDate)
-  const daysUntil = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  if (daysUntil < 0) return { label: 'Expired', color: colors.statusCritical, bg: colors.statusCriticalSubtle }
-  if (daysUntil <= 30) return { label: `Expires in ${daysUntil}d`, color: colors.statusPending, bg: colors.statusPendingSubtle }
-  return { label: 'Current', color: colors.statusActive, bg: colors.statusActiveSubtle }
+const emptyCOIForm: UploadCOIForm = {
+  policy_type: 'general_liability',
+  carrier: '',
+  policy_number: '',
+  coverage_amount: '',
+  aggregate_limit: '',
+  effective_date: '',
+  expiration_date: '',
+  additional_insured: false,
+  waiver_of_subrogation: false,
+  file: null,
 }
 
-const InsuranceSection: React.FC<{ contractId: string; contractTitle: string; onClose: () => void }> = ({ contractId, contractTitle, onClose }) => {
-  // TODO: Create `insurance_certificates` table in Supabase if it does not exist yet.
-  const { data: certs = [], isLoading: certsLoading } = useQuery({
-    queryKey: ['insurance_certificates', contractId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('insurance_certificates')
-        .select('*')
-        .eq('contract_id', contractId)
-        .order('expiration_date', { ascending: true })
-      if (error) {
-        // Table may not exist yet — degrade gracefully
-        console.warn('[InsuranceSection] Query failed:', error.message)
-        return [] as InsuranceCert[]
-      }
-      return (data ?? []) as InsuranceCert[]
-    },
-    enabled: !!contractId,
-  })
+const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClose: () => void }> = ({ projectId, contract, onClose }) => {
+  const company = contract.counterparty_name
+  const { data: certs = [], isLoading: certsLoading } = useInsuranceCertificatesByCompany(projectId, company)
+  const uploadCert = useUploadInsuranceCertificate()
+  const deleteCert = useDeleteInsuranceCertificate()
 
-  const allCerts: InsuranceCert[] = certs
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [form, setForm] = useState<UploadCOIForm>(emptyCOIForm)
+
+  const handleUpload = async () => {
+    if (!company) {
+      toast.error('Contract counterparty is missing — cannot attach COI')
+      return
+    }
+    if (!form.expiration_date) {
+      toast.error('Expiration date is required')
+      return
+    }
+    try {
+      await uploadCert.mutateAsync({
+        cert: {
+          project_id: projectId,
+          company,
+          policy_type: form.policy_type || null,
+          carrier: form.carrier || null,
+          policy_number: form.policy_number || null,
+          coverage_amount: form.coverage_amount ? parseFloat(form.coverage_amount) : null,
+          aggregate_limit: form.aggregate_limit ? parseFloat(form.aggregate_limit) : null,
+          effective_date: form.effective_date || null,
+          expiration_date: form.expiration_date,
+          additional_insured: form.additional_insured,
+          waiver_of_subrogation: form.waiver_of_subrogation,
+        },
+        file: form.file ?? undefined,
+      })
+      toast.success('Insurance certificate uploaded')
+      setForm(emptyCOIForm)
+      setUploadOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed')
+    }
+  }
+
+  const handleDelete = async (cert: InsuranceCertificate) => {
+    if (!window.confirm(`Delete ${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'certificate'} for ${cert.company}?`)) return
+    try {
+      await deleteCert.mutateAsync({ id: cert.id, projectId })
+      toast.success('Certificate deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
 
   return (
     <Card padding={spacing['4']} style={{ marginTop: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['4'] }}>
-        <SectionHeader title={`Insurance Certificates — ${contractTitle}`} />
+        <SectionHeader title={`Insurance Certificates — ${contract.title}`} />
         <div style={{ display: 'flex', gap: spacing['2'] }}>
-          <Btn variant="secondary" size="sm" icon={<Mail size={14} />} onClick={async () => {
-            try {
-              await supabase.from('notifications').insert({
-                type: 'coi_update_request',
-                title: `COI Update Requested for ${contractTitle}`,
-                contract_id: contractId,
-                status: 'pending',
-              })
-              toast.success('COI update request sent to contractor')
-            } catch {
-              // Fallback if notifications table doesn't exist
-              toast.success('COI update request sent to contractor')
-            }
-          }}>Request Updated COI</Btn>
+          <Btn variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setUploadOpen(true)} data-testid="upload-coi-button">
+            Upload COI
+          </Btn>
           <Btn variant="ghost" size="sm" onClick={onClose}><X size={16} /></Btn>
         </div>
       </div>
+      {!company && (
+        <div style={{ padding: spacing['3'], marginBottom: spacing['3'], backgroundColor: colors.statusPendingSubtle, borderRadius: borderRadius.base, color: colors.statusPending, fontSize: typography.fontSize.sm }}>
+          Contract has no counterparty name — add one to track insurance certificates.
+        </div>
+      )}
       {certsLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
           {[1, 2].map((i) => <Skeleton key={i} width="100%" height="40px" />)}
         </div>
-      ) : allCerts.length === 0 ? (
-        <EmptyState icon={<Shield size={36} />} title="No insurance certificates" description="No insurance certificates tracked for this contract." />
+      ) : certs.length === 0 ? (
+        <EmptyState icon={<Shield size={36} />} title="No insurance certificates" description="Upload a COI to begin tracking insurance for this contract." />
       ) : (
         <div style={{ overflowX: 'auto', border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Type', 'Carrier', 'Policy #', 'Coverage', 'Expiration', 'Holder', 'Add\'l Insured', 'Status'].map((h) => (
+                {['Type', 'Carrier', 'Policy #', 'Coverage', 'Expiration', 'Add\'l Insured', 'Status', 'Document', ''].map((h) => (
                   <th key={h} style={{ ...sovTableHeaderStyle, textAlign: h === 'Coverage' ? 'right' : 'left' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {allCerts.map((cert) => {
-                const status = getInsuranceStatus(cert.expirationDate)
+              {certs.map((cert) => {
+                const status = getCOIStatus(cert.expiration_date)
+                const styleCfg = COI_SEVERITY_STYLES[status.severity]
                 return (
                   <tr key={cert.id} style={{ transition: `background ${transitions.instant}` }} onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = colors.surfaceHover }} onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}>
-                    <td style={{ ...sovTableCellStyle, fontWeight: typography.fontWeight.medium }}>{cert.type}</td>
-                    <td style={sovTableCellStyle}>{cert.carrier}</td>
-                    <td style={{ ...sovTableCellStyle, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>{cert.policyNumber}</td>
-                    <td style={{ ...sovTableCellStyle, textAlign: 'right', fontWeight: typography.fontWeight.medium }}>{formatCurrency(cert.coverageAmount)}</td>
-                    <td style={sovTableCellStyle}>{new Date(cert.expirationDate).toLocaleDateString()}</td>
-                    <td style={{ ...sovTableCellStyle, color: colors.textSecondary }}>{cert.certificateHolder}</td>
+                    <td style={{ ...sovTableCellStyle, fontWeight: typography.fontWeight.medium }}>{POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? (cert.policy_type ?? '—')}</td>
+                    <td style={sovTableCellStyle}>{cert.carrier ?? '—'}</td>
+                    <td style={{ ...sovTableCellStyle, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>{cert.policy_number ?? '—'}</td>
+                    <td style={{ ...sovTableCellStyle, textAlign: 'right', fontWeight: typography.fontWeight.medium }}>{cert.coverage_amount != null ? formatCurrency(cert.coverage_amount) : '—'}</td>
+                    <td style={sovTableCellStyle}>{cert.expiration_date ? new Date(cert.expiration_date).toLocaleDateString() : '—'}</td>
                     <td style={sovTableCellStyle}>
-                      <span style={{ padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, color: cert.additionalInsured ? colors.statusActive : colors.textTertiary, backgroundColor: cert.additionalInsured ? colors.statusActiveSubtle : colors.surfaceInset }}>
-                        {cert.additionalInsured ? 'Yes' : 'No'}
+                      <span style={{ padding: `1px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, color: cert.additional_insured ? colors.statusActive : colors.textTertiary, backgroundColor: cert.additional_insured ? colors.statusActiveSubtle : colors.surfaceInset }}>
+                        {cert.additional_insured ? 'Yes' : 'No'}
                       </span>
                     </td>
                     <td style={sovTableCellStyle}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing.xs, padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: status.color, backgroundColor: status.bg }}>
-                        <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: status.color }} />
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing.xs, padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: styleCfg.color, backgroundColor: styleCfg.bg }}>
+                        <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: styleCfg.color }} />
                         {status.label}
                       </span>
+                    </td>
+                    <td style={sovTableCellStyle}>
+                      {cert.document_url ? (
+                        <a href={cert.document_url} target="_blank" rel="noopener noreferrer" style={{ color: colors.statusInfo, textDecoration: 'none', fontSize: typography.fontSize.caption }}>View</a>
+                      ) : (
+                        <span style={{ color: colors.textTertiary }}>—</span>
+                      )}
+                    </td>
+                    <td style={sovTableCellStyle}>
+                      <PermissionGate permission="project.settings">
+                        <Btn size="sm" variant="ghost" onClick={() => handleDelete(cert)} disabled={deleteCert.isPending} aria-label="Delete certificate">
+                          <Trash2 size={12} />
+                        </Btn>
+                      </PermissionGate>
                     </td>
                   </tr>
                 )
@@ -1012,6 +1073,53 @@ const InsuranceSection: React.FC<{ contractId: string; contractTitle: string; on
           </table>
         </div>
       )}
+      <Modal open={uploadOpen} onClose={() => { setUploadOpen(false); setForm(emptyCOIForm) }} title="Upload Certificate of Insurance" width="560px">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Policy Type</label>
+              <select
+                value={form.policy_type}
+                onChange={(e) => setForm({ ...form, policy_type: e.target.value })}
+                style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderLight}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
+              >
+                {Object.entries(POLICY_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <InputField label="Carrier" value={form.carrier} onChange={(v) => setForm({ ...form, carrier: v })} placeholder="Acme Insurance Co." />
+          </div>
+          <InputField label="Policy Number" value={form.policy_number} onChange={(v) => setForm({ ...form, policy_number: v })} placeholder="GL-1234567" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField label="Coverage Amount ($)" value={form.coverage_amount} onChange={(v) => setForm({ ...form, coverage_amount: v })} placeholder="1000000" />
+            <InputField label="Aggregate Limit ($)" value={form.aggregate_limit} onChange={(v) => setForm({ ...form, aggregate_limit: v })} placeholder="2000000" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField label="Effective Date" type="date" value={form.effective_date} onChange={(v) => setForm({ ...form, effective_date: v })} />
+            <InputField label="Expiration Date" type="date" value={form.expiration_date} onChange={(v) => setForm({ ...form, expiration_date: v })} />
+          </div>
+          <div style={{ display: 'flex', gap: spacing['4'] }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], fontSize: typography.fontSize.sm }}>
+              <input type="checkbox" checked={form.additional_insured} onChange={(e) => setForm({ ...form, additional_insured: e.target.checked })} /> Additional Insured
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], fontSize: typography.fontSize.sm }}>
+              <input type="checkbox" checked={form.waiver_of_subrogation} onChange={(e) => setForm({ ...form, waiver_of_subrogation: e.target.checked })} /> Waiver of Subrogation
+            </label>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Certificate File (PDF, image)</label>
+            <input
+              type="file"
+              accept="application/pdf,image/*"
+              onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })}
+              style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderLight}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end', marginTop: spacing['2'] }}>
+            <Btn variant="secondary" onClick={() => { setUploadOpen(false); setForm(emptyCOIForm) }}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleUpload} loading={uploadCert.isPending} data-testid="save-coi-button">Upload</Btn>
+          </div>
+        </div>
+      </Modal>
     </Card>
   )
 }
@@ -1145,13 +1253,36 @@ const alertSeverityConfig: Record<string, { icon: React.ElementType; color: stri
   info: { icon: Shield, color: colors.statusInfo, bg: colors.statusInfoSubtle, borderColor: colors.statusInfo },
 }
 
-const ComplianceAlertBar: React.FC<{ contracts: Contract[] }> = ({ contracts }) => {
+const ComplianceAlertBar: React.FC<{ contracts: Contract[]; projectId: string | null | undefined }> = ({ contracts, projectId }) => {
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set())
+  const { data: certs = [] } = useInsuranceCertificates(projectId ?? undefined)
 
   // Derive compliance alerts from actual contract data
   const alerts = useMemo<ComplianceAlert[]>(() => {
     const result: ComplianceAlert[] = []
     const now = new Date()
+
+    // Insurance certificate alerts — expired or expiring within 30 days
+    for (const cert of certs) {
+      const status = getCOIStatus(cert.expiration_date)
+      if (status.severity === 'expired') {
+        result.push({
+          id: `coi-expired-${cert.id}`,
+          severity: 'critical',
+          description: `${cert.company} ${cert.policy_type ?? 'insurance'} certificate ${status.label.toLowerCase()}.`,
+          actionLabel: 'Request Updated COI',
+          category: 'Insurance',
+        })
+      } else if (status.severity === 'expiring') {
+        result.push({
+          id: `coi-expiring-${cert.id}`,
+          severity: 'warning',
+          description: `${cert.company} ${cert.policy_type ?? 'insurance'} certificate ${status.label.toLowerCase()}.`,
+          actionLabel: 'Request Updated COI',
+          category: 'Insurance',
+        })
+      }
+    }
 
     for (const c of contracts) {
       // Check for contracts past end date that are still active
@@ -1203,7 +1334,7 @@ const ComplianceAlertBar: React.FC<{ contracts: Contract[] }> = ({ contracts }) 
     }
 
     return result
-  }, [contracts])
+  }, [contracts, certs])
 
   const visibleAlerts = alerts.filter((a) => !dismissedAlerts.has(a.id))
 
@@ -1610,7 +1741,7 @@ export const Contracts: React.FC = () => {
         <>
           <PageInsightBanners page="contracts" />
 
-          <ComplianceAlertBar contracts={typedContracts} />
+          <ComplianceAlertBar contracts={typedContracts} projectId={projectId} />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
             <MetricBox label="Total Contracts" value={typedContracts.length} />
@@ -1676,10 +1807,10 @@ export const Contracts: React.FC = () => {
                   onClose={() => setSelectedContractId(null)}
                 />
               )}
-              {detailTab === 'insurance' && (
+              {detailTab === 'insurance' && projectId && (
                 <InsuranceSection
-                  contractId={selectedContract.id}
-                  contractTitle={selectedContract.title}
+                  projectId={projectId}
+                  contract={selectedContract}
                   onClose={() => setSelectedContractId(null)}
                 />
               )}

@@ -12,6 +12,9 @@ import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useDeleteCrew } from '../hooks/mutations';
+import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
+import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
+import { useTimesheets } from '../hooks/queries/timesheets';
 
 interface AddCrewModalProps { onClose: () => void; projectId: string; onCreated: () => void }
 const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreated }) => {
@@ -72,6 +75,85 @@ export const Crews: React.FC = () => {
   const { crews, loading, error: crewError, loadCrews } = useCrewStore();
   const { activeProject } = useProjectContext();
   const deleteCrew = useDeleteCrew();
+
+  // New: crew_schedules-based phase assignment + productivity rollup
+  const csProjectId = activeProject?.id;
+  const { data: crewSchedules = [] } = useCrewSchedules(csProjectId);
+  const { data: phasesForAssignment = [] } = useSchedulePhasesForAssignment(csProjectId);
+  const { data: projectTimesheets = [] } = useTimesheets(csProjectId);
+  const createCrewSchedule = useCreateCrewSchedule();
+  const deleteCrewSchedule = useDeleteCrewSchedule();
+  const [csForm, setCsForm] = useState({
+    crew_name: '',
+    phase_id: '',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: (() => { const d = new Date(); d.setDate(d.getDate() + 5); return d.toISOString().split('T')[0]; })(),
+    headcount: '4',
+  });
+  const submitCrewSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!csProjectId) { toast.error('No active project'); return; }
+    if (!csForm.crew_name.trim()) { toast.error('Crew name required'); return; }
+    const headcount = Number(csForm.headcount);
+    if (!Number.isFinite(headcount) || headcount < 0) { toast.error('Invalid headcount'); return; }
+    if (csForm.end_date < csForm.start_date) { toast.error('End must be ≥ start'); return; }
+    try {
+      await createCrewSchedule.mutateAsync({
+        project_id: csProjectId,
+        phase_id: csForm.phase_id || null,
+        crew_name: csForm.crew_name.trim(),
+        start_date: csForm.start_date,
+        end_date: csForm.end_date,
+        headcount,
+      });
+      toast.success('Crew assigned');
+      setCsForm((p) => ({ ...p, crew_name: '', phase_id: '' }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to assign');
+    }
+  };
+  const removeCrewSchedule = async (id: string) => {
+    if (!csProjectId) return;
+    try {
+      await deleteCrewSchedule.mutateAsync({ id, project_id: csProjectId });
+      toast.success('Assignment removed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove');
+    }
+  };
+  const crewProductivity = useMemo(() => {
+    const phaseById = new Map(phasesForAssignment.map((p) => [p.id, p]));
+    const hoursByPhase = new Map<string, number>();
+    for (const t of projectTimesheets) {
+      const act = (t.activity || '').toLowerCase().trim();
+      if (!act) continue;
+      for (const p of phasesForAssignment) {
+        const pname = (p.name || '').toLowerCase().trim();
+        if (!pname) continue;
+        if (act === pname || act.includes(pname) || pname.includes(act)) {
+          hoursByPhase.set(p.id, (hoursByPhase.get(p.id) ?? 0) + t.hours);
+          break;
+        }
+      }
+    }
+    return crewSchedules.map((s) => {
+      const phase = s.phase_id ? phaseById.get(s.phase_id) : null;
+      const hours = s.phase_id ? (hoursByPhase.get(s.phase_id) ?? 0) : 0;
+      const progress = phase?.percent_complete ?? 0;
+      return {
+        scheduleId: s.id,
+        crewName: s.crew_name,
+        phaseName: phase?.name ?? s.phase_name ?? '(unassigned)',
+        phaseId: s.phase_id,
+        headcount: s.headcount,
+        start: s.start_date,
+        end: s.end_date,
+        hours: Math.round(hours * 10) / 10,
+        progress: Math.round(progress),
+        efficiency: progress > 0 ? Math.round((hours / progress) * 10) / 10 : null,
+      };
+    });
+  }, [crewSchedules, phasesForAssignment, projectTimesheets]);
 
   const handleDeleteCrew = async (crew: { id: string; name: string }) => {
     if (!activeProject?.id) return;
@@ -674,6 +756,106 @@ export const Crews: React.FC = () => {
       {showAddCrew && activeProject?.id && (
         <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
       )}
+
+      {/* Phase assignment + productivity (crew_schedules) */}
+      <Card>
+        <SectionHeader title="Assign crew to schedule phase" />
+        <form
+          onSubmit={submitCrewSchedule}
+          style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.6fr 1fr 1fr 0.8fr auto', gap: spacing['3'], alignItems: 'end', marginBottom: spacing['3'] }}
+        >
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Crew name</label>
+            <input
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
+              value={csForm.crew_name}
+              onChange={(e) => setCsForm((p) => ({ ...p, crew_name: e.target.value }))}
+              placeholder="Steel Frame Alpha"
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Phase</label>
+            <select
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
+              value={csForm.phase_id}
+              onChange={(e) => setCsForm((p) => ({ ...p, phase_id: e.target.value }))}
+            >
+              <option value="">(unassigned)</option>
+              {phasesForAssignment.map((ph) => (
+                <option key={ph.id} value={ph.id}>{ph.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Start</label>
+            <input
+              type="date"
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
+              value={csForm.start_date}
+              onChange={(e) => setCsForm((p) => ({ ...p, start_date: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>End</label>
+            <input
+              type="date"
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
+              value={csForm.end_date}
+              onChange={(e) => setCsForm((p) => ({ ...p, end_date: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>HC</label>
+            <input
+              type="number"
+              min="0"
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
+              value={csForm.headcount}
+              onChange={(e) => setCsForm((p) => ({ ...p, headcount: e.target.value }))}
+            />
+          </div>
+          <Btn type="submit" variant="primary" icon={<Plus size={14} />} loading={createCrewSchedule.isPending}>Assign</Btn>
+        </form>
+
+        <SectionHeader title="Crew schedule & productivity" />
+        {crewProductivity.length === 0 ? (
+          <EmptyState
+            icon={<BarChart3 size={32} color={colors.textTertiary} />}
+            title="No crew assignments yet"
+            description="Assign a crew to a schedule phase above to start tracking productivity."
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr 0.6fr 1.4fr 0.7fr 1fr 0.8fr auto', gap: spacing['2'], padding: spacing['2'], fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <div>Crew</div>
+              <div>Phase</div>
+              <div>HC</div>
+              <div>Dates</div>
+              <div>Hours</div>
+              <div>Progress</div>
+              <div>h / %</div>
+              <div></div>
+            </div>
+            {crewProductivity.map((row) => (
+              <div key={row.scheduleId} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr 0.6fr 1.4fr 0.7fr 1fr 0.8fr auto', gap: spacing['2'], padding: spacing['3'], alignItems: 'center', borderTop: `1px solid ${colors.borderSubtle}`, fontSize: typography.fontSize.sm }}>
+                <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{row.crewName}</div>
+                <div style={{ color: row.phaseId ? colors.textPrimary : colors.textTertiary }}>{row.phaseName}</div>
+                <div style={{ color: colors.textSecondary }}>{row.headcount}</div>
+                <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.xs }}>{row.start} → {row.end}</div>
+                <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{row.hours}h</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ flex: 1, height: 6, background: colors.surfaceInset, borderRadius: borderRadius.base }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, row.progress)}%`, background: colors.primaryOrange, borderRadius: borderRadius.base }} />
+                  </div>
+                  <span style={{ color: colors.textSecondary, fontSize: typography.fontSize.xs, width: 32 }}>{row.progress}%</span>
+                </div>
+                <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.xs }}>{row.efficiency != null ? `${row.efficiency}` : '—'}</div>
+                <Btn variant="ghost" size="sm" onClick={() => removeCrewSchedule(row.scheduleId)} aria-label="Remove assignment">×</Btn>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Modal open={!!editingCrew} onClose={() => setEditingCrew(null)} title="Edit Crew">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>

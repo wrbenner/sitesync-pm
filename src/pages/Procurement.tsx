@@ -5,8 +5,10 @@ import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions, touchTarget } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { usePurchaseOrders, useDeliveries, useMaterialInventory, usePOLineItems } from '../hooks/queries'
-import { useCreatePurchaseOrder, useDeletePurchaseOrder, useCreateDelivery, useDeleteDelivery, useCreateMaterialItem } from '../hooks/queries/procurement-equipment'
+import { useDeliveries, useMaterialInventory } from '../hooks/queries'
+import { usePurchaseOrders, usePOLineItems } from '../hooks/queries/purchase-orders'
+import { useCreatePurchaseOrder, useDeletePurchaseOrder, useUpdatePurchaseOrder } from '../hooks/mutations/purchase-orders'
+import { useCreateDelivery, useDeleteDelivery, useCreateMaterialItem } from '../hooks/queries/procurement-equipment'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -280,6 +282,7 @@ export const Procurement: React.FC = () => {
 
   // mutations
   const createPO = useCreatePurchaseOrder()
+  const updatePO = useUpdatePurchaseOrder()
   const deletePO = useDeletePurchaseOrder()
   const createDelivery = useCreateDelivery()
   const deleteDelivery = useDeleteDelivery()
@@ -320,7 +323,13 @@ export const Procurement: React.FC = () => {
     })
   }, [pos, approvalOverrides])
 
-  // Helper to update approval state for a PO
+  // Map approval stages to persisted PO status values
+  const STAGE_TO_STATUS: Partial<Record<ApprovalStage, string>> = {
+    draft: 'draft',
+    issued: 'issued',
+  }
+
+  // Helper to update approval state for a PO — persists status when the stage maps to a DB value
   const updateApproval = (poId: string, stage: ApprovalStage, newEntry: ApprovalHistoryEntry) => {
     setApprovalOverrides(prev => {
       const existing = prev[poId]
@@ -332,6 +341,10 @@ export const Procurement: React.FC = () => {
         },
       }
     })
+    const nextStatus = STAGE_TO_STATUS[stage]
+    if (nextStatus && projectId) {
+      updatePO.mutate({ id: poId, projectId, updates: { status: nextStatus } })
+    }
   }
 
   // ── Compute Vendor Scores from delivery data ──────────────

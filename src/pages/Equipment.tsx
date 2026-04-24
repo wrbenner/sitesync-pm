@@ -112,6 +112,14 @@ const fleetColumns = [
       )
     },
   }),
+  fleetCol.accessor('serial_number', {
+    header: 'Serial',
+    cell: (info) => (
+      <span style={{ color: colors.textSecondary, fontFamily: 'monospace', fontSize: typography.fontSize.caption }}>
+        {info.getValue() ?? '—'}
+      </span>
+    ),
+  }),
   fleetCol.accessor('status', {
     header: 'Status',
     cell: (info) => <StatusBadge status={info.getValue()} />,

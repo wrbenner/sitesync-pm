@@ -1,10 +1,16 @@
-import React from 'react'
-import { Building, Calendar, Camera, MessageSquare, CheckCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { Building, Calendar, Camera, MessageSquare, CheckCircle, Send, CheckCheck } from 'lucide-react'
 import { Skeleton } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { useProject, useSchedulePhases, useOwnerUpdates } from '../hooks/queries'
+import { useProject, useSchedulePhases } from '../hooks/queries'
+import { useOwnerUpdatesForProject, type OwnerUpdate } from '../hooks/queries/owner-updates'
+import { useCreateOwnerUpdate, useAcknowledgeOwnerUpdate } from '../hooks/mutations/owner-updates'
+import { usePermissions } from '../hooks/usePermissions'
+import { useAuth } from '../hooks/useAuth'
+import type { SchedulePhase } from '../types/database'
 
+// ── Progress Ring ──────────────────────────────────────────
 function ProgressRing({ value, size = 160, stroke = 10 }: { value: number; size?: number; stroke?: number }) {
   const radius = (size - stroke) / 2
   const circumference = 2 * Math.PI * radius
@@ -39,7 +45,8 @@ function ProgressRing({ value, size = 160, stroke = 10 }: { value: number; size?
   )
 }
 
-function MilestoneTimeline({ phases }: { phases: unknown[] }) {
+// ── Milestone Timeline ─────────────────────────────────────
+function MilestoneTimeline({ phases }: { phases: SchedulePhase[] }) {
   if (!phases || phases.length === 0) {
     return <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm }}>No schedule milestones available.</p>
   }
@@ -48,14 +55,14 @@ function MilestoneTimeline({ phases }: { phases: unknown[] }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {milestones.map((phase: unknown, i: number) => {
-        const isComplete = phase.progress_pct >= 100
-        const isActive = phase.progress_pct > 0 && phase.progress_pct < 100
+      {milestones.map((phase, i) => {
+        const pct = phase.percent_complete ?? 0
+        const isComplete = pct >= 100
+        const isActive = pct > 0 && pct < 100
         const dotColor = isComplete ? colors.statusActive : isActive ? colors.primaryOrange : colors.borderDefault
 
         return (
           <div key={phase.id || i} style={{ display: 'flex', gap: spacing.md, minHeight: 56 }}>
-            {/* Timeline line + dot */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 20 }}>
               <div style={{
                 width: 12, height: 12, borderRadius: '50%',
@@ -66,13 +73,13 @@ function MilestoneTimeline({ phases }: { phases: unknown[] }) {
                 <div style={{ width: 2, flex: 1, backgroundColor: colors.borderDefault }} />
               )}
             </div>
-            {/* Content */}
-            <div style={{ paddingBottom: spacing.md }}>
+            <div style={{ paddingBottom: spacing.md, flex: 1 }}>
               <p style={{ margin: 0, fontWeight: typography.fontWeight.medium, fontSize: typography.fontSize.sm, color: colors.textPrimary }}>
                 {phase.name}
               </p>
               <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2 }}>
                 {phase.start_date ? new Date(phase.start_date).toLocaleDateString() : ''} &mdash; {phase.end_date ? new Date(phase.end_date).toLocaleDateString() : ''}
+                {' '}&middot;{' '}{pct}%
                 {isComplete && (
                   <CheckCircle size={12} style={{ marginLeft: 6, color: colors.statusActive, verticalAlign: 'middle' }} />
                 )}
@@ -85,18 +92,201 @@ function MilestoneTimeline({ phases }: { phases: unknown[] }) {
   )
 }
 
+// ── Composer (owners only) ─────────────────────────────────
+interface ComposerProps {
+  projectId: string
+  userId: string | null
+}
+function UpdateComposer({ projectId, userId }: ComposerProps) {
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const createUpdate = useCreateOwnerUpdate()
+
+  const disabled = createUpdate.isPending || title.trim().length === 0
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (disabled) return
+    await createUpdate.mutateAsync({
+      project_id: projectId,
+      title,
+      content,
+      created_by: userId,
+      publish: true,
+    })
+    setTitle('')
+    setContent('')
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        backgroundColor: colors.surfaceRaised,
+        border: `1px solid ${colors.borderSubtle}`,
+        borderRadius: borderRadius.lg,
+        padding: spacing.lg,
+        boxShadow: shadows.sm,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: spacing.sm,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs }}>
+        <Send size={18} style={{ color: colors.orangeText }} />
+        <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+          Post an Update
+        </h2>
+      </div>
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Update title (required)"
+        maxLength={200}
+        style={{
+          width: '100%',
+          padding: `${spacing.sm} ${spacing.md}`,
+          border: `1px solid ${colors.borderDefault}`,
+          borderRadius: borderRadius.base,
+          fontSize: typography.fontSize.base,
+          fontFamily: typography.fontFamily,
+          color: colors.textPrimary,
+          backgroundColor: colors.white,
+        }}
+      />
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Share progress, milestones, risks, or decisions with the owner"
+        rows={4}
+        style={{
+          width: '100%',
+          padding: `${spacing.sm} ${spacing.md}`,
+          border: `1px solid ${colors.borderDefault}`,
+          borderRadius: borderRadius.base,
+          fontSize: typography.fontSize.sm,
+          fontFamily: typography.fontFamily,
+          color: colors.textPrimary,
+          backgroundColor: colors.white,
+          resize: 'vertical',
+          minHeight: 96,
+        }}
+      />
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button
+          type="submit"
+          disabled={disabled}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            padding: `${spacing.sm} ${spacing.md}`,
+            minHeight: 44,
+            backgroundColor: disabled ? colors.borderDefault : colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: borderRadius.base,
+            fontSize: typography.fontSize.sm,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <Send size={14} aria-hidden="true" />
+          {createUpdate.isPending ? 'Posting…' : 'Post Update'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// ── Single update card ─────────────────────────────────────
+interface UpdateCardProps {
+  update: OwnerUpdate
+  currentUserId: string | null
+}
+function UpdateCard({ update, currentUserId }: UpdateCardProps) {
+  const ack = useAcknowledgeOwnerUpdate()
+
+  const handleAcknowledge = () => {
+    if (!currentUserId || ack.isPending) return
+    ack.mutate({ owner_update_id: update.id, user_id: currentUserId })
+  }
+
+  return (
+    <div style={{
+      backgroundColor: colors.surfaceRaised,
+      border: `1px solid ${colors.borderSubtle}`,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      boxShadow: shadows.sm,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: spacing.sm }}>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            {update.title}
+          </h3>
+          <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: 2 }}>
+            {update.published
+              ? `Posted ${update.published_at ? new Date(update.published_at).toLocaleDateString() : (update.created_at ? new Date(update.created_at).toLocaleDateString() : '')}`
+              : 'Draft'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleAcknowledge}
+          disabled={!currentUserId || ack.isPending}
+          aria-label="Acknowledge this update"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing.xs,
+            padding: `${spacing.xs} ${spacing.sm}`,
+            minHeight: 36,
+            backgroundColor: colors.white,
+            color: colors.textPrimary,
+            border: `1px solid ${colors.borderDefault}`,
+            borderRadius: borderRadius.base,
+            fontSize: typography.fontSize.caption,
+            fontFamily: typography.fontFamily,
+            cursor: !currentUserId || ack.isPending ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <CheckCheck size={14} aria-hidden="true" />
+          {ack.isPending ? 'Saving…' : 'Acknowledge'}
+        </button>
+      </div>
+
+      {(update.content || update.schedule_summary) && (
+        <p style={{ margin: 0, marginTop: spacing.sm, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          {update.content || update.schedule_summary}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ── Page ───────────────────────────────────────────────────
 export const OwnerPortal: React.FC = () => {
   const projectId = useProjectId()
+  const { user } = useAuth()
+  const { role } = usePermissions()
   const { data: project, isLoading: projectLoading } = useProject(projectId)
   const { data: phases, isLoading: phasesLoading } = useSchedulePhases(projectId)
-  const { data: updates, isLoading: updatesLoading } = useOwnerUpdates(projectId)
+  const { data: updates, isLoading: updatesLoading } = useOwnerUpdatesForProject(projectId)
 
+  const isOwner = role === 'owner'
   const isLoading = projectLoading || phasesLoading || updatesLoading
 
-  const publishedUpdates = updates?.filter((u: unknown) => u.published) || []
-  const latestUpdate = publishedUpdates.length > 0 ? publishedUpdates[0] : null
+  const visibleUpdates: OwnerUpdate[] = (updates ?? []).filter(
+    (u) => isOwner || u.published,
+  )
 
-  const avgProgress: number | null = phases?.length ? Math.round(phases.reduce((s: number, p: unknown) => s + (p.percent_complete || 0), 0) / phases.length) : null
+  const avgProgress: number | null = phases?.length
+    ? Math.round(phases.reduce((s, p) => s + (p.percent_complete ?? 0), 0) / phases.length)
+    : null
   const overallProgress = avgProgress ?? 0
 
   if (isLoading) {
@@ -166,39 +356,38 @@ export const OwnerPortal: React.FC = () => {
               Schedule Milestones
             </h2>
           </div>
-          <MilestoneTimeline phases={phases || []} />
+          <MilestoneTimeline phases={(phases ?? []) as SchedulePhase[]} />
         </div>
 
-        {/* Latest Update */}
-        <div style={{
-          backgroundColor: colors.surfaceRaised,
-          border: `1px solid ${colors.borderSubtle}`,
-          borderRadius: borderRadius.lg,
-          padding: spacing.lg,
-          boxShadow: shadows.sm,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
+        {/* Composer — owners only */}
+        {isOwner && projectId && (
+          <UpdateComposer projectId={projectId} userId={user?.id ?? null} />
+        )}
+
+        {/* Updates list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
             <MessageSquare size={18} style={{ color: colors.orangeText }} />
             <h2 style={{ margin: 0, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-              Latest Update
+              Updates
             </h2>
           </div>
-          {latestUpdate ? (
-            <div>
-              <h3 style={{ margin: 0, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, marginBottom: spacing.xs }}>
-                {latestUpdate.title}
-              </h3>
-              <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.6 }}>
-                {latestUpdate.content || latestUpdate.schedule_summary || 'No details available.'}
-              </p>
-              <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing.sm }}>
-                Posted {latestUpdate.created_at ? new Date(latestUpdate.created_at).toLocaleDateString() : ''}
+          {visibleUpdates.length === 0 ? (
+            <div style={{
+              backgroundColor: colors.surfaceRaised,
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: borderRadius.lg,
+              padding: spacing.lg,
+              boxShadow: shadows.sm,
+            }}>
+              <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                No published updates yet.
               </p>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-              No published updates yet.
-            </p>
+            visibleUpdates.map((u) => (
+              <UpdateCard key={u.id} update={u} currentUserId={user?.id ?? null} />
+            ))
           )}
         </div>
 
@@ -239,7 +428,7 @@ export const OwnerPortal: React.FC = () => {
       {/* Footer */}
       <div style={{ marginTop: spacing.xl, textAlign: 'center' }}>
         <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0 }}>
-          Powered by SiteSync AI
+          Powered by SiteSync PM
         </p>
       </div>
     </div>

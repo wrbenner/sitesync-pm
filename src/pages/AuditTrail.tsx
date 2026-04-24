@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Download, Clock, X, AlertCircle } from 'lucide-react';
-import { PageContainer, Card, Btn, Skeleton, useToast } from '../components/Primitives';
+import { PageContainer, Card, Btn, Skeleton, Modal, useToast } from '../components/Primitives';
 import { ApiError } from '../api/errors';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useAuditTrail, exportAuditTrailCSV } from '../hooks/useAuditTrail';
+import type { AuditEntry } from '../hooks/useAuditTrail';
 import { PermissionGate } from '../components/auth/PermissionGate';
 
 const actionColors: Record<string, string> = {
@@ -38,6 +39,7 @@ export const AuditTrail: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEntity, setFilterEntity] = useState<string>('');
   const [filterAction, setFilterAction] = useState<string>('');
+  const [selectedEntry, setSelectedEntry] = useState<AuditEntry | null>(null);
 
   const { data: entries, total, hasMore, loadMore, loadingMore, isPending: loading, isError, error } = useAuditTrail({
     entityType: filterEntity || undefined,
@@ -143,11 +145,16 @@ export const AuditTrail: React.FC = () => {
           </div>
         ) : (<>
           {filtered.map((entry, i) => (
-            <div key={entry.id} style={{
+            <div key={entry.id} role="button" tabIndex={0}
+              aria-label={`View changes for ${entry.entity_type} ${entry.entity_title ?? ''}`}
+              onClick={() => setSelectedEntry(entry)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEntry(entry); } }}
+              style={{
               display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
               padding: `${spacing['3']} ${spacing['4']}`,
               borderBottom: i < filtered.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
               transition: `background-color ${transitions.quick}`,
+              cursor: 'pointer',
             }}
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
@@ -196,6 +203,144 @@ export const AuditTrail: React.FC = () => {
           )}
         </>)}
       </Card>
+
+      <AuditDiffModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
     </PageContainer>
   );
 };
+
+// ── Diff viewer ────────────────────────────────────────────────────────
+// Lightweight line-by-line JSON compare. No external deps.
+
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const sorter = (_: string, v: unknown) => {
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const out: Record<string, unknown> = {};
+      for (const k of Object.keys(v as Record<string, unknown>).sort()) {
+        out[k] = (v as Record<string, unknown>)[k];
+      }
+      return out;
+    }
+    return v;
+  };
+  return JSON.stringify(value, sorter, 2);
+}
+
+interface DiffLine {
+  kind: 'context' | 'added' | 'removed';
+  text: string;
+}
+
+function computeLineDiff(before: string, after: string): DiffLine[] {
+  const a = before.split('\n');
+  const b = after.split('\n');
+  // O(n*m) LCS — fine for the small JSON payloads we render (KB scale).
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const out: DiffLine[] = [];
+  let i = 0, j = 0;
+  while (i < m && j < n) {
+    if (a[i] === b[j]) { out.push({ kind: 'context', text: a[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ kind: 'removed', text: a[i] }); i++; }
+    else { out.push({ kind: 'added', text: b[j] }); j++; }
+  }
+  while (i < m) { out.push({ kind: 'removed', text: a[i++] }); }
+  while (j < n) { out.push({ kind: 'added', text: b[j++] }); }
+  return out;
+}
+
+const AuditDiffModal: React.FC<{ entry: AuditEntry | null; onClose: () => void }> = ({ entry, onClose }) => {
+  const lines = useMemo(() => {
+    if (!entry) return [] as DiffLine[];
+    return computeLineDiff(stableStringify(entry.old_value), stableStringify(entry.new_value));
+  }, [entry]);
+
+  if (!entry) return null;
+
+  const summary = `${entry.action.replace('_', ' ')} · ${entry.entity_type.replace('_', ' ')}${entry.entity_title ? ` · ${entry.entity_title}` : ''}`;
+  const hasContent = entry.old_value || entry.new_value;
+
+  return (
+    <Modal open={!!entry} onClose={onClose} title="Change details" width="820px">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+        <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
+          <div style={{ textTransform: 'capitalize', color: colors.textPrimary, fontWeight: typography.fontWeight.semibold, marginBottom: spacing['1'] }}>
+            {summary}
+          </div>
+          <div style={{ color: colors.textTertiary, fontSize: typography.fontSize.caption }}>
+            {new Date(entry.created_at).toLocaleString()}
+            {entry.actor_id ? ` · ${entry.actor_id.slice(0, 8)}` : ''}
+          </div>
+        </div>
+
+        {!hasContent ? (
+          <div style={{ padding: spacing['5'], textAlign: 'center', color: colors.textTertiary, fontSize: typography.fontSize.sm }}>
+            No before/after data recorded for this event.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <JsonPane label="Before" json={entry.old_value} />
+            <JsonPane label="After" json={entry.new_value} />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, marginBottom: spacing['2'] }}>
+                Diff
+              </div>
+              <DiffPane lines={lines} />
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
+const JsonPane: React.FC<{ label: string; json: Record<string, unknown> | null }> = ({ label, json }) => (
+  <div>
+    <div style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, marginBottom: spacing['2'] }}>
+      {label}
+    </div>
+    <pre style={{
+      margin: 0, padding: spacing['3'], maxHeight: 260, overflow: 'auto',
+      backgroundColor: colors.surfaceInset, border: `1px solid ${colors.borderSubtle}`,
+      borderRadius: borderRadius.md, fontSize: typography.fontSize.caption,
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+      color: colors.textPrimary, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+    }}>
+      {json ? stableStringify(json) : '— (empty)'}
+    </pre>
+  </div>
+);
+
+const DiffPane: React.FC<{ lines: DiffLine[] }> = ({ lines }) => (
+  <pre style={{
+    margin: 0, padding: spacing['3'], maxHeight: 320, overflow: 'auto',
+    backgroundColor: colors.surfaceInset, border: `1px solid ${colors.borderSubtle}`,
+    borderRadius: borderRadius.md, fontSize: typography.fontSize.caption,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    color: colors.textPrimary, whiteSpace: 'pre', overflowX: 'auto',
+  }}>
+    {lines.length === 0 ? (
+      <span style={{ color: colors.textTertiary }}>No differences.</span>
+    ) : lines.map((line, idx) => {
+      const prefix = line.kind === 'added' ? '+ ' : line.kind === 'removed' ? '- ' : '  ';
+      const bg = line.kind === 'added' ? 'rgba(16,185,129,0.12)'
+        : line.kind === 'removed' ? 'rgba(239,68,68,0.12)'
+        : 'transparent';
+      const fg = line.kind === 'added' ? colors.statusActive
+        : line.kind === 'removed' ? colors.statusCritical
+        : colors.textSecondary;
+      return (
+        <div key={idx} style={{ backgroundColor: bg, color: fg, padding: '1px 4px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {prefix}{line.text || ' '}
+        </div>
+      );
+    })}
+  </pre>
+);

@@ -24,13 +24,105 @@ const FilesPage: React.FC = () => {
   const { data: rawFiles, isPending: loading, isError, error, refetch } = useFiles(projectId);
   const [nowMs] = useState(() => Date.now());
 
-  const files = useMemo(() =>
+  const baseFiles = useMemo(() =>
     (rawFiles || []).map(f => ({
       ...f,
       modifiedDate: f.created_at ? new Date(f.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '',
     })),
     [rawFiles]
   );
+
+  // ── Virtual folder hierarchy ────────────────────────────────
+  // Derive folders from `/`-separated path prefixes in file names or the
+  // `folder` text column, so files uploaded without a parent_folder_id still
+  // show a browseable hierarchy.
+  const { files, virtualFolderIds } = useMemo(() => {
+    const virtualFolders = new Map<string, FileItem>();
+    const fileItems: FileItem[] = [];
+
+    const parentIdForPath = (segments: string[]): string | null => {
+      if (segments.length === 0) return null;
+      return `v:${segments.join('/')}`;
+    };
+
+    const ensureFolderChain = (segments: string[]): string | null => {
+      let parent: string | null = null;
+      for (let i = 0; i < segments.length; i++) {
+        const pathSlice = segments.slice(0, i + 1);
+        const id = parentIdForPath(pathSlice)!;
+        if (!virtualFolders.has(id)) {
+          virtualFolders.set(id, {
+            id,
+            name: segments[i],
+            type: 'folder',
+            modifiedDate: '',
+            parent_folder_id: parent,
+            itemCount: 0,
+            totalSize: 0,
+          });
+        }
+        parent = id;
+      }
+      return parent;
+    };
+
+    for (const f of baseFiles) {
+      const raw = f as unknown as Record<string, unknown>;
+      const isRealFolder = f.type === 'folder';
+      if (isRealFolder) {
+        fileItems.push(f);
+        continue;
+      }
+      // Only virtualize when no real parent_folder_id is set
+      const hasRealParent = raw.parent_folder_id != null;
+      const folderText = (raw.folder as string | null | undefined) ?? '';
+      const name = f.name ?? '';
+      let segments: string[] = [];
+      let displayName = name;
+
+      if (!hasRealParent) {
+        if (name.includes('/')) {
+          const parts = name.split('/').filter(Boolean);
+          if (parts.length > 1) {
+            displayName = parts[parts.length - 1];
+            segments = parts.slice(0, -1);
+          }
+        } else if (folderText) {
+          segments = folderText.split('/').map(s => s.trim()).filter(Boolean);
+        }
+      }
+
+      if (segments.length > 0) {
+        const virtualParent = ensureFolderChain(segments);
+        fileItems.push({ ...f, name: displayName, parent_folder_id: virtualParent });
+      } else {
+        fileItems.push(f);
+      }
+    }
+
+    // Populate item counts and total size on virtual folders
+    const all = [...fileItems, ...virtualFolders.values()];
+    for (const folder of virtualFolders.values()) {
+      let count = 0;
+      let size = 0;
+      for (const child of all) {
+        if ((child.parent_folder_id ?? null) === folder.id) {
+          count += 1;
+          const csize = (child as unknown as Record<string, unknown>).file_size_bytes as number
+            ?? (child as unknown as Record<string, unknown>).file_size as number
+            ?? 0;
+          size += csize || 0;
+        }
+      }
+      folder.itemCount = count;
+      folder.totalSize = size;
+    }
+
+    return {
+      files: [...virtualFolders.values(), ...fileItems],
+      virtualFolderIds: new Set(virtualFolders.keys()),
+    };
+  }, [baseFiles]);
 
   // ── Summary metrics ────────────────────────────────────────
   const metrics = useMemo(() => {
@@ -97,6 +189,11 @@ const FilesPage: React.FC = () => {
     draggingFileIdRef.current = null;
     setDragOverFolderId(null);
     if (!sourceId || sourceId === targetFolderId) return;
+    // Virtual folders are client-side only; can't persist moves into them.
+    if (virtualFolderIds.has(targetFolderId) || virtualFolderIds.has(sourceId)) {
+      addToast('info', 'Path-based folders are read-only');
+      return;
+    }
     const source = files.find((f: FileItem) => f.id === sourceId);
     const target = files.find((f: FileItem) => f.id === targetFolderId);
     if (source && target) {
@@ -105,7 +202,7 @@ const FilesPage: React.FC = () => {
       addToast('success', `Moved "${source.name}" into "${target.name}"`);
       refetch();
     }
-  }, [files, addToast, refetch]);
+  }, [files, virtualFolderIds, addToast, refetch]);
 
   const handleFileClick = useCallback((file: FileItem) => {
     if (file.type === 'folder') navigateToFolder(file.id, file.name);
