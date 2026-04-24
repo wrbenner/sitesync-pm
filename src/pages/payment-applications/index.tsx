@@ -1,14 +1,19 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  DollarSign, Plus, Scale, Receipt, ShieldCheck, FileText, X, ArrowRight, CheckCircle2, Clock, ClipboardCheck, Unlock,
+  DollarSign, Plus, Scale, Receipt, ShieldCheck, FileText, X, ArrowRight, CheckCircle2, Clock, ClipboardCheck, Unlock, Lock, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
-import { PageContainer, Card, MetricBox, Btn, Skeleton, EmptyState } from '../../components/Primitives'
+import { PageContainer, Card, MetricBox, Btn, Skeleton, EmptyState, Modal, InputField } from '../../components/Primitives'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
 import { useProjectId } from '../../hooks/useProjectId'
 import { usePayApplications, useContracts, useRetainageLedger, useLienWaivers, useProject } from '../../hooks/queries'
+import { useRetainageEntries, summarizeRetainage, summarizeRetainageByPayApp } from '../../hooks/queries/retainage'
+import { useReleaseRetainageEntry } from '../../hooks/mutations/retainage'
+import { useGenerateLienWaiver, WAIVER_TYPE_LABELS, type WaiverType } from '../../hooks/mutations/lien-waivers'
+import { usePermissions } from '../../hooks/usePermissions'
+import { useAuth } from '../../hooks/useAuth'
 import type { LienWaiverRow } from '../../types/api'
 import { approvePayApplication, markPayApplicationAsPaid } from '../../api/endpoints/payApplications'
 import { updateLienWaiverStatus, generateWaiversFromPayApp } from '../../api/endpoints/lienWaivers'
@@ -23,6 +28,45 @@ import { PayAppDetail } from './PayAppDetail'
 import { LienWaiverPanel, CashFlowPanel } from './LienWaiverPanel'
 import { CreateEditPayAppDrawer } from './SOVEditor'
 import { useIsMobile } from '../../hooks/useWindowSize'
+
+// Period-closed banner. Lazy + null-safe because W2-1 may not have committed
+// financial-periods yet; if the module is missing, the banner renders nothing
+// rather than breaking this page.
+const _periodModulePath = '../../hooks/queries/financial-periods'
+const PeriodClosedBanner = React.lazy(async () => {
+  try {
+    const mod: unknown = await import(/* @vite-ignore */ _periodModulePath)
+    const hookFn = (mod as { useActivePeriod?: unknown } | null)?.useActivePeriod
+    if (typeof hookFn !== 'function') return { default: () => null }
+    const useActivePeriod = hookFn as (projectId: string | undefined) => {
+      data?: { status?: string | null; label?: string | number | null; name?: string | null } | null
+    }
+    const Banner: React.FC<{ projectId: string | undefined }> = ({ projectId }) => {
+      const result = useActivePeriod(projectId) ?? { data: null }
+      const period = result?.data
+      if (!period || period.status !== 'closed') return null
+      const label = period.label ?? period.name ?? 'current'
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: spacing['3'],
+          padding: `${spacing['3']} ${spacing['4']}`,
+          backgroundColor: colors.statusPendingSubtle,
+          borderRadius: borderRadius.base,
+          borderLeft: `3px solid ${colors.statusPending}`,
+          marginBottom: spacing['4'],
+        }}>
+          <Lock size={14} color={colors.statusPending} />
+          <span style={{ fontSize: typography.fontSize.sm, color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
+            Period {String(label)} is closed — edits restricted
+          </span>
+        </div>
+      )
+    }
+    return { default: Banner }
+  } catch {
+    return { default: () => null }
+  }
+})
 
 const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'applications', label: 'Pay Applications', icon: Receipt },
@@ -152,8 +196,54 @@ const PaymentApplicationsPage: React.FC = () => {
   const { data: payApps, isLoading: loadingApps } = usePayApplications(projectId)
   const { data: contracts, isLoading: loadingContracts } = useContracts(projectId)
   const { data: retainage, isLoading: loadingRetainage } = useRetainageLedger(projectId)
+  const { data: retainageEntries } = useRetainageEntries(projectId)
   const { data: lienWaivers } = useLienWaivers(projectId)
   const { data: project } = useProject(projectId)
+
+  // Role gating for retainage release (owner/admin/project_manager).
+  const { role } = usePermissions()
+  const { user } = useAuth()
+  const canReleaseRetainage = role === 'owner' || role === 'admin' || role === 'project_manager'
+
+  // Generate Waiver modal state
+  const [genWaiverOpen, setGenWaiverOpen] = useState(false)
+  const [genWaiverForm, setGenWaiverForm] = useState<{
+    type: WaiverType
+    contractor_name: string
+    application_id: string
+    amount: string
+    through_date: string
+    notes: string
+  }>({
+    type: 'conditional_partial',
+    contractor_name: '',
+    application_id: '',
+    amount: '',
+    through_date: new Date().toISOString().slice(0, 10),
+    notes: '',
+  })
+  const generateWaiver = useGenerateLienWaiver()
+
+  // Release Retainage modal state
+  const [releaseTarget, setReleaseTarget] = useState<{
+    id: string
+    contract_id: string
+    amount_held: number
+    released_amount: number
+  } | null>(null)
+  const [releaseAmount, setReleaseAmount] = useState('')
+  const [releaseNotes, setReleaseNotes] = useState('')
+  const releaseRetainage = useReleaseRetainageEntry()
+
+  // Retainage summaries
+  const retainageSummary = useMemo(
+    () => summarizeRetainage(retainageEntries ?? []),
+    [retainageEntries],
+  )
+  const retainageByPayApp = useMemo(
+    () => summarizeRetainageByPayApp(retainageEntries ?? []),
+    [retainageEntries],
+  )
 
   const apps = (payApps ?? []) as Array<Record<string, unknown>>
   const contractList = (contracts ?? []) as Array<Record<string, unknown>>
@@ -379,6 +469,10 @@ const PaymentApplicationsPage: React.FC = () => {
         </div>
       )}
 
+      <Suspense fallback={null}>
+        <PeriodClosedBanner projectId={projectId ?? undefined} />
+      </Suspense>
+
       <PageInsightBanners page="payment_applications" />
 
       {!isLoading && apps.length === 0 && activeTab === 'applications' && (
@@ -424,6 +518,42 @@ const PaymentApplicationsPage: React.FC = () => {
             </div>
           )}
 
+          {apps.length > 0 && retainageByPayApp.size > 0 && (
+            <Card padding={spacing['4']}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
+                <ShieldCheck size={14} color={colors.primaryOrange} />
+                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  Cumulative Retainage Held by Pay App
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: spacing['2'] }}>
+                {apps.map((a) => {
+                  const r = retainageByPayApp.get(a.id as string)
+                  if (!r) return null
+                  const outstanding = r.held - r.released
+                  return (
+                    <div key={a.id as string} style={{
+                      padding: `${spacing['2']} ${spacing['3']}`,
+                      borderRadius: borderRadius.base,
+                      backgroundColor: colors.surfaceInset,
+                      border: `1px solid ${colors.borderSubtle}`,
+                    }}>
+                      <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                        App #{String(a.application_number ?? '?')}
+                      </p>
+                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusPending, fontFamily: typography.fontFamilyMono }}>
+                        {fmtCurrency(r.held)} held
+                      </p>
+                      <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: outstanding > 0 ? colors.textSecondary : colors.statusActive, fontFamily: typography.fontFamilyMono }}>
+                        {outstanding > 0 ? `${fmtCurrency(outstanding)} outstanding` : 'Fully released'}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
+
           {apps.length > 0 && (
             <PayAppList
               apps={apps}
@@ -437,24 +567,136 @@ const PaymentApplicationsPage: React.FC = () => {
       )}
 
       {activeTab === 'lien_waivers' && !isLoading && (
-        <LienWaiverPanel
-          payApps={apps}
-          waivers={waivers}
-          contracts={contractList}
-          project={project as PayAppProject | undefined}
-          onMarkReceived={(id) => markReceivedMutation.mutate(id)}
-          onMarkExecuted={(id) => markExecutedMutation.mutate(id)}
-          isMarkingReceived={markingWaiverId}
-          onGenerateAll={(payAppId) => generateAllMutation.mutate(payAppId)}
-          isGenerating={generateAllMutation.isPending}
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <PermissionGate permission="budget.edit">
+              <Btn
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => setGenWaiverOpen(true)}
+              >
+                Generate Waiver
+              </Btn>
+            </PermissionGate>
+          </div>
+          <LienWaiverPanel
+            payApps={apps}
+            waivers={waivers}
+            contracts={contractList}
+            project={project as PayAppProject | undefined}
+            onMarkReceived={(id) => markReceivedMutation.mutate(id)}
+            onMarkExecuted={(id) => markExecutedMutation.mutate(id)}
+            isMarkingReceived={markingWaiverId}
+            onGenerateAll={(payAppId) => generateAllMutation.mutate(payAppId)}
+            isGenerating={generateAllMutation.isPending}
+          />
+        </div>
       )}
 
       {activeTab === 'cash_flow' && !isLoading && (
         <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as Array<Record<string, unknown>>} />
       )}
 
-      {/* ── Retainage Release Workflow Tab ──────────────────── */}
+      {/* ── Retainage Ledger (retainage_entries) ────────────── */}
+      {activeTab === 'retainage' && !isLoading && (
+        <Card padding={spacing['5']} style={{ marginBottom: spacing['4'] }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
+            <ShieldCheck size={16} color={colors.primaryOrange} />
+            <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Retainage Ledger (per contract)
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: spacing['4'], marginBottom: spacing['4'] }}>
+            <MetricBox label="Total Held" value={fmtCurrency(retainageSummary.totals.held)} />
+            <MetricBox label="Total Released" value={fmtCurrency(retainageSummary.totals.released)} change={retainageSummary.totals.released > 0 ? 1 : 0} />
+            <MetricBox label="Outstanding" value={fmtCurrency(retainageSummary.totals.outstanding)} />
+          </div>
+          {(retainageEntries ?? []).length === 0 ? (
+            <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+              No retainage entries yet. Entries appear here once pay apps are approved with retainage held.
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 720 }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 160px',
+                  backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}`,
+                  padding: `${spacing['2']} ${spacing['3']}`, gap: spacing['2'],
+                }}>
+                  {['Contract', 'Held', 'Released', 'Outstanding', 'Actions'].map((h) => (
+                    <span key={h} style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, fontWeight: typography.fontWeight.semibold }}>{h}</span>
+                  ))}
+                </div>
+                {(retainageEntries ?? []).map((e, i) => {
+                  const contract = contractList.find((c) => c.id === e.contract_id) as Record<string, unknown> | undefined
+                  const label = (contract?.counterparty as string) || (contract?.description as string) || `Contract ${String(e.contract_id).slice(0, 8)}`
+                  const outstanding = (e.amount_held ?? 0) - (e.released_amount ?? 0)
+                  const fullyReleased = !!e.released_at || outstanding <= 0.005
+                  return (
+                    <div key={e.id} style={{
+                      display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 160px',
+                      padding: `${spacing['2']} ${spacing['3']}`, gap: spacing['2'],
+                      borderBottom: `1px solid ${colors.borderSubtle}`,
+                      backgroundColor: i % 2 === 0 ? colors.white : colors.surfacePage,
+                      alignItems: 'center',
+                    }}>
+                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
+                        {label}
+                        {e.percent_held != null && (
+                          <span style={{ marginLeft: spacing['2'], fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                            {e.percent_held}%
+                          </span>
+                        )}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.statusPending }}>
+                        {fmtCurrency(e.amount_held ?? 0)}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: e.released_amount > 0 ? colors.statusActive : colors.textTertiary }}>
+                        {fmtCurrency(e.released_amount ?? 0)}
+                      </span>
+                      <span style={{ fontSize: typography.fontSize.sm, fontFamily: typography.fontFamilyMono, color: colors.textPrimary }}>
+                        {fmtCurrency(outstanding)}
+                      </span>
+                      <div>
+                        {fullyReleased ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.statusActive, fontWeight: typography.fontWeight.medium }}>
+                            <CheckCircle2 size={12} /> Released
+                          </span>
+                        ) : canReleaseRetainage ? (
+                          <Btn
+                            size="sm"
+                            variant="secondary"
+                            icon={<Unlock size={12} />}
+                            onClick={() => {
+                              setReleaseTarget({
+                                id: e.id,
+                                contract_id: e.contract_id,
+                                amount_held: e.amount_held ?? 0,
+                                released_amount: e.released_amount ?? 0,
+                              })
+                              setReleaseAmount(String(outstanding))
+                              setReleaseNotes('')
+                            }}
+                          >
+                            Release
+                          </Btn>
+                        ) : (
+                          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                            PM/admin only
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* ── Retainage Release Workflow Tab (legacy ledger pipeline) ── */}
       {activeTab === 'retainage' && !isLoading && (() => {
         const totalHeld = retainageItems.reduce((s, i) => s + i.retainageHeld, 0)
         const totalReleased = retainageItems.reduce((s, i) => s + i.retainageReleased, 0)
@@ -860,6 +1102,190 @@ const PaymentApplicationsPage: React.FC = () => {
           setSelectedAppId(null)
         }}
       />
+
+      {/* ── Generate Lien Waiver Modal ───────────────────────── */}
+      <Modal open={genWaiverOpen} onClose={() => setGenWaiverOpen(false)} title="Generate Lien Waiver">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Waiver Type</label>
+            <select
+              value={genWaiverForm.type}
+              onChange={(e) => setGenWaiverForm((f) => ({ ...f, type: e.target.value as WaiverType }))}
+              style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
+            >
+              {(Object.keys(WAIVER_TYPE_LABELS) as WaiverType[]).map((t) => (
+                <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+          </div>
+          <InputField
+            label="Subcontractor / Contractor Name *"
+            value={genWaiverForm.contractor_name}
+            onChange={(v) => setGenWaiverForm((f) => ({ ...f, contractor_name: v }))}
+            placeholder="e.g. Acme Electrical Inc."
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+            <InputField
+              label="Amount ($) *"
+              value={genWaiverForm.amount}
+              onChange={(v) => setGenWaiverForm((f) => ({ ...f, amount: v }))}
+              type="number"
+              placeholder="0.00"
+            />
+            <InputField
+              label="Through Date *"
+              value={genWaiverForm.through_date}
+              onChange={(v) => setGenWaiverForm((f) => ({ ...f, through_date: v }))}
+              type="date"
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Associated Pay Application</label>
+            <select
+              value={genWaiverForm.application_id}
+              onChange={(e) => setGenWaiverForm((f) => ({ ...f, application_id: e.target.value }))}
+              style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
+            >
+              <option value="">— None —</option>
+              {apps.map((a) => (
+                <option key={a.id as string} value={a.id as string}>
+                  #{(a.application_number as number) ?? '?'} · {new Date((a.period_to as string) ?? '').toLocaleDateString()}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
+            <textarea
+              value={genWaiverForm.notes}
+              onChange={(e) => setGenWaiverForm((f) => ({ ...f, notes: e.target.value }))}
+              rows={3}
+              style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, resize: 'vertical', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
+            <Btn variant="secondary" onClick={() => setGenWaiverOpen(false)}>Cancel</Btn>
+            <Btn
+              variant="primary"
+              loading={generateWaiver.isPending}
+              onClick={() => {
+                if (!projectId) return
+                const amountNum = parseFloat(genWaiverForm.amount)
+                if (!(amountNum > 0)) { toast.error('Amount must be greater than 0'); return }
+                generateWaiver.mutate(
+                  {
+                    project_id: projectId,
+                    application_id: genWaiverForm.application_id || null,
+                    contractor_name: genWaiverForm.contractor_name,
+                    amount: amountNum,
+                    through_date: genWaiverForm.through_date,
+                    type: genWaiverForm.type,
+                    notes: genWaiverForm.notes || null,
+                  },
+                  {
+                    onSuccess: () => {
+                      setGenWaiverOpen(false)
+                      setGenWaiverForm((f) => ({ ...f, contractor_name: '', amount: '', notes: '' }))
+                    },
+                  },
+                )
+              }}
+            >
+              {generateWaiver.isPending ? 'Generating…' : 'Generate Waiver'}
+            </Btn>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Release Retainage Modal (owner/admin/PM only) ────── */}
+      <Modal open={!!releaseTarget} onClose={() => setReleaseTarget(null)} title="Release Retainage">
+        {releaseTarget && (() => {
+          const outstanding = releaseTarget.amount_held - releaseTarget.released_amount
+          const amt = parseFloat(releaseAmount) || 0
+          const invalid = !(amt > 0) || amt > outstanding + 0.005
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+              {!canReleaseRetainage && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: spacing['3'], backgroundColor: colors.statusCriticalSubtle, borderRadius: borderRadius.base }}>
+                  <AlertTriangle size={14} color={colors.statusCritical} />
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.statusCritical }}>
+                    Only owners, admins, and project managers can release retainage.
+                  </span>
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing['3'] }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Held</p>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamilyMono }}>
+                    {fmtCurrency(releaseTarget.amount_held)}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Already Released</p>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamilyMono, color: colors.statusActive }}>
+                    {fmtCurrency(releaseTarget.released_amount)}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Outstanding</p>
+                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, fontFamily: typography.fontFamilyMono, color: colors.statusPending }}>
+                    {fmtCurrency(outstanding)}
+                  </p>
+                </div>
+              </div>
+              <InputField
+                label="Release Amount ($)"
+                value={releaseAmount}
+                onChange={setReleaseAmount}
+                type="number"
+                placeholder="0.00"
+              />
+              <div style={{ display: 'flex', gap: spacing['2'] }}>
+                <Btn variant="ghost" size="sm" onClick={() => setReleaseAmount(String(outstanding / 2))}>Release 50%</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setReleaseAmount(String(outstanding))}>Release Full</Btn>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Notes</label>
+                <textarea
+                  value={releaseNotes}
+                  onChange={(e) => setReleaseNotes(e.target.value)}
+                  rows={2}
+                  style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
+                <Btn variant="secondary" onClick={() => setReleaseTarget(null)}>Cancel</Btn>
+                <Btn
+                  variant="primary"
+                  disabled={invalid || !canReleaseRetainage}
+                  loading={releaseRetainage.isPending}
+                  onClick={() => {
+                    if (!projectId || !releaseTarget) return
+                    releaseRetainage.mutate(
+                      {
+                        id: releaseTarget.id,
+                        project_id: projectId,
+                        release_amount: amt,
+                        released_by: user?.id ?? null,
+                        notes: releaseNotes || null,
+                      },
+                      {
+                        onSuccess: () => {
+                          setReleaseTarget(null)
+                          setReleaseAmount('')
+                          setReleaseNotes('')
+                        },
+                      },
+                    )
+                  }}
+                >
+                  {releaseRetainage.isPending ? 'Releasing…' : 'Release'}
+                </Btn>
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
     </PageContainer>
   )
 }
