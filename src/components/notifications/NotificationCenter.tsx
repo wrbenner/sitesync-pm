@@ -1,13 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Check, Bell, HelpCircle, DollarSign, Sparkles, CheckSquare,
   ChevronRight, CheckCheck, ExternalLink, Inbox } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
-import { useNotificationStore, useUiStore } from '../../stores';
-import type { Notification } from '../../stores/notificationStore';
+import { useUiStore } from '../../stores';
 import { useAuth } from '../../hooks/useAuth';
-import { useNotifications } from '../../hooks/queries';
-import { useMarkNotificationRead, useMarkAllNotificationsRead } from '../../hooks/mutations';
+import { useNotifications, useUnreadCount } from '../../hooks/queries/notifications';
+import { useMarkNotificationRead, useMarkAllNotificationsRead } from '../../hooks/mutations/notifications';
+import type { Notification } from '../../types/database';
 
 // ── Type Maps ────────────────────────────────────────────────
 
@@ -16,6 +17,13 @@ const typeIcons: Record<string, React.ReactNode> = {
   info: <HelpCircle size={14} />,
   success: <CheckSquare size={14} />,
   error: <DollarSign size={14} />,
+  rfi_assigned: <HelpCircle size={14} />,
+  submittal_review: <HelpCircle size={14} />,
+  punch_item: <CheckSquare size={14} />,
+  task_update: <CheckSquare size={14} />,
+  meeting_reminder: <HelpCircle size={14} />,
+  ai_alert: <Sparkles size={14} />,
+  daily_log_approval: <CheckSquare size={14} />,
 };
 
 const typeColors: Record<string, string> = {
@@ -23,6 +31,13 @@ const typeColors: Record<string, string> = {
   info: colors.statusInfo,
   success: colors.statusActive,
   error: colors.statusCritical,
+  rfi_assigned: colors.statusInfo,
+  submittal_review: colors.statusInfo,
+  punch_item: colors.statusPending,
+  task_update: colors.statusActive,
+  meeting_reminder: colors.statusInfo,
+  ai_alert: colors.statusCritical,
+  daily_log_approval: colors.statusActive,
 };
 
 const remoteTypeIcons: Record<string, string> = {
@@ -40,6 +55,29 @@ const remoteTypeIcons: Record<string, string> = {
   overdue: '⏰',
 };
 
+// ── Click-through routing ────────────────────────────────────
+// Maps a notification's entity_type + entity_id to an in-app route.
+// Returns null when there's no matching detail route, in which case the
+// caller should fall back to the row's `link` field.
+
+function routeForNotification(n: Notification): string | null {
+  if (n.entity_type && n.entity_id) {
+    switch (n.entity_type) {
+      case 'rfi':
+        return `/rfis/${n.entity_id}`;
+      case 'submittal':
+        return `/submittals/${n.entity_id}`;
+      case 'punch_item':
+        return `/punch-list/${n.entity_id}`;
+      case 'change_order':
+        // No per-item detail route exists; land on the list and let the
+        // user filter from there.
+        return '/change-orders';
+    }
+  }
+  return n.link ?? null;
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
 function groupByTime(notifications: Notification[]): { label: string; items: Notification[] }[] {
@@ -50,7 +88,8 @@ function groupByTime(notifications: Notification[]): { label: string; items: Not
   const older: Notification[] = [];
 
   notifications.forEach((n) => {
-    const diff = now - n.timestamp.getTime();
+    const ts = n.created_at ? new Date(n.created_at).getTime() : now;
+    const diff = now - ts;
     const hours = diff / (1000 * 60 * 60);
     if (hours < 24) today.push(n);
     else if (hours < 48) yesterday.push(n);
@@ -66,18 +105,8 @@ function groupByTime(notifications: Notification[]): { label: string; items: Not
   return groups;
 }
 
-function formatRelTime(timestamp: Date): string {
-  const diff = Date.now() - timestamp.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
-
-function formatRelativeTime(dateStr: string): string {
+function formatRelativeTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
@@ -89,6 +118,8 @@ function formatRelativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+const EMPTY_LIST: Notification[] = [];
+
 // ── NotificationList (mobile-optimized, embeddable) ─────────
 
 interface NotificationListProps {
@@ -96,7 +127,12 @@ interface NotificationListProps {
 }
 
 export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }) => {
-  const { notifications, markRead } = useNotificationStore();
+  const { user } = useAuth();
+  const { data, isLoading } = useNotifications(user?.id, { pageSize: 50 });
+  const markRead = useMarkNotificationRead();
+  const navigate = useNavigate();
+
+  const notifications = data?.data ?? EMPTY_LIST;
   const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
   const rowTouchStart = useRef<Record<string, { x: number; y: number }>>({});
 
@@ -117,17 +153,36 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }
 
   const handleRowTouchEnd = (id: string) => {
     const offset = swipeOffsets[id] || 0;
-    if (offset < -40) {
-      markRead(id);
+    if (offset < -40 && user?.id) {
+      markRead.mutate({ id, userId: user.id });
     }
     setSwipeOffsets((prev) => ({ ...prev, [id]: 0 }));
   };
+
+  const handleClick = (n: Notification) => {
+    if (user?.id && !n.read) {
+      markRead.mutate({ id: n.id, userId: user.id });
+    }
+    const route = routeForNotification(n);
+    if (route) {
+      if (onNavigate) onNavigate(route);
+      else navigate(route);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{ padding: spacing['8'], textAlign: 'center', color: colors.textTertiary }}>
+        <p style={{ fontSize: typography.fontSize.sm, margin: 0 }}>Loading notifications…</p>
+      </div>
+    );
+  }
 
   if (notifications.length === 0) {
     return (
       <div style={{ padding: spacing['8'], textAlign: 'center', color: colors.textTertiary }}>
         <Bell size={32} style={{ marginBottom: spacing['2'], opacity: 0.3 }} />
-        <p style={{ fontSize: typography.fontSize.sm, margin: 0 }}>No notifications</p>
+        <p style={{ fontSize: typography.fontSize.sm, margin: 0 }}>You&apos;re all caught up</p>
       </div>
     );
   }
@@ -135,12 +190,13 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }
   return (
     <div>
       {notifications.map((n) => {
-        const color = typeColors[n.type] || colors.textSecondary;
+        const typeKey = n.type ?? 'info';
+        const color = typeColors[typeKey] || colors.textSecondary;
         const offset = swipeOffsets[n.id] || 0;
+        const route = routeForNotification(n);
 
         return (
           <div key={n.id} style={{ position: 'relative', overflow: 'hidden' }}>
-            {/* Swipe-left action background */}
             <div style={{
               position: 'absolute', right: 0, top: 0, bottom: 0, width: 80,
               backgroundColor: colors.primaryOrange,
@@ -152,22 +208,17 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }
               }}>Read</span>
             </div>
 
-            {/* Row */}
             <div
               role="button"
               tabIndex={0}
               onTouchStart={(e) => handleRowTouchStart(n.id, e)}
               onTouchMove={(e) => handleRowTouchMove(n.id, e)}
               onTouchEnd={() => handleRowTouchEnd(n.id)}
-              onClick={() => {
-                markRead(n.id);
-                if (n.actionRoute) onNavigate?.(n.actionRoute);
-              }}
+              onClick={() => handleClick(n)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  markRead(n.id);
-                  if (n.actionRoute) onNavigate?.(n.actionRoute);
+                  handleClick(n);
                 }
               }}
               style={{
@@ -181,22 +232,19 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }
                 transition: offset === 0 ? `transform 0.2s ease` : 'none',
               }}
             >
-              {/* Unread dot */}
               <div style={{
                 width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
                 backgroundColor: n.read ? 'transparent' : colors.primaryOrange,
               }} />
 
-              {/* Type icon */}
               <div style={{
                 width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                 backgroundColor: `${color}15`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ color }}>{typeIcons[n.type]}</span>
+                <span style={{ color }}>{typeIcons[typeKey] ?? <Bell size={14} />}</span>
               </div>
 
-              {/* Content */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{
                   fontSize: typography.fontSize.body, margin: 0,
@@ -208,11 +256,10 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onNavigate }
                 <p style={{
                   fontSize: typography.fontSize.caption, color: colors.textTertiary,
                   margin: '2px 0 0',
-                }}>{formatRelTime(n.timestamp)}</p>
+                }}>{formatRelativeTime(n.created_at)}</p>
               </div>
 
-              {/* Chevron */}
-              {n.actionRoute && (
+              {route && (
                 <ChevronRight size={16} color={colors.textTertiary} style={{ flexShrink: 0 }} />
               )}
             </div>
@@ -231,8 +278,37 @@ interface NotificationCenterProps {
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose }) => {
-  const { notifications, markRead, markAllRead, dismiss } = useNotificationStore();
-  const groups = groupByTime(notifications);
+  const { user } = useAuth();
+  const [page, setPage] = useState(1);
+  const { data } = useNotifications(user?.id, { page, pageSize: 20 });
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
+  const navigate = useNavigate();
+
+  // Reset to first page whenever the panel reopens.
+  useEffect(() => {
+    if (open) setPage(1);
+  }, [open]);
+
+  const notifications = data?.data ?? EMPTY_LIST;
+  const total = data?.total ?? 0;
+  const hasMore = data?.hasMore ?? false;
+  const groups = useMemo(() => groupByTime(notifications), [notifications]);
+
+  const handleMarkRead = (id: string) => {
+    if (user?.id) markRead.mutate({ id, userId: user.id });
+  };
+
+  const handleClick = (n: Notification) => {
+    if (user?.id && !n.read) {
+      markRead.mutate({ id: n.id, userId: user.id });
+    }
+    const route = routeForNotification(n);
+    if (route) {
+      navigate(route);
+      onClose();
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -252,7 +328,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
               display: 'flex', flexDirection: 'column', overflow: 'hidden',
             }}
           >
-            {/* Header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: `${spacing['3']} ${spacing['4']}`,
@@ -261,15 +336,21 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 <Bell size={16} color={colors.textPrimary} />
                 <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Notifications</span>
+                {total > 0 && (
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                    ({total})
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                 <button
-                  onClick={markAllRead}
+                  onClick={() => { if (user?.id) markAllRead.mutate(user.id); }}
+                  disabled={markAllRead.isPending}
                   style={{
                     display: 'flex', alignItems: 'center', gap: spacing['1'],
                     padding: `${spacing['1']} ${spacing['2']}`,
                     backgroundColor: 'transparent', border: 'none',
-                    borderRadius: borderRadius.sm, cursor: 'pointer',
+                    borderRadius: borderRadius.sm, cursor: markAllRead.isPending ? 'not-allowed' : 'pointer',
                     color: colors.textTertiary, fontSize: typography.fontSize.caption,
                     fontFamily: typography.fontFamily,
                   }}
@@ -290,7 +371,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
               </div>
             </div>
 
-            {/* Notifications */}
             <div style={{ flex: 1, overflow: 'auto' }}>
               {groups.map((group) => (
                 <div key={group.label}>
@@ -304,14 +384,15 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
                     {group.label}
                   </p>
                   {group.items.map((n) => {
-                    const color = typeColors[n.type] || colors.textSecondary;
+                    const typeKey = n.type ?? 'info';
+                    const color = typeColors[typeKey] || colors.textSecondary;
                     return (
                       <div
                         key={n.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() => markRead(n.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); markRead(n.id); } }}
+                        onClick={() => handleClick(n)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(n); } }}
                         style={{
                           display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
                           padding: `${spacing['3']} ${spacing['4']}`,
@@ -324,23 +405,26 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
                       >
                         <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: n.read ? 'transparent' : colors.primaryOrange, marginTop: 6, flexShrink: 0 }} />
                         <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: `${color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span style={{ color }}>{typeIcons[n.type]}</span>
+                          <span style={{ color }}>{typeIcons[typeKey] ?? <Bell size={14} />}</span>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: typography.fontSize.sm, fontWeight: n.read ? typography.fontWeight.normal : typography.fontWeight.medium, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.snug }}>{n.title}</p>
-                          {n.message && (
-                            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</p>
+                          {n.body && (
+                            <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body}</p>
                           )}
                           <p style={{ fontSize: '10px', color: colors.textTertiary, margin: 0, marginTop: 2 }}>
-                            {Math.floor((Date.now() - n.timestamp.getTime()) / 3600000)}h ago
+                            {formatRelativeTime(n.created_at)}
                           </p>
                         </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
-                          style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.sm, cursor: 'pointer', color: colors.textTertiary, opacity: 0.4, flexShrink: 0 }}
-                        >
-                          <X size={10} />
-                        </button>
+                        {!n.read && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
+                            aria-label="Mark as read"
+                            style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.sm, cursor: 'pointer', color: colors.textTertiary, opacity: 0.6, flexShrink: 0 }}
+                          >
+                            <Check size={12} />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -349,11 +433,50 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
 
               {notifications.length === 0 && (
                 <div style={{ padding: spacing['8'], textAlign: 'center', color: colors.textTertiary }}>
-                  <Bell size={24} style={{ marginBottom: spacing['2'], opacity: 0.3 }} />
-                  <p style={{ fontSize: typography.fontSize.sm, margin: 0 }}>No notifications</p>
+                  <Inbox size={28} style={{ marginBottom: spacing['2'], opacity: 0.3 }} />
+                  <p style={{ fontSize: typography.fontSize.sm, margin: 0 }}>You&apos;re all caught up</p>
                 </div>
               )}
             </div>
+
+            {/* Pagination footer */}
+            {(page > 1 || hasMore) && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: `${spacing['2']} ${spacing['4']}`,
+                borderTop: `1px solid ${colors.borderSubtle}`, flexShrink: 0,
+                backgroundColor: colors.surfaceInset,
+              }}>
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  style={{
+                    fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                    backgroundColor: 'transparent', border: 'none',
+                    cursor: page <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: page <= 1 ? 0.4 : 1,
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+                  Page {page}
+                </span>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!hasMore}
+                  style={{
+                    fontSize: typography.fontSize.caption,
+                    color: hasMore ? colors.orangeText : colors.textTertiary,
+                    backgroundColor: 'transparent', border: 'none',
+                    cursor: hasMore ? 'pointer' : 'not-allowed',
+                    opacity: hasMore ? 1 : 0.4,
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </motion.div>
         </>
       )}
@@ -370,13 +493,11 @@ interface NotificationBellProps {
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ onClick, isOpen }) => {
   const { user } = useAuth();
-  const { data: notifications } = useNotifications(user?.id);
-  const unreadCount = (notifications || []).filter((n: unknown) => !n.read).length;
+  const { data: unreadCount = 0 } = useUnreadCount(user?.id);
   const announceStatus = useUiStore(s => s.announceStatus);
   const prevUnreadRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Skip the initial mount; only announce genuine changes
     if (prevUnreadRef.current !== null && prevUnreadRef.current !== unreadCount) {
       announceStatus(`You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`);
     }
@@ -398,6 +519,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onClick, isO
       }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceFlat; }}
       onMouseLeave={(e) => { if (!isOpen) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+      aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
     >
       <Bell size={18} color={unreadCount > 0 ? colors.textPrimary : colors.textSecondary} />
       {unreadCount > 0 && (
@@ -427,14 +549,17 @@ interface NotificationPanelProps {
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose }) => {
   const { user } = useAuth();
-  const { data: notifications, isPending: loading } = useNotifications(user?.id);
+  const [page, setPage] = useState(1);
+  const { data, isPending: loading } = useNotifications(user?.id, { page, pageSize: 20 });
+  const { data: unreadCount = 0 } = useUnreadCount(user?.id);
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  const items = notifications || [];
-  const filtered = filter === 'unread' ? items.filter((n: unknown) => !n.read) : items;
-  const unreadCount = items.filter((n: unknown) => !n.read).length;
+  const items = data?.data ?? EMPTY_LIST;
+  const filtered = filter === 'unread' ? items.filter((n) => !n.read) : items;
+  const hasMore = data?.hasMore ?? false;
 
   const handleMarkRead = (id: string) => {
     if (user?.id) markRead.mutate({ id, userId: user.id });
@@ -444,10 +569,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
     if (user?.id) markAllRead.mutate(user.id);
   };
 
-  const handleClickNotification = (notification: unknown) => {
-    handleMarkRead(notification.id);
-    if (notification.link) {
-      window.location.assign(`#${notification.link}`);
+  const handleClickNotification = (n: Notification) => {
+    if (!n.read) handleMarkRead(n.id);
+    const route = routeForNotification(n);
+    if (route) {
+      navigate(route);
       onClose();
     }
   };
@@ -464,7 +590,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
         zIndex: (zIndex.dropdown as number) + 1, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: `${spacing['3']} ${spacing['4']}`,
@@ -486,9 +611,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
                 onClick={handleMarkAllRead}
                 title="Mark all as read"
                 aria-label="Mark all as read"
+                disabled={markAllRead.isPending}
                 style={{
                   padding: spacing['1'], backgroundColor: 'transparent', border: 'none',
-                  borderRadius: borderRadius.sm, cursor: 'pointer', color: colors.textTertiary,
+                  borderRadius: borderRadius.sm, cursor: markAllRead.isPending ? 'not-allowed' : 'pointer',
+                  color: colors.textTertiary,
                   display: 'flex', alignItems: 'center',
                   transition: `color ${transitions.fast}`,
                 }}
@@ -512,7 +639,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
           </div>
         </div>
 
-        {/* Filter tabs */}
         <div style={{ display: 'flex', gap: spacing['1'], padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
           {(['all', 'unread'] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} style={{
@@ -529,7 +655,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
           ))}
         </div>
 
-        {/* List */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading && (
             <div style={{ padding: spacing['6'], textAlign: 'center' }}>
@@ -541,64 +666,106 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose })
             <div style={{ padding: spacing['6'], textAlign: 'center' }}>
               <Inbox size={32} color={colors.textTertiary} style={{ marginBottom: spacing['2'] }} />
               <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>
-                {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+                {filter === 'unread' ? 'No unread notifications' : "You're all caught up"}
               </p>
             </div>
           )}
 
-          {filtered.slice(0, 50).map((notification: unknown) => (
-            <div
-              key={notification.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => handleClickNotification(notification)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickNotification(notification); } }}
-              style={{
-                display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
-                padding: `${spacing['3']} ${spacing['4']}`,
-                backgroundColor: notification.read ? 'transparent' : `${colors.primaryOrange}04`,
-                borderBottom: `1px solid ${colors.borderSubtle}`,
-                cursor: 'pointer',
-                transition: `background-color ${transitions.fast}`,
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = notification.read ? 'transparent' : `${colors.primaryOrange}04`; }}
-            >
-              <div style={{ width: 8, paddingTop: 6, flexShrink: 0 }}>
-                {!notification.read && (
-                  <div style={{ width: 6, height: 6, borderRadius: borderRadius.full, backgroundColor: colors.primaryOrange }} />
-                )}
-              </div>
-              <span style={{ fontSize: typography.fontSize.title, flexShrink: 0, marginTop: 1 }}>
-                {remoteTypeIcons[notification.type] || '📌'}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: typography.fontSize.sm, color: colors.textPrimary,
-                  fontWeight: notification.read ? typography.fontWeight.normal : typography.fontWeight.medium,
-                  margin: 0, lineHeight: typography.lineHeight.snug,
-                }}>
-                  {notification.title}
-                </p>
-                {notification.body && (
-                  <p style={{
-                    fontSize: typography.fontSize.caption, color: colors.textTertiary,
-                    margin: `${spacing['1']} 0 0`, lineHeight: typography.lineHeight.normal,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {notification.body}
-                  </p>
-                )}
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'], display: 'block' }}>
-                  {formatRelativeTime(notification.created_at)}
+          {filtered.map((notification) => {
+            const route = routeForNotification(notification);
+            return (
+              <div
+                key={notification.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => handleClickNotification(notification)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickNotification(notification); } }}
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: spacing['3'],
+                  padding: `${spacing['3']} ${spacing['4']}`,
+                  backgroundColor: notification.read ? 'transparent' : `${colors.primaryOrange}04`,
+                  borderBottom: `1px solid ${colors.borderSubtle}`,
+                  cursor: 'pointer',
+                  transition: `background-color ${transitions.fast}`,
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = notification.read ? 'transparent' : `${colors.primaryOrange}04`; }}
+              >
+                <div style={{ width: 8, paddingTop: 6, flexShrink: 0 }}>
+                  {!notification.read && (
+                    <div style={{ width: 6, height: 6, borderRadius: borderRadius.full, backgroundColor: colors.primaryOrange }} />
+                  )}
+                </div>
+                <span style={{ fontSize: typography.fontSize.title, flexShrink: 0, marginTop: 1 }}>
+                  {remoteTypeIcons[notification.type ?? ''] || '📌'}
                 </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontSize: typography.fontSize.sm, color: colors.textPrimary,
+                    fontWeight: notification.read ? typography.fontWeight.normal : typography.fontWeight.medium,
+                    margin: 0, lineHeight: typography.lineHeight.snug,
+                  }}>
+                    {notification.title}
+                  </p>
+                  {notification.body && (
+                    <p style={{
+                      fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                      margin: `${spacing['1']} 0 0`, lineHeight: typography.lineHeight.normal,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {notification.body}
+                    </p>
+                  )}
+                  <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginTop: spacing['1'], display: 'block' }}>
+                    {formatRelativeTime(notification.created_at)}
+                  </span>
+                </div>
+                {route && (
+                  <ExternalLink size={12} color={colors.textTertiary} style={{ marginTop: 4, flexShrink: 0 }} />
+                )}
               </div>
-              {notification.link && (
-                <ExternalLink size={12} color={colors.textTertiary} style={{ marginTop: 4, flexShrink: 0 }} />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
+
+        {/* Pagination footer */}
+        {(page > 1 || hasMore) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: `${spacing['2']} ${spacing['4']}`,
+            borderTop: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surfaceInset,
+          }}>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              style={{
+                fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                backgroundColor: 'transparent', border: 'none',
+                cursor: page <= 1 ? 'not-allowed' : 'pointer',
+                opacity: page <= 1 ? 0.4 : 1,
+              }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
+              Page {page}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!hasMore}
+              style={{
+                fontSize: typography.fontSize.caption,
+                color: hasMore ? colors.orangeText : colors.textTertiary,
+                backgroundColor: 'transparent', border: 'none',
+                cursor: hasMore ? 'pointer' : 'not-allowed',
+                opacity: hasMore ? 1 : 0.4,
+              }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

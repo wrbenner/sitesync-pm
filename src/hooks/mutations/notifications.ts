@@ -22,6 +22,7 @@ export function useMarkNotificationRead() {
     },
     onSuccess: (result: { userId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['notifications', result.userId] })
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread_count', result.userId] })
       posthog.capture('notification_read', { user_id: result.userId })
     },
     onError: createOnError('mark_notification_read'),
@@ -38,6 +39,7 @@ export function useMarkAllNotificationsRead() {
     },
     onSuccess: (result: { userId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['notifications', result.userId] })
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread_count', result.userId] })
       posthog.capture('all_notifications_read', { user_id: result.userId })
     },
     onError: createOnError('mark_all_notifications_read'),
