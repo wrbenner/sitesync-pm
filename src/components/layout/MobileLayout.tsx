@@ -180,7 +180,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   return (
     <div className="mobile-layout" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: colors.surfacePage, overflow: 'hidden', touchAction: 'manipulation' }}>
       <style>{`
-        .mobile-layout button { min-height: 44px; touch-action: manipulation; }
+        .mobile-layout button { min-height: 56px; min-width: 56px; touch-action: manipulation; }
+        @keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
       {/* ── Top Header ──────────────────────────────── */}
       <header style={{
@@ -193,34 +195,46 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
           {location.pathname !== '/dashboard' && location.pathname !== '/' ? (
             <button
               onClick={() => navigate(-1)}
-              style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', minWidth: 44, minHeight: 44 }}
+              style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', minWidth: 56, minHeight: 56 }}
               aria-label="Go back"
             >
-              <ArrowLeft size={20} color={colors.textSecondary} />
+              <ArrowLeft size={22} color={colors.textSecondary} />
             </button>
           ) : (
-            <img src="/logos/sitesync-symbol.png" alt="" style={{ height: 30, width: 'auto', objectFit: 'contain' }} />
+            <img src={`${import.meta.env.BASE_URL}logos/sitesync-symbol.png`} alt="" style={{ height: 30, width: 'auto', objectFit: 'contain' }} />
           )}
-          <span style={{ fontSize: typography.fontSize.title, fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em' }}>
+          <span style={{ fontSize: typography.fontSize.title, fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em', lineHeight: 1 }}>
             SiteSync
+          </span>
+          <span style={{
+            fontSize: '10px', fontWeight: 700,
+            color: colors.primaryOrange,
+            backgroundColor: colors.orangeSubtle,
+            padding: '2px 6px',
+            borderRadius: borderRadius.sm,
+            letterSpacing: '0.08em',
+            lineHeight: 1,
+            textTransform: 'uppercase',
+          }}>
+            PM
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
           <button
             onClick={() => setSearchOpen(!searchOpen)}
-            style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
+            style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
             aria-label="Search"
           >
-            <Search size={20} color={colors.textSecondary} />
+            <Search size={22} color={colors.textSecondary} />
           </button>
           <button
             onClick={() => navigate('/activity')}
-            style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', position: 'relative' }}
+            style={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', position: 'relative' }}
             aria-label="Notifications"
           >
-            <Bell size={20} color={colors.textSecondary} />
-            <div style={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusCritical, border: `2px solid ${colors.surfaceRaised}` }} />
+            <Bell size={22} color={colors.textSecondary} />
+            <div style={{ position: 'absolute', top: 14, right: 14, width: 8, height: 8, borderRadius: '50%', backgroundColor: colors.statusCritical, border: `2px solid ${colors.surfaceRaised}` }} />
           </button>
         </div>
       </header>
@@ -237,7 +251,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
               width: '100%', padding: `${spacing['3']} ${spacing['4']}`, fontSize: typography.fontSize.title,
               fontFamily: typography.fontFamily, border: 'none',
               backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md,
-              outline: 'none', boxSizing: 'border-box', minHeight: '48px',
+              outline: 'none', boxSizing: 'border-box', minHeight: '56px',
             }}
           />
         </div>
@@ -320,7 +334,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                       onClick={() => { impact('light'); navigate(item.route); setMoreOpen(false); }}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: `${spacing['3']} ${spacing['5']}`, minHeight: '48px',
+                        padding: `${spacing['3']} ${spacing['5']}`, minHeight: '56px',
                         backgroundColor: activeTab === item.id ? colors.orangeSubtle : 'transparent',
                         color: activeTab === item.id ? colors.orangeText : colors.textPrimary,
                         border: 'none', cursor: 'pointer',
@@ -330,7 +344,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                       }}
                     >
                       {item.label}
-                      <ChevronRight size={16} color={colors.textTertiary} />
+                      <ChevronRight size={18} color={colors.textTertiary} />
                     </button>
                   ))}
                 </div>
@@ -399,26 +413,26 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                       onClick={markAllRead}
                       style={{
                         display: 'flex', alignItems: 'center', gap: spacing['1'],
-                        padding: `${spacing['2']} ${spacing['3']}`, minHeight: '44px',
+                        padding: `${spacing['2']} ${spacing['3']}`, minHeight: '56px', minWidth: '56px',
                         backgroundColor: 'transparent', border: 'none',
                         borderRadius: borderRadius.sm, cursor: 'pointer',
                         color: colors.textTertiary, fontSize: typography.fontSize.caption,
                         fontFamily: typography.fontFamily,
                       }}
                     >
-                      <Check size={12} /> All read
+                      <Check size={14} /> All read
                     </button>
                   )}
                   <button
                     onClick={() => setNotificationsOpen(false)}
                     style={{
-                      width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       backgroundColor: colors.surfaceInset, border: 'none',
                       borderRadius: '50%', cursor: 'pointer', color: colors.textTertiary,
                     }}
                     aria-label="Close"
                   >
-                    <X size={16} />
+                    <X size={20} />
                   </button>
                 </div>
               </div>
@@ -467,7 +481,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   gap: 2, padding: `${spacing['1']} ${spacing['2']}`,
                   backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-                  position: 'relative', minWidth: 44, minHeight: 48,
+                  position: 'relative', minWidth: 56, minHeight: 56,
                 }}
                 aria-label="QR Check In"
               >
@@ -498,7 +512,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   gap: 2, padding: 0, backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
-                  position: 'relative', bottom: 8,
+                  position: 'relative', bottom: 8, minWidth: 56, minHeight: 56,
                 }}
                 aria-label="Capture"
               >
@@ -529,7 +543,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                   backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
                   color: isActive ? colors.orangeText : colors.textTertiary,
                   transition: `color ${transitions.instant}`,
-                  minWidth: 44, minHeight: 48, position: 'relative',
+                  minWidth: 56, minHeight: 56, position: 'relative',
                 }}
                 aria-label="Notifications"
               >
@@ -568,7 +582,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 backgroundColor: 'transparent', border: 'none', cursor: 'pointer',
                 color: isActive ? colors.orangeText : colors.textTertiary,
                 transition: `color ${transitions.instant}`,
-                minWidth: 44, minHeight: 48,
+                minWidth: 56, minHeight: 56,
               }}
               aria-label={tab.label}
             >

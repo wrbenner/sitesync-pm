@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { CheckCircle2, ChevronDown, ChevronUp, Link2, AlertTriangle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { CheckCircle2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Link2, AlertTriangle, ZoomIn, ZoomOut } from 'lucide-react';
 import type { GanttPhase } from './GanttChart';
 import type { PredictedRisk } from '../../lib/predictions';
 import { colors, spacing, typography, borderRadius, getStatusColor } from '../../styles/theme';
@@ -457,15 +457,91 @@ interface Props {
 export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
   const { updatePhase } = useScheduleStore();
 
-  const today = useMemo(() => {
+  // Actual today (fixed) + user-driven week offset (\u00b11 per swipe or button tap).
+  // Offset shifts the 3-week window forward or backward by 7 days per step.
+  const actualToday = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
 
+  const [weekOffset, setWeekOffset] = useState(0);
+  const today = useMemo(() => addDays(actualToday, weekOffset * 7), [actualToday, weekOffset]);
   const rangeEnd = useMemo(() => addDays(today, 21), [today]);
 
-  // Filter to activities that overlap the next 21 days
+  // Pinch-zoom state \u2014 scales the weeks list between 0.8x and 1.5x.
+  const [zoom, setZoom] = useState(1);
+  const pinchRef = useRef({ active: false, initialDist: 0, initialZoom: 1 });
+
+  // Swipe state for advancing/retreating the 3-week window.
+  const swipeRef = useRef({ startX: 0, startY: 0, active: false });
+  const SWIPE_THRESHOLD = 60;
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Pinch-zoom: register non-passive touchmove so we can preventDefault when scaling.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchRef.current.active) {
+        const a = e.touches[0];
+        const b = e.touches[1];
+        const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+        if (pinchRef.current.initialDist > 0) {
+          const ratio = dist / pinchRef.current.initialDist;
+          const next = Math.max(0.8, Math.min(1.5, pinchRef.current.initialZoom * ratio));
+          setZoom(next);
+        }
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('touchmove', onMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onMove);
+  }, []);
+
+  const onWrapperTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const a = e.touches[0];
+      const b = e.touches[1];
+      pinchRef.current = {
+        active: true,
+        initialDist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
+        initialZoom: zoom,
+      };
+      swipeRef.current.active = false;
+    }
+  }, [zoom]);
+
+  const onWrapperTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      pinchRef.current.active = false;
+    }
+  }, []);
+
+  // Header-area swipe: advances window by \u00b11 week without stealing card swipes.
+  const onHeaderTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    swipeRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      active: true,
+    };
+  }, []);
+
+  const onHeaderTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!swipeRef.current.active) return;
+    swipeRef.current.active = false;
+    const dx = e.changedTouches[0].clientX - swipeRef.current.startX;
+    const dy = e.changedTouches[0].clientY - swipeRef.current.startY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > SWIPE_THRESHOLD) {
+      setWeekOffset((o) => o + (dx < 0 ? 1 : -1));
+    }
+  }, []);
+
+  // Filter to activities that overlap the current 21-day window
   const lookahead = useMemo(() => phases.filter(p => {
     const start = new Date(p.startDate + 'T00:00:00');
     const end = new Date(p.endDate + 'T00:00:00');
@@ -489,51 +565,171 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
   }, [lookahead, today, rangeEnd]);
 
   const handleMarkInProgress = (phase: GanttPhase) => {
-    updatePhase(phase.id, { status: 'in_progress' });
+    updatePhase(phase.id, { status: 'active' });
   };
 
-  if (lookahead.length === 0) {
-    return (
-      <div style={{
-        padding: `${spacing['2xl']} ${spacing['4']}`,
-        textAlign: 'center',
-        color: colors.textTertiary,
-        fontSize: typography.fontSize.sm,
-      }}>
-        No activities scheduled for the next 3 weeks.
-      </div>
-    );
-  }
+  const windowLabel = weekOffset === 0
+    ? 'Next 3 Weeks'
+    : weekOffset > 0
+      ? `+${weekOffset}w Ahead`
+      : `${weekOffset}w Back`;
 
   return (
-    <div>
-      {/* Header */}
+    <div
+      ref={wrapperRef}
+      onTouchStart={onWrapperTouchStart}
+      onTouchEnd={onWrapperTouchEnd}
+      style={{ touchAction: 'pan-y' }}
+    >
+      {/* Sticky top header with window nav + pinch-zoom controls */}
+      <div
+        onTouchStart={onHeaderTouchStart}
+        onTouchEnd={onHeaderTouchEnd}
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 20,
+          backgroundColor: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: `${spacing['2']} ${spacing['3']}`,
+          borderBottom: `1px solid ${colors.borderDefault}`,
+          gap: spacing['2'],
+        }}
+      >
+        <button
+          onClick={() => setWeekOffset((o) => o - 1)}
+          aria-label="Previous week"
+          style={{
+            width: 56, height: 56,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: colors.textSecondary, borderRadius: borderRadius.base,
+          }}
+        >
+          <ChevronLeft size={22} />
+        </button>
+        <div style={{
+          flex: 1,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+          minWidth: 0,
+        }}>
+          <span style={{
+            fontSize: typography.fontSize.body,
+            fontWeight: typography.fontWeight.semibold,
+            color: colors.textPrimary,
+          }}>
+            {windowLabel}
+          </span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: typography.fontWeight.medium,
+            color: colors.primaryOrange,
+            backgroundColor: `${colors.primaryOrange}14`,
+            padding: '2px 10px',
+            borderRadius: borderRadius.full,
+            whiteSpace: 'nowrap',
+          }}>
+            {fmtDate(today)} {'\u2013'} {fmtDate(addDays(rangeEnd, -1))}
+          </span>
+        </div>
+        <button
+          onClick={() => setWeekOffset((o) => o + 1)}
+          aria-label="Next week"
+          style={{
+            width: 56, height: 56,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: colors.textSecondary, borderRadius: borderRadius.base,
+          }}
+        >
+          <ChevronRight size={22} />
+        </button>
+      </div>
+
+      {/* Zoom + reset-to-today control strip */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: `${spacing['3']} ${spacing['4']} ${spacing['2']}`,
-        marginBottom: spacing['1'],
+        padding: `${spacing['2']} ${spacing['3']}`,
+        gap: spacing['2'],
       }}>
-        <span style={{
-          fontSize: typography.fontSize.body,
-          fontWeight: typography.fontWeight.semibold,
-          color: colors.textPrimary,
-        }}>
-          Next 3 Weeks
-        </span>
-        <span style={{
-          fontSize: 12,
-          fontWeight: typography.fontWeight.medium,
-          color: colors.primaryOrange,
-          backgroundColor: `${colors.primaryOrange}14`,
-          padding: '3px 10px',
-          borderRadius: borderRadius.full,
-          whiteSpace: 'nowrap',
-        }}>
-          {fmtDate(today)} {'\u2013'} {fmtDate(addDays(rangeEnd, -1))}
-        </span>
+        {weekOffset !== 0 ? (
+          <button
+            onClick={() => setWeekOffset(0)}
+            aria-label="Jump to today"
+            style={{
+              minHeight: 56, minWidth: 56,
+              padding: `0 ${spacing['3']}`,
+              display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+              background: colors.surfaceRaised,
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.base, cursor: 'pointer',
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+              color: colors.textPrimary,
+            }}
+          >
+            Today
+          </button>
+        ) : (
+          <span style={{ fontSize: 11, color: colors.textTertiary }}>
+            {'Swipe or tap arrows to shift window \u00b7 pinch to zoom'}
+          </span>
+        )}
+        <div style={{ display: 'flex', gap: spacing['1'] }}>
+          <button
+            onClick={() => setZoom((z) => Math.max(0.8, z - 0.1))}
+            aria-label="Zoom out"
+            style={{
+              width: 56, height: 56,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.base, cursor: 'pointer',
+              color: colors.textSecondary,
+            }}
+          >
+            <ZoomOut size={18} />
+          </button>
+          <button
+            onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))}
+            aria-label="Zoom in"
+            style={{
+              width: 56, height: 56,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.base, cursor: 'pointer',
+              color: colors.textSecondary,
+            }}
+          >
+            <ZoomIn size={18} />
+          </button>
+        </div>
       </div>
+
+      {lookahead.length === 0 && (
+        <div style={{
+          padding: `${spacing['2xl']} ${spacing['4']}`,
+          textAlign: 'center',
+          color: colors.textTertiary,
+          fontSize: typography.fontSize.sm,
+        }}>
+          No activities scheduled in this window.
+        </div>
+      )}
+
+      {/* Zoomable content region — CSS `zoom` scales layout without breaking
+          sticky positioning, unlike transform:scale. Wide browser support now. */}
+      <div
+        style={{
+          // Cast via React.CSSProperties — `zoom` is valid CSS but not in the
+          // default TS React.CSSProperties shape; the cast keeps tsc happy.
+          ...( { zoom } as React.CSSProperties ),
+          transition: pinchRef.current.active ? 'none' : 'zoom 120ms ease-out',
+        }}
+      >
 
       {/* Week sections */}
       {weeks.map((week, wi) => {
@@ -601,6 +797,7 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
           </div>
         );
       })}
+      </div>
     </div>
   );
 };

@@ -6,7 +6,7 @@
  * - Network-first with offline fallback for HTML navigation
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE = `sitesync-static-${CACHE_VERSION}`;
 const API_CACHE = `sitesync-api-${CACHE_VERSION}`;
 const APP_SHELL_CACHE = `sitesync-shell-${CACHE_VERSION}`;
@@ -49,15 +49,30 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
+  // Skip non-GET requests — writes must hit network and never be cached
   if (request.method !== 'GET') return;
 
-  // Skip Supabase auth/realtime and external auth endpoints
-  if (url.hostname.includes('supabase')) return;
+  // Skip Supabase realtime (websocket) and auth refresh endpoints — those must
+  // never be cached. Everything else on Supabase gets network-first with a
+  // cache fallback below.
+  if (
+    url.hostname.includes('supabase') &&
+    (url.pathname.includes('/realtime/') || url.pathname.includes('/auth/'))
+  ) {
+    return;
+  }
 
   // Strategy 0: Cache-first for DZI tiles (critical for offline drawing viewing)
   if (isDrawingTile(url)) {
     event.respondWith(tileCacheFirst(request));
+    return;
+  }
+
+  // Strategy 0.5: Network-first with cache fallback for Supabase GET reads.
+  // Hours-impacting data needs freshness, but a stale cached copy beats a
+  // broken UI when the phone loses signal on-site.
+  if (url.hostname.includes('supabase')) {
+    event.respondWith(networkFirst(request, API_CACHE));
     return;
   }
 
@@ -123,6 +138,31 @@ function staleWhileRevalidate(request, cacheName) {
 
       return cached || fetchPromise;
     })
+  );
+}
+
+/**
+ * Network-first with cache fallback: try network, fall back to the last
+ * known-good cached response on failure. Used for Supabase reads.
+ */
+function networkFirst(request, cacheName) {
+  return caches.open(cacheName).then((cache) =>
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      })
+      .catch(() => cache.match(request).then((cached) => {
+        if (cached) return cached;
+        // No cached response — surface the network error so the app can
+        // show its own offline state instead of silently hanging.
+        return new Response(
+          JSON.stringify({ error: 'offline', message: 'Network unavailable and no cached response.' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } },
+        );
+      })),
   );
 }
 
@@ -274,3 +314,4 @@ self.addEventListener('message', (event) => {
     return;
   }
 });
+
