@@ -80,6 +80,7 @@ interface MappedTask {
   percent_complete: number | null;
   isCriticalPath: boolean;
   is_critical_path: boolean;
+  parent_task_id: string | null;
 }
 
 export const Tasks: React.FC = () => {
@@ -125,6 +126,7 @@ export const Tasks: React.FC = () => {
       percent_complete: percentComplete,
       isCriticalPath: !!t.is_critical_path,
       is_critical_path: !!t.is_critical_path,
+      parent_task_id: (t.parent_task_id as string | null) ?? null,
     };
   }), [tasksRaw, profileMap]);
 
@@ -178,8 +180,34 @@ export const Tasks: React.FC = () => {
   const [depRelationType, setDepRelationType] = useState<RelationType>('follows');
   const [depLagDays, setDepLagDays] = useState<string>('0');
 
+  // Build hierarchical maps. Subtask counts come from children where parent_task_id === this.uuid.
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, MappedTask[]>();
+    localTasks.forEach((t) => {
+      if (t.parent_task_id) {
+        const arr = map.get(t.parent_task_id) ?? [];
+        arr.push(t);
+        map.set(t.parent_task_id, arr);
+      }
+    });
+    return map;
+  }, [localTasks]);
+
+  const tasksWithComputedSubtasks = useMemo(() => {
+    return localTasks.map((t) => {
+      const kids = childrenByParent.get(t.uuid) ?? [];
+      return {
+        ...t,
+        subtasks: {
+          total: kids.length,
+          completed: kids.filter((k) => k.status === 'done').length,
+        },
+      };
+    });
+  }, [localTasks, childrenByParent]);
+
   const filteredTasks = useMemo(() => {
-    return localTasks.filter((t) => {
+    return tasksWithComputedSubtasks.filter((t) => {
       const matchesSearch = searchQuery === '' ||
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -188,15 +216,22 @@ export const Tasks: React.FC = () => {
       if (criticalFilter) return matchesSearch && matchesPriority && matchesMy && (t.priority === 'critical' || t.priority === 'high');
       return matchesSearch && matchesPriority && matchesMy;
     });
-  }, [localTasks, searchQuery, filterPriority, criticalFilter, myTasksOnly]);
+  }, [tasksWithComputedSubtasks, searchQuery, filterPriority, criticalFilter, myTasksOnly]);
+
+  // Sub-task creation state
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [parentTaskForNew, setParentTaskForNew] = useState('');
 
   useTableKeyboardNavigation(filteredTasks, selectedTask?.id ?? null, setSelectedTask);
 
   const tasksByStatus = useMemo(() => {
-    const grouped: Record<TaskStatus, typeof localTasks> = { todo: [], in_progress: [], in_review: [], done: [] };
-    filteredTasks.forEach((t) => grouped[t.status].push(t));
+    const grouped: Record<TaskStatus, typeof filteredTasks> = { todo: [], in_progress: [], in_review: [], done: [] };
+    // Board view shows only root tasks — subtasks are surfaced in their parent's detail panel.
+    filteredTasks.filter((t) => !t.parent_task_id).forEach((t) => grouped[t.status].push(t));
     return grouped;
   }, [filteredTasks]);
+
+  const rootTasks = useMemo(() => filteredTasks.filter((t) => !t.parent_task_id), [filteredTasks]);
 
   const formatDue = (dateStr: string) => {
     const days = Math.ceil((new Date(dateStr).getTime() - nowMs) / (1000 * 60 * 60 * 24));
@@ -441,6 +476,17 @@ export const Tasks: React.FC = () => {
     </div>
   );
 
+  // Flatten root tasks interleaved with their children for the list view.
+  const hierarchicalList: Array<{ task: typeof filteredTasks[0]; depth: number }> = [];
+  rootTasks.forEach((root) => {
+    hierarchicalList.push({ task: root, depth: 0 });
+    const kids = childrenByParent.get(root.uuid) ?? [];
+    kids.forEach((child) => {
+      // Children aren't independently filtered by the search box beyond inheritance from the parent's visibility.
+      hierarchicalList.push({ task: tasksWithComputedSubtasks.find((t) => t.uuid === child.uuid) ?? child, depth: 1 });
+    });
+  });
+
   const renderList = () => (
     <Card padding="0">
       <div
@@ -457,7 +503,7 @@ export const Tasks: React.FC = () => {
           </p>
         ))}
       </div>
-      {filteredTasks.map((task, idx) => {
+      {hierarchicalList.map(({ task, depth }, idx) => {
         const due = formatDue(task.dueDate);
         const sc = statusConfig[task.status];
         return (
@@ -471,21 +517,27 @@ export const Tasks: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: '2fr 140px 120px 120px 100px 80px',
               padding: `${spacing.lg} ${spacing.xl}`,
-              borderBottom: idx < filteredTasks.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
+              borderBottom: idx < hierarchicalList.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
               cursor: 'pointer',
               transition: `background-color ${transitions.quick}`,
               alignItems: 'center',
+              backgroundColor: depth > 0 ? colors.surfaceFlat : colors.surfaceRaised,
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceFlat; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceRaised; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceInset; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = depth > 0 ? colors.surfaceFlat : colors.surfaceRaised; }}
           >
-            <div>
-              <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
-                {task.title}
-              </p>
-              {task.subtasks.total > 0 && (
-                <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{task.subtasks.completed}/{task.subtasks.total} subtasks</span>
+            <div style={{ paddingLeft: depth > 0 ? spacing.xl : 0, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+              {depth > 0 && (
+                <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, fontFamily: 'monospace' }} aria-hidden="true">└─</span>
               )}
+              <div>
+                <p style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, margin: 0 }}>
+                  {task.title}
+                </p>
+                {task.subtasks.total > 0 && (
+                  <span style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{task.subtasks.completed}/{task.subtasks.total} subtasks</span>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
               <Avatar initials={task.assignee.initials} size={24} />
@@ -584,17 +636,144 @@ export const Tasks: React.FC = () => {
           </div>
 
           {/* Subtasks */}
-          {selectedTask.subtasks.total > 0 && (
-            <div style={{ marginBottom: spacing['2xl'] }}>
-              <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>
-                Subtasks ({selectedTask.subtasks.completed}/{selectedTask.subtasks.total})
-              </h3>
-              <ProgressBar
-                value={selectedTask.subtasks.completed} max={selectedTask.subtasks.total} height={6}
-                color={selectedTask.subtasks.completed === selectedTask.subtasks.total ? colors.tealSuccess : colors.statusInfo}
-              />
-            </div>
-          )}
+          {(() => {
+            const kids = childrenByParent.get(selectedTask.uuid) ?? [];
+            const completed = kids.filter((k) => k.status === 'done').length;
+            return (
+              <div style={{ marginBottom: spacing['2xl'] }}>
+                <h3 style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing.md }}>
+                  Subtasks ({completed}/{kids.length})
+                </h3>
+                {kids.length > 0 && (
+                  <>
+                    <ProgressBar
+                      value={completed} max={kids.length} height={6}
+                      color={completed === kids.length ? colors.tealSuccess : colors.statusInfo}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs, marginTop: spacing.md }}>
+                      {kids.map((k) => {
+                        const isDone = k.status === 'done';
+                        return (
+                          <button
+                            key={k.uuid}
+                            type="button"
+                            onClick={async () => {
+                              const next: TaskStatus = isDone ? 'todo' : 'done';
+                              try {
+                                await updateTask.mutateAsync({ id: k.uuid, updates: { status: next }, projectId: projectId! });
+                                setLocalTasks((prev) => prev.map((t) => t.uuid === k.uuid ? { ...t, status: next } : t));
+                                addToast('success', isDone ? 'Subtask reopened' : 'Subtask completed');
+                              } catch {
+                                addToast('error', 'Failed to update subtask');
+                              }
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: spacing.sm,
+                              textAlign: 'left', background: 'transparent', border: 'none',
+                              padding: `${spacing.sm} ${spacing.md}`,
+                              borderRadius: borderRadius.sm, cursor: 'pointer',
+                              color: isDone ? colors.textTertiary : colors.textPrimary,
+                              fontSize: typography.fontSize.sm,
+                              fontFamily: typography.fontFamily,
+                            }}
+                          >
+                            <span style={{
+                              width: 14, height: 14, borderRadius: borderRadius.sm,
+                              border: `1.5px solid ${isDone ? colors.tealSuccess : colors.textTertiary}`,
+                              backgroundColor: isDone ? colors.tealSuccess : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0,
+                            }}>
+                              {isDone && <span style={{ color: colors.white, fontSize: 10, lineHeight: 1 }}>&#10003;</span>}
+                            </span>
+                            <span style={{ textDecoration: isDone ? 'line-through' : 'none' }}>{k.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                <PermissionGate permission="tasks.create">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const title = newSubtaskTitle.trim();
+                      if (!title) return;
+                      try {
+                        const result = await createTask.mutateAsync({
+                          projectId: projectId!,
+                          data: {
+                            project_id: projectId!,
+                            title,
+                            status: 'todo',
+                            priority: 'medium',
+                            parent_task_id: selectedTask.uuid,
+                          },
+                        });
+                        const newUuid = String((result?.data as Record<string, unknown> | undefined)?.id ?? '');
+                        const newId = parseInt(newUuid.replace(/\D/g, '').slice(0, 8) || String(Date.now()), 10);
+                        const newRow: MappedTask = {
+                          id: newId,
+                          uuid: newUuid,
+                          title,
+                          description: '',
+                          status: 'todo',
+                          priority: 'medium',
+                          assignee: { name: 'Unassigned', initials: 'NA', company: '' },
+                          dueDate: '',
+                          tags: [],
+                          commentsCount: 0,
+                          attachmentsCount: 0,
+                          createdDate: new Date().toISOString().slice(0, 10),
+                          subtasks: { total: 0, completed: 0 },
+                          linkedItems: [],
+                          predecessorIds: [],
+                          predecessor_ids: [],
+                          successor_ids: [],
+                          percent_complete: null,
+                          isCriticalPath: false,
+                          is_critical_path: false,
+                          parent_task_id: selectedTask.uuid,
+                        };
+                        setLocalTasks((prev) => [newRow, ...prev]);
+                        setNewSubtaskTitle('');
+                        addToast('success', 'Subtask added');
+                      } catch {
+                        addToast('error', 'Failed to add subtask');
+                      }
+                    }}
+                    style={{ display: 'flex', gap: spacing.sm, marginTop: spacing.md }}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Add a subtask…"
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: `${spacing.sm} ${spacing.md}`,
+                        fontSize: typography.fontSize.sm,
+                        fontFamily: typography.fontFamily,
+                        border: 'none',
+                        backgroundColor: colors.surfaceFlat,
+                        borderRadius: borderRadius.sm,
+                        outline: 'none',
+                      }}
+                      data-testid="subtask-title-input"
+                    />
+                    <Btn
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => { /* submit via form */ }}
+                      disabled={!newSubtaskTitle.trim() || createTask.isPending}
+                    >
+                      Add
+                    </Btn>
+                  </form>
+                </PermissionGate>
+              </div>
+            );
+          })()}
 
           {/* Dependencies */}
           {(selectedTask.predecessor_ids?.length > 0 || selectedTask.successor_ids?.length > 0) && (
@@ -1081,6 +1260,20 @@ export const Tasks: React.FC = () => {
             <input type="text" placeholder="What needs to be done?" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus
               style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none', boxSizing: 'border-box' }} />
           </div>
+          <div>
+            <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Parent Task (optional)</label>
+            <select
+              value={parentTaskForNew}
+              onChange={(e) => setParentTaskForNew(e.target.value)}
+              style={{ width: '100%', padding: `${spacing.md} ${spacing.lg}`, fontSize: typography.fontSize.base, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceFlat, borderRadius: borderRadius.md, outline: 'none' }}
+              data-testid="parent-task-select"
+            >
+              <option value="">None — create as a top-level task</option>
+              {rootTasks.map((t) => (
+                <option key={t.uuid} value={t.uuid}>{t.title}</option>
+              ))}
+            </select>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
             <div>
               <label style={{ display: 'block', fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textSecondary, marginBottom: spacing.sm }}>Priority</label>
@@ -1208,8 +1401,9 @@ export const Tasks: React.FC = () => {
                 subtasks: { total: 0, completed: 0 },
                 linkedItems: [] as { type: string; id: string }[],
               };
-              setLocalTasks([newTask as typeof localTasks[0], ...localTasks]);
+              setLocalTasks([{ ...newTask, parent_task_id: parentTaskForNew || null } as typeof localTasks[0], ...localTasks]);
               const taskData: Record<string, unknown> = { project_id: projectId!, title: newTask.title, status: 'todo', priority: newPriority };
+              if (parentTaskForNew) taskData.parent_task_id = parentTaskForNew;
               if (newStartDate) taskData.start_date = newStartDate;
               if (newEndDate) taskData.end_date = newEndDate;
               if (newEstimatedHours) taskData.estimated_hours = parseFloat(newEstimatedHours);
@@ -1250,6 +1444,7 @@ export const Tasks: React.FC = () => {
               setDepPredecessorId('');
               setDepRelationType('follows');
               setDepLagDays('0');
+              setParentTaskForNew('');
             }}>Create Task</Btn>
           </div>
         </div>
