@@ -10,7 +10,6 @@ import {
 } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
-import { useAuth } from '../hooks/useAuth'
 import { PermissionGate } from '../components/auth/PermissionGate'
 import { useCloseoutData, type CloseoutItemRow } from '../hooks/queries/closeout'
 import { usePunchItems } from '../hooks/queries/punch-items'
@@ -48,7 +47,6 @@ function formatDate(iso: string | null | undefined): string {
 
 export const Closeout: React.FC = () => {
   const projectId = useProjectId()
-  const { user } = useAuth()
 
   const { data: closeoutData, isLoading: loadingCloseout } = useCloseoutData(projectId ?? undefined)
   const { data: punchResult, isLoading: loadingPunch } = usePunchItems(projectId ?? undefined, { page: 1, pageSize: 200 })
@@ -166,7 +164,7 @@ export const Closeout: React.FC = () => {
             <WarrantiesTab projectId={projectId} warranties={warranties ?? []} />
           )}
           {activeTab === 'om' && (
-            <OMManualsTab projectId={projectId} items={omItems} userId={user?.id} />
+            <OMManualsTab projectId={projectId} items={omItems} />
           )}
           {activeTab === 'training' && (
             <TrainingTab projectId={projectId} items={trainingItems} />
@@ -515,7 +513,7 @@ const WarrantyFormModal: React.FC<{
 // ██ O&M MANUALS TAB
 // ══════════════════════════════════════════════════════════
 
-const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[]; userId?: string }> = ({ projectId, items, userId: _userId }) => {
+const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = ({ projectId, items }) => {
   const [uploadOpen, setUploadOpen] = useState(false)
   const uploadOM = useUploadOMManual()
   const deleteItem = useDeleteCloseoutItem()
