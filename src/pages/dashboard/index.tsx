@@ -34,6 +34,12 @@ import { compactDollars } from './types';
 import { WelcomeOnboarding } from './WelcomeOnboarding';
 import { OnboardingChecklist } from './DashboardBriefing';
 import { DashboardBriefingAI } from './DashboardBriefingAI';
+import { DashboardProjectHealth } from './DashboardProjectHealth';
+import { DashboardMyTasks } from './DashboardMyTasks';
+import { DashboardPortfolio } from './DashboardPortfolio';
+import { DashboardCarbon } from './DashboardCarbon';
+import { DashboardSiteMapMini } from './DashboardSiteMapMini';
+import { DashboardCompliance } from './DashboardCompliance';
 
 const QuickRFIButton = lazy(() => import('../../components/field/QuickRFIButton'));
 
@@ -48,8 +54,13 @@ function getGreeting(hour: number): string {
 function getFirstName(user: { user_metadata?: { full_name?: string }; email?: string } | null): string {
   const fullName = user?.user_metadata?.full_name;
   if (fullName) return fullName.split(' ')[0];
+  // Don't show raw email prefixes like "wrbenner23" — they look unprofessional.
+  // Only use email prefix if it looks like a real name (letters only, 3+ chars).
   const email = user?.email;
-  if (email) return email.split('@')[0];
+  if (email) {
+    const prefix = email.split('@')[0];
+    if (/^[a-zA-Z]{3,}$/.test(prefix)) return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  }
   return 'there';
 }
 
@@ -202,19 +213,20 @@ const DashboardInner: React.FC = () => {
     staleTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  const hasRealLocation = !!geoResult && geoResult.source !== 'default';
   const projectLat = geoResult?.lat;
   const projectLon = geoResult?.lon;
   const { data: weatherData } = useQuery<WeatherData>({
     queryKey: ['weather_current', projectId, projectLat, projectLon],
     queryFn: () => fetchWeather(projectLat, projectLon),
-    enabled: !!projectId && !!geoResult,
+    enabled: !!projectId && hasRealLocation,
     staleTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const { data: forecastData } = useQuery<WeatherDay[]>({
     queryKey: ['weather_forecast', projectId, projectLat, projectLon],
-    queryFn: () => fetchWeatherForecast5Day(projectLat ?? 32.7767, projectLon ?? -96.7970),
-    enabled: !!projectId && !!geoResult,
+    queryFn: () => fetchWeatherForecast5Day(projectLat!, projectLon!),
+    enabled: !!projectId && hasRealLocation,
     staleTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -222,7 +234,7 @@ const DashboardInner: React.FC = () => {
 
   // Weather conflicts
   const weatherConflictInsights = useMemo<AIInsight[]>(() => {
-    if (!forecastData || !schedulePhases) return [];
+    if (!hasRealLocation || !forecastData || !schedulePhases) return [];
     const nowStr = new Date().toISOString();
     const conflicts: AIInsight[] = [];
     const activePhases = schedulePhases.filter((p) => p.status !== 'complete' && (p.percent_complete ?? 0) < 100 && p.start_date);
@@ -286,16 +298,17 @@ const DashboardInner: React.FC = () => {
 
   const rfiData = useMemo(() => ({ open: metrics?.rfis_open ?? 0, overdue: metrics?.rfis_overdue ?? 0 }), [metrics?.rfis_open, metrics?.rfis_overdue]);
   const punchData = useMemo(() => ({ open: metrics?.punch_open ?? 0, total: metrics?.punch_total ?? 0, resolved: (metrics?.punch_total ?? 0) - (metrics?.punch_open ?? 0) }), [metrics?.punch_open, metrics?.punch_total]);
-  const safetyScore = useMemo(() => Math.max(0, Math.min(100, 98 - (metrics?.safety_incidents_this_month ?? 0) * 3)), [metrics?.safety_incidents_this_month]);
+  const safetyIncidents = metrics?.safety_incidents_this_month ?? null;
+  const safetyScore = safetyIncidents !== null ? Math.max(0, Math.min(100, 100 - safetyIncidents * 5)) : null;
 
   const isEmptyProject = !metrics || ((metrics.rfis_total ?? 0) === 0 && (metrics.punch_total ?? 0) === 0 && (metrics.budget_total ?? 0) === 0);
 
   const targetCompletion = project?.target_completion ?? null;
   const daysRemaining = useMemo(() => targetCompletion ? Math.max(0, Math.ceil((new Date(targetCompletion).getTime() - now) / 86400000)) : 0, [targetCompletion, now]);
   const startDateStr = project?.start_date ?? null;
-  const projectStartDate = useMemo(() => startDateStr ? new Date(startDateStr) : new Date(now - 247 * 86400000), [startDateStr, now]);
-  const dayNumber = useMemo(() => Math.max(1, Math.ceil((now - projectStartDate.getTime()) / 86400000)), [now, projectStartDate]);
-  const totalDays = useMemo(() => dayNumber + daysRemaining, [dayNumber, daysRemaining]);
+  const projectStartDate = useMemo(() => startDateStr ? new Date(startDateStr) : null, [startDateStr]);
+  const dayNumber = useMemo(() => projectStartDate ? Math.max(1, Math.ceil((now - projectStartDate.getTime()) / 86400000)) : null, [now, projectStartDate]);
+  const totalDays = useMemo(() => (dayNumber && daysRemaining > 0) ? dayNumber + daysRemaining : null, [dayNumber, daysRemaining]);
 
   const missingWaivers = useMemo(() => {
     const approvedAppIds = (payApps ?? []).filter((a) => a.status === 'approved' || a.status === 'paid').map((a) => a.id);
@@ -337,13 +350,6 @@ const DashboardInner: React.FC = () => {
 
   const m = (delay: number) => reducedMotion ? {} : fadeUp(delay);
 
-  // ── Progress Ring Math ───────────────────────────────
-  const ringSize = 72;
-  const ringStroke = 5;
-  const ringR = (ringSize / 2) - ringStroke;
-  const ringC = 2 * Math.PI * ringR;
-  const ringOffset = ringC * (1 - animProgress / 100);
-
   // ── Error / Loading ──────────────────────────────────
   if (projectError) {
     return (
@@ -368,23 +374,34 @@ const DashboardInner: React.FC = () => {
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: `${spacing['10']} 0 ${spacing['16']}` }}>
 
         {/* ═══════════════════════════════════════════════════════════
-            HERO — The first thing you see. Sets the emotional tone.
-            Generous vertical rhythm. The project name is the anchor.
+            HERO — Calm authority. Project name is the anchor.
+            Progress bar lives here — not in the metrics grid.
         ═══════════════════════════════════════════════════════════ */}
         <motion.header {...m(0)} style={{ marginBottom: spacing['8'] }}>
-          <p style={{
-            margin: 0, marginBottom: spacing['1.5'],
-            fontSize: typography.fontSize.caption,
-            color: colors.textTertiary,
-            letterSpacing: '0.3px',
-            fontWeight: typography.fontWeight.medium,
-          }}>
-            {greeting}, {firstName} · {dateStr}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing['1'] }}>
+            <p style={{
+              margin: 0,
+              fontSize: typography.fontSize.caption,
+              color: colors.textTertiary,
+              letterSpacing: '0.3px',
+              fontWeight: typography.fontWeight.medium,
+            }}>
+              {greeting}, {firstName}
+            </p>
+            <p style={{
+              margin: 0,
+              fontSize: typography.fontSize.caption,
+              color: colors.textTertiary,
+              letterSpacing: '0.3px',
+              fontWeight: typography.fontWeight.medium,
+            }}>
+              {dateStr}
+            </p>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing['6'] }}>
             <h1 style={{
               margin: 0,
-              fontSize: '32px',
+              fontSize: '28px',
               fontWeight: typography.fontWeight.bold,
               color: colors.textPrimary,
               letterSpacing: '-0.025em',
@@ -392,8 +409,7 @@ const DashboardInner: React.FC = () => {
             }}>
               {project?.name ?? 'Project'}
             </h1>
-            {/* Weather — minimal, ambient */}
-            {weatherData && (
+            {hasRealLocation && weatherData && (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['1.5'], flexShrink: 0 }}>
                 <span style={{ fontSize: 18, lineHeight: 1, position: 'relative', top: 2 }}>{weatherData.icon}</span>
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
@@ -405,6 +421,30 @@ const DashboardInner: React.FC = () => {
               </div>
             )}
           </div>
+          {/* Progress bar — thin, elegant, integrated */}
+          <div style={{ marginTop: spacing['3'], display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+            <div style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.surfaceInset, overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(overallProgress, 100)}%` }}
+                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                style={{ height: '100%', backgroundColor: colors.brand400, borderRadius: 2 }}
+              />
+            </div>
+            <span style={{
+              fontSize: '11px', fontWeight: typography.fontWeight.semibold,
+              color: overallProgress > 0 ? colors.textPrimary : colors.textTertiary,
+              fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em',
+              flexShrink: 0, minWidth: 32, textAlign: 'right',
+            }}>
+              {Math.round(animProgress)}%
+            </span>
+            {dayNumber !== null && (
+              <span style={{ fontSize: '10px', color: colors.textTertiary, flexShrink: 0 }}>
+                Day {dayNumber}{totalDays ? ` / ${totalDays}` : ''}
+              </span>
+            )}
+          </div>
         </motion.header>
 
         {/* ═══════════════════════════════════════════════════════════
@@ -413,7 +453,7 @@ const DashboardInner: React.FC = () => {
             LABEL → BIG NUMBER → context line
             The ring sits at the end as a visual anchor.
         ═══════════════════════════════════════════════════════════ */}
-        <motion.div {...m(0.05)} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: spacing['3'], marginBottom: spacing['8'], alignItems: 'stretch' }}>
+        <motion.div {...m(0.05)} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['8'] }}>
           <MetricTile
             label="Schedule"
             value={scheduleHealth.days === 0 ? '0' : `${scheduleHealth.positive ? '+' : '–'}${scheduleHealth.days}`}
@@ -439,43 +479,24 @@ const DashboardInner: React.FC = () => {
           />
           <MetricTile
             label="Safety"
-            value={String(safetyScore)}
-            unit="/100"
-            context={safetyScore >= 90 ? 'Excellent' : safetyScore >= 70 ? 'Good' : 'At risk'}
-            color={safetyScore >= 90 ? colors.statusActive : safetyScore >= 70 ? colors.statusPending : colors.statusCritical}
+            value={safetyScore !== null ? String(safetyScore) : '—'}
+            unit={safetyScore !== null ? '/100' : undefined}
+            context={safetyScore === null ? 'No data' : safetyScore >= 90 ? 'Excellent' : safetyScore >= 70 ? 'Good' : 'At risk'}
+            color={safetyScore === null ? colors.textTertiary : safetyScore >= 90 ? colors.statusActive : safetyScore >= 70 ? colors.statusPending : colors.statusCritical}
             onClick={() => navigate('/safety')}
           />
-          {/* Progress Ring — the anchor */}
-          <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: `${spacing['4']} ${spacing['5']}`,
-            backgroundColor: colors.surfaceRaised,
-            border: `1px solid ${colors.borderSubtle}`,
-            borderRadius: borderRadius.xl,
-            minWidth: 110,
-          }}>
-            <div style={{ position: 'relative', width: ringSize, height: ringSize }}>
-              <svg width={ringSize} height={ringSize} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={ringSize / 2} cy={ringSize / 2} r={ringR} fill="none" stroke={colors.surfaceInset} strokeWidth={ringStroke} />
-                <circle
-                  cx={ringSize / 2} cy={ringSize / 2} r={ringR} fill="none"
-                  stroke={colors.brand400} strokeWidth={ringStroke}
-                  strokeDasharray={ringC} strokeDashoffset={ringOffset}
-                  strokeLinecap="round"
-                  style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1)' }}
-                />
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em' }}>
-                  {Math.round(animProgress)}%
-                </span>
-              </div>
-            </div>
-            <p style={{ margin: 0, marginTop: spacing['1.5'], fontSize: '10px', color: colors.textTertiary, fontWeight: typography.fontWeight.medium, textAlign: 'center', lineHeight: 1.3 }}>
-              {overallProgress === 0 ? `Day ${dayNumber}` : `Day ${dayNumber} / ${totalDays}`}
-            </p>
-          </div>
         </motion.div>
+
+        {/* ═══════════════════════════════════════════════════════════
+            PROJECT HEALTH — Unified 0-100 score synthesizing cost,
+            schedule, safety, and quality. Sits between the KPI tiles
+            and the focus list as a command-deck summary.
+        ═══════════════════════════════════════════════════════════ */}
+        {!isEmptyProject && (
+          <motion.div {...m(0.08)} style={{ marginBottom: spacing['8'] }}>
+            <DashboardProjectHealth metrics={metrics} />
+          </motion.div>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════
             FOCUS — What needs your attention right now.
@@ -496,18 +517,18 @@ const DashboardInner: React.FC = () => {
                   onClick={() => navigate(item.path)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: spacing['3'],
-                    padding: `${spacing['3']} ${spacing['5']}`,
+                    padding: `${spacing['3.5']} ${spacing['5']}`,
                     borderTop: 'none', borderLeft: 'none', borderRight: 'none',
                     borderBottom: i < focusItems.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                     background: 'none',
                     cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
-                    width: '100%', transition: 'background-color 0.1s ease',
+                    width: '100%', transition: 'background-color 0.15s ease',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
                   <div style={{
-                    width: 28, height: 28, borderRadius: borderRadius.base, flexShrink: 0,
+                    width: 30, height: 30, borderRadius: borderRadius.lg, flexShrink: 0,
                     backgroundColor: sevBg(item.severity),
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: sevColor(item.severity),
@@ -518,7 +539,7 @@ const DashboardInner: React.FC = () => {
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.label}</span>
                     {item.detail && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: spacing['2'] }}>{item.detail}</span>}
                   </div>
-                  <ArrowUpRight size={13} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+                  <ChevronRight size={14} color={colors.textTertiary} style={{ flexShrink: 0 }} />
                 </button>
               ))}
             </div>
@@ -535,11 +556,29 @@ const DashboardInner: React.FC = () => {
         )}
 
         {/* ═══════════════════════════════════════════════════════════
+            COMMAND WIDGETS — absorbed routes (Tasks, Portfolio,
+            Carbon, Site Map, Compliance). Two-column balanced grid.
+        ═══════════════════════════════════════════════════════════ */}
+        <motion.div {...m(0.13)} style={{ marginBottom: spacing['8'], display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+          <ErrorBoundary message="">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: spacing['4'] }}>
+              <DashboardMyTasks />
+              <DashboardCompliance projectId={projectId} />
+              <DashboardCarbon projectId={projectId} />
+              <DashboardSiteMapMini projectId={projectId} projectLat={projectLat} projectLon={projectLon} />
+            </div>
+          </ErrorBoundary>
+          <ErrorBoundary message="">
+            <DashboardPortfolio />
+          </ErrorBoundary>
+        </motion.div>
+
+        {/* ═══════════════════════════════════════════════════════════
             LOWER DECK — Adaptive layout: 2-col when both sides have
             content, single column when only forecast/critical path exist.
         ═══════════════════════════════════════════════════════════ */}
         <LowerDeck
-          forecastData={forecastData}
+          forecastData={hasRealLocation ? forecastData : undefined}
           isEmptyProject={isEmptyProject}
           delay={0.15}
           m={m}
@@ -547,45 +586,6 @@ const DashboardInner: React.FC = () => {
 
         {/* Onboarding for empty projects — before quick nav so it's prominent */}
         {isEmptyProject && <OnboardingChecklist navigate={navigate} reducedMotion={reducedMotion} />}
-
-        {/* ═══════════════════════════════════════════════════════════
-            QUICK NAV — Ghost pills. Barely there until you need them.
-            Separated from content above with subtle breathing room.
-        ═══════════════════════════════════════════════════════════ */}
-        <motion.nav {...m(0.2)} style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', paddingTop: spacing['2'] }}>
-          {[
-            { label: 'Owner Report', icon: <Sparkles size={12} />, path: '/reports/owner', accent: true },
-            { label: 'Daily Log', icon: <FileText size={12} />, path: '/daily-log' },
-            { label: 'Submittals', icon: <Send size={12} />, path: '/submittals' },
-            { label: 'Drawings', icon: <FileText size={12} />, path: '/drawings' },
-            { label: 'Punch List', icon: <ClipboardList size={12} />, path: '/punch-list' },
-            { label: 'Schedule', icon: <Calendar size={12} />, path: '/schedule' },
-          ].map((a) => (
-            <button
-              key={a.path}
-              onClick={() => navigate(a.path)}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '6px 14px',
-                backgroundColor: a.accent ? colors.primaryOrange : 'transparent',
-                color: a.accent ? colors.white : colors.textTertiary,
-                border: a.accent ? 'none' : `1px solid ${colors.borderSubtle}`,
-                borderRadius: borderRadius.full,
-                fontSize: '12px',
-                fontWeight: typography.fontWeight.medium,
-                fontFamily: typography.fontFamily,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                letterSpacing: '0.1px',
-              }}
-              onMouseEnter={(e) => { if (!a.accent) { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.color = colors.textPrimary; e.currentTarget.style.backgroundColor = colors.surfaceHover; } }}
-              onMouseLeave={(e) => { if (!a.accent) { e.currentTarget.style.borderColor = colors.borderSubtle; e.currentTarget.style.color = colors.textTertiary; e.currentTarget.style.backgroundColor = 'transparent'; } }}
-            >
-              {a.icon}
-              {a.label}
-            </button>
-          ))}
-        </motion.nav>
 
         <Suspense fallback={null}>
           <QuickRFIButton />
@@ -630,9 +630,10 @@ const LowerDeck: React.FC<LowerDeckProps> = React.memo(({ forecastData, isEmptyP
   return (
     <motion.div {...m(delay)} style={{
       display: 'grid',
-      gridTemplateColumns: hasBothColumns ? '1fr 1fr' : '1fr',
+      gridTemplateColumns: hasBothColumns ? '2fr 3fr' : '1fr',
       gap: spacing['4'],
       marginBottom: spacing['8'],
+      alignItems: 'start',
     }}>
       {/* Left: Forecast + Critical Path */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
@@ -655,19 +656,23 @@ const ForecastStrip: React.FC<{ forecastData: WeatherDay[] }> = ({ forecastData 
       5-Day Forecast
     </p>
     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-      {forecastData.slice(0, 5).map((day) => {
+      {forecastData.slice(0, 5).map((day, i) => {
         const isRainy = day.precip_probability >= 60;
+        const isToday = i === 0;
         return (
           <div key={day.date} style={{ textAlign: 'center', flex: 1 }}>
-            <p style={{ margin: 0, fontSize: '10px', color: colors.textTertiary, marginBottom: 4 }}>
-              {new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
+            <p style={{ margin: 0, fontSize: '10px', color: isToday ? colors.textPrimary : colors.textTertiary, fontWeight: isToday ? typography.fontWeight.semibold : typography.fontWeight.medium, marginBottom: 6 }}>
+              {isToday ? 'Today' : new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })}
             </p>
-            <span style={{ fontSize: 18, lineHeight: 1 }}>{day.icon}</span>
-            <p style={{ margin: 0, marginTop: 4, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 20, lineHeight: 1 }}>{day.icon}</span>
+            <p style={{ margin: 0, marginTop: 6, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
               {day.temp_high}°
             </p>
+            <p style={{ margin: 0, marginTop: 1, fontSize: '10px', color: colors.textTertiary, fontVariantNumeric: 'tabular-nums' }}>
+              {day.temp_low}°
+            </p>
             {isRainy && (
-              <p style={{ margin: 0, marginTop: 1, fontSize: '9px', color: colors.statusPending, fontWeight: typography.fontWeight.medium }}>
+              <p style={{ margin: 0, marginTop: 2, fontSize: '9px', color: colors.statusPending, fontWeight: typography.fontWeight.semibold }}>
                 {day.precip_probability}%
               </p>
             )}
@@ -700,35 +705,35 @@ const MetricTile: React.FC<MetricTileProps> = ({ label, value, unit, context, co
     onClick={onClick}
     style={{
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-      padding: `${spacing['4']} ${spacing['4']}`,
+      padding: `${spacing['5']} ${spacing['5']}`,
       backgroundColor: colors.surfaceRaised,
       border: `1px solid ${colors.borderSubtle}`,
       borderRadius: borderRadius.xl,
       cursor: 'pointer', textAlign: 'left', fontFamily: typography.fontFamily,
       transition: 'transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s ease, border-color 0.2s ease',
-      minHeight: 110,
+      minHeight: 120,
     }}
-    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.05)'; e.currentTarget.style.borderColor = 'var(--color-borderDefault)'; }}
+    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'var(--color-borderDefault)'; }}
     onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--color-borderSubtle)'; }}
   >
-    <span style={{ fontSize: '11px', fontWeight: typography.fontWeight.medium, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+    <span style={{ fontSize: '11px', fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
       {label}
     </span>
-    <div style={{ marginTop: spacing['2'] }}>
+    <div style={{ marginTop: spacing['3'] }}>
       <span style={{
-        fontSize: '24px', fontWeight: typography.fontWeight.bold, color,
+        fontSize: '28px', fontWeight: typography.fontWeight.bold, color,
         fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em', lineHeight: 1,
       }}>
         {value}
       </span>
-      {unit && <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, marginLeft: 2 }}>{unit}</span>}
+      {unit && <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary, marginLeft: 3 }}>{unit}</span>}
     </div>
-    <span style={{ fontSize: '11px', color: colors.textTertiary, marginTop: spacing['1.5'], lineHeight: 1.3 }}>
+    <span style={{ fontSize: '12px', color: colors.textTertiary, marginTop: spacing['2'], lineHeight: 1.3 }}>
       {context}
     </span>
     {bar && (
-      <div style={{ height: 2, borderRadius: 1, backgroundColor: colors.surfaceInset, marginTop: spacing['2'], overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${Math.min(bar.pct, 100)}%`, backgroundColor: bar.color, borderRadius: 1, transition: 'width 1s ease' }} />
+      <div style={{ height: 3, borderRadius: 2, backgroundColor: colors.surfaceInset, marginTop: spacing['2.5'], overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.min(bar.pct, 100)}%`, backgroundColor: bar.color, borderRadius: 2, transition: 'width 1s ease' }} />
       </div>
     )}
   </button>
@@ -820,7 +825,22 @@ const ENTITY_ROUTES: Record<string, string> = {
   rfi: '/rfis', submittal: '/submittals', change_order: '/change-orders',
   punch_item: '/punch-list', punch_list_item: '/punch-list', daily_log: '/daily-log',
   task: '/schedule', drawing: '/drawings', meeting: '/meetings', safety: '/safety',
+  incident: '/safety', safety_inspection: '/safety',
 };
+
+function getEntityRoute(entityType: string, entityId?: string): string | undefined {
+  const base = ENTITY_ROUTES[entityType];
+  if (!base || !entityId) return base;
+  // Deep-link to specific entity where supported
+  if (entityType === 'rfi') return `/rfis/${entityId}`;
+  if (entityType === 'submittal') return `/submittals/${entityId}`;
+  if (entityType === 'punch_item' || entityType === 'punch_list_item') return `/punch-list?item=${entityId}`;
+  if (entityType === 'change_order') return `/change-orders/${entityId}`;
+  if (entityType === 'drawing') return `/drawings/${entityId}`;
+  if (entityType === 'daily_log') return `/daily-log/${entityId}`;
+  if (entityType === 'incident' || entityType === 'safety_inspection') return `/safety?id=${entityId}`;
+  return base;
+}
 
 const ActivityFeedCard: React.FC = React.memo(() => {
   const projectId = useProjectId();
@@ -831,15 +851,19 @@ const ActivityFeedCard: React.FC = React.memo(() => {
   if (items.length === 0) return null;
 
   return (
-    <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, alignSelf: 'start' }}>
-      <p style={{ margin: 0, marginBottom: spacing['3'], fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        Recent Activity
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
+    <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+        <p style={{ margin: 0, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Recent Activity
+        </p>
+        <span style={{ fontSize: '10px', color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>{items.length} updates</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['0.5'] }}>
         {items.map((item) => {
           const { icon: Icon, color: iconColor } = TYPE_ICONS[item.entityType] ?? { icon: FileText, color: colors.textTertiary };
-          const route = ENTITY_ROUTES[item.entityType];
-          const verb = item.verb.replace(/_/g, ' ').replace(/^(rfi|submittal|punch|change order|daily log|task|drawing|meeting)\s*/i, '').trim() || 'updated';
+          const route = getEntityRoute(item.entityType, item.entityId);
+          const verb = item.verb.replace(/_/g, ' ').replace(/^(rfi|submittal|punch|change order|daily log|task|drawing|meeting|incident|safety inspection|safety)\s*/i, '').trim() || 'updated';
+          const displayName = item.actorName === 'Unknown User' ? 'You' : item.actorName;
           return (
             <button
               key={item.id}
@@ -859,9 +883,9 @@ const ActivityFeedCard: React.FC = React.memo(() => {
                 <Icon size={10} color={iconColor} />
               </div>
               <p style={{ margin: 0, flex: 1, fontSize: '11px', color: colors.textSecondary, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.actorName}</span>
+                <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{displayName}</span>
                 {' '}{verb}
-                {item.entityLabel && <> <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.entityLabel}</span></>}
+                {item.entityLabel && <> <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{item.entityLabel.replace(/^(Created|Updated|Deleted)\s+/i, '')}</span></>}
               </p>
               <span style={{ fontSize: '10px', color: colors.textTertiary, whiteSpace: 'nowrap', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                 {relativeTime(item.createdAt)}
