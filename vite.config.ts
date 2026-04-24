@@ -48,6 +48,10 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/@supabase/')) return 'vendor-supabase'
             // Heavy libs (lazy loaded per page)
             if (id.includes('/three/') || id.includes('/@react-three/')) return 'vendor-three'
+            // BIM / IFC WASM loader — only needed on /bim
+            if (id.includes('/web-ifc/') || id.includes('/web-ifc-three/')) return 'vendor-ifc'
+            // Zip handling (drawings bulk upload) — only pulled on drawings/upload paths
+            if (id.includes('/jszip/')) return 'vendor-jszip'
             // Split the PDF stack: generator (@react-pdf/renderer + pdf-lib) vs viewer (pdfjs-dist + react-pdf)
             if (id.includes('/@react-pdf/') || id.includes('/pdf-lib/')) return 'vendor-pdf-gen'
             if (id.includes('/pdfjs-dist/') || id.includes('/react-pdf/')) return 'vendor-pdf-viewer'

@@ -1,4 +1,4 @@
-// SiteSync AI — Real User Monitoring
+// SiteSync PM — Real User Monitoring
 // Tracks Core Web Vitals (LCP, FID, CLS, INP, TTFB) and custom performance metrics.
 // Sends to both Sentry Performance and PostHog for dual visibility.
 
