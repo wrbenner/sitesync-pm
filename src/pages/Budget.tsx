@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { useCopilotStore } from '../stores/copilotStore';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { PageContainer, Card, SectionHeader, MetricBox, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
+import { PageContainer, Card, SectionHeader, StatusTag, DetailPanel, RelatedItems, Skeleton, useToast } from '../components/Primitives';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { MetricCardSkeleton, TableSkeleton } from '../components/ui/Skeletons';
 import { Btn } from '../components/Primitives';
@@ -23,11 +23,11 @@ import { useAppNavigate, getRelatedItemsForChangeOrder } from '../utils/connecti
 import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
 import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
 import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
-import { Treemap } from '../components/budget/Treemap';
+// Treemap removed (Jobs redesign)
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { Download, AlertTriangle, ChevronRight, ChevronDown, ArrowRight, DollarSign, Sparkles, RefreshCw, Pencil, Trash2, ShieldCheck, TrendingUp, TrendingDown, Camera, GitCompare, CheckCircle, XCircle, Clock, Users, Calendar, Layers } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ChevronDown, ArrowRight, DollarSign, Sparkles, RefreshCw, Pencil, Trash2, ShieldCheck, TrendingUp, TrendingDown, GitCompare, CheckCircle, XCircle, Clock, Users, Calendar, Layers, Plus, MoreHorizontal } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
 import { buildWBSFromDivisions, computeContingency, computeCashFlow, computeMilestoneAlignment, generateSCurveData } from '../lib/budgetComputations';
 import type { WBSNode as ComputedWBSNode } from '../lib/budgetComputations';
@@ -48,7 +48,61 @@ import { getCOTypeConfig, getCOStatusConfig } from '../machines/changeOrderMachi
 import type { ChangeOrderState } from '../machines/changeOrderMachine';
 import { useNavigate } from 'react-router-dom'
 import { useBudgetRealtime } from '../hooks/queries/realtime'
-import { MetricFlash } from '../components/ui/RealtimeFlash';
+import { BudgetKPIs } from './budget/BudgetKPIs'
+import { BudgetTabBar } from './budget/BudgetTabBar'
+import type { BudgetTab } from './budget/BudgetTabBar'
+import {
+  useFinancialPeriods,
+  firstOfMonth,
+  type FinancialPeriod,
+  type FinancialPeriodStatus,
+} from '../hooks/queries/financial-periods'
+import {
+  useClosePeriod,
+  useReopenPeriod,
+  useCreatePeriod,
+} from '../hooks/mutations/financial-periods'
+import { Lock, Unlock } from 'lucide-react'
+
+// Jobs-style action-menu row. Two-line label + description, no chrome.
+const MenuItem: React.FC<{
+  label: string;
+  description?: string;
+  onClick: () => void;
+  testid?: string;
+}> = ({ label, description, onClick, testid }) => (
+  <button
+    onClick={onClick}
+    data-testid={testid}
+    style={{
+      display: 'block', width: '100%', textAlign: 'left',
+      padding: `${spacing['2']} ${spacing['3']}`,
+      border: 'none', background: 'transparent', cursor: 'pointer',
+      borderRadius: borderRadius.base,
+      fontFamily: typography.fontFamily,
+      transition: 'background-color 0.1s ease',
+    }}
+    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.surfaceHover; }}
+    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+  >
+    <div style={{
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.medium,
+      color: colors.textPrimary,
+    }}>
+      {label}
+    </div>
+    {description && (
+      <div style={{
+        marginTop: 2,
+        fontSize: typography.fontSize.caption,
+        color: colors.textTertiary,
+      }}>
+        {description}
+      </div>
+    )}
+  </button>
+);
 
 interface AddBudgetLineItemModalProps { projectId: string; onClose: () => void; onCreated: () => void }
 const AddBudgetLineItemModal: React.FC<AddBudgetLineItemModalProps> = ({ projectId, onClose, onCreated }) => {
@@ -356,6 +410,308 @@ const DivisionDrawerContent: React.FC<{ division: MappedDivision; projectId: str
   );
 };
 
+// ── Helpers shared by the new financial-hub tabs ──────────────────────────
+
+function formatMonthLabel(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+const PERIOD_STATUS_META: Record<FinancialPeriodStatus, { label: string; color: string; bg: string }> = {
+  open:          { label: 'Open',          color: colors.statusActive,   bg: colors.statusActiveSubtle   },
+  pending_close: { label: 'Pending Close', color: colors.statusPending,  bg: colors.statusPendingSubtle  },
+  closed:        { label: 'Closed',        color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+  reopened:      { label: 'Reopened',      color: colors.statusInfo,     bg: colors.statusInfoSubtle     },
+};
+
+// ── Cost Codes section ────────────────────────────────────────────────────
+// Compact division roll-up — click a row to open the existing DivisionDetail
+// drawer (which handles the cost-code-level drill + inline edit).
+interface CostCodesSectionProps {
+  projectId: string | null;
+  divisions: MappedDivision[];
+  canEdit: boolean;
+  fmt: (n: number) => string;
+  onOpenDivision: (d: MappedDivision) => void;
+}
+const CostCodesSection: React.FC<CostCodesSectionProps> = ({ divisions, fmt, onOpenDivision }) => {
+  if (divisions.length === 0) {
+    return (
+      <Card padding={spacing['6']}>
+        <EmptyState
+          icon={Layers}
+          title="No cost codes yet"
+          description="Import a budget or add line items with CSI division codes to see the division → cost code drill."
+        />
+      </Card>
+    );
+  }
+  return (
+    <div>
+      <SectionHeader title="Division → Cost Codes" />
+      <Card padding="0">
+        <div style={{ display: 'grid', gridTemplateColumns: '60px 2fr 110px 110px 110px 110px 80px', padding: `10px ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+          {['CSI', 'Division', 'Budget', 'Spent', 'Committed', 'Remaining', '% Spent'].map((h) => (
+            <span key={h} style={{ fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+          ))}
+        </div>
+        {divisions.map((d, i) => {
+          const remaining = d.budget - d.spent - d.committed;
+          const pct = d.budget > 0 ? Math.round((d.spent / d.budget) * 100) : 0;
+          return (
+            <div
+              key={d.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenDivision(d)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenDivision(d); } }}
+              style={{
+                display: 'grid', gridTemplateColumns: '60px 2fr 110px 110px 110px 110px 80px',
+                padding: `${spacing['3']} ${spacing['4']}`,
+                borderBottom: i < divisions.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                alignItems: 'center', cursor: 'pointer', transition: 'background-color 0.1s ease',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 600, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>{d.csi_division ?? '—'}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: colors.textPrimary }}>{d.name}</span>
+              <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.budget)}</span>
+              <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.spent)}</span>
+              <span style={{ fontSize: 13, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.committed)}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: remaining < 0 ? colors.statusCritical : colors.statusActive, fontVariantNumeric: 'tabular-nums' }}>{fmt(remaining)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
+                <div style={{ flex: 1, height: 6, backgroundColor: colors.surfaceInset, borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 90 ? colors.statusCritical : pct > 60 ? colors.statusPending : colors.statusActive, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontSize: 11, color: pct > 90 ? colors.statusCritical : colors.textTertiary, minWidth: 28, textAlign: 'right' }}>{pct}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </Card>
+    </div>
+  );
+};
+
+// ── Cash Flow section ─────────────────────────────────────────────────────
+// SCurve + a monthly phased forecast table derived from budget_items +
+// schedule_phases (already computed by computeCashFlow upstream).
+interface CashFlowRow { month: string; planned: number; actual: number; committed: number }
+interface CashFlowSectionProps {
+  totalBudget: number;
+  spent: number;
+  plannedData: number[];
+  actualData: number[];
+  labels: string[];
+  cashFlowSummary: CashFlowRow[];
+  fmt: (n: number) => string;
+}
+const CashFlowSection: React.FC<CashFlowSectionProps> = ({ totalBudget, spent, plannedData, actualData, labels, cashFlowSummary, fmt }) => (
+  <div>
+    <SectionHeader title="Cumulative Cost (S Curve)" />
+    <Card padding={spacing['5']}>
+      <div role="img" aria-label="S Curve — cumulative planned vs actual">
+        <SCurve totalBudget={totalBudget} spent={spent} plannedData={plannedData} actualData={actualData} labels={labels} />
+      </div>
+    </Card>
+
+    <div style={{ marginTop: spacing['5'] }}>
+      <SectionHeader title="Monthly Cash Flow" />
+      {cashFlowSummary.length === 0 ? (
+        <Card padding={spacing['5']}>
+          <EmptyState
+            icon={Calendar}
+            title="No phased forecast yet"
+            description="Cash flow needs schedule_phases + budget_items with date ranges. Link activities to line items to populate this."
+          />
+        </Card>
+      ) : (
+        <Card padding="0">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px', padding: `10px ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+            {['Month', 'Planned', 'Actual', 'Committed'].map((h) => (
+              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+            ))}
+          </div>
+          {cashFlowSummary.map((row, i) => (
+            <div key={`${row.month}-${i}`} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: i < cashFlowSummary.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: colors.textPrimary }}>{row.month}</span>
+              <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.planned)}</span>
+              <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.actual)}</span>
+              <span style={{ fontSize: 13, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.committed)}</span>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  </div>
+);
+
+// ── Period Close section ──────────────────────────────────────────────────
+// Monthly ledger backed by financial_periods. RLS enforces owner/admin on
+// close/reopen; the UI mirrors that gate with `canEdit` for snappy feedback.
+interface PeriodCloseSectionProps {
+  projectId: string | null;
+  periods: FinancialPeriod[];
+  isLoading: boolean;
+  canEdit: boolean;
+  isCreating: boolean;
+  onOpenClose: (p: FinancialPeriod) => void;
+  onOpenReopen: (p: FinancialPeriod) => void;
+  onTrackMonth: (monthIso: string) => void;
+}
+const PeriodCloseSection: React.FC<PeriodCloseSectionProps> = ({ periods, isLoading, canEdit, isCreating, onOpenClose, onOpenReopen, onTrackMonth }) => {
+  const thisMonthIso = firstOfMonth(new Date()).toISOString().slice(0, 10);
+  const isTracked = periods.some((p) => p.period_month === thisMonthIso);
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+        <SectionHeader title="Monthly Period Close" />
+        {canEdit && !isTracked && (
+          <Btn
+            variant="secondary"
+            size="sm"
+            icon={<Plus size={12} />}
+            disabled={isCreating}
+            onClick={() => onTrackMonth(thisMonthIso)}
+          >
+            {isCreating ? 'Adding…' : `Track ${formatMonthLabel(thisMonthIso)}`}
+          </Btn>
+        )}
+      </div>
+
+      {isLoading ? (
+        <Card padding={spacing['5']}>
+          <Skeleton height="120px" />
+        </Card>
+      ) : periods.length === 0 ? (
+        <Card padding={spacing['6']}>
+          <EmptyState
+            icon={Calendar}
+            title="No periods tracked yet"
+            description={canEdit ? 'Click "Track this month" above to start tracking monthly close.' : 'Ask an owner or admin to begin tracking monthly periods.'}
+          />
+        </Card>
+      ) : (
+        <Card padding="0">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 200px 200px', padding: `10px ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+            {['Period', 'Status', 'Closed / Reopened', 'Actions'].map((h) => (
+              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+            ))}
+          </div>
+          {periods.map((p, i) => {
+            const meta = PERIOD_STATUS_META[p.status];
+            const trail =
+              p.status === 'reopened' && p.reopened_at
+                ? `Reopened ${new Date(p.reopened_at).toLocaleDateString()}`
+                : p.status === 'closed' && p.closed_at
+                  ? `Closed ${new Date(p.closed_at).toLocaleDateString()}`
+                  : '—';
+            const canClose = canEdit && p.status !== 'closed';
+            const canReopen = canEdit && p.status === 'closed';
+            return (
+              <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 200px 200px', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: i < periods.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: colors.textPrimary }}>{formatMonthLabel(p.period_month)}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: meta.color, backgroundColor: meta.bg, padding: '3px 8px', borderRadius: borderRadius.full, textAlign: 'center', justifySelf: 'start' }}>{meta.label}</span>
+                <span style={{ fontSize: 12, color: colors.textSecondary }}>{trail}</span>
+                <div style={{ display: 'flex', gap: spacing['2'] }}>
+                  {canClose && (
+                    <Btn size="sm" variant="secondary" icon={<Lock size={12} />} onClick={() => onOpenClose(p)}>
+                      {p.status === 'pending_close' ? 'Finish Close' : 'Close'}
+                    </Btn>
+                  )}
+                  {canReopen && (
+                    <Btn size="sm" variant="ghost" icon={<Unlock size={12} />} onClick={() => onOpenReopen(p)}>
+                      Reopen
+                    </Btn>
+                  )}
+                  {!canEdit && <span style={{ fontSize: 11, color: colors.textTertiary }}>View only</span>}
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// ── Snapshots section ─────────────────────────────────────────────────────
+// Backed by the existing budget_snapshots table. Tiny inline sparkline of
+// total_budget over time so trend reads at a glance.
+interface SnapshotsSectionProps {
+  snapshots: BudgetSnapshotRow[];
+  fmt: (n: number) => string;
+  canCreate: boolean;
+  onCreate: () => void | Promise<void>;
+}
+const SnapshotsSection: React.FC<SnapshotsSectionProps> = ({ snapshots, fmt, canCreate, onCreate }) => {
+  const sparkline = (() => {
+    if (snapshots.length < 2) return null;
+    const series = [...snapshots].reverse().map((s) => s.total_budget);
+    const min = Math.min(...series);
+    const max = Math.max(...series);
+    const range = max - min || 1;
+    const w = 120;
+    const h = 28;
+    const step = series.length > 1 ? w / (series.length - 1) : 0;
+    const d = series
+      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${i * step} ${h - ((v - min) / range) * h}`)
+      .join(' ');
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-label="Total budget trend">
+        <path d={d} stroke={colors.primaryOrange} strokeWidth={1.5} fill="none" />
+      </svg>
+    );
+  })();
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+        <div>
+          <SectionHeader title="Budget Snapshots" />
+          {sparkline && (
+            <div style={{ marginTop: -8, marginLeft: 2 }}>{sparkline}</div>
+          )}
+        </div>
+        {canCreate && (
+          <Btn variant="secondary" size="sm" icon={<Plus size={12} />} onClick={() => void onCreate()}>
+            Take Snapshot
+          </Btn>
+        )}
+      </div>
+      {snapshots.length === 0 ? (
+        <Card padding={spacing['6']}>
+          <EmptyState
+            icon={TrendingUp}
+            title="No snapshots yet"
+            description={canCreate ? 'Take a snapshot to freeze the current budget state for period-over-period comparison.' : 'Ask a budget editor to capture a snapshot.'}
+          />
+        </Card>
+      ) : (
+        <Card padding="0">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px', padding: `10px ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+            {['Snapshot', 'Total Budget', 'Spent', 'Committed'].map((h) => (
+              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+            ))}
+          </div>
+          {snapshots.map((s, i) => (
+            <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 140px 140px', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: i < snapshots.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: colors.textPrimary }}>{s.name}</div>
+                <div style={{ fontSize: 11, color: colors.textTertiary }}>{new Date(s.snapshot_date).toLocaleDateString()}</div>
+              </div>
+              <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(s.total_budget)}</span>
+              <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(s.total_spent)}</span>
+              <span style={{ fontSize: 13, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' }}>{fmt(s.total_committed)}</span>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  );
+};
+
 const BudgetPage: React.FC = () => {
   const appNavigate = useAppNavigate();
   const navigate = useNavigate();
@@ -371,9 +727,25 @@ const BudgetPage: React.FC = () => {
   const { data: payApps } = usePayApplications(projectId);
   const [selectedCO, setSelectedCO] = useState<NonNullable<typeof costData>['changeOrders'][0] | null>(null);
   const [selectedDivision, setSelectedDivision] = useState<MappedDivision | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'earned-value'>('overview');
+  const [activeTab, setActiveTab] = useState<BudgetTab>('overview');
+  // Primary financial-hub tab. Absorbs the retired /financials and
+  // /cost-management pages — the existing BudgetTabBar (overview/WBS/
+  // change-orders/earned-value) stays alive under the Summary view.
+  type MainView = 'summary' | 'cost-codes' | 'cash-flow' | 'period-close' | 'snapshots';
+  const [mainView, setMainView] = useState<MainView>('summary');
+  const [closingPeriod, setClosingPeriod] = useState<FinancialPeriod | null>(null);
+  const [reopeningPeriod, setReopeningPeriod] = useState<FinancialPeriod | null>(null);
+  const [periodCloseStatus, setPeriodCloseStatus] = useState<'pending_close' | 'closed'>('closed');
+  const [periodCloseNotes, setPeriodCloseNotes] = useState('');
+  const [periodReopenNotes, setPeriodReopenNotes] = useState('');
+  const financialPeriodsQuery = useFinancialPeriods(projectId ?? undefined);
+  const closePeriodMutation = useClosePeriod();
+  const reopenPeriodMutation = useReopenPeriod();
+  const createPeriodMutation = useCreatePeriod();
   const [uploadOpen, setUploadOpen] = useState(false);
   const [drawUploadOpen, setDrawUploadOpen] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [addLineOpen, setAddLineOpen] = useState(false);
   const qc = useQueryClient();
   const [hoveredDivId, setHoveredDivId] = useState<string | null>(null);
@@ -465,34 +837,13 @@ const BudgetPage: React.FC = () => {
     [projectFinancials, divisionFinancials]
   );
 
-  const aiConfigured = aiService.isConfigured();
-  const { data: aiInsightsData, loading: aiInsightsLoading, refetch: refreshAiInsights } = useQuery(
-    `ai-insights-budget-${projectId}`,
-    () => getAiInsights(projectId!, { summary: projectFinancials, divisions: divisionFinancials }),
-    { enabled: aiConfigured && !projectFinancials.isEmpty && !!projectId },
-  );
+  // AI insights panel removed (Jobs redesign — critical anomalies banner is sufficient)
 
   const committed = useMemo(() => divisions.reduce((sum, d) => sum + d.committed, 0), [divisions]);
   const spent = useMemo(() => divisions.reduce((sum, d) => sum + d.spent, 0), [divisions]);
   const remaining = useMemo(() => (projectData?.totalValue ?? 0) - spent - committed, [projectData?.totalValue, spent, committed]);
 
-  // Budget Summary by Category (DakiyBuilds 5-category model)
-  const categorySummary = useMemo(() => {
-    const map = new Map<string, { category: string; budgeted: number; spent: number; committed: number }>();
-    for (const d of divisions) {
-      const key = d.csi_division || d.name || 'General';
-      const existing = map.get(key) || { category: key, budgeted: 0, spent: 0, committed: 0 };
-      existing.budgeted += d.budget;
-      existing.spent += d.spent;
-      existing.committed += d.committed;
-      map.set(key, existing);
-    }
-    return Array.from(map.values()).map((c) => ({
-      ...c,
-      remaining: c.budgeted - c.spent,
-      pctUsed: c.budgeted > 0 ? Math.round((c.spent / c.budgeted) * 100) : 0,
-    }));
-  }, [divisions]);
+  // Budget Summary by Category — REMOVED (Jobs redesign)
 
   // Budget Health status
   const budgetHealthStatus = useMemo(() => {
@@ -550,11 +901,7 @@ const BudgetPage: React.FC = () => {
     [divisions, changeOrders, scheduleActivities, projectData?.startDate, projectData?.scheduledEndDate],
   );
 
-  // Real milestone alignment from schedule activities
-  const milestoneAlignment = useMemo(
-    () => computeMilestoneAlignment(divisions, scheduleActivities),
-    [divisions, scheduleActivities],
-  );
+  // Milestone alignment removed from budget page (Jobs redesign — belongs on Schedule page)
 
   // Real WBS hierarchy from CSI division codes
   const wbsNodes = useMemo(
@@ -646,17 +993,6 @@ const BudgetPage: React.FC = () => {
     setEditingCell(null);
   };
 
-  const pillBase: React.CSSProperties = {
-    padding: `${spacing['1']} ${spacing['3']}`,
-    borderRadius: borderRadius.full,
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    fontFamily: typography.fontFamily,
-    transition: 'all 0.15s ease',
-  };
-
   return (
     <PageContainer
       title="Budget"
@@ -664,84 +1000,198 @@ const BudgetPage: React.FC = () => {
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
           <PresenceAvatars page="budget" size={28} />
+
+          {/* Primary "+ Add" menu — collapses Add Line Item / Import Budget /
+              Upload Draw Report into one action. */}
           <PermissionGate permission="budget.edit">
-            <Btn
-              variant="secondary"
-              size="sm"
-              icon={<Camera size={14} />}
-              onClick={async () => {
-                try {
-                  const saved = await budgetSnapshotService.saveSnapshot({
-                    projectId: projectId!,
-                    name: `Snapshot ${new Date().toLocaleDateString()}`,
-                    totalBudget: projectData?.totalValue ?? 0,
-                    totalSpent: spent,
-                    totalCommitted: committed,
-                    divisionData: divisions.map(d => ({ division: d.name, budget: d.budget, spent: d.spent, committed: d.committed })),
-                  });
-                  if (saved) {
-                    setSnapshots(prev => [saved, ...prev]);
-                    toast.success('Budget snapshot saved to database');
-                  } else {
-                    // Fallback: keep in memory if table doesn't exist yet
-                    toast.success('Budget snapshot saved (local)');
-                  }
-                } catch {
-                  toast.error('Failed to save snapshot');
-                }
-              }}
-            >
-              Save Snapshot
-            </Btn>
+            <div style={{ position: 'relative' }}>
+              <Btn
+                variant="primary"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={() => { setAddMenuOpen((o) => !o); setMoreMenuOpen(false); }}
+                data-testid="budget-add-menu"
+              >
+                Add
+              </Btn>
+              {addMenuOpen && (
+                <>
+                  <div
+                    onClick={() => setAddMenuOpen(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+                  />
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+                    minWidth: 220, backgroundColor: colors.surfaceRaised,
+                    borderRadius: borderRadius.md, boxShadow: shadows.dropdown,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    padding: spacing['1'], zIndex: 999,
+                    display: 'flex', flexDirection: 'column',
+                  }}>
+                    <MenuItem
+                      label="Add line item"
+                      description="Create a single SOV line"
+                      onClick={() => { setAddMenuOpen(false); setAddLineOpen(true); }}
+                      testid="create-budget-item-button"
+                    />
+                    <MenuItem
+                      label="Import budget"
+                      description="Upload Excel schedule of values"
+                      onClick={() => { setAddMenuOpen(false); setUploadOpen(true); }}
+                      testid="import-budget-button"
+                    />
+                    <MenuItem
+                      label="Upload draw report"
+                      description="AIA G702/G703 — auto-updates actuals"
+                      onClick={() => { setAddMenuOpen(false); setDrawUploadOpen(true); }}
+                      testid="upload-draw-report-button"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </PermissionGate>
-          {snapshots.length > 0 && (
+
+          {/* Overflow menu — snapshot, compare, export. Secondary actions. */}
+          <div style={{ position: 'relative' }}>
             <Btn
               variant="ghost"
               size="sm"
-              icon={<GitCompare size={14} />}
-              onClick={() => { setShowSnapshotCompare(prev => !prev); if (!compareSnapshotId && snapshots.length) setCompareSnapshotId(snapshots[0].id); }}
+              aria-label="More actions"
+              onClick={() => { setMoreMenuOpen((o) => !o); setAddMenuOpen(false); }}
             >
-              Compare
+              <MoreHorizontal size={14} />
             </Btn>
-          )}
-          <PermissionGate permission="budget.edit">
-            <Btn variant="primary" size="sm" onClick={() => setAddLineOpen(true)} data-testid="create-budget-item-button">Add Line Item</Btn>
-          </PermissionGate>
-          <PermissionGate permission="budget.edit">
-            <Btn variant="secondary" size="sm" onClick={() => setUploadOpen(true)} data-testid="import-budget-button">Import Budget</Btn>
-          </PermissionGate>
-          <PermissionGate permission="budget.edit">
-            <Btn variant="secondary" size="sm" onClick={() => setDrawUploadOpen(true)} data-testid="upload-draw-report-button">Upload Draw Report</Btn>
-          </PermissionGate>
-          <Btn
-            variant="secondary"
-            size="sm"
-            icon={<Download size={14} />}
-            onClick={() => {
-              const projectName = projectData?.name ?? 'Project';
-              const divisionsPayload = divisionRows.map((d) => ({
-                division: d.name ?? d.code ?? 'Division',
-                budget: Number(d.budget ?? 0),
-                spent: Number(d.spent ?? 0),
-                committed: Number(d.committed ?? 0),
-                percentComplete: Number(d.progress ?? 0),
-              }));
-              const changeOrdersPayload = allChangeOrders.map((co) => ({
-                number: String(co.number ?? co.id ?? ''),
-                description: String(co.description ?? co.title ?? ''),
-                amount: Number(co.amount ?? 0),
-                status: String(co.status ?? ''),
-              }));
-              exportBudgetXlsx(projectName, { divisions: divisionsPayload, changeOrders: changeOrdersPayload });
-              addToast('success', 'Budget report exported');
-            }}
-            data-testid="export-budget-button"
-          >
-            Export XLSX
-          </Btn>
+            {moreMenuOpen && (
+              <>
+                <div
+                  onClick={() => setMoreMenuOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+                />
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+                  minWidth: 220, backgroundColor: colors.surfaceRaised,
+                  borderRadius: borderRadius.md, boxShadow: shadows.dropdown,
+                  border: `1px solid ${colors.borderSubtle}`,
+                  padding: spacing['1'], zIndex: 999,
+                  display: 'flex', flexDirection: 'column',
+                }}>
+                  {canEditBudget && (
+                    <MenuItem
+                      label="Save snapshot"
+                      description="Freeze current state for comparison"
+                      onClick={async () => {
+                        setMoreMenuOpen(false);
+                        try {
+                          const saved = await budgetSnapshotService.saveSnapshot({
+                            projectId: projectId!,
+                            name: `Snapshot ${new Date().toLocaleDateString()}`,
+                            totalBudget: projectData?.totalValue ?? 0,
+                            totalSpent: spent,
+                            totalCommitted: committed,
+                            divisionData: divisions.map(d => ({ division: d.name, budget: d.budget, spent: d.spent, committed: d.committed })),
+                          });
+                          if (saved) {
+                            setSnapshots(prev => [saved, ...prev]);
+                            toast.success('Budget snapshot saved');
+                          } else {
+                            toast.success('Budget snapshot saved (local)');
+                          }
+                        } catch {
+                          toast.error('Failed to save snapshot');
+                        }
+                      }}
+                    />
+                  )}
+                  {snapshots.length > 0 && (
+                    <MenuItem
+                      label={showSnapshotCompare ? 'Hide comparison' : 'Compare snapshots'}
+                      description={snapshots.length === 1 ? '1 snapshot available' : `${snapshots.length} snapshots available`}
+                      onClick={() => {
+                        setMoreMenuOpen(false);
+                        setShowSnapshotCompare(prev => !prev);
+                        if (!compareSnapshotId && snapshots.length) setCompareSnapshotId(snapshots[0].id);
+                      }}
+                    />
+                  )}
+                  <MenuItem
+                    label="Export XLSX"
+                    description="Download budget + change orders"
+                    onClick={() => {
+                      setMoreMenuOpen(false);
+                      const projectName = projectData?.name ?? 'Project';
+                      const divisionsPayload = divisionRows.map((d) => ({
+                        division: d.name ?? d.code ?? 'Division',
+                        budget: Number(d.budget ?? 0),
+                        spent: Number(d.spent ?? 0),
+                        committed: Number(d.committed ?? 0),
+                        percentComplete: Number(d.progress ?? 0),
+                      }));
+                      const changeOrdersPayload = allChangeOrders.map((co) => ({
+                        number: String(co.number ?? co.id ?? ''),
+                        description: String(co.description ?? co.title ?? ''),
+                        amount: Number(co.amount ?? 0),
+                        status: String(co.status ?? ''),
+                      }));
+                      exportBudgetXlsx(projectName, { divisions: divisionsPayload, changeOrders: changeOrdersPayload });
+                      addToast('success', 'Budget report exported');
+                    }}
+                    testid="export-budget-button"
+                  />
+                </div>
+              </>
+            )}
+          </div>
         </div>
       }
     >
+      {/* ── Primary financial-hub tabs ─────────────────────────────
+          Budget absorbed /financials (Period Close) and /cost-management
+          (Cost Codes drill). The existing BudgetTabBar still drives the
+          Summary sub-views (overview / WBS / change-orders / earned-value). */}
+      <div
+        role="tablist"
+        aria-label="Budget views"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          marginBottom: spacing['4'],
+          borderBottom: `1px solid ${colors.borderLight}`,
+          paddingBottom: spacing['1'],
+        }}
+      >
+        {([
+          { id: 'summary' as const,      label: 'Summary' },
+          { id: 'cost-codes' as const,   label: 'Cost Codes' },
+          { id: 'cash-flow' as const,    label: 'Cash Flow' },
+          { id: 'period-close' as const, label: 'Period Close' },
+          { id: 'snapshots' as const,    label: 'Snapshots' },
+        ]).map((tab) => {
+          const active = mainView === tab.id;
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setMainView(tab.id)}
+              style={{
+                padding: `${spacing['2']} ${spacing['3']}`,
+                border: 'none',
+                borderBottom: active ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+                background: 'none',
+                cursor: 'pointer',
+                fontSize: typography.fontSize.sm,
+                fontFamily: typography.fontFamily,
+                fontWeight: active ? typography.fontWeight.medium : typography.fontWeight.normal,
+                color: active ? colors.primaryOrange : colors.textSecondary,
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       <BudgetUpload open={uploadOpen} onClose={() => setUploadOpen(false)} onSuccess={() => setUploadOpen(false)} />
       {projectId && (
         <DrawReportUpload
@@ -764,6 +1214,7 @@ const BudgetPage: React.FC = () => {
         />
       )}
 
+      {mainView === 'summary' && (<>
       {isEmpty ? (
         <div style={{ padding: spacing['6'], backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderDefault}` }}>
           <EmptyState
@@ -826,153 +1277,22 @@ const BudgetPage: React.FC = () => {
         </div>
       )}
 
-      {/* Summary Metrics */}
-      <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
-        <AnimatePresence>
-          {isFlashing && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.15 }}
-              aria-live="polite"
-              aria-atomic="true"
-              style={{
-                position: 'absolute',
-                top: -8,
-                right: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing['1'],
-                padding: `2px ${spacing['2']}`,
-                backgroundColor: colors.primaryOrange,
-                borderRadius: borderRadius.full,
-                zIndex: 10,
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.white, display: 'inline-block', flexShrink: 0 }} />
-              <span style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.white, whiteSpace: 'nowrap' }}>
-                Budget updated just now
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <motion.div
-          role="group"
-          aria-label="Budget summary metrics"
-          variants={staggerContainer}
-          initial={reducedMotion ? false : 'hidden'}
-          animate="visible"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: spacing.lg,
-          }}
-        >
-          {([
-            { label: 'Total Project', value: projectData.totalValue, format: 'currency' as const },
-            { label: 'Spent to Date', value: spent, format: 'currency' as const, previousValue: previousBilledToDate },
-            { label: 'Committed', value: committed, format: 'currency' as const },
-            { label: 'Remaining', value: remaining, format: 'currency' as const, colorOverride: remaining >= 0 ? 'success' as const : 'danger' as const },
-          ]).map(({ label, value, format, previousValue, colorOverride }) => (
-            <motion.div key={label} variants={fadeUp}>
-              <MetricFlash isFlashing={isFlashing}>
-                <MetricBox label={label} value={value} format={format} previousValue={previousValue} colorOverride={colorOverride} />
-              </MetricFlash>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
+      {/* ── Premium KPI Cards + Contingency Bar ── */}
+      <BudgetKPIs
+        totalBudget={projectData.totalValue}
+        spent={spent}
+        committed={committed}
+        remaining={remaining}
+        contingencyRemaining={contingencyRemaining}
+        contingencyTotal={contingencyBudget}
+        contingencyPct={contingencyPct}
+        previousBilledToDate={previousBilledToDate}
+        isFlashing={isFlashing}
+      />
 
-      {/* Budget Health Status — compact indicator (detailed metrics shown in summary above) */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: spacing['2'],
-        marginBottom: spacing['4'],
-        padding: `${spacing['2']} ${spacing['3']}`,
-        backgroundColor: budgetHealthStatus.bg,
-        border: `1px solid ${budgetHealthStatus.color}`,
-        borderRadius: borderRadius.base,
-        width: 'fit-content',
-      }}>
-        <ShieldCheck size={14} color={budgetHealthStatus.color} />
-        <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: budgetHealthStatus.color }}>
-          {budgetHealthStatus.label}
-        </span>
-        {contingencyBudget > 0 && (
-          <span style={{ fontSize: typography.fontSize.caption, color: budgetHealthStatus.color, opacity: 0.8 }}>
-            · Contingency: {fmt(contingencyRemaining)} remaining ({100 - contingencyPct}%)
-          </span>
-        )}
-      </div>
+      {/* Budget Summary by Category — REMOVED (Jobs redesign: redundant with Division Health) */}
 
-      {/* Budget Summary by Category (DakiyBuilds 5-category health bars) */}
-      {categorySummary.length > 0 && (
-        <motion.div
-          variants={fadeUp}
-          initial={reducedMotion ? false : 'hidden'}
-          animate="visible"
-          style={{ marginBottom: spacing['4'] }}
-        >
-          <SectionHeader title="Budget Summary by Category" />
-          <Card padding="0">
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px 1fr', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
-              {['Category', 'Budgeted', 'Spent', 'Committed', 'Remaining', '% Used', 'Health'].map((h) => (
-                <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
-              ))}
-            </div>
-            {categorySummary.map((cat, idx) => {
-              const pct = cat.pctUsed;
-              const barColor = pct > 100 ? '#991b1b' : pct > 70 ? colors.statusCritical : pct > 30 ? colors.statusPending : colors.statusActive;
-              return (
-                <div key={cat.category} style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px 1fr', padding: `${spacing['3']} ${spacing['4']}`, borderBottom: idx < categorySummary.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none', alignItems: 'center' }}>
-                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.category}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(cat.budgeted)}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(cat.spent)}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(cat.committed)}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: cat.remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmt(cat.remaining)}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: barColor }}>
-                    {pct}%
-                    {pct > 100 && <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold, color: '#991b1b', marginLeft: 4 }}>OVER</span>}
-                  </span>
-                  <div style={{ paddingRight: spacing['2'] }}>
-                    <div style={{ height: 8, borderRadius: 4, backgroundColor: colors.surfaceInset, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 4, width: `${Math.min(pct, 100)}%`, backgroundColor: barColor, transition: 'width 0.3s' }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {/* Totals row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px 100px 100px 80px 1fr', padding: `${spacing['3']} ${spacing['4']}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>Total</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(categorySummary.reduce((s, c) => s + c.budgeted, 0))}</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(categorySummary.reduce((s, c) => s + c.spent, 0))}</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{fmt(categorySummary.reduce((s, c) => s + c.committed, 0))}</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: remaining >= 0 ? colors.statusActive : colors.statusCritical }}>{fmt(categorySummary.reduce((s, c) => s + c.remaining, 0))}</span>
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.textPrimary }}>{projectData.totalValue > 0 ? Math.round((spent / projectData.totalValue) * 100) : 0}%</span>
-              <div />
-            </div>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Contingency Drawdown */}
-      <motion.div
-        variants={fadeUp}
-        initial={reducedMotion ? false : 'hidden'}
-        animate="visible"
-        style={{ marginBottom: spacing['4'] }}
-      >
-        <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Contingency Drawdown</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <div role="progressbar" aria-label="Contingency drawdown" aria-valuenow={contingencyPct} aria-valuemin={0} aria-valuemax={100} style={{ flex: 1, height: 12, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, overflow: 'hidden', display: 'flex' }}>
-            <div style={{ width: `${contingencyPct}%`, height: '100%', backgroundColor: colors.statusPending, borderRadius: borderRadius.full }} />
-          </div>
-          <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {fmt(contingencyRemaining)} of {fmt(contingencyBudget)} remaining
-          </span>
-        </div>
-      </motion.div>
+      {/* Contingency Drawdown — REMOVED (Jobs redesign: already shown in health badge) */}
 
       {/* ── Budget Snapshot Comparison ── */}
       {showSnapshotCompare && snapshots.length > 0 && (() => {
@@ -1184,271 +1504,19 @@ const BudgetPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* ── Cost-Loaded Schedule Integration ── */}
-      <motion.div
-        variants={fadeUp}
-        initial={reducedMotion ? false : 'hidden'}
-        animate="visible"
-        style={{ marginBottom: spacing['4'] }}
-      >
-        <SectionHeader title="Schedule Integration" action={
-          <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>
-            <Calendar size={12} /> Cash Flow Projection
-          </span>
-        } />
-        <Card padding={spacing['4']}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['4'] }}>
-            {/* Schedule milestones table */}
-            <div>
-              <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Milestone Spend Alignment</p>
-              <div style={{ border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 80px 80px 80px 80px', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                  {['Milestone', 'Planned', 'Actual', 'Plan $', 'Actual $'].map(h => (
-                    <span key={h} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
-                  ))}
-                </div>
-                {milestoneAlignment.length === 0 && (
-                  <div style={{ padding: `${spacing['3']} ${spacing['3']}`, textAlign: 'center' }}>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>No milestone data — add schedule activities to see alignment</span>
-                  </div>
-                )}
-                {milestoneAlignment.map((m, i, arr) => {
-                  const variance = m.actualSpend ? m.actualSpend - m.plannedSpend : null;
-                  return (
-                    <div key={m.milestone} style={{
-                      display: 'grid', gridTemplateColumns: '1.5fr 80px 80px 80px 80px',
-                      padding: `${spacing['2']} ${spacing['3']}`,
-                      borderBottom: i < arr.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                      alignItems: 'center',
-                      backgroundColor: variance && variance > 0 ? 'rgba(224, 82, 82, 0.04)' : 'transparent',
-                    }}>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{m.milestone}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{m.planned.slice(5)}</span>
-                      <span style={{ fontSize: typography.fontSize.caption, color: m.actual ? colors.textPrimary : colors.textTertiary }}>{m.actual ? m.actual.slice(5) : '--'}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(m.plannedSpend)}</span>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: variance && variance > 0 ? colors.statusCritical : colors.textPrimary }}>
-                        {m.actualSpend ? fmt(m.actualSpend) : '--'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Cash flow projection summary */}
-            <div>
-              <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.4px', margin: 0, marginBottom: spacing['2'] }}>Cash Flow Summary</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
-                {[
-                  { label: 'Planned Spend (This Month)', value: fmt(cashFlowSummary.plannedSpendThisMonth), color: colors.statusInfo },
-                  { label: 'Actual Spend (MTD)', value: fmt(cashFlowSummary.actualSpendMTD), color: colors.statusActive },
-                  { label: 'Forecast Next 30 Days', value: fmt(cashFlowSummary.forecastNext30), color: colors.primaryOrange },
-                  { label: 'Schedule Variance (SV)', value: `${cashFlowSummary.scheduleVariance >= 0 ? '' : '-'}${fmt(Math.abs(cashFlowSummary.scheduleVariance))}`, color: cashFlowSummary.scheduleVariance >= 0 ? colors.statusActive : colors.statusCritical },
-                  { label: 'Cost Performance Index', value: cashFlowSummary.costPerformanceIndex.toFixed(2), color: cashFlowSummary.costPerformanceIndex >= 1.0 ? colors.statusActive : colors.statusPending },
-                ].map(item => (
-                  <div key={item.label} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: `${spacing['3']} ${spacing['3']}`,
-                    backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base,
-                    border: `1px solid ${colors.borderSubtle}`,
-                  }}>
-                    <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{item.label}</span>
-                    <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.bold, color: item.color }}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-              {/* Mini spend curve bars */}
-              <div style={{ marginTop: spacing['3'] }}>
-                <p style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, margin: 0, marginBottom: spacing['2'] }}>Monthly Spend vs Plan</p>
-                <div style={{ display: 'flex', gap: spacing['1'], alignItems: 'flex-end', height: 60 }}>
-                  {(() => {
-                    // Show last 6 months of real cash flow data
-                    const recentMonths = cashFlowSummary.monthlyData
-                      .filter(m => m.planned > 0 || m.actual > 0)
-                      .slice(-6);
-                    if (recentMonths.length === 0) return <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>No spend data yet</span>;
-                    const max = Math.max(...recentMonths.map(m => Math.max(m.planned, m.actual)), 1);
-                    return recentMonths.map(bar => {
-                      const shortMonth = bar.month.split(' ')[0]; // "Jan 2026" → "Jan"
-                    return (
-                      <div key={bar.monthKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <div style={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 48, width: '100%' }}>
-                          <div style={{ flex: 1, height: `${(bar.planned / max) * 100}%`, backgroundColor: colors.statusInfoSubtle, borderRadius: 2 }} title={`Plan: ${fmt(bar.planned)}`} />
-                          <div style={{ flex: 1, height: `${(bar.actual / max) * 100}%`, backgroundColor: bar.actual > bar.planned ? colors.statusCritical : colors.statusActive, borderRadius: 2, opacity: 0.7 }} title={`Actual: ${fmt(bar.actual)}`} />
-                        </div>
-                        <span style={{ fontSize: '9px', color: colors.textTertiary }}>{shortMonth}</span>
-                      </div>
-                    );
-                  });
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </motion.div>
+      {/* Schedule Integration — REMOVED (Jobs redesign: belongs on Schedule page, not Budget) */}
 
-      {/* AI Insights Panel */}
-      {aiConfigured ? (
-        !aiInsightsLoading && (aiInsightsData?.insights ?? []).length > 0 ? (
-          <motion.div
-            variants={fadeUp}
-            initial={reducedMotion ? false : 'hidden'}
-            animate="visible"
-            style={{
-              marginBottom: spacing['4'],
-              backgroundColor: colors.surfaceRaised,
-              border: `1px solid ${colors.border}`,
-              borderRadius: borderRadius.base,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: `${spacing['3']} ${spacing['4']}`,
-                borderBottom: `1px solid ${colors.border}`,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-                <Sparkles size={14} color={colors.primaryOrange} />
-                <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                  AI Variance Analysis
-                </span>
-              </div>
-              <button
-                onClick={() => void refreshAiInsights()}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing['1'],
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: `${spacing['1']} ${spacing['2']}`,
-                  borderRadius: borderRadius.sm,
-                  fontSize: typography.fontSize.caption,
-                  color: colors.textTertiary,
-                  fontFamily: typography.fontFamily,
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = colors.textTertiary; }}
-              >
-                <RefreshCw size={12} />
-                Refresh Analysis
-              </button>
-            </div>
-            {(aiInsightsData?.insights ?? []).slice(0, 3).map((insight) => (
-              <div
-                key={insight.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: spacing['3'],
-                  padding: `${spacing['3']} ${spacing['4']}`,
-                  borderBottom: `1px solid ${colors.border}`,
-                }}
-              >
-                <div
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: insight.severity === 'critical' ? colors.statusCritical : colors.statusPending,
-                    flexShrink: 0,
-                    marginTop: 5,
-                  }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, marginBottom: spacing['1'], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                    {insight.title}
-                  </p>
-                  <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.5 }}>
-                    {insight.description}
-                  </p>
-                </div>
-                <button
-                  onClick={() => navigate('/copilot', { state: { initialContext: 'budget', initialMessage: `Analyze: ${insight.title}` } })}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    fontSize: typography.fontSize.caption,
-                    color: colors.primaryOrange,
-                    fontFamily: typography.fontFamily,
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                  }}
-                >
-                  View Details
-                </button>
-              </div>
-            ))}
-          </motion.div>
-        ) : null
-      ) : (
-        <div
-          style={{
-            marginBottom: spacing['4'],
-            padding: `${spacing['3']} ${spacing['4']}`,
-            backgroundColor: colors.surfaceInset,
-            borderRadius: borderRadius.base,
-            fontSize: typography.fontSize.sm,
-            color: colors.textTertiary,
-          }}
-        >
-          AI analysis unavailable — configure OpenAI key in Settings
-        </div>
-      )}
+      {/* AI Insights Panel — REMOVED (Jobs redesign: critical anomalies banner at top is sufficient) */}
 
-      {/* Tab Toggle */}
-      <div role="tablist" aria-label="Budget views" style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.full, padding: 2, marginBottom: spacing['5'] }}>
-        <button
-          role="tab"
-          aria-selected={activeTab === 'overview' && !wbsView}
-          aria-controls="budget-tab-overview"
-          onClick={() => { setActiveTab('overview'); setWbsView(false); }}
-          style={{
-            ...pillBase,
-            backgroundColor: activeTab === 'overview' && !wbsView ? colors.surfaceRaised : 'transparent',
-            color: activeTab === 'overview' && !wbsView ? colors.textPrimary : colors.textTertiary,
-            boxShadow: activeTab === 'overview' && !wbsView ? shadows.sm : 'none',
-          }}
-        >
-          Overview
-        </button>
-        <button
-          role="tab"
-          aria-selected={wbsView}
-          aria-controls="budget-tab-wbs"
-          onClick={() => { setActiveTab('overview'); setWbsView(true); }}
-          style={{
-            ...pillBase,
-            backgroundColor: wbsView ? colors.surfaceRaised : 'transparent',
-            color: wbsView ? colors.textPrimary : colors.textTertiary,
-            boxShadow: wbsView ? shadows.sm : 'none',
-            display: 'flex', alignItems: 'center', gap: spacing['1'],
-          }}
-        >
-          <Layers size={13} /> WBS View
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === 'earned-value'}
-          aria-controls="budget-tab-earned-value"
-          onClick={() => { setActiveTab('earned-value'); setWbsView(false); }}
-          style={{
-            ...pillBase,
-            backgroundColor: activeTab === 'earned-value' ? colors.surfaceRaised : 'transparent',
-            color: activeTab === 'earned-value' ? colors.textPrimary : colors.textTertiary,
-            boxShadow: activeTab === 'earned-value' ? shadows.sm : 'none',
-          }}
-        >
-          Earned Value
-        </button>
-      </div>
+      {/* ── Premium Tab Bar with sliding indicator ── */}
+      <BudgetTabBar
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setWbsView(tab === 'wbs');
+        }}
+        changeOrderCount={allChangeOrders.length}
+      />
 
       <AnimatePresence mode="wait">
       {/* ── WBS Hierarchy View ── */}
@@ -1567,22 +1635,45 @@ const BudgetPage: React.FC = () => {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.16, ease: 'easeOut' }}
         >
-          {/* Cost Distribution Treemap */}
-          <SectionHeader title="Cost Distribution" action={<span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], fontSize: typography.fontSize.caption, color: colors.orangeText, fontWeight: typography.fontWeight.medium, cursor: 'pointer' }}>Click to drill down <ChevronRight size={12} aria-hidden="true" /></span>} />
-          <Card padding={spacing['5']}>
-            <div role="img" aria-label="Cost distribution treemap showing budget allocation across divisions">
-              <Treemap divisions={costData.divisions} />
+          {/* Division Health — the ONE thing that matters */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['2'] }}>
+                <h3 style={{
+                  margin: 0, fontSize: 16, fontWeight: 600,
+                  color: colors.textPrimary, fontFamily: typography.fontFamily,
+                }}>
+                  Division Health
+                </h3>
+                <span style={{ fontSize: 12, color: colors.textTertiary, fontWeight: 500 }}>
+                  {costData.divisions.length} divisions
+                </span>
+              </div>
+              <span style={{
+                fontSize: 11, color: colors.textTertiary, fontWeight: 500,
+                padding: `2px ${spacing['2']}`, backgroundColor: colors.surfaceInset,
+                borderRadius: borderRadius.sm,
+              }}>
+                J/K navigate · Enter open
+              </span>
             </div>
-          </Card>
-
-          {/* Fix 1: Division Health */}
-          <div style={{ marginTop: spacing['4'] }}>
-            <SectionHeader title="Division Health" action={<span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>J/K to navigate, Enter to open</span>} />
             <Card padding="0">
-              {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px 32px', padding: `${spacing['2']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}>
+              {/* Premium sticky table header */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px 32px',
+                padding: `10px ${spacing['4']}`,
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                backgroundColor: colors.surfaceInset,
+                position: 'sticky',
+                top: 0,
+                zIndex: 2,
+              }}>
                 {['Division', 'Budget', 'Spent to Date', 'Committed', 'Remaining', '% Complete', '', ''].map((h, i) => (
-                  <span key={`${h}-${i}`} style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{h}</span>
+                  <span key={`${h}-${i}`} style={{
+                    fontSize: 11, fontWeight: 600, color: colors.textTertiary,
+                    textTransform: 'uppercase' as const, letterSpacing: '0.04em',
+                  }}>{h}</span>
                 ))}
               </div>
               <motion.div
@@ -1629,13 +1720,13 @@ const BudgetPage: React.FC = () => {
                       gridTemplateColumns: 'minmax(150px, 2fr) 95px 140px 95px 115px 105px 24px 32px',
                       alignItems: 'center',
                       padding: `${spacing['3']} ${spacing['4']}`,
-                      borderLeft: isAtRisk ? `3px solid ${colors.chartRed}` : '3px solid transparent',
+                      borderLeft: isAtRisk ? `3px solid #DC2626` : isHovered ? `3px solid ${colors.primaryOrange}` : '3px solid transparent',
                       borderBottom: idx < costData.divisions.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                      backgroundColor: isAtRisk ? colors.statusCriticalSubtle : isHovered ? colors.surfaceHover : 'transparent',
+                      backgroundColor: isAtRisk ? 'rgba(220,38,38,0.04)' : isHovered ? colors.surfaceHover : 'transparent',
                       cursor: 'pointer',
                       outline: isFocused ? `2px solid ${colors.primaryOrange}` : 'none',
                       outlineOffset: '-2px',
-                      transition: 'background-color 0.1s ease',
+                      transition: 'all 0.12s ease',
                     }}
                   >
                     {/* Division name */}
@@ -1760,9 +1851,17 @@ const BudgetPage: React.FC = () => {
                           aria-label={canEditBudget ? `Edit percent complete for ${division.name}` : undefined}
                           onClick={() => { if (canEditBudget) setEditingCell({ divId: division.id, field: 'progress', value: String(division.progress) }); }}
                           onKeyDown={(e) => { if (canEditBudget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditingCell({ divId: division.id, field: 'progress', value: String(division.progress) }); } }}
-                          style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], cursor: canEditBudget ? 'text' : 'default', padding: `2px ${spacing['1']}`, borderRadius: borderRadius.sm }}
+                          style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], cursor: canEditBudget ? 'text' : 'default', padding: `2px ${spacing['1']}`, borderRadius: borderRadius.sm }}
                         >
-                          <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: isAtRisk ? colors.chartRed : colors.textSecondary }}>{division.progress}%</span>
+                          <div style={{ flex: 1, minWidth: 36, height: 4, backgroundColor: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', width: `${Math.min(division.progress, 100)}%`,
+                              backgroundColor: isAtRisk ? '#DC2626' : division.progress >= 70 ? '#D97706' : '#16A34A',
+                              borderRadius: 2,
+                              transition: 'width 0.4s cubic-bezier(0.16,1,0.3,1)',
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: isAtRisk ? '#DC2626' : colors.textSecondary, minWidth: 28, textAlign: 'right' }}>{division.progress}%</span>
                           {canEditBudget && isHovered && <Pencil size={11} color={colors.textTertiary} style={{ flexShrink: 0 }} />}
                         </div>
                       )}
@@ -1806,7 +1905,10 @@ const BudgetPage: React.FC = () => {
 
           {/* S Curve */}
           <div style={{ marginTop: spacing['5'] }}>
-            <SectionHeader title="Cumulative Cost (S Curve)" />
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['2'], marginBottom: spacing['3'] }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>Cumulative Cost (S Curve)</h3>
+              <span style={{ fontSize: 12, color: colors.textTertiary, fontWeight: 500 }}>Planned vs Actual</span>
+            </div>
             <Card padding={spacing['5']}>
               <div role="img" aria-label="S Curve chart showing cumulative cost over time against total budget">
                 <SCurve
@@ -1820,67 +1922,55 @@ const BudgetPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* AI Budget Risk Insights */}
-          {budgetAnomalies.length > 0 && (
-            <div style={{ marginTop: spacing['5'] }}>
-              <SectionHeader
-                title="AI Budget Risk"
-                action={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                    <Sparkles size={12} color={colors.primaryOrange} />
-                    <span style={{ fontSize: typography.fontSize.caption, color: colors.primaryOrange, fontWeight: typography.fontWeight.medium }}>
-                      {budgetAnomalies.length} insight{budgetAnomalies.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                }
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                {budgetAnomalies.map((anomaly, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: spacing['3'],
-                      padding: `${spacing['3']} ${spacing['4']}`,
-                      backgroundColor: anomaly.severity === 'critical' ? colors.badgeRedBg : colors.badgeAmberBg,
-                      border: `1px solid ${anomaly.severity === 'critical' ? colors.statusCriticalSubtle : colors.statusPendingSubtle}`,
-                      borderRadius: borderRadius.base,
-                    }}
-                  >
-                    <AlertTriangle
-                      size={14}
-                      color={anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending}
-                      style={{ flexShrink: 0, marginTop: 2 }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending }}>
-                        {anomaly.severity === 'critical' ? 'Cost Overrun Risk' : 'Budget Alert'}: {anomaly.divisionName}
-                      </p>
-                      <p style={{ margin: 0, marginTop: spacing['1'], fontSize: typography.fontSize.sm, color: anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending }}>
-                        {anomaly.message}
-                      </p>
+        </motion.div>
+      )}
+
+      {/* ── Change Orders Tab ── */}
+      {activeTab === 'change-orders' && (
+        <motion.div
+          key="change-orders"
+          role="tabpanel"
+          id="budget-tab-change-orders"
+          aria-label="Change Orders"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        >
+          {/* ── CO Summary KPIs ── */}
+          {(() => {
+            const pendingCOs = allChangeOrders.filter(co => co.status !== 'approved' && co.status !== 'rejected' && co.status !== 'void');
+            const pendingTotal = pendingCOs.reduce((s, co) => s + (co.estimated_cost || co.amount), 0);
+            const rejectedTotal = allChangeOrders.filter(co => co.status === 'rejected').reduce((s, co) => s + (co.estimated_cost || co.amount), 0);
+            const coKpis = [
+              { label: 'Approved', value: fmt(approvedTotal), count: allChangeOrders.filter(co => co.status === 'approved').length, color: '#16A34A', bg: '#F0FDF4' },
+              { label: 'Pending', value: fmt(pendingTotal), count: pendingCOs.length, color: '#D97706', bg: '#FFFBEB' },
+              { label: 'Rejected', value: fmt(rejectedTotal), count: allChangeOrders.filter(co => co.status === 'rejected').length, color: '#DC2626', bg: '#FEF2F2' },
+              { label: 'Net Impact', value: fmt(approvedTotal + pendingTotal), count: allChangeOrders.length, color: '#2563EB', bg: '#EFF6FF' },
+            ];
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+                {coKpis.map(kpi => (
+                  <div key={kpi.label} style={{
+                    padding: `${spacing['3']} ${spacing['4']}`,
+                    backgroundColor: colors.surfaceRaised,
+                    borderRadius: borderRadius.xl,
+                    border: `1px solid ${colors.borderSubtle}`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['1'] }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>{kpi.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: kpi.color, backgroundColor: kpi.bg, padding: '1px 6px', borderRadius: borderRadius.full }}>{kpi.count}</span>
                     </div>
-                    <span style={{
-                      flexShrink: 0,
-                      padding: `2px ${spacing['2']}`,
-                      borderRadius: borderRadius.full,
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.semibold,
-                      backgroundColor: anomaly.severity === 'critical' ? colors.statusCriticalSubtle : colors.statusPendingSubtle,
-                      color: anomaly.severity === 'critical' ? colors.statusCritical : colors.statusPending,
-                    }}>
-                      {anomaly.variancePct.toFixed(0)}%
-                    </span>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{kpi.value}</span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* CO Budget Impact */}
-          <div style={{ marginTop: spacing['5'] }}>
-            <SectionHeader title="Change Order Impact" />
+          {/* CO Budget Impact Waterfall */}
+          <div style={{ marginBottom: spacing['4'] }}>
+            <h3 style={{ margin: 0, marginBottom: spacing['3'], fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>Budget Impact</h3>
             <Card padding={spacing['5']}>
               <div role="img" aria-label="Waterfall chart showing change order impact on budget">
               <WaterfallChart
@@ -1893,23 +1983,26 @@ const BudgetPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Change Orders */}
-          <div style={{ marginTop: spacing['2xl'] }}>
-            <SectionHeader title="Change Orders" action={
+          {/* Change Orders Table */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>Change Orders</h3>
               <Btn variant="ghost" size="sm" icon={<ArrowRight size={12} />} iconPosition="right" onClick={() => navigate('/change-orders')}>View Pipeline</Btn>
-            } />
+            </div>
             <Card padding="0">
-              {/* Header */}
               <div role="table" aria-label="Change orders">
               <div role="rowgroup">
-              <div role="row" style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `${spacing.md} ${spacing.xl}`, borderBottom: `1px solid ${colors.borderLight}` }}>
+              <div role="row" style={{
+                display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
+                padding: `10px ${spacing['4']}`,
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                backgroundColor: colors.surfaceInset,
+              }}>
                 {['Number', 'Type', 'Title', 'Amount', 'Status'].map((label) => (
-                  <span role="columnheader" key={label} style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textTertiary }}>{label}</span>
+                  <span role="columnheader" key={label} style={{ fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>{label}</span>
                 ))}
               </div>
               </div>
-
-              {/* Rows */}
               <div role="rowgroup">
               {allChangeOrders.slice(0, 10).map((co, i) => {
                 const coType = co.type || 'co';
@@ -1917,40 +2010,48 @@ const BudgetPage: React.FC = () => {
                 const typeConfig = getCOTypeConfig(coType);
                 const statusConfig = getCOStatusConfig(coStatus);
                 return (
-                  <div role="row" tabIndex={0} key={co.id} onClick={() => setSelectedCO(co)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }} style={{
-                    display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
-                    padding: `${spacing.lg} ${spacing.xl}`,
-                    borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderLight}` : 'none',
-                    alignItems: 'center', cursor: 'pointer',
-                  }}>
-                    <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{co.coNumber}</span>
-                    <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
-                    <span role="cell" style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing.xs }}>
+                  <div
+                    role="row"
+                    tabIndex={0}
+                    key={co.id}
+                    onClick={() => setSelectedCO(co)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCO(co); } }}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px',
+                      padding: `${spacing['3']} ${spacing['4']}`,
+                      borderBottom: i < allChangeOrders.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                      alignItems: 'center', cursor: 'pointer',
+                      transition: 'background-color 0.1s ease',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = colors.surfaceHover; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent'; }}
+                  >
+                    <span role="cell" style={{ fontSize: 13, fontWeight: 600, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>{co.coNumber}</span>
+                    <span role="cell" style={{ fontSize: 11, fontWeight: 600, color: typeConfig.color }}>{typeConfig.shortLabel}</span>
+                    <span role="cell" style={{ fontSize: 13, color: colors.textPrimary, display: 'inline-flex', alignItems: 'center', gap: spacing['1'] }}>
                       {co.title}
                       {getAnnotationsForEntity('change_order', co.id).map((ann) => (
                         <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
                       ))}
                     </span>
-                    <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{fmt(co.amount)}</span>
-                    <span role="cell" style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, textAlign: 'center' }}>{statusConfig.label}</span>
+                    <span role="cell" style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(co.amount)}</span>
+                    <span role="cell" style={{ fontSize: 11, fontWeight: 600, color: statusConfig.color, backgroundColor: statusConfig.bg, padding: '3px 8px', borderRadius: borderRadius.full, textAlign: 'center', display: 'inline-block' }}>{statusConfig.label}</span>
                   </div>
                 );
               })}
               </div>
-
-              {/* Running Totals */}
               <div role="rowgroup">
-              <div role="row" style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `${spacing.md} ${spacing.xl}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
+              <div role="row" style={{ display: 'grid', gridTemplateColumns: '80px 60px 1fr 120px 140px', padding: `10px ${spacing['4']}`, borderTop: `2px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceInset }}>
                 <span role="cell"></span>
                 <span role="cell"></span>
-                <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Approved Total</span>
-                <span role="cell" style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{fmt(approvedTotal)}</span>
+                <span role="cell" style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary }}>Approved Total</span>
+                <span role="cell" style={{ fontSize: 13, fontWeight: 700, color: '#16A34A', fontVariantNumeric: 'tabular-nums' }}>{fmt(approvedTotal)}</span>
                 <span role="cell"></span>
               </div>
               </div>
               </div>
               {allChangeOrders.length > 10 && (
-                <div style={{ padding: `${spacing['3']} ${spacing.xl}`, textAlign: 'center' }}>
+                <div style={{ padding: `${spacing['3']} ${spacing['4']}`, textAlign: 'center', borderTop: `1px solid ${colors.borderSubtle}` }}>
                   <Btn variant="ghost" size="sm" onClick={() => navigate('/change-orders')}>View all {allChangeOrders.length} change orders</Btn>
                 </div>
               )}
@@ -1970,7 +2071,10 @@ const BudgetPage: React.FC = () => {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.16, ease: 'easeOut' }}
         >
-          <SectionHeader title="Earned Value Analysis" />
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: spacing['2'], marginBottom: spacing['3'] }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>Earned Value Analysis</h3>
+            <span style={{ fontSize: 12, color: colors.textTertiary, fontWeight: 500 }}>CPI · SPI · EAC · ETC</span>
+          </div>
           <Card padding={spacing['5']}>
             <div role="img" aria-label="Earned value analysis dashboard showing budget performance indicators">
               <EarnedValueDashboard />
@@ -2030,6 +2134,211 @@ const BudgetPage: React.FC = () => {
         )}
       </DetailPanel>
       </>)}
+      </>)}
+
+      {/* ── Cost Codes tab ─────────────────────────────────────
+          Absorbed from /cost-management. Division → Cost Code → Budget
+          Items drill. Inline edit on spent / original_amount uses the
+          existing useUpdateBudgetItem mutation. */}
+      {mainView === 'cost-codes' && (
+        <CostCodesSection
+          projectId={projectId ?? null}
+          divisions={divisions}
+          canEdit={canEditBudget}
+          fmt={fmt}
+          onOpenDivision={(d) => setSelectedDivision(d)}
+        />
+      )}
+
+      {/* ── Cash Flow tab ──────────────────────────────────────
+          Monthly phased forecast. Pulls burn rate from cashFlowSummary
+          which is already derived from budget_items + schedule_phases. */}
+      {mainView === 'cash-flow' && (
+        <CashFlowSection
+          totalBudget={projectData?.totalValue ?? 0}
+          spent={spent}
+          plannedData={sCurveData.planned}
+          actualData={sCurveData.actual}
+          labels={sCurveData.labels}
+          cashFlowSummary={cashFlowSummary}
+          fmt={fmt}
+        />
+      )}
+
+      {/* ── Period Close tab ───────────────────────────────────
+          Absorbed from /financials. Monthly close ledger backed by
+          the new financial_periods table. Close / Reopen are RLS-
+          gated (owner/admin); UI gates on budget.edit for symmetry. */}
+      {mainView === 'period-close' && (
+        <PeriodCloseSection
+          projectId={projectId ?? null}
+          periods={financialPeriodsQuery.data ?? []}
+          isLoading={financialPeriodsQuery.isLoading}
+          canEdit={canEditBudget}
+          isCreating={createPeriodMutation.isPending}
+          onOpenClose={(p) => {
+            setClosingPeriod(p);
+            setPeriodCloseStatus('closed');
+            setPeriodCloseNotes(p.notes ?? '');
+          }}
+          onOpenReopen={(p) => {
+            setReopeningPeriod(p);
+            setPeriodReopenNotes('');
+          }}
+          onTrackMonth={(monthIso) => {
+            if (!projectId) return;
+            createPeriodMutation.mutate({ projectId, periodMonth: monthIso });
+          }}
+        />
+      )}
+
+      {/* ── Snapshots tab ──────────────────────────────────────
+          Budget history with month-over-month deltas. Uses the
+          existing snapshots state (persisted via budgetSnapshotService). */}
+      {mainView === 'snapshots' && (
+        <SnapshotsSection
+          snapshots={snapshots}
+          fmt={fmt}
+          canCreate={canEditBudget}
+          onCreate={async () => {
+            if (!projectId) return;
+            try {
+              const saved = await budgetSnapshotService.saveSnapshot({
+                projectId,
+                name: `Snapshot ${new Date().toLocaleDateString()}`,
+                totalBudget: projectData?.totalValue ?? 0,
+                totalSpent: spent,
+                totalCommitted: committed,
+                divisionData: divisions.map((d) => ({
+                  division: d.name,
+                  budget: d.budget,
+                  spent: d.spent,
+                  committed: d.committed,
+                })),
+              });
+              setSnapshots((prev) => [saved, ...prev]);
+              toast.success('Snapshot saved');
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : 'Failed to save snapshot');
+            }
+          }}
+        />
+      )}
+
+      {/* ── Close-period modal ─────────────────────────────────
+          Renders when `closingPeriod` is set from the Period Close list. */}
+      {closingPeriod && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setClosingPeriod(null); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }}
+        >
+          <div style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, padding: 24, width: '100%', maxWidth: 480 }}>
+            <h2 style={{ margin: 0, marginBottom: 16, fontSize: 18, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Close Period — {formatMonthLabel(closingPeriod.period_month)}
+            </h2>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: colors.textSecondary, marginBottom: 6 }}>Status</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              {([
+                { key: 'pending_close' as const, label: 'Mark Pending', hint: 'Lock to review; still editable' },
+                { key: 'closed' as const,        label: 'Close',         hint: 'Hard close — no more writes' },
+              ]).map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setPeriodCloseStatus(opt.key)}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: borderRadius.base,
+                    border: `1px solid ${periodCloseStatus === opt.key ? colors.primaryOrange : colors.borderDefault}`,
+                    backgroundColor: periodCloseStatus === opt.key ? colors.primaryOrange + '10' : 'transparent',
+                    color: colors.textPrimary, cursor: 'pointer', textAlign: 'left',
+                    fontFamily: typography.fontFamily,
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{opt.label}</div>
+                  <div style={{ fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>{opt.hint}</div>
+                </button>
+              ))}
+            </div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: colors.textSecondary, marginBottom: 6 }}>Notes (optional)</label>
+            <textarea
+              value={periodCloseNotes}
+              onChange={(e) => setPeriodCloseNotes(e.target.value)}
+              rows={4}
+              placeholder="Context for the audit trail…"
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <Btn variant="ghost" onClick={() => setClosingPeriod(null)}>Cancel</Btn>
+              <Btn
+                variant="primary"
+                disabled={closePeriodMutation.isPending}
+                onClick={async () => {
+                  if (!projectId) return;
+                  await closePeriodMutation.mutateAsync({
+                    id: closingPeriod.id,
+                    projectId,
+                    status: periodCloseStatus,
+                    notes: periodCloseNotes.trim() || null,
+                  });
+                  setClosingPeriod(null);
+                  setPeriodCloseNotes('');
+                }}
+              >
+                {closePeriodMutation.isPending ? 'Saving…' : periodCloseStatus === 'closed' ? 'Close Period' : 'Mark Pending'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reopen-period modal ────────────────────────────────
+          Notes required — becomes part of the audit trail alongside
+          reopened_at / reopened_by. */}
+      {reopeningPeriod && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setReopeningPeriod(null); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }}
+        >
+          <div style={{ backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.lg, padding: 24, width: '100%', maxWidth: 480 }}>
+            <h2 style={{ margin: 0, marginBottom: 8, fontSize: 18, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              Reopen Period — {formatMonthLabel(reopeningPeriod.period_month)}
+            </h2>
+            <p style={{ margin: 0, marginBottom: 16, fontSize: 12, color: colors.textTertiary }}>
+              Reopening is audited. Provide a reason so the trail stays clean.
+            </p>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: colors.textSecondary, marginBottom: 6 }}>Reason <span style={{ color: colors.statusCritical }}>*</span></label>
+            <textarea
+              value={periodReopenNotes}
+              onChange={(e) => setPeriodReopenNotes(e.target.value)}
+              rows={4}
+              placeholder="e.g. Missed invoice from GC — need to re-run pay app #7"
+              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <Btn variant="ghost" onClick={() => setReopeningPeriod(null)}>Cancel</Btn>
+              <Btn
+                variant="primary"
+                disabled={reopenPeriodMutation.isPending || !periodReopenNotes.trim()}
+                onClick={async () => {
+                  if (!projectId) return;
+                  await reopenPeriodMutation.mutateAsync({
+                    id: reopeningPeriod.id,
+                    projectId,
+                    notes: periodReopenNotes.trim(),
+                  });
+                  setReopeningPeriod(null);
+                  setPeriodReopenNotes('');
+                }}
+              >
+                {reopenPeriodMutation.isPending ? 'Reopening…' : 'Reopen Period'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 };
