@@ -16,7 +16,7 @@ import type { AnalysisStage, PipelineState } from '../../hooks/useDrawingIntelli
 import { supabase } from '../../lib/supabase'
 
 // ── Types ─────────────────────────────────────────────────────
-// Adapted from SiteSync AI:
+// Adapted from SiteSync PM:
 //   sitesyncai-web/app/components/ProcessingStatusView/ProcessingStatusView.tsx
 // Styled with SiteSync PM's inline theme tokens (no styled-components).
 

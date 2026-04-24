@@ -440,13 +440,14 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
 
   // (keyboard nav effect moved before early return)
 
-  // 44x44 minimum touch target for all toolbar buttons
+  // 36x36 visual size with 44x44 touch target via padding
   const toolbarBtnStyle: React.CSSProperties = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    minWidth: 44, minHeight: 44, width: 44, height: 44,
+    minWidth: 36, minHeight: 36, width: 36, height: 36,
     border: 'none', padding: 0,
-    borderRadius: borderRadius.base, backgroundColor: colors.overlayWhiteThin,
-    color: colors.white, cursor: 'pointer', transition: `background-color ${transitions.quick}`,
+    borderRadius: '8px', backgroundColor: 'transparent',
+    color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+    transition: `all ${transitions.quick}`,
     flexShrink: 0,
   };
 
@@ -459,12 +460,12 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
       {/* Top toolbar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: `0 ${spacing['4']}`,
-        backgroundColor: colors.overlayDark,
-        borderBottom: `1px solid ${colors.darkBorder}`,
+        padding: `0 ${spacing['5']}`,
+        backgroundColor: 'rgba(10,10,10,0.97)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
         flexShrink: 0,
-        minHeight: 56,
-        height: 56,
+        minHeight: 48,
+        height: 48,
       }}>
         {/* Left: close + drawing nav + title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], minWidth: 0 }}>
@@ -478,12 +479,12 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
                 onClick={onPrevDrawing}
                 disabled={!hasPrevDrawing}
                 aria-label="Previous drawing"
-                style={{ ...toolbarBtnStyle, width: 36, minWidth: 36, height: 36, minHeight: 36, opacity: hasPrevDrawing ? 1 : 0.3 }}
+                style={{ ...toolbarBtnStyle, width: 30, minWidth: 30, height: 30, minHeight: 30, opacity: hasPrevDrawing ? 1 : 0.25 }}
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
               {drawingPositionLabel && (
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', minWidth: '44px', textAlign: 'center', fontFamily: typography.fontFamilyMono }}>
+                <span style={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.4)', minWidth: '44px', textAlign: 'center', fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em' }}>
                   {drawingPositionLabel}
                 </span>
               )}
@@ -491,13 +492,13 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
                 onClick={onNextDrawing}
                 disabled={!hasNextDrawing}
                 aria-label="Next drawing"
-                style={{ ...toolbarBtnStyle, width: 36, minWidth: 36, height: 36, minHeight: 36, opacity: hasNextDrawing ? 1 : 0.3 }}
+                style={{ ...toolbarBtnStyle, width: 30, minWidth: 30, height: 30, minHeight: 30, opacity: hasNextDrawing ? 1 : 0.25 }}
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
           )}
-          <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.medium, color: colors.white, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.92)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {title || 'Document Viewer'}
           </span>
         </div>
@@ -517,9 +518,9 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
               <span
                 aria-live="polite"
                 aria-atomic="true"
-                style={{ fontSize: typography.fontSize.sm, color: colors.white, minWidth: '80px', textAlign: 'center' }}
+                style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(255,255,255,0.5)', minWidth: '80px', textAlign: 'center', fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em' }}
               >
-                {loading ? '...' : `Page ${pageNumber} of ${numPages}`}
+                {loading ? '...' : `${pageNumber} / ${numPages}`}
               </span>
               <button
                 onClick={nextPage}
@@ -537,7 +538,7 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
               <button
                 onClick={resetZoom}
                 aria-label={`Current zoom ${Math.round(zoomLevel * 100)}%, click to reset`}
-                style={{ ...toolbarBtnStyle, width: 'auto', minWidth: 60, padding: `0 ${spacing['2']}`, fontSize: typography.fontSize.sm }}
+                style={{ ...toolbarBtnStyle, width: 'auto', minWidth: 52, padding: '0 8px', fontSize: '12px', fontFamily: typography.fontFamilyMono, fontWeight: 500, color: 'rgba(255,255,255,0.45)' }}
               >
                 {Math.round(zoomLevel * 100)}%
               </button>
@@ -849,16 +850,19 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
       {activeTool !== 'select' && !error && (
         <div style={{
           position: 'fixed',
-          top: 72,
+          top: 60,
           left: '50%',
           transform: 'translateX(-50%)',
-          padding: `${spacing['1']} ${spacing['3']}`,
-          backgroundColor: colors.primaryOrange,
-          color: colors.white,
-          borderRadius: borderRadius.full,
-          fontSize: typography.fontSize.caption,
-          fontWeight: typography.fontWeight.semibold,
-          boxShadow: shadows.cardHover,
+          padding: '5px 14px',
+          backgroundColor: 'rgba(10,10,10,0.88)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          color: 'rgba(255,255,255,0.85)',
+          borderRadius: '10px',
+          border: '1px solid rgba(244,120,32,0.2)',
+          fontSize: '11px',
+          fontWeight: 500,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
           zIndex: (zIndex.toast as number) + 1,
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
@@ -873,33 +877,33 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
 
       {/* Right-rail floating controls: mini-map, bookmarks */}
       {!isMobile && !error && (
-        <div style={{ position: 'fixed', top: 72, right: 16, display: 'flex', flexDirection: 'column', gap: 8, zIndex: (zIndex.toast as number) + 1 }}>
+        <div style={{ position: 'fixed', top: 64, right: 16, display: 'flex', flexDirection: 'column', gap: 6, zIndex: (zIndex.toast as number) + 1 }}>
           {numPages > 1 && (
             <button
               onClick={() => setShowMinimap((v) => !v)}
               aria-label={showMinimap ? 'Hide sheet mini-map' : 'Show sheet mini-map'}
-              style={{ ...toolbarBtnStyle, backgroundColor: showMinimap ? colors.primaryOrange : 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+              style={{ ...toolbarBtnStyle, width: 34, height: 34, backgroundColor: showMinimap ? 'rgba(244,120,32,0.2)' : 'rgba(10,10,10,0.65)', backdropFilter: 'blur(12px)', color: showMinimap ? colors.primaryOrange : 'rgba(255,255,255,0.6)' }}
               title="Page mini-map"
             >
-              <Layers size={18} />
+              <Layers size={16} />
             </button>
           )}
           <button
             onClick={saveCurrentViewport}
             aria-label="Bookmark current view"
             title="Bookmark current view"
-            style={{ ...toolbarBtnStyle, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+            style={{ ...toolbarBtnStyle, width: 34, height: 34, backgroundColor: 'rgba(10,10,10,0.65)', backdropFilter: 'blur(12px)' }}
           >
-            <BookmarkPlus size={18} />
+            <BookmarkPlus size={16} />
           </button>
           {viewports.length > 0 && (
             <button
               onClick={() => setViewportsOpen((v) => !v)}
               aria-label={`${viewports.length} saved views`}
               title={`${viewports.length} saved views`}
-              style={{ ...toolbarBtnStyle, backgroundColor: viewportsOpen ? colors.primaryOrange : 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+              style={{ ...toolbarBtnStyle, width: 34, height: 34, backgroundColor: viewportsOpen ? 'rgba(244,120,32,0.2)' : 'rgba(10,10,10,0.65)', backdropFilter: 'blur(12px)', color: viewportsOpen ? colors.primaryOrange : 'rgba(255,255,255,0.6)' }}
             >
-              <Bookmark size={18} />
+              <Bookmark size={16} />
             </button>
           )}
         </div>
@@ -947,14 +951,14 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
       {/* Sheet mini-map sidebar */}
       {showMinimap && numPages > 1 && !isMobile && (
         <div style={{
-          position: 'fixed', top: 56, right: 72, bottom: 0, width: 180,
-          backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
-          borderLeft: `1px solid ${colors.darkBorder}`,
+          position: 'fixed', top: 48, right: 64, bottom: 0, width: 180,
+          backgroundColor: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          borderLeft: '1px solid rgba(255,255,255,0.06)',
           overflowY: 'auto',
           padding: spacing['2'],
           zIndex: (zIndex.toast as number),
         }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1, padding: `${spacing['1']} ${spacing['2']}`, marginBottom: 4 }}>Pages</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: `${spacing['1']} ${spacing['2']}`, marginBottom: 4 }}>Pages</div>
           <Document file={file} options={PDF_OPTIONS}>
             {Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
               <button
@@ -962,11 +966,12 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
                 onClick={() => setPageNumber(n)}
                 style={{
                   width: '100%', padding: 6, marginBottom: 4,
-                  background: n === pageNumber ? 'rgba(244,120,32,0.2)' : 'transparent',
-                  border: n === pageNumber ? `2px solid ${colors.primaryOrange}` : `1px solid rgba(255,255,255,0.15)`,
-                  borderRadius: borderRadius.sm, cursor: 'pointer',
-                  color: colors.white, fontSize: 11, fontFamily: typography.fontFamily,
+                  background: n === pageNumber ? 'rgba(244,120,32,0.1)' : 'transparent',
+                  border: n === pageNumber ? `1.5px solid rgba(244,120,32,0.5)` : `1px solid rgba(255,255,255,0.08)`,
+                  borderRadius: '6px', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.7)', fontSize: 10, fontFamily: typography.fontFamilyMono,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  transition: `all ${transitions.fast}`,
                 }}
                 aria-label={`Go to page ${n}`}
                 aria-current={n === pageNumber ? 'page' : undefined}
@@ -994,12 +999,14 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
       {(scaleOverride || scaleRatioText) && !error && (
         <div style={{
           position: 'fixed', bottom: isMobile ? 64 : 24, left: 16,
-          padding: `${spacing['1']} ${spacing['2']}`,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(8px)',
-          color: colors.white,
-          borderRadius: borderRadius.sm,
-          fontSize: 11, fontFamily: typography.fontFamilyMono,
+          padding: '4px 10px',
+          backgroundColor: 'rgba(10,10,10,0.75)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          color: 'rgba(255,255,255,0.55)',
+          borderRadius: '6px',
+          fontSize: 11, fontFamily: typography.fontFamilyMono, fontWeight: 500,
+          letterSpacing: '0.02em',
           zIndex: (zIndex.toast as number),
         }}>
           Scale: {scaleOverride

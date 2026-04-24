@@ -15,7 +15,7 @@ import type {
 } from '../../types/ai'
 import { Btn } from '../Primitives'
 
-// Adapted from SiteSync AI:
+// Adapted from SiteSync PM:
 //   sitesyncai-web/app/components/DiscrepancyModal/DiscrepancyModal.tsx
 // Rewritten to show side-by-side arch/struct images with highlighted conflict
 // regions, dimension comparison, severity badge, and action buttons.

@@ -100,21 +100,31 @@ const SortHeader: React.FC<{
       onClick={() => field && onSort(field)}
       disabled={!field}
       style={{
-        display: 'flex', alignItems: 'center', gap: 3,
+        display: 'flex', alignItems: 'center', gap: 4,
         border: 'none', backgroundColor: 'transparent', cursor: field ? 'pointer' : 'default',
-        fontSize: typography.fontSize.caption, fontWeight: 600,
+        fontSize: '11px', fontWeight: 600,
         color: isActive ? colors.textPrimary : colors.textTertiary,
-        fontFamily: typography.fontFamily, padding: 0,
-        textTransform: 'uppercase', letterSpacing: '0.4px',
+        fontFamily: typography.fontFamily, padding: '4px 0',
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+        transition: 'color 150ms ease',
       }}
     >
       {label}
       {isActive && (
-        sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+        sortDir === 'asc' ? <ChevronUp size={11} strokeWidth={2.5} /> : <ChevronDown size={11} strokeWidth={2.5} />
       )}
     </button>
   );
 };
+
+/** Format a date string into human-readable form */
+function formatDate(raw: string): string {
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch { return raw; }
+}
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -240,14 +250,15 @@ export const DrawingList: React.FC<DrawingListProps> = ({
   // ── Table view ──────────────────────────────────────────
   return (
     <div style={{
-      borderRadius: borderRadius.lg, border: `1px solid ${colors.borderSubtle}`,
+      borderRadius: '14px', border: `1px solid ${colors.borderSubtle}`,
       overflow: 'hidden', backgroundColor: colors.surfaceRaised,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
     }}>
       {/* Table header */}
       <div style={{
         display: 'grid', gridTemplateColumns: GRID_TEMPLATE,
-        padding: '7px 16px',
-        borderBottom: `1px solid ${colors.borderSubtle}`,
+        padding: '8px 16px',
+        borderBottom: `1px solid ${colors.borderDefault}`,
         backgroundColor: colors.surfaceInset,
         position: 'sticky', top: 0, zIndex: 5,
       }}>
@@ -297,11 +308,11 @@ export const DrawingList: React.FC<DrawingListProps> = ({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDrawing(drawing); } }}
               style={{
                 display: 'grid', gridTemplateColumns: GRID_TEMPLATE,
-                padding: '8px 16px',
+                padding: '10px 16px',
                 alignItems: 'center', cursor: 'pointer',
                 borderBottom: index < drawings.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                 backgroundColor: isSelected ? `${colors.primaryOrange}06` : isFocused ? colors.surfaceHover : 'transparent',
-                transition: `background-color ${transitions.quick}`,
+                transition: 'background-color 180ms ease, box-shadow 180ms ease',
               }}
               onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = colors.surfaceHover; }}
               onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = isFocused ? colors.surfaceHover : 'transparent'; else e.currentTarget.style.backgroundColor = `${colors.primaryOrange}06`; }}
@@ -321,6 +332,7 @@ export const DrawingList: React.FC<DrawingListProps> = ({
               <span style={{
                 fontSize: typography.fontSize.sm, fontWeight: 600,
                 color: colors.textPrimary, fontFamily: typography.fontFamilyMono,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {highlightMatch(drawing.setNumber || '—', searchQuery)}
               </span>
@@ -335,34 +347,43 @@ export const DrawingList: React.FC<DrawingListProps> = ({
 
               {/* Discipline */}
               <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: spacing['1.5'],
-                fontSize: typography.fontSize.caption, fontWeight: 500,
-                color: colors.textPrimary, textTransform: 'capitalize',
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                fontSize: typography.fontSize.caption, fontWeight: 400,
+                color: colors.textSecondary, textTransform: 'capitalize',
               }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: discColor, flexShrink: 0 }} />
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%', backgroundColor: discColor,
+                  flexShrink: 0,
+                }} />
                 {drawing.discipline?.replace(/_/g, ' ') || 'Unclassified'}
               </span>
 
               {/* Revision */}
               <span style={{
-                fontSize: typography.fontSize.sm, color: colors.textSecondary,
+                fontSize: typography.fontSize.sm,
                 fontFamily: typography.fontFamilyMono,
+                fontWeight: 500,
+                color: colors.textTertiary,
+                fontVariantNumeric: 'tabular-nums',
               }}>
                 {rev}
               </span>
 
               {/* Issued date */}
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                {issuedDate}
+              <span style={{
+                fontSize: typography.fontSize.caption, color: colors.textTertiary,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {formatDate(issuedDate)}
               </span>
 
-              {/* Status badge */}
+              {/* Status */}
               <span style={{
                 display: 'inline-flex', alignItems: 'center',
-                padding: '2px 8px', borderRadius: borderRadius.sm,
-                backgroundColor: badge.bg, color: badge.color,
-                fontSize: typography.fontSize.caption, fontWeight: 600, textTransform: 'uppercase',
-                letterSpacing: '0.3px', whiteSpace: 'nowrap',
+                padding: '2px 7px', borderRadius: '4px',
+                backgroundColor: `${badge.bg}cc`, color: badge.color,
+                fontSize: '10px', fontWeight: 500, textTransform: 'uppercase',
+                letterSpacing: '0.04em', whiteSpace: 'nowrap',
               }}>
                 {badge.label}
               </span>
@@ -374,9 +395,9 @@ export const DrawingList: React.FC<DrawingListProps> = ({
                   aria-label={`Open viewer for ${drawing.setNumber}`}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 28, height: 28, border: 'none', borderRadius: borderRadius.base,
+                    width: 28, height: 28, border: 'none', borderRadius: '8px',
                     backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary,
-                    transition: `all ${transitions.quick}`,
+                    transition: 'all 200ms ease',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.surfaceInset; e.currentTarget.style.color = colors.primaryOrange; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = colors.textTertiary; }}

@@ -732,11 +732,11 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: '100vw', height: '100%', backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['3']} ${spacing['4']}`, backgroundColor: colors.toolbarBg, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
-          <div>
-            <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.white }}>{drawing.setNumber}: {drawing.title}</span>
-            <span style={{ fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted, marginLeft: spacing['3'] }}>Rev {drawing.revision} · {drawing.discipline}</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0 ${spacing['5']}`, height: 48, backgroundColor: 'rgba(10,10,10,0.97)', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, letterSpacing: '-0.01em', color: 'rgba(255,255,255,0.92)' }}>{drawing.setNumber}: {drawing.title}</span>
+            <span style={{ fontSize: '11px', fontWeight: 500, fontFamily: typography.fontFamilyMono, color: 'rgba(255,255,255,0.4)' }}>Rev {drawing.revision} · {drawing.discipline}</span>
           </div>
           {/* Presence bar showing other active viewers */}
           <DrawingPresenceBar />
@@ -746,11 +746,11 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
           <div
             title={`You (${presenceUser.name})`}
             style={{
-              width: 28, height: 28, borderRadius: '50%',
+              width: 24, height: 24, borderRadius: '50%',
               backgroundColor: presenceUser.color,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', fontWeight: typography.fontWeight.bold, color: colors.white,
-              border: `2px solid rgba(255, 255, 255, 0.3)`,
+              fontSize: '9px', fontWeight: 700, color: colors.white,
+              border: '2px solid rgba(10,10,10,0.97)',
             }}
           >
             {presenceUser.initials}
@@ -758,15 +758,17 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
           <button
             onClick={() => setShowCompare(!showCompare)}
             style={{
-              padding: `${spacing['1']} ${spacing['3']}`, border: 'none', borderRadius: borderRadius.base,
-              backgroundColor: showCompare ? colors.primaryOrange : colors.overlayWhiteThin,
-              color: colors.white, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+              padding: '4px 12px', border: 'none', borderRadius: '6px',
+              backgroundColor: showCompare ? 'rgba(244,120,32,0.2)' : 'rgba(255,255,255,0.07)',
+              color: showCompare ? colors.primaryOrange : 'rgba(255,255,255,0.6)',
+              fontSize: '11px', fontWeight: 500,
               fontFamily: typography.fontFamily, cursor: 'pointer',
+              transition: `all ${transitions.fast}`,
             }}
           >
-            {showCompare ? 'Exit Compare' : 'Compare Versions'}
+            {showCompare ? 'Exit Compare' : 'Compare'}
           </button>
-          <button onClick={onClose} aria-label="Close drawing viewer" style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlayWhiteThin, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.white }}>
+          <button onClick={onClose} aria-label="Close drawing viewer" style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', transition: `all ${transitions.fast}` }}>
             <X size={18} />
           </button>
         </div>
@@ -779,8 +781,8 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
       ) : (
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
           {/* Layer panel */}
-          <div style={{ width: '180px', backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: spacing['3'], flexShrink: 0, overflowY: 'auto' }}>
-            <p style={{ fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.darkMutedText, textTransform: 'uppercase', letterSpacing: typography.letterSpacing.wider, margin: 0, marginBottom: spacing['3'] }}>Layers</p>
+          <div style={{ width: '180px', backgroundColor: 'rgba(0, 0, 0, 0.15)', padding: spacing['3'], flexShrink: 0, overflowY: 'auto', borderRight: '1px solid rgba(255,255,255,0.04)' }}>
+            <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, marginBottom: spacing['3'] }}>Layers</p>
             {disciplineLayers.map((layer) => {
               const isActive = activeLayers.has(layer.id);
               return (
@@ -956,11 +958,11 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
             </div>
 
             {/* Zoom controls */}
-            <div style={{ position: 'absolute', bottom: spacing['4'], left: spacing['4'], display: 'flex', flexDirection: 'column', gap: spacing['1'], zIndex: 5 }}>
-              <button onClick={() => setZoom((z) => { const next = Math.min(4, parseFloat((z + 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom in" title="Zoom in" style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomIn size={16} /></button>
-              <button onClick={() => setZoom((z) => { const next = Math.max(0.25, parseFloat((z - 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom out" title="Zoom out" style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><ZoomOut size={16} /></button>
-              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); announceStatus('View reset to fit'); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised, border: 'none', borderRadius: borderRadius.md, cursor: 'pointer', color: colors.textSecondary, boxShadow: shadows.card }}><Maximize2 size={16} /></button>
-              <div style={{ padding: `${spacing['1']} 0`, textAlign: 'center', fontSize: typography.fontSize.caption, color: colors.textOnDarkMuted }}>{Math.round(zoom * 100)}%</div>
+            <div style={{ position: 'absolute', bottom: 14, left: 14, display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 5 }}>
+              <button onClick={() => setZoom((z) => { const next = Math.min(4, parseFloat((z + 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom in" title="Zoom in" style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}><ZoomIn size={15} /></button>
+              <button onClick={() => setZoom((z) => { const next = Math.max(0.25, parseFloat((z - 0.25).toFixed(2))); announceStatus(`Zoomed to ${Math.round(next * 100)}%`); return next; })} aria-label="Zoom out" title="Zoom out" style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}><ZoomOut size={15} /></button>
+              <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); announceStatus('View reset to fit'); }} aria-label="Reset zoom and pan" title="Reset zoom and pan" style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}><Maximize2 size={15} /></button>
+              <div style={{ padding: '4px 0', textAlign: 'center', fontSize: '11px', fontWeight: 500, fontFamily: typography.fontFamilyMono, color: 'rgba(255,255,255,0.35)' }}>{Math.round(zoom * 100)}%</div>
             </div>
 
             {/* Markup toolbar with Save */}
