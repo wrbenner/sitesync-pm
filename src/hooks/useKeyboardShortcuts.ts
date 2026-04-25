@@ -35,6 +35,7 @@ export function useKeyboardShortcuts(shortcuts: Array<Shortcut | ChordShortcut>)
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handler = useCallback((e: KeyboardEvent) => {
+    if (!e.key) return // guard against synthetic events with no key
     const target = e.target as HTMLElement
     const tagName = target.tagName
     const isTyping = tagName === 'INPUT' || tagName === 'TEXTAREA' || target.isContentEditable
@@ -100,7 +101,7 @@ export function useKeyboardShortcuts(shortcuts: Array<Shortcut | ChordShortcut>)
             return
           }
         }
-      } else {
+      } else if ('key' in shortcut && shortcut.key) {
         // Legacy Shortcut format
         const metaMatch = shortcut.meta ? (e.metaKey || e.ctrlKey) : !(e.metaKey || e.ctrlKey)
         const shiftMatch = shortcut.shift ? e.shiftKey : !e.shiftKey
