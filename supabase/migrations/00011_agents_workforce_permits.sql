@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: AI Agents, Workforce Management, and Permit Tracking
+-- SiteSync PM: AI Agents, Workforce Management, and Permit Tracking
 -- AI agent orchestration, workforce members and assignments, time tracking,
 -- labor forecasting, permits, and permit inspections.
 -- =============================================================================

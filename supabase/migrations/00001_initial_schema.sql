@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: Initial Database Schema
+-- SiteSync PM: Initial Database Schema
 -- Construction Project Management Platform
 -- =============================================================================
 

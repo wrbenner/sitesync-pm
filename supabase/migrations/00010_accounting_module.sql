@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: Construction Accounting Module
+-- SiteSync PM: Construction Accounting Module
 -- Contracts, schedule of values, pay applications, job costing, invoices
 -- payable, WIP reporting, and retainage tracking.
 -- =============================================================================
