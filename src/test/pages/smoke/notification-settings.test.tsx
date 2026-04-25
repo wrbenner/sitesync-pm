@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, it, expect } from 'vitest'
 
-const PAGE_FILE = path.resolve(__dirname, '..', '..', '..', '..', 'src/pages/settings/NotificationSettings.tsx')
+const PAGE_FILE = path.resolve(__dirname, '..', '..', '..', '..', 'src/pages/Settings/NotificationSettings.tsx')
 
 describe('Notification Settings smoke', () => {
   it('page source exists on disk', () => {

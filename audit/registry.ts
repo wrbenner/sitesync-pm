@@ -832,7 +832,7 @@ export const PAGE_REGISTRY: PageContract[] = [
   },
   {
     route: '/settings/notifications',
-    pageFile: 'src/pages/settings/NotificationSettings.tsx',
+    pageFile: 'src/pages/Settings/NotificationSettings.tsx',
     title: 'Notification Settings',
     entity: null,
     expected: {},
