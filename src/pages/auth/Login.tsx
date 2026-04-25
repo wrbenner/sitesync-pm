@@ -84,8 +84,12 @@ const PremiumInput: React.FC<{
           letterSpacing: typography.letterSpacing.wide,
         }}
       >
-        {label}{required && <span style={{ color: colors.primaryOrange, marginLeft: 2 }}>*</span>}
+        {label}
       </label>
+      {required && <span aria-hidden="true" style={{
+        color: colors.primaryOrange, marginLeft: 2, position: 'relative',
+        top: -spacing['1.5'], fontSize: typography.fontSize.sm,
+      }}>*</span>}
       <div style={{ position: 'relative' }}>
         {icon && (
           <span style={{
