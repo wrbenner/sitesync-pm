@@ -64,3 +64,20 @@ audit/generated/
 
 # Stray ad-hoc apply scripts
 /scripts/apply-site-map-migration.sql
+
+# macOS Finder / iCloud sync conflict duplicates ("foo 2.tsx", etc.)
+# These regenerate constantly when iCloud Drive resolves a conflict.
+# They are never source — always identical to the un-suffixed file.
+*\ 2.md
+*\ 2.tsx
+*\ 2.ts
+*\ 2.js
+*\ 2.jsx
+*\ 2.json
+*\ 2.yml
+*\ 2.yaml
+*\ 2.png
+*\ 2.svg
+*\ 2.html
+*\ 2.css
+*\ 2.sql
