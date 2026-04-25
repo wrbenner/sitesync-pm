@@ -380,10 +380,8 @@ export const dailyLogService = {
       status: newStatus,
       updated_at: new Date().toISOString(),
     };
-    if (newStatus === 'submitted') {
-      updates.is_submitted = true;
-      updates.submitted_at = new Date().toISOString();
-    }
+    // Note: is_submitted and submitted_at are NOT real DB columns on daily_logs.
+    // Status alone tracks submission state.
     if (newStatus === 'approved') {
       updates.approved = true;
       updates.approved_at = new Date().toISOString();

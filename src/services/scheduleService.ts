@@ -105,13 +105,13 @@ export const scheduleService = {
   },
 
   /**
-   * Create a new phase in 'planned' status with provenance.
+   * Create a new phase in 'upcoming' status with provenance.
    */
   async createPhase(input: CreatePhaseInput): Promise<ScheduleServiceResult<unknown>> {
     const payload: AugmentedInsert = {
       project_id: input.project_id,
       name: input.name,
-      status: 'planned' satisfies ScheduleStatus,
+      status: 'upcoming' satisfies ScheduleStatus,
       start_date: input.start_date ?? null,
       end_date: input.end_date ?? null,
       percent_complete: input.percent_complete ?? 0,
@@ -160,7 +160,7 @@ export const scheduleService = {
     }
 
     // 3. Validate transition via state machine
-    const currentStatus = (phase.status ?? 'planned') as ScheduleStatus;
+    const currentStatus = (phase.status ?? 'upcoming') as ScheduleStatus;
     const validTargets = getValidScheduleTransitions(currentStatus, role);
     if (!validTargets.includes(newStatus)) {
       return {
