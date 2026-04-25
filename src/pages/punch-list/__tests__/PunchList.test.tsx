@@ -17,7 +17,13 @@ const punchItemsState = {
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
     from: vi.fn(),
-    auth: { getSession: vi.fn().mockResolvedValue({ data: { session: null } }) },
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+    },
+    channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn().mockReturnThis() })),
+    removeChannel: vi.fn(),
   },
   isSupabaseConfigured: true,
 }))
