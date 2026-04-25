@@ -70,7 +70,7 @@ export const drawingService = {
       .insert({
         project_id: input.project_id,
         title: input.title,
-        status: 'for_review' as DrawingStatus,
+        status: 'draft' as DrawingStatus,
         file_url: input.file_url ?? null,
         discipline: input.discipline ?? null,
         sheet_number: input.sheet_number ?? null,
@@ -154,8 +154,7 @@ export const drawingService = {
    * use transitionStatus() when formal workflow transitions are needed.
    */
   async updateDrawing(drawingId: string, updates: Partial<Drawing>): Promise<Result> {
-
-    const { uploaded_by: _uploaded_by, ...safeUpdates } = updates as Record<
+    const { uploaded_by: _uploaded_by, status: _status, ...safeUpdates } = updates as Record<
       string,
       unknown
     >;

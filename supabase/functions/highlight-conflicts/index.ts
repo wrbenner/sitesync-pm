@@ -1,5 +1,5 @@
 // ── highlight-conflicts Edge Function ─────────────────────────
-// Adapted from SiteSync AI:
+// Adapted from SiteSync PM:
 //   sitesync-ai-utils-backend/app/routers/conflict_polygon.py
 //   sitesync-ai-utils-backend/app/services/conflict_polygon.py
 //

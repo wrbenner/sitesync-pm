@@ -413,9 +413,14 @@ export const documentService = {
    * Delete a document.
    */
   async deleteDocument(documentId: string): Promise<Result> {
+    const userId = await getCurrentUserId();
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from('files')
-      .delete()
+      .update({
+        deleted_at: now,
+        deleted_by: userId,
+      } as Record<string, unknown>)
       .eq('id', documentId);
 
     if (error) return fail(dbError(error.message, { documentId }));

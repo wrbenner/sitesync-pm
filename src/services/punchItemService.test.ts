@@ -116,8 +116,8 @@ describe('punchItemService.transitionStatus — lifecycle timestamps', () => {
     return mockUpdate
   }
 
-  it('sets verified_date when transitioning in_progress → resolved → verified', async () => {
-    const mockUpdate = setupTransition('resolved', 'superintendent')
+  it('sets verified_date when transitioning sub_complete → verified', async () => {
+    const mockUpdate = setupTransition('sub_complete', 'superintendent')
 
     const result = await punchItemService.transitionStatus('pi-1', 'Verify')
 
@@ -127,10 +127,10 @@ describe('punchItemService.transitionStatus — lifecycle timestamps', () => {
     )
   })
 
-  it('transitions open → verified via Verify (Complete at Creation)', async () => {
+  it('transitions open → verified via Verify (direct verify at creation)', async () => {
     const mockUpdate = setupTransition('open', 'superintendent')
 
-    const result = await punchItemService.transitionStatus('pi-1', 'Verify (Complete at Creation)')
+    const result = await punchItemService.transitionStatus('pi-1', 'Verify')
 
     expect(result.error).toBeNull()
     expect(mockUpdate).toHaveBeenCalledWith(
@@ -138,10 +138,10 @@ describe('punchItemService.transitionStatus — lifecycle timestamps', () => {
     )
   })
 
-  it('transitions verified → in_progress via Reject Verification', async () => {
+  it('transitions verified → in_progress via Reject', async () => {
     const mockUpdate = setupTransition('verified', 'superintendent')
 
-    const result = await punchItemService.transitionStatus('pi-1', 'Reject Verification')
+    const result = await punchItemService.transitionStatus('pi-1', 'Reject')
 
     expect(result.error).toBeNull()
     expect(mockUpdate).toHaveBeenCalledWith(

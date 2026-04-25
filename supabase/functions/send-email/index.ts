@@ -68,7 +68,7 @@ function renderTemplate(
         ${body}
       </div>
       <div style="padding:16px;color:#6B7280;font-size:11px;border-top:1px solid #E5E7EB;">
-        Sent by SiteSync AI. Do not reply to this email.
+        Sent by SiteSync PM. Do not reply to this email.
       </div>
     </body></html>`
 
@@ -124,7 +124,7 @@ function renderTemplate(
       subject: `ACTION REQUIRED: ${severityHigh} high severity clashes on ${projectName}`,
       html: wrap(
         'Drawing clashes detected',
-        `<p>SiteSync AI detected <strong>${severityHigh}</strong> high severity dimensional mismatches on <strong>${projectName}</strong>.</p>
+        `<p>SiteSync PM detected <strong>${severityHigh}</strong> high severity dimensional mismatches on <strong>${projectName}</strong>.</p>
          <p>Review before issuing RFIs to the architect or structural engineer.</p>
          ${data.report_url ? `<p><a href="${data.report_url}" style="color:#F47820;">View report</a></p>` : ''}`,
       ),
@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get('RESEND_API_KEY')
     if (!resendKey) throw new HttpError(500, 'RESEND_API_KEY not configured', 'config_error')
 
-    const from = body.from ?? Deno.env.get('RESEND_FROM_ADDRESS') ?? 'SiteSync AI <noreply@sitesync.app>'
+    const from = body.from ?? Deno.env.get('RESEND_FROM_ADDRESS') ?? 'SiteSync PM <noreply@sitesync.app>'
 
     const payload: Record<string, unknown> = {
       from,

@@ -136,7 +136,7 @@ function buildBlocks(body: SlackRequest) {
     elements: [
       {
         type: 'mrkdwn',
-        text: `SiteSync AI • <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
+        text: `SiteSync PM • <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}>`,
       },
     ],
   })

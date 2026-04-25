@@ -804,6 +804,57 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'stub',
   },
 
+  // ── AI / Settings / Profile (added in sprint-zero-consolidation) ──
+  {
+    route: '/ai',
+    pageFile: 'src/pages/AIAssistant.tsx',
+    title: 'AI Assistant',
+    entity: null,
+    expected: {},
+    permissionModule: 'ai',
+    status: 'production',
+  },
+  {
+    route: '/settings',
+    pageFile: 'src/pages/admin/ProjectSettings.tsx',
+    title: 'Project Settings',
+    entity: 'project',
+    expected: {},
+    status: 'production',
+  },
+  {
+    route: '/settings/team',
+    pageFile: 'src/pages/admin/UserManagement.tsx',
+    title: 'Team & Roles',
+    entity: null,
+    expected: {},
+    status: 'production',
+  },
+  {
+    route: '/settings/notifications',
+    pageFile: 'src/pages/Settings/NotificationSettings.tsx',
+    title: 'Notification Settings',
+    entity: null,
+    expected: {},
+    status: 'production',
+  },
+  {
+    route: '/profile',
+    pageFile: 'src/pages/UserProfile.tsx',
+    title: 'User Profile',
+    entity: null,
+    expected: {},
+    status: 'production',
+  },
+  {
+    route: '/digital-twin',
+    pageFile: 'src/pages/SiteMap.tsx',
+    title: 'Digital Twin (redirects to /bim)',
+    entity: null,
+    expected: {},
+    status: 'stub',
+  },
+
   // ── Catch-all ────────────────────────────────────────────
   {
     route: '*',

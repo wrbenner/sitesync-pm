@@ -13,7 +13,8 @@ const from = (table: AnyTableName) => supabase.from(table as keyof Database['pub
 
 /** Columns that actually exist on the submittals table */
 const SUBMITTAL_COLUMNS = new Set([
-  'title', 'spec_section', 'subcontractor', 'assigned_to', 'status',
+  'title', 'spec_section', 'subcontractor', 'assigned_to', 'status', 'type',
+  'description', 'related_rfi_id',
   'due_date', 'required_onsite_date', 'submit_by_date', 'lead_time_weeks',
   'revision_number', 'stamp', 'project_id', 'parent_submittal_id',
   'approved_date', 'submitted_date', 'days_in_review', 'created_by',

@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { usePresenceStore } from '../../stores/presenceStore'
+import { useShallow } from 'zustand/react/shallow'
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 
 // ── Presence Dots (for list rows) ────────────────────────
@@ -17,7 +18,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
   // Data flow: PresenceBar's useOthers hook (Liveblocks) populates presenceStore,
   // and this component reads entity viewers via the getUsersViewingEntity selector.
   // No explicit registration is needed here.
-  const viewers = usePresenceStore((s) => s.getUsersViewingEntity(entityId))
+  const viewers = usePresenceStore(useShallow((s) => s.getUsersViewingEntity(entityId)))
   const isInitialized = usePresenceStore((s) => s.isInitialized)
   const [overflowOpen, setOverflowOpen] = useState(false)
   const [focusedAvatarId, setFocusedAvatarId] = useState<string | null>(null)
@@ -252,7 +253,7 @@ interface EditingWarningProps {
 }
 
 export const EditingWarning: React.FC<EditingWarningProps> = ({ entityId }) => {
-  const editors = usePresenceStore((s) => s.getUsersViewingEntity(entityId))
+  const editors = usePresenceStore(useShallow((s) => s.getUsersViewingEntity(entityId)))
 
   if (editors.length === 0) return null
 
@@ -308,7 +309,7 @@ interface PagePresenceProps {
 }
 
 export const PagePresence: React.FC<PagePresenceProps> = ({ page }) => {
-  const viewers = usePresenceStore((s) => s.getUsersOnPage(page))
+  const viewers = usePresenceStore(useShallow((s) => s.getUsersOnPage(page)))
 
   if (viewers.length === 0) return null
 

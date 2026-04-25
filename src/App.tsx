@@ -66,55 +66,52 @@ const NotificationCenter = lazy(() => import('./components/notifications/Notific
 const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').then((m) => ({ default: m.ShortcutOverlay })));
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
-// TODO: Consider grouping related pages (RFIs + Submittals + ChangeOrders) into a single chunk using webpackChunkName or Vite manual chunks for frequently co-visited pages
-// Lazy loaded pages
+// ── Lazy loaded pages ─────────────────────────────────────
+// Core 10
 const Dashboard = lazyWithRetry(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })));
-const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
-const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
-const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
-const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
-const SubmittalDetailPage = lazy(() => import('./pages/submittals/SubmittalDetailPage'));
+const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
 const Schedule = lazyWithRetry(() => import('./pages/schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
-const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
-const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
-const FieldCapture = lazy(() => import('./pages/field-capture').then((m) => ({ default: m.FieldCapture })));
+const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
+const RFIDetail = lazy(() => import('./pages/rfis/RFIDetail').then((m) => ({ default: m.RFIDetail })));
+const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
+const SubmittalDetailPage = lazy(() => import('./pages/submittals/SubmittalDetailPage'));
+const SpecParserPage = lazy(() => import('./pages/submittals/SpecParserPage'));
 const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => ({ default: m.PunchList })));
 const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetailPage'));
+const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
+const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
+const Safety = lazy(() => import('./pages/safety/index').then((m) => ({ default: m.Safety })));
+// People & Labor
+const Workforce = lazy(() => import('./pages/Workforce'));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
+const TimeTracking = lazy(() => import('./pages/TimeTracking'));
 const Directory = lazy(() => import('./pages/Directory').then((m) => ({ default: m.Directory })));
 const Meetings = lazy(() => import('./pages/Meetings').then((m) => ({ default: m.Meetings })));
-const Files = lazy(() => import('./pages/files').then((m) => ({ default: m.Files })));
-const Lookahead = lazy(() => import('./pages/Lookahead').then((m) => ({ default: m.Lookahead })));
-const BIMViewerPage = lazy(() => import('./pages/bim/BIMViewerPage'));
-const SpecParserPage = lazy(() => import('./pages/submittals/SpecParserPage'));
-const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
-const Safety = lazy(() => import('./pages/safety').then((m) => ({ default: m.Safety })));
-const Estimating = lazy(() => import('./pages/Estimating'));
-const Procurement = lazy(() => import('./pages/Procurement'));
-const EquipmentPage = lazy(() => import('./pages/Equipment'));
-const Portfolio = lazy(() => import('./pages/Portfolio'));
-const Financials = lazy(() => import('./pages/Financials'));
+// Financial
 const PaymentApplications = lazy(() => import('./pages/payment-applications'));
-const OwnerPortal = lazy(() => import('./pages/OwnerPortal'));
-const AIAgents = lazy(() => import('./pages/AIAgents'));
-const Workforce = lazy(() => import('./pages/Workforce'));
-const Permits = lazy(() => import('./pages/Permits'));
-const Integrations = lazy(() => import('./pages/Integrations'));
-const Reports = lazy(() => import('./pages/Reports'));
-const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default: m.Contracts })));
+const Estimating = lazy(() => import('./pages/Estimating'));
+// Field Ops
+const EquipmentPage = lazy(() => import('./pages/Equipment'));
+const Procurement = lazy(() => import('./pages/Procurement'));
+const Permits = lazy(() => import('./pages/Permits'));
+// Documents & Closeout
+const Files = lazy(() => import('./pages/files').then((m) => ({ default: m.Files })));
+const Reports = lazy(() => import('./pages/Reports'));
 const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m.Closeout })));
-const Vendors = lazy(() => import('./pages/Vendors').then((m) => ({ default: m.Vendors })));
-const CostManagement = lazy(() => import('./pages/CostManagement'));
-const TimeTracking = lazy(() => import('./pages/TimeTracking'));
-const Wiki = lazy(() => import('./pages/Wiki'));
-const SiteMap = lazy(() => import('./pages/SiteMap'));
-const CarbonDashboard = lazy(() => import('./pages/CarbonDashboard'));
-const HUDCompliancePage = lazy(() => import('./pages/compliance/HUDCompliancePage'));
-const AICopilot = lazy(() => import('./pages/AICopilot'));
+const BIMViewerPage = lazy(() => import('./pages/bim/BIMViewerPage'));
+// Intelligence
+const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+// Utility & Admin
+const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
+const Integrations = lazy(() => import('./pages/Integrations'));
+const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const WorkflowSettings = lazy(() => import('./pages/Settings/WorkflowSettings'));
-const RFIDetail = lazy(() => import('./pages/rfis/RFIDetail').then((m) => ({ default: m.RFIDetail })));
+const ProjectSettings = lazy(() => import('./pages/admin/ProjectSettings').then((m) => ({ default: m.ProjectSettings })));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
+const NotificationSettings = lazy(() => import('./pages/Settings/NotificationSettings'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
 const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
@@ -329,65 +326,92 @@ function AppRoutes() {
           <Routes location={location}>
             <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
-            <Route path="/portfolio" element={<PageSuspense><ProtectedRoute moduleId="portfolio" moduleName="Portfolio"><Portfolio /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── Core 10 ── */}
             <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
             <Route path="/dashboard" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
-            <Route path="/tasks" element={<PageSuspense><ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute></PageSuspense>} />
-            <Route path="/drawings" element={<PageSuspense><ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
+            <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
+            <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
             <Route path="/rfis" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute></PageSuspense>} />
             <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
-            <Route path="/lookahead" element={<PageSuspense><ProtectedRoute moduleId="lookahead" moduleName="Lookahead"><Lookahead /></ProtectedRoute></PageSuspense>} />
-            <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
-            <Route path="/change-orders" element={<PageSuspense><ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><ChangeOrders /></ProtectedRoute></PageSuspense>} />
-            <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
-            <Route path="/field-capture" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/spec-parser" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />
             <Route path="/punch-list/:itemId" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch Item Detail"><PunchItemDetailPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/crews" element={<PageSuspense><ProtectedRoute moduleId="crews" moduleName="Crews"><Crews /></ProtectedRoute></PageSuspense>} />
+            <Route path="/drawings" element={<PageSuspense><ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/change-orders" element={<PageSuspense><ProtectedRoute moduleId="change-orders" moduleName="Change Orders"><ChangeOrders /></ProtectedRoute></PageSuspense>} />
             <Route path="/safety" element={<PageSuspense><ProtectedRoute moduleId="safety" moduleName="Safety"><Safety /></ProtectedRoute></PageSuspense>} />
-            <Route path="/estimating" element={<PageSuspense><ProtectedRoute moduleId="estimating" moduleName="Estimating"><Estimating /></ProtectedRoute></PageSuspense>} />
-            <Route path="/procurement" element={<PageSuspense><ProtectedRoute moduleId="procurement" moduleName="Procurement"><Procurement /></ProtectedRoute></PageSuspense>} />
-            <Route path="/equipment" element={<PageSuspense><ProtectedRoute moduleId="equipment" moduleName="Equipment"><EquipmentPage /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── People & Labor ── */}
+            <Route path="/workforce" element={<PageSuspense><ProtectedRoute moduleId="workforce" moduleName="Workforce"><Workforce /></ProtectedRoute></PageSuspense>} />
+            <Route path="/crews" element={<PageSuspense><ProtectedRoute moduleId="crews" moduleName="Crews"><Crews /></ProtectedRoute></PageSuspense>} />
+            <Route path="/time-tracking" element={<PageSuspense><ProtectedRoute moduleId="time-tracking" moduleName="Time Tracking"><TimeTracking /></ProtectedRoute></PageSuspense>} />
             <Route path="/directory" element={<PageSuspense><ProtectedRoute moduleId="directory" moduleName="Directory"><Directory /></ProtectedRoute></PageSuspense>} />
             <Route path="/meetings" element={<PageSuspense><ProtectedRoute moduleId="meetings" moduleName="Meetings"><Meetings /></ProtectedRoute></PageSuspense>} />
-            <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
-            <Route path="/bim" element={<PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/submittals/spec-parser" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/activity" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
-            <Route path="/project-health" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/financials" element={<PageSuspense><ProtectedRoute moduleId="financials" moduleName="Financials"><Financials /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── Financial ── */}
             <Route path="/pay-apps" element={<PageSuspense><ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute></PageSuspense>} />
-            <Route path="/payment-applications" element={<PageSuspense><ProtectedRoute moduleId="pay-apps" moduleName="Payment Applications"><PaymentApplications /></ProtectedRoute></PageSuspense>} />
-            <Route path="/portal/owner" element={<PageSuspense><ProtectedRoute requiredPermission="project.settings" moduleName="Owner Portal"><OwnerPortal /></ProtectedRoute></PageSuspense>} />
-            <Route path="/ai-agents" element={<PageSuspense><ProtectedRoute moduleId="ai-agents" moduleName="AI Agents"><AIAgents /></ProtectedRoute></PageSuspense>} />
-            <Route path="/workforce" element={<PageSuspense><ProtectedRoute moduleId="workforce" moduleName="Workforce"><Workforce /></ProtectedRoute></PageSuspense>} />
+            <Route path="/payment-applications" element={<Navigate to="/pay-apps" replace />} />
+            <Route path="/contracts" element={<PageSuspense><ProtectedRoute moduleId="contracts" moduleName="Contracts"><Contracts /></ProtectedRoute></PageSuspense>} />
+            <Route path="/estimating" element={<PageSuspense><ProtectedRoute moduleId="estimating" moduleName="Estimating"><Estimating /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── Field Ops ── */}
+            <Route path="/equipment" element={<PageSuspense><ProtectedRoute moduleId="equipment" moduleName="Equipment"><EquipmentPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/procurement" element={<PageSuspense><ProtectedRoute moduleId="procurement" moduleName="Procurement"><Procurement /></ProtectedRoute></PageSuspense>} />
             <Route path="/permits" element={<PageSuspense><ProtectedRoute moduleId="permits" moduleName="Permits"><Permits /></ProtectedRoute></PageSuspense>} />
-            <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── Documents & Closeout ── */}
+            <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/lien-waivers" element={<Navigate to="/pay-apps" replace />} />
-            <Route path="/contracts" element={<PageSuspense><ProtectedRoute moduleId="contracts" moduleName="Contracts"><Contracts /></ProtectedRoute></PageSuspense>} />
-            <Route path="/transmittals" element={<Navigate to="/files" replace />} />
             <Route path="/closeout" element={<PageSuspense><ProtectedRoute moduleId="closeout" moduleName="Closeout"><Closeout /></ProtectedRoute></PageSuspense>} />
+            <Route path="/bim" element={<PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── Intelligence ── */}
+            <Route path="/ai" element={<PageSuspense><ProtectedRoute moduleId="ai" moduleName="AI Assistant"><AIAssistant /></ProtectedRoute></PageSuspense>} />
+
+            {/* ── Utility & Admin ── */}
+            <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
+            <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
+            <Route path="/settings/workflows" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
+            <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
+            <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
+            <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
+            <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
+
+            {/* ── Redirects: merged pages ── */}
+            <Route path="/tasks" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/lookahead" element={<Navigate to="/schedule" replace />} />
+            <Route path="/field-capture" element={<Navigate to="/daily-log" replace />} />
+            <Route path="/financials" element={<Navigate to="/budget" replace />} />
+            <Route path="/cost-management" element={<Navigate to="/budget" replace />} />
+            <Route path="/vendors" element={<Navigate to="/contracts" replace />} />
+
+            {/* ── Redirects: cut pages ── */}
+            <Route path="/portfolio" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/digital-twin" element={<Navigate to="/bim" replace />} />
+            <Route path="/carbon" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/compliance" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/wiki" element={<Navigate to="/files" replace />} />
+            <Route path="/site-map" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/portal/owner" element={<Navigate to="/reports" replace />} />
+            <Route path="/ai-agents" element={<Navigate to="/ai" replace />} />
+            <Route path="/copilot" element={<Navigate to="/ai" replace />} />
+
+            {/* ── Redirects: legacy aliases ── */}
+            <Route path="/activity" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/project-health" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/lien-waivers" element={<Navigate to="/pay-apps" replace />} />
+            <Route path="/transmittals" element={<Navigate to="/files" replace />} />
             <Route path="/specifications" element={<Navigate to="/files" replace />} />
             <Route path="/preconstruction" element={<Navigate to="/estimating" replace />} />
             <Route path="/resources" element={<Navigate to="/estimating" replace />} />
-            <Route path="/vendors" element={<PageSuspense><ProtectedRoute moduleId="vendors" moduleName="Vendors"><Vendors /></ProtectedRoute></PageSuspense>} />
-            <Route path="/cost-management" element={<PageSuspense><ProtectedRoute moduleId="cost-management" moduleName="Cost Management"><CostManagement /></ProtectedRoute></PageSuspense>} />
-            <Route path="/time-tracking" element={<PageSuspense><ProtectedRoute moduleId="time-tracking" moduleName="Time Tracking"><TimeTracking /></ProtectedRoute></PageSuspense>} />
             <Route path="/deliveries" element={<Navigate to="/procurement" replace />} />
-            <Route path="/wiki" element={<PageSuspense><ProtectedRoute moduleId="wiki" moduleName="Wiki"><Wiki /></ProtectedRoute></PageSuspense>} />
-            <Route path="/site-map" element={<PageSuspense><ProtectedRoute moduleId="site-map" moduleName="Site Map"><SiteMap /></ProtectedRoute></PageSuspense>} />
-            <Route path="/carbon" element={<PageSuspense><ProtectedRoute moduleId="carbon" moduleName="Carbon"><CarbonDashboard /></ProtectedRoute></PageSuspense>} />
-            <Route path="/compliance" element={<PageSuspense><ProtectedRoute moduleId="compliance" moduleName="HUD & Tax Credits"><HUDCompliancePage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/site-intelligence" element={<Navigate to="/site-map" replace />} />
-            <Route path="/copilot" element={<PageSuspense><ProtectedRoute moduleId="copilot" moduleName="AI Copilot"><AICopilot /></ProtectedRoute></PageSuspense>} />
-            <Route path="/settings/workflows" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense>} />
-            <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
+            <Route path="/site-intelligence" element={<Navigate to="/dashboard" replace />} />
+
             <Route path="*" element={<PageSuspense><NotFound /></PageSuspense>} />
           </Routes>
         </motion.div>

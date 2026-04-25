@@ -1,4 +1,4 @@
--- SiteSync AI Construction PM Platform - Seed Data
+-- SiteSync PM Construction PM Platform - Seed Data
 -- This file populates demo data for testing and development
 -- Generated for 2 organizations, 3 projects, 10 users, and comprehensive project data
 

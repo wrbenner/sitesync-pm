@@ -21,7 +21,7 @@ warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
 fail()    { echo -e "${RED}✗${NC} $1"; }
 header()  { echo -e "\n${BOLD}═══ $1 ═══${NC}\n"; }
 
-header "SiteSync AI Setup"
+header "SiteSync PM Setup"
 
 # ── 1. Node dependencies ──
 header "Node Dependencies"

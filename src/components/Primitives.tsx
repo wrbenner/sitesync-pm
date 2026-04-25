@@ -246,7 +246,7 @@ export const Btn: React.FC<BtnProps> = ({
       style={{
         display: 'inline-flex',
         width: fullWidth ? '100%' : 'auto',
-        minHeight: 56,
+        minHeight: size === 'lg' ? 48 : size === 'md' ? 40 : 32,
         padding: s.padding,
         fontSize: s.fontSize,
         fontWeight: typography.fontWeight.medium,
@@ -408,6 +408,7 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
       <p
         style={{
           fontSize: typography.fontSize['4xl'],
+          fontFamily: typography.fontFamilyMono,
           fontWeight: typography.fontWeight.semibold,
           color: valueColor,
           margin: 0,
@@ -479,24 +480,22 @@ export const Tag: React.FC<TagProps> = React.memo(({
     aria-label={label}
     style={{
       display: 'inline-block',
-      padding: `${spacing['0.5']} ${spacing['2']}`,
-      borderRadius: borderRadius.sm,
+      padding: `2px ${spacing['2']}`,
+      borderRadius: borderRadius.full,
       backgroundColor,
       color,
       fontSize,
       fontWeight: typography.fontWeight.medium,
       whiteSpace: 'nowrap',
       lineHeight: typography.lineHeight.normal,
-      letterSpacing: typography.letterSpacing.wide,
-      transition: `box-shadow ${duration.instant}ms ${easing.standard}, filter ${duration.instant}ms ${easing.standard}`,
+      letterSpacing: '0.01em',
+      transition: `opacity ${duration.instant}ms ${easing.standard}`,
     }}
     onMouseEnter={(e) => {
-      (e.currentTarget as HTMLSpanElement).style.boxShadow = shadows.sm;
-      (e.currentTarget as HTMLSpanElement).style.filter = 'saturate(1.2)';
+      (e.currentTarget as HTMLSpanElement).style.opacity = '0.85';
     }}
     onMouseLeave={(e) => {
-      (e.currentTarget as HTMLSpanElement).style.boxShadow = 'none';
-      (e.currentTarget as HTMLSpanElement).style.filter = 'none';
+      (e.currentTarget as HTMLSpanElement).style.opacity = '1';
     }}
   >
     {label}

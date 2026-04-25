@@ -52,7 +52,7 @@ const DEFAULT_USER: AppUser = {
   initials: 'DU',
   email: 'dev@sitesync.ai',
   role: 'project_manager',
-  company: 'SiteSync AI',
+  company: 'SiteSync PM',
 };
 
 export const useUserStore = create<UserState>((set) => ({

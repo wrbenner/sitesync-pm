@@ -402,7 +402,7 @@ Deno.serve(async (req) => {
     const currentPage = sanitizeForPrompt(projectContext?.page || 'dashboard')
     const entityContext = projectContext?.entityContext ? sanitizeForPrompt(projectContext.entityContext) : ''
 
-    const systemPrompt = `You are SiteSync AI, an expert construction project management assistant. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+    const systemPrompt = `You are SiteSync PM, an expert construction project management assistant. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
 ${contextSummary ? `CURRENT PROJECT:\n${contextSummary}\n` : ''}
 ${entityContext ? `USER IS VIEWING:\n${entityContext}\n` : ''}

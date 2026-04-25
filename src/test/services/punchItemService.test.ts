@@ -185,7 +185,8 @@ describe('punchItemService.transitionStatus', () => {
     })
 
     const { punchItemService } = await import('../../services/punchItemService')
-    const result = await punchItemService.transitionStatus('pi-1', 'Verify')
+    // 'Reject' is not valid from the 'open' state (open allows Start Work / Verify)
+    const result = await punchItemService.transitionStatus('pi-1', 'Reject')
 
     expect(result.error).toMatch(/Invalid action/)
     expect(result.data).toBeNull()
@@ -258,7 +259,7 @@ describe('punchItemService.transitionStatus', () => {
     )
   })
 
-  it('sets resolved_date when transitioning to resolved', async () => {
+  it('transitions in_progress → sub_complete via Sub Complete', async () => {
     sessionFor('user-1')
 
     const mockUpdate = vi.fn().mockReturnValue({
@@ -285,11 +286,11 @@ describe('punchItemService.transitionStatus', () => {
     })
 
     const { punchItemService } = await import('../../services/punchItemService')
-    const result = await punchItemService.transitionStatus('pi-1', 'Mark Resolved')
+    const result = await punchItemService.transitionStatus('pi-1', 'Sub Complete')
 
     expect(result.error).toBeNull()
     expect(mockUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'resolved', resolved_date: expect.any(String) }),
+      expect.objectContaining({ status: 'sub_complete', updated_at: expect.any(String) }),
     )
   })
 

@@ -79,7 +79,14 @@ describe('useCreateSubmittal', () => {
     const { result } = renderMutation(() => useCreateSubmittal())
     await result.current.mutateAsync({ data: validSubmittal, projectId: 'p1' })
     expect(h.supabase.from).toHaveBeenCalledWith('submittals')
-    expect(h.chain.insert).toHaveBeenCalledWith(validSubmittal)
+    // sanitizeSubmittalData converts empty-string optional fields to null
+    expect(h.chain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: validSubmittal.title,
+        spec_section: validSubmittal.spec_section,
+        type: validSubmittal.type,
+      }),
+    )
     await waitFor(() => expect(h.invalidateEntity).toHaveBeenCalledWith('submittal', 'test-project'))
     expect(h.posthogCapture).toHaveBeenCalledWith('submittal_created', expect.any(Object))
   })

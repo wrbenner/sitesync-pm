@@ -1,4 +1,4 @@
-// SiteSync AI — Apple HIG Animation System
+// SiteSync PM — Apple HIG Animation System
 // Every animation: transform + opacity only, ≤ 500ms, 60fps, respects prefers-reduced-motion.
 // Usage: <motion.div {...animations.pageSlide} /> or spread individual props.
 

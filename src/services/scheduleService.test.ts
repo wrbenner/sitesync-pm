@@ -20,6 +20,7 @@ function makeChain(resolved: unknown) {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue(resolved),
@@ -36,7 +37,7 @@ beforeEach(() => {
 
 describe('scheduleService.loadPhases', () => {
   it('returns active phases on success', async () => {
-    const phases = [{ id: 'ph-1', status: 'planned', deleted_at: null }];
+    const phases = [{ id: 'ph-1', status: 'upcoming', deleted_at: null }];
     mockSupabase.from.mockReturnValue(makeChain({ data: phases, error: null }));
 
     const result = await scheduleService.loadPhases('proj-1');
@@ -84,8 +85,8 @@ describe('scheduleService.loadMilestones', () => {
 });
 
 describe('scheduleService.createPhase', () => {
-  it('creates phase with planned status and provenance', async () => {
-    const created = { id: 'ph-new', status: 'planned', created_by: 'user-1' };
+  it('creates phase with upcoming status and provenance', async () => {
+    const created = { id: 'ph-new', status: 'upcoming', created_by: 'user-1' };
     const chain = makeChain({ data: created, error: null });
     mockSupabase.from.mockReturnValue(chain);
 
@@ -96,7 +97,7 @@ describe('scheduleService.createPhase', () => {
     expect(result.error).toBeNull();
     expect(result.data).toEqual(created);
     const insertArg = chain.insert.mock.calls[0][0];
-    expect(insertArg.status).toBe('planned');
+    expect(insertArg.status).toBe('upcoming');
     expect(insertArg.created_by).toBe('user-1');
   });
 
@@ -146,43 +147,44 @@ describe('scheduleService.transitionStatus', () => {
       }
       return {
         update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: updateError }),
       };
     });
   }
 
   it('allows valid transition for superintendent', async () => {
-    setupTransition('planned', 'superintendent');
+    setupTransition('upcoming', 'superintendent');
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+    const result = await scheduleService.transitionStatus('ph-1', 'active');
     expect(result.error).toBeNull();
   });
 
   it('blocks invalid transition', async () => {
-    setupTransition('planned', 'superintendent');
+    setupTransition('upcoming', 'superintendent');
 
     const result = await scheduleService.transitionStatus('ph-1', 'completed');
     expect(result.error).toContain('Invalid transition');
   });
 
   it('blocks transition for viewer role', async () => {
-    setupTransition('planned', 'viewer');
+    setupTransition('upcoming', 'viewer');
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+    const result = await scheduleService.transitionStatus('ph-1', 'active');
     expect(result.error).toContain('Invalid transition');
   });
 
   it('blocks reopen for superintendent (only PM+ can reopen)', async () => {
     setupTransition('completed', 'superintendent');
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+    const result = await scheduleService.transitionStatus('ph-1', 'active');
     expect(result.error).toContain('Invalid transition');
   });
 
   it('allows reopen for project_manager', async () => {
     setupTransition('completed', 'project_manager');
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+    const result = await scheduleService.transitionStatus('ph-1', 'active');
     expect(result.error).toBeNull();
   });
 
@@ -193,7 +195,7 @@ describe('scheduleService.transitionStatus', () => {
       single: vi.fn().mockResolvedValue({ data: null, error: { message: 'not found' } }),
     }));
 
-    const result = await scheduleService.transitionStatus('ph-999', 'in_progress');
+    const result = await scheduleService.transitionStatus('ph-999', 'active');
     expect(result.error).toBe('not found');
   });
 
@@ -207,7 +209,7 @@ describe('scheduleService.transitionStatus', () => {
           eq: vi.fn().mockReturnThis(),
           single: vi
             .fn()
-            .mockResolvedValue({ data: { status: 'planned', project_id: 'proj-1' }, error: null }),
+            .mockResolvedValue({ data: { status: 'upcoming', project_id: 'proj-1' }, error: null }),
         };
       }
       return {
@@ -217,13 +219,14 @@ describe('scheduleService.transitionStatus', () => {
       };
     });
 
-    const result = await scheduleService.transitionStatus('ph-1', 'in_progress');
+    const result = await scheduleService.transitionStatus('ph-1', 'active');
     expect(result.error).toContain('not a member');
   });
 
   it('sets percent_complete to 100 when completing', async () => {
     let callCount = 0;
-    const updateChain = { update: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) };
+    const updateChain = { update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) };
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'schedule_phases' && callCount === 0) {
         callCount++;
@@ -232,7 +235,7 @@ describe('scheduleService.transitionStatus', () => {
           eq: vi.fn().mockReturnThis(),
           single: vi
             .fn()
-            .mockResolvedValue({ data: { status: 'in_progress', project_id: 'proj-1' }, error: null }),
+            .mockResolvedValue({ data: { status: 'active', project_id: 'proj-1' }, error: null }),
         };
       }
       if (table === 'project_members') {
@@ -255,6 +258,7 @@ describe('scheduleService.updatePhase', () => {
   it('updates fields and sets updated_by', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -270,6 +274,7 @@ describe('scheduleService.deletePhase', () => {
   it('soft-deletes by setting deleted_at and deleted_by', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -286,6 +291,7 @@ describe('scheduleService.updateDependencies', () => {
   it('sets depends_on to first predecessor', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -299,6 +305,7 @@ describe('scheduleService.updateDependencies', () => {
   it('sets depends_on to null for empty predecessors', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);

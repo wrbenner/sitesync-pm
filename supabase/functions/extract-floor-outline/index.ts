@@ -1,5 +1,5 @@
 // ── extract-floor-outline Edge Function ───────────────────────
-// Adapted from SiteSync AI:
+// Adapted from SiteSync PM:
 //   sitesync-ai-utils-backend/app/routers/outer_walls_extractor.py
 //   sitesync-ai-utils-backend/app/services/outer_walls_extractor.py
 //

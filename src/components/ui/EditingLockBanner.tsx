@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {  Pencil } from 'lucide-react'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { usePresenceStore } from '../../stores/presenceStore'
+import { useShallow } from 'zustand/react/shallow'
 import { broadcastEditingStart, broadcastEditingStop } from '../../lib/realtime'
 
 // ── Editing Lock Banner ─────────────────────────────────
@@ -23,7 +24,7 @@ export const EditingLockBanner: React.FC<EditingLockBannerProps> = React.memo(({
   entityId,
   isEditing = false,
 }) => {
-  const editors = usePresenceStore((s) => s.getUsersEditingEntity(entityId))
+  const editors = usePresenceStore(useShallow((s) => s.getUsersEditingEntity(entityId)))
 
   // Broadcast editing state changes
   useEffect(() => {

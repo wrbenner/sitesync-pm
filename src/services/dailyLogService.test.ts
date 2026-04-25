@@ -29,11 +29,13 @@ function makeChain() {
     eq: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
     order: vi.fn(),
+    limit: vi.fn(),
     single: mockSingle,
     maybeSingle: mockMaybeSingle,
   }
-  for (const key of ['select', 'eq', 'insert', 'update', 'order']) {
+  for (const key of ['select', 'eq', 'insert', 'update', 'delete', 'order', 'limit']) {
     chain[key].mockReturnValue(chain)
   }
   return chain

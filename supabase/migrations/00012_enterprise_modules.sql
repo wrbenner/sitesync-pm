@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: Enterprise Modules
+-- SiteSync PM: Enterprise Modules
 -- Integrations, custom reports, sustainability tracking, waste management,
 -- warranties, and warranty claims.
 -- =============================================================================

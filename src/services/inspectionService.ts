@@ -137,7 +137,9 @@ export const inspectionService = {
    * Update inspection fields (non-status). Use transitionStatus() for status changes.
    */
   async updateInspection(inspectionId: string, updates: Partial<Inspection>): Promise<Result> {
+    const userId = await getCurrentUserId();
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    safeUpdates.updated_by = userId;
 
     const { error } = await supabase
       .from('inspections')
@@ -149,9 +151,14 @@ export const inspectionService = {
   },
 
   async deleteInspection(inspectionId: string): Promise<Result> {
+    const userId = await getCurrentUserId();
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from('inspections')
-      .delete()
+      .update({
+        deleted_at: now,
+        deleted_by: userId,
+      } as Record<string, unknown>)
       .eq('id', inspectionId);
 
     if (error) return fail(dbError(error.message, { inspectionId }));

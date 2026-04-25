@@ -128,8 +128,8 @@ export const submittalService = {
     const updates: Record<string, unknown> = {
       status: newStatus,
       updated_at: new Date().toISOString(),
+      updated_by: userId,
     };
-    void userId;
 
     if (newStatus === 'submitted') {
       updates.submitted_date = new Date().toISOString();
@@ -167,9 +167,14 @@ export const submittalService = {
   },
 
   async deleteSubmittal(submittalId: string): Promise<Result> {
+    const userId = await getCurrentUserId();
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from('submittals')
-      .delete()
+      .update({
+        deleted_at: now,
+        deleted_by: userId,
+      } as Record<string, unknown>)
       .eq('id', submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId }));

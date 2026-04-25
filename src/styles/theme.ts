@@ -1,4 +1,4 @@
-// SiteSync AI — Unified Design System
+// SiteSync PM — Unified Design System
 // Single source of truth for all design tokens.
 // Every color, spacing, font, shadow, radius, and z-index value in the app comes from here.
 

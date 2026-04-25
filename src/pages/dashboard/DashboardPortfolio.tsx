@@ -117,7 +117,7 @@ export const DashboardPortfolio: React.FC = () => {
             Portfolio
           </span>
         </div>
-        <span style={{ fontSize: '10px', color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>
+        <span style={{ fontSize: '10px', color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
           {projects.length} projects
         </span>
       </div>
@@ -153,7 +153,7 @@ export const DashboardPortfolio: React.FC = () => {
                   <span style={{ fontSize: '10px', color: style.dot, fontWeight: typography.fontWeight.semibold, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                     {style.label}
                   </span>
-                  <span style={{ fontSize: '10px', color: colors.textTertiary }}>· {row.reason}</span>
+                  <span style={{ fontSize: '10px', color: colors.textSecondary }}>· {row.reason}</span>
                 </div>
               </div>
               <ChevronRight size={12} color={colors.textTertiary} style={{ flexShrink: 0 }} />

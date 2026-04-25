@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Home, Calendar, DollarSign, FileText, BookOpen,
-  Briefcase, CheckSquare, Users, Search,
+  CheckSquare, Users, Search,
   Shield, Calculator, Package, Truck,
-  Sun, Moon, Bot, ClipboardCheck, BarChart3,
-  TrendingUp, FileDiff, Send, HardHat,
-  Receipt, Milestone, Clock, X, MoreHorizontal,
+  Sun, Moon, ClipboardCheck, BarChart3,
+  FileDiff, Send, HardHat,
+  Receipt, Clock, X, MoreHorizontal,
   ChevronRight, CheckCircle2,
-  FileSignature, Map as MapIcon, Leaf,
+  FileSignature,
   Pin, PinOff, Box,
-  Landmark, HelpCircle, LayoutGrid,
+  HelpCircle,
   Repeat2, Grid3X3, ChevronDown, Plus, Sparkles,
   History, Star, Settings, Bell, ArrowRight,
   type LucideIcon,
@@ -52,48 +52,43 @@ interface SidebarProps {
 // Every navigable page in the app. This is the single source of truth.
 
 const ALL_ITEMS: NavItem[] = [
-  { id: 'dashboard', label: 'Command Center', icon: Home, description: 'Project overview & KPIs' },
-  { id: 'portfolio', label: 'Portfolio', icon: Briefcase, description: 'All projects overview' },
-  { id: 'ai-agents', label: 'AI Agents', icon: Bot, description: 'Autonomous AI workers' },
-  { id: 'lookahead', label: 'Lookahead', icon: Milestone, description: 'Short-term schedule view' },
-  { id: 'tasks', label: 'Tasks', icon: LayoutGrid, description: 'Task management' },
+  // ── Core 10 (always in primary nav) ──
+  { id: 'dashboard', label: 'Home', icon: Home, description: 'Project overview & KPIs' },
+  { id: 'daily-log', label: 'Daily Log', icon: BookOpen, description: 'Daily reports & logs' },
   { id: 'schedule', label: 'Schedule', icon: Calendar, description: 'Project schedule & Gantt' },
-  { id: 'budget', label: 'Budget', icon: DollarSign, description: 'Budget tracking' },
-  { id: 'change-orders', label: 'Change Orders', icon: FileDiff, description: 'Track change orders' },
-  { id: 'financials', label: 'Financials', icon: TrendingUp, description: 'Financial overview' },
-  { id: 'pay-apps', label: 'Pay Apps', icon: Receipt, description: 'Payment applications' },
-  { id: 'drawings', label: 'Drawings', icon: FileText, description: 'Drawing sets & markup' },
+  { id: 'budget', label: 'Budget', icon: DollarSign, description: 'Budget tracking & cash flow' },
   { id: 'rfis', label: 'RFIs', icon: HelpCircle, description: 'Requests for information' },
   { id: 'submittals', label: 'Submittals', icon: Send, description: 'Submittal tracking' },
-  { id: 'estimating', label: 'Estimating', icon: Calculator, description: 'Cost estimation' },
-  { id: 'procurement', label: 'Procurement', icon: Package, description: 'Procurement management' },
-  { id: 'equipment', label: 'Equipment', icon: Truck, description: 'Equipment tracking' },
-  { id: 'permits', label: 'Permits', icon: ClipboardCheck, description: 'Permit management' },
-  { id: 'contracts', label: 'Contracts', icon: FileSignature, description: 'Contract management' },
-  { id: 'vendors', label: 'Vendors', icon: Users, description: 'Vendor directory' },
-  { id: 'cost-management', label: 'Cost Management', icon: DollarSign, description: 'Cost tracking & control' },
-  { id: 'field-capture', label: 'Field Capture', icon: HardHat, description: 'Photos & field notes' },
-  { id: 'daily-log', label: 'Daily Log', icon: BookOpen, description: 'Daily reports & logs' },
-  { id: 'punch-list', label: 'Punch List', icon: CheckSquare, description: 'Punch list items' },
-  { id: 'site-map', label: 'Site Map', icon: MapIcon, description: 'Interactive site map' },
-  { id: 'crews', label: 'Crews', icon: Users, description: 'Crew management' },
-  { id: 'workforce', label: 'Workforce', icon: HardHat, description: 'Workforce tracking' },
-  { id: 'time-tracking', label: 'Time Tracking', icon: Clock, description: 'Time cards & tracking' },
-  { id: 'safety', label: 'Safety', icon: Shield, description: 'Safety management' },
-  { id: 'meetings', label: 'Meetings', icon: Repeat2, description: 'Meeting management' },
-  { id: 'directory', label: 'Directory', icon: Users, description: 'Team directory' },
-  { id: 'files', label: 'Files', icon: FileText, description: 'Document storage' },
-  { id: 'bim', label: '3D Model (BIM)', icon: Box, description: '3D building model' },
-  { id: 'wiki', label: 'Wiki', icon: BookOpen, description: 'Project knowledge base' },
-  { id: 'closeout', label: 'Closeout', icon: CheckCircle2, description: 'Project closeout' },
-  { id: 'carbon', label: 'Carbon & LEED', icon: Leaf, description: 'Sustainability tracking' },
-  { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Generate reports' },
-  { id: 'compliance', label: 'HUD & Tax Credits', icon: Landmark, description: 'Compliance tracking' },
+  { id: 'punch-list', label: 'Punch List', icon: CheckSquare, description: 'QC deficiency tracking' },
+  { id: 'drawings', label: 'Drawings', icon: FileText, description: 'Drawing sets & markup' },
+  { id: 'change-orders', label: 'Change Orders', icon: FileDiff, description: 'Cost change management' },
+  { id: 'safety', label: 'Safety', icon: Shield, description: 'OSHA, inspections, incidents' },
+  // ── People & Labor ──
+  { id: 'workforce', label: 'Workforce', icon: HardHat, description: 'Roster, credentials, dispatch' },
+  { id: 'crews', label: 'Crews', icon: Users, description: 'Crew assignments & productivity' },
+  { id: 'time-tracking', label: 'Time Tracking', icon: Clock, description: 'WH-347, Davis-Bacon, payroll' },
+  { id: 'directory', label: 'Directory', icon: Users, description: 'Team & sub contacts' },
+  { id: 'meetings', label: 'Meetings', icon: Repeat2, description: 'OAC, sub coordination, safety' },
+  // ── Financial ──
+  { id: 'pay-apps', label: 'Pay Apps', icon: Receipt, description: 'Payment applications & lien waivers' },
+  { id: 'contracts', label: 'Contracts', icon: FileSignature, description: 'Sub agreements & compliance' },
+  { id: 'estimating', label: 'Estimating', icon: Calculator, description: 'Preconstruction estimates' },
+  // ── Field Operations ──
+  { id: 'equipment', label: 'Equipment', icon: Truck, description: 'Fleet tracking & maintenance' },
+  { id: 'procurement', label: 'Procurement', icon: Package, description: 'Material ordering & deliveries' },
+  { id: 'permits', label: 'Permits', icon: ClipboardCheck, description: 'Permit tracking & inspections' },
+  // ── Documents & Closeout ──
+  { id: 'files', label: 'Files', icon: FileText, description: 'Document storage & sharing' },
+  { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Cross-project reporting' },
+  { id: 'closeout', label: 'Closeout', icon: CheckCircle2, description: 'As-builts, O&M, warranties' },
+  { id: 'bim', label: 'BIM', icon: Box, description: '3D model coordination' },
+  // ── Intelligence ──
+  { id: 'ai', label: 'Iris', icon: Sparkles, description: 'Project intelligence — ask anything' },
 ];
 
 const ITEM_MAP = new Map(ALL_ITEMS.map((i) => [i.id, i]));
 
-// ── Core navigation (the 5 essentials a GC touches daily) ──
+// ── Core navigation (the 10 essentials a GC touches daily) ──
 // Steve Jobs: "People think focus means saying yes to the thing you've
 // got to focus on. It means saying no to the hundred other good ideas."
 
@@ -103,39 +98,30 @@ const CORE_NAV: NavItem[] = [
   { id: 'schedule', label: 'Schedule', icon: Calendar },
   { id: 'budget', label: 'Budget', icon: DollarSign },
   { id: 'rfis', label: 'RFIs', icon: HelpCircle },
+  { id: 'submittals', label: 'Submittals', icon: Send },
+  { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
+  { id: 'drawings', label: 'Drawings', icon: FileText },
+  { id: 'change-orders', label: 'Change Orders', icon: FileDiff },
+  { id: 'safety', label: 'Safety', icon: Shield },
 ];
 
 const CORE_NAV_IDS = new Set(CORE_NAV.map((i) => i.id));
 
 // ── Default favorites for a GC ──────────────────────────
-const DEFAULT_PINS = ['punch-list', 'submittals', 'drawings', 'safety', 'change-orders'];
+const DEFAULT_PINS = ['time-tracking', 'workforce', 'crews', 'pay-apps', 'contracts'];
 
 // ── All Tools categories (for the browse panel) ──────────
 const TOOL_CATEGORIES: NavGroup[] = [
   {
-    id: 'field',
-    label: 'Field',
+    id: 'people-labor',
+    label: 'People & Labor',
     icon: HardHat,
     items: [
-      { id: 'daily-log', label: 'Daily Log', icon: BookOpen },
-      { id: 'field-capture', label: 'Field Capture', icon: HardHat },
-      { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
-      { id: 'safety', label: 'Safety', icon: Shield },
-      { id: 'crews', label: 'Crews', icon: Users },
-      { id: 'workforce', label: 'Workforce', icon: HardHat },
-      { id: 'time-tracking', label: 'Time Tracking', icon: Clock },
-      { id: 'site-map', label: 'Site Map', icon: MapIcon },
-    ],
-  },
-  {
-    id: 'project',
-    label: 'Project',
-    icon: Calendar,
-    items: [
-      { id: 'tasks', label: 'Tasks', icon: LayoutGrid },
-      { id: 'schedule', label: 'Schedule', icon: Calendar },
-      { id: 'lookahead', label: 'Lookahead', icon: Milestone },
-      { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
+      { id: 'workforce', label: 'Workforce', icon: HardHat, description: 'Roster, credentials, dispatch' },
+      { id: 'crews', label: 'Crews', icon: Users, description: 'Crew assignments & productivity' },
+      { id: 'time-tracking', label: 'Time Tracking', icon: Clock, description: 'WH-347, Davis-Bacon, payroll' },
+      { id: 'directory', label: 'Directory', icon: Users, description: 'Team & sub contacts' },
+      { id: 'meetings', label: 'Meetings', icon: Repeat2, description: 'OAC, sub coordination, safety' },
     ],
   },
   {
@@ -143,65 +129,38 @@ const TOOL_CATEGORIES: NavGroup[] = [
     label: 'Financial',
     icon: DollarSign,
     items: [
-      { id: 'budget', label: 'Budget', icon: DollarSign },
-      { id: 'financials', label: 'Financials', icon: TrendingUp },
-      { id: 'pay-apps', label: 'Pay Apps', icon: Receipt },
-      { id: 'change-orders', label: 'Change Orders', icon: FileDiff },
-      { id: 'estimating', label: 'Estimating', icon: Calculator },
-      { id: 'cost-management', label: 'Cost Management', icon: DollarSign },
-      { id: 'compliance', label: 'HUD & Tax Credits', icon: Landmark },
+      { id: 'budget', label: 'Budget', icon: DollarSign, description: 'Budget tracking & cash flow' },
+      { id: 'pay-apps', label: 'Pay Apps', icon: Receipt, description: 'Payment applications & lien waivers' },
+      { id: 'change-orders', label: 'Change Orders', icon: FileDiff, description: 'Cost change management' },
+      { id: 'contracts', label: 'Contracts', icon: FileSignature, description: 'Sub agreements & compliance' },
+      { id: 'estimating', label: 'Estimating', icon: Calculator, description: 'Preconstruction estimates' },
     ],
   },
   {
-    id: 'documents',
-    label: 'Documents',
+    id: 'field-ops',
+    label: 'Field Operations',
+    icon: Shield,
+    items: [
+      { id: 'daily-log', label: 'Daily Log', icon: BookOpen, description: 'Daily reports & logs' },
+      { id: 'punch-list', label: 'Punch List', icon: CheckSquare, description: 'QC deficiency tracking' },
+      { id: 'safety', label: 'Safety', icon: Shield, description: 'OSHA, inspections, incidents' },
+      { id: 'equipment', label: 'Equipment', icon: Truck, description: 'Fleet tracking & maintenance' },
+      { id: 'procurement', label: 'Procurement', icon: Package, description: 'Material ordering & deliveries' },
+      { id: 'permits', label: 'Permits', icon: ClipboardCheck, description: 'Permit tracking & inspections' },
+    ],
+  },
+  {
+    id: 'docs-closeout',
+    label: 'Documents & Closeout',
     icon: FileText,
     items: [
-      { id: 'rfis', label: 'RFIs', icon: HelpCircle },
-      { id: 'submittals', label: 'Submittals', icon: Send },
-      { id: 'drawings', label: 'Drawings', icon: FileText },
-      { id: 'contracts', label: 'Contracts', icon: FileSignature },
-      { id: 'permits', label: 'Permits', icon: ClipboardCheck },
-      { id: 'files', label: 'Files', icon: FileText },
-    ],
-  },
-  {
-    id: 'supply-chain',
-    label: 'Supply Chain',
-    icon: Package,
-    items: [
-      { id: 'procurement', label: 'Procurement', icon: Package },
-      { id: 'equipment', label: 'Equipment', icon: Truck },
-      { id: 'vendors', label: 'Vendors', icon: Users },
-    ],
-  },
-  {
-    id: 'team',
-    label: 'Team',
-    icon: Users,
-    items: [
-      { id: 'meetings', label: 'Meetings', icon: Repeat2 },
-      { id: 'directory', label: 'Directory', icon: Users },
-      { id: 'wiki', label: 'Wiki', icon: BookOpen },
-    ],
-  },
-  {
-    id: 'intelligence',
-    label: 'Intelligence',
-    icon: Sparkles,
-    items: [
-      { id: 'ai-agents', label: 'AI Agents', icon: Bot },
-      { id: 'bim', label: '3D Model (BIM)', icon: Box },
-    ],
-  },
-  {
-    id: 'admin',
-    label: 'Admin',
-    icon: Settings,
-    items: [
-      { id: 'closeout', label: 'Closeout', icon: CheckCircle2 },
-      { id: 'carbon', label: 'Carbon & LEED', icon: Leaf },
-      { id: 'reports', label: 'Reports', icon: BarChart3 },
+      { id: 'rfis', label: 'RFIs', icon: HelpCircle, description: 'Requests for information' },
+      { id: 'submittals', label: 'Submittals', icon: Send, description: 'Submittal tracking' },
+      { id: 'drawings', label: 'Drawings', icon: FileText, description: 'Drawing sets & markup' },
+      { id: 'files', label: 'Files', icon: FileText, description: 'Document storage & sharing' },
+      { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Cross-project reporting' },
+      { id: 'closeout', label: 'Closeout', icon: CheckCircle2, description: 'As-builts, O&M, warranties' },
+      { id: 'bim', label: 'BIM', icon: Box, description: '3D model coordination' },
     ],
   },
 ];
@@ -209,43 +168,38 @@ const TOOL_CATEGORIES: NavGroup[] = [
 // ── Prefetch map ──────────────────────────────────────────
 
 const PAGE_PREFETCH_MAP: Record<string, () => void> = {
-  portfolio:      () => import('../pages/Portfolio').catch(() => {}),
-  dashboard:      () => import('../pages/dashboard').catch(() => {}),
-  'ai-agents':    () => import('../pages/AIAgents').catch(() => {}),
-  lookahead:      () => import('../pages/Lookahead').catch(() => {}),
-  tasks:          () => import('../pages/Tasks').catch(() => {}),
-  schedule:       () => import('../pages/schedule').catch(() => {}),
-  budget:         () => import('../pages/Budget').catch(() => {}),
+  // ── Core 10 ──
+  dashboard:       () => import('../pages/dashboard').catch(() => {}),
+  'daily-log':     () => import('../pages/daily-log').catch(() => {}),
+  schedule:        () => import('../pages/schedule').catch(() => {}),
+  budget:          () => import('../pages/Budget').catch(() => {}),
+  rfis:            () => import('../pages/RFIs').catch(() => {}),
+  submittals:      () => import('../pages/submittals').catch(() => {}),
+  'punch-list':    () => import('../pages/punch-list').catch(() => {}),
+  drawings:        () => import('../pages/drawings/index').catch(() => {}),
   'change-orders': () => import('../pages/ChangeOrders').catch(() => {}),
-  financials:     () => import('../pages/Financials').catch(() => {}),
-  'pay-apps':     () => import('../pages/payment-applications').catch(() => {}),
-  drawings:       () => import('../pages/drawings/index').catch(() => {}),
-  rfis:           () => import('../pages/RFIs').catch(() => {}),
-  submittals:     () => import('../pages/submittals').catch(() => {}),
-  estimating:     () => import('../pages/Estimating').catch(() => {}),
-  procurement:    () => import('../pages/Procurement').catch(() => {}),
-  equipment:      () => import('../pages/Equipment').catch(() => {}),
-  permits:        () => import('../pages/Permits').catch(() => {}),
-  contracts:      () => import('../pages/Contracts').catch(() => {}),
-  vendors:        () => import('../pages/Vendors').catch(() => {}),
-  'cost-management': () => import('../pages/CostManagement').catch(() => {}),
-  'time-tracking':   () => import('../pages/TimeTracking').catch(() => {}),
-  wiki:              () => import('../pages/Wiki').catch(() => {}),
-  'site-map':        () => import('../pages/SiteMap').catch(() => {}),
-  carbon:            () => import('../pages/CarbonDashboard').catch(() => {}),
-  closeout:       () => import('../pages/Closeout').catch(() => {}),
-  'field-capture': () => import('../pages/field-capture').catch(() => {}),
-  'daily-log':    () => import('../pages/daily-log').catch(() => {}),
-  'punch-list':   () => import('../pages/punch-list').catch(() => {}),
-  crews:          () => import('../pages/Crews').catch(() => {}),
-  workforce:      () => import('../pages/Workforce').catch(() => {}),
-  safety:         () => import('../pages/Safety').catch(() => {}),
-  meetings:       () => import('../pages/Meetings').catch(() => {}),
-  directory:      () => import('../pages/Directory').catch(() => {}),
-  files:          () => import('../pages/Files').catch(() => {}),
-  bim:            () => import('../pages/bim/BIMViewerPage').catch(() => {}),
-  reports:        () => import('../pages/Reports').catch(() => {}),
-  compliance:     () => import('../pages/compliance/HUDCompliancePage').catch(() => {}),
+  safety:          () => import('../pages/Safety').catch(() => {}),
+  // ── People & Labor ──
+  workforce:       () => import('../pages/Workforce').catch(() => {}),
+  crews:           () => import('../pages/Crews').catch(() => {}),
+  'time-tracking': () => import('../pages/TimeTracking').catch(() => {}),
+  directory:       () => import('../pages/Directory').catch(() => {}),
+  meetings:        () => import('../pages/Meetings').catch(() => {}),
+  // ── Financial ──
+  'pay-apps':      () => import('../pages/payment-applications').catch(() => {}),
+  contracts:       () => import('../pages/Contracts').catch(() => {}),
+  estimating:      () => import('../pages/Estimating').catch(() => {}),
+  // ── Field Ops ──
+  equipment:       () => import('../pages/Equipment').catch(() => {}),
+  procurement:     () => import('../pages/Procurement').catch(() => {}),
+  permits:         () => import('../pages/Permits').catch(() => {}),
+  // ── Documents & Closeout ──
+  files:           () => import('../pages/Files').catch(() => {}),
+  reports:         () => import('../pages/Reports').catch(() => {}),
+  closeout:        () => import('../pages/Closeout').catch(() => {}),
+  bim:             () => import('../pages/bim/BIMViewerPage').catch(() => {}),
+  // ── Intelligence ──
+  ai:              () => import('../pages/AIAssistant').catch(() => {}),
 };
 
 // ── Mobile bottom nav ─────────────────────────────────────
@@ -1124,25 +1078,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
           display: 'flex', alignItems: 'center', gap: spacing['2.5'],
         }}>
           <img
-            src="/logos/sitesync-symbol.png"
+            src={`${import.meta.env.BASE_URL}logos/sitesync-symbol.png`}
             alt=""
             style={{
               height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0,
             }}
           />
           <span style={{
-            fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.bold,
-            color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight,
+            fontSize: typography.fontSize.lg, fontWeight: 800,
+            color: colors.textPrimary, letterSpacing: '-0.02em',
             lineHeight: 1,
           }}>
             SiteSync
           </span>
           <span style={{
-            fontSize: '10px', fontWeight: typography.fontWeight.bold,
-            color: colors.primaryOrange, marginTop: `-${spacing['1']}`, marginLeft: `-${spacing['0.5']}`,
-            letterSpacing: '0.03em',
+            fontSize: '10px', fontWeight: 700,
+            color: colors.primaryOrange,
+            backgroundColor: colors.orangeSubtle,
+            padding: '2px 6px',
+            borderRadius: borderRadius.sm,
+            letterSpacing: '0.08em',
+            lineHeight: 1,
+            textTransform: 'uppercase',
           }}>
-            AI
+            PM
           </span>
           {isOverlay && onClose && (
             <button
@@ -1317,17 +1276,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
           padding: `${spacing['2.5']} ${spacing['3']}`,
           display: 'flex', alignItems: 'center', gap: spacing['2.5'],
         }}>
-          <div style={{
-            width: 28, height: 28,
-            background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
-            borderRadius: borderRadius.full,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: colors.white, fontSize: '11px',
-            fontWeight: typography.fontWeight.semibold, flexShrink: 0,
-          }}>
+          <button
+            onClick={() => onNavigate('profile')}
+            title="My Profile"
+            style={{
+              width: 28, height: 28,
+              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, ${colors.orangeGradientEnd} 100%)`,
+              borderRadius: borderRadius.full,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: colors.white, fontSize: '11px',
+              fontWeight: typography.fontWeight.semibold, flexShrink: 0,
+              border: 'none', cursor: 'pointer',
+              transition: 'transform 120ms ease, box-shadow 120ms ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.primaryOrange}40`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+          >
             {displayInitials}
-          </div>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          </button>
+          <button
+            onClick={() => onNavigate('profile')}
+            title="My Profile"
+            style={{
+              flex: 1, overflow: 'hidden', border: 'none', background: 'none',
+              cursor: 'pointer', padding: 0, textAlign: 'left',
+              borderRadius: borderRadius.sm,
+            }}
+          >
             <p style={{
               fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
               color: colors.textPrimary, margin: 0,
@@ -1338,7 +1313,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
             <p style={{ fontSize: '10px', color: colors.textTertiary, margin: 0, textTransform: 'capitalize' }}>
               {role ? role.replace('_', ' ') : ''}
             </p>
-          </div>
+          </button>
+          <button
+            onClick={() => onNavigate('settings')}
+            aria-label="Project Settings"
+            title="Settings"
+            style={{
+              width: 28, height: 28,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: colors.overlayBlackLight, border: 'none',
+              borderRadius: borderRadius.base, cursor: 'pointer',
+              color: colors.textSecondary, flexShrink: 0,
+              transition: `background-color 80ms ease, transform 120ms ease`,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackMedium; (e.currentTarget as HTMLButtonElement).style.transform = 'rotate(30deg)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = colors.overlayBlackLight; (e.currentTarget as HTMLButtonElement).style.transform = 'rotate(0deg)'; }}
+          >
+            <Settings size={14} />
+          </button>
           <button
             onClick={toggleTheme}
             aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

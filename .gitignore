@@ -44,3 +44,23 @@ coverage/
 
 # Audit harness generated specs (regenerate with `npm run audit:gen`)
 audit/generated/
+
+# Local planning / strategy docs (working notes, not source)
+/DRAWINGS_IMPLEMENTATION_PLAN.md
+/DRAWINGS_REDESIGN_PLAN.md
+/DRAWINGS_REDESIGN_PLAN.html
+/PHASE_1_IMPLEMENTATION.md
+/PHASE_2_IMPLEMENTATION.md
+/PHASE_3_IMPLEMENTATION.md
+/PHASE_4_IMPLEMENTATION.md
+/PHASE_5_IMPLEMENTATION.md
+/SITESYNC_ENTERPRISE_RESEARCH.html
+/SiteSync_Enterprise_Audit.html
+/STRATEGIC_PLAN.html
+/SiteSync-Schedule-Engine-Strategic-Plan.docx
+/SiteSync_Drawing_Upload_Plan.docx
+/run_this_in_supabase.sql
+*.tsx.old
+
+# Stray ad-hoc apply scripts
+/scripts/apply-site-map-migration.sql

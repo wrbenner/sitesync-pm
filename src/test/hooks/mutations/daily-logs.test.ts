@@ -46,12 +46,15 @@ vi.mock('../../../lib/auditLogger', () => ({ logAuditEntry: h.logAuditEntry }))
 import { useCreateDailyLog, useUpdateDailyLog, useDeleteDailyLog } from '../../../hooks/mutations/daily-logs'
 
 const validLog = {
-  date: '2026-04-18',
-  weather_condition: 'clear' as const,
-  temperature_high: '72',
-  temperature_low: '55',
-  crew_count: '18',
-  activities: 'Pour concrete on level 3',
+  project_id: 'p1',
+  log_date: '2026-04-18',
+  weather: 'clear',
+  temperature_high: 72,
+  temperature_low: 55,
+  workers_onsite: 18,
+  total_hours: 144,
+  incidents: 0,
+  work_summary: 'Pour concrete on level 3',
   safety_notes: '',
   delays: '',
 }
@@ -59,7 +62,7 @@ const validLog = {
 beforeEach(() => {
   vi.clearAllMocks()
   h.hasPermission.mockReturnValue(true)
-  h.setResult({ data: { id: 'dl1', date: validLog.date }, error: null })
+  h.setResult({ data: { id: 'dl1', log_date: validLog.log_date }, error: null })
 })
 
 describe('useCreateDailyLog', () => {
@@ -68,10 +71,10 @@ describe('useCreateDailyLog', () => {
     const { result } = renderMutation(() => useCreateDailyLog())
     await expect(result.current.mutateAsync({ data: validLog, projectId: 'p1' })).rejects.toThrow(/permission/i)
   })
-  it('rejects empty date via Zod', async () => {
+  it('rejects empty log_date via Zod', async () => {
     const { result } = renderMutation(() => useCreateDailyLog())
     await expect(
-      result.current.mutateAsync({ data: { ...validLog, date: '' }, projectId: 'p1' }),
+      result.current.mutateAsync({ data: { ...validLog, log_date: '' }, projectId: 'p1' }),
     ).rejects.toThrow(/validation/i)
   })
   it('inserts and invalidates', async () => {

@@ -8,6 +8,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
+
+// Tailwind-style palettes for the AI page (the shared theme uses flat tokens)
+const gray = {
+  50: '#FAFAF9', 100: '#F5F4F2', 200: '#E8E6E3', 300: '#D0D0D0',
+  400: '#B0B0B0', 500: '#8B8680', 600: '#6B6560', 700: '#5C5550', 800: '#3D3833',
+} as const;
+const blue = {
+  300: '#93C5FD', 500: '#3B82F6', 600: '#2563EB', 700: '#1D4ED8',
+} as const;
+const indigo = {
+  600: '#4F46E5', 700: '#4338CA',
+} as const;
+
 import { useProjectContext } from '../stores/projectContextStore';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -122,18 +135,18 @@ function renderContent(text: string): React.ReactNode {
       const code = lines.slice(1, lines[lines.length - 1] === '```' ? -1 : undefined).join('\n');
       return (
         <pre key={i} style={{
-          background: colors.gray[900],
-          color: colors.gray[100],
+          background: colors.textPrimary,
+          color: colors.surfaceInset,
           padding: spacing[4],
           borderRadius: borderRadius.lg,
           overflowX: 'auto',
           fontSize: '13px',
           lineHeight: 1.6,
           margin: `${spacing[3]} 0`,
-          border: `1px solid ${colors.gray[800]}`,
+          border: `1px solid ${colors.gray700}`,
         }}>
           {lang && (
-            <div style={{ color: colors.gray[500], fontSize: '11px', marginBottom: spacing[2], textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ color: colors.gray500, fontSize: '11px', marginBottom: spacing[2], textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {lang}
             </div>
           )}
@@ -143,10 +156,10 @@ function renderContent(text: string): React.ReactNode {
     }
     // Heading
     if (block.startsWith('### ')) {
-      return <h3 key={i} style={{ fontSize: '15px', fontWeight: 600, color: colors.gray[900], margin: `${spacing[4]} 0 ${spacing[2]}` }}>{block.slice(4)}</h3>;
+      return <h3 key={i} style={{ fontSize: '15px', fontWeight: 600, color: colors.textPrimary, margin: `${spacing[4]} 0 ${spacing[2]}` }}>{block.slice(4)}</h3>;
     }
     if (block.startsWith('## ')) {
-      return <h2 key={i} style={{ fontSize: '17px', fontWeight: 700, color: colors.gray[900], margin: `${spacing[4]} 0 ${spacing[2]}` }}>{block.slice(3)}</h2>;
+      return <h2 key={i} style={{ fontSize: '17px', fontWeight: 700, color: colors.textPrimary, margin: `${spacing[4]} 0 ${spacing[2]}` }}>{block.slice(3)}</h2>;
     }
     // Bullet list
     if (block.match(/^[-•*]\s/m)) {
@@ -154,7 +167,7 @@ function renderContent(text: string): React.ReactNode {
       return (
         <ul key={i} style={{ margin: `${spacing[2]} 0`, paddingLeft: spacing[5] }}>
           {items.map((item, j) => (
-            <li key={j} style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray[700], marginBottom: spacing[1] }}>
+            <li key={j} style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray700, marginBottom: spacing[1] }}>
               {renderInline(item.replace(/^[-•*]\s/, ''))}
             </li>
           ))}
@@ -167,7 +180,7 @@ function renderContent(text: string): React.ReactNode {
       return (
         <ol key={i} style={{ margin: `${spacing[2]} 0`, paddingLeft: spacing[5] }}>
           {items.map((item, j) => (
-            <li key={j} style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray[700], marginBottom: spacing[1] }}>
+            <li key={j} style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray700, marginBottom: spacing[1] }}>
               {renderInline(item.replace(/^\d+\.\s/, ''))}
             </li>
           ))}
@@ -175,7 +188,7 @@ function renderContent(text: string): React.ReactNode {
       );
     }
     // Regular paragraph
-    return <p key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray[700], margin: `${spacing[2]} 0` }}>{renderInline(block)}</p>;
+    return <p key={i} style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray700, margin: `${spacing[2]} 0` }}>{renderInline(block)}</p>;
   });
 }
 
@@ -184,7 +197,7 @@ function renderInline(text: string): React.ReactNode {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} style={{ color: colors.gray[900], fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
+      return <strong key={i} style={{ color: colors.textPrimary, fontWeight: 600 }}>{part.slice(2, -2)}</strong>;
     }
     // Inline code
     const codeParts = part.split(/(`[^`]+`)/g);
@@ -192,8 +205,8 @@ function renderInline(text: string): React.ReactNode {
       if (cp.startsWith('`') && cp.endsWith('`')) {
         return (
           <code key={`${i}-${j}`} style={{
-            background: colors.gray[100],
-            color: colors.blue[700],
+            background: colors.surfaceInset,
+            color: colors.statusInfo,
             padding: '1px 5px',
             borderRadius: '4px',
             fontSize: '13px',
@@ -226,11 +239,11 @@ function CopyButton({ text }: { text: string }) {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '4px',
         padding: '4px 8px', border: 'none', borderRadius: borderRadius.md,
-        background: 'transparent', color: colors.gray[400],
+        background: 'transparent', color: colors.gray400,
         cursor: 'pointer', fontSize: '12px', transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { (e.target as HTMLElement).style.color = colors.gray[600]; (e.target as HTMLElement).style.background = colors.gray[100]; }}
-      onMouseLeave={e => { (e.target as HTMLElement).style.color = colors.gray[400]; (e.target as HTMLElement).style.background = 'transparent'; }}
+      onMouseEnter={e => { (e.target as HTMLElement).style.color = colors.gray600; (e.target as HTMLElement).style.background = colors.surfaceInset; }}
+      onMouseLeave={e => { (e.target as HTMLElement).style.color = colors.gray400; (e.target as HTMLElement).style.background = 'transparent'; }}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
       {copied ? 'Copied' : 'Copy'}
@@ -245,15 +258,15 @@ function TypingIndicator() {
     <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3], padding: `${spacing[4]} ${spacing[6]}`, maxWidth: '768px', margin: '0 auto' }}>
       <div style={{
         width: 32, height: 32, borderRadius: borderRadius.lg,
-        background: `linear-gradient(135deg, ${colors.blue[600]}, ${colors.indigo[700]})`,
+        background: `linear-gradient(135deg, ${colors.statusInfo}, ${colors.indigo})`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         <Eye size={16} color="white" strokeWidth={1.8} />
       </div>
-      <div style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '12px 16px', background: colors.gray[50], borderRadius: borderRadius.xl }}>
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '12px 16px', background: colors.surfaceInset, borderRadius: borderRadius.xl }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{
-            width: 6, height: 6, borderRadius: '50%', background: colors.gray[400],
+            width: 6, height: 6, borderRadius: '50%', background: colors.gray400,
             animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
           }} />
         ))}
@@ -485,8 +498,8 @@ export default function AIAssistant() {
       {/* ── Conversation sidebar ── */}
       {showSidebar && (
         <div style={{
-          width: 260, borderRight: `1px solid ${colors.gray[200]}`,
-          display: 'flex', flexDirection: 'column', background: colors.gray[50],
+          width: 260, borderRight: `1px solid ${colors.borderSubtle}`,
+          display: 'flex', flexDirection: 'column', background: colors.surfaceInset,
           flexShrink: 0,
         }}>
           {/* New chat button */}
@@ -496,12 +509,12 @@ export default function AIAssistant() {
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: spacing[2],
                 padding: `${spacing[2]} ${spacing[3]}`,
-                border: `1px solid ${colors.gray[300]}`, borderRadius: borderRadius.lg,
+                border: `1px solid ${colors.gray300}`, borderRadius: borderRadius.lg,
                 background: 'white', cursor: 'pointer', fontSize: '13px',
-                fontWeight: 500, color: colors.gray[700],
+                fontWeight: 500, color: colors.gray700,
                 transition: 'all 0.15s',
               }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.background = colors.gray[50]; }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.background = colors.surfaceInset; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'white'; }}
             >
               <Plus size={16} />
@@ -512,7 +525,7 @@ export default function AIAssistant() {
           {/* Conversation list */}
           <div style={{ flex: 1, overflowY: 'auto', padding: `0 ${spacing[2]}` }}>
             {conversations.length === 0 ? (
-              <div style={{ padding: spacing[4], textAlign: 'center', color: colors.gray[400], fontSize: '13px' }}>
+              <div style={{ padding: spacing[4], textAlign: 'center', color: colors.gray400, fontSize: '13px' }}>
                 No conversations yet
               </div>
             ) : (
@@ -529,9 +542,9 @@ export default function AIAssistant() {
                     marginBottom: '2px', transition: 'all 0.15s',
                   }}
                 >
-                  <MessageSquare size={14} style={{ color: colors.gray[400], flexShrink: 0 }} />
+                  <MessageSquare size={14} style={{ color: colors.gray400, flexShrink: 0 }} />
                   <span style={{
-                    flex: 1, fontSize: '13px', color: colors.gray[700],
+                    flex: 1, fontSize: '13px', color: colors.gray700,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
                     {conv.title}
@@ -540,10 +553,10 @@ export default function AIAssistant() {
                     onClick={(e) => { e.stopPropagation(); handleDelete(conv.id); }}
                     style={{
                       padding: '2px', border: 'none', background: 'transparent',
-                      cursor: 'pointer', color: colors.gray[300], borderRadius: '4px',
+                      cursor: 'pointer', color: colors.gray300, borderRadius: '4px',
                       opacity: 0, transition: 'opacity 0.15s',
                     }}
-                    onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1'; (e.target as HTMLElement).style.color = colors.red[500]; }}
+                    onMouseEnter={e => { (e.target as HTMLElement).style.opacity = '1'; (e.target as HTMLElement).style.color = colors.red; }}
                     onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '0'; }}
                   >
                     <Trash2 size={13} />
@@ -555,14 +568,14 @@ export default function AIAssistant() {
 
           {/* Project context badge */}
           <div style={{
-            padding: spacing[3], borderTop: `1px solid ${colors.gray[200]}`,
+            padding: spacing[3], borderTop: `1px solid ${colors.borderSubtle}`,
             display: 'flex', alignItems: 'center', gap: spacing[2],
           }}>
             <div style={{
               width: 8, height: 8, borderRadius: '50%',
-              background: colors.green[500],
+              background: colors.green,
             }} />
-            <span style={{ fontSize: '12px', color: colors.gray[500] }}>
+            <span style={{ fontSize: '12px', color: colors.gray500 }}>
               Context: {projectName}
             </span>
           </div>
@@ -575,7 +588,7 @@ export default function AIAssistant() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: `${spacing[3]} ${spacing[5]}`,
-          borderBottom: `1px solid ${colors.gray[100]}`,
+          borderBottom: `1px solid ${colors.borderSubtle}`,
           background: 'white',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
@@ -583,7 +596,7 @@ export default function AIAssistant() {
               onClick={() => setShowSidebar(!showSidebar)}
               style={{
                 padding: spacing[1], border: 'none', background: 'transparent',
-                cursor: 'pointer', color: colors.gray[400], borderRadius: borderRadius.md,
+                cursor: 'pointer', color: colors.gray400, borderRadius: borderRadius.md,
               }}
             >
               <MessageSquare size={18} />
@@ -591,13 +604,13 @@ export default function AIAssistant() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: spacing[2],
               padding: `${spacing[1]} ${spacing[3]}`,
-              background: colors.gray[50], borderRadius: borderRadius.full,
+              background: colors.surfaceInset, borderRadius: borderRadius.full,
             }}>
-              <Eye size={14} style={{ color: colors.blue[600] }} />
-              <span style={{ fontSize: '13px', fontWeight: 700, color: colors.gray[800], letterSpacing: '-0.01em' }}>
+              <Eye size={14} style={{ color: colors.statusInfo }} />
+              <span style={{ fontSize: '13px', fontWeight: 700, color: colors.textPrimary, letterSpacing: '-0.01em' }}>
                 Iris
               </span>
-              <ChevronDown size={12} style={{ color: colors.gray[400] }} />
+              <ChevronDown size={12} style={{ color: colors.gray400 }} />
             </div>
           </div>
           {/* Approval queue + history toggles */}
@@ -609,10 +622,10 @@ export default function AIAssistant() {
               style={{
                 position: 'relative',
                 padding: `${spacing[1]} ${spacing[2]}`,
-                border: `1px solid ${rightPanel === 'approvals' ? colors.blue[500] : colors.gray[200]}`,
+                border: `1px solid ${rightPanel === 'approvals' ? colors.statusInfo : colors.borderSubtle}`,
                 borderRadius: borderRadius.md,
-                background: rightPanel === 'approvals' ? colors.blue[50] : 'white',
-                color: rightPanel === 'approvals' ? colors.blue[700] : colors.gray[600],
+                background: rightPanel === 'approvals' ? colors.statusInfoSubtle : 'white',
+                color: rightPanel === 'approvals' ? colors.statusInfo : colors.gray600,
                 cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', gap: spacing[1],
                 fontSize: '12px', fontWeight: 600,
@@ -638,10 +651,10 @@ export default function AIAssistant() {
               aria-label="Task history"
               style={{
                 padding: `${spacing[1]} ${spacing[2]}`,
-                border: `1px solid ${rightPanel === 'history' ? colors.blue[500] : colors.gray[200]}`,
+                border: `1px solid ${rightPanel === 'history' ? colors.statusInfo : colors.borderSubtle}`,
                 borderRadius: borderRadius.md,
-                background: rightPanel === 'history' ? colors.blue[50] : 'white',
-                color: rightPanel === 'history' ? colors.blue[700] : colors.gray[600],
+                background: rightPanel === 'history' ? colors.statusInfoSubtle : 'white',
+                color: rightPanel === 'history' ? colors.statusInfo : colors.gray600,
                 cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', gap: spacing[1],
                 fontSize: '12px', fontWeight: 600,
@@ -671,29 +684,29 @@ export default function AIAssistant() {
             }}>
               <div style={{
                 width: 64, height: 64, borderRadius: '20px',
-                background: `linear-gradient(135deg, ${colors.blue[600]}, ${colors.indigo[700]})`,
+                background: `linear-gradient(135deg, ${colors.statusInfo}, ${colors.indigo})`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: spacing[5],
-                boxShadow: `0 12px 40px ${colors.blue[600]}40`,
+                boxShadow: `0 12px 40px ${colors.statusInfo}40`,
               }}>
                 <Eye size={30} color="white" strokeWidth={1.8} />
               </div>
               <h1 style={{
-                fontSize: '28px', fontWeight: 800, color: colors.gray[900],
+                fontSize: '28px', fontWeight: 800, color: colors.textPrimary,
                 marginBottom: spacing[1], textAlign: 'center',
                 letterSpacing: '-0.02em',
               }}>
                 Iris
               </h1>
               <p style={{
-                fontSize: '13px', fontWeight: 500, color: colors.blue[500],
+                fontSize: '13px', fontWeight: 500, color: blue[500],
                 marginBottom: spacing[3], textAlign: 'center',
                 letterSpacing: '0.08em', textTransform: 'uppercase',
               }}>
                 by SiteSync
               </p>
               <p style={{
-                fontSize: '15px', color: colors.gray[500],
+                fontSize: '15px', color: gray[500],
                 marginBottom: spacing[8], textAlign: 'center',
                 maxWidth: '460px', lineHeight: 1.6,
               }}>
@@ -716,25 +729,25 @@ export default function AIAssistant() {
                     style={{
                       display: 'flex', alignItems: 'flex-start', gap: spacing[3],
                       padding: spacing[4],
-                      border: `1px solid ${colors.gray[200]}`, borderRadius: borderRadius.xl,
+                      border: `1px solid ${gray[200]}`, borderRadius: borderRadius.xl,
                       background: 'white', cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.borderColor = colors.blue[300];
-                      (e.currentTarget as HTMLElement).style.boxShadow = `0 2px 8px ${colors.blue[500]}15`;
+                      (e.currentTarget as HTMLElement).style.borderColor = blue[300];
+                      (e.currentTarget as HTMLElement).style.boxShadow = `0 2px 8px ${blue[500]}15`;
                     }}
                     onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.borderColor = colors.gray[200];
+                      (e.currentTarget as HTMLElement).style.borderColor = gray[200];
                       (e.currentTarget as HTMLElement).style.boxShadow = 'none';
                     }}
                   >
-                    <item.icon size={18} style={{ color: colors.blue[500], flexShrink: 0, marginTop: '1px' }} />
+                    <item.icon size={18} style={{ color: blue[500], flexShrink: 0, marginTop: '1px' }} />
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: colors.gray[800], marginBottom: '2px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: gray[800], marginBottom: '2px' }}>
                         {item.label}
                       </div>
-                      <div style={{ fontSize: '12px', color: colors.gray[500], lineHeight: 1.4 }}>
+                      <div style={{ fontSize: '12px', color: gray[500], lineHeight: 1.4 }}>
                         {item.prompt.slice(0, 60)}…
                       </div>
                     </div>
@@ -758,14 +771,14 @@ export default function AIAssistant() {
                   <div style={{
                     width: 32, height: 32, borderRadius: borderRadius.lg,
                     background: msg.role === 'assistant'
-                      ? `linear-gradient(135deg, ${colors.blue[600]}, ${colors.indigo[700]})`
-                      : colors.gray[200],
+                      ? `linear-gradient(135deg, ${blue[600]}, ${indigo[700]})`
+                      : gray[200],
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
                     {msg.role === 'assistant'
                       ? <Eye size={16} color="white" strokeWidth={1.8} />
-                      : <User size={16} color={colors.gray[600]} />
+                      : <User size={16} color={gray[600]} />
                     }
                   </div>
 
@@ -773,13 +786,13 @@ export default function AIAssistant() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontSize: '13px', fontWeight: 600,
-                      color: msg.role === 'assistant' ? colors.blue[700] : colors.gray[700],
+                      color: msg.role === 'assistant' ? blue[700] : gray[700],
                       marginBottom: spacing[1],
                     }}>
                       {msg.role === 'assistant' ? 'Iris' : 'You'}
                     </div>
                     <div>{msg.role === 'assistant' ? renderContent(msg.content) : (
-                      <p style={{ fontSize: '14px', lineHeight: 1.7, color: colors.gray[700] }}>{msg.content}</p>
+                      <p style={{ fontSize: '14px', lineHeight: 1.7, color: gray[700] }}>{msg.content}</p>
                     )}</div>
                     {msg.role === 'assistant' && (
                       <div style={{ marginTop: spacing[2] }}>
@@ -802,10 +815,10 @@ export default function AIAssistant() {
                 position: 'absolute', bottom: spacing[4], left: '50%',
                 transform: 'translateX(-50%)',
                 width: 36, height: 36, borderRadius: '50%',
-                background: 'white', border: `1px solid ${colors.gray[200]}`,
+                background: 'white', border: `1px solid ${gray[200]}`,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: colors.gray[500],
+                cursor: 'pointer', color: gray[500],
               }}
             >
               <ArrowDown size={16} />
@@ -817,13 +830,13 @@ export default function AIAssistant() {
         <div style={{
           padding: `${spacing[3]} ${spacing[5]} ${spacing[5]}`,
           background: 'white',
-          borderTop: `1px solid ${colors.gray[50]}`,
+          borderTop: `1px solid ${gray[50]}`,
         }}>
           <div style={{
             maxWidth: '768px', margin: '0 auto',
             display: 'flex', alignItems: 'flex-end', gap: spacing[2],
             padding: `${spacing[3]} ${spacing[4]}`,
-            border: `1px solid ${colors.gray[300]}`,
+            border: `1px solid ${gray[300]}`,
             borderRadius: borderRadius.xl,
             background: 'white',
             boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
@@ -841,7 +854,7 @@ export default function AIAssistant() {
               style={{
                 flex: 1, border: 'none', outline: 'none',
                 resize: 'none', fontSize: '14px', lineHeight: 1.5,
-                color: colors.gray[800], background: 'transparent',
+                color: gray[800], background: 'transparent',
                 fontFamily: typography.fontFamily,
                 maxHeight: '200px',
               }}
@@ -853,8 +866,8 @@ export default function AIAssistant() {
                 width: 36, height: 36, borderRadius: borderRadius.lg,
                 border: 'none', cursor: input.trim() && !isStreaming ? 'pointer' : 'default',
                 background: input.trim() && !isStreaming
-                  ? `linear-gradient(135deg, ${colors.blue[500]}, ${colors.indigo[600]})`
-                  : colors.gray[200],
+                  ? `linear-gradient(135deg, ${blue[500]}, ${indigo[600]})`
+                  : gray[200],
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.2s', flexShrink: 0,
               }}
@@ -867,7 +880,7 @@ export default function AIAssistant() {
           </div>
           <div style={{
             maxWidth: '768px', margin: `${spacing[2]} auto 0`,
-            textAlign: 'center', fontSize: '11px', color: colors.gray[400],
+            textAlign: 'center', fontSize: '11px', color: gray[400],
           }}>
             Iris uses your live project data. Always verify critical decisions independently.
           </div>
@@ -940,20 +953,20 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
       aria-label={mode === 'approvals' ? 'Pending approvals' : 'Task history'}
       style={{
         width: 340,
-        borderLeft: `1px solid ${colors.gray[200]}`,
-        background: colors.gray[50],
+        borderLeft: `1px solid ${gray[200]}`,
+        background: gray[50],
         display: 'flex', flexDirection: 'column', flexShrink: 0,
       }}
     >
       <div style={{
         padding: `${spacing[3]} ${spacing[4]}`,
-        borderBottom: `1px solid ${colors.gray[200]}`,
+        borderBottom: `1px solid ${gray[200]}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: 'white',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
           {mode === 'approvals' ? <ClipboardList size={16} /> : <History size={16} />}
-          <span style={{ fontSize: '14px', fontWeight: 700, color: colors.gray[800] }}>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: gray[800] }}>
             {mode === 'approvals' ? 'Pending approvals' : 'Task history'}
           </span>
         </div>
@@ -962,7 +975,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
           aria-label="Close panel"
           style={{
             padding: spacing[1], border: 'none', background: 'transparent',
-            cursor: 'pointer', color: colors.gray[400], borderRadius: borderRadius.md,
+            cursor: 'pointer', color: gray[400], borderRadius: borderRadius.md,
           }}
         >
           <XCircle size={16} />
@@ -972,7 +985,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
       {mode === 'history' && (
         <div style={{
           padding: spacing[3],
-          borderBottom: `1px solid ${colors.gray[200]}`,
+          borderBottom: `1px solid ${gray[200]}`,
           display: 'flex', gap: spacing[2], flexWrap: 'wrap',
           background: 'white',
         }}>
@@ -984,8 +997,8 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
               flex: 1, minWidth: 120,
               padding: `${spacing[1]} ${spacing[2]}`,
               fontSize: '12px', fontFamily: typography.fontFamily,
-              border: `1px solid ${colors.gray[200]}`, borderRadius: borderRadius.md,
-              background: 'white', color: colors.gray[700], outline: 'none',
+              border: `1px solid ${gray[200]}`, borderRadius: borderRadius.md,
+              background: 'white', color: gray[700], outline: 'none',
             }}
           >
             <option value="all">All domains</option>
@@ -1001,8 +1014,8 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
               flex: 1, minWidth: 120,
               padding: `${spacing[1]} ${spacing[2]}`,
               fontSize: '12px', fontFamily: typography.fontFamily,
-              border: `1px solid ${colors.gray[200]}`, borderRadius: borderRadius.md,
-              background: 'white', color: colors.gray[700], outline: 'none',
+              border: `1px solid ${gray[200]}`, borderRadius: borderRadius.md,
+              background: 'white', color: gray[700], outline: 'none',
             }}
           >
             <option value="all">All statuses</option>
@@ -1017,7 +1030,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
         {list.length === 0 ? (
           <div style={{
             padding: spacing[6], textAlign: 'center',
-            color: colors.gray[400], fontSize: '13px',
+            color: gray[400], fontSize: '13px',
           }}>
             {mode === 'approvals' ? 'No actions waiting for approval.' : 'No tasks yet.'}
           </div>
@@ -1070,28 +1083,28 @@ function AgentTaskCard({ task, showActions, onApprove, onReject, isApproving, is
     <div style={{
       padding: spacing[3],
       background: 'white',
-      border: `1px solid ${colors.gray[200]}`,
+      border: `1px solid ${gray[200]}`,
       borderRadius: borderRadius.md,
       display: 'flex', flexDirection: 'column', gap: spacing[2],
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing[2] }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: '12px', fontWeight: 600, color: colors.gray[700],
+            fontSize: '12px', fontWeight: 600, color: gray[700],
             display: 'flex', alignItems: 'center', gap: spacing[2], marginBottom: 2,
           }}>
             <span style={{
               padding: '1px 6px', borderRadius: borderRadius.full,
-              background: colors.gray[100], color: colors.gray[600],
+              background: gray[100], color: gray[600],
               fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}>
               {DOMAIN_LABEL[task.agent_domain]}
             </span>
-            <span style={{ color: colors.gray[400], fontWeight: 400, fontSize: '11px' }}>{when}</span>
+            <span style={{ color: gray[400], fontWeight: 400, fontSize: '11px' }}>{when}</span>
           </div>
           <div style={{
-            fontSize: '13px', color: colors.gray[800],
+            fontSize: '13px', color: gray[800],
             overflow: 'hidden', textOverflow: 'ellipsis',
             display: '-webkit-box',
             WebkitLineClamp: 2,
@@ -1139,8 +1152,8 @@ function AgentTaskCard({ task, showActions, onApprove, onReject, isApproving, is
             disabled={isApproving || isRejecting}
             style={{
               padding: `${spacing[1]} ${spacing[2]}`,
-              border: `1px solid ${colors.gray[200]}`, borderRadius: borderRadius.md,
-              background: 'white', color: colors.gray[600],
+              border: `1px solid ${gray[200]}`, borderRadius: borderRadius.md,
+              background: 'white', color: gray[600],
               fontSize: '12px', fontWeight: 600, fontFamily: typography.fontFamily,
               cursor: (isApproving || isRejecting) ? 'not-allowed' : 'pointer',
               opacity: (isApproving || isRejecting) ? 0.6 : 1,

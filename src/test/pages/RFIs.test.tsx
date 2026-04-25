@@ -20,6 +20,12 @@ vi.mock('../../lib/supabase', () => ({
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn(),
+    })),
+    removeChannel: vi.fn(),
   },
   isSupabaseConfigured: true,
 }))
@@ -61,8 +67,8 @@ vi.mock('../../utils/connections', () => ({
   getRelatedItemsForRfi: () => [],
 }))
 
-vi.mock('../../components/forms/CreateRFIModal', () => ({
-  default: ({ open, onSubmit }: { open: boolean; onSubmit: (d: unknown) => void }) =>
+vi.mock('../../components/rfis/RFICreateWizard', () => ({
+  default: ({ open, onSubmit }: { open: boolean; onSubmit: (d: unknown) => void | Promise<void> }) =>
     open ? (
       <div data-testid="create-rfi-modal">
         <button onClick={() => onSubmit({ title: 'Test RFI', priority: 'medium' })}>Submit</button>
@@ -115,6 +121,7 @@ vi.mock('../../components/ai/AIAnnotation', () => ({
 
 vi.mock('../../components/ai/PredictiveAlert', () => ({
   PredictiveAlertBanner: () => null,
+  PageInsightBanners: () => null,
 }))
 
 vi.mock('../../components/ui/EditingLockBanner', () => ({
@@ -187,7 +194,7 @@ describe('RFIs page', () => {
     rfisState.error = new Error('Network error')
     rfisState.data = undefined
     render(wrap(<RFIs />))
-    expect(screen.getByText(/Unable to load RFIs|Network error/i)).toBeTruthy()
+    expect(screen.getAllByText(/Unable to load RFIs|Network error/i).length).toBeGreaterThan(0)
     const retryBtn = screen.getByRole('button', { name: /retry/i })
     expect(retryBtn).toBeTruthy()
     fireEvent.click(retryBtn)

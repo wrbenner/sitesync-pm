@@ -186,10 +186,13 @@ function barColor(phase: GanttPhase): { bg: string; border: string; progress: st
   if (phase.status === 'delayed') {
     return { bg: '#FEF3C7', border: '#FCD34D', progress: '#F59E0B', text: '#92400E' };
   }
-  if (phase.status === 'in_progress') {
+  if (phase.status === 'active' || phase.status === 'in_progress' || phase.status === 'on_track') {
     return { bg: '#DBEAFE', border: '#93C5FD', progress: '#3B82F6', text: '#1E40AF' };
   }
-  // "not_started" / "planned" — warm neutral, NOT invisible gray
+  if (phase.status === 'at_risk') {
+    return { bg: '#FEF3C7', border: '#FCD34D', progress: '#F59E0B', text: '#92400E' };
+  }
+  // "upcoming" / unknown — warm neutral
   return { bg: '#E8E5E0', border: '#C4BFB8', progress: '#8D8680', text: '#4B4539' };
 }
 
@@ -290,7 +293,7 @@ const PhaseDetailPanel: React.FC<DetailPanelProps> = ({ phase, onClose, risks })
   const progress = phase.progress ?? phase.percent_complete ?? 0;
   const isMilestone = dur <= 1 && start.getTime() === end.getTime();
   const risk = risks.find(r => r.phaseId === phase.id);
-  const statusLabel = (phase.status ?? 'planned').replace(/_/g, ' ');
+  const statusLabel = (phase.status ?? 'upcoming').replace(/_/g, ' ');
 
   return (
     <div style={{
@@ -641,7 +644,7 @@ const GanttRow: React.FC<GanttRowProps> = React.memo(({ phase, chartStart, pxPer
   return (
     <div
       role="row"
-      aria-label={`${phase.name}: ${phase.status ?? 'planned'}, ${progress}% complete`}
+      aria-label={`${phase.name}: ${phase.status ?? 'upcoming'}, ${progress}% complete`}
       onClick={() => onSelect(phase.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

@@ -96,9 +96,10 @@ export function useSubmitChangeOrder() {
     mutationFn: async ({ id, userId, projectId }) => {
       // State-machine gate: only allow draft → pending_review for eligible roles.
       await validateChangeOrderStatusTransition(id, projectId, 'pending_review')
-      void userId
       const { error } = await from('change_orders').update({
         status: 'pending_review',
+        submitted_by: userId,
+        submitted_at: new Date().toISOString(),
       }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }
@@ -118,7 +119,6 @@ export function useApproveChangeOrder() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => ({ status: 'approved', approved_amount: p.approvedCost }),
     mutationFn: async ({ id, userId, comments, approvedCost, projectId }) => {
-      void userId; void comments;
       // 1. Fetch the CO so we know its amount and cost_code for budget propagation
       const { data: co, error: fetchErr } = await supabase
         .from('change_orders').select('amount, cost_code, approved_amount').eq('id', id).single()
@@ -130,9 +130,11 @@ export function useApproveChangeOrder() {
       // 2. Mark the CO as approved
       const updates: Record<string, unknown> = {
         status: 'approved',
+        approved_by: userId,
         approved_date: new Date().toISOString().slice(0, 10),
       }
       if (approvedCost !== undefined) updates.approved_amount = approvedCost
+      if (comments) updates.approval_comments = comments
       const { error } = await from('change_orders').update(updates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
 
@@ -227,9 +229,11 @@ export function useRejectChangeOrder() {
     getEntityId: (p) => p.id,
     getNewValue: (p) => ({ status: 'rejected', comments: p.comments }),
     mutationFn: async ({ id, userId, comments, projectId }) => {
-      void userId; void comments;
       const { error } = await from('change_orders').update({
         status: 'rejected',
+        rejected_by: userId,
+        rejected_at: new Date().toISOString(),
+        rejection_comments: comments,
       }).eq('id', id).eq('project_id', projectId)
       if (error) throw error
       return { projectId }

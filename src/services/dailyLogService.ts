@@ -96,16 +96,16 @@ export const dailyLogService = {
   async loadTodayLog(projectId: string): Promise<DailyLogServiceResult<DailyLog>> {
     const today = new Date().toISOString().split('T')[0];
 
-    const { data: rows, error: fetchError } = await supabase
+    const { data: existingLog, error: fetchError } = await supabase
       .from('daily_logs')
       .select('*')
       .eq('project_id', projectId)
       .eq('log_date', today)
       .order('created_at', { ascending: false })
-      .limit(1);
+      .maybeSingle();
 
     if (fetchError) return { data: null, error: fetchError.message };
-    if (rows && rows.length > 0) return { data: rows[0] as DailyLog, error: null };
+    if (existingLog) return { data: existingLog as DailyLog, error: null };
 
     const userId = await getCurrentUserId();
     let weather: WeatherSnapshot | null = null;
@@ -380,10 +380,8 @@ export const dailyLogService = {
       status: newStatus,
       updated_at: new Date().toISOString(),
     };
-    if (newStatus === 'submitted') {
-      updates.is_submitted = true;
-      updates.submitted_at = new Date().toISOString();
-    }
+    // Note: is_submitted and submitted_at are NOT real DB columns on daily_logs.
+    // Status alone tracks submission state.
     if (newStatus === 'approved') {
       updates.approved = true;
       updates.approved_at = new Date().toISOString();

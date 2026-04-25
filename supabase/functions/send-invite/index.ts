@@ -79,7 +79,7 @@ function inviteEmailHtml(opts: {
       <h1 style="margin:0;font-size:24px">You're invited to SiteSync</h1>
     </div>
     <div style="padding:32px;color:#1f2937;line-height:1.6">
-      <p>You've been invited to join <strong>${opts.organization_name}</strong> on SiteSync AI as a <strong>${opts.role}</strong>.</p>
+      <p>You've been invited to join <strong>${opts.organization_name}</strong> on SiteSync PM as a <strong>${opts.role}</strong>.</p>
       <p style="color:#6b7280">Access: ${projScope}</p>
       <div style="text-align:center;margin:32px 0">
         <a href="${opts.accept_url}" style="display:inline-block;background:#2563eb;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600">Accept Invitation</a>
