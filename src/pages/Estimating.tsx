@@ -1109,3 +1109,5 @@ const selectStyle: React.CSSProperties = {
   cursor: 'pointer',
   boxSizing: 'border-box',
 }
+
+export default Estimating

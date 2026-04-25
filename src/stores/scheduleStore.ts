@@ -29,7 +29,7 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     start_date: startDate || null,
     end_date: endDate || null,
     percent_complete: pct,
-    status: (d['status'] as string | null) ?? 'planned',
+    status: (d['status'] as string | null) ?? 'upcoming',
     is_critical_path: isCritical,
     float_days: (d['float_days'] as number | null) ?? 0,
     baseline_start: (d['baseline_start'] as string | null) ?? null,

@@ -250,7 +250,7 @@ export const Signup: React.FC = () => {
               letterSpacing: typography.letterSpacing.tight,
             }}
           >
-            SiteSync AI
+            SiteSync PM
           </h1>
           <p
             style={{

@@ -47,8 +47,8 @@ const incidentColumns = [
   incidentCol.accessor('date', {
     header: 'Date',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+      <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
+        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -56,7 +56,7 @@ const incidentColumns = [
     header: 'Type',
     cell: (info) => {
       const v = info.getValue() as string
-      return <span style={{ color: colors.textPrimary }}>{v ? v.replace(/_/g, ' ') : ''}</span>
+      return <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, textTransform: 'capitalize' as const }}>{v ? v.replace(/_/g, ' ') : '\u2014'}</span>
     },
   }),
   incidentCol.accessor('severity', {
@@ -149,8 +149,8 @@ const inspectionColumns = [
   inspectionCol.accessor('date', {
     header: 'Date',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+      <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
+        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -199,9 +199,9 @@ const inspectionColumns = [
     header: 'Score',
     cell: (info) => {
       const score = info.getValue() as number | null
-      if (score == null) return <span style={{ color: colors.textTertiary }}>N/A</span>
+      if (score == null) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>&mdash;</span>
       const scoreColor = score >= 90 ? colors.statusActive : score >= 70 ? colors.statusPending : colors.statusCritical
-      return <span style={{ fontWeight: typography.fontWeight.semibold, color: scoreColor }}>{score}%</span>
+      return <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.semibold, color: scoreColor, fontVariantNumeric: 'tabular-nums' as const }}>{score}%</span>
     },
   }),
 ]
@@ -211,8 +211,8 @@ const talkColumns = [
   talkCol.accessor('date', {
     header: 'Date',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : ''}
+      <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
+        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -235,7 +235,7 @@ const talkColumns = [
   talkCol.accessor('attendance_count', {
     header: 'Attendees',
     cell: (info) => (
-      <span style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
+      <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const }}>
         {info.getValue() ?? 0}
       </span>
     ),
@@ -263,8 +263,8 @@ const certColumns = [
   certCol.accessor('expiration_date', {
     header: 'Expires',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString() : 'No expiry'}
+      <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
+        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -362,24 +362,18 @@ const caColumns = [
     header: 'Due Date',
     cell: (info) => {
       const val = info.getValue() as string | null
-      if (!val) return <span style={{ color: colors.textTertiary }}>\u2014</span>
+      if (!val) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>&mdash;</span>
       const isOverdue = new Date(val) < new Date() && info.row.original.status !== 'closed' && info.row.original.status !== 'verified'
       return (
         <span style={{
+          fontSize: 11,
+          fontFamily: typography.fontFamilyMono,
+          fontVariantNumeric: 'tabular-nums' as const,
           color: isOverdue ? colors.statusCritical : colors.textSecondary,
           fontWeight: isOverdue ? typography.fontWeight.semibold : typography.fontWeight.normal,
         }}>
-          {new Date(val).toLocaleDateString()}
-          {isOverdue && (
-            <span style={{
-              marginLeft: spacing.xs,
-              fontSize: typography.fontSize.caption,
-              color: colors.statusCritical,
-              fontWeight: typography.fontWeight.medium,
-            }}>
-              {' '}OVERDUE
-            </span>
-          )}
+          {new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {isOverdue && <span style={{ marginLeft: 4, fontSize: 10, letterSpacing: '0.04em' }}> OVERDUE</span>}
         </span>
       )
     },
@@ -446,7 +440,7 @@ function EmptyState({ message, cta, onCta }: { message: string; cta?: string; on
         {message}
       </p>
       {cta && onCta && (
-        <Btn variant="primary" onClick={onCta} style={{ minHeight: '56px' }}>
+        <Btn variant="primary" onClick={onCta}>
           {cta}
         </Btn>
       )}
@@ -1143,30 +1137,26 @@ export const Safety: React.FC = () => {
   return (
     <PageContainer
       title="Safety"
-      subtitle="Site safety management, inspections, incidents, and compliance tracking"
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton pdfFilename="SiteSync_Safety_Report" />
-          <Btn variant="secondary" icon={<Sparkles size={16} />} onClick={() => setShowAiScanModal(true)} style={{ minHeight: 56 }}>
-            AI Safety Scan
-          </Btn>
           {activeTab === 'incidents' && (
             <PermissionGate permission="safety.manage">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)}>
               Report Incident
             </Btn>
             </PermissionGate>
           )}
           {activeTab === 'toolbox' && (
             <PermissionGate permission="safety.manage">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)}>
               New Talk
             </Btn>
             </PermissionGate>
           )}
           {activeTab === 'checklists' && (
             <PermissionGate permission="safety.manage">
-            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowChecklistModal(true)} style={{ minHeight: 56 }}>
+            <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowChecklistModal(true)}>
               New Checklist
             </Btn>
             </PermissionGate>
@@ -1178,10 +1168,10 @@ export const Safety: React.FC = () => {
 
       {/* Dashboard Metric Cards */}
       {isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing.lg }}>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} style={{
-              width: '100%', minWidth: 180, height: 100,
+              width: '100%', height: 88,
               backgroundColor: colors.surfaceInset,
               borderRadius: borderRadius.md,
               animation: 'safety-pulse 1.5s ease-in-out infinite',
@@ -1191,74 +1181,29 @@ export const Safety: React.FC = () => {
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: spacing.lg,
-          marginBottom: spacing['2xl'],
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+          gap: spacing['3'],
+          marginBottom: spacing.lg,
         }}>
           <MetricBox
-            label="Days Since Last Incident"
+            label="Days Without Incident"
             value={daysSinceIncident ?? 0}
             colorOverride={daysColor}
-            changeLabel="Medical treatment or above"
           />
-
-          {/* TRIR with benchmark sub-label */}
-          <div>
-            <MetricBox
-              label="TRIR"
-              value={trir ?? 'N/A'}
-              colorOverride={trirColor}
-            />
-            <p style={{
-              margin: '4px 0 0',
-              fontSize: typography.fontSize.caption,
-              color: colors.textTertiary,
-              paddingLeft: spacing['1'],
-            }}>
-              Industry avg: 2.8
-            </p>
-          </div>
-
           <MetricBox
-            label="Open Corrective Actions"
+            label="TRIR"
+            value={trir ?? 'N/A'}
+            colorOverride={trirColor}
+          />
+          <MetricBox
+            label="Open Actions"
             value={openCorrectiveActions}
             colorOverride={caColor}
           />
-
           <MetricBox
-            label="Certifications Expiring Soon"
+            label="Expiring Certs"
             value={expiringCerts}
             colorOverride={certColor}
-            changeLabel="Within 30 days"
-          />
-
-          <MetricBox
-            label="Inspections This Week"
-            value={inspectionsThisWeek}
-            colorOverride={inspectionsThisWeek > 0 ? 'success' : undefined}
-          />
-
-          <div>
-            <MetricBox
-              label="DART Rate"
-              value={dart ?? 'N/A'}
-              colorOverride={dartColor}
-            />
-            <p style={{
-              margin: '4px 0 0',
-              fontSize: typography.fontSize.caption,
-              color: colors.textTertiary,
-              paddingLeft: spacing['1'],
-            }}>
-              Industry avg: 1.5
-            </p>
-          </div>
-
-          <MetricBox
-            label="Near Misses Reported"
-            value={nearMissCount}
-            colorOverride={nearMissCount > 0 ? 'success' : undefined}
-            changeLabel="High reporting = strong culture"
           />
         </div>
       )}
@@ -1270,7 +1215,7 @@ export const Safety: React.FC = () => {
         backgroundColor: colors.surfaceInset,
         borderRadius: borderRadius.lg,
         padding: spacing['1'],
-        marginBottom: spacing['2xl'],
+        marginBottom: spacing.lg,
         overflowX: 'auto',
       }}>
         {tabs.map((tab) => {
@@ -1296,7 +1241,6 @@ export const Safety: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
-                minHeight: '56px',
               }}
             >
               {React.createElement(Icon, { size: 14 })}
@@ -1364,7 +1308,7 @@ export const Safety: React.FC = () => {
               </p>
               <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
                 <PermissionGate permission="safety.manage">
-                <Btn variant="primary" onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>
+                <Btn variant="primary" onClick={() => setShowIncidentModal(true)}>
                   Report First Incident
                 </Btn>
                 </PermissionGate>
@@ -1420,7 +1364,6 @@ export const Safety: React.FC = () => {
                       color: isActive ? colors.orangeText : colors.textPrimary,
                       backgroundColor: isActive ? colors.orangeSubtle : colors.surfaceRaised,
                       transition: `all ${transitions.instant}`,
-                      minHeight: '56px',
                     }}
                   >
                     {CHECKLIST_TEMPLATES[key].label}
@@ -1476,8 +1419,6 @@ export const Safety: React.FC = () => {
                                     transition: `all ${transitions.instant}`,
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.04em',
-                                    minHeight: '56px',
-                                    minWidth: '52px',
                                   }}
                                 >
                                   {val === 'na' ? 'N/A' : val.charAt(0).toUpperCase() + val.slice(1)}
@@ -1517,7 +1458,7 @@ export const Safety: React.FC = () => {
                     )}
                   </span>
                   <PermissionGate permission="safety.manage">
-                    <Btn variant="primary" onClick={handleSaveInspection} disabled={createSafetyInspection.isPending} style={{ minHeight: '56px' }}>
+                    <Btn variant="primary" onClick={handleSaveInspection} disabled={createSafetyInspection.isPending}>
                       {createSafetyInspection.isPending ? 'Saving…' : 'Save Inspection'}
                     </Btn>
                   </PermissionGate>
@@ -1690,7 +1631,7 @@ export const Safety: React.FC = () => {
                               }
                             }}
                             disabled={updateCorrectiveAction.isPending}
-                            style={{ minHeight: '40px', fontSize: typography.fontSize.caption }}
+                            style={{ fontSize: typography.fontSize.caption }}
                           >
                             {label}
                           </Btn>
@@ -1863,7 +1804,7 @@ export const Safety: React.FC = () => {
               <button
                 onClick={() => { setShowChecklistModal(false); setChecklistForm({ name: '', category: 'general', templateId: '' }) }}
                 aria-label="Close"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4, minHeight: '56px', minWidth: '56px' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4 }}
               >
                 &times;
               </button>
@@ -1940,7 +1881,7 @@ export const Safety: React.FC = () => {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
-              <Btn variant="ghost" onClick={() => { setShowChecklistModal(false); setChecklistForm({ name: '', category: 'general', templateId: '' }) }} style={{ minHeight: '56px' }}>Cancel</Btn>
+              <Btn variant="ghost" onClick={() => { setShowChecklistModal(false); setChecklistForm({ name: '', category: 'general', templateId: '' }) }}>Cancel</Btn>
               <Btn
                 variant="primary"
                 disabled={!checklistForm.name.trim() || createChecklist.isPending || createChecklistFromTemplate.isPending}
@@ -1973,7 +1914,6 @@ export const Safety: React.FC = () => {
                     toast.error('Failed to create checklist')
                   }
                 }}
-                style={{ minHeight: '56px' }}
               >
                 {createChecklist.isPending || createChecklistFromTemplate.isPending ? 'Creating...' : 'Create Checklist'}
               </Btn>
@@ -2015,7 +1955,6 @@ export const Safety: React.FC = () => {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
-                  minHeight: '56px', minWidth: '56px',
                 }}
               >
                 &times;
@@ -2581,8 +2520,8 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
-              <Btn variant="ghost" onClick={handleCloseModal} style={{ minHeight: '56px', minWidth: '56px' }}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleIncidentSubmit} disabled={createIncident.isPending || createCorrectiveAction.isPending} style={{ minHeight: '56px' }}>
+              <Btn variant="ghost" onClick={handleCloseModal}>Cancel</Btn>
+              <Btn variant="primary" onClick={handleIncidentSubmit} disabled={createIncident.isPending || createCorrectiveAction.isPending}>
                 {createIncident.isPending ? 'Saving…' : 'Submit Report'}
               </Btn>
             </div>
@@ -2622,7 +2561,6 @@ export const Safety: React.FC = () => {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 20, color: colors.textSecondary, lineHeight: 1, padding: 4,
-                  minHeight: '56px', minWidth: '56px',
                 }}
               >
                 &times;
@@ -2716,7 +2654,7 @@ export const Safety: React.FC = () => {
                     color: colors.textPrimary, outline: 'none',
                   }}
                 />
-                <Btn variant="secondary" onClick={handleAddAttendee} style={{ minHeight: '56px', flexShrink: 0 }}>
+                <Btn variant="secondary" onClick={handleAddAttendee} style={{ flexShrink: 0 }}>
                   Add
                 </Btn>
               </div>
@@ -2774,8 +2712,8 @@ export const Safety: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing['3'] }}>
-              <Btn variant="ghost" onClick={handleCloseTalkModal} style={{ minHeight: '56px' }}>Cancel</Btn>
-              <Btn onClick={handleSaveTalk} style={{ minHeight: '56px' }}>Save Talk</Btn>
+              <Btn variant="ghost" onClick={handleCloseTalkModal}>Cancel</Btn>
+              <Btn onClick={handleSaveTalk}>Save Talk</Btn>
             </div>
           </div>
         </div>
@@ -2800,3 +2738,4 @@ export const Safety: React.FC = () => {
 }
 
 export default Safety
+

@@ -54,15 +54,21 @@ export type SubmittalFormValues = z.infer<typeof submittalSchema>
 
 export const punchItemSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
-  location: z.string().default(''),
-  floor: z.string().default(''),
-  trade: z.string().default(''),
-  assigned_to: z.string().default(''),
+  location: z.string().nullable().default(''),
+  floor: z.string().nullable().default(''),
+  trade: z.string().nullable().default(''),
+  assigned_to: z.string().nullable().default(''),
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
-  due_date: z.string().default(''),
-  description: z.string().default(''),
-  drawing_id: z.string().default(''),
-})
+  due_date: z.string().nullable().default(''),
+  description: z.string().nullable().default(''),
+  drawing_id: z.string().nullable().default(''),
+  area: z.string().nullable().optional(),
+  reported_by: z.string().nullable().optional(),
+  before_photo_url: z.string().nullable().optional(),
+  after_photo_url: z.string().nullable().optional(),
+  photos: z.array(z.string()).nullable().optional(),
+  project_id: z.string().optional(),
+}).passthrough()
 
 export type PunchItemFormValues = z.infer<typeof punchItemSchema>
 

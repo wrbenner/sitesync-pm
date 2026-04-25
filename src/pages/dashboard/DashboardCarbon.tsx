@@ -175,7 +175,7 @@ export const DashboardCarbon: React.FC<Props> = ({ projectId }) => {
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
           padding: spacing['3'], backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.md, color: colors.textTertiary, fontSize: typography.fontSize.sm,
+          borderRadius: borderRadius.md, color: colors.textSecondary, fontSize: typography.fontSize.sm,
         }}>
           <Leaf size={14} />
           <span>No carbon data yet. Log material deliveries to begin tracking.</span>
@@ -200,7 +200,7 @@ export const DashboardCarbon: React.FC<Props> = ({ projectId }) => {
             {spark.area && <path d={spark.area} fill="url(#carbonGrad)" />}
             {spark.path && <path d={spark.path} fill="none" stroke={colors.statusActive} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />}
           </svg>
-          <div style={{ fontSize: '10px', color: colors.textTertiary, marginTop: spacing['1'] }}>
+          <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: spacing['1'] }}>
             Cumulative · last 12 weeks
           </div>
         </>

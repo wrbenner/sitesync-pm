@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-04-18T19:18:49.506Z",
-  "totalRoutes": 55,
-  "passingRoutes": 55,
-  "averageScore": 100,
+  "generatedAt": "2026-04-25T13:36:54.679Z",
+  "totalRoutes": 62,
+  "passingRoutes": 59,
+  "averageScore": 99,
   "results": [
     {
       "contract": {
@@ -59,7 +59,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -92,7 +92,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -159,7 +159,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -202,7 +202,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -248,7 +248,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -293,7 +293,13 @@
         "updatePresent": true,
         "deletePresent": true
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -330,7 +336,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -458,7 +464,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -500,7 +506,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -542,7 +548,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -573,15 +579,21 @@
         "has_create": true,
         "has_detail_view": true,
         "has_export": true,
-        "has_import": true
+        "has_import": false
       },
       "mutations": {
         "createPresent": false,
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
-      "score": 100
+      "findings": [
+        {
+          "severity": "P2",
+          "code": "MISSING_HAS_IMPORT",
+          "message": "Page declares has_import but no evidence found in src/pages/schedule/index.tsx"
+        }
+      ],
+      "score": 80
     },
     {
       "contract": {
@@ -607,7 +619,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -648,7 +660,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -679,7 +691,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -710,7 +722,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -827,7 +839,13 @@
         "updatePresent": false,
         "deletePresent": false
       },
-      "findings": [],
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
       "score": 100
     },
     {
@@ -854,7 +872,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -883,7 +901,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -912,7 +930,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -941,7 +959,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -972,7 +990,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1003,7 +1021,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1043,7 +1061,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1081,7 +1099,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1119,7 +1137,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1150,7 +1168,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1181,7 +1199,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1210,7 +1228,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1293,7 +1311,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1324,7 +1342,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1353,7 +1371,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1377,7 +1395,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1402,7 +1420,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1431,7 +1449,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1462,7 +1480,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1495,7 +1513,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1524,7 +1542,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1555,7 +1573,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1586,7 +1604,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1617,7 +1635,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1642,7 +1660,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1667,7 +1685,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1693,6 +1711,198 @@
     },
     {
       "contract": {
+        "route": "/rfis/:rfiId",
+        "pageFile": "src/pages/rfis/RFIDetail.tsx",
+        "title": "RFI Detail",
+        "entity": "rfi",
+        "expected": {
+          "has_detail_view": true,
+          "has_edit": true
+        },
+        "permissionModule": "rfis",
+        "status": "production"
+      },
+      "actual": {
+        "has_edit": true,
+        "has_detail_view": false
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        },
+        {
+          "severity": "P3",
+          "code": "MISSING_HAS_DETAIL_VIEW",
+          "message": "Page declares has_detail_view but no evidence found in src/pages/rfis/RFIDetail.tsx"
+        }
+      ],
+      "score": 50
+    },
+    {
+      "contract": {
+        "route": "/submittals/:submittalId",
+        "pageFile": "src/pages/submittals/SubmittalDetailPage.tsx",
+        "title": "Submittal Detail",
+        "entity": "submittal",
+        "expected": {
+          "has_detail_view": true,
+          "has_edit": true
+        },
+        "permissionModule": "submittals",
+        "status": "production"
+      },
+      "actual": {
+        "has_edit": true,
+        "has_detail_view": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/punch-list/:itemId",
+        "pageFile": "src/pages/punch-list/PunchItemDetailPage.tsx",
+        "title": "Punch Item Detail",
+        "entity": "punch-item",
+        "expected": {
+          "has_detail_view": true,
+          "has_edit": true
+        },
+        "permissionModule": "punch-list",
+        "status": "production"
+      },
+      "actual": {
+        "has_edit": true,
+        "has_detail_view": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/submittals/spec-parser",
+        "pageFile": "src/pages/submittals/SpecParserPage.tsx",
+        "title": "Spec Parser",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "submittals",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/bim",
+        "pageFile": "src/pages/bim/BIMViewerPage.tsx",
+        "title": "3D Model Viewer",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "bim",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/compliance",
+        "pageFile": "src/pages/compliance/HUDCompliancePage.tsx",
+        "title": "HUD & Tax Credits",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "compliance",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/site-intelligence",
+        "pageFile": "src/pages/SiteMap.tsx",
+        "title": "Site Intelligence (redirects to /site-map)",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "site-map",
+        "status": "stub"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": -1
+    },
+    {
+      "contract": {
         "route": "*",
         "pageFile": "src/pages/errors/NotFound.tsx",
         "title": "Not Found",
@@ -1710,5 +1920,36 @@
       "score": 100
     }
   ],
-  "globalFindings": []
+  "globalFindings": [
+    {
+      "severity": "P1",
+      "code": "REGISTRY_DRIFT_MISSING_ENTRY",
+      "message": "Route \"/ai\" declared in src/App.tsx but missing from audit/registry.ts"
+    },
+    {
+      "severity": "P1",
+      "code": "REGISTRY_DRIFT_MISSING_ENTRY",
+      "message": "Route \"/settings\" declared in src/App.tsx but missing from audit/registry.ts"
+    },
+    {
+      "severity": "P1",
+      "code": "REGISTRY_DRIFT_MISSING_ENTRY",
+      "message": "Route \"/settings/team\" declared in src/App.tsx but missing from audit/registry.ts"
+    },
+    {
+      "severity": "P1",
+      "code": "REGISTRY_DRIFT_MISSING_ENTRY",
+      "message": "Route \"/settings/notifications\" declared in src/App.tsx but missing from audit/registry.ts"
+    },
+    {
+      "severity": "P1",
+      "code": "REGISTRY_DRIFT_MISSING_ENTRY",
+      "message": "Route \"/profile\" declared in src/App.tsx but missing from audit/registry.ts"
+    },
+    {
+      "severity": "P1",
+      "code": "REGISTRY_DRIFT_MISSING_ENTRY",
+      "message": "Route \"/digital-twin\" declared in src/App.tsx but missing from audit/registry.ts"
+    }
+  ]
 }

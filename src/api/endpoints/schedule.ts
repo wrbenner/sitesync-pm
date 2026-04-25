@@ -28,18 +28,21 @@ type RawRow = {
   deleted_by: string | null
 }
 
-const VALID_STATUSES = new Set<ScheduleActivity['status']>([
-  'not_started',
-  'in_progress',
+// DB CHECK: ('completed', 'active', 'upcoming', 'at_risk', 'delayed', 'on_track')
+const VALID_STATUSES = new Set<string>([
   'completed',
+  'active',
+  'upcoming',
+  'at_risk',
   'delayed',
+  'on_track',
 ])
 
 function toActivityStatus(s: string | null): ScheduleActivity['status'] {
-  if (s !== null && VALID_STATUSES.has(s as ScheduleActivity['status'])) {
+  if (s !== null && VALID_STATUSES.has(s)) {
     return s as ScheduleActivity['status']
   }
-  return 'not_started'
+  return 'upcoming' as ScheduleActivity['status']
 }
 
 export function mapScheduleActivityRow(row: RawRow): ScheduleActivity {

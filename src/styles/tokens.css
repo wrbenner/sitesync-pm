@@ -1,4 +1,4 @@
-/* SiteSync AI Design Tokens
+/* SiteSync PM Design Tokens
    Single source of truth for all CSS custom properties.
    Components use these via inline styles (theme.ts CSS var references)
    or directly in stylesheets. */

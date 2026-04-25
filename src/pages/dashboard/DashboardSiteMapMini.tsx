@@ -162,7 +162,7 @@ export const DashboardSiteMapMini: React.FC<Props> = ({ projectId, projectLat, p
         }}
       />
       {pins.length === 0 && (
-        <div style={{ fontSize: '10px', color: colors.textTertiary, marginTop: spacing['2'] }}>
+        <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: spacing['2'] }}>
           No crew pings in the last 15 minutes.
         </div>
       )}

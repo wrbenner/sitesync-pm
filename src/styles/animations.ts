@@ -1,4 +1,4 @@
-// SiteSync AI — Unified Motion System
+// SiteSync PM — Unified Motion System
 // Every animation in the app is defined here. No magic numbers in components.
 
 import { shadows } from './theme'
