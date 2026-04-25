@@ -20,6 +20,12 @@ vi.mock('../../lib/supabase', () => ({
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     },
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn(),
+    })),
+    removeChannel: vi.fn(),
   },
   isSupabaseConfigured: true,
 }))
@@ -115,6 +121,7 @@ vi.mock('../../components/ai/AIAnnotation', () => ({
 
 vi.mock('../../components/ai/PredictiveAlert', () => ({
   PredictiveAlertBanner: () => null,
+  PageInsightBanners: () => null,
 }))
 
 vi.mock('../../components/ui/EditingLockBanner', () => ({
