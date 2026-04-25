@@ -1,5 +1,5 @@
 #!/bin/bash
-# SiteSync AI Edge Functions - Example API Calls
+# SiteSync PM Edge Functions - Example API Calls
 # These examples show how to call each edge function
 
 # Configuration
@@ -9,7 +9,7 @@ CRON_SECRET="your-cron-secret-here"
 PROJECT_ID="550e8400-e29b-41d4-a716-446655440000"
 
 echo "================================"
-echo "SiteSync AI Edge Functions"
+echo "SiteSync PM Edge Functions"
 echo "Example API Calls"
 echo "================================"
 echo ""

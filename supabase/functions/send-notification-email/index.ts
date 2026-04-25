@@ -65,7 +65,7 @@ function wrapInHtmlTemplate(body: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SiteSync AI Notification</title>
+  <title>SiteSync PM Notification</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F7F8FA;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
@@ -76,7 +76,7 @@ function wrapInHtmlTemplate(body: string): string {
           <!-- Header -->
           <tr>
             <td style="background-color:#F47820;border-radius:8px 8px 0 0;padding:24px 32px;">
-              <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">SiteSync AI</span>
+              <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">SiteSync PM</span>
             </td>
           </tr>
 
@@ -93,7 +93,7 @@ function wrapInHtmlTemplate(body: string): string {
           <tr>
             <td style="background-color:#F7F8FA;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 8px 8px;padding:20px 32px;text-align:center;">
               <p style="margin:0;color:#6B7280;font-size:12px;line-height:1.5;">
-                You are receiving this because you are a member of this project in SiteSync AI.<br />
+                You are receiving this because you are a member of this project in SiteSync PM.<br />
                 <a href="https://app.sitesync.ai/notifications/unsubscribe" style="color:#F47820;text-decoration:underline;">Unsubscribe from notifications</a>
               </p>
             </td>
@@ -150,7 +150,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'SiteSync AI <notifications@sitesync.ai>',
+        from: 'SiteSync PM <notifications@sitesync.ai>',
         to: [recipientEmail],
         subject: renderedSubject,
         html: wrapInHtmlTemplate(renderedBody),
