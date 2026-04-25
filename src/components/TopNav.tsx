@@ -87,7 +87,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
         {/* Logo */}
         <button
           onClick={() => onNavigate('dashboard')}
-          aria-label="SiteSync AI, go to dashboard"
+          aria-label="SiteSync PM, go to dashboard"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -102,15 +102,24 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
           }}
         >
           <img
-            src="/logos/sitesync-symbol.png"
+            src={`${import.meta.env.BASE_URL}logos/sitesync-symbol.png`}
             alt=""
             style={{ height: 36, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
-          <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em' }}>
+          <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em', lineHeight: 1 }}>
             SiteSync
           </span>
-          <span style={{ fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, marginTop: `-${spacing['2']}`, letterSpacing: '0.03em' }}>
-            AI
+          <span style={{
+            fontSize: '11px', fontWeight: 700,
+            color: colors.primaryOrange,
+            backgroundColor: colors.orangeSubtle,
+            padding: '3px 7px',
+            borderRadius: borderRadius.sm,
+            letterSpacing: '0.08em',
+            lineHeight: 1,
+            textTransform: 'uppercase',
+          }}>
+            PM
           </span>
         </button>
 

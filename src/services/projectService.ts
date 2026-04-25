@@ -118,6 +118,8 @@ export const projectService = {
         name: input.name,
         organization_id: organizationId,
         address: input.address ?? null,
+        project_type: input.project_type ?? null,
+        total_value: input.total_value ?? null,
         description: input.description ?? null,
         status: 'active',
         start_date: input.start_date ?? null,

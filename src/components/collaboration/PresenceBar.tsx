@@ -3,6 +3,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { Eye, RefreshCw, Sparkles, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { usePresenceStore } from '../../stores/presenceStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useOthers } from '../../lib/liveblocks';
 import type { PresenceUserWithAction } from '../../stores/presenceStore';
 
@@ -372,7 +373,7 @@ interface PresenceBarProps {
 }
 
 export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
-  const users = usePresenceStore(s => s.getUsersOnPage(page));
+  const users = usePresenceStore(useShallow(s => s.getUsersOnPage(page)));
   const maxVisible = useMaxVisible();
   const [announcement, setAnnouncement] = useState('');
   const [viewerCountText, setViewerCountText] = useState('');
@@ -572,7 +573,7 @@ interface EntityPresenceProps {
 }
 
 export const EntityPresence: React.FC<EntityPresenceProps> = ({ entityId }) => {
-  const users = usePresenceStore(s => s.getUsersViewingEntity(entityId));
+  const users = usePresenceStore(useShallow(s => s.getUsersViewingEntity(entityId)));
 
   if (users.length === 0) return null;
 
@@ -600,7 +601,7 @@ interface SidebarPresenceDotProps {
 }
 
 export const SidebarPresenceDot: React.FC<SidebarPresenceDotProps> = ({ page }) => {
-  const count = usePresenceStore(s => s.getUsersOnPage(page).length);
+  const count = usePresenceStore(s => s.getUsersOnPage(page).length); // Returns primitive — safe without useShallow
 
   if (count === 0) return null;
 

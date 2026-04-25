@@ -1,0 +1,1714 @@
+{
+  "generatedAt": "2026-04-18T19:18:49.506Z",
+  "totalRoutes": 55,
+  "passingRoutes": 55,
+  "averageScore": 100,
+  "results": [
+    {
+      "contract": {
+        "route": "/login",
+        "pageFile": "src/pages/auth/Login.tsx",
+        "title": "Login",
+        "entity": null,
+        "expected": {},
+        "status": "production"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/signup",
+        "pageFile": "src/pages/auth/Signup.tsx",
+        "title": "Signup",
+        "entity": null,
+        "expected": {},
+        "status": "production"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/onboarding",
+        "pageFile": "src/pages/Onboarding.tsx",
+        "title": "Onboarding",
+        "entity": null,
+        "expected": {},
+        "status": "production"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/portfolio",
+        "pageFile": "src/pages/Portfolio.tsx",
+        "title": "Portfolio",
+        "entity": "project",
+        "expected": {
+          "has_list": true,
+          "has_search": true,
+          "has_filters": true
+        },
+        "permissionModule": "portfolio",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_filters": true,
+        "has_search": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/",
+        "pageFile": "src/pages/dashboard/index.tsx",
+        "title": "Dashboard (root)",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "dashboard",
+        "status": "production"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/dashboard",
+        "pageFile": "src/pages/dashboard/index.tsx",
+        "title": "Dashboard",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "dashboard",
+        "status": "production"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/project-health",
+        "pageFile": "src/pages/ProjectHealth.tsx",
+        "title": "Project Health",
+        "entity": null,
+        "expected": {
+          "has_detail_view": true
+        },
+        "permissionModule": "project-health",
+        "status": "beta"
+      },
+      "actual": {
+        "has_detail_view": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/tasks",
+        "pageFile": "src/pages/Tasks.tsx",
+        "title": "Tasks",
+        "entity": "task",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_detail_view": true,
+          "has_filters": true,
+          "has_search": true
+        },
+        "createModal": "CreateTaskModal",
+        "hooksModule": "src/hooks/mutations/tasks.ts",
+        "permissionModule": "tasks",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true,
+        "has_filters": true,
+        "has_search": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/rfis",
+        "pageFile": "src/pages/RFIs.tsx",
+        "title": "RFIs",
+        "entity": "rfi",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_export": true,
+          "has_detail_view": true,
+          "has_filters": true,
+          "has_search": true
+        },
+        "createModal": "CreateRFIModal",
+        "hooksModule": "src/hooks/mutations/rfis.ts",
+        "exportReportType": "rfi_log",
+        "permissionModule": "rfis",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true,
+        "has_filters": true,
+        "has_search": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/submittals",
+        "pageFile": "src/pages/submittals/index.tsx",
+        "title": "Submittals",
+        "entity": "submittal",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_export": true,
+          "has_detail_view": true,
+          "has_filters": true,
+          "has_search": true
+        },
+        "createModal": "CreateSubmittalModal",
+        "hooksModule": "src/hooks/mutations/submittals.ts",
+        "exportReportType": "submittal_log",
+        "permissionModule": "submittals",
+        "status": "production",
+        "knownIssues": [
+          "Missing useDeleteSubmittal hook"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true,
+        "has_filters": true,
+        "has_search": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/change-orders",
+        "pageFile": "src/pages/ChangeOrders.tsx",
+        "title": "Change Orders",
+        "entity": "change-order",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_delete": true,
+          "has_filters": true,
+          "has_search": true
+        },
+        "createModal": "CreateChangeOrderModal",
+        "hooksModule": "src/hooks/mutations/change-orders.ts",
+        "permissionModule": "change-orders",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_delete": true,
+        "has_filters": true,
+        "has_search": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/daily-log",
+        "pageFile": "src/pages/daily-log/index.tsx",
+        "title": "Daily Log",
+        "entity": "daily-log",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_export": true,
+          "has_detail_view": true
+        },
+        "createModal": "CreateDailyLogModal",
+        "hooksModule": "src/hooks/mutations/daily-logs.ts",
+        "exportReportType": "daily_log",
+        "permissionModule": "daily-log",
+        "status": "production",
+        "knownIssues": [
+          "Missing useDeleteDailyLog hook"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/punch-list",
+        "pageFile": "src/pages/punch-list/index.tsx",
+        "title": "Punch List",
+        "entity": "punch-item",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_export": true,
+          "has_detail_view": true,
+          "has_filters": true
+        },
+        "createModal": "CreatePunchItemModal",
+        "hooksModule": "src/hooks/mutations/punch-items.ts",
+        "exportReportType": "punch_list",
+        "permissionModule": "punch-list",
+        "status": "production",
+        "knownIssues": [
+          "Missing useDeletePunchItem hook"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true,
+        "has_filters": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/meetings",
+        "pageFile": "src/pages/Meetings.tsx",
+        "title": "Meetings",
+        "entity": "meeting",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_detail_view": true
+        },
+        "createModal": "CreateMeetingModal",
+        "hooksModule": "src/hooks/mutations/meetings.ts",
+        "permissionModule": "meetings",
+        "status": "production",
+        "knownIssues": [
+          "Missing useUpdateMeeting + useDeleteMeeting hooks"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/crews",
+        "pageFile": "src/pages/Crews.tsx",
+        "title": "Crews",
+        "entity": "crew",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_detail_view": true
+        },
+        "createModal": "CreateCrewModal",
+        "hooksModule": "src/hooks/mutations/crews.ts",
+        "permissionModule": "crews",
+        "status": "production",
+        "knownIssues": [
+          "Missing useUpdateCrew + useDeleteCrew hooks"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_detail_view": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/directory",
+        "pageFile": "src/pages/Directory.tsx",
+        "title": "Directory",
+        "entity": "contact",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_search": true
+        },
+        "createModal": "AddContactModal",
+        "hooksModule": "src/hooks/mutations/directory-contacts.ts",
+        "permissionModule": "directory",
+        "status": "production",
+        "knownIssues": [
+          "Missing useUpdateDirectoryContact + useDeleteDirectoryContact hooks"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_search": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/schedule",
+        "pageFile": "src/pages/schedule/index.tsx",
+        "title": "Schedule",
+        "entity": "phase",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_import": true,
+          "has_detail_view": true,
+          "has_export": true
+        },
+        "createModal": "AddPhaseModal",
+        "exportReportType": "schedule",
+        "permissionModule": "schedule",
+        "status": "production",
+        "knownIssues": [
+          "Missing useUpdatePhase + useDeletePhase hooks"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_detail_view": true,
+        "has_export": true,
+        "has_import": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/lookahead",
+        "pageFile": "src/pages/Lookahead.tsx",
+        "title": "Lookahead",
+        "entity": null,
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "lookahead",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/budget",
+        "pageFile": "src/pages/Budget.tsx",
+        "title": "Budget",
+        "entity": "budget-item",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_import": true,
+          "has_export": true,
+          "has_detail_view": true
+        },
+        "exportReportType": "budget",
+        "permissionModule": "budget",
+        "status": "production",
+        "knownIssues": [
+          "Create uses inline supabase.insert instead of a mutation hook"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_detail_view": true,
+        "has_export": true,
+        "has_import": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": false,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/financials",
+        "pageFile": "src/pages/Financials.tsx",
+        "title": "Financials",
+        "entity": null,
+        "expected": {
+          "has_list": true,
+          "has_export": true
+        },
+        "permissionModule": "financials",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/cost-management",
+        "pageFile": "src/pages/CostManagement.tsx",
+        "title": "Cost Management",
+        "entity": "cost-code",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "cost-management",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/drawings",
+        "pageFile": "src/pages/drawings/index.tsx",
+        "title": "Drawings",
+        "entity": "drawing",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_detail_view": true,
+          "has_import": true
+        },
+        "permissionModule": "drawings",
+        "status": "beta",
+        "knownIssues": [
+          "No dedicated useCreateDrawing / useDeleteDrawing hooks — relies on upload path"
+        ]
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_detail_view": true,
+        "has_import": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/files",
+        "pageFile": "src/pages/files/index.tsx",
+        "title": "Files",
+        "entity": "file",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_delete": true,
+          "has_search": true
+        },
+        "hooksModule": "src/hooks/mutations/files.ts",
+        "permissionModule": "files",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_delete": true,
+        "has_search": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": false,
+        "deletePresent": true
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/field-capture",
+        "pageFile": "src/pages/field-capture/index.tsx",
+        "title": "Field Capture",
+        "entity": null,
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "field-capture",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/safety",
+        "pageFile": "src/pages/safety/index.tsx",
+        "title": "Safety",
+        "entity": null,
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_export": true
+        },
+        "exportReportType": "safety",
+        "permissionModule": "safety",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/workforce",
+        "pageFile": "src/pages/Workforce.tsx",
+        "title": "Workforce",
+        "entity": null,
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "workforce",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/equipment",
+        "pageFile": "src/pages/Equipment.tsx",
+        "title": "Equipment",
+        "entity": "equipment",
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "equipment",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/estimating",
+        "pageFile": "src/pages/Estimating.tsx",
+        "title": "Estimating",
+        "entity": null,
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "estimating",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/procurement",
+        "pageFile": "src/pages/Procurement.tsx",
+        "title": "Procurement",
+        "entity": null,
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "procurement",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/preconstruction",
+        "pageFile": "src/pages/Preconstruction.tsx",
+        "title": "Preconstruction",
+        "entity": "bid-package",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "preconstruction",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/resources",
+        "pageFile": "src/pages/Resources.tsx",
+        "title": "Resources",
+        "entity": "resource",
+        "expected": {
+          "has_list": true,
+          "has_import": true
+        },
+        "permissionModule": "resources",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_import": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/vendors",
+        "pageFile": "src/pages/Vendors.tsx",
+        "title": "Vendors",
+        "entity": "vendor",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_filters": true,
+          "has_search": true
+        },
+        "hooksModule": "src/hooks/queries/vendors.ts",
+        "permissionModule": "vendors",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_filters": true,
+        "has_search": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/permits",
+        "pageFile": "src/pages/Permits.tsx",
+        "title": "Permits",
+        "entity": "permit",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_export": true
+        },
+        "hooksModule": "src/hooks/queries/permits.ts",
+        "permissionModule": "permits",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/contracts",
+        "pageFile": "src/pages/Contracts.tsx",
+        "title": "Contracts",
+        "entity": "contract",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": true,
+          "has_filters": true
+        },
+        "hooksModule": "src/hooks/queries/enterprise-modules.ts",
+        "permissionModule": "contracts",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_delete": true,
+        "has_filters": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/transmittals",
+        "pageFile": "src/pages/Transmittals.tsx",
+        "title": "Transmittals",
+        "entity": "transmittal",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "transmittals",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/closeout",
+        "pageFile": "src/pages/Closeout.tsx",
+        "title": "Closeout",
+        "entity": "closeout-item",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "closeout",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/specifications",
+        "pageFile": "src/pages/Specifications.tsx",
+        "title": "Specifications",
+        "entity": "specification",
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "specifications",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/pay-apps",
+        "pageFile": "src/pages/payment-applications/index.tsx",
+        "title": "Pay Applications",
+        "entity": "pay-app",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_detail_view": true,
+          "has_export": true
+        },
+        "createModal": "CreateEditPayAppDrawer",
+        "hooksModule": "src/hooks/queries/financials.ts",
+        "permissionModule": "pay-apps",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true,
+        "has_detail_view": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/payment-applications",
+        "pageFile": "src/pages/payment-applications/index.tsx",
+        "title": "Payment Applications (alias)",
+        "entity": "pay-app",
+        "expected": {},
+        "status": "production",
+        "knownIssues": [
+          "Alias route for /pay-apps — same page"
+        ]
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/lien-waivers",
+        "pageFile": "src/pages/LienWaivers.tsx",
+        "title": "Lien Waivers",
+        "entity": "lien-waiver",
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "lien-waivers",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/reports",
+        "pageFile": "src/pages/Reports.tsx",
+        "title": "Reports",
+        "entity": null,
+        "expected": {
+          "has_list": true,
+          "has_export": true
+        },
+        "permissionModule": "reports",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/reports/owner",
+        "pageFile": "src/pages/OwnerReportPage.tsx",
+        "title": "Owner Report",
+        "entity": null,
+        "expected": {
+          "has_export": true
+        },
+        "permissionModule": "reports",
+        "status": "beta"
+      },
+      "actual": {
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/portal/owner",
+        "pageFile": "src/pages/OwnerPortal.tsx",
+        "title": "Owner Portal",
+        "entity": null,
+        "expected": {},
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/copilot",
+        "pageFile": "src/pages/AICopilot.tsx",
+        "title": "AI Copilot",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "copilot",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/ai-agents",
+        "pageFile": "src/pages/AIAgents.tsx",
+        "title": "AI Agents",
+        "entity": null,
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "ai-agents",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/activity",
+        "pageFile": "src/pages/Activity.tsx",
+        "title": "Activity Feed",
+        "entity": null,
+        "expected": {
+          "has_list": true,
+          "has_filters": true
+        },
+        "permissionModule": "activity",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_filters": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/audit-trail",
+        "pageFile": "src/pages/AuditTrail.tsx",
+        "title": "Audit Trail",
+        "entity": null,
+        "expected": {
+          "has_list": true,
+          "has_filters": true,
+          "has_export": true
+        },
+        "permissionModule": "audit-trail",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_filters": true,
+        "has_export": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/integrations",
+        "pageFile": "src/pages/Integrations.tsx",
+        "title": "Integrations",
+        "entity": null,
+        "expected": {
+          "has_list": true
+        },
+        "permissionModule": "integrations",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/time-tracking",
+        "pageFile": "src/pages/TimeTracking.tsx",
+        "title": "Time Tracking",
+        "entity": "time-entry",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "time-tracking",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/deliveries",
+        "pageFile": "src/pages/Deliveries.tsx",
+        "title": "Deliveries",
+        "entity": "delivery",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "deliveries",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/wiki",
+        "pageFile": "src/pages/Wiki.tsx",
+        "title": "Wiki",
+        "entity": "wiki-page",
+        "expected": {
+          "has_list": true,
+          "has_create": true
+        },
+        "permissionModule": "wiki",
+        "status": "beta"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true
+      },
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/site-map",
+        "pageFile": "src/pages/SiteMap.tsx",
+        "title": "Site Map",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "site-map",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/carbon",
+        "pageFile": "src/pages/CarbonDashboard.tsx",
+        "title": "Carbon Dashboard",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "carbon",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "3 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/settings/workflows",
+        "pageFile": "src/pages/Settings/WorkflowSettings.tsx",
+        "title": "Workflow Settings",
+        "entity": null,
+        "expected": {},
+        "permissionModule": "settings",
+        "status": "beta"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "*",
+        "pageFile": "src/pages/errors/NotFound.tsx",
+        "title": "Not Found",
+        "entity": null,
+        "expected": {},
+        "status": "production"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": false,
+        "updatePresent": false,
+        "deletePresent": false
+      },
+      "findings": [],
+      "score": 100
+    }
+  ],
+  "globalFindings": []
+}

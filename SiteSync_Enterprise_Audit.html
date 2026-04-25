@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSync PM — Enterprise Audit & Recycling Plan</title>
+<style>
+  :root { --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e4e4e7; --muted: #a1a1aa; --green: #22c55e; --red: #ef4444; --yellow: #eab308; --blue: #3b82f6; --purple: #a855f7; --orange: #f97316; --cyan: #06b6d4; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; color: var(--blue); }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-yellow { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .badge-purple { background: rgba(168,85,247,0.15); color: var(--purple); }
+  .badge-orange { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .badge-cyan { background: rgba(6,182,212,0.15); color: var(--cyan); }
+  .stat { font-size: 2rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  tr:hover { background: rgba(255,255,255,0.02); }
+  .finding { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; margin: 0.75rem 0; }
+  .finding-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .finding p { color: var(--muted); font-size: 0.9rem; }
+  .callout { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; padding: 1.25rem; margin: 1.5rem 0; }
+  .callout-warn { background: rgba(234,179,8,0.08); border-color: rgba(234,179,8,0.2); }
+  .callout-danger { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
+  .callout-green { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); }
+  .priority-tag { display: inline-block; width: 28px; height: 28px; border-radius: 50%; text-align: center; line-height: 28px; font-size: 0.75rem; font-weight: 700; margin-right: 8px; flex-shrink: 0; }
+  .p1 { background: var(--red); color: white; }
+  .p2 { background: var(--orange); color: white; }
+  .p3 { background: var(--yellow); color: #000; }
+  .p4 { background: var(--blue); color: white; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 6px 0; display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; }
+  .check { color: var(--green); flex-shrink: 0; }
+  .cross { color: var(--red); flex-shrink: 0; }
+  .partial { color: var(--yellow); flex-shrink: 0; }
+  code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+  pre { background: var(--bg); padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 0.85rem; overflow-x: auto; border: 1px solid var(--border); }
+  .section-divider { border: none; border-top: 2px solid var(--border); margin: 3rem 0; }
+</style>
+</head>
+<body>
+
+<h1>SiteSync PM — Enterprise Audit & Recycling Plan</h1>
+<p class="subtitle">Why the new app's pages don't work, what to recycle from the old codebase, and the roadmap to enterprise quality &bull; April 18, 2026</p>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 1: WHY PAGES DON'T WORK -->
+<!-- ════════════════════════════════════════════ -->
+
+<h2>Part 1: Why None of the Pages Work</h2>
+
+<div class="grid">
+  <div class="card">
+    <div class="stat-label">Root Cause</div>
+    <div class="stat" style="color:var(--red);font-size:1.5rem">Auth Wall</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:4px">Every page redirects to /login because there's no authenticated user session</p>
+  </div>
+  <div class="card">
+    <div class="stat-label">Build Status</div>
+    <div class="stat" style="color:var(--yellow);font-size:1.5rem">Deps Broken</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:4px">node_modules has wrong platform binaries — needs fresh npm install</p>
+  </div>
+  <div class="card">
+    <div class="stat-label">TypeScript</div>
+    <div class="stat" style="color:var(--green);font-size:1.5rem">0 Errors</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:4px">All 50+ pages compile cleanly — the code itself is sound</p>
+  </div>
+  <div class="card">
+    <div class="stat-label">Pages Written</div>
+    <div class="stat" style="color:var(--green);font-size:1.5rem">50+</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:4px">Real Supabase queries, state machines, audit trails, offline support</p>
+  </div>
+</div>
+
+<div class="callout callout-danger">
+  <h3 style="color:var(--red);margin-top:0">Three things blocking you — fix in this order:</h3>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">1</span><strong>Fresh npm install (5 min)</strong></div>
+  <p>The installed <code>node_modules</code> are built for a different CPU architecture (likely arm64 vs x86_64). Vite's Rolldown bundler can't load its native bindings. On your Mac, run:</p>
+  <pre>cd ~/Desktop/sitesync-pm
+rm -rf node_modules package-lock.json
+npm install
+npm run dev</pre>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">2</span><strong>Create a .env file with Supabase credentials (2 min)</strong></div>
+  <p><code>src/lib/supabase.ts</code> has hardcoded fallback credentials pointing to <code>https://hypxrmcppjfbtlwuoafc.supabase.co</code>. But you need a user account on that Supabase instance to get past the auth wall. Either:</p>
+  <p style="margin-top:8px"><strong>Option A</strong> — Create an account on the existing Supabase instance via the Signup page (<code>/signup</code>), then log in normally.</p>
+  <p style="margin-top:4px"><strong>Option B</strong> — Enable the dev bypass. Create a <code>.env</code> file with ONLY this:</p>
+  <pre>VITE_DEV_BYPASS=true</pre>
+  <p>⚠️ Important: do NOT also set <code>VITE_SUPABASE_URL</code> or <code>VITE_SUPABASE_ANON_KEY</code> — the dev bypass code (<code>src/lib/devBypass.ts</code>) requires those to be unset. If you have a <code>.env.example</code> copied over, delete the Supabase vars from it.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">3</span><strong>Auth guard blocks everything (the actual "pages don't work")</strong></div>
+  <p><code>src/components/auth/ProtectedRoute.tsx</code> (line 183) wraps every route. If <code>useAuth()</code> returns no user, it does <code>&lt;Navigate to="/login" /&gt;</code>. Since there's no valid session, you see nothing but the login screen. Once you either log in or enable the dev bypass, all 50+ pages will render.</p>
+  <p style="margin-top:8px">If pages render but show <strong>empty data</strong>, that's because the Supabase database tables may be empty or RLS policies may be blocking reads. You'll need to seed data or adjust RLS.</p>
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 2: OLD CODEBASE AUDIT -->
+<!-- ════════════════════════════════════════════ -->
+
+<h2>Part 2: What's in the Old Codebase (the zip)</h2>
+
+<div class="callout">
+  <p>Your uploaded zip contains <strong>7 repos</strong> from the original SiteSync PM product — a Next.js + NestJS + Python microservices stack. The new sitesync-pm app is a different stack (Vite/React/Supabase), so the code can't be copy-pasted directly, but there's a LOT of domain intelligence and patterns worth recycling.</p>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="card-header"><strong>sitesyncai-web</strong><span class="badge badge-purple">906 files</span></div>
+    <p style="color:var(--muted);font-size:0.85rem">Next.js 15 + React 19 + Apollo GraphQL + Styled Components. 50+ pages, PDF annotation layer, overlap comparison, chatbot with action types, Stripe billing, signed S3 uploads. This was your production frontend.</p>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>sitesyncai-backend</strong><span class="badge badge-cyan">28 modules</span></div>
+    <p style="color:var(--muted);font-size:0.85rem">NestJS + Prisma + MongoDB + GraphQL. 30+ data models covering users, orgs, projects, files, entities, annotations, drawing pairs, billing, reports. Full Stripe integration. This is the schema blueprint for your Supabase tables.</p>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>sitesyncai-microservices</strong><span class="badge badge-orange">15 services</span></div>
+    <p style="color:var(--muted);font-size:0.85rem">Python + AWS SQS. Plan classification, edge detection (Roboflow), overlap generation (OpenCV), dimensional discrepancy analysis, scale extraction — all Gemini-powered. Contains the most valuable AI prompts in the entire codebase.</p>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>drawing-tools</strong><span class="badge badge-green">Tailwind</span></div>
+    <p style="color:var(--muted);font-size:0.85rem">Next.js + Tailwind + react-pdf + Canvas. Standalone PDF annotation tool with rectangle/text/grab tools, overlap viewer, color picker, undo/redo. Uses Tailwind like the new app — most directly recyclable repo.</p>
+  </div>
+</div>
+
+<h3>The Crown Jewels to Recycle</h3>
+
+<table>
+  <thead><tr><th>Asset</th><th>Source</th><th>Value</th><th>Effort to Port</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Plan Classification AI Prompt</strong></td>
+      <td>microservices/plan-classification-v2</td>
+      <td><span class="badge badge-green">Critical IP</span></td>
+      <td>Low — copy prompt text, call from Supabase edge function</td>
+    </tr>
+    <tr>
+      <td><strong>Dimensional Discrepancy Analysis</strong></td>
+      <td>microservices/dimensional-discrepancy</td>
+      <td><span class="badge badge-green">Critical IP</span></td>
+      <td>Medium — needs Gemini + OpenCV, could run as separate Python service</td>
+    </tr>
+    <tr>
+      <td><strong>PDF Annotation Layer</strong></td>
+      <td>drawing-tools/PDFAnnotationLayer</td>
+      <td><span class="badge badge-green">High</span></td>
+      <td>Low — already Tailwind/React, port to Vite directly</td>
+    </tr>
+    <tr>
+      <td><strong>Overlap Comparison Viewer</strong></td>
+      <td>drawing-tools/overlap page</td>
+      <td><span class="badge badge-green">High</span></td>
+      <td>Low — standalone component, clean implementation</td>
+    </tr>
+    <tr>
+      <td><strong>Data Model / Schema</strong></td>
+      <td>backend/prisma/schema.prisma</td>
+      <td><span class="badge badge-green">High</span></td>
+      <td>Medium — translate Prisma models → Supabase migrations</td>
+    </tr>
+    <tr>
+      <td><strong>Edge Detection Pipeline</strong></td>
+      <td>microservices/edge-detection-v2</td>
+      <td><span class="badge badge-blue">Medium</span></td>
+      <td>Medium — uses Roboflow API, needs integration point</td>
+    </tr>
+    <tr>
+      <td><strong>Chatbot Action Types</strong></td>
+      <td>web/ChatBot component</td>
+      <td><span class="badge badge-blue">Medium</span></td>
+      <td>Low — pattern for AI actions (DOWNLOAD_REPORT, SHOW_PAGE, etc.)</td>
+    </tr>
+    <tr>
+      <td><strong>Signed Upload Flow</strong></td>
+      <td>web/FileInput + backend/upload</td>
+      <td><span class="badge badge-blue">Medium</span></td>
+      <td>Low — presigned URL → direct S3 PUT, already well-patterned</td>
+    </tr>
+    <tr>
+      <td><strong>Stripe Billing Logic</strong></td>
+      <td>backend/billing module</td>
+      <td><span class="badge badge-blue">Medium</span></td>
+      <td>Medium — customer creation, invoices, payment intents, receipts</td>
+    </tr>
+    <tr>
+      <td><strong>Scale Extraction Prompts</strong></td>
+      <td>microservices + utils</td>
+      <td><span class="badge badge-blue">Medium</span></td>
+      <td>Low — Gemini prompts with anti-hallucination rules for scale detection</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>What NOT to Recycle</h3>
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+  <div class="card"><strong>Styled Components UI</strong><p style="color:var(--muted);font-size:0.85rem">New app uses Tailwind. Don't port styled-components code — just port the component logic.</p></div>
+  <div class="card"><strong>Apollo/GraphQL Layer</strong><p style="color:var(--muted);font-size:0.85rem">New app uses React Query + Supabase. The GraphQL patterns don't apply.</p></div>
+  <div class="card"><strong>NestJS Backend Code</strong><p style="color:var(--muted);font-size:0.85rem">Supabase edge functions replace this. Port the business logic, not the framework code.</p></div>
+  <div class="card"><strong>MongoDB/Prisma Queries</strong><p style="color:var(--muted);font-size:0.85rem">Translate the schema concepts to PostgreSQL/Supabase, don't port the query syntax.</p></div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 3: STRATEGY DOCS GAP ANALYSIS -->
+<!-- ════════════════════════════════════════════ -->
+
+<h2>Part 3: Strategy Docs vs. What's Built</h2>
+
+<h3>Demo Build Spec — 8 Priorities</h3>
+<table>
+  <thead><tr><th>Priority</th><th>Feature</th><th>Status in sitesync-pm</th><th>Old Codebase Has?</th></tr></thead>
+  <tbody>
+    <tr><td><span class="priority-tag p1">P1</span></td><td>RAG Project Brain</td><td><span class="badge badge-yellow">Partial</span> — ProjectBrain.tsx + edge function exist, but no vector search pipeline (no pgvector embeddings, no Docling)</td><td>ChatBot with Socket.IO + OpenAI exists in old web app, but no RAG</td></tr>
+    <tr><td><span class="priority-tag p1">P2</span></td><td>Resumable Uploads (tus)</td><td><span class="badge badge-red">Missing</span> — standard Supabase Storage uploads only</td><td>Old app has signed S3 upload with progress tracking — pattern is recyclable, but no tus</td></tr>
+    <tr><td><span class="priority-tag p1">P3</span></td><td>PDF Markup (Bluebeam killer)</td><td><span class="badge badge-yellow">Partial</span> — PdfViewer + AnnotationCanvas exist, annotations don't persist to DB</td><td><span class="badge badge-green">YES</span> — drawing-tools has production Canvas annotation layer with undo/redo, already in Tailwind</td></tr>
+    <tr><td><span class="priority-tag p2">P4</span></td><td>E-Signature (OpenSign)</td><td><span class="badge badge-red">Missing</span></td><td>No</td></tr>
+    <tr><td><span class="priority-tag p2">P5</span></td><td>Safety Photo AI</td><td><span class="badge badge-yellow">Partial</span> — SafetyPhotoAnalyzer + edge function use Gemini Vision, but don't auto-create tasks</td><td>No (old app focused on drawings, not safety)</td></tr>
+    <tr><td><span class="priority-tag p2">P6</span></td><td>Instant Search (Typesense)</td><td><span class="badge badge-red">Missing</span> — has @orama/orama (client-side) but not wired up</td><td>No</td></tr>
+    <tr><td><span class="priority-tag p3">P7</span></td><td>Audit Log</td><td><span class="badge badge-green">Done</span> — useAuditedMutation on every mutation, audit_log table exists</td><td>No</td></tr>
+    <tr><td><span class="priority-tag p3">P8</span></td><td>Feature Flags</td><td><span class="badge badge-red">Missing</span></td><td>No</td></tr>
+  </tbody>
+</table>
+
+<h3>Enterprise File & Document Stack</h3>
+<table>
+  <thead><tr><th>Layer</th><th>Doc Recommends</th><th>sitesync-pm Status</th><th>Old Codebase Has?</th></tr></thead>
+  <tbody>
+    <tr><td>Storage</td><td>SeaweedFS</td><td>Using Supabase Storage (fine for now)</td><td>AWS S3</td></tr>
+    <tr><td>Uploads</td><td>tus protocol</td><td><span class="badge badge-red">Missing</span></td><td>Signed URL + progress tracking (recyclable pattern)</td></tr>
+    <tr><td>Doc Intelligence</td><td>Docling (IBM)</td><td><span class="badge badge-red">Missing</span></td><td><span class="badge badge-green">YES</span> — 15 Python microservices for PDF processing, classification, extraction</td></tr>
+    <tr><td>PDF Viewer</td><td>PDF.js + annotations</td><td><span class="badge badge-yellow">Partial</span></td><td><span class="badge badge-green">YES</span> — production PDF viewer + annotation layer</td></tr>
+    <tr><td>E-Signature</td><td>OpenSign</td><td><span class="badge badge-red">Missing</span></td><td>No</td></tr>
+    <tr><td>Doc Management</td><td>Mayan EDMS patterns</td><td>Basic file versioning</td><td>Folder hierarchy + file metadata in backend</td></tr>
+    <tr><td>Image Processing</td><td>Thumbor</td><td><span class="badge badge-red">Missing</span></td><td>thumbnail-service (Flask) — trivially recyclable</td></tr>
+    <tr><td>Virus Scanning</td><td>ClamAV</td><td><span class="badge badge-red">Missing</span></td><td>No</td></tr>
+  </tbody>
+</table>
+
+<h3>Industry-Changing Open Source Angles</h3>
+<table>
+  <thead><tr><th>Angle</th><th>sitesync-pm</th><th>Old Codebase</th><th>Verdict</th></tr></thead>
+  <tbody>
+    <tr><td>Computer Vision Safety</td><td>Gemini Vision (partial)</td><td>Not in old app</td><td>Finish the Gemini loop in new app</td></tr>
+    <tr><td>RAG Document AI</td><td>Project Brain shell exists</td><td>ChatBot exists but no RAG</td><td>Build proper RAG pipeline in new app</td></tr>
+    <tr><td>Voice Documentation</td><td>VoiceCapture (Web Speech API)</td><td>Not in old app</td><td>Upgrade to Whisper in new app</td></tr>
+    <tr><td>Drawing Intelligence</td><td>Basic drawing viewer</td><td><span class="badge badge-green">RICH</span> — classification, pairing, scale, edge detection, discrepancy analysis</td><td><strong>RECYCLE THE AI PROMPTS + PIPELINE ARCHITECTURE</strong></td></tr>
+    <tr><td>Predictive ML</td><td>Heuristic risk scores</td><td>Cost analytics service</td><td>Future — need training data first</td></tr>
+    <tr><td>Digital Twin</td><td>UI store only</td><td>Not in old app</td><td>Future roadmap</td></tr>
+    <tr><td>Drone Intelligence</td><td>Not started</td><td>Not in old app</td><td>Future roadmap</td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 4: WHAT SITESYNC-PM DOES WELL -->
+<!-- ════════════════════════════════════════════ -->
+
+<h2>Part 4: What sitesync-pm Already Does Well</h2>
+
+<div class="callout callout-green">
+  <p>The new app is not a blank slate — it has substantial enterprise-grade infrastructure that the old codebase lacked.</p>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="card-header"><strong>Construction Workflows</strong><span class="badge badge-green">50+ pages</span></div>
+    <ul class="checklist">
+      <li><span class="check">✓</span> RFIs, Submittals, Change Orders, Pay Apps</li>
+      <li><span class="check">✓</span> Daily Logs, Punch Lists, Safety, Inspections</li>
+      <li><span class="check">✓</span> Schedule/Gantt, Budget, Cost Management</li>
+      <li><span class="check">✓</span> Crews, Equipment, Contracts, Permits</li>
+      <li><span class="check">✓</span> Drawings, Files, Meetings, Directory</li>
+      <li><span class="cross">✗</span> Old app only had ~15 of these workflows</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>State Machines</strong><span class="badge badge-green">8 machines</span></div>
+    <ul class="checklist">
+      <li><span class="check">✓</span> XState for submittals, change orders, payments, documents, drawings, equipment, inspections, schedules</li>
+      <li><span class="check">✓</span> Enforce valid state transitions (can't approve before review)</li>
+      <li><span class="cross">✗</span> Old app had no workflow state machines</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>Offline-First</strong><span class="badge badge-green">Production-grade</span></div>
+    <ul class="checklist">
+      <li><span class="check">✓</span> Dexie (IndexedDB) offline database</li>
+      <li><span class="check">✓</span> Offline mutation queue with sync manager</li>
+      <li><span class="check">✓</span> Conflict resolution on reconnect</li>
+      <li><span class="cross">✗</span> Old app had no offline support</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>Real-Time Collaboration</strong><span class="badge badge-green">Multi-layer</span></div>
+    <ul class="checklist">
+      <li><span class="check">✓</span> Supabase Realtime subscriptions</li>
+      <li><span class="check">✓</span> Liveblocks for collaborative editing</li>
+      <li><span class="check">✓</span> Presence indicators</li>
+      <li><span class="partial">~</span> Old app had Socket.IO (simpler)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>Auth & Permissions</strong><span class="badge badge-green">Enterprise RBAC</span></div>
+    <ul class="checklist">
+      <li><span class="check">✓</span> Supabase Auth with org membership</li>
+      <li><span class="check">✓</span> Permission gates on every mutation</li>
+      <li><span class="check">✓</span> Row Level Security (RLS) policies</li>
+      <li><span class="check">✓</span> Module-based access control per route</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><strong>Observability</strong><span class="badge badge-green">Full stack</span></div>
+    <ul class="checklist">
+      <li><span class="check">✓</span> Sentry error tracking</li>
+      <li><span class="check">✓</span> PostHog analytics</li>
+      <li><span class="check">✓</span> Audit trail on every mutation</li>
+      <li><span class="check">✓</span> AI cost tracking</li>
+      <li><span class="partial">~</span> Old app had Langfuse (AI observability only)</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 5: PRIORITY ROADMAP -->
+<!-- ════════════════════════════════════════════ -->
+
+<h2>Part 5: Priority Roadmap</h2>
+
+<div class="callout">
+  <p><strong>Strategy:</strong> Get sitesync-pm running first, then bring in the old codebase's best assets (AI prompts, annotation layer, data model patterns) to fill the gaps your strategy docs identified.</p>
+</div>
+
+<h3>Phase 1: Get It Running (Today)</h3>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">1</span><strong>Fix deps + auth (30 min)</strong></div>
+  <p><code>rm -rf node_modules package-lock.json && npm install</code>, create <code>.env</code> with <code>VITE_DEV_BYPASS=true</code> (no Supabase vars), run <code>npm run dev</code>. All 50+ pages should render.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">2</span><strong>Verify Supabase connection + seed data (1 hr)</strong></div>
+  <p>Once bypass works, switch to real Supabase. Create account via /signup, create an org and project. Pages will render with empty data. Run the existing migrations to ensure tables exist.</p>
+</div>
+
+<h3>Phase 2: Recycle the Old App's Best Assets (1-2 weeks)</h3>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">3</span><strong>Port the PDF Annotation Layer from drawing-tools (2-3 days)</strong></div>
+  <p>The old drawing-tools repo has a clean Canvas-based PDFAnnotationLayer in Tailwind/React that supports rectangle + polygon + text tools, undo/redo, color picker, and scale-aware coordinates. Port it into sitesync-pm's DrawingViewer. Wire annotations to persist in the Supabase <code>annotations</code> table (migration already exists). This gives you the "Bluebeam killer" from the Demo Build Spec.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">4</span><strong>Port the AI classification + discrepancy prompts (1-2 days)</strong></div>
+  <p>The plan-classification-v2 microservice has a master Gemini prompt that extracts sheet number, drawing title, discipline, scale, floor level, building type, and more from construction drawings — with anti-hallucination rules built in. Port this into a Supabase edge function (<code>classify-drawing</code> already exists). The dimensional-discrepancy-analysis prompt is the other crown jewel — it compares arch vs struct drawings and identifies dimensional conflicts with severity ratings.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p2">5</span><strong>Port the overlap comparison viewer (1 day)</strong></div>
+  <p>drawing-tools has a clean two-layer PDF overlay tool with opacity/position/scale controls. Port to sitesync-pm's Drawings page. Wire it to the overlap-image-generation Python service if you want server-side overlap processing too.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p2">6</span><strong>Translate old Prisma schema → Supabase migrations (2-3 days)</strong></div>
+  <p>The old backend has 30+ Prisma models covering entities, annotations, drawing pairs, discrepancy reports, and billing that sitesync-pm doesn't fully have yet. Translate the key models into PostgreSQL migrations. Focus on: EntityInstance (annotations), ArchStructDrawingPair, DrawingPairDiscrepancyReport, ConvertedPageImage (with classification metadata).</p>
+</div>
+
+<h3>Phase 3: Build the Demo Showstoppers (2-3 weeks)</h3>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p1">7</span><strong>Complete RAG Project Brain (2-3 days)</strong></div>
+  <p>Add pgvector extension, build document_chunks table, create embedding pipeline (on file upload → extract text → embed with Gemini text-embedding-004 → store vectors). Wire project-brain-query to do real vector similarity search. The ProjectBrain.tsx component already exists.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p2">8</span><strong>Add resumable uploads with tus (1-2 days)</strong></div>
+  <p>Install tus-js-client. Replace upload handlers in FileUpload, DrawingUpload, BudgetUpload. The old app's signed-URL upload with progress tracking is a reference pattern.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p2">9</span><strong>Integrate OpenSign for e-signatures (2-3 days)</strong></div>
+  <p>Deploy OpenSign via Docker. Build send-for-signature edge function. Add "Send for Signature" to Change Orders, Lien Waivers, Contracts pages.</p>
+</div>
+
+<div class="finding">
+  <div class="finding-header"><span class="priority-tag p3">10</span><strong>Complete Safety Photo AI loop (1 day)</strong></div>
+  <p>The analyze-safety-photo edge function works. Wire: auto-create tasks from violations, persist safety scores, add OSHA reference lookup.</p>
+</div>
+
+<h3>Phase 4: Enterprise Polish (Ongoing)</h3>
+
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+  <div class="card"><strong>Global Search</strong><p style="color:var(--muted);font-size:0.85rem">Wire up @orama/orama (already in deps) for Cmd+K search across all entities. Upgrade to Typesense later.</p></div>
+  <div class="card"><strong>Feature Flags</strong><p style="color:var(--muted);font-size:0.85rem">Simple flags table in Supabase + useFeatureFlag hook. No need for Unleash yet.</p></div>
+  <div class="card"><strong>Stripe Billing</strong><p style="color:var(--muted);font-size:0.85rem">Recycle billing patterns from old backend — customer creation, invoices, payment intents. Billing edge functions already stubbed in sitesync-pm.</p></div>
+  <div class="card"><strong>Python AI Services</strong><p style="color:var(--muted);font-size:0.85rem">Deploy old microservices as standalone Docker containers. Connect to sitesync-pm via edge function → SQS/HTTP → Python service → result.</p></div>
+  <div class="card"><strong>Email Notifications</strong><p style="color:var(--muted);font-size:0.85rem">Recycle Resend integration from old backend. send-email edge function already exists in sitesync-pm.</p></div>
+  <div class="card"><strong>Invite System</strong><p style="color:var(--muted);font-size:0.85rem">Old backend has invite-based registration with token flow. sitesync-pm has invite migration + send-invite edge function. Connect them.</p></div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 6: SUMMARY -->
+<!-- ════════════════════════════════════════════ -->
+
+<h2>Bottom Line</h2>
+
+<div class="callout callout-green">
+  <p style="font-size:1.05rem"><strong>Your new app (sitesync-pm) is architecturally superior to the old one</strong> — it has 3x more construction workflows, state machines for every entity lifecycle, offline-first architecture, real-time collaboration, and enterprise auth/permissions. The old app had none of these.</p>
+
+  <p style="margin-top:1rem;font-size:1.05rem"><strong>What the old app HAS that the new one DOESN'T</strong> is the drawing intelligence pipeline — the AI prompts for plan classification, scale extraction, dimensional discrepancy analysis, and the PDF annotation/overlap tools. These represent months of domain-specific iteration and are the core IP of the product.</p>
+
+  <p style="margin-top:1rem;font-size:1.05rem"><strong>The path forward:</strong></p>
+  <ol style="margin-top:0.5rem;padding-left:1.25rem;font-size:1.05rem">
+    <li>Fix deps + auth today → pages work</li>
+    <li>Port drawing intelligence from old codebase → unique differentiator</li>
+    <li>Build RAG + e-signatures + resumable uploads → demo showstoppers</li>
+    <li>Deploy old Python microservices alongside → full AI pipeline</li>
+  </ol>
+</div>
+
+<p style="color:var(--muted);font-size:0.8rem;margin-top:3rem;text-align:center">Generated by Claude &bull; April 18, 2026 &bull; Based on analysis of 5 strategy documents, 7 old codebase repos, and full sitesync-pm audit</p>
+
+</body>
+</html>

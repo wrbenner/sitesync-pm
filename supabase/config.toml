@@ -383,6 +383,15 @@ verify_jwt = false
 [functions.extract-draw-report]
 verify_jwt = false
 
+# classify-drawing: same ES256 issue as the others — the runtime's
+# pre-invocation JWT validator rejects asymmetric-signed tokens with
+# "UNAUTHORIZED_UNSUPPORTED_TOKEN_ALGORITHM". In-function auth via
+# authenticateRequest (shared/auth.ts) verifies the token against
+# GoTrue's /auth/v1/user endpoint, which handles any algorithm the
+# project is configured for.
+[functions.classify-drawing]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

@@ -82,7 +82,7 @@ const STATUS_COLOR: Record<string, { fg: string; bg: string }> = {
   open: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
   in_progress: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
   closed: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
-  cancelled: { fg: colors.statusDanger ?? colors.statusNeutral, bg: colors.statusNeutralSubtle },
+  cancelled: { fg: colors.statusCritical ?? colors.statusNeutral, bg: colors.statusNeutralSubtle },
   scheduled: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
   completed: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
 };
@@ -186,7 +186,7 @@ const PLATFORM_COLORS: Record<VideoPlatform, string> = {
 type ActionItemPriority = 'high' | 'medium' | 'low';
 
 const PRIORITY_CONFIG: Record<ActionItemPriority, { label: string; fg: string; bg: string }> = {
-  high: { label: 'High', fg: colors.statusDanger ?? '#dc2626', bg: colors.statusNeutralSubtle },
+  high: { label: 'High', fg: colors.statusCritical ?? '#dc2626', bg: colors.statusNeutralSubtle },
   medium: { label: 'Medium', fg: colors.statusPending, bg: colors.statusPendingSubtle },
   low: { label: 'Low', fg: colors.statusActive, bg: colors.statusActiveSubtle },
 };
@@ -628,7 +628,7 @@ const MeetingDetailView: React.FC<{
           <span>Meeting duration: <strong style={{ color: colors.textPrimary }}>{meetingDuration} min</strong></span>
           <span style={{ color: colors.borderDefault }}>|</span>
           <span>Agenda total: <strong style={{
-            color: totalAgendaDuration > meetingDuration ? (colors.statusDanger ?? colors.statusPending) : colors.statusActive,
+            color: totalAgendaDuration > meetingDuration ? (colors.statusCritical ?? colors.statusPending) : colors.statusActive,
           }}>{totalAgendaDuration} min</strong></span>
           {totalAgendaDuration > meetingDuration && (
             <Tag label={`${totalAgendaDuration - meetingDuration} min over`} color={colors.statusPending} backgroundColor={colors.statusPendingSubtle} />
@@ -834,7 +834,7 @@ const MeetingDetailView: React.FC<{
                 const rowBorder = isLast ? 'none' : `1px solid ${colors.borderSubtle}`;
                 const rsvpColors: Record<string, { fg: string; bg: string }> = {
                   accepted: { fg: colors.statusActive, bg: colors.statusActiveSubtle },
-                  declined: { fg: colors.statusDanger ?? colors.statusNeutral, bg: colors.statusNeutralSubtle },
+                  declined: { fg: colors.statusCritical ?? colors.statusNeutral, bg: colors.statusNeutralSubtle },
                   tentative: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
                   pending: { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle },
                 };
@@ -936,7 +936,7 @@ const MeetingDetailView: React.FC<{
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.xs }}>
                 {participants.map((p) => (
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: spacing.xs, fontSize: typography.fontSize.sm }}>
-                    <span style={{ color: p.attended ? colors.statusActive : (colors.statusDanger ?? colors.statusPending) }}>
+                    <span style={{ color: p.attended ? colors.statusActive : (colors.statusCritical ?? colors.statusPending) }}>
                       {p.attended ? <CheckCircle size={12} /> : '\u2717'}
                     </span>
                     <span style={{ color: colors.textPrimary }}>{p.name}</span>
@@ -1306,7 +1306,7 @@ export const Meetings: React.FC = () => {
     return (
       <PageContainer title="Meetings">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 24px', gap: spacing.lg, textAlign: 'center' }}>
-          <AlertTriangle size={48} color={colors.statusDanger} />
+          <AlertTriangle size={48} color={colors.statusCritical} />
           <p style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
             Failed to load meetings
           </p>
@@ -1641,11 +1641,11 @@ export const Meetings: React.FC = () => {
                 {overdueItems.length > 0 && (
                   <div style={{
                     padding: `${spacing.md} ${spacing.lg}`, borderBottom: `1px solid ${colors.borderSubtle}`,
-                    background: `${colors.statusDanger ?? colors.statusPending}08`,
+                    background: `${colors.statusCritical ?? colors.statusPending}08`,
                     display: 'flex', alignItems: 'center', gap: spacing.sm,
                   }}>
-                    <AlertTriangle size={16} color={colors.statusDanger ?? colors.statusPending} />
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusDanger ?? colors.statusPending }}>
+                    <AlertTriangle size={16} color={colors.statusCritical ?? colors.statusPending} />
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusCritical ?? colors.statusPending }}>
                       {overdueItems.length} overdue action item{overdueItems.length > 1 ? 's' : ''} require attention
                     </span>
                   </div>
@@ -1677,17 +1677,17 @@ export const Meetings: React.FC = () => {
                             key={item.id}
                             style={{
                               transition: transitions.quick,
-                              background: isOverdue ? `${colors.statusDanger ?? colors.statusPending}06` : undefined,
+                              background: isOverdue ? `${colors.statusCritical ?? colors.statusPending}06` : undefined,
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = colors.surfaceHover; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isOverdue ? `${colors.statusDanger ?? colors.statusPending}06` : ''; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isOverdue ? `${colors.statusCritical ?? colors.statusPending}06` : ''; }}
                           >
                             <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, maxWidth: 320 }}>
                               <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
                                 {item.description}
                               </p>
                               {isOverdue && (
-                                <span style={{ fontSize: typography.fontSize.label, color: colors.statusDanger ?? colors.statusPending, fontWeight: typography.fontWeight.medium as number }}>
+                                <span style={{ fontSize: typography.fontSize.label, color: colors.statusCritical ?? colors.statusPending, fontWeight: typography.fontWeight.medium as number }}>
                                   {daysOver} day{daysOver > 1 ? 's' : ''} overdue
                                 </span>
                               )}
@@ -1699,7 +1699,7 @@ export const Meetings: React.FC = () => {
                               <Tag label={pc.label} color={pc.fg} backgroundColor={pc.bg} />
                             </td>
                             <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, whiteSpace: 'nowrap' }}>
-                              <span style={{ fontSize: typography.fontSize.sm, color: isOverdue ? (colors.statusDanger ?? colors.statusPending) : colors.textSecondary, fontWeight: isOverdue ? (typography.fontWeight.semibold as number) : undefined }}>
+                              <span style={{ fontSize: typography.fontSize.sm, color: isOverdue ? (colors.statusCritical ?? colors.statusPending) : colors.textSecondary, fontWeight: isOverdue ? (typography.fontWeight.semibold as number) : undefined }}>
                                 {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}
                               </span>
                             </td>
@@ -1739,7 +1739,7 @@ export const Meetings: React.FC = () => {
                                     display: 'inline-flex', alignItems: 'center', gap: spacing.xs,
                                     padding: `${spacing.xs} ${spacing.sm}`, borderRadius: borderRadius.md,
                                     border: `1px solid ${colors.borderDefault}`, background: colors.surfaceRaised,
-                                    color: colors.statusDanger ?? colors.statusPending, cursor: 'pointer',
+                                    color: colors.statusCritical ?? colors.statusPending, cursor: 'pointer',
                                     fontSize: typography.fontSize.label, fontFamily: typography.fontFamily,
                                   }}
                                   title={`Send reminder to ${item.assignee}`}

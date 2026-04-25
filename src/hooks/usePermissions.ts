@@ -205,18 +205,57 @@ export function usePermissions(): PermissionsResult {
   const instanceId = useId()
 
   // BUG #3 FIX: Reduce staleTime from 5 minutes to 30 seconds
+  // BUG #4 FIX: Also check projects.owner_id as fallback — if the user is the
+  // project owner but has no project_members row (e.g. RLS blocked the auto-insert),
+  // grant them 'owner' role so they aren't stuck as a viewer.
   const { data: membership, isLoading } = useQuery({
     queryKey: ['project_membership', projectId, user?.id],
     queryFn: async () => {
       if (!projectId || !user?.id) return null
+
+      // 1. Try project_members first (normal path)
       const { data, error } = await supabase
         .from('project_members')
         .select('role')
         .eq('project_id', projectId)
         .eq('user_id', user.id)
         .maybeSingle()
-      if (error) return null
-      return (data?.role as ProjectRole) || null
+      if (!error && data?.role) return data.role as ProjectRole
+
+      // 2. Fallback: check if user is the project owner
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('owner_id')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (proj?.owner_id === user.id) {
+        // Auto-insert membership row for the owner (best-effort, may fail due to RLS)
+        await supabase.from('project_members').upsert({
+          project_id: projectId,
+          user_id: user.id,
+          role: 'owner',
+          accepted_at: new Date().toISOString(),
+        }, { onConflict: 'project_id,user_id' }).select().maybeSingle()
+        return 'owner' as ProjectRole
+      }
+
+      // 3. Fallback: check if user created the project (created_by field)
+      const { data: projCreator } = await supabase
+        .from('projects')
+        .select('created_by')
+        .eq('id', projectId)
+        .maybeSingle()
+      if (projCreator?.created_by === user.id) {
+        await supabase.from('project_members').upsert({
+          project_id: projectId,
+          user_id: user.id,
+          role: 'project_manager',
+          accepted_at: new Date().toISOString(),
+        }, { onConflict: 'project_id,user_id' }).select().maybeSingle()
+        return 'project_manager' as ProjectRole
+      }
+
+      return null
     },
     enabled: !!projectId && !!user?.id,
     staleTime: 30_000, // 30 seconds (was 5 minutes)
@@ -224,31 +263,42 @@ export function usePermissions(): PermissionsResult {
   })
 
   // BUG #3 FIX: Realtime subscription to instantly invalidate permissions on role change
+  // FIX: Use a unique suffix per effect invocation to avoid Supabase's "cannot add
+  // callbacks after subscribe" error in React 19 StrictMode (effects run twice and
+  // supabase.channel(sameName) returns the already-subscribed channel).
   useEffect(() => {
     if (!projectId || !user?.id) return
 
-    const channel = supabase
-      .channel(`permissions:${projectId}:${user.id}:${instanceId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'project_members',
-          filter: `project_id=eq.${projectId}`,
-        },
-        (payload) => {
-          // If this user's role changed, or they were removed, invalidate immediately
-          const row = (payload.new as Record<string, unknown>) ?? (payload.old as Record<string, unknown>)
-          if (row?.user_id === user.id || payload.eventType === 'DELETE') {
-            queryClient.invalidateQueries({ queryKey: ['project_membership', projectId, user.id] })
+    const suffix = Math.random().toString(36).slice(2, 8)
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    try {
+      channel = supabase
+        .channel(`permissions:${projectId}:${user.id}:${instanceId}:${suffix}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'project_members',
+            filter: `project_id=eq.${projectId}`,
+          },
+          (payload) => {
+            // If this user's role changed, or they were removed, invalidate immediately
+            const row = (payload.new as Record<string, unknown>) ?? (payload.old as Record<string, unknown>)
+            if (row?.user_id === user.id || payload.eventType === 'DELETE') {
+              queryClient.invalidateQueries({ queryKey: ['project_membership', projectId, user.id] })
+            }
           }
-        }
-      )
-      .subscribe()
+        )
+        .subscribe()
+    } catch {
+      // Swallow channel subscription errors — they're non-critical and can occur
+      // during React StrictMode double-invocation or hot module reloads.
+    }
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [projectId, user?.id, queryClient, instanceId])
 

@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: Seed Data
+-- SiteSync PM: Seed Data
 -- Riverside Commercial Tower, Dallas TX, $52M
 -- =============================================================================
 -- This seed file populates the database with realistic construction project

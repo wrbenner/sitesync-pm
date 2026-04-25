@@ -127,7 +127,6 @@ export const Safety: React.FC = () => {
   return (
     <PageContainer
       title="Safety"
-      subtitle="Site safety management, inspections, incidents, and compliance tracking"
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
           <ExportButton
@@ -202,8 +201,8 @@ export const Safety: React.FC = () => {
               });
             }}
           />
-          {activeTab === 'incidents' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} style={{ minHeight: 56 }}>Report Incident</Btn>}
-          {activeTab === 'toolbox' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} style={{ minHeight: 56 }}>New Talk</Btn>}
+          {activeTab === 'incidents' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowIncidentModal(true)} >Report Incident</Btn>}
+          {activeTab === 'toolbox' && <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setShowTalkModal(true)} >New Talk</Btn>}
         </div>
       }
     >
@@ -224,7 +223,7 @@ export const Safety: React.FC = () => {
       />
 
       {/* Tab Switcher */}
-      <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing.lg, overflowX: 'auto' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -233,7 +232,7 @@ export const Safety: React.FC = () => {
               key={tab.key}
               aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
-              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '56px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px' }}
             >
               {React.createElement(Icon, { size: 14 })}
               {tab.label}

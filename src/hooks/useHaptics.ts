@@ -1,4 +1,4 @@
-// SiteSync AI — Haptic Feedback Hook
+// SiteSync PM — Haptic Feedback Hook
 // Wraps Capacitor Haptics with platform detection. No-op on web.
 // Light: toggles, checkboxes, selection. Medium: button press, confirmations. Heavy: delete, errors.
 

@@ -1,10 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Loader2, Eye, EyeOff, Mail, Lock, User, Shield,
+  CheckCircle, ArrowRight, Sparkles, X, Building2,
+  HardHat, BarChart3, FileCheck, Cloud,
+} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 import { loginSchema, signupSchema, magicLinkSchema, resetPasswordSchema } from '../../schemas/auth'
+
+/* ─────────────────────── Helpers ─────────────────────── */
 
 function mapAuthError(message: string): string {
   const msg = message.toLowerCase()
@@ -17,6 +24,165 @@ function mapAuthError(message: string): string {
   if (msg.includes('password') && msg.includes('short')) return 'Password must be at least 6 characters'
   return message
 }
+
+function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
+  if (!pw) return { score: 0, label: '', color: colors.borderSubtle }
+  let s = 0
+  if (pw.length >= 8) s++
+  if (pw.length >= 12) s++
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++
+  if (/\d/.test(pw)) s++
+  if (/[^A-Za-z0-9]/.test(pw)) s++
+
+  if (s <= 1) return { score: 1, label: 'Weak', color: colors.statusCritical }
+  if (s <= 2) return { score: 2, label: 'Fair', color: colors.statusPending }
+  if (s <= 3) return { score: 3, label: 'Good', color: colors.statusInfo }
+  return { score: 4, label: 'Strong', color: colors.statusActive }
+}
+
+const APPLE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
+
+const FEATURES = [
+  { icon: HardHat, label: 'Project Management', desc: 'RFIs, submittals, and change orders' },
+  { icon: BarChart3, label: 'Real-Time Analytics', desc: 'Budget tracking and schedule insights' },
+  { icon: FileCheck, label: 'Punch Lists', desc: 'Photo-attached, location-tagged items' },
+  { icon: Cloud, label: 'AI-Powered', desc: 'Weather forecasts and risk analysis' },
+]
+
+/* ─────────────────────── Sub-components ─────────────────────── */
+
+const PremiumInput: React.FC<{
+  id: string
+  type?: string
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  icon?: React.ReactNode
+  required?: boolean
+  autoComplete?: string
+  autoFocus?: boolean
+  error?: string | null
+  onBlurValidate?: (val: string) => string | null
+  rightElement?: React.ReactNode
+}> = ({ id, type = 'text', label, value, onChange, placeholder, icon, required, autoComplete, autoFocus, error: externalError, onBlurValidate, rightElement }) => {
+  const [focused, setFocused] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+  const error = externalError ?? localError
+
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        style={{
+          display: 'block',
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.medium,
+          color: error ? colors.statusCritical : focused ? colors.textPrimary : colors.textSecondary,
+          marginBottom: spacing['1.5'],
+          transition: `color 120ms ease`,
+          letterSpacing: typography.letterSpacing.wide,
+        }}
+      >
+        {label}{required && <span style={{ color: colors.primaryOrange, marginLeft: 2 }}>*</span>}
+      </label>
+      <div style={{ position: 'relative' }}>
+        {icon && (
+          <span style={{
+            position: 'absolute', left: spacing['3'], top: '50%', transform: 'translateY(-50%)',
+            color: error ? colors.statusCritical : focused ? colors.primaryOrange : colors.textTertiary,
+            transition: `color 120ms ease`, display: 'flex', pointerEvents: 'none',
+          }}>
+            {icon}
+          </span>
+        )}
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(e) => { onChange(e.target.value); if (error) setLocalError(null) }}
+          placeholder={placeholder}
+          required={required}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => {
+            setFocused(false)
+            if (onBlurValidate) setLocalError(onBlurValidate(e.target.value))
+          }}
+          style={{
+            width: '100%',
+            height: 48,
+            padding: `0 ${rightElement ? '44px' : spacing['4']} 0 ${icon ? '40px' : spacing['4']}`,
+            fontSize: typography.fontSize.body,
+            fontFamily: typography.fontFamily,
+            color: colors.textPrimary,
+            backgroundColor: colors.surfaceInset,
+            border: `1px solid ${error ? colors.statusCritical : focused ? colors.primaryOrange : colors.borderSubtle}`,
+            borderRadius: borderRadius.md,
+            outline: 'none',
+            boxShadow: focused ? `0 0 0 3px ${error ? colors.statusCriticalSubtle : colors.orangeSubtle}` : 'none',
+            transition: `border-color 120ms ease, box-shadow 120ms ease`,
+            boxSizing: 'border-box' as const,
+            letterSpacing: typography.letterSpacing.normal,
+          }}
+        />
+        {rightElement && (
+          <span style={{
+            position: 'absolute', right: spacing['3'], top: '50%', transform: 'translateY(-50%)',
+            display: 'flex',
+          }}>
+            {rightElement}
+          </span>
+        )}
+      </div>
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: 4 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            id={`${id}-error`}
+            role="alert"
+            style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.statusCritical }}
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+const PasswordStrengthBar: React.FC<{ password: string }> = ({ password }) => {
+  const { score, label, color } = getPasswordStrength(password)
+  if (!password) return null
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      style={{ marginTop: spacing['1.5'] }}
+    >
+      <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{
+            flex: 1, height: 3, borderRadius: 2,
+            backgroundColor: i <= score ? color : colors.borderSubtle,
+            transition: `background-color 200ms ease`,
+          }} />
+        ))}
+      </div>
+      <span style={{ fontSize: typography.fontSize.caption, color, fontWeight: typography.fontWeight.medium }}>
+        {label}
+      </span>
+    </motion.div>
+  )
+}
+
+/* ─────────────────────── Main Component ─────────────────────── */
 
 export const Login: React.FC = () => {
   const navigate = useNavigate()
@@ -58,6 +224,7 @@ export const Login: React.FC = () => {
   const [signupEmailError, setSignupEmailError] = useState<string | null>(null)
   const [signupPasswordError, setSignupPasswordError] = useState<string | null>(null)
   const [signupConfirmError, setSignupConfirmError] = useState<string | null>(null)
+  const [showSignupPassword, setShowSignupPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,9 +242,6 @@ export const Login: React.FC = () => {
 
     setIsSubmitting(true)
     try {
-      // Use useAuth hook's signIn — it updates shared auth state BEFORE we navigate.
-      // Direct supabase.auth.signInWithPassword() causes a race condition where
-      // ProtectedRoute checks auth before onAuthStateChange fires.
       const result = await signIn(parsed.data.email, parsed.data.password)
       if (result.error) {
         setError(result.error)
@@ -104,7 +268,7 @@ export const Login: React.FC = () => {
       confirmPassword: signupConfirmPassword,
       firstName: signupFirstName,
       lastName: signupLastName,
-      organization: 'pending', // Login tab signup has no org field; use bottom tab
+      organization: 'pending',
     })
     if (!parsed.success) {
       const errs = parsed.error.flatten().fieldErrors
@@ -130,10 +294,8 @@ export const Login: React.FC = () => {
       if (signUpError) {
         setSignupError(mapAuthError(signUpError.message))
       } else if (data.session) {
-        // Email confirmation is disabled — user is already signed in
         navigate('/dashboard')
       } else {
-        // Email confirmation required
         setSignupSuccess(true)
       }
     } finally {
@@ -154,11 +316,8 @@ export const Login: React.FC = () => {
     setMagicLoading(true)
     try {
       const { error: otpError } = await supabase.auth.signInWithOtp({ email: parsed.data.email })
-      if (otpError) {
-        setMagicError(mapAuthError(otpError.message))
-      } else {
-        setMagicSuccess(true)
-      }
+      if (otpError) setMagicError(mapAuthError(otpError.message))
+      else setMagicSuccess(true)
     } finally {
       setMagicLoading(false)
     }
@@ -175,776 +334,829 @@ export const Login: React.FC = () => {
     }
 
     setResetLoading(true)
-
     const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email)
-
-    if (err) {
-      setResetError(mapAuthError(err.message))
-    } else {
-      setResetSent(true)
-    }
+    if (err) setResetError(mapAuthError(err.message))
+    else setResetSent(true)
     setResetLoading(false)
   }
 
-  const inputStyle: React.CSSProperties = {
+  // ─── Shared button style ────────
+  const primaryBtnStyle = (loading: boolean): React.CSSProperties => ({
     width: '100%',
-    height: '48px',
-    padding: `${spacing['3']} ${spacing['4']}`,
-    fontSize: '16px',
+    height: 48,
+    padding: `0 ${spacing['6']}`,
+    fontSize: typography.fontSize.body,
+    fontWeight: typography.fontWeight.semibold,
     fontFamily: typography.fontFamily,
-    color: colors.textPrimary,
-    backgroundColor: colors.surfacePage,
-    border: `1px solid ${colors.borderDefault}`,
+    color: colors.white,
+    background: loading
+      ? colors.orangeHover
+      : `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
+    border: 'none',
     borderRadius: borderRadius.md,
-    outline: 'none',
-    boxShadow: 'none',
-    transition: `border-color ${transitions.quick}`,
-    boxSizing: 'border-box' as const,
+    cursor: loading ? 'not-allowed' : 'pointer',
+    transition: `all 160ms ease`,
     letterSpacing: typography.letterSpacing.normal,
-  }
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: typography.fontSize.label,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
-    marginBottom: spacing['2'],
-    letterSpacing: typography.letterSpacing.wide,
-  }
+    opacity: loading ? 0.8 : 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing['2'],
+    boxShadow: loading ? 'none' : '0 2px 8px rgba(244, 120, 32, 0.25)',
+  })
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      fontFamily: typography.fontFamily,
+    }}>
+      <style>{`
+        @keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes float-glow { 0%, 100% { opacity: 0.4; transform: translateY(0); } 50% { opacity: 0.7; transform: translateY(-8px); } }
+      `}</style>
+
+      {/* ─── Left Panel — Brand Showcase ─── */}
+      <div style={{
+        flex: 1,
         display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: spacing['12'],
+        background: `linear-gradient(145deg, #1A1613 0%, #2A1F16 50%, #1A1613 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+        minHeight: '100vh',
+      }}>
+        {/* Ambient glow */}
+        <div style={{
+          position: 'absolute',
+          width: 400, height: 400,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(244, 120, 32, 0.12) 0%, transparent 70%)`,
+          top: '20%', left: '30%',
+          animation: 'float-glow 6s ease-in-out infinite',
+          pointerEvents: 'none',
+        }} />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: APPLE_EASE }}
+          style={{ position: 'relative', zIndex: 1, maxWidth: 440, width: '100%' }}
+        >
+          {/* Logo */}
+          <div style={{
+            width: 48, height: 48,
+            borderRadius: borderRadius.xl,
+            background: `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: spacing['8'],
+            boxShadow: '0 4px 20px rgba(244, 120, 32, 0.3)',
+          }}>
+            <span style={{
+              color: colors.white,
+              fontSize: typography.fontSize.medium,
+              fontWeight: typography.fontWeight.bold,
+            }}>S</span>
+          </div>
+
+          <h1 style={{
+            fontSize: '36px',
+            fontWeight: typography.fontWeight.bold,
+            color: '#FFFFFF',
+            margin: 0,
+            letterSpacing: typography.letterSpacing.tighter,
+            lineHeight: typography.lineHeight.tight,
+          }}>
+            Build smarter.
+            <br />
+            <span style={{ color: colors.primaryOrange }}>Ship faster.</span>
+          </h1>
+
+          <p style={{
+            fontSize: typography.fontSize.title,
+            color: 'rgba(255,255,255,0.55)',
+            margin: 0, marginTop: spacing['4'],
+            lineHeight: typography.lineHeight.relaxed,
+            maxWidth: 360,
+          }}>
+            Construction management powered by real-time data and AI insights.
+          </p>
+
+          {/* Feature cards */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            gap: spacing['3'], marginTop: spacing['10'],
+          }}>
+            {FEATURES.map((feat, i) => (
+              <motion.div
+                key={feat.label}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1, duration: 0.4, ease: APPLE_EASE }}
+                style={{
+                  padding: spacing['4'],
+                  borderRadius: borderRadius.lg,
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <feat.icon size={20} color={colors.primaryOrange} strokeWidth={1.5} />
+                <p style={{
+                  margin: 0, marginTop: spacing['2'],
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: typography.fontWeight.medium,
+                  color: 'rgba(255,255,255,0.85)',
+                }}>
+                  {feat.label}
+                </p>
+                <p style={{
+                  margin: 0, marginTop: 2,
+                  fontSize: typography.fontSize.caption,
+                  color: 'rgba(255,255,255,0.4)',
+                }}>
+                  {feat.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ─── Right Panel — Auth Forms ─── */}
+      <div style={{
+        width: 520,
+        minWidth: 420,
+        display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
-        boxSizing: 'border-box' as const,
+        padding: `${spacing['10']} ${spacing['12']}`,
         backgroundColor: colors.surfacePage,
-        fontFamily: typography.fontFamily,
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '400px',
-          padding: 'clamp(16px, 4vw, 48px)',
-        }}
-      >
-        {/* Logo / Brand */}
-        <div style={{ textAlign: 'center', marginBottom: spacing['5'] }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '40px',
-              height: '40px',
-              borderRadius: borderRadius.lg,
-              backgroundColor: colors.primaryOrange,
-              marginBottom: spacing['4'],
-            }}
+        overflowY: 'auto',
+      }}>
+        <div style={{ width: '100%', maxWidth: 380 }}>
+          {/* Header */}
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ marginBottom: spacing['6'] }}
           >
-            <span style={{ color: colors.white, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.title }}>S</span>
-          </div>
-          <h1
-            style={{
-              fontSize: typography.fontSize.heading,
+            <h2 style={{
+              fontSize: typography.fontSize.large,
               fontWeight: typography.fontWeight.semibold,
               color: colors.textPrimary,
               margin: 0,
               letterSpacing: typography.letterSpacing.tight,
-            }}
-          >
-            SiteSync AI
-          </h1>
-          <p
-            style={{
+            }}>
+              {tab === 'signin' ? 'Welcome back' : tab === 'signup' ? 'Create your account' : 'Magic link sign in'}
+            </h2>
+            <p style={{
               fontSize: typography.fontSize.body,
               color: colors.textTertiary,
-              margin: 0,
-              marginTop: spacing['2'],
-              letterSpacing: typography.letterSpacing.normal,
-            }}
-          >
-            {tab === 'signin' ? 'Sign in to your account' : tab === 'magic' ? 'Sign in without a password' : 'Create a new account'}
-          </p>
-        </div>
+              margin: 0, marginTop: spacing['1.5'],
+            }}>
+              {tab === 'signin'
+                ? 'Sign in to access your projects'
+                : tab === 'signup'
+                  ? 'Start managing construction with AI'
+                  : 'We\'ll send a link to your email'
+              }
+            </p>
+          </motion.div>
 
-        {/* Tab Toggle */}
-        <div
-          style={{
+          {/* Tab Toggle */}
+          <div style={{
             display: 'flex',
-            borderBottom: `1px solid ${colors.borderDefault}`,
-            marginBottom: spacing['5'],
-          }}
-        >
-          {(['signin', 'magic', 'signup'] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => { setTab(t); setError(null); setSignupError(null); setMagicError(null); setMagicSuccess(false) }}
-              style={{
-                flex: 1,
-                padding: `${spacing['3']} ${spacing['2']}`,
-                fontSize: typography.fontSize.sm,
-                fontWeight: tab === t ? typography.fontWeight.semibold : typography.fontWeight.normal,
-                fontFamily: typography.fontFamily,
-                color: tab === t ? colors.primaryOrange : colors.textSecondary,
-                background: 'none',
-                border: 'none',
-                borderBottom: tab === t ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
-                marginBottom: '-1px',
-                cursor: 'pointer',
-                transition: `color ${transitions.quick}, border-color ${transitions.quick}`,
-                letterSpacing: typography.letterSpacing.normal,
-              }}
-            >
-              {t === 'signin' ? 'Sign In' : t === 'magic' ? 'Magic Link' : 'Create Account'}
-            </button>
-          ))}
-        </div>
-
-        {/* Form Card */}
-        <div
-          style={{
-            backgroundColor: colors.surfaceRaised,
-            borderRadius: borderRadius.xl,
-            padding: spacing['8'],
-            boxShadow: shadows.card,
-          }}
-        >
-          <style>{`@keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          <form onSubmit={handleSubmit} aria-label="Sign in to SiteSync" aria-describedby="login-error" style={{ display: tab === 'signin' ? 'block' : 'none' }}>
-            <div style={{ marginBottom: spacing['4'] }}>
-              <label style={labelStyle} htmlFor="login-email">Email address</label>
-              <input
-                type="email"
-                id="login-email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(null) }}
-                placeholder="you@company.com"
-                required
-                aria-required="true"
-                aria-invalid={!!emailError || !!error}
-                aria-describedby={emailError ? 'email-error' : error ? 'login-error' : undefined}
-                autoComplete="email"
-                style={{ ...inputStyle, borderColor: emailError ? colors.statusCritical : inputStyle.borderColor }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = emailError ? colors.statusCritical : colors.borderFocus; e.currentTarget.style.boxShadow = emailError ? 'none' : '0 0 0 2px #F47820' }}
-                onBlur={(e) => {
-                  const val = e.currentTarget.value
-                  if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                    setEmailError('Enter a valid email address')
-                    e.currentTarget.style.borderColor = colors.statusCritical
-                  } else {
-                    setEmailError(null)
-                    e.currentTarget.style.borderColor = colors.borderDefault
-                  }
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
-              />
-              {emailError && (
-                <p id="email-error" role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-                  {emailError}
-                </p>
-              )}
-            </div>
-
-            <div style={{ marginBottom: spacing['4'] }}>
-              <label style={labelStyle} htmlFor="login-password">Password</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="login-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  aria-required="true"
-                  aria-invalid={!!error}
-                  aria-describedby={error ? 'login-error' : undefined}
-                  autoComplete="current-password"
-                  style={{ ...inputStyle, paddingRight: '44px' }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderDefault
-                    e.currentTarget.style.boxShadow = 'none'
-                    if (!e.currentTarget.value) setPasswordError('Password is required')
-                    else setPasswordError(null)
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: colors.textTertiary,
-                  }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {passwordError && (
-                <p role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-                  {passwordError}
-                </p>
-              )}
-            </div>
-
-            {error && (
-              <div role="alert" aria-live="polite" style={{ color: colors.statusCritical, fontSize: '14px', padding: '8px 12px', backgroundColor: colors.statusCriticalSubtle, borderRadius: '8px', marginTop: '8px', border: `1px solid ${colors.statusCritical}40` }}>
-                {error}
-              </div>
-            )}
-
-            <div style={{ textAlign: 'right', marginBottom: spacing['4'] }}>
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.md,
+            padding: 3,
+            marginBottom: spacing['6'],
+            position: 'relative',
+          }}>
+            {(['signin', 'magic', 'signup'] as const).map((t) => (
               <button
+                key={t}
                 type="button"
-                onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null) }}
+                onClick={() => { setTab(t); setError(null); setSignupError(null); setMagicError(null); setMagicSuccess(false) }}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: colors.orangeText,
+                  flex: 1,
+                  padding: `${spacing['2']} ${spacing['3']}`,
                   fontSize: typography.fontSize.sm,
+                  fontWeight: tab === t ? typography.fontWeight.semibold : typography.fontWeight.normal,
                   fontFamily: typography.fontFamily,
+                  color: tab === t ? colors.textPrimary : colors.textTertiary,
+                  background: tab === t ? colors.surfaceRaised : 'transparent',
+                  border: 'none',
+                  borderRadius: borderRadius.base,
                   cursor: 'pointer',
-                  padding: 0,
-                  fontWeight: typography.fontWeight.medium,
+                  transition: `all 120ms ease`,
+                  boxShadow: tab === t ? shadows.sm : 'none',
+                  position: 'relative',
+                  zIndex: 1,
                 }}
               >
-                Forgot Password?
+                {t === 'signin' ? 'Sign In' : t === 'magic' ? 'Magic Link' : 'Sign Up'}
               </button>
-            </div>
+            ))}
+          </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting}
-              style={{
-                width: '100%',
-                minWidth: '160px',
-                height: '48px',
-                padding: `${spacing['3']} ${spacing['4']}`,
-                fontSize: '16px',
-                fontWeight: typography.fontWeight.semibold,
-                fontFamily: typography.fontFamily,
-                color: colors.white,
-                backgroundColor: isSubmitting ? colors.orangeHover : colors.primaryOrange,
-                border: 'none',
-                borderRadius: borderRadius.md,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                transition: `background-color ${transitions.quick}`,
-                letterSpacing: typography.letterSpacing.normal,
-                opacity: isSubmitting ? 0.7 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: spacing['2'],
-              }}
-              onMouseEnter={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.orangeHover }}
-              onMouseLeave={(e) => { if (!isSubmitting) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
-            >
-              {isSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-              {isSubmitting ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Magic Link Form */}
-          {tab === 'magic' && (
-            <form onSubmit={handleMagicLink} aria-label="Sign in with magic link">
-              {magicSuccess ? (
-                <div
-                  role="status"
-                  style={{
-                    padding: `${spacing['4']} ${spacing['5']}`,
-                    borderRadius: borderRadius.md,
-                    backgroundColor: colors.statusActiveSubtle,
-                    color: colors.statusActive,
-                    fontSize: typography.fontSize.sm,
-                    lineHeight: typography.lineHeight.normal,
-                    textAlign: 'center',
-                  }}
+          {/* Form Card */}
+          <div style={{
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.xl,
+            padding: spacing['7'],
+            boxShadow: shadows.card,
+            border: `1px solid ${colors.borderSubtle}`,
+          }}>
+            <AnimatePresence mode="wait">
+              {/* ─── Sign In Form ─── */}
+              {tab === 'signin' && (
+                <motion.form
+                  key="signin"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleSubmit}
+                  aria-label="Sign in to SiteSync"
+                  style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
                 >
-                  Check your email for a sign in link.
-                </div>
-              ) : (
-                <>
-                  {magicError && (
-                    <div
-                      role="alert"
-                      aria-live="assertive"
+                  <PremiumInput
+                    id="login-email"
+                    type="email"
+                    label="Email address"
+                    value={email}
+                    onChange={(v) => { setEmail(v); if (emailError) setEmailError(null) }}
+                    placeholder="you@company.com"
+                    icon={<Mail size={16} />}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    error={emailError}
+                    onBlurValidate={(v) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email' : null}
+                  />
+
+                  <PremiumInput
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    label="Password"
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="Enter your password"
+                    icon={<Lock size={16} />}
+                    required
+                    autoComplete="current-password"
+                    error={passwordError}
+                    rightElement={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: 0, display: 'flex', color: colors.textTertiary,
+                        }}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    }
+                  />
+
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        role="alert"
+                        style={{
+                          padding: `${spacing['3']} ${spacing['4']}`,
+                          borderRadius: borderRadius.md,
+                          backgroundColor: colors.statusCriticalSubtle,
+                          color: colors.statusCritical,
+                          fontSize: typography.fontSize.sm,
+                          border: `1px solid ${colors.statusCritical}20`,
+                        }}
+                      >
+                        {error}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null) }}
                       style={{
-                        padding: `${spacing['3']} ${spacing['4']}`,
-                        borderRadius: borderRadius.md,
-                        backgroundColor: colors.statusCriticalSubtle,
-                        color: colors.statusCritical,
+                        background: 'none', border: 'none',
+                        color: colors.orangeText,
                         fontSize: typography.fontSize.sm,
-                        marginBottom: spacing['5'],
-                        lineHeight: typography.lineHeight.normal,
+                        fontFamily: typography.fontFamily,
+                        cursor: 'pointer', padding: 0,
+                        fontWeight: typography.fontWeight.medium,
                       }}
                     >
-                      {magicError}
-                    </div>
-                  )}
-                  <div style={{ marginBottom: spacing['6'] }}>
-                    <label style={labelStyle} htmlFor="magic-email">Email address</label>
-                    <input
-                      type="email"
-                      id="magic-email"
-                      value={magicEmail}
-                      onChange={(e) => setMagicEmail(e.target.value)}
-                      placeholder="you@company.com"
-                      required
-                      autoComplete="email"
-                      style={inputStyle}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
-                    />
+                      Forgot password?
+                    </button>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={magicLoading}
-                    aria-busy={magicLoading}
-                    style={{
-                      width: '100%',
-                      height: '48px',
-                      padding: `${spacing['3']} ${spacing['4']}`,
-                      fontSize: '16px',
-                      fontWeight: typography.fontWeight.semibold,
-                      fontFamily: typography.fontFamily,
-                      color: colors.white,
-                      backgroundColor: magicLoading ? colors.orangeHover : colors.primaryOrange,
-                      border: 'none',
-                      borderRadius: borderRadius.md,
-                      cursor: magicLoading ? 'not-allowed' : 'pointer',
-                      transition: `background-color ${transitions.quick}`,
-                      opacity: magicLoading ? 0.7 : 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: spacing['2'],
-                    }}
-                    onMouseEnter={(e) => { if (!magicLoading) e.currentTarget.style.backgroundColor = colors.orangeHover }}
-                    onMouseLeave={(e) => { if (!magicLoading) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
-                  >
-                    {magicLoading && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-                    {magicLoading ? 'Sending link...' : 'Send Magic Link'}
-                  </button>
-                </>
-              )}
-            </form>
-          )}
 
-          {/* Sign Up Form */}
-          {tab === 'signup' && (
-            <form onSubmit={handleSignUp} aria-label="Create a SiteSync account" aria-describedby="signup-error">
-              {signupSuccess ? (
-                <div
-                  role="status"
-                  style={{
-                    padding: `${spacing['4']} ${spacing['5']}`,
-                    borderRadius: borderRadius.md,
-                    backgroundColor: colors.statusActiveSubtle,
-                    color: colors.statusActive,
-                    fontSize: typography.fontSize.sm,
-                    lineHeight: typography.lineHeight.normal,
-                    textAlign: 'center',
-                  }}
+                  <button type="submit" disabled={isSubmitting} style={primaryBtnStyle(isSubmitting)}>
+                    {isSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+                    {isSubmitting ? 'Signing in...' : 'Sign In'}
+                    {!isSubmitting && <ArrowRight size={16} />}
+                  </button>
+                </motion.form>
+              )}
+
+              {/* ─── Magic Link Form ─── */}
+              {tab === 'magic' && (
+                <motion.div
+                  key="magic"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  Check your email to confirm your account.
-                </div>
-              ) : (
-                <>
-                  {signupError && (
-                    <div
-                      id="signup-error"
-                      role="alert"
-                      aria-live="assertive"
-                      style={{
-                        padding: `${spacing['3']} ${spacing['4']}`,
-                        borderRadius: borderRadius.md,
-                        backgroundColor: colors.statusCriticalSubtle,
-                        color: colors.statusCritical,
-                        fontSize: typography.fontSize.sm,
-                        marginBottom: spacing['5'],
-                        lineHeight: typography.lineHeight.normal,
-                      }}
+                  {magicSuccess ? (
+                    <div style={{ textAlign: 'center', padding: `${spacing['6']} 0` }}>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                        style={{
+                          width: 56, height: 56, borderRadius: borderRadius.full,
+                          background: `linear-gradient(135deg, ${colors.statusActive}, #34D399)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          margin: '0 auto', marginBottom: spacing['4'],
+                          boxShadow: '0 4px 20px rgba(74, 222, 128, 0.3)',
+                        }}
+                      >
+                        <CheckCircle size={28} color={colors.white} strokeWidth={2.5} />
+                      </motion.div>
+                      <h3 style={{
+                        margin: 0, fontSize: typography.fontSize.subtitle,
+                        fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
+                      }}>
+                        Check your email
+                      </h3>
+                      <p style={{
+                        margin: 0, marginTop: spacing['2'],
+                        fontSize: typography.fontSize.body, color: colors.textSecondary,
+                      }}>
+                        We sent a sign-in link to <strong>{magicEmail}</strong>
+                      </p>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={handleMagicLink}
+                      style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
                     >
-                      {signupError}
-                    </div>
+                      <AnimatePresence>
+                        {magicError && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            role="alert"
+                            style={{
+                              padding: `${spacing['3']} ${spacing['4']}`,
+                              borderRadius: borderRadius.md,
+                              backgroundColor: colors.statusCriticalSubtle,
+                              color: colors.statusCritical,
+                              fontSize: typography.fontSize.sm,
+                            }}
+                          >
+                            {magicError}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <PremiumInput
+                        id="magic-email"
+                        type="email"
+                        label="Email address"
+                        value={magicEmail}
+                        onChange={setMagicEmail}
+                        placeholder="you@company.com"
+                        icon={<Mail size={16} />}
+                        required
+                        autoComplete="email"
+                        autoFocus
+                      />
+
+                      <button type="submit" disabled={magicLoading} style={primaryBtnStyle(magicLoading)}>
+                        {magicLoading && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+                        {magicLoading ? 'Sending...' : 'Send Magic Link'}
+                        {!magicLoading && <Sparkles size={16} />}
+                      </button>
+                    </form>
                   )}
-
-                  <div style={{ display: 'flex', gap: spacing['3'], marginBottom: spacing['4'] }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={labelStyle} htmlFor="signup-first-name">First Name</label>
-                      <input
-                        type="text"
-                        id="signup-first-name"
-                        value={signupFirstName}
-                        onChange={(e) => setSignupFirstName(e.target.value)}
-                        placeholder="Jane"
-                        required
-                        autoComplete="given-name"
-                        style={inputStyle}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={labelStyle} htmlFor="signup-last-name">Last Name</label>
-                      <input
-                        type="text"
-                        id="signup-last-name"
-                        value={signupLastName}
-                        onChange={(e) => setSignupLastName(e.target.value)}
-                        placeholder="Smith"
-                        required
-                        autoComplete="family-name"
-                        style={inputStyle}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus; e.currentTarget.style.boxShadow = '0 0 0 2px #F47820' }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; e.currentTarget.style.boxShadow = 'none' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: spacing['4'] }}>
-                    <label style={labelStyle} htmlFor="signup-email">Email address</label>
-                    <input
-                      type="email"
-                      id="signup-email"
-                      value={signupEmail}
-                      onChange={(e) => { setSignupEmail(e.target.value); if (signupEmailError) setSignupEmailError(null) }}
-                      placeholder="you@company.com"
-                      required
-                      autoComplete="email"
-                      aria-invalid={!!signupEmailError}
-                      aria-describedby={signupEmailError ? 'signup-email-error' : undefined}
-                      style={{ ...inputStyle, borderColor: signupEmailError ? colors.statusCritical : inputStyle.borderColor }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = signupEmailError ? colors.statusCritical : colors.borderFocus; e.currentTarget.style.boxShadow = signupEmailError ? 'none' : '0 0 0 2px #F47820' }}
-                      onBlur={(e) => {
-                        const val = e.currentTarget.value
-                        if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-                          setSignupEmailError('Please enter a valid email address')
-                          e.currentTarget.style.borderColor = colors.statusCritical
-                        } else {
-                          setSignupEmailError(null)
-                          e.currentTarget.style.borderColor = colors.borderDefault
-                        }
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    />
-                    {signupEmailError && (
-                      <p id="signup-email-error" role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-                        {signupEmailError}
-                      </p>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom: spacing['4'] }}>
-                    <label style={labelStyle} htmlFor="signup-password">Password</label>
-                    <input
-                      type="password"
-                      id="signup-password"
-                      value={signupPassword}
-                      onChange={(e) => { setSignupPassword(e.target.value); if (signupPasswordError) setSignupPasswordError(null) }}
-                      placeholder="At least 8 characters"
-                      required
-                      autoComplete="new-password"
-                      aria-invalid={!!signupPasswordError}
-                      aria-describedby={signupPasswordError ? 'signup-password-error' : undefined}
-                      style={{ ...inputStyle, borderColor: signupPasswordError ? colors.statusCritical : inputStyle.borderColor }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = signupPasswordError ? colors.statusCritical : colors.borderFocus; e.currentTarget.style.boxShadow = signupPasswordError ? 'none' : '0 0 0 2px #F47820' }}
-                      onBlur={(e) => {
-                        if (e.currentTarget.value && e.currentTarget.value.length < 8) {
-                          setSignupPasswordError('Password must be at least 8 characters')
-                          e.currentTarget.style.borderColor = colors.statusCritical
-                        } else {
-                          setSignupPasswordError(null)
-                          e.currentTarget.style.borderColor = colors.borderDefault
-                        }
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    />
-                    {signupPasswordError && (
-                      <p id="signup-password-error" role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-                        {signupPasswordError}
-                      </p>
-                    )}
-                  </div>
-
-                  <div style={{ marginBottom: spacing['6'] }}>
-                    <label style={labelStyle} htmlFor="signup-confirm-password">Confirm Password</label>
-                    <input
-                      type="password"
-                      id="signup-confirm-password"
-                      value={signupConfirmPassword}
-                      onChange={(e) => { setSignupConfirmPassword(e.target.value); if (signupConfirmError) setSignupConfirmError(null) }}
-                      placeholder="Re-enter your password"
-                      required
-                      autoComplete="new-password"
-                      aria-invalid={!!signupConfirmError}
-                      aria-describedby={signupConfirmError ? 'signup-confirm-error' : undefined}
-                      style={{ ...inputStyle, borderColor: signupConfirmError ? colors.statusCritical : inputStyle.borderColor }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = signupConfirmError ? colors.statusCritical : colors.borderFocus; e.currentTarget.style.boxShadow = signupConfirmError ? 'none' : '0 0 0 2px #F47820' }}
-                      onBlur={(e) => {
-                        if (e.currentTarget.value && e.currentTarget.value !== signupPassword) {
-                          setSignupConfirmError('Passwords do not match')
-                          e.currentTarget.style.borderColor = colors.statusCritical
-                        } else {
-                          setSignupConfirmError(null)
-                          e.currentTarget.style.borderColor = colors.borderDefault
-                        }
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    />
-                    {signupConfirmError && (
-                      <p id="signup-confirm-error" role="alert" style={{ margin: `${spacing['1']} 0 0`, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-                        {signupConfirmError}
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={signupSubmitting}
-                    aria-busy={signupSubmitting}
-                    style={{
-                      width: '100%',
-                      minWidth: '160px',
-                      height: '48px',
-                      padding: `${spacing['3']} ${spacing['4']}`,
-                      fontSize: '16px',
-                      fontWeight: typography.fontWeight.semibold,
-                      fontFamily: typography.fontFamily,
-                      color: colors.white,
-                      backgroundColor: signupSubmitting ? colors.orangeHover : colors.primaryOrange,
-                      border: 'none',
-                      borderRadius: borderRadius.md,
-                      cursor: signupSubmitting ? 'not-allowed' : 'pointer',
-                      transition: `background-color ${transitions.quick}`,
-                      letterSpacing: typography.letterSpacing.normal,
-                      opacity: signupSubmitting ? 0.7 : 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: spacing['2'],
-                    }}
-                    onMouseEnter={(e) => { if (!signupSubmitting) e.currentTarget.style.backgroundColor = colors.orangeHover }}
-                    onMouseLeave={(e) => { if (!signupSubmitting) e.currentTarget.style.backgroundColor = colors.primaryOrange }}
-                  >
-                    {signupSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-                    {signupSubmitting ? 'Creating account...' : 'Create Account'}
-                  </button>
-                </>
+                </motion.div>
               )}
-            </form>
-          )}
-        </div>
 
-        {/* Bottom toggle link */}
-        <p
-          style={{
+              {/* ─── Sign Up Form ─── */}
+              {tab === 'signup' && (
+                <motion.div
+                  key="signup"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {signupSuccess ? (
+                    <div style={{ textAlign: 'center', padding: `${spacing['6']} 0` }}>
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                        style={{
+                          width: 56, height: 56, borderRadius: borderRadius.full,
+                          background: `linear-gradient(135deg, ${colors.statusActive}, #34D399)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          margin: '0 auto', marginBottom: spacing['4'],
+                          boxShadow: '0 4px 20px rgba(74, 222, 128, 0.3)',
+                        }}
+                      >
+                        <CheckCircle size={28} color={colors.white} strokeWidth={2.5} />
+                      </motion.div>
+                      <h3 style={{
+                        margin: 0, fontSize: typography.fontSize.subtitle,
+                        fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
+                      }}>
+                        Account created
+                      </h3>
+                      <p style={{
+                        margin: 0, marginTop: spacing['2'],
+                        fontSize: typography.fontSize.body, color: colors.textSecondary,
+                      }}>
+                        Check your email to confirm your account
+                      </p>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={handleSignUp}
+                      style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
+                    >
+                      <AnimatePresence>
+                        {signupError && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            role="alert"
+                            style={{
+                              padding: `${spacing['3']} ${spacing['4']}`,
+                              borderRadius: borderRadius.md,
+                              backgroundColor: colors.statusCriticalSubtle,
+                              color: colors.statusCritical,
+                              fontSize: typography.fontSize.sm,
+                            }}
+                          >
+                            {signupError}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Name fields */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
+                        <PremiumInput
+                          id="signup-first-name"
+                          label="First name"
+                          value={signupFirstName}
+                          onChange={setSignupFirstName}
+                          placeholder="Jane"
+                          icon={<User size={16} />}
+                          required
+                          autoComplete="given-name"
+                          autoFocus
+                        />
+                        <PremiumInput
+                          id="signup-last-name"
+                          label="Last name"
+                          value={signupLastName}
+                          onChange={setSignupLastName}
+                          placeholder="Smith"
+                          required
+                          autoComplete="family-name"
+                        />
+                      </div>
+
+                      <PremiumInput
+                        id="signup-email"
+                        type="email"
+                        label="Work email"
+                        value={signupEmail}
+                        onChange={(v) => { setSignupEmail(v); if (signupEmailError) setSignupEmailError(null) }}
+                        placeholder="you@construction.com"
+                        icon={<Mail size={16} />}
+                        required
+                        autoComplete="email"
+                        error={signupEmailError}
+                        onBlurValidate={(v) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Please enter a valid email' : null}
+                      />
+
+                      <div>
+                        <PremiumInput
+                          id="signup-password"
+                          type={showSignupPassword ? 'text' : 'password'}
+                          label="Password"
+                          value={signupPassword}
+                          onChange={(v) => { setSignupPassword(v); if (signupPasswordError) setSignupPasswordError(null) }}
+                          placeholder="At least 8 characters"
+                          icon={<Lock size={16} />}
+                          required
+                          autoComplete="new-password"
+                          error={signupPasswordError}
+                          onBlurValidate={(v) => v && v.length < 8 ? 'Must be at least 8 characters' : null}
+                          rightElement={
+                            <button
+                              type="button"
+                              onClick={() => setShowSignupPassword(!showSignupPassword)}
+                              aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                padding: 0, display: 'flex', color: colors.textTertiary,
+                              }}
+                            >
+                              {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          }
+                        />
+                        <PasswordStrengthBar password={signupPassword} />
+                      </div>
+
+                      <PremiumInput
+                        id="signup-confirm-password"
+                        type="password"
+                        label="Confirm password"
+                        value={signupConfirmPassword}
+                        onChange={(v) => { setSignupConfirmPassword(v); if (signupConfirmError) setSignupConfirmError(null) }}
+                        placeholder="Re-enter your password"
+                        icon={<Shield size={16} />}
+                        required
+                        autoComplete="new-password"
+                        error={signupConfirmError}
+                        onBlurValidate={(v) => v && v !== signupPassword ? 'Passwords do not match' : null}
+                      />
+
+                      <button type="submit" disabled={signupSubmitting} style={primaryBtnStyle(signupSubmitting)}>
+                        {signupSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
+                        {signupSubmitting ? 'Creating account...' : 'Create Account'}
+                        {!signupSubmitting && <ArrowRight size={16} />}
+                      </button>
+
+                      <p style={{
+                        margin: 0, fontSize: typography.fontSize.caption,
+                        color: colors.textTertiary, textAlign: 'center',
+                        lineHeight: typography.lineHeight.normal,
+                      }}>
+                        By signing up, you agree to our terms of service and privacy policy.
+                      </p>
+                    </form>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom link */}
+          <p style={{
             textAlign: 'center',
             fontSize: typography.fontSize.sm,
             color: colors.textTertiary,
             marginTop: spacing['6'],
-            letterSpacing: typography.letterSpacing.normal,
-          }}
-        >
-          {tab === 'signin' ? (
-            <>
-              No account yet?{' '}
-              <button
-                type="button"
-                onClick={() => { setTab('signup'); setError(null) }}
-                style={{ background: 'none', border: 'none', color: colors.orangeText, fontSize: 'inherit', fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, cursor: 'pointer', padding: 0 }}
-              >
-                Create an account
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={() => { setTab('signin'); setSignupError(null) }}
-                style={{ background: 'none', border: 'none', color: colors.orangeText, fontSize: 'inherit', fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.medium, cursor: 'pointer', padding: 0 }}
-              >
-                Sign in
-              </button>
-            </>
-          )}
-        </p>
-      </div>
-
-      {/* Reset Password Modal */}
-      {showReset && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: colors.overlayDark,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: zIndex.modal as number,
-          }}
-          onClick={() => setShowReset(false)}
-        >
-          <div
-            style={{
-              backgroundColor: colors.surfaceRaised,
-              borderRadius: borderRadius.xl,
-              padding: spacing['8'],
-              width: '100%',
-              maxWidth: '400px',
-              boxShadow: shadows.panel,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              style={{
-                fontSize: typography.fontSize.title,
-                fontWeight: typography.fontWeight.semibold,
-                color: colors.textPrimary,
-                margin: 0,
-                marginBottom: spacing['2'],
-                letterSpacing: typography.letterSpacing.tight,
-              }}
-            >
-              Reset Password
-            </h2>
-            <p
-              style={{
-                fontSize: typography.fontSize.sm,
-                color: colors.textTertiary,
-                margin: 0,
-                marginBottom: spacing['6'],
-                lineHeight: typography.lineHeight.normal,
-              }}
-            >
-              Enter your email and we'll send you a link to reset your password.
-            </p>
-
-            {resetSent ? (
-              <div>
-                <div
+          }}>
+            {tab === 'signin' ? (
+              <>
+                No account yet?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setTab('signup'); setError(null) }}
                   style={{
-                    padding: `${spacing['3']} ${spacing['4']}`,
-                    borderRadius: borderRadius.md,
-                    backgroundColor: colors.statusActiveSubtle,
-                    color: colors.statusActive,
-                    fontSize: typography.fontSize.sm,
-                    lineHeight: typography.lineHeight.normal,
-                    marginBottom: spacing['5'],
+                    background: 'none', border: 'none',
+                    color: colors.orangeText,
+                    fontSize: 'inherit', fontFamily: typography.fontFamily,
+                    fontWeight: typography.fontWeight.medium,
+                    cursor: 'pointer', padding: 0,
                   }}
                 >
-                  Check your email for a password reset link.
+                  Create an account
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setTab('signin'); setSignupError(null) }}
+                  style={{
+                    background: 'none', border: 'none',
+                    color: colors.orangeText,
+                    fontSize: 'inherit', fontFamily: typography.fontFamily,
+                    fontWeight: typography.fontWeight.medium,
+                    cursor: 'pointer', padding: 0,
+                  }}
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+
+      {/* ─── Reset Password Modal ─── */}
+      <AnimatePresence>
+        {showReset && (
+          <div
+            style={{
+              position: 'fixed', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: zIndex.modal as number,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowReset(false)}
+              style={{
+                position: 'absolute', inset: 0,
+                backgroundColor: colors.overlayScrim,
+                backdropFilter: 'blur(4px)',
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{ duration: 0.25, ease: APPLE_EASE }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'relative',
+                backgroundColor: colors.surfaceRaised,
+                borderRadius: borderRadius.xl,
+                padding: spacing['7'],
+                width: '100%',
+                maxWidth: 400,
+                boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
+                border: `1px solid ${colors.borderSubtle}`,
+              }}
+            >
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                marginBottom: spacing['4'],
+              }}>
+                <div>
+                  <h2 style={{
+                    fontSize: typography.fontSize.subtitle,
+                    fontWeight: typography.fontWeight.semibold,
+                    color: colors.textPrimary,
+                    margin: 0,
+                    letterSpacing: typography.letterSpacing.tight,
+                  }}>
+                    Reset Password
+                  </h2>
+                  <p style={{
+                    fontSize: typography.fontSize.sm,
+                    color: colors.textTertiary,
+                    margin: 0, marginTop: spacing['1'],
+                  }}>
+                    We'll send a reset link to your email
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowReset(false)}
                   style={{
-                    width: '100%',
-                    padding: `${spacing['3']} ${spacing['4']}`,
-                    fontSize: typography.fontSize.body,
-                    fontWeight: typography.fontWeight.medium,
-                    fontFamily: typography.fontFamily,
-                    color: colors.textSecondary,
-                    backgroundColor: colors.surfacePage,
-                    border: `1px solid ${colors.borderDefault}`,
-                    borderRadius: borderRadius.md,
-                    cursor: 'pointer',
+                    width: 28, height: 28, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', backgroundColor: 'transparent',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: borderRadius.base, cursor: 'pointer',
+                    color: colors.textTertiary,
                   }}
                 >
-                  Close
+                  <X size={14} />
                 </button>
               </div>
-            ) : (
-              <form onSubmit={handleReset}>
-                {resetError && (
-                  <div
-                    style={{
-                      padding: `${spacing['3']} ${spacing['4']}`,
-                      borderRadius: borderRadius.md,
-                      backgroundColor: colors.statusCriticalSubtle,
-                      color: colors.statusCritical,
-                      fontSize: typography.fontSize.sm,
-                      marginBottom: spacing['5'],
-                      lineHeight: typography.lineHeight.normal,
-                    }}
-                  >
-                    {mapAuthError(resetError)}
+
+              {resetSent ? (
+                <div>
+                  <div style={{
+                    textAlign: 'center', padding: `${spacing['4']} 0 ${spacing['5']}`,
+                  }}>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                      style={{
+                        width: 48, height: 48, borderRadius: borderRadius.full,
+                        background: `linear-gradient(135deg, ${colors.statusActive}, #34D399)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto', marginBottom: spacing['3'],
+                      }}
+                    >
+                      <CheckCircle size={24} color={colors.white} strokeWidth={2.5} />
+                    </motion.div>
+                    <p style={{
+                      fontSize: typography.fontSize.body, color: colors.textSecondary,
+                      margin: 0,
+                    }}>
+                      Check your email for a reset link
+                    </p>
                   </div>
-                )}
-                <div style={{ marginBottom: spacing['5'] }}>
-                  <label style={labelStyle} htmlFor="reset-email">Email</label>
-                  <input
-                    type="email" id="reset-email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    required
-                    style={inputStyle}
-                    onFocus={(e) => { e.currentTarget.style.borderColor = colors.borderFocus }}
-                    onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: spacing['3'] }}>
                   <button
                     type="button"
                     onClick={() => setShowReset(false)}
                     style={{
-                      flex: 1,
-                      padding: `${spacing['3']} ${spacing['4']}`,
-                      fontSize: typography.fontSize.body,
-                      fontWeight: typography.fontWeight.medium,
-                      fontFamily: typography.fontFamily,
-                      color: colors.textSecondary,
-                      backgroundColor: colors.surfacePage,
-                      border: `1px solid ${colors.borderDefault}`,
-                      borderRadius: borderRadius.md,
-                      cursor: 'pointer',
+                      width: '100%', padding: `${spacing['2.5']} ${spacing['4']}`,
+                      fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+                      fontFamily: typography.fontFamily, color: colors.textSecondary,
+                      backgroundColor: colors.surfaceInset,
+                      border: `1px solid ${colors.borderSubtle}`,
+                      borderRadius: borderRadius.md, cursor: 'pointer',
                     }}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={resetLoading}
-                    style={{
-                      flex: 1,
-                      padding: `${spacing['3']} ${spacing['4']}`,
-                      fontSize: typography.fontSize.body,
-                      fontWeight: typography.fontWeight.semibold,
-                      fontFamily: typography.fontFamily,
-                      color: colors.white,
-                      backgroundColor: colors.primaryOrange,
-                      border: 'none',
-                      borderRadius: borderRadius.md,
-                      cursor: resetLoading ? 'not-allowed' : 'pointer',
-                      opacity: resetLoading ? 0.7 : 1,
-                    }}
-                  >
-                    {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                    Close
                   </button>
                 </div>
-              </form>
-            )}
+              ) : (
+                <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+                  <AnimatePresence>
+                    {resetError && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        style={{
+                          padding: `${spacing['3']} ${spacing['4']}`,
+                          borderRadius: borderRadius.md,
+                          backgroundColor: colors.statusCriticalSubtle,
+                          color: colors.statusCritical,
+                          fontSize: typography.fontSize.sm,
+                        }}
+                      >
+                        {mapAuthError(resetError)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <PremiumInput
+                    id="reset-email"
+                    type="email"
+                    label="Email address"
+                    value={resetEmail}
+                    onChange={setResetEmail}
+                    placeholder="you@company.com"
+                    icon={<Mail size={16} />}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                  />
+
+                  <div style={{ display: 'flex', gap: spacing['3'] }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowReset(false)}
+                      style={{
+                        flex: 1, height: 44,
+                        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+                        fontFamily: typography.fontFamily, color: colors.textSecondary,
+                        backgroundColor: colors.surfaceInset,
+                        border: `1px solid ${colors.borderSubtle}`,
+                        borderRadius: borderRadius.md, cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={resetLoading}
+                      style={{
+                        flex: 1, height: 44,
+                        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
+                        fontFamily: typography.fontFamily, color: colors.white,
+                        background: `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
+                        border: 'none',
+                        borderRadius: borderRadius.md,
+                        cursor: resetLoading ? 'not-allowed' : 'pointer',
+                        opacity: resetLoading ? 0.8 : 1,
+                      }}
+                    >
+                      {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   )
 }

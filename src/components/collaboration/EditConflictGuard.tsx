@@ -4,6 +4,7 @@ import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase, fromTable } from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
 import { usePresenceStore } from '../../stores/presenceStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores';
 import { Btn } from '../Primitives';
 import {
@@ -409,7 +410,7 @@ interface CoEditingWarningProps {
 }
 
 export const CoEditingWarning: React.FC<CoEditingWarningProps> = ({ entityId }) => {
-  const viewers = usePresenceStore(s => s.getUsersViewingEntity(entityId));
+  const viewers = usePresenceStore(useShallow(s => s.getUsersViewingEntity(entityId)));
 
   if (viewers.length === 0) return null;
 

@@ -1,0 +1,312 @@
+name: Workflow Builder — Intelligent Product-Aware v3
+
+# v3: Reasons about the product holistically. Auto-generates product state JSON,
+# picks the highest-impact unwired page from a hardcoded priority list, and
+# tells Claude Code to WIRE existing hooks (not build new ones).
+
+on:
+  # schedule:
+  #   - cron: '*/45 * * * *'  # DISABLED — user requested halt
+  workflow_dispatch:
+    inputs:
+      target_page:
+        description: 'Force a specific page (e.g. Safety.tsx). Leave blank for auto-select.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Print selected page without running (true/false)'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: workflow-builder
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  wire-page:
+    name: Select + Wire + PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git
+        run: |
+          git config user.name "SiteSync Workflow Builder"
+          git config user.email "organism@sitesync.app"
+
+      - name: Generate product state
+        id: product-state
+        run: |
+          chmod +x scripts/product-state.sh
+          bash scripts/product-state.sh /tmp/product-state.json > /dev/null
+          echo "Product state generated. Pages tracked:"
+          python3 -c "import json; d=json.load(open('/tmp/product-state.json')); [print(' ', p['priority'], p['page'], p['status']) for p in d['unwired_pages']]"
+
+      - name: Select target page (top-down by priority)
+        id: select
+        env:
+          FORCED: ${{ inputs.target_page }}
+        run: |
+          python3 <<'PY'
+          import json, os
+          forced = os.environ.get("FORCED", "").strip()
+          state = json.load(open("/tmp/product-state.json"))
+          target = None
+          if forced:
+              for p in state["unwired_pages"]:
+                  if p["page"] == forced:
+                      target = p
+                      break
+          if target is None:
+              # Pick the first unwired page in priority order (top-down)
+              for p in state["unwired_pages"]:
+                  if p["status"] == "unwired":
+                      target = p
+                      break
+          if target is None:
+              print("No unwired pages — nothing to do.")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+                  f.write("page=NONE\n")
+              raise SystemExit(0)
+          print(f"Selected: {target['page']} (priority {target['priority']})")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"page={target['page']}\n")
+              f.write(f"file={target['file']}\n")
+              f.write(f"domain={target['domain']}\n")
+              f.write(f"mutations={','.join(target['available_mutation_hooks'])}\n")
+              f.write(f"queries={','.join(target['available_query_hooks'])}\n")
+          PY
+
+      - name: Skip if nothing to do
+        if: steps.select.outputs.page == 'NONE' || inputs.dry_run == 'true'
+        run: echo "No target or dry-run; exiting." && exit 0
+
+      - name: Create feature branch
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        id: branch
+        run: |
+          SLUG=$(echo "${{ steps.select.outputs.page }}" | tr '[:upper:].' '[:lower:]-' | sed 's/-tsx$//')
+          BRANCH="organism/wire-${SLUG}-${{ github.run_number }}"
+          git push origin --delete "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Install Claude Code
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Claude Code wires hooks to page
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: |
+          PAGE="${{ steps.select.outputs.page }}"
+          FILE="${{ steps.select.outputs.file }}"
+          DOMAIN="${{ steps.select.outputs.domain }}"
+          MUTATIONS="${{ steps.select.outputs.mutations }}"
+          QUERIES="${{ steps.select.outputs.queries }}"
+
+          PRODUCT_STATE=$(cat /tmp/product-state.json)
+
+          cat > /tmp/wire-prompt.txt <<PROMPT_EOF
+          You are a senior full-stack engineer who lives in this product.
+
+          PRODUCT STATE (auto-generated):
+          $PRODUCT_STATE
+
+          YOUR TASK: Make src/pages/... ${FILE} fully functional by WIRING existing hooks.
+
+          TARGET PAGE: ${FILE}
+          DOMAIN: ${DOMAIN}
+
+          Available mutation hooks you MUST wire (located in src/hooks/mutations/${DOMAIN}.ts or similar):
+          ${MUTATIONS:-(none listed — look in src/hooks/mutations/ for this domain)}
+
+          Available query hooks (located in src/hooks/queries/${DOMAIN}.ts or similar):
+          ${QUERIES:-(none listed — look in src/hooks/queries/ for this domain)}
+
+          KEY INSIGHT: The hooks ALREADY EXIST in src/hooks/mutations/ and src/hooks/queries/.
+          Your job is not to build them — it is to IMPORT them and WIRE them into the page's
+          forms, buttons, and lists. This is a WIRING problem, not a building problem.
+
+          For EVERY form/create-button on this page:
+          1. Import the appropriate mutation hook from src/hooks/mutations/${DOMAIN}.ts
+          2. Call the hook at the top of the component: const { mutateAsync, isPending } = useCreateX()
+          3. In the form onSubmit handler, call await mutateAsync(formValues)
+          4. Invalidate queries on success (the mutation hook usually does this, but verify)
+          5. Show a toast on success/error using 'sonner' (import { toast } from 'sonner')
+          6. Disable the submit button while isPending
+          7. Close the dialog/reset form on success
+
+          For EVERY list/table on this page:
+          1. Import the appropriate query hook from src/hooks/queries/${DOMAIN}.ts
+          2. Use the real data: const { data, isLoading, error } = useX()
+          3. Handle loading state (skeleton or spinner)
+          4. Handle error state (friendly message)
+          5. Handle empty state (helpful CTA)
+          6. Remove any hardcoded mock data arrays in the component
+
+          HARD RULES:
+          - Do NOT create new hooks if they already exist in src/hooks/mutations or src/hooks/queries.
+          - Do NOT use inline supabase.from() calls when a hook exists for the domain.
+          - Do NOT change CSS, colors, fonts, spacing, or layout.
+          - Do NOT touch .github/, .organism/, .agent/, or .quality-floor.json.
+          - Do NOT write new unit tests.
+          - Do NOT fix unrelated ESLint errors.
+          - Keep changes SCOPED to ${FILE}. You may touch small helper components it imports if needed.
+
+          APPROACH:
+          1. Read ${FILE} completely.
+          2. Read the relevant mutation file src/hooks/mutations/${DOMAIN}.ts to see signatures.
+          3. Read the relevant query file src/hooks/queries/${DOMAIN}.ts to see signatures.
+          4. Identify every form, dialog, and list in the page.
+          5. Wire each one. If a form doesn't have a corresponding hook, leave it alone — don't invent.
+          6. Verify: npx tsc --noEmit passes.
+          7. Commit with: git add -A && git commit -m "feat(${DOMAIN}): wire ${PAGE} to existing hooks"
+          PROMPT_EOF
+
+          claude --max-turns 40 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/wire-prompt.txt)" || true
+
+      - name: Verify — typecheck
+        id: typecheck
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: |
+          if npx tsc --noEmit 2>&1 | tee /tmp/tsc.log; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            head -40 /tmp/tsc.log || true
+          fi
+
+      - name: Verify — build
+        id: build
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: |
+          if npm run build 2>&1 | tail -30; then
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify — mutation hook imports present
+        id: grep-check
+        if: steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true'
+        run: |
+          FILE="${{ steps.select.outputs.file }}"
+          MUTATIONS="${{ steps.select.outputs.mutations }}"
+          IMPORTED=0
+          TOTAL=0
+          if [ -n "$MUTATIONS" ]; then
+            IFS=',' read -ra ARR <<< "$MUTATIONS"
+            for h in "${ARR[@]}"; do
+              TOTAL=$((TOTAL + 1))
+              if grep -q "$h" "$FILE" 2>/dev/null; then
+                IMPORTED=$((IMPORTED + 1))
+                echo "  ✅ $h imported"
+              else
+                echo "  ❌ $h NOT imported"
+              fi
+            done
+          fi
+          echo "imported=$IMPORTED" >> "$GITHUB_OUTPUT"
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+
+      - name: Retry once if typecheck failed
+        if: >
+          steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true' &&
+          steps.typecheck.outputs.result == 'FAIL'
+        run: |
+          TSC_ERR=$(cat /tmp/tsc.log | head -60)
+          cat > /tmp/retry.txt <<RP_EOF
+          The previous wiring attempt caused TypeScript errors. Fix ONLY the type
+          errors below. Do not introduce new features.
+
+          TSC errors:
+          $TSC_ERR
+
+          Run: npx tsc --noEmit to verify.
+          Commit with: git add -A && git commit -m "fix(wire): resolve type errors"
+          RP_EOF
+          claude --max-turns 15 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/retry.txt)" || true
+          if npx tsc --noEmit 2>&1 | tail -30; then
+            echo "Retry typecheck passed."
+          fi
+
+      - name: Create PR and auto-merge
+        id: pr
+        if: >
+          steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true' &&
+          steps.build.outputs.result == 'PASS'
+        run: |
+          PAGE="${{ steps.select.outputs.page }}"
+          DOMAIN="${{ steps.select.outputs.domain }}"
+          BRANCH="${{ steps.branch.outputs.branch }}"
+
+          if git diff --quiet HEAD~0..HEAD 2>/dev/null && [ -z "$(git log main..HEAD --oneline 2>/dev/null)" ]; then
+            echo "No new commits — Claude Code made no changes. Skipping PR."
+            exit 0
+          fi
+
+          git push -u origin "$BRANCH" --force-with-lease
+
+          cat > /tmp/pr-body.md <<PRBODY
+          ## Workflow Builder v3 — wired existing hooks to ${PAGE}
+
+          **Target page**: \`${{ steps.select.outputs.file }}\`
+          **Domain**: ${DOMAIN}
+
+          **Mutation hooks available for wiring**: ${{ steps.select.outputs.mutations }}
+          **Query hooks available for wiring**: ${{ steps.select.outputs.queries }}
+
+          ### Verification
+          - TypeScript: ${{ steps.typecheck.outputs.result }}
+          - Build: ${{ steps.build.outputs.result }}
+          - Mutation hooks imported: ${{ steps.grep-check.outputs.imported }} / ${{ steps.grep-check.outputs.total }}
+
+          Auto-generated by Workflow Builder v3 run #${{ github.run_number }}
+          PRBODY
+
+          PR_URL=$(gh pr create \
+            --title "feat(${DOMAIN}): wire ${PAGE} to existing hooks" \
+            --body "$(cat /tmp/pr-body.md)" \
+            --base main \
+            --head "$BRANCH" \
+            --label "organism,workflow-builder" 2>&1 || echo "")
+          echo "pr_url=$PR_URL"
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
+          if [ -n "$PR_NUMBER" ]; then
+            echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            gh pr merge --admin "$PR_NUMBER" --auto --squash --delete-branch || true
+          fi
+
+      - name: Escalate if verification failed
+        if: >
+          always() && steps.select.outputs.page != 'NONE' && inputs.dry_run != 'true' &&
+          (steps.build.outputs.result == 'FAIL' || steps.typecheck.outputs.result == 'FAIL')
+        run: |
+          gh issue create \
+            --title "[workflow-builder] wiring ${{ steps.select.outputs.page }} failed" \
+            --body "Build=${{ steps.build.outputs.result }} TSC=${{ steps.typecheck.outputs.result }} Run #${{ github.run_number }}" \
+            --label "needs-human,organism" || true

@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: Safety Module
+-- SiteSync PM: Safety Module
 -- Full safety management: inspections, incidents, toolbox talks, certifications,
 -- observations, and all supporting infrastructure.
 -- =============================================================================

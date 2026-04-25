@@ -32,6 +32,14 @@ export default defineConfig(({ mode }) => {
       },
     },
 
+    // Ensure CJS-only deps are pre-bundled in dev mode so that dynamic
+    // import('pdfjs-dist') resolves cleanly instead of hitting CJS/ESM
+    // interop issues that surface as "Failed to fetch dynamically imported
+    // module" errors.
+    optimizeDeps: {
+      include: ['pdfjs-dist', 'jszip'],
+    },
+
     build: {
       chunkSizeWarningLimit: 250,
       sourcemap: mode === 'production' ? 'hidden' : true,

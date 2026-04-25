@@ -1,7 +1,8 @@
 import { setup } from 'xstate';
 import { colors } from '../styles/theme';
 
-export type ScheduleStatus = 'planned' | 'in_progress' | 'delayed' | 'completed';
+// DB CHECK constraint: ('completed', 'active', 'upcoming', 'at_risk', 'delayed', 'on_track')
+export type ScheduleStatus = 'upcoming' | 'active' | 'delayed' | 'completed' | 'at_risk' | 'on_track';
 
 export const scheduleMachine = setup({
   types: {
@@ -19,16 +20,16 @@ export const scheduleMachine = setup({
   },
 }).createMachine({
   id: 'schedule',
-  initial: 'planned',
+  initial: 'upcoming',
   context: { phaseId: '', projectId: '', error: null },
   states: {
-    planned: {
+    upcoming: {
       on: {
-        START: { target: 'in_progress' },
+        START: { target: 'active' },
         MARK_DELAYED: { target: 'delayed' },
       },
     },
-    in_progress: {
+    active: {
       on: {
         COMPLETE: { target: 'completed' },
         MARK_DELAYED: { target: 'delayed' },
@@ -36,13 +37,13 @@ export const scheduleMachine = setup({
     },
     delayed: {
       on: {
-        RESUME: { target: 'in_progress' },
+        RESUME: { target: 'active' },
         COMPLETE: { target: 'completed' },
       },
     },
     completed: {
       on: {
-        REOPEN: { target: 'in_progress' },
+        REOPEN: { target: 'active' },
       },
     },
   },
@@ -68,16 +69,18 @@ export function getValidScheduleTransitions(
   if (!canEdit) return [];
 
   const base: Record<ScheduleStatus, ScheduleStatus[]> = {
-    planned: ['in_progress', 'delayed'],
-    in_progress: ['completed', 'delayed'],
-    delayed: ['in_progress', 'completed'],
+    upcoming: ['active', 'delayed'],
+    active: ['completed', 'delayed'],
+    on_track: ['completed', 'delayed'],
+    at_risk: ['active', 'delayed', 'completed'],
+    delayed: ['active', 'completed'],
     completed: [],
   };
 
   const result: ScheduleStatus[] = [...(base[status] ?? [])];
 
   if (status === 'completed' && canReopen) {
-    result.push('in_progress');
+    result.push('active');
   }
 
   return result;
@@ -91,15 +94,25 @@ export function getScheduleStatusConfig(status: ScheduleStatus): {
   bg: string;
 } {
   const config: Record<ScheduleStatus, { label: string; color: string; bg: string }> = {
-    planned: {
-      label: 'Planned',
+    upcoming: {
+      label: 'Upcoming',
       color: colors.statusNeutral,
       bg: colors.statusNeutralSubtle,
     },
-    in_progress: {
-      label: 'In Progress',
+    active: {
+      label: 'Active',
       color: colors.statusInfo,
       bg: colors.statusInfoSubtle,
+    },
+    on_track: {
+      label: 'On Track',
+      color: colors.statusActive,
+      bg: colors.statusActiveSubtle,
+    },
+    at_risk: {
+      label: 'At Risk',
+      color: colors.statusPending,
+      bg: colors.statusPendingSubtle,
     },
     delayed: {
       label: 'Delayed',
@@ -112,7 +125,7 @@ export function getScheduleStatusConfig(status: ScheduleStatus): {
       bg: colors.statusActiveSubtle,
     },
   };
-  return config[status] ?? config.planned;
+  return config[status] ?? config.upcoming;
 }
 
 // ── Derived Status from Progress ─────────────────────────────────────────────
@@ -122,6 +135,6 @@ export function deriveStatusFromProgress(
   currentStatus: ScheduleStatus,
 ): ScheduleStatus {
   if (percent >= 100) return 'completed';
-  if (percent > 0 && currentStatus === 'planned') return 'in_progress';
+  if (percent > 0 && currentStatus === 'upcoming') return 'active';
   return currentStatus;
 }

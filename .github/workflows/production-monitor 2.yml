@@ -1,0 +1,129 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  PRODUCTION MONITOR — The Organism Watches The Live App                 ║
+# ║                                                                          ║
+# ║  Every hour, checks the live app is working. If something is broken,    ║
+# ║  opens a GitHub issue tagged 'urgent' so the organism prioritizes it.   ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+name: "Production Monitor — Live App Health"
+
+on:
+  # schedule:
+  #   - cron: "0 * * * *"  # DISABLED — user requested halt
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  LIVE_URL: "https://sitesync-pm.vercel.app"
+
+jobs:
+  health-check:
+    name: "🏥 Health Check"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check live app
+        id: check
+        run: |
+          ISSUES=""
+          CRITICAL=false
+
+          # 1. Homepage loads
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "${{ env.LIVE_URL }}" 2>/dev/null)
+          LOAD_TIME=$(curl -s -o /dev/null -w "%{time_total}" -m 10 "${{ env.LIVE_URL }}" 2>/dev/null)
+          echo "Homepage: HTTP $HTTP_CODE, ${LOAD_TIME}s"
+          if [ "$HTTP_CODE" != "200" ]; then
+            ISSUES="$ISSUES\n- 🚨 Homepage returned HTTP $HTTP_CODE (expected 200)"
+            CRITICAL=true
+          fi
+          if (( $(echo "$LOAD_TIME > 5.0" | bc -l 2>/dev/null || echo 0) )); then
+            ISSUES="$ISSUES\n- ⚠️ Homepage load time: ${LOAD_TIME}s (should be <5s)"
+          fi
+
+          # 2. Login page loads
+          LOGIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "${{ env.LIVE_URL }}/#/login" 2>/dev/null)
+          echo "Login page: HTTP $LOGIN_CODE"
+          if [ "$LOGIN_CODE" != "200" ]; then
+            ISSUES="$ISSUES\n- 🚨 Login page returned HTTP $LOGIN_CODE"
+            CRITICAL=true
+          fi
+
+          # 3. Check if the HTML contains the app mount point
+          BODY=$(curl -s -m 10 "${{ env.LIVE_URL }}" 2>/dev/null)
+          if ! echo "$BODY" | grep -q "id=\"root\""; then
+            ISSUES="$ISSUES\n- 🚨 App root element not found in HTML"
+            CRITICAL=true
+          fi
+
+          # 4. Check if JS bundle loads
+          JS_URL=$(echo "$BODY" | grep -oP 'src="(/assets/[^"]+\.js)"' | head -1 | sed 's/src="//;s/"//')
+          if [ -n "$JS_URL" ]; then
+            JS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "${{ env.LIVE_URL }}$JS_URL" 2>/dev/null)
+            echo "JS bundle: HTTP $JS_CODE"
+            if [ "$JS_CODE" != "200" ]; then
+              ISSUES="$ISSUES\n- 🚨 JS bundle failed to load: HTTP $JS_CODE"
+              CRITICAL=true
+            fi
+          fi
+
+          # 5. Check Supabase reachability
+          SUPA_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 10 \
+            "https://hypxrmcppjfbtlwuoafc.supabase.co/auth/v1/settings" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5cHhybWNwcGpmYnRsd3VvYWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTM1MjQsImV4cCI6MjA5MDI4OTUyNH0.gI_zodUcFN1z5a9k4GC5At4fsPYgWi-99C0ZNcVgmYA" \
+            2>/dev/null)
+          echo "Supabase: HTTP $SUPA_CODE"
+          if [ "$SUPA_CODE" != "200" ]; then
+            ISSUES="$ISSUES\n- 🚨 Supabase returned HTTP $SUPA_CODE"
+            CRITICAL=true
+          fi
+
+          # 6. Check Vercel deployment status
+          VERCEL_STATUS=$(curl -s -m 10 "https://api.vercel.com/v13/deployments?teamId=&projectId=prj_zPPgChDOlE5b76HhGDbu73rLjFWg&limit=1" 2>/dev/null | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); print(d.get('deployments',[{}])[0].get('readyState','unknown'))" 2>/dev/null || echo "unknown")
+          echo "Vercel deployment: $VERCEL_STATUS"
+
+          if [ -n "$ISSUES" ]; then
+            echo "has_issues=true" >> "$GITHUB_OUTPUT"
+            echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
+            printf "$ISSUES" > /tmp/health-issues.txt
+            echo ""
+            echo "⚠️ Issues found:"
+            printf "$ISSUES"
+          else
+            echo "has_issues=false" >> "$GITHUB_OUTPUT"
+            echo "✅ All health checks passed"
+          fi
+
+      - name: Open urgent issue if critical
+        if: steps.check.outputs.critical == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUES=$(cat /tmp/health-issues.txt)
+
+          # Check if there's already an open health issue
+          EXISTING=$(gh issue list --repo ${{ env.OWNER || 'wrbenner' }}/${{ env.REPO || 'sitesync-pm' }} \
+            --label "urgent,production" --state open --json number --jq length 2>/dev/null || echo "0")
+
+          if [ "$EXISTING" = "0" ]; then
+            gh issue create \
+              --repo wrbenner/sitesync-pm \
+              --title "🚨 Production Health Alert — $(date -u +%Y-%m-%dT%H:%M)" \
+              --body "## Production Health Check Failed
+
+          $(cat /tmp/health-issues.txt)
+
+          **Detected at:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          **Live URL:** ${{ env.LIVE_URL }}
+
+          The organism should prioritize fixing this before any other work.
+
+          ---
+          *Generated by Production Monitor*" \
+              --label "urgent,production" 2>&1
+            echo "🚨 Opened urgent issue"
+          else
+            echo "ℹ️ Urgent issue already open ($EXISTING)"
+          fi

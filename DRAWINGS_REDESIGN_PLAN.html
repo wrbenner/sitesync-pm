@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSync Drawings — World-Class Redesign Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --orange: #F47820;
+    --orange-light: #FEF5ED;
+    --orange-dark: #C45A0C;
+    --navy: #0f172a;
+    --navy-light: #1e293b;
+    --slate: #334155;
+    --slate-light: #64748b;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --white: #ffffff;
+    --green: #10b981;
+    --green-light: #d1fae5;
+    --red: #ef4444;
+    --red-light: #fee2e2;
+    --amber: #f59e0b;
+    --amber-light: #fef3c7;
+    --blue: #3b82f6;
+    --blue-light: #dbeafe;
+    --purple: #8b5cf6;
+    --purple-light: #ede9fe;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Hero Section */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 80px 40px;
+    background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 50%, #16213e 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(244, 120, 32, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+    animation: float 20s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-2%, -2%); }
+  }
+
+  .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(244, 120, 32, 0.1);
+    border: 1px solid rgba(244, 120, 32, 0.2);
+    border-radius: 100px;
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--orange);
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--orange) 0%, #f97316 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 20px;
+    color: var(--slate-light);
+    max-width: 600px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+  }
+
+  .hero-quote {
+    font-style: italic;
+    font-size: 18px;
+    color: var(--slate-light);
+    border-left: 3px solid var(--orange);
+    padding-left: 20px;
+    text-align: left;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .hero-quote cite {
+    display: block;
+    font-style: normal;
+    font-weight: 600;
+    color: var(--orange);
+    margin-top: 8px;
+    font-size: 14px;
+  }
+
+  /* Section styles */
+  .section {
+    padding: 100px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-dark {
+    background: var(--navy);
+  }
+
+  .section-alt {
+    background: var(--navy-light);
+  }
+
+  .section-full {
+    max-width: 100%;
+    padding: 100px 40px;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+
+  .section-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--orange);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+
+  .section-subtitle {
+    font-size: 18px;
+    color: var(--slate-light);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* Cards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  .card-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 1024px) {
+    .card-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(244, 120, 32, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .card h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .card p {
+    font-size: 15px;
+    color: var(--slate-light);
+    line-height: 1.6;
+  }
+
+  /* Pain Points */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .pain-grid { grid-template-columns: 1fr; }
+  }
+
+  .pain-card {
+    background: rgba(239, 68, 68, 0.04);
+    border: 1px solid rgba(239, 68, 68, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .pain-severity {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .severity-critical {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--red);
+  }
+
+  .severity-high {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--amber);
+  }
+
+  .severity-medium {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--blue);
+  }
+
+  .pain-card h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .pain-card p {
+    font-size: 13px;
+    color: var(--slate-light);
+    line-height: 1.5;
+  }
+
+  /* Comparison Table */
+  .comp-table-wrap {
+    overflow-x: auto;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    min-width: 900px;
+  }
+
+  .comp-table thead {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .comp-table th {
+    padding: 16px 20px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--slate-light);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+  }
+
+  .comp-table th:last-child {
+    background: rgba(244, 120, 32, 0.06);
+    color: var(--orange);
+  }
+
+  .comp-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    color: var(--gray-300);
+  }
+
+  .comp-table td:last-child {
+    background: rgba(244, 120, 32, 0.03);
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .comp-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .comp-table tr:hover td:last-child {
+    background: rgba(244, 120, 32, 0.06);
+  }
+
+  .check { color: var(--green); }
+  .cross { color: var(--red); opacity: 0.5; }
+  .partial { color: var(--amber); }
+  .star { color: var(--orange); }
+
+  /* Layout mockup */
+  .mockup-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 48px;
+  }
+
+  .mockup-browser {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .browser-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .mockup-content {
+    padding: 0;
+  }
+
+  /* Plan Room Mockup */
+  .plan-room {
+    background: #f8f9fb;
+    color: #1e293b;
+    min-height: 500px;
+  }
+
+  .pr-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    height: 52px;
+  }
+
+  .pr-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .pr-back {
+    font-size: 13px;
+    color: #64748b;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pr-title-main {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .pr-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+    color: #94a3b8;
+    min-width: 260px;
+  }
+
+  .pr-search kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: auto;
+    color: #94a3b8;
+  }
+
+  .pr-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pr-filter-btn {
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pr-upload-btn {
+    font-size: 13px;
+    font-weight: 600;
+    color: white;
+    background: #F47820;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pr-body {
+    padding: 24px;
+  }
+
+  .pr-discipline-group {
+    margin-bottom: 32px;
+  }
+
+  .pr-discipline-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .pr-disc-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+  }
+
+  .pr-disc-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  .pr-disc-count {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+
+  .pr-disc-type {
+    font-size: 11px;
+    color: #94a3b8;
+    background: #f1f5f9;
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-left: auto;
+  }
+
+  .pr-sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .pr-sheet-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .pr-sheet-card:hover {
+    border-color: #F47820;
+    box-shadow: 0 4px 20px rgba(244, 120, 32, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .pr-sheet-thumb {
+    height: 140px;
+    background: linear-gradient(135deg, #f8f9fb, #eef2f7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pr-sheet-thumb svg {
+    opacity: 0.15;
+  }
+
+  .pr-sheet-status {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+  }
+
+  .status-current { background: #d1fae5; color: #065f46; }
+  .status-review { background: #fef3c7; color: #92400e; }
+  .status-clash { background: #fee2e2; color: #991b1b; }
+
+  .pr-sheet-info {
+    padding: 12px 14px;
+  }
+
+  .pr-sheet-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 2px;
+  }
+
+  .pr-sheet-title {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pr-sheet-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .pr-rev-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    background: #f1f5f9;
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  /* Viewer Mockup */
+  .viewer-mockup {
+    background: #1a1a2e;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .viewer-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    height: 44px;
+  }
+
+  .viewer-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .viewer-back {
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+
+  .viewer-sheet-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+  }
+
+  .viewer-sheet-title {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    margin-left: 8px;
+  }
+
+  .viewer-tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .viewer-tool-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.15s;
+  }
+
+  .viewer-tool-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: white;
+  }
+
+  .viewer-tool-btn.active {
+    background: rgba(244, 120, 32, 0.2);
+    color: var(--orange);
+  }
+
+  .viewer-tool-sep {
+    width: 1px;
+    height: 20px;
+    background: rgba(255,255,255,0.1);
+    margin: 0 4px;
+  }
+
+  .viewer-canvas {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #13132a;
+    overflow: hidden;
+  }
+
+  .viewer-drawing-placeholder {
+    width: 75%;
+    height: 80%;
+    background: white;
+    border-radius: 2px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .viewer-drawing-placeholder::after {
+    content: 'A101 — 1st Floor Plan';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #94a3b8;
+    position: absolute;
+    bottom: 12px;
+    right: 16px;
+  }
+
+  .viewer-grid-lines {
+    position: absolute;
+    inset: 20px;
+    opacity: 0.06;
+    background-image:
+      linear-gradient(#000 1px, transparent 1px),
+      linear-gradient(90deg, #000 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .viewer-minimap {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 140px;
+    height: 100px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+  }
+
+  .minimap-viewport {
+    width: 40px;
+    height: 30px;
+    border: 1.5px solid var(--orange);
+    border-radius: 2px;
+    background: rgba(244, 120, 32, 0.1);
+  }
+
+  .minimap-label {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .viewer-sheet-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(0,0,0,0.4);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    overflow-x: auto;
+  }
+
+  .strip-sheet {
+    flex-shrink: 0;
+    width: 64px;
+    height: 48px;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid transparent;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .strip-sheet:hover {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+  }
+
+  .strip-sheet.active {
+    border-color: var(--orange);
+    background: rgba(244, 120, 32, 0.1);
+    color: var(--orange);
+    font-weight: 600;
+  }
+
+  /* Floating toolbar mockup */
+  .floating-toolbar {
+    position: absolute;
+    top: 50%;
+    left: 24px;
+    transform: translateY(-50%);
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ft-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s;
+  }
+
+  .ft-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: white;
+  }
+
+  .ft-btn.active {
+    background: var(--orange);
+    color: white;
+  }
+
+  .ft-sep {
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+    margin: 4px 6px;
+  }
+
+  /* Diff slider mockup */
+  .diff-mockup {
+    background: #1a1a2e;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .diff-drawing {
+    width: 70%;
+    height: 75%;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .diff-old {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #fff5f5, #ffe0e0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #991b1b;
+    font-weight: 500;
+  }
+
+  .diff-new {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 55%;
+    background: linear-gradient(135deg, #f0fff4, #d1fae5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #065f46;
+    font-weight: 500;
+    border-right: 3px solid var(--orange);
+  }
+
+  .diff-handle {
+    position: absolute;
+    top: 50%;
+    left: 55%;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    box-shadow: 0 2px 12px rgba(244, 120, 32, 0.4);
+    cursor: ew-resize;
+    z-index: 2;
+  }
+
+  .diff-labels {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 24px;
+    z-index: 3;
+  }
+
+  .diff-label {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 100px;
+    backdrop-filter: blur(10px);
+  }
+
+  .diff-label-old {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .diff-label-new {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  /* Phase Timeline */
+  .phase-timeline {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    position: relative;
+  }
+
+  @media (max-width: 900px) {
+    .phase-timeline { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .phase-timeline { grid-template-columns: 1fr; }
+  }
+
+  .phase-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .phase-1::before { background: var(--orange); }
+  .phase-2::before { background: var(--blue); }
+  .phase-3::before { background: var(--purple); }
+  .phase-4::before { background: var(--green); }
+
+  .phase-week {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .phase-1 .phase-week { color: var(--orange); }
+  .phase-2 .phase-week { color: var(--blue); }
+  .phase-3 .phase-week { color: var(--purple); }
+  .phase-4 .phase-week { color: var(--green); }
+
+  .phase-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+
+  .phase-card .phase-tagline {
+    font-size: 13px;
+    color: var(--slate-light);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+
+  .phase-items {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .phase-items li {
+    font-size: 13px;
+    color: var(--gray-300);
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.5;
+  }
+
+  .phase-items li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--slate-light);
+  }
+
+  /* Tech stack */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .tech-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: all 0.2s;
+  }
+
+  .tech-card:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .tech-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .tech-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .tech-role {
+    font-size: 12px;
+    color: var(--slate-light);
+  }
+
+  .tech-license {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Principles */
+  .principles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+
+  .principle-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+  }
+
+  .principle-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 800;
+    color: rgba(244, 120, 32, 0.2);
+    margin-bottom: 16px;
+    line-height: 1;
+  }
+
+  .principle-card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .principle-card p {
+    font-size: 13px;
+    color: var(--slate-light);
+    line-height: 1.6;
+  }
+
+  /* Metrics */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .metrics-row { grid-template-columns: 1fr; }
+  }
+
+  .metric-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+  }
+
+  .metric-value {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--orange), #f97316);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .metric-label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .metric-detail {
+    font-size: 12px;
+    color: var(--slate-light);
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 60px 40px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .footer p {
+    font-size: 14px;
+    color: var(--slate-light);
+  }
+
+  .footer-quote {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">Strategic Design Plan</div>
+    <h1>The Drawings Page,<br><span>Reimagined.</span></h1>
+    <p>A comprehensive redesign plan based on deep research into what general contractors actually need, competitive analysis of Procore, Bluebeam, PlanGrid, and Fieldwire, and the design principles of history's greatest product minds.</p>
+    <div class="hero-quote">
+      "Design is not just what it looks like and feels like. Design is how it works."
+      <cite>Steve Jobs</cite>
+    </div>
+  </div>
+</section>
+
+<!-- ===== RESEARCH: What GCs Need ===== -->
+<section class="section-full section-dark">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">01 — Research</div>
+      <h2 class="section-title">What GCs Actually Need</h2>
+      <p class="section-subtitle">Ranked by impact on daily work, from superintendent interviews and competitive analysis</p>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background: rgba(244, 120, 32, 0.1); color: var(--orange);">1</div>
+        <h3>Instant Access to the Right Sheet</h3>
+        <p>The #1 pain point. A super on site has dirty hands, bad connectivity, and 30 seconds of patience. Finding the correct, current drawing must be effortless.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--blue);">2</div>
+        <h3>Crystal-Clear Version Control</h3>
+        <p>"Is this Rev C or Rev E?" kills trust. Every revision must be visually unmistakable. The current set must be obvious at a glance. No ambiguity.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--green);">3</div>
+        <h3>Buttery-Smooth Plan Viewing</h3>
+        <p>Pinch-zoom, pan, and navigation must feel like Apple Maps — not a clunky PDF viewer. Construction drawings are large, detailed documents that demand a world-class viewer.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--purple);">4</div>
+        <h3>Markup That Doesn't Fight You</h3>
+        <p>Pen, text, shapes, measurements — all must be one-tap away. Bluebeam sets the bar with professional-grade annotation. We need to match or exceed it.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--amber);">5</div>
+        <h3>Sheet-to-Sheet Hyperlinking</h3>
+        <p>Detail callouts like "SEE A5.01" should be clickable links, not dead text. Procore and Fieldwire auto-detect these. We can do it with AI — better.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--red);">6</div>
+        <h3>RFI / Punch / Photo Integration</h3>
+        <p>Drawings are the spatial anchor for everything on a jobsite. Every issue, photo, and question should live on the plan — not in a separate tab.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Current Problems ===== -->
+<section class="section-full section-alt">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">02 — Diagnosis</div>
+      <h2 class="section-title">What's Wrong Today</h2>
+      <p class="section-subtitle">10 specific issues found after deep-diving the current 1,000+ line implementation</p>
+    </div>
+
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-severity severity-critical">!</div>
+        <div>
+          <h4>PDF Viewer Is Basic</h4>
+          <p>react-pdf renders page-by-page at fixed resolution. No smooth zoom, no minimap, no semantic zoom. Feels like 2015.</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-critical">!</div>
+        <div>
+          <h4>Metric Cards Steal Prime Real Estate</h4>
+          <p>4 stat cards at the top push actual drawings below the fold. A super doesn't care about "disciplines count."</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-high">!</div>
+        <div>
+          <h4>340px Fixed Sidebar Wastes Space</h4>
+          <p>25% of screen width locked to metadata when the user wants to SEE THE PLAN. Should be on-demand.</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-high">!</div>
+        <div>
+          <h4>No Drawing Set Grouping</h4>
+          <p>A 200-page plan set shows as 200 individual rows. No hierarchy, no discipline grouping, no spatial organization.</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-high">!</div>
+        <div>
+          <h4>600+ Inline Style Objects</h4>
+          <p>Every component is styled inline. Impossible to maintain a consistent design language or make sweeping visual improvements.</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-high">!</div>
+        <div>
+          <h4>Table View Is Default</h4>
+          <p>Construction people think spatially. Grid with large thumbnails should be default — the drawing IS the interface.</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-medium">!</div>
+        <div>
+          <h4>No Breadcrumb Navigation</h4>
+          <p>Once inside a drawing, there's no spatial sense of where you are in the set. Can't quickly jump between related sheets.</p>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-severity severity-medium">!</div>
+        <div>
+          <h4>No Keyboard Shortcuts</h4>
+          <p>Only Cmd+K for search. Power users need arrow keys, space to preview, keyboard-driven markup tools.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Competitive Analysis ===== -->
+<section class="section-full section-dark">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">03 — Competition</div>
+      <h2 class="section-title">Competitive Teardown</h2>
+      <p class="section-subtitle">How we stack up — and where we'll leapfrog everyone</p>
+    </div>
+
+    <div class="comp-table-wrap">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Procore</th>
+            <th>Bluebeam</th>
+            <th>PlanGrid/ACC</th>
+            <th>Fieldwire</th>
+            <th>SiteSync Target</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sheet Hyperlinking</td>
+            <td><span class="check">&#10003; Auto</span></td>
+            <td><span class="cross">&#10007; Manual</span></td>
+            <td><span class="check">&#10003; Auto</span></td>
+            <td><span class="check">&#10003; Auto</span></td>
+            <td><span class="star">&#9733; AI-powered</span></td>
+          </tr>
+          <tr>
+            <td>Revision Comparison</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="check">&#10003; Advanced</span></td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="star">&#9733; Slider + AI diff</span></td>
+          </tr>
+          <tr>
+            <td>Markup Tools</td>
+            <td><span class="check">&#10003; Basic</span></td>
+            <td><span class="check">&#10003; Best-in-class</span></td>
+            <td><span class="check">&#10003; Good</span></td>
+            <td><span class="check">&#10003; Basic</span></td>
+            <td><span class="star">&#9733; Bluebeam-level</span></td>
+          </tr>
+          <tr>
+            <td>Offline Support</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="partial">~ Desktop</span></td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="star">&#9733; Service Worker</span></td>
+          </tr>
+          <tr>
+            <td>AI Classification</td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="star">&#9733; Gemini 2.5 Pro</span></td>
+          </tr>
+          <tr>
+            <td>Drawing Set Hierarchy</td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="check">&#10003;</span></td>
+            <td><span class="star">&#9733; AI-organized</span></td>
+          </tr>
+          <tr>
+            <td>Natural Language Search</td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="star">&#9733; "3rd floor mech"</span></td>
+          </tr>
+          <tr>
+            <td>Clash Detection</td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="star">&#9733; AI-powered</span></td>
+          </tr>
+          <tr>
+            <td>Tiled Infinite Zoom</td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="partial">~ Desktop</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="cross">&#10007;</span></td>
+            <td><span class="star">&#9733; OpenSeadragon</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Design DNA: Minimalist Research ===== -->
+<section class="section-full section-alt">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">04 — Design DNA</div>
+      <h2 class="section-title">Lessons from the Masters</h2>
+      <p class="section-subtitle">What we learned studying the best minimalist interfaces — and what we're stealing</p>
+    </div>
+
+    <div class="card-grid" style="margin-bottom: 48px;">
+      <div class="card" style="border-left: 3px solid var(--slate-light);">
+        <h3 style="font-size: 16px;">SumatraPDF</h3>
+        <p>Under 10MB. No ribbons, no sidebars, no popups. Everything subordinated to content. <strong>Lesson:</strong> eliminate every pixel not serving the user's current task.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--gray-300);">
+        <h3 style="font-size: 16px;">Apple Preview</h3>
+        <p>Zero onboarding needed. Annotation tools hidden until you need them. Content fills the window. <strong>Lesson:</strong> toolbars should be invisible until summoned.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--blue);">
+        <h3 style="font-size: 16px;">PDF Expert (Readdle)</h3>
+        <p>Architects call it out for speed, smoothness, and Apple Pencil fluidity. UI feels balanced and premium. <strong>Lesson:</strong> markup must feel like writing on paper, not fighting software.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--purple);">
+        <h3 style="font-size: 16px;">Linear</h3>
+        <p>Reduced 98 theme variables to 3. Monochrome with few bold accents. Not every element carries equal weight. <strong>Lesson:</strong> discipline with color, obsession with alignment.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--green);">
+        <h3 style="font-size: 16px;">PDFgear</h3>
+        <p>Three themes, five background colors, zero clutter. Fulfills exactly what's needed. <strong>Lesson:</strong> don't add features, add calm.</p>
+      </div>
+      <div class="card" style="border-left: 3px solid var(--amber);">
+        <h3 style="font-size: 16px;">"Linear Design" Trend</h3>
+        <p>Clean, clutter-free, high-contrast. Single directional eye movement. Bold typography for clarity. <strong>Lesson:</strong> sequential beats decorative every time.</p>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-bottom: 40px;">
+      <h2 class="section-title" style="font-size: 32px;">The Minimalist Manifesto</h2>
+      <p class="section-subtitle">8 non-negotiable rules derived from the research above</p>
+    </div>
+
+    <div class="pain-grid">
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">1</div>
+        <div>
+          <h4>Color Budget: Max 3 at a Time</h4>
+          <p>Black/white/gray base + orange accent + one status color. Kill the rainbow of discipline colors. Use subtle tinted backgrounds instead.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">2</div>
+        <div>
+          <h4>Button Audit: 80/80 Rule</h4>
+          <p>If a button isn't used by 80%+ of users on 80%+ of visits, it's hidden behind overflow. Period.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">3</div>
+        <div>
+          <h4>Zero Chrome in Viewer</h4>
+          <p>Toolbar auto-hides after 3s of inactivity (like video players). Tap/move to reveal. The DRAWING is the UI.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">4</div>
+        <div>
+          <h4>3 Font Sizes Only</h4>
+          <p>13px body, 16px emphasis, 11px caption. Sheet numbers in JetBrains Mono. Everything else Inter. Max 2 weights per view.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">5</div>
+        <div>
+          <h4>8px Spacing Grid</h4>
+          <p>Everything is a multiple of 8: 8, 16, 24, 32, 48. No exceptions. This creates the "calm alignment" that Linear achieves.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">6</div>
+        <div>
+          <h4>200ms Transition Max</h4>
+          <p>Ease-out curves only. No bounce, no spring, no playful effects. Professional, precise, confident.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">7</div>
+        <div>
+          <h4>Dark Viewer, Light List</h4>
+          <p>Browser is light (familiar). Viewer is dark (professional, reduces eye strain). Clear psychological boundary between browsing and working.</p>
+        </div>
+      </div>
+      <div class="pain-card" style="background: rgba(244, 120, 32, 0.04); border-color: rgba(244, 120, 32, 0.1);">
+        <div class="pain-severity" style="background: rgba(244, 120, 32, 0.15); color: var(--orange); font-size: 12px; font-weight: 800;">8</div>
+        <div>
+          <h4>One Action Per State</h4>
+          <p>ONE primary action at any moment. Upload when empty. View when browsing. Markup when viewing. Never compete for attention.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Design Principles ===== -->
+<section class="section-full section-dark">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">05 — Core Principles</div>
+      <h2 class="section-title">Design Principles</h2>
+      <p class="section-subtitle">Every decision passes through these five filters</p>
+    </div>
+
+    <div class="principles-grid">
+      <div class="principle-card">
+        <div class="principle-number">01</div>
+        <h3>The Drawing IS the Interface</h3>
+        <p>The plan itself is the primary UI element. Everything revolves around the plan — not sidebars, not tables.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-number">02</div>
+        <h3>Progressive Disclosure</h3>
+        <p>Show the minimum. Reveal complexity on demand. A super sees sheets. A PM sees metadata. Both are served.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-number">03</div>
+        <h3>Spatial > Tabular</h3>
+        <p>Construction people think in space, not spreadsheets. Grid view default. Thumbnails are the navigation.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-number">04</div>
+        <h3>Zero-Friction Transitions</h3>
+        <p>Opening a drawing should feel like zooming into a map — not opening a new app. Seamless spatial continuity.</p>
+      </div>
+      <div class="principle-card">
+        <div class="principle-number">05</div>
+        <h3>AI as Invisible Infrastructure</h3>
+        <p>AI works silently — auto-classify, auto-link, detect changes. Not a feature you "use" but intelligence you feel.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== The Redesign: Plan Room ===== -->
+<section class="section-full section-dark">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">06 — The Plan Room</div>
+      <h2 class="section-title">Drawing Set View</h2>
+      <p class="section-subtitle">Grouped by discipline, large thumbnails, instant visual recognition</p>
+    </div>
+
+    <div class="mockup-container">
+      <div class="mockup-browser">
+        <div class="browser-dot" style="background: #ff5f57;"></div>
+        <div class="browser-dot" style="background: #ffbd2e;"></div>
+        <div class="browser-dot" style="background: #28c840;"></div>
+        <span style="margin-left: 12px; font-size: 12px; color: var(--slate-light);">sitesync.app/project/highland-tower/drawings</span>
+      </div>
+      <div class="mockup-content">
+        <div class="plan-room">
+          <!-- Top bar -->
+          <div class="pr-topbar">
+            <div class="pr-topbar-left">
+              <a class="pr-back" href="#">&#8592; Project</a>
+              <span class="pr-title-main">Drawings</span>
+            </div>
+            <div class="pr-search">
+              <span>&#128269;</span> Search drawings...
+              <kbd>&#8984;K</kbd>
+            </div>
+            <div class="pr-topbar-right">
+              <button class="pr-filter-btn">Discipline &#9662;</button>
+              <button class="pr-filter-btn">Status &#9662;</button>
+              <button class="pr-filter-btn" style="padding: 7px 10px;">&#9776;</button>
+              <button class="pr-upload-btn">&#8593; Upload</button>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="pr-body">
+            <!-- Architectural Group -->
+            <div class="pr-discipline-group">
+              <div class="pr-discipline-header">
+                <div class="pr-disc-badge" style="background: #3B82F6;">A</div>
+                <span class="pr-disc-name">Architectural</span>
+                <span class="pr-disc-count">8 sheets</span>
+                <span class="pr-disc-type">Floor Plans</span>
+              </div>
+              <div class="pr-sheet-grid">
+                <div class="pr-sheet-card">
+                  <div class="pr-sheet-thumb">
+                    <svg width="120" height="90" viewBox="0 0 120 90"><rect x="10" y="10" width="100" height="70" rx="2" fill="none" stroke="#000" stroke-width="0.5"/><line x1="30" y1="10" x2="30" y2="80" stroke="#000" stroke-width="0.3"/><line x1="60" y1="10" x2="60" y2="80" stroke="#000" stroke-width="0.3"/><line x1="90" y1="10" x2="90" y2="80" stroke="#000" stroke-width="0.3"/><line x1="10" y1="30" x2="110" y2="30" stroke="#000" stroke-width="0.3"/><line x1="10" y1="55" x2="110" y2="55" stroke="#000" stroke-width="0.3"/></svg>
+                    <span class="pr-sheet-status status-current">Current</span>
+                  </div>
+                  <div class="pr-sheet-info">
+                    <div class="pr-sheet-number">A-101</div>
+                    <div class="pr-sheet-title">1st Floor Plan</div>
+                    <div class="pr-sheet-meta">
+                      <span class="pr-rev-badge">Rev 3</span>
+                      <span>Apr 15</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="pr-sheet-card">
+                  <div class="pr-sheet-thumb">
+                    <svg width="120" height="90" viewBox="0 0 120 90"><rect x="10" y="10" width="100" height="70" rx="2" fill="none" stroke="#000" stroke-width="0.5"/><line x1="35" y1="10" x2="35" y2="80" stroke="#000" stroke-width="0.3"/><line x1="70" y1="10" x2="70" y2="80" stroke="#000" stroke-width="0.3"/><line x1="10" y1="35" x2="110" y2="35" stroke="#000" stroke-width="0.3"/><line x1="10" y1="60" x2="110" y2="60" stroke="#000" stroke-width="0.3"/></svg>
+                    <span class="pr-sheet-status status-current">Current</span>
+                  </div>
+                  <div class="pr-sheet-info">
+                    <div class="pr-sheet-number">A-102</div>
+                    <div class="pr-sheet-title">2nd Floor Plan</div>
+                    <div class="pr-sheet-meta">
+                      <span class="pr-rev-badge">Rev 2</span>
+                      <span>Apr 12</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="pr-sheet-card">
+                  <div class="pr-sheet-thumb">
+                    <svg width="120" height="90" viewBox="0 0 120 90"><rect x="10" y="10" width="100" height="70" rx="2" fill="none" stroke="#000" stroke-width="0.5"/><line x1="40" y1="10" x2="40" y2="80" stroke="#000" stroke-width="0.3"/><line x1="80" y1="10" x2="80" y2="80" stroke="#000" stroke-width="0.3"/><line x1="10" y1="40" x2="110" y2="40" stroke="#000" stroke-width="0.3"/></svg>
+                    <span class="pr-sheet-status status-review">For Review</span>
+                  </div>
+                  <div class="pr-sheet-info">
+                    <div class="pr-sheet-number">A-103</div>
+                    <div class="pr-sheet-title">3rd Floor Plan</div>
+                    <div class="pr-sheet-meta">
+                      <span class="pr-rev-badge">Rev 2</span>
+                      <span>Apr 18</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="pr-sheet-card">
+                  <div class="pr-sheet-thumb">
+                    <svg width="120" height="90" viewBox="0 0 120 90"><rect x="10" y="15" width="100" height="60" rx="2" fill="none" stroke="#000" stroke-width="0.5"/><rect x="25" y="25" width="20" height="40" rx="1" fill="none" stroke="#000" stroke-width="0.3"/><rect x="55" y="25" width="20" height="40" rx="1" fill="none" stroke="#000" stroke-width="0.3"/><rect x="85" y="25" width="20" height="40" rx="1" fill="none" stroke="#000" stroke-width="0.3"/></svg>
+                    <span class="pr-sheet-status status-current">Current</span>
+                  </div>
+                  <div class="pr-sheet-info">
+                    <div class="pr-sheet-number">A-201</div>
+                    <div class="pr-sheet-title">North Elevation</div>
+                    <div class="pr-sheet-meta">
+                      <span class="pr-rev-badge">Rev 1</span>
+                      <span>Mar 28</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Structural Group -->
+            <div class="pr-discipline-group">
+              <div class="pr-discipline-header">
+                <div class="pr-disc-badge" style="background: #E74C3C;">S</div>
+                <span class="pr-disc-name">Structural</span>
+                <span class="pr-disc-count">6 sheets</span>
+                <span class="pr-disc-type">Foundation & Framing</span>
+              </div>
+              <div class="pr-sheet-grid">
+                <div class="pr-sheet-card">
+                  <div class="pr-sheet-thumb">
+                    <svg width="120" height="90" viewBox="0 0 120 90"><rect x="10" y="10" width="100" height="70" rx="2" fill="none" stroke="#000" stroke-width="0.5"/><circle cx="30" cy="30" r="6" fill="none" stroke="#000" stroke-width="0.3"/><circle cx="60" cy="30" r="6" fill="none" stroke="#000" stroke-width="0.3"/><circle cx="90" cy="30" r="6" fill="none" stroke="#000" stroke-width="0.3"/><circle cx="30" cy="55" r="6" fill="none" stroke="#000" stroke-width="0.3"/><circle cx="60" cy="55" r="6" fill="none" stroke="#000" stroke-width="0.3"/><circle cx="90" cy="55" r="6" fill="none" stroke="#000" stroke-width="0.3"/></svg>
+                    <span class="pr-sheet-status status-current">Current</span>
+                  </div>
+                  <div class="pr-sheet-info">
+                    <div class="pr-sheet-number">S-101</div>
+                    <div class="pr-sheet-title">Foundation Plan</div>
+                    <div class="pr-sheet-meta">
+                      <span class="pr-rev-badge">Rev 1</span>
+                      <span>Mar 20</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="pr-sheet-card">
+                  <div class="pr-sheet-thumb">
+                    <svg width="120" height="90" viewBox="0 0 120 90"><rect x="10" y="10" width="100" height="70" rx="2" fill="none" stroke="#000" stroke-width="0.5"/><line x1="10" y1="25" x2="110" y2="25" stroke="#000" stroke-width="0.5"/><line x1="10" y1="55" x2="110" y2="55" stroke="#000" stroke-width="0.5"/><line x1="35" y1="25" x2="35" y2="55" stroke="#000" stroke-width="0.3"/><line x1="60" y1="25" x2="60" y2="55" stroke="#000" stroke-width="0.3"/><line x1="85" y1="25" x2="85" y2="55" stroke="#000" stroke-width="0.3"/></svg>
+                    <span class="pr-sheet-status status-clash">2 Clashes</span>
+                  </div>
+                  <div class="pr-sheet-info">
+                    <div class="pr-sheet-number">S-201</div>
+                    <div class="pr-sheet-title">2nd Floor Framing</div>
+                    <div class="pr-sheet-meta">
+                      <span class="pr-rev-badge">Rev 1</span>
+                      <span>Mar 25</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== The Viewer ===== -->
+<section class="section-full section-alt">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">07 — The Viewer</div>
+      <h2 class="section-title">Infinite Canvas Drawing Viewer</h2>
+      <p class="section-subtitle">OpenSeadragon tiled zoom, floating markup tools, minimap navigator, sheet strip</p>
+    </div>
+
+    <div class="mockup-container">
+      <div class="mockup-browser">
+        <div class="browser-dot" style="background: #ff5f57;"></div>
+        <div class="browser-dot" style="background: #ffbd2e;"></div>
+        <div class="browser-dot" style="background: #28c840;"></div>
+        <span style="margin-left: 12px; font-size: 12px; color: var(--slate-light);">Drawing Viewer — A-101: 1st Floor Plan</span>
+      </div>
+      <div class="mockup-content">
+        <div class="viewer-mockup">
+          <!-- Top bar -->
+          <div class="viewer-topbar">
+            <div class="viewer-topbar-left">
+              <span class="viewer-back">&#8592; Set</span>
+              <span class="viewer-sheet-name">A-101</span>
+              <span class="viewer-sheet-title">1st Floor Plan</span>
+            </div>
+            <div class="viewer-tools">
+              <button class="viewer-tool-btn" title="Search">&#128269;</button>
+              <button class="viewer-tool-btn" title="Zoom In">+</button>
+              <button class="viewer-tool-btn" title="Zoom Out">-</button>
+              <button class="viewer-tool-btn" title="Fit">&#9744;</button>
+              <div class="viewer-tool-sep"></div>
+              <button class="viewer-tool-btn" title="Measure">&#128207;</button>
+              <button class="viewer-tool-btn active" title="Markup">&#9998;</button>
+              <button class="viewer-tool-btn" title="Pin">&#128204;</button>
+              <div class="viewer-tool-sep"></div>
+              <button class="viewer-tool-btn" title="Compare Revisions">&#8596;</button>
+              <button class="viewer-tool-btn" title="Split View">&#9109;</button>
+              <div class="viewer-tool-sep"></div>
+              <button class="viewer-tool-btn" title="Download">&#8595;</button>
+              <button class="viewer-tool-btn" title="Share">&#8599;</button>
+              <button class="viewer-tool-btn" title="More">&#8943;</button>
+            </div>
+          </div>
+
+          <!-- Canvas -->
+          <div class="viewer-canvas">
+            <!-- Floating markup toolbar -->
+            <div class="floating-toolbar">
+              <button class="ft-btn" title="Select">&#9670;</button>
+              <button class="ft-btn active" title="Pen">&#9998;</button>
+              <button class="ft-btn" title="Highlight">&#9729;</button>
+              <button class="ft-btn" title="Text">T</button>
+              <div class="ft-sep"></div>
+              <button class="ft-btn" title="Rectangle">&#9634;</button>
+              <button class="ft-btn" title="Arrow">&#8594;</button>
+              <button class="ft-btn" title="Cloud">&#9729;</button>
+              <div class="ft-sep"></div>
+              <button class="ft-btn" title="Measure">&#128207;</button>
+              <button class="ft-btn" title="Pin">&#128204;</button>
+            </div>
+
+            <!-- Drawing placeholder -->
+            <div class="viewer-drawing-placeholder">
+              <div class="viewer-grid-lines"></div>
+            </div>
+
+            <!-- Minimap -->
+            <div class="viewer-minimap">
+              <span class="minimap-label">Navigator</span>
+              <div class="minimap-viewport"></div>
+            </div>
+          </div>
+
+          <!-- Sheet strip -->
+          <div class="viewer-sheet-strip">
+            <div class="strip-sheet active">A-101</div>
+            <div class="strip-sheet">A-102</div>
+            <div class="strip-sheet">A-103</div>
+            <div class="strip-sheet">A-201</div>
+            <div class="strip-sheet">A-202</div>
+            <div class="strip-sheet">A-301</div>
+            <div class="strip-sheet">A-501</div>
+            <div class="strip-sheet">A-502</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 48px;">
+      <div class="card-grid card-grid-3">
+        <div class="card">
+          <h3 style="font-size: 16px;">Tiled Deep Zoom</h3>
+          <p>OpenSeadragon loads only visible tiles at the current zoom level. Smooth zoom from overview to reading 1/16" dimension text.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">Floating Markup Toolbar</h3>
+          <p>Figma-style tool palette that lives beside the drawing. One click to annotate. No modals, no context switching.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">Sheet Navigation Strip</h3>
+          <p>Horizontal thumbnail strip at bottom. Click to jump between sheets. Swipe left/right on mobile.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">Minimap Navigator</h3>
+          <p>Always visible. Shows your viewport position. Click anywhere on the minimap to jump there instantly.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">Callout Hyperlinking</h3>
+          <p>AI detects "SEE DETAIL A5.01" text and renders clickable hotspots. One tap navigates to the referenced sheet.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">Dark Viewer Background</h3>
+          <p>Dark navy (#1a1a2e) behind white drawings. Reduces eye strain, makes the plan pop. Professional feel.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Revision Diff ===== -->
+<section class="section-full section-dark">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">08 — The "Wow" Feature</div>
+      <h2 class="section-title">Revision Diff Slider</h2>
+      <p class="section-subtitle">Drag to reveal what changed. Like GitHub image diff — but for construction plans.</p>
+    </div>
+
+    <div class="mockup-container">
+      <div class="mockup-browser">
+        <div class="browser-dot" style="background: #ff5f57;"></div>
+        <div class="browser-dot" style="background: #ffbd2e;"></div>
+        <div class="browser-dot" style="background: #28c840;"></div>
+        <span style="margin-left: 12px; font-size: 12px; color: var(--slate-light);">Revision Compare — A-101: Rev 2 vs Rev 3</span>
+      </div>
+      <div class="mockup-content">
+        <div class="diff-mockup">
+          <div class="diff-labels">
+            <span class="diff-label diff-label-old">Rev 2 (Old)</span>
+            <span class="diff-label diff-label-new">Rev 3 (New)</span>
+          </div>
+          <div class="diff-drawing">
+            <div class="diff-old">Previous Revision</div>
+            <div class="diff-new">Current Revision</div>
+            <div class="diff-handle">&#8596;</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <div class="card-grid card-grid-3">
+        <div class="card">
+          <h3 style="font-size: 16px;">Slider Mode</h3>
+          <p>Drag a vertical line left/right to reveal old vs new revision. The most intuitive way to spot changes.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">AI Change Summary</h3>
+          <p>"3 walls moved, 2 doors added, dimensions updated in grid C-4" — AI tells you what changed in plain English.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 16px;">Synced Side-by-Side</h3>
+          <p>Two sheets, zoom and pan linked. Pan one, both pan. Perfect for coordination meetings.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Implementation Phases ===== -->
+<section class="section-full section-alt">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">09 — Execution</div>
+      <h2 class="section-title">Implementation Phases</h2>
+      <p class="section-subtitle">Four weeks to world-class. Each phase delivers standalone value.</p>
+    </div>
+
+    <div class="phase-timeline">
+      <div class="phase-card phase-1">
+        <div class="phase-week">Week 1-2</div>
+        <h3>Foundation</h3>
+        <p class="phase-tagline">"Make it beautiful"</p>
+        <ul class="phase-items">
+          <li>Remove metric cards from top</li>
+          <li>Default to grid view with 240px thumbnails</li>
+          <li>Drawing set grouping by discipline</li>
+          <li>Redesign toolbar — contextual, minimal</li>
+          <li>Slide-over detail panel (480px)</li>
+          <li>Skeleton loading states</li>
+          <li>Keyboard shortcuts</li>
+          <li>Consolidate shared constants</li>
+          <li>CSS modules or Tailwind migration</li>
+        </ul>
+      </div>
+
+      <div class="phase-card phase-2">
+        <div class="phase-week">Week 2-3</div>
+        <h3>The Viewer</h3>
+        <p class="phase-tagline">"Make it magical"</p>
+        <ul class="phase-items">
+          <li>Integrate OpenSeadragon</li>
+          <li>Build DZI tile generation pipeline</li>
+          <li>Add minimap navigator</li>
+          <li>Sheet navigation strip</li>
+          <li>Revision diff slider (juxtapose)</li>
+          <li>Floating Figma-style markup toolbar</li>
+          <li>Improved touch gestures</li>
+          <li>Scale-aware measurement tool</li>
+        </ul>
+      </div>
+
+      <div class="phase-card phase-3">
+        <div class="phase-week">Week 3-4</div>
+        <h3>Intelligence</h3>
+        <p class="phase-tagline">"Make it smart"</p>
+        <ul class="phase-items">
+          <li>AI callout hyperlinking</li>
+          <li>Enhanced fuzzy + metadata search</li>
+          <li>Revision change summary AI</li>
+          <li>Auto-organization of uploads</li>
+          <li>Clash detection pins ON drawing</li>
+          <li>Comment threads on coordinates</li>
+        </ul>
+      </div>
+
+      <div class="phase-card phase-4">
+        <div class="phase-week">Week 4</div>
+        <h3>Polish</h3>
+        <p class="phase-tagline">"Make it insanely great"</p>
+        <ul class="phase-items">
+          <li>Grid-to-viewer zoom transition</li>
+          <li>Progressive image loading</li>
+          <li>Dark mode for viewer</li>
+          <li>Offline tile caching</li>
+          <li>Follow mode (collaboration)</li>
+          <li>Activity feed on drawings</li>
+          <li>Deep link sharing</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tech Stack ===== -->
+<section class="section-full section-dark">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">10 — Technology</div>
+      <h2 class="section-title">Open Source Stack</h2>
+      <p class="section-subtitle">Battle-tested libraries. No reinventing wheels.</p>
+    </div>
+
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--blue);">&#128444;</div>
+        <div>
+          <div class="tech-name">OpenSeadragon</div>
+          <div class="tech-role">Tiled image viewer (replaces react-pdf)</div>
+        </div>
+        <span class="tech-license">BSD-3</span>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--green);">&#9889;</div>
+        <div>
+          <div class="tech-name">Sharp</div>
+          <div class="tech-role">Server-side DZI tile generation</div>
+        </div>
+        <span class="tech-license">Apache-2.0</span>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon" style="background: rgba(244, 120, 32, 0.1); color: var(--orange);">&#9998;</div>
+        <div>
+          <div class="tech-name">Fabric.js</div>
+          <div class="tech-role">Markup & annotation (keep)</div>
+        </div>
+        <span class="tech-license">MIT</span>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--purple);">&#128269;</div>
+        <div>
+          <div class="tech-name">Fuse.js</div>
+          <div class="tech-role">Client-side fuzzy search</div>
+        </div>
+        <span class="tech-license">Apache-2.0</span>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--amber);">&#9881;</div>
+        <div>
+          <div class="tech-name">Liveblocks</div>
+          <div class="tech-role">Real-time collaboration (keep)</div>
+        </div>
+        <span class="tech-license">Proprietary</span>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--blue);">&#128203;</div>
+        <div>
+          <div class="tech-name">react-virtual</div>
+          <div class="tech-role">Virtual scrolling for 500+ sheets</div>
+        </div>
+        <span class="tech-license">MIT</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Success Metrics ===== -->
+<section class="section-full section-alt">
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <div class="section-header">
+      <div class="section-number">11 — Metrics</div>
+      <h2 class="section-title">How We'll Know It Worked</h2>
+      <p class="section-subtitle">Measurable targets that prove the redesign delivers</p>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric-card">
+        <div class="metric-value">&lt;5s</div>
+        <div class="metric-label">Time to Find a Drawing</div>
+        <div class="metric-detail">Down from ~15-20 seconds today</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">&lt;2s</div>
+        <div class="metric-label">Drawing Load Time</div>
+        <div class="metric-detail">First paint. &lt;100ms when cached.</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">3x</div>
+        <div class="metric-label">Markup Adoption</div>
+        <div class="metric-detail">Increase in markups per user per week</div>
+      </div>
+    </div>
+
+    <div class="metrics-row" style="margin-top: 20px;">
+      <div class="metric-card">
+        <div class="metric-value">0</div>
+        <div class="metric-label">Wrong Revision Incidents</div>
+        <div class="metric-detail">Zero reports of building from wrong revision</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">70+</div>
+        <div class="metric-label">NPS Score</div>
+        <div class="metric-detail">For the drawings page specifically</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">80%</div>
+        <div class="metric-label">Field Adoption</div>
+        <div class="metric-detail">Field crew using digital vs. paper</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<section class="footer">
+  <p class="footer-quote">"The best software feels inevitable — like it couldn't have been designed any other way."</p>
+  <p style="margin-top: 32px; font-size: 13px;">SiteSync Drawings Redesign Plan &mdash; April 2026</p>
+</section>
+
+</body>
+</html>

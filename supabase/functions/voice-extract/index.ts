@@ -36,7 +36,7 @@ function checkRateLimit(userId: string): void {
   }
 }
 
-const EXTRACTION_SYSTEM_PROMPT = `You are a construction field report parser for SiteSync AI. Superintendents and foremen speak naturally on job sites. You extract structured data from their voice transcripts.
+const EXTRACTION_SYSTEM_PROMPT = `You are a construction field report parser for SiteSync PM. Superintendents and foremen speak naturally on job sites. You extract structured data from their voice transcripts.
 
 EXTRACTION RULES:
 1. Identify ALL entities: daily log activities, RFI drafts, punch items, safety observations

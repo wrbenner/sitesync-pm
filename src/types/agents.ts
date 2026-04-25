@@ -1,5 +1,5 @@
 // ── Multi-Agent System Types ──────────────────────────────────
-// Type definitions for the SiteSync AI agent orchestration system.
+// Type definitions for the SiteSync PM agent orchestration system.
 // Six specialist agents + one coordinator, each with domain-specific tools.
 
 // ── Agent Domains ─────────────────────────────────────────────

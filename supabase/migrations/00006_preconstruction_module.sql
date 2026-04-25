@@ -1,5 +1,5 @@
 -- =============================================================================
--- SiteSync AI: Preconstruction Module
+-- SiteSync PM: Preconstruction Module
 -- Estimating, bid management, quantity takeoffs, and cost databases.
 -- Full support for conceptual through CD level estimates, bid leveling,
 -- and digital takeoff workflows.

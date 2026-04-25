@@ -163,7 +163,7 @@ export const DashboardProjectHealth: React.FC<Props> = ({ metrics, onClick }) =>
                   style={{ height: '100%', backgroundColor: c, borderRadius: 2 }}
                 />
               </div>
-              <span style={{ fontSize: '10px', color: colors.textTertiary, lineHeight: 1.3 }}>
+              <span style={{ fontSize: '10px', color: colors.textSecondary, lineHeight: 1.3 }}>
                 {sub.context}
               </span>
             </div>

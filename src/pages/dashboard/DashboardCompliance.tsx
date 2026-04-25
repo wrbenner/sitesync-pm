@@ -146,7 +146,7 @@ export const DashboardCompliance: React.FC<Props> = ({ projectId }) => {
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
           padding: spacing['3'], backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.md, color: colors.textTertiary, fontSize: typography.fontSize.sm,
+          borderRadius: borderRadius.md, color: colors.textSecondary, fontSize: typography.fontSize.sm,
         }}>
           <ClipboardCheck size={14} />
           <span>No expiring permits, COIs, or failed inspections.</span>
@@ -196,7 +196,7 @@ export const DashboardCompliance: React.FC<Props> = ({ projectId }) => {
             );
           })}
           {rows.length > 6 && (
-            <div style={{ fontSize: '10px', color: colors.textTertiary, textAlign: 'center', paddingTop: spacing['1'] }}>
+            <div style={{ fontSize: '10px', color: colors.textSecondary, textAlign: 'center', paddingTop: spacing['1'] }}>
               +{rows.length - 6} more
             </div>
           )}

@@ -224,7 +224,7 @@ export const DashboardMyTasks: React.FC = () => {
             My Tasks
           </span>
         </div>
-        <span style={{ fontSize: '10px', color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>
+        <span style={{ fontSize: '10px', color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
           {overdue.length > 0 && (
             <span style={{ color: colors.statusCritical, marginRight: spacing['2'] }}>{overdue.length} overdue</span>
           )}
@@ -238,7 +238,7 @@ export const DashboardMyTasks: React.FC = () => {
         <div style={{
           display: 'flex', alignItems: 'center', gap: spacing['2'],
           padding: spacing['3'], backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.md, color: colors.textTertiary, fontSize: typography.fontSize.sm,
+          borderRadius: borderRadius.md, color: colors.textSecondary, fontSize: typography.fontSize.sm,
         }}>
           <Calendar size={14} />
           <span>No open tasks assigned to you.</span>
@@ -278,7 +278,7 @@ export const DashboardMyTasks: React.FC = () => {
                   <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {task.title}
                   </div>
-                  <div style={{ fontSize: '10px', color: due.overdue ? colors.statusCritical : colors.textTertiary, marginTop: 1 }}>
+                  <div style={{ fontSize: '10px', color: due.overdue ? colors.statusCritical : colors.textSecondary, marginTop: 1 }}>
                     {due.label}{task.project_name && ` · ${task.project_name}`}
                   </div>
                 </div>

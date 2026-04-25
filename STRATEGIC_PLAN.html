@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSync PM — World-Class Execution Plan v2</title>
+<style>
+  :root {
+    --orange: #F47820;
+    --orange-light: #FFF3E8;
+    --red: #E05252;
+    --red-light: #FFF0F0;
+    --green: #16A34A;
+    --green-light: #F0FDF4;
+    --yellow: #D97706;
+    --yellow-light: #FFFBEB;
+    --blue: #3B82F6;
+    --blue-light: #EFF6FF;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray-50); color: var(--gray-900); line-height: 1.6; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
+  .header { text-align: center; margin-bottom: 48px; }
+  .header h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+  .header h1 span { color: var(--orange); }
+  .header .subtitle { font-size: 18px; color: var(--gray-500); margin-bottom: 8px; }
+  .header .version { display: inline-block; padding: 4px 12px; background: var(--orange-light); color: var(--orange); font-size: 13px; font-weight: 600; border-radius: 20px; margin-bottom: 16px; }
+  .header .date { font-size: 13px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Diagnosis */
+  .diagnosis { background: var(--red-light); border: 1px solid #FECACA; border-radius: 12px; padding: 32px; margin-bottom: 40px; }
+  .diagnosis h2 { color: var(--red); font-size: 20px; margin-bottom: 16px; }
+  .diagnosis p { color: var(--gray-700); margin-bottom: 12px; }
+  .finding { background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; border-left: 3px solid var(--red); }
+  .finding .finding-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .finding .finding-detail { font-size: 13px; color: var(--gray-500); }
+  .finding .finding-count { display: inline-block; background: var(--red-light); color: var(--red); font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+
+  /* Good news */
+  .good-news { background: var(--green-light); border: 1px solid #BBF7D0; border-radius: 12px; padding: 32px; margin-bottom: 40px; }
+  .good-news h2 { color: var(--green); font-size: 20px; margin-bottom: 16px; }
+  .good-news p { color: var(--gray-700); margin-bottom: 8px; }
+  .good-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 14px; color: var(--gray-700); }
+  .good-item::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  /* Scorecard */
+  .scorecard { margin-bottom: 40px; }
+  .scorecard h2 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
+  .score-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .score-table th { background: var(--gray-900); color: white; padding: 12px 16px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .score-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); font-size: 14px; vertical-align: top; }
+  .score-table tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .pill-red { background: var(--red-light); color: var(--red); }
+  .pill-yellow { background: var(--yellow-light); color: var(--yellow); }
+  .pill-green { background: var(--green-light); color: var(--green); }
+  .pill-blue { background: var(--blue-light); color: var(--blue); }
+  .critical { font-weight: 600; color: var(--red); }
+  .fake-list { margin-top: 6px; font-size: 12px; color: var(--red); }
+  .fake-list code { background: #FEE2E2; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+
+  /* Phase cards */
+  .phase { background: white; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid var(--gray-200); }
+  .phase.p1 { border-left-color: var(--red); }
+  .phase.p2 { border-left-color: var(--orange); }
+  .phase.p3 { border-left-color: var(--blue); }
+  .phase.p4 { border-left-color: #8B5CF6; }
+  .phase.p5 { border-left-color: var(--green); }
+  .phase-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .phase.p1 .phase-label { color: var(--red); }
+  .phase.p2 .phase-label { color: var(--orange); }
+  .phase.p3 .phase-label { color: var(--blue); }
+  .phase.p4 .phase-label { color: #8B5CF6; }
+  .phase.p5 .phase-label { color: var(--green); }
+  .phase h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .phase .timeline { font-size: 13px; color: var(--gray-400); margin-bottom: 16px; }
+  .phase p { color: var(--gray-700); margin-bottom: 16px; font-size: 15px; }
+  .task-list { list-style: none; padding: 0; }
+  .task-list li { padding: 12px 0; border-bottom: 1px solid var(--gray-100); display: flex; align-items: flex-start; gap: 10px; font-size: 14px; }
+  .task-list li:last-child { border-bottom: none; }
+  .check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gray-200); flex-shrink: 0; margin-top: 2px; }
+  .task-title { font-weight: 600; color: var(--gray-900); }
+  .task-detail { color: var(--gray-500); font-size: 13px; margin-top: 2px; }
+  .task-files { font-size: 12px; color: var(--gray-400); margin-top: 4px; font-family: 'SF Mono', 'Fira Code', monospace; }
+
+  /* Cost section */
+  .cost-section { background: white; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .cost-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+  .cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .cost-card { padding: 20px; border-radius: 8px; border: 1px solid var(--gray-200); }
+  .cost-card .cost-label { font-size: 13px; color: var(--gray-500); margin-bottom: 4px; }
+  .cost-card .cost-value { font-size: 24px; font-weight: 800; }
+  .cost-card .cost-note { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+  .cost-card.highlight { background: var(--orange-light); border-color: var(--orange); grid-column: span 3; }
+  .cost-card.highlight .cost-value { color: var(--orange); }
+  .cost-breakdown { margin-top: 20px; }
+  .cost-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-100); font-size: 14px; }
+  .cost-row:last-child { border-bottom: none; font-weight: 700; }
+  .cost-row .cost-item { color: var(--gray-700); }
+  .cost-row .cost-amount { font-weight: 600; }
+
+  /* Timeline */
+  .timeline-section { background: white; border-radius: 12px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .timeline-section h2 { font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+  .tl-row { display: flex; gap: 16px; margin-bottom: 16px; align-items: stretch; }
+  .tl-week { width: 80px; flex-shrink: 0; text-align: center; }
+  .tl-week .tl-num { font-size: 24px; font-weight: 800; color: var(--orange); }
+  .tl-week .tl-label { font-size: 11px; color: var(--gray-400); text-transform: uppercase; }
+  .tl-bar { flex: 1; border-radius: 8px; padding: 16px; font-size: 13px; }
+  .tl-bar.red { background: var(--red-light); border: 1px solid #FECACA; }
+  .tl-bar.orange { background: var(--orange-light); border: 1px solid #FED7AA; }
+  .tl-bar.blue { background: var(--blue-light); border: 1px solid #BFDBFE; }
+  .tl-bar.purple { background: #F3E8FF; border: 1px solid #DDD6FE; }
+  .tl-bar.green { background: var(--green-light); border: 1px solid #BBF7D0; }
+  .tl-bar strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+  /* Bottom line */
+  .bottom-line { background: var(--gray-900); color: white; border-radius: 12px; padding: 32px; margin-top: 40px; }
+  .bottom-line h2 { font-size: 22px; font-weight: 700; margin-bottom: 16px; }
+  .bottom-line p { color: #D1D5DB; margin-bottom: 12px; line-height: 1.7; }
+  .bottom-line strong { color: var(--orange); }
+
+  @media (max-width: 640px) {
+    .cost-grid { grid-template-columns: 1fr; }
+    .cost-card.highlight { grid-column: span 1; }
+    .tl-row { flex-direction: column; }
+    .tl-week { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>SiteSync <span>PM</span> — Execution Plan</h1>
+    <div class="version">v2 — Complete Deep Audit</div>
+    <p class="subtitle">From prototype to Procore-killer in 5 phases</p>
+    <p class="date">April 20, 2026 · Prepared for Walker · Budget: up to $3,000</p>
+  </div>
+
+  <!-- DIAGNOSIS -->
+  <div class="diagnosis">
+    <h2>The Complete Diagnosis — Every Fake Action Found</h2>
+    <p>I audited every page, every toast message, every onClick handler, every mutation. Here's every place where a button lies to the user — says "success" without touching the database:</p>
+
+    <div class="finding">
+      <div class="finding-title">Submittals — Approve/Reject/Revise are completely fake <span class="finding-count">3 stubs</span></div>
+      <div class="finding-detail">SubmittalDetail.tsx lines 48-61: handleApprove(), handleReject(), handleRequestRevision() all just show a toast and close the panel. The service layer (submittalService.addApproval, createRevision) exists but is never called.</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-title">Pay Applications — Submit, Pay, and Process are all fake <span class="finding-count">5 stubs</span></div>
+      <div class="finding-detail">PaymentApplications.tsx: "Payment flow initiated" (line 139), "Application submitted for review" (line 153), "Opening payment flow" (line 1038), plus G702/G703 export fallbacks (lines 1058, 1084). The G702 math is penny-accurate — but you can't actually submit or pay.</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-title">Time Tracking — WH-347, Payroll Export, T&M, Wage Import are all fake <span class="finding-count">4 stubs</span></div>
+      <div class="finding-detail">"WH-347 report generated" (line 552) — no PDF. "T&M ticket creation form would open here" (line 567) — form doesn't exist. "Import from wage determination" (line 664) — no API. "Payroll exported" (line 734) — no file.</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-title">Change Orders — No line items, no budget impact, fake entity links <span class="finding-count">3 gaps</span></div>
+      <div class="finding-detail">Single flat "amount" field instead of line items by CSI code. Approved COs never update budget_items or project contract_value. getLinkedEntities() returns hardcoded []. Promotion creates duplicate record instead of converting.</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-title">Workforce — Certification renewal reminder is fake <span class="finding-count">1 stub</span></div>
+      <div class="finding-detail">Line 563: "Renewal reminder sent" toast with no backend action. Certifications use demo data (credentialDemoData), not Supabase queries.</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-title">Meetings — Action item reminder is fake <span class="finding-count">1 stub</span></div>
+      <div class="finding-detail">Line 1618: "Reminder sent to {assignee}" toast — no email or notification sent.</div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-title">Error Boundaries — Only 5 of 40+ pages are protected <span class="finding-count">35 pages exposed</span></div>
+      <div class="finding-detail">Dashboard, RFIs, Budget, Schedule, Submittals have ErrorBoundary wraps. Everything else crashes with a white screen on error.</div>
+    </div>
+  </div>
+
+  <!-- GOOD NEWS -->
+  <div class="good-news">
+    <h2>What the Audit Got Right — Better Than I Thought</h2>
+    <p>The deeper I dug, the more I found that's actually solid. Some findings from v1 were wrong:</p>
+    <div class="good-item">Contracts page is actually 1,790 lines with full CRUD + Schedule of Values + signature workflow + insurance tracking. It's 60-70% complete, not 30%.</div>
+    <div class="good-item">Notification system is REAL — in-app notifications query a real Supabase table with realtime subscriptions. queueNotification() is called 6 times in api/invalidation.ts.</div>
+    <div class="good-item">Permission system is production-ready — real role-based access from project_members table with realtime invalidation. 34-permission matrix enforced.</div>
+    <div class="good-item">Error handling foundation is solid — ApiError hierarchy, Sentry integration, global error boundaries, offline detection with Dexie cache.</div>
+    <div class="good-item">Lien Waivers work end-to-end — create, send for signature, track status. Not a stub.</div>
+    <div class="good-item">Daily Logs are 95% complete — create, weather, workforce, photos, submit, approve/reject, export all work.</div>
+    <div class="good-item">RFIs have a proper state machine with ball-in-court tracking, response timeline, and validated transitions.</div>
+    <div class="good-item">Pay App G702/G703 calculations are penny-accurate with proper AIA formula implementation.</div>
+  </div>
+
+  <!-- SCORECARD -->
+  <div class="scorecard">
+    <h2>Updated Workflow Scorecard</h2>
+    <table class="score-table">
+      <thead><tr><th>Module</th><th>What Works</th><th>What's Fake/Missing</th><th>Grade</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Daily Logs</strong></td>
+          <td>Full lifecycle: create, weather, workforce, equipment, visitors, photos, submit, approve/reject, export</td>
+          <td>Minor: amendment UI feedback</td>
+          <td><span class="pill pill-green">A</span></td>
+        </tr>
+        <tr>
+          <td><strong>RFIs</strong></td>
+          <td>Create, assign, respond, review, close/reopen, due dates, state machine, ball-in-court</td>
+          <td>Email notifications exist but never fire. Drawing link is text-only.</td>
+          <td><span class="pill pill-green">B+</span></td>
+        </tr>
+        <tr>
+          <td><strong>Punch List</strong></td>
+          <td>Create (wizard), assign, sub-complete, GC verify/reject, bulk actions, state machine, photos</td>
+          <td>No drawing linkage. Before/after photo capture stubbed.</td>
+          <td><span class="pill pill-green">B+</span></td>
+        </tr>
+        <tr>
+          <td><strong>Lien Waivers</strong></td>
+          <td>Create, send for signature, add signers, track status, delete</td>
+          <td>Nothing major</td>
+          <td><span class="pill pill-green">B+</span></td>
+        </tr>
+        <tr>
+          <td><strong>Contracts</strong></td>
+          <td>Full CRUD, SOV line items with calculations, signatures, insurance, payment milestones, compliance</td>
+          <td>No amendments. One compliance "Review" button is toast-only.</td>
+          <td><span class="pill pill-blue">B</span></td>
+        </tr>
+        <tr>
+          <td><strong>Pay Apps</strong></td>
+          <td>Create, G702/G703 math (correct!), SOV editing, PDF export, retention calc</td>
+          <td class="critical">"Submit" = toast. "Mark as Paid" = toast. "Process Payment" = toast. No payment ledger.
+            <div class="fake-list">Lines 139, 153, 1038 in PaymentApplications.tsx</div></td>
+          <td><span class="pill pill-yellow">C+</span></td>
+        </tr>
+        <tr>
+          <td><strong>Change Orders</strong></td>
+          <td>Create PCO, promote to COR, state machine, approval flow</td>
+          <td class="critical">No line items. Approved COs don't update budget. Entity links = []. Promotion duplicates.
+            <div class="fake-list">mutations.ts:57-93, ChangeOrders.tsx:313</div></td>
+          <td><span class="pill pill-yellow">C</span></td>
+        </tr>
+        <tr>
+          <td><strong>Submittals</strong></td>
+          <td>Create, state machine exists, due dates, CSI division lookup</td>
+          <td class="critical">Approve/Reject/Revise = all toast stubs. Document upload doesn't persist metadata. No revision flow.
+            <div class="fake-list">SubmittalDetail.tsx lines 48-61</div></td>
+          <td><span class="pill pill-red">D+</span></td>
+        </tr>
+        <tr>
+          <td><strong>Time Tracking</strong></td>
+          <td>Time entries, cost codes, approval, WH-347 data computation</td>
+          <td class="critical">WH-347 PDF = fake. T&M form = doesn't exist. Payroll export = fake. Wage import = fake.
+            <div class="fake-list">TimeTracking.tsx lines 552, 567, 664, 734</div></td>
+          <td><span class="pill pill-yellow">C</span></td>
+        </tr>
+        <tr>
+          <td><strong>Budget</strong></td>
+          <td>Upload/import, division health, variance detection, EAC forecast, waterfall chart</td>
+          <td>Contingency hardcoded. COs don't revise budget. No PO commitment linkage.</td>
+          <td><span class="pill pill-yellow">C+</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase p1">
+    <div class="phase-label">Phase 1 — Kill Every Fake Button</div>
+    <h3>Wire 17 Toast Stubs to Real Mutations</h3>
+    <div class="timeline">3 sessions · ~$120–180 in Claude usage · Highest ROI</div>
+    <p>Every button that says "success" without touching the database is a lie. Phase 1 eliminates all 17 lies. Most of the backend logic already exists — it's just never called.</p>
+    <ul class="task-list">
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Submittals: Wire approve/reject/revise to submittalService</div>
+          <div class="task-detail">Connect handleApprove → submittalService.addApproval(). Connect handleRequestRevision → submittalService.createRevision(). Wire document upload metadata persistence. The service layer is complete — just never imported.</div>
+          <div class="task-files">SubmittalDetail.tsx:48-61, submittalService.ts:204, :263</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Pay Apps: Wire submit + mark-as-paid + process payment</div>
+          <div class="task-detail">Replace 5 toast stubs with real mutations. "Submit for review" → status to 'submitted'. "Mark as Paid" → status to 'paid' + payment timestamp. "Process Payment" → payment flow. Add payment history ledger.</div>
+          <div class="task-files">PaymentApplications.tsx:139, 153, 1038</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Time Tracking: Build WH-347 PDF generation</div>
+          <div class="task-detail">The data computation for WH-347 already works (real time_entries grouped by workforce_member). Generate actual PDF using pdf-lib (already in the project). Wire payroll export to real CSV/XLSX download.</div>
+          <div class="task-files">TimeTracking.tsx:552, 734</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Time Tracking: Build T&M ticket creation form</div>
+          <div class="task-detail">Create a real T&M (Time & Materials) ticket modal with labor hours, material costs, equipment charges. Store to a time_material_tickets table or reuse existing structures.</div>
+          <div class="task-files">TimeTracking.tsx:567</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Workforce: Wire certification renewal to notifications</div>
+          <div class="task-detail">Replace demo credential data with real Supabase query. "Renewal reminder" should queue a real notification via queueNotification() (already used in 6 other places).</div>
+          <div class="task-files">Workforce.tsx:563</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Meetings: Wire action item reminder to notifications</div>
+          <div class="task-detail">"Reminder sent to {assignee}" should queue a real in-app notification. Pattern already exists in api/invalidation.ts.</div>
+          <div class="task-files">Meetings.tsx:1618</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase p2">
+    <div class="phase-label">Phase 2 — The Financial Backbone</div>
+    <h3>Connect Contracts ↔ Change Orders ↔ Budget ↔ Pay Apps</h3>
+    <div class="timeline">4 sessions · ~$160–240 · This is what separates Procore from toys</div>
+    <p>Right now the financial modules are isolated islands. A change order approval should ripple through the budget. A pay app should bill against a contract's SOV. This phase makes them talk to each other — the way Swinerton expects.</p>
+    <ul class="task-list">
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Change Order line items table + CRUD</div>
+          <div class="task-detail">Create change_order_line_items migration (cost_code, description, amount, scope_type). Replace single flat "amount" with itemized breakdown. Add/edit/remove line items in the CO detail view.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">CO approval → budget auto-update</div>
+          <div class="task-detail">When a change order status moves to "approved", automatically update budget_items committed amounts, project contract_value, and trigger EAC recalculation. This is the single most important financial connection.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Fix CO promotion logic</div>
+          <div class="task-detail">Change usePromoteChangeOrder from creating a new record to mutating the original's type field (PCO → COR). Maintain audit trail of the conversion. Single source of truth.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Pay Apps: Link billing to Contract SOV line items</div>
+          <div class="task-detail">Pay app line items should reference contract_sov_items. Track "completed to date" per SOV line. Calculate retention per line, not just globally. Show billing progress against each SOV item.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Budget: Dynamic contingency + CO-driven revisions</div>
+          <div class="task-detail">Replace hardcoded $3.8M contingency with real contingency cost code. When COs approve, auto-revise budget and recalculate. Wire PO commitments to budget lines via procurement data.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Contract amendments workflow</div>
+          <div class="task-detail">Add amendment creation to the Contracts page. Track amendment history, effective dates, impact on contract value. Link amendments to change orders that triggered them.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Entity linking: CO ↔ RFI ↔ Submittal ↔ Drawing</div>
+          <div class="task-detail">Create entity_links junction table (source_type, source_id, target_type, target_id). Replace all hardcoded empty arrays with real cross-module relationships. Show linked items in every detail panel.</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase p3">
+    <div class="phase-label">Phase 3 — Bulletproof Quality</div>
+    <h3>Error Boundaries, E2E Tests, Email Delivery</h3>
+    <div class="timeline">3 sessions · ~$120–180 · Makes it trustworthy</div>
+    <p>A platform Swinerton trusts can't crash with a white screen when a network request fails. Every page needs error protection, critical workflows need automated tests, and notifications need to actually arrive.</p>
+    <ul class="task-list">
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Add ErrorBoundary to all 35+ unprotected pages</div>
+          <div class="task-detail">Wrap every route-level component in the existing ErrorBoundary pattern. Show "Something went wrong" with retry button instead of white screen. Currently only Dashboard, RFIs, Budget, Schedule, Submittals are protected.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">E2E tests for 5 critical workflows</div>
+          <div class="task-detail">Playwright tests for: (1) RFI create → assign → respond → close, (2) Submittal create → approve, (3) Change order create → approve → budget update, (4) Pay app create → submit → approve, (5) Punch item create → complete → verify.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Wire email delivery via Resend</div>
+          <div class="task-detail">processNotificationQueue() exists but is never called. Create a Supabase Edge Function that runs on a cron to process the queue and send emails via Resend API. RFI assignments, submittal reviews, overdue alerts — real emails.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">RLS policies audit + enforcement</div>
+          <div class="task-detail">Every table needs Row Level Security so users only see their project's data. Audit all tables, add project_id-scoped RLS policies, test that cross-project data is invisible.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Drawing linkage for RFIs + Punch Items</div>
+          <div class="task-detail">Replace text-only drawing references with a real drawing picker component. Select from project drawings, show thumbnail preview. Store as FK relationship, not text string.</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase p4">
+    <div class="phase-label">Phase 4 — Demo-Ready Seed Data</div>
+    <h3>The "Parkview Tower" Demo Project</h3>
+    <div class="timeline">2 sessions · ~$80–120 · The difference between prototype and product</div>
+    <p>When you demo to Swinerton, the platform needs to feel alive — not empty. A realistic seed project with interconnected data across every module tells a story the moment someone logs in.</p>
+    <ul class="task-list">
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">SQL seed: "Parkview Tower" — $28M mixed-use project</div>
+          <div class="task-detail">15 cost codes, 6 subcontracts, 12 RFIs (various states), 8 submittals with approval chains, 5 change orders (some approved, affecting budget), 25 punch items, 30 days of daily logs, 3 pay apps at different stages, 2 contracts with SOV. All cross-linked via entity_links.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Realistic financial story</div>
+          <div class="task-detail">Budget shows one division over (concrete at 108%), one under (electrical at 72%), contingency 40% consumed by 3 approved COs. Dashboard EAC shows slight overrun. Pay app #3 is pending approval. This tells the "project health" story immediately.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Demo reset capability</div>
+          <div class="task-detail">"Reset Demo Project" button in Settings that re-runs the seed script. One click and you're back to a clean demo state. Essential for repeated Swinerton demos.</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase p5">
+    <div class="phase-label">Phase 5 — Production Launch</div>
+    <h3>Deploy, Monitor, and Polish</h3>
+    <div class="timeline">2 sessions + infrastructure setup · ~$80–120 in Claude + ongoing infra costs</div>
+    <p>Ship it for real. Custom domain, proper hosting, error monitoring, performance optimization. This is the last mile.</p>
+    <ul class="task-list">
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Deploy to Vercel with custom domain</div>
+          <div class="task-detail">Set up sitesyncpm.com (or similar). Preview deployments for PR branches. Environment variables for Supabase keys. Edge caching for static assets.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Upgrade Supabase to Pro</div>
+          <div class="task-detail">Daily backups, no pause after inactivity, point-in-time recovery, 8GB database, dedicated compute. The free tier pauses after 1 week of inactivity — unacceptable for a product.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Sentry error tracking</div>
+          <div class="task-detail">Global Sentry.init in main.tsx (foundation already exists). Source maps upload on deploy. Slack alerts for new errors. Know when things break before users tell you.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Performance audit + optimization</div>
+          <div class="task-detail">Lighthouse audit. Code-split heavy pages (BIM viewer, Drawing viewer). Lazy-load below-fold components. Optimize Supabase queries (add indexes for common filters). Target: LCP under 2s.</div>
+        </div>
+      </li>
+      <li>
+        <div class="check"></div>
+        <div>
+          <div class="task-title">Clean up duplicate files</div>
+          <div class="task-detail">Remove all "filename 2.tsx" duplicates throughout the codebase (ScheduleKPIs 2.tsx, index 2.tsx, PunchListDetail 2.tsx, etc.). These are macOS copy artifacts polluting the build.</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="timeline-section">
+    <h2>Execution Timeline</h2>
+    <div class="tl-row">
+      <div class="tl-week"><div class="tl-num">1</div><div class="tl-label">Week</div></div>
+      <div class="tl-bar red"><strong>Phase 1: Kill Every Fake Button</strong>Wire 17 toast stubs → real mutations. Submittals, Pay Apps, Time Tracking, Workforce, Meetings.</div>
+    </div>
+    <div class="tl-row">
+      <div class="tl-week"><div class="tl-num">2–3</div><div class="tl-label">Weeks</div></div>
+      <div class="tl-bar orange"><strong>Phase 2: Financial Backbone</strong>CO line items + budget impact. Pay App → Contract SOV billing. Entity linking. Contract amendments.</div>
+    </div>
+    <div class="tl-row">
+      <div class="tl-week"><div class="tl-num">4</div><div class="tl-label">Week</div></div>
+      <div class="tl-bar blue"><strong>Phase 3: Bulletproof Quality</strong>Error boundaries on 35 pages. E2E tests for 5 workflows. Email delivery. RLS policies. Drawing linkage.</div>
+    </div>
+    <div class="tl-row">
+      <div class="tl-week"><div class="tl-num">5</div><div class="tl-label">Week</div></div>
+      <div class="tl-bar purple"><strong>Phase 4: Seed Data</strong>"Parkview Tower" demo project with interconnected data. Financial story. Demo reset button.</div>
+    </div>
+    <div class="tl-row">
+      <div class="tl-week"><div class="tl-num">6</div><div class="tl-label">Week</div></div>
+      <div class="tl-bar green"><strong>Phase 5: Ship It</strong>Vercel deploy, Supabase Pro, Sentry, performance audit, cleanup.</div>
+    </div>
+  </div>
+
+  <!-- COST BREAKDOWN -->
+  <div class="cost-section">
+    <h2>Complete Investment Breakdown</h2>
+    <div class="cost-grid">
+      <div class="cost-card">
+        <div class="cost-label">One-Time: Claude Sessions</div>
+        <div class="cost-value">$560–840</div>
+        <div class="cost-note">~14 focused sessions across all 5 phases. This is where the code gets written.</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-label">One-Time: Domain + Setup</div>
+        <div class="cost-value">$15–50</div>
+        <div class="cost-note">Custom domain registration + DNS setup.</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-label">One-Time: Playwright Setup</div>
+        <div class="cost-value">$0</div>
+        <div class="cost-note">Free + open source. CI integration via GitHub Actions free tier.</div>
+      </div>
+    </div>
+    <div class="cost-breakdown">
+      <h3 style="font-size: 16px; margin-bottom: 12px; margin-top: 20px;">Monthly Infrastructure (Post-Launch)</h3>
+      <div class="cost-row"><span class="cost-item">Supabase Pro</span><span class="cost-amount">$25/mo</span></div>
+      <div class="cost-row"><span class="cost-item">Vercel Pro</span><span class="cost-amount">$20/mo</span></div>
+      <div class="cost-row"><span class="cost-item">Resend (email delivery)</span><span class="cost-amount">$0–20/mo</span></div>
+      <div class="cost-row"><span class="cost-item">Sentry (error tracking)</span><span class="cost-amount">$0/mo</span></div>
+      <div class="cost-row"><span class="cost-item">Monthly total</span><span class="cost-amount">$45–65/mo</span></div>
+    </div>
+    <div class="cost-grid" style="margin-top: 20px;">
+      <div class="cost-card highlight">
+        <div class="cost-label">Year 1 Total (development + 12 months hosting)</div>
+        <div class="cost-value">$1,115 – $1,670</div>
+        <div class="cost-note">Well within the $3,000 budget. Leaves $1,300–1,900 for contingency: additional Claude sessions for feature requests, a freelance QA tester for a day, or advanced features like SSO/SAML for enterprise auth.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM LINE -->
+  <div class="bottom-line">
+    <h2>The Bottom Line</h2>
+    <p>The deeper I looked, the more I found that's actually solid underneath. The permission system is production-ready. The notification infrastructure exists. The G702/G703 math is correct. The state machines are properly validated. The error handling foundation is strong.</p>
+    <p>What's missing is <strong>the wiring</strong>. Service layers that exist but are never called. Toast messages where mutations should be. Financial modules that don't talk to each other. Buttons that promise workflows they don't deliver.</p>
+    <p>Phase 1 alone — killing every fake button — would fundamentally change how the platform feels. A Swinerton PM clicks "Approve" on a submittal and it <em>actually approves</em>. Clicks "Submit" on a pay app and it <em>actually submits</em>. That's the difference between a demo and a product someone trusts with a $28M project.</p>
+    <p>All 5 phases, done right, in 6 weeks, for under $1,700. <strong>That leaves you $1,300 in reserve</strong> for the features Swinerton will ask for after they start using it.</p>
+    <p style="margin-top: 24px; color: var(--orange); font-weight: 700; font-size: 18px;">Ready to start Phase 1? Let's kill every fake button today.</p>
+  </div>
+
+</div>
+</body>
+</html>

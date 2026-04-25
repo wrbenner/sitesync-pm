@@ -440,7 +440,7 @@ const DashboardInner: React.FC = () => {
               {Math.round(animProgress)}%
             </span>
             {dayNumber !== null && (
-              <span style={{ fontSize: '10px', color: colors.textTertiary, flexShrink: 0 }}>
+              <span style={{ fontSize: '10px', color: colors.textSecondary, flexShrink: 0 }}>
                 Day {dayNumber}{totalDays ? ` / ${totalDays}` : ''}
               </span>
             )}

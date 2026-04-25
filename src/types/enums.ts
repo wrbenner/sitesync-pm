@@ -1,4 +1,4 @@
-// TypeScript enums for SiteSync AI database
+// TypeScript enums for SiteSync PM database
 // Maps to PostgreSQL enum types defined in the Supabase schema
 import { colors } from '../styles/theme';
 

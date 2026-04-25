@@ -179,10 +179,13 @@ export interface ClassifyDrawingResult {
   plan_type: string | null
   sheet_number: string | null
   drawing_title: string | null
+  revision: string | null
   scale_text: string | null
   scale_ratio: number | null
   confidence: number | null
   ai_cost_cents: number
+  file_size_bytes?: number
+  errors?: string[]
   status: DrawingClassificationStatus
 }
 

@@ -1,0 +1,281 @@
+name: Integration Weaver — Cross-Page Wiring
+
+on:
+  # schedule:
+  #   - cron: '0 1,5,9,13,17,21 * * *'  # DISABLED — user requested halt
+  workflow_dispatch:
+    inputs:
+      target_integration:
+        description: 'Force integration key (e.g. rfi_drawing_link). Leave blank for auto.'
+        required: false
+        default: ''
+
+concurrency:
+  group: integration-weaver
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  weave-integration:
+    name: Integration Blueprint
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: D1 — Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: D1 — Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: D1 — Install dependencies
+        run: npm ci
+
+      - name: D1 — Configure git
+        run: |
+          git config user.name "SiteSync Integration Weaver"
+          git config user.email "organism@sitesync.app"
+
+      - name: D1 — Select integration
+        id: select-integration
+        env:
+          FORCED_INTEGRATION: ${{ inputs.target_integration }}
+        run: |
+          cat > /tmp/select-integration.js <<'SCRIPT'
+          const fs = require('fs');
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
+          const forced = process.env.FORCED_INTEGRATION || '';
+
+          const PRIORITY_ORDER = [
+            'activity_feed_wired',
+            'dashboard_metrics_wired',
+            'rfi_drawing_link',
+            'punch_drawing_pin',
+            'rfi_submittal_link',
+            'task_schedule_link',
+            'change_order_budget_link',
+            'pay_app_sov_link',
+            'meeting_task_link',
+            'safety_daily_log_link'
+          ];
+
+          if (forced && registry.integrations[forced]) {
+            if (registry.integrations[forced].status !== 'done') {
+              console.log(forced);
+              process.exit(0);
+            }
+          }
+
+          for (const key of PRIORITY_ORDER) {
+            const integration = registry.integrations[key];
+            if (!integration || integration.status === 'done' || integration.status === 'in_progress') continue;
+
+            const prereqs = integration.prereqs || [];
+            const allReady = prereqs.every(pageName => {
+              const page = registry.pages[pageName];
+              return page && page.functional_score >= 50;
+            });
+
+            if (allReady) {
+              console.log(key);
+              process.exit(0);
+            }
+          }
+
+          console.log('NONE');
+          SCRIPT
+
+          TARGET=$(node /tmp/select-integration.js)
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "Selected integration: $TARGET"
+
+      - name: Skip if nothing to integrate
+        if: steps.select-integration.outputs.target == 'NONE'
+        run: |
+          echo "All integrations complete, in progress, or prerequisites not met."
+          exit 0
+
+      - name: D1 — Create branch (lock is local-only)
+        id: create-branch
+        if: steps.select-integration.outputs.target != 'NONE'
+        env:
+          TARGET: ${{ steps.select-integration.outputs.target }}
+        run: |
+          BRANCH="integration/$TARGET-run-${{ github.run_number }}"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+          # Lock is local-only. The concurrency group prevents parallel runs,
+          # so pushing the lock to main is unnecessary (branch protection would block it).
+          # The integration registry update lands on the feature branch + PR instead.
+
+      - name: A1 — Claude analyzes integration context
+        if: steps.select-integration.outputs.target != 'NONE'
+        run: |
+          TARGET="${{ steps.select-integration.outputs.target }}"
+
+          npm install -g @anthropic-ai/claude-code
+
+          cat > /tmp/iw-analyze.txt <<PROMPT_EOF
+          ## SiteSync PM — Integration Weaver Analysis: ${TARGET}
+
+          Read source files relevant to integrating ${TARGET}.
+          Identify: (1) what files need to change, (2) what DB columns/FKs already exist, (3) what picker UI pattern is used elsewhere.
+          Output a brief plan. Do not implement yet.
+          PROMPT_EOF
+
+          claude --max-turns 10 --allowedTools "Read,Glob,Grep,Bash" --print "$(cat /tmp/iw-analyze.txt)" || true
+
+      - name: A2 — Claude implements integration
+        if: steps.select-integration.outputs.target != 'NONE'
+        run: |
+          TARGET="${{ steps.select-integration.outputs.target }}"
+          RUN_ID="${{ github.run_number }}"
+
+          cat > /tmp/iw-impl.txt <<PROMPT_EOF
+          ## SiteSync PM — Integration Weaver Implementation: ${TARGET}
+
+          Implement the following cross-page integration.
+
+          Integration: ${TARGET}
+
+          activity_feed_wired: Wire Activity Feed to display real events from rfis, submittals, daily_logs, punch_items, tasks, meetings, safety_incidents. Store in activity_feed table with entity_type, entity_id, entity_title, action, user_id, timestamp. Insert event after each mutation.
+
+          dashboard_metrics_wired: Replace hardcoded metric cards on Dashboard with real Supabase queries: Open RFIs, Open Punch Items, Overdue Tasks, Submittals Pending, Active COs total, Budget % used, Safety incidents.
+
+          rfi_drawing_link: In RFI detail, add Link Drawing button. Modal lists drawings, stores drawing_id on rfi.
+
+          punch_drawing_pin: In Punch Item detail, add Pin to Drawing. Stores drawing_pin_x/y and drawing_id on punch_items.
+
+          rfi_submittal_link: In RFI detail, add Link Submittal. Stores submittal_id on RFI.
+
+          task_schedule_link: In Task detail, add Link to Schedule Phase. Stores schedule_phase_id on task.
+
+          change_order_budget_link: In Change Order form, add Link Budget Line Item. When CO Approved, update revised_budget on line item.
+
+          pay_app_sov_link: When creating Payment Application, auto-populate SOV from budget_line_items. Each pay_app_line_items row references budget_line_item_id.
+
+          meeting_task_link: In Meeting detail, when adding Action Item, add Create as Task checkbox. If checked, insert into tasks table.
+
+          safety_daily_log_link: In Safety Incident detail, add Link to Daily Log picker. Stores daily_log_id on incident.
+
+          Rules:
+          1. Do NOT change CSS.
+          2. Do NOT refactor working code.
+          3. All data through Supabase.
+
+          After making code changes, ALSO update organism-memory/task-registry.json:
+          - Set registry.integrations['${TARGET}'].status = "done".
+          - Set registry.integrations['${TARGET}'].completed_at to the current ISO-8601 timestamp (new Date().toISOString()).
+          - Delete registry.integrations['${TARGET}'].locked_at.
+          - Save with JSON.stringify(registry, null, 2).
+          This must be part of the same commit as your code changes so branch protection on main does not block it.
+
+          Commit: git add -A && git commit -m "feat(integration): wire ${TARGET} [IW-${RUN_ID}]"
+          PROMPT_EOF
+
+          claude --max-turns 35 --allowedTools "Bash,Read,Write,Edit,Glob,Grep" --print "$(cat /tmp/iw-impl.txt)" || true
+
+      - name: D2 — Verify integration and build
+        id: verify
+        if: steps.select-integration.outputs.target != 'NONE'
+        run: |
+          if npm run build 2>&1; then
+            echo "build=PASS" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=FAIL" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: D3 — Ensure integration registry update is in branch commit
+        if: steps.select-integration.outputs.target != 'NONE' && steps.verify.outputs.build == 'PASS'
+        env:
+          TARGET: ${{ steps.select-integration.outputs.target }}
+          BUILD: ${{ steps.verify.outputs.build }}
+        run: |
+          cat > /tmp/update-integration.js <<'SCRIPT'
+          const fs = require('fs');
+          const TARGET = process.env.TARGET;
+          const BUILD = process.env.BUILD;
+
+          const registry = JSON.parse(fs.readFileSync('organism-memory/task-registry.json', 'utf8'));
+          const integration = registry.integrations[TARGET];
+          if (!integration) { console.log('Integration not found'); process.exit(0); }
+
+          if (BUILD === 'PASS') {
+            integration.status = 'done';
+            if (!integration.completed_at) integration.completed_at = new Date().toISOString();
+          } else {
+            integration.status = 'pending';
+          }
+          delete integration.locked_at;
+          registry.last_updated = new Date().toISOString();
+          fs.writeFileSync('organism-memory/task-registry.json', JSON.stringify(registry, null, 2));
+
+          console.log('Registry reconciled — integration', TARGET, 'status:', integration.status);
+          SCRIPT
+
+          node /tmp/update-integration.js
+
+          # If Claude Code already staged/committed the registry update, nothing to do.
+          # Otherwise, amend the registry changes onto the latest commit on this branch
+          # so code + registry land on main atomically when the PR auto-merges.
+          if git diff --quiet organism-memory/task-registry.json && git diff --cached --quiet organism-memory/task-registry.json; then
+            echo "Registry already up-to-date in branch commit — no amend needed."
+          else
+            echo "Amending registry update onto latest branch commit."
+            git add organism-memory/task-registry.json
+            if git log -1 --pretty=%s | grep -q .; then
+              git commit --amend --no-edit
+            else
+              git commit -m "chore(organism): mark integration ${TARGET:-target} complete"
+            fi
+          fi
+
+      - name: D4 — Create PR and enable auto-merge
+        id: create-pr
+        if: steps.select-integration.outputs.target != 'NONE' && steps.verify.outputs.build == 'PASS'
+        run: |
+          TARGET="${{ steps.select-integration.outputs.target }}"
+          BRANCH="${{ steps.create-branch.outputs.branch }}"
+
+          git push origin "$BRANCH"
+
+          cat > /tmp/iw-pr-body.md <<PRBODY_EOF
+          Automated PR — Integration Weaver
+
+          Integration: ${TARGET}
+          Build: ${{ steps.verify.outputs.build }}
+
+          Auto-generated by Integration Weaver run #${{ github.run_number }}
+          PRBODY_EOF
+          PR_BODY=$(cat /tmp/iw-pr-body.md)
+
+          PR_URL=$(gh pr create \
+            --title "feat(integration): wire ${TARGET} [IW-${{ github.run_number }}]" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "$BRANCH" \
+            --label "organism,integration-weaver" || echo "")
+
+          PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$' || echo "")
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || true
+          fi

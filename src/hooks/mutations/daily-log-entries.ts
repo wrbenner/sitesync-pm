@@ -70,10 +70,11 @@ export function useSubmitDailyLog() {
     },
     mutationFn: async ({ id, signatureUrl, projectId }: { id: string; signatureUrl?: string; projectId: string }) => {
       await validateDailyLogStatusTransition(id, projectId, 'submitted')
+      // Note: only use columns that exist in the daily_logs table.
+      // is_submitted and submitted_at are NOT real DB columns.
       const updates: Record<string, unknown> = {
         status: 'submitted',
-        is_submitted: true,
-        submitted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       }
       if (signatureUrl) updates.superintendent_signature_url = signatureUrl
       const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)

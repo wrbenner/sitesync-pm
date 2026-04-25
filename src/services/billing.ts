@@ -1,4 +1,4 @@
-// SiteSync AI — Billing & Subscription Service
+// SiteSync PM — Billing & Subscription Service
 // Manages plan limits, usage tracking, and Stripe subscription lifecycle.
 
 import { supabase } from '../lib/supabase'

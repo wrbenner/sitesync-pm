@@ -221,18 +221,18 @@ export const Permits: React.FC = () => {
   }
 
   const totalPermits = permits?.length || 0
-  const activePermits = permits?.filter((p: unknown) => p.status === 'approved').length || 0
-  const pendingReview = permits?.filter((p: unknown) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
+  const activePermits = permits?.filter((p: Record<string, unknown>) => p.status === 'approved').length || 0
+  const pendingReview = permits?.filter((p: Record<string, unknown>) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
 
   const now = new Date()
-  const expiringSoonCount = permits?.filter((p: unknown) => {
+  const expiringSoonCount = permits?.filter((p: Record<string, unknown>) => {
     if (!p.expiration_date) return false
-    const daysUntil = (new Date(p.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    const daysUntil = (new Date(p.expiration_date as string).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return daysUntil >= 0 && daysUntil <= 30
   }).length || 0
-  const expiredCount = permits?.filter((p: unknown) => {
+  const expiredCount = permits?.filter((p: Record<string, unknown>) => {
     if (!p.expiration_date) return false
-    return new Date(p.expiration_date).getTime() < now.getTime()
+    return new Date(p.expiration_date as string).getTime() < now.getTime()
   }).length || 0
 
   const handleAdd = () => {
@@ -404,9 +404,9 @@ export const Permits: React.FC = () => {
         <>
           <SectionHeader title="Upcoming Inspections" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
-            {permits && permits.filter((p: unknown) => p.status === 'approved').length > 0 ? (
-              permits.filter((p: unknown) => p.status === 'approved').map((permit: unknown) => (
-                <Card key={permit.id} padding={spacing['4']}>
+            {permits && permits.filter((p: Record<string, unknown>) => p.status === 'approved').length > 0 ? (
+              permits.filter((p: Record<string, unknown>) => p.status === 'approved').map((permit: Record<string, unknown>) => (
+                <Card key={permit.id as string} padding={spacing['4']}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'] }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: borderRadius.base,
@@ -417,20 +417,20 @@ export const Permits: React.FC = () => {
                     </div>
                     <div>
                       <p style={{ margin: 0, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                        {permit.permit_number}
+                        {permit.permit_number as string}
                       </p>
                       <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                        {permit.type ? permit.type.replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ''}
+                        {permit.type ? (permit.type as string).replace(/_/g, ' ').split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ''}
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                      {permit.jurisdiction || 'No jurisdiction'}
+                      {(permit.jurisdiction as string) || 'No jurisdiction'}
                     </span>
                     {permit.expiration_date && (
                       <span style={{ fontSize: typography.fontSize.caption, color: colors.statusPending }}>
-                        Expires {new Date(permit.expiration_date).toLocaleDateString()}
+                        Expires {new Date(permit.expiration_date as string).toLocaleDateString()}
                       </span>
                     )}
                   </div>

@@ -1,4 +1,4 @@
-// SiteSync AI — Sentry Error Tracking & Performance Monitoring
+// SiteSync PM — Sentry Error Tracking & Performance Monitoring
 // Captures errors, traces, session replays, and custom breadcrumbs.
 
 import * as Sentry from '@sentry/react'

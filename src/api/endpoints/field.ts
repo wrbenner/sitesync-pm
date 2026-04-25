@@ -221,12 +221,9 @@ export const submitDailyLog = async (
   validateProjectId(projectId)
   const updates: Record<string, unknown> = {
     status: 'submitted',
-    is_submitted: true,
-    submitted_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
   if (signatureUrl) updates.superintendent_signature_url = signatureUrl
-  if (userId) updates.submitted_by = userId
   return supabaseMutation<DailyLogRow>(client =>
     client.from('daily_logs')
       .update(updates as Database['public']['Tables']['daily_logs']['Update'])
@@ -248,11 +245,7 @@ export const amendDailyLog = async (
       .insert({
         ...payload,
         project_id: projectId,
-        amended_from_id: originalId,
         status: 'draft',
-        is_submitted: false,
-        submitted_at: null,
-        submitted_by: null,
         approved: null,
         approved_at: null,
         approved_by: null,
@@ -357,11 +350,10 @@ export const getDailyLogs = async (
       weather_source: (l as Record<string, unknown>).weather_source as string | null ?? null,
       wind_speed: l.wind_speed,
       workers_onsite: l.workers_onsite,
-      is_submitted: l.is_submitted,
-      submitted_at: l.submitted_at,
-      submitted_by: (l as Record<string, unknown>).submitted_by as string | null ?? null,
-      amended_from_id: (l as Record<string, unknown>).amended_from_id as string | null ?? null,
-      version: l.version,
+      is_submitted: l.status === 'submitted' || l.status === 'approved',
+      submitted_at: (l.status === 'submitted' || l.status === 'approved') ? l.updated_at : null,
+      // version not stored in DB; default to 1
+      version: 1,
       // Computed fields
       date: l.log_date,
       workers: l.workers_onsite ?? 0,

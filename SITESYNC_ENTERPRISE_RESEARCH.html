@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteSync Enterprise Research — Strategic Technology Roadmap</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --text2: #9898a8;
+    --orange: #f97316;
+    --orange2: #fb923c;
+    --blue: #3b82f6;
+    --green: #22c55e;
+    --purple: #a855f7;
+    --red: #ef4444;
+    --cyan: #06b6d4;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; line-height:1.6; }
+
+  .hero { padding:80px 40px 60px; text-align:center; background: linear-gradient(180deg, #1a1028 0%, var(--bg) 100%); border-bottom:1px solid var(--border); }
+  .hero h1 { font-size:48px; font-weight:800; background: linear-gradient(135deg, var(--orange), var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:12px; }
+  .hero .subtitle { font-size:20px; color:var(--text2); max-width:700px; margin:0 auto 32px; }
+  .hero .stats { display:flex; gap:32px; justify-content:center; flex-wrap:wrap; }
+  .hero .stat { text-align:center; }
+  .hero .stat-num { font-size:36px; font-weight:800; color:var(--orange); }
+  .hero .stat-label { font-size:13px; color:var(--text2); text-transform:uppercase; letter-spacing:1px; }
+
+  .container { max-width:1200px; margin:0 auto; padding:40px 24px; }
+
+  .nav-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:40px; position:sticky; top:0; background:var(--bg); padding:16px 0; z-index:10; border-bottom:1px solid var(--border); }
+  .nav-tab { padding:8px 20px; border-radius:8px; background:var(--surface); border:1px solid var(--border); color:var(--text2); cursor:pointer; font-size:14px; font-weight:500; transition:all 0.2s; }
+  .nav-tab:hover { border-color:var(--orange); color:var(--text); }
+  .nav-tab.active { background:var(--orange); color:#fff; border-color:var(--orange); }
+
+  section { margin-bottom:64px; }
+  section h2 { font-size:32px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+  section h2 .icon { font-size:28px; }
+  section .section-desc { color:var(--text2); font-size:16px; margin-bottom:32px; }
+
+  .card-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap:20px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; transition:all 0.2s; }
+  .card:hover { border-color:var(--orange); transform:translateY(-2px); }
+  .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .card h3 { font-size:18px; font-weight:700; }
+  .card .badge { padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .badge-harvest { background:rgba(34,197,94,0.15); color:var(--green); }
+  .badge-pattern { background:rgba(168,85,247,0.15); color:var(--purple); }
+  .badge-integrate { background:rgba(59,130,246,0.15); color:var(--blue); }
+  .badge-build { background:rgba(249,115,22,0.15); color:var(--orange); }
+  .badge-critical { background:rgba(239,68,68,0.15); color:var(--red); }
+  .card .stars { color:var(--orange2); font-size:13px; font-weight:600; }
+  .card .desc { color:var(--text2); font-size:14px; margin-bottom:12px; }
+  .card .tech-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .card .tech-tag { padding:2px 8px; border-radius:4px; background:var(--surface2); font-size:12px; color:var(--text2); }
+  .card .harvest-list { list-style:none; padding:0; }
+  .card .harvest-list li { font-size:13px; padding:4px 0; color:var(--text2); display:flex; align-items:flex-start; gap:6px; }
+  .card .harvest-list li::before { content:'→'; color:var(--orange); font-weight:700; flex-shrink:0; }
+
+  .priority-section { margin-bottom:48px; }
+  .priority-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .priority-dot { width:12px; height:12px; border-radius:50%; }
+  .priority-dot.p0 { background:var(--red); }
+  .priority-dot.p1 { background:var(--orange); }
+  .priority-dot.p2 { background:var(--blue); }
+  .priority-dot.p3 { background:var(--purple); }
+  .priority-header h3 { font-size:20px; font-weight:700; }
+  .priority-header .timeline { color:var(--text2); font-size:14px; margin-left:auto; }
+
+  .roadmap-item { display:flex; gap:16px; padding:16px; background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+  .roadmap-item .num { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; flex-shrink:0; }
+  .roadmap-item .num.p0 { background:rgba(239,68,68,0.15); color:var(--red); }
+  .roadmap-item .num.p1 { background:rgba(249,115,22,0.15); color:var(--orange); }
+  .roadmap-item .num.p2 { background:rgba(59,130,246,0.15); color:var(--blue); }
+  .roadmap-item .num.p3 { background:rgba(168,85,247,0.15); color:var(--purple); }
+  .roadmap-item h4 { font-size:15px; font-weight:600; margin-bottom:4px; }
+  .roadmap-item .detail { font-size:13px; color:var(--text2); }
+  .roadmap-item .source { font-size:12px; color:var(--orange2); margin-top:4px; }
+
+  .giant-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; margin-bottom:40px; }
+  .giant-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .giant-card h4 { font-size:16px; font-weight:700; margin-bottom:4px; }
+  .giant-card .trait { color:var(--orange2); font-size:13px; font-weight:600; margin-bottom:8px; }
+  .giant-card .how { color:var(--text2); font-size:13px; }
+
+  .comparison-table { width:100%; border-collapse:collapse; margin:24px 0; }
+  .comparison-table th { text-align:left; padding:12px 16px; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text2); border-bottom:2px solid var(--border); }
+  .comparison-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:14px; }
+  .comparison-table tr:hover { background:var(--surface2); }
+  .check { color:var(--green); font-weight:700; }
+  .cross { color:var(--red); opacity:0.5; }
+  .partial { color:var(--orange2); }
+
+  .toc { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px; margin-bottom:48px; }
+  .toc h3 { font-size:18px; font-weight:700; margin-bottom:16px; }
+  .toc-list { list-style:none; padding:0; columns:2; column-gap:32px; }
+  .toc-list li { padding:6px 0; }
+  .toc-list a { color:var(--text2); text-decoration:none; font-size:14px; transition:color 0.2s; }
+  .toc-list a:hover { color:var(--orange); }
+  .toc-list .num { color:var(--orange); font-weight:600; margin-right:8px; }
+
+  @media (max-width:768px) {
+    .hero h1 { font-size:32px; }
+    .card-grid { grid-template-columns:1fr; }
+    .giant-grid { grid-template-columns:1fr; }
+    .toc-list { columns:1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>SiteSync Enterprise Blueprint</h1>
+  <p class="subtitle">Strategic research on open-source repos, tech-giant patterns, and implementation roadmap to make SiteSync years ahead of Procore and every competitor.</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-num">47</div><div class="stat-label">Repos Analyzed</div></div>
+    <div class="stat"><div class="stat-num">8</div><div class="stat-label">Tech Giant Patterns</div></div>
+    <div class="stat"><div class="stat-num">6</div><div class="stat-label">Priority Tiers</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Ambition Level</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc">
+  <h3>Research Sections</h3>
+  <ol class="toc-list">
+    <li><a href="#giants"><span class="num">01</span> Tech Giant DNA — What to Steal</a></li>
+    <li><a href="#realtime"><span class="num">02</span> Real-Time Multiplayer & Collaboration</a></li>
+    <li><a href="#bim"><span class="num">03</span> BIM/IFC 3D Viewers</a></li>
+    <li><a href="#pm"><span class="num">04</span> Project Management Engines</a></li>
+    <li><a href="#schedule"><span class="num">05</span> Scheduling & Gantt</a></li>
+    <li><a href="#pdf"><span class="num">06</span> PDF/Drawing Annotation</a></li>
+    <li><a href="#photo"><span class="num">07</span> Photo Markup & Field Capture</a></li>
+    <li><a href="#ai"><span class="num">08</span> AI & Document Intelligence</a></li>
+    <li><a href="#dashboard"><span class="num">09</span> Enterprise Dashboards</a></li>
+    <li><a href="#pwa"><span class="num">10</span> Offline-First PWA for Field</a></li>
+    <li><a href="#canvas"><span class="num">11</span> Whiteboard & Canvas Tools</a></li>
+    <li><a href="#dnd"><span class="num">12</span> Drag-Drop & Kanban</a></li>
+    <li><a href="#procore"><span class="num">13</span> Procore Gap Analysis</a></li>
+    <li><a href="#contech"><span class="num">14</span> ConTech AI Trends 2026</a></li>
+    <li><a href="#roadmap"><span class="num">15</span> Implementation Roadmap</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 1: TECH GIANT DNA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="giants">
+  <h2><span class="icon">🧬</span> Tech Giant DNA — What to Steal</h2>
+  <p class="section-desc">The specific traits from the world's best software that will make SiteSync feel like it was built by a $10B company.</p>
+
+  <div class="giant-grid">
+    <div class="giant-card">
+      <h4>Figma</h4>
+      <div class="trait">Multiplayer Presence</div>
+      <div class="how">Live cursors on drawings, real-time co-editing of submittals/RFIs, "who's looking at this" avatars. Uses last-writer-wins CRDT over WebSockets. Server holds state in-memory, checkpoints every 30-60s. SiteSync already has Supabase Realtime — layer presence on top.</div>
+    </div>
+    <div class="giant-card">
+      <h4>Linear</h4>
+      <div class="trait">Speed & Keyboard-First</div>
+      <div class="how">Every action < 50ms. Cmd+K command palette. Optimistic updates everywhere. Local-first rendering. Built on Radix UI + custom design system "Orbiter" with 8px spacing grid. SiteSync should feel instant — pre-fetch routes, cache aggressively, animate transitions.</div>
+    </div>
+    <div class="giant-card">
+      <h4>Notion</h4>
+      <div class="trait">Block-Based Flexibility</div>
+      <div class="how">Everything is a block with {id, type, properties}. Pages contain blocks, blocks can be databases, databases can contain pages. This recursive structure lets one system be docs, spreadsheets, kanban, and wikis. SiteSync daily logs, meeting minutes, and specs should use blocks.</div>
+    </div>
+    <div class="giant-card">
+      <h4>Slack</h4>
+      <div class="trait">Real-Time Messaging Layer</div>
+      <div class="how">Threading on any entity. @mentions that generate notifications. Channels per project. Rich previews of linked RFIs/submittals. SiteSync already has activity feeds — upgrade to threaded conversations on every entity.</div>
+    </div>
+    <div class="giant-card">
+      <h4>Procore</h4>
+      <div class="trait">Full-Lifecycle Integration</div>
+      <div class="how">Modular architecture where submittals auto-link to schedule milestones, RFIs connect to drawings, budget flows to pay-apps. Everything cross-references. Agentic APIs in 2026 let AI automate workflows. SiteSync needs this entity-relationship web.</div>
+    </div>
+    <div class="giant-card">
+      <h4>Airtable</h4>
+      <div class="trait">Flexible Views of Same Data</div>
+      <div class="how">Same dataset shown as table, kanban, calendar, gallery, or form. Custom views with saved filters. SiteSync should let users switch between list/kanban/calendar/timeline for tasks, punch items, submittals — same data, different lens.</div>
+    </div>
+    <div class="giant-card">
+      <h4>Vercel</h4>
+      <div class="trait">Developer-Grade Deploys</div>
+      <div class="how">Preview environments, instant rollbacks, edge functions. SiteSync should have Supabase Edge Functions for server-side AI processing, webhook integrations, and scheduled jobs (daily report generation, overdue alerts).</div>
+    </div>
+    <div class="giant-card">
+      <h4>Apple</h4>
+      <div class="trait">Obsessive Polish</div>
+      <div class="how">Micro-interactions that feel alive. Spring animations on modals. Haptic-like visual feedback. Smooth 60fps transitions. Progressive disclosure — hide complexity until needed. SiteSync's Framer Motion usage is a start; push it further with spring physics and gesture recognition.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 2: REAL-TIME COLLABORATION -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="realtime">
+  <h2><span class="icon">⚡</span> Real-Time Multiplayer & Collaboration</h2>
+  <p class="section-desc">The infrastructure to make SiteSync feel alive — every change visible instantly across all connected users.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>Yjs (CRDT Engine)</h3>
+        <span class="badge badge-critical">Critical</span>
+      </div>
+      <div class="stars">★ 900K+ weekly downloads · MIT</div>
+      <div class="desc">The most popular CRDT for collaborative apps. Powers Tiptap, Excalidraw, and hundreds of production apps. Network-agnostic, supports shared cursors, offline editing, undo/redo, and version snapshots.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">JavaScript</span>
+        <span class="tech-tag">CRDT</span>
+        <span class="tech-tag">WebSocket</span>
+        <span class="tech-tag">P2P capable</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Co-edit daily logs, meeting minutes, and specs simultaneously</li>
+        <li>Offline field edits auto-merge when connectivity returns</li>
+        <li>Shared cursors on drawings — see where teammates are looking</li>
+        <li>Integrates with Supabase via y-websocket provider</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Liveblocks Patterns</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ Presence-first architecture</div>
+      <div class="desc">Liveblocks pioneered the presence API pattern: useOthers() to see connected users, useUpdateMyPresence() to broadcast cursor/state. Build this natively on Supabase Presence (already available).</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React Hooks</span>
+        <span class="tech-tag">Presence</span>
+        <span class="tech-tag">Cursors</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Avatar stack showing who's on each page right now</li>
+        <li>Live cursors on drawing/photo markup views</li>
+        <li>"X is editing this submittal" conflict prevention</li>
+        <li>Viewport following — click avatar to see their view</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Supabase Realtime (Already Have)</h3>
+        <span class="badge badge-harvest">Enhance</span>
+      </div>
+      <div class="stars">★ Already integrated · Presence + Broadcast</div>
+      <div class="desc">SiteSync already uses Supabase Realtime for data sync (useRealtimeQuery). The Presence and Broadcast channels are unused — these are the building blocks for Figma-style collaboration.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Supabase</span>
+        <span class="tech-tag">PostgreSQL CDC</span>
+        <span class="tech-tag">WebSocket</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Presence: track who's viewing each entity (already built useEntityPresence)</li>
+        <li>Broadcast: send cursor positions, typing indicators, live notifications</li>
+        <li>Combine with optimistic locking (already built useOptimisticLock)</li>
+        <li>Zero additional infrastructure cost — it's included in Supabase</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 3: BIM/IFC -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="bim">
+  <h2><span class="icon">🏗️</span> BIM / IFC 3D Model Viewers</h2>
+  <p class="section-desc">Embed 3D building models directly in SiteSync — the feature that will make every PM's jaw drop.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>That Open Engine (IFC.js successor)</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 635 stars · MIT License</div>
+      <div class="desc">TypeScript-first (89.9% TS), built on Three.js, provides pre-made BIM components — floor plan nav, dimensions, DXF export, IFC loading. MIT licensed, no commercial restrictions.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">Three.js</span>
+        <span class="tech-tag">IFC</span>
+        <span class="tech-tag">WebGL</span>
+        <span class="tech-tag">MIT</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Embed 3D model viewer on Drawing pages</li>
+        <li>Click a room → see all punch items pinned there</li>
+        <li>Overlay RFI locations on the 3D model</li>
+        <li>Floor plan extraction for 2D navigation</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>xeokit SDK</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 895 stars · AGPLv3 (commercial license available)</div>
+      <div class="desc">Pure WebGL for maximum performance. Handles hundreds of thousands of objects. Supports IFC 2x3/4.3, glTF, LAZ/LAS point clouds, CityJSON. Used by industry leaders for AEC applications.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">JavaScript</span>
+        <span class="tech-tag">WebGL</span>
+        <span class="tech-tag">BIM</span>
+        <span class="tech-tag">Point Clouds</span>
+      </div>
+      <ul class="harvest-list">
+        <li>High-performance viewer for massive models (hospitals, skyscrapers)</li>
+        <li>BCF issue tracking integration (maps to SiteSync punch items)</li>
+        <li>Real-world coordinates with double precision</li>
+        <li>AGPLv3 caveat — need commercial license for closed-source</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>OpenProject BIM</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ Pattern reference · GPLv3</div>
+      <div class="desc">Shows how a PM tool integrates IFC viewing. Upload IFC, view in 2D/3D in-browser, link BCF issues to model elements. The UX pattern is what matters — not the code.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Ruby on Rails</span>
+        <span class="tech-tag">Angular</span>
+        <span class="tech-tag">BCF</span>
+      </div>
+      <ul class="harvest-list">
+        <li>UX pattern: upload model → browse floors → click element → create issue</li>
+        <li>BCF (BIM Collaboration Format) for standardized issue exchange</li>
+        <li>2D floor plan extraction from 3D model</li>
+        <li>Overlay punch items, RFIs, and submittals on model</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 4: PM ENGINES -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="pm">
+  <h2><span class="icon">📋</span> Project Management Engines</h2>
+  <p class="section-desc">Battle-tested PM frameworks with patterns to harvest for task management, sprints, and workflow automation.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>Plane</h3>
+        <span class="badge badge-harvest">Harvest</span>
+      </div>
+      <div class="stars">★ 48.1K stars · AGPLv3</div>
+      <div class="desc">Open-source Linear/Jira alternative. React + Vite frontend, Django backend. 48K stars proves the UX resonates. Their Cycles (sprints), Modules, and custom Views are exactly what construction PM needs.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">Vite</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">PostgreSQL</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Custom Views pattern — saved filters with multiple display modes</li>
+        <li>Cycles → Construction Phases with burn-down charts</li>
+        <li>Rich text editor with file uploads (harvest component)</li>
+        <li>Analytics dashboard with trend visualization</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Taiga</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ 8K+ stars · MPL-2.0</div>
+      <div class="desc">Agile PM with excellent Kanban, Scrum, and issue tracking. Their permission system and custom fields architecture is worth studying for SiteSync's role-based access.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Python</span>
+        <span class="tech-tag">Angular</span>
+        <span class="tech-tag">REST API</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Custom fields on any entity type (construction needs this)</li>
+        <li>Fine-grained permissions per project/module</li>
+        <li>Swimlane Kanban for multi-dimensional task views</li>
+        <li>Export/import patterns for project templates</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>OpenProject</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ 9K+ stars · GPLv3</div>
+      <div class="desc">Enterprise PM with Gantt charts, BIM integration, time tracking, and cost reporting. Already analyzed in previous sessions. Their work package hierarchy and custom status workflows are gold.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Ruby on Rails</span>
+        <span class="tech-tag">Angular</span>
+        <span class="tech-tag">PostgreSQL</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Work package hierarchy → Task dependency chains</li>
+        <li>Time tracking aggregation → Labor cost reporting</li>
+        <li>Custom workflow states per entity type</li>
+        <li>BIM viewer integration (already studied)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 5: SCHEDULING & GANTT -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="schedule">
+  <h2><span class="icon">📅</span> Scheduling & Gantt Libraries</h2>
+  <p class="section-desc">Replace basic phase lists with interactive Gantt charts that rival Primavera P6.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>gantt-task-react</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 1.2K+ stars · MIT</div>
+      <div class="desc">Interactive Gantt chart component for React. Supports task dependencies, milestones, drag-to-resize, and sub-tasks. MIT licensed, designed for drop-in use.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">SVG</span>
+        <span class="tech-tag">MIT</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Replace current schedule list with visual Gantt</li>
+        <li>Drag bars to adjust dates, auto-cascade dependencies</li>
+        <li>Critical path highlighting</li>
+        <li>Day/week/month zoom levels</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>SVAR React Gantt</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ Active development · MIT</div>
+      <div class="desc">Modern React Gantt with inline editing, resource assignment, and zoom controls. Better touch support than gantt-task-react. Active development with 2025/2026 releases.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">Canvas</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Inline cell editing for quick schedule updates in field</li>
+        <li>Resource histograms (crew allocation visualization)</li>
+        <li>Baseline comparison (planned vs actual)</li>
+        <li>P6/MS Project import compatibility</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Procore Scheduling Pattern</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ New in 2025 — their marquee feature</div>
+      <div class="desc">Procore just launched native scheduling in 2025. Their approach: import from P6/MS Project, build from scratch, unified master schedule view, auto-link submittals to milestones. The cross-entity linking is the killer feature.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">P6 Import</span>
+        <span class="tech-tag">MS Project</span>
+        <span class="tech-tag">Auto-linking</span>
+      </div>
+      <ul class="harvest-list">
+        <li>When a submittal is late → schedule milestone flags yellow</li>
+        <li>When an RFI is open too long → affected schedule activities highlight</li>
+        <li>Drag a milestone → see cost impact ripple through budget</li>
+        <li>Import .mpp/.xer files, export back out</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 6: PDF/DRAWING ANNOTATION -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="pdf">
+  <h2><span class="icon">📐</span> PDF & Drawing Annotation</h2>
+  <p class="section-desc">Let field teams mark up drawings, redline specs, and pin issues directly on plans.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>PDF.js + react-pdf</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 42K stars (PDF.js) · Apache 2.0</div>
+      <div class="desc">Mozilla's PDF renderer. The gold standard for web PDF viewing. Use as the base layer, then add custom annotation overlays with Canvas/SVG for construction-specific markup.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">JavaScript</span>
+        <span class="tech-tag">Canvas</span>
+        <span class="tech-tag">React wrapper</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Render construction drawings at full resolution</li>
+        <li>Layer custom SVG annotations on top (pins, clouds, arrows)</li>
+        <li>Text search within specs for RFI reference</li>
+        <li>Thumbnail strip for multi-page navigation</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>react-pdf-highlighter</h3>
+        <span class="badge badge-harvest">Harvest</span>
+      </div>
+      <div class="stars">★ 2K+ stars · MIT</div>
+      <div class="desc">Text and area highlighting on PDFs. Select text → add comment. Draw rectangle → attach note. Perfect for spec review and submittal markup workflows.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">PDF.js</span>
+        <span class="tech-tag">TypeScript</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Highlight spec sections when creating RFIs</li>
+        <li>Area markup for drawing redlines</li>
+        <li>Comment threads attached to highlights</li>
+        <li>Export annotations as JSON (persist to Supabase)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Konva + react-konva</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 11K+ stars · MIT</div>
+      <div class="desc">2D canvas library for React. Used by many drawing annotation tools. Better performance than SVG for complex markups with many elements. Supports shapes, text, images, and freehand drawing.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">Canvas 2D</span>
+        <span class="tech-tag">Touch events</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Freehand drawing on construction drawings (cloud, arrow, line)</li>
+        <li>Pinch-zoom on mobile for drawing detail</li>
+        <li>Pin drop for punch item locations</li>
+        <li>Layer system: base drawing + markups per user/discipline</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 7: PHOTO MARKUP -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="photo">
+  <h2><span class="icon">📸</span> Photo Markup & Field Capture</h2>
+  <p class="section-desc">Construction lives on photos. Make every image annotatable, taggable, and linked to the right entity.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>Annotorious</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ Active · W3C Web Annotation compatible</div>
+      <div class="desc">Image annotation library following the W3C Web Annotation standard. TypeScript + React support. Create annotations as rectangles, polygons, or freehand selections on images.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">W3C Standard</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Circle defects on punch item photos</li>
+        <li>Draw arrows pointing to issues</li>
+        <li>Add text callouts on progress photos</li>
+        <li>W3C format = future-proof annotation storage</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>marker.js</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ Purpose-built for annotation</div>
+      <div class="desc">Drop-in image annotation tool. Arrows, callouts, highlights, freehand, text markers. Returns annotated image as data URL or the annotations as JSON for re-editing.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">JavaScript</span>
+        <span class="tech-tag">SVG overlay</span>
+        <span class="tech-tag">Touch support</span>
+      </div>
+      <ul class="harvest-list">
+        <li>One-tap photo annotation on mobile in the field</li>
+        <li>Save annotations separately from image (non-destructive)</li>
+        <li>Re-open and edit annotations later</li>
+        <li>Export flattened image for reports/submittals</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>react-image-annotate</h3>
+        <span class="badge badge-harvest">Harvest</span>
+      </div>
+      <div class="stars">★ Full annotation toolkit</div>
+      <div class="desc">Classify and tag images with polygons, bounding boxes, or points. Canvas-based for performance. Originally built for ML labeling but perfect for construction defect marking.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">Canvas</span>
+        <span class="tech-tag">ML-ready</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Polygon tool for irregular defect areas</li>
+        <li>Point tool for pinpointing exact locations</li>
+        <li>Classification tags (defect type, severity, trade)</li>
+        <li>Canvas rendering handles dozens of annotations smoothly</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 8: AI & DOCUMENT INTELLIGENCE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="ai">
+  <h2><span class="icon">🤖</span> AI & Document Intelligence</h2>
+  <p class="section-desc">The AI layer that will make SiteSync feel like it has a brain — auto-extracting data, predicting delays, and drafting responses.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>Supabase Edge Functions + LLM</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="stars">★ Already available in stack</div>
+      <div class="desc">Run AI processing server-side via Supabase Edge Functions. Call Claude/GPT APIs to analyze documents, generate RFI responses, summarize daily logs, and extract submittal data from PDFs.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Deno</span>
+        <span class="tech-tag">Edge Functions</span>
+        <span class="tech-tag">LLM API</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Upload spec PDF → AI extracts submittal requirements automatically</li>
+        <li>Paste RFI question → AI drafts response from project docs</li>
+        <li>"Summarize today" → AI compiles daily log from all entries</li>
+        <li>Photo upload → AI auto-tags (trade, defect type, location)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Document Layout Analysis</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ deepdoctection, pydoxtools · Open source</div>
+      <div class="desc">Python libraries for intelligent document parsing — table extraction, layout analysis, OCR. Run as microservice to process uploaded construction documents (plans, specs, contracts).</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Python</span>
+        <span class="tech-tag">OCR</span>
+        <span class="tech-tag">Table extraction</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Extract SOV line items from contractor payment apps</li>
+        <li>Parse spec sections to auto-create submittal log</li>
+        <li>OCR handwritten field notes from daily logs</li>
+        <li>Table extraction from engineering calculations</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Vision-Language Models (2026)</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="stars">★ Qwen2.5-VL, GLM-4.5V · Open source</div>
+      <div class="desc">Latest VLMs can understand construction drawings, identify elements, read annotations, and extract structured data from complex documents. 131K context windows handle massive spec documents.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">VLM</span>
+        <span class="tech-tag">Multi-modal</span>
+        <span class="tech-tag">Construction docs</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Upload drawing → AI identifies rooms, dimensions, notes</li>
+        <li>Photo of site → AI detects safety violations (no hardhat, open excavation)</li>
+        <li>Scan contract → AI highlights risky clauses and missing protections</li>
+        <li>Compare as-built photo to BIM model for deviation detection</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 9: DASHBOARDS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="dashboard">
+  <h2><span class="icon">📊</span> Enterprise Dashboards</h2>
+  <p class="section-desc">Executive-grade analytics that make project health visible at a glance.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>Ant Design Pro Patterns</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ 35K+ stars · MIT</div>
+      <div class="desc">Enterprise admin template with analytics dashboards, permission systems, and business components. Study their dashboard composition — metric cards, trend charts, activity streams, alert banners.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">Charts</span>
+      </div>
+      <ul class="harvest-list">
+        <li>KPI card grid with sparklines and trend arrows</li>
+        <li>Route-level permission system (already partially built)</li>
+        <li>Dashboard widget layout with drag-to-rearrange</li>
+        <li>Export dashboard as PDF report</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Recharts (Already Have)</h3>
+        <span class="badge badge-harvest">Enhance</span>
+      </div>
+      <div class="stars">★ 24K+ stars · MIT · Already in bundle</div>
+      <div class="desc">SiteSync already uses Recharts. Push it further with composed charts, custom tooltips, and responsive containers. Add real-time data streaming with Supabase Realtime.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">SVG</span>
+        <span class="tech-tag">D3-based</span>
+      </div>
+      <ul class="harvest-list">
+        <li>S-curve chart: planned vs actual progress over time</li>
+        <li>Cash flow waterfall chart for budget page</li>
+        <li>Stacked bar: RFI/submittal status distribution per week</li>
+        <li>Real-time updating charts (pulse animation on new data)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>React Admin Framework</h3>
+        <span class="badge badge-pattern">Pattern</span>
+      </div>
+      <div class="stars">★ 25K+ stars · MIT</div>
+      <div class="desc">180+ composable components for data-centric admin interfaces. Their DataGrid, filters, and export patterns are battle-tested in thousands of enterprise apps.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">REST/GraphQL</span>
+        <span class="tech-tag">Composable</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Advanced DataGrid with sort, filter, export for every list page</li>
+        <li>Bulk actions (select 10 punch items → assign all to one sub)</li>
+        <li>Inline editing in list views</li>
+        <li>CSV/PDF export on every data table</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 10: PWA / OFFLINE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="pwa">
+  <h2><span class="icon">📱</span> Offline-First PWA for Field</h2>
+  <p class="section-desc">Construction sites have terrible connectivity. SiteSync must work perfectly offline and sync when signal returns.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>Workbox (Google)</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 12K+ stars · MIT</div>
+      <div class="desc">Google's production-ready service worker toolkit. Caching strategies (cache-first, network-first, stale-while-revalidate), background sync, and precaching — all configurable via Vite plugin.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Service Worker</span>
+        <span class="tech-tag">Cache API</span>
+        <span class="tech-tag">Background Sync</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Cache all app shell + assets for instant load without network</li>
+        <li>Background sync: queue mutations offline, replay when connected</li>
+        <li>Stale-while-revalidate for project data (show cached, fetch fresh)</li>
+        <li>Vite plugin: vite-plugin-pwa wraps Workbox perfectly</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>IndexedDB + Dexie.js</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 11K+ stars · Apache 2.0</div>
+      <div class="desc">Client-side database for offline data storage. Dexie wraps IndexedDB with a clean Promise-based API. Store project data locally, sync deltas with Supabase when online.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">IndexedDB</span>
+        <span class="tech-tag">Promise API</span>
+        <span class="tech-tag">Sync</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Cache full project data locally (tasks, punch items, contacts)</li>
+        <li>Create punch items offline → auto-upload with photos when connected</li>
+        <li>Daily log entries saved locally, synced in background</li>
+        <li>Dexie.syncable for bi-directional sync with Supabase</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>PWA Install + Camera API</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="stars">★ Native web APIs</div>
+      <div class="desc">Web manifest + service worker = installable app that feels native. MediaDevices API for camera access. Push notifications for RFI responses, submittal approvals, and safety alerts.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">Web Manifest</span>
+        <span class="tech-tag">Push API</span>
+        <span class="tech-tag">Camera</span>
+      </div>
+      <ul class="harvest-list">
+        <li>"Add to Home Screen" — SiteSync icon on every super's phone</li>
+        <li>Push notification: "Your RFI #47 was answered"</li>
+        <li>Camera capture → auto-attach to current daily log or punch item</li>
+        <li>Geolocation auto-tagging on field captures</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 11: WHITEBOARD & CANVAS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="canvas">
+  <h2><span class="icon">🎨</span> Whiteboard & Canvas Tools</h2>
+  <p class="section-desc">Infinite canvas for site plans, meeting sketches, and collaborative markup sessions.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>tldraw</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 39K+ stars · Custom license (free for dev)</div>
+      <div class="desc">Full-featured infinite canvas SDK. Pressure-sensitive drawing, shapes, arrows, rich text, image support. Built-in multiplayer with live cursors and viewport following. React-native.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">Canvas</span>
+        <span class="tech-tag">Multiplayer</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Meeting whiteboard: sketch layouts, mark up plans together</li>
+        <li>Site plan annotation: drop pins, draw areas, add notes</li>
+        <li>Real-time co-markup during OAC meetings</li>
+        <li>Export annotations as images for daily reports</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Excalidraw</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 80K+ stars · MIT</div>
+      <div class="desc">Virtual whiteboard with hand-drawn aesthetic. Used by Google Cloud, Meta, Notion, Obsidian. Excellent for quick sketches and collaborative diagramming. Fully embeddable as React component.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">TypeScript</span>
+        <span class="tech-tag">MIT</span>
+        <span class="tech-tag">Embeddable</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Quick field sketches embedded in daily logs</li>
+        <li>Diagram construction sequences during planning</li>
+        <li>Lightweight alternative to tldraw (MIT license, no restrictions)</li>
+        <li>Export as SVG/PNG for formal documentation</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 12: DRAG & DROP -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="dnd">
+  <h2><span class="icon">🖱️</span> Drag-Drop & Kanban</h2>
+  <p class="section-desc">Visual task management that construction teams actually want to use.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>dnd-kit</h3>
+        <span class="badge badge-integrate">Integrate</span>
+      </div>
+      <div class="stars">★ 13K+ stars · MIT</div>
+      <div class="desc">Modern, lightweight (~10kb), hook-based DnD library for React. Keyboard + screen reader accessible. Grid, list, and kanban support. Zero dependencies.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">React</span>
+        <span class="tech-tag">Hooks</span>
+        <span class="tech-tag">Accessible</span>
+        <span class="tech-tag">10kb</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Kanban view for punch items by status (Open/In Progress/Complete/Verified)</li>
+        <li>Drag tasks between schedule phases</li>
+        <li>Reorder priority in any list view</li>
+        <li>Touch-friendly for iPad use in field trailers</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>dnd-kit + Tailwind + shadcn/ui</h3>
+        <span class="badge badge-harvest">Harvest</span>
+      </div>
+      <div class="stars">★ Reference implementation on GitHub</div>
+      <div class="desc">Complete Kanban board implementation using dnd-kit with Tailwind CSS and shadcn/ui components. Accessible, beautiful, ready to adapt for construction workflows.</div>
+      <div class="tech-tags">
+        <span class="tech-tag">dnd-kit</span>
+        <span class="tech-tag">Tailwind</span>
+        <span class="tech-tag">shadcn/ui</span>
+      </div>
+      <ul class="harvest-list">
+        <li>Drop-in Kanban component — adapt columns to entity statuses</li>
+        <li>Card components with avatars, badges, and due dates</li>
+        <li>Animated placeholder during drag</li>
+        <li>Column header with count badges and add button</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 13: PROCORE GAP ANALYSIS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="procore">
+  <h2><span class="icon">🎯</span> Procore Gap Analysis</h2>
+  <p class="section-desc">What Procore has, what SiteSync has, and where to leapfrog them.</p>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Procore</th>
+        <th>SiteSync Now</th>
+        <th>SiteSync Target</th>
+        <th>Leapfrog Strategy</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>RFI Management</td>
+        <td class="check">✓ Full</td>
+        <td class="check">✓ Rebuilt</td>
+        <td class="check">✓✓ Superior</td>
+        <td>AI-drafted responses, threaded like Slack, spec-linked highlights</td>
+      </tr>
+      <tr>
+        <td>Submittals</td>
+        <td class="check">✓ Full</td>
+        <td class="check">✓ Rebuilt</td>
+        <td class="check">✓✓ Superior</td>
+        <td>AI auto-populates from spec PDF, document-first UX, pipeline view</td>
+      </tr>
+      <tr>
+        <td>Punch List</td>
+        <td class="check">✓ Full</td>
+        <td class="check">✓ Photo-first</td>
+        <td class="check">✓✓ Superior</td>
+        <td>Photo-first creation, AI defect detection, before/after comparison</td>
+      </tr>
+      <tr>
+        <td>Daily Logs</td>
+        <td class="check">✓ Standard</td>
+        <td class="check">✓ Auto-capture</td>
+        <td class="check">✓✓ Superior</td>
+        <td>AI auto-generates from photos + weather + crew data, voice dictation</td>
+      </tr>
+      <tr>
+        <td>Scheduling</td>
+        <td class="check">✓ New (2025)</td>
+        <td class="partial">◐ Basic</td>
+        <td class="check">✓✓ Match+</td>
+        <td>Interactive Gantt, dependency chains, P6 import, auto-link to submittals</td>
+      </tr>
+      <tr>
+        <td>BIM/3D Viewer</td>
+        <td class="partial">◐ Via partners</td>
+        <td class="cross">✗ None</td>
+        <td class="check">✓✓ Built-in</td>
+        <td>Embed That Open Engine — IFC viewer with punch items pinned on model</td>
+      </tr>
+      <tr>
+        <td>Drawing Markup</td>
+        <td class="check">✓ Full</td>
+        <td class="cross">✗ None</td>
+        <td class="check">✓ Full</td>
+        <td>PDF.js + Konva overlay, multi-user markup, cloud/arrow/pin tools</td>
+      </tr>
+      <tr>
+        <td>Offline Mode</td>
+        <td class="partial">◐ Limited</td>
+        <td class="cross">✗ None</td>
+        <td class="check">✓✓ Full PWA</td>
+        <td>Workbox + IndexedDB, full offline CRUD, background sync</td>
+      </tr>
+      <tr>
+        <td>Real-Time Collab</td>
+        <td class="partial">◐ Basic</td>
+        <td class="check">✓ Realtime queries</td>
+        <td class="check">✓✓ Figma-level</td>
+        <td>Live cursors, presence avatars, conflict detection, co-editing</td>
+      </tr>
+      <tr>
+        <td>AI Features</td>
+        <td class="check">✓ Procore AI (2025)</td>
+        <td class="partial">◐ Project Brain</td>
+        <td class="check">✓✓ Superior</td>
+        <td>On-device AI, doc parsing, auto-tagging, predictive delays, drafting</td>
+      </tr>
+      <tr>
+        <td>Mobile Experience</td>
+        <td class="check">✓ Native apps</td>
+        <td class="partial">◐ Responsive</td>
+        <td class="check">✓✓ PWA Native-feel</td>
+        <td>PWA install, push notifications, camera capture, offline-first</td>
+      </tr>
+      <tr>
+        <td>Cost / Pricing</td>
+        <td class="cross">$$$ Per user</td>
+        <td class="check">✓ Free / low cost</td>
+        <td class="check">✓✓ Disruptive</td>
+        <td>Free tier for small GCs, per-project pricing, no per-seat lock-in</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 14: CONTECH AI TRENDS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="contech">
+  <h2><span class="icon">🔮</span> ConTech AI Trends 2026</h2>
+  <p class="section-desc">Where the industry is headed — and how SiteSync can get there first.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-header">
+        <h3>AI Project Engineer</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="desc">AI assistants that act as virtual project engineers — answering technical questions, tracking daily tasks, detecting safety risks, and auto-generating reports. McKinsey estimates 14-15% productivity boost from better data analytics.</div>
+      <ul class="harvest-list">
+        <li>SiteSync already has Project Brain — push it to be proactive</li>
+        <li>"Good morning, Walker. 3 submittals due this week, RFI #12 needs response, weather alert for Thursday."</li>
+        <li>Auto-generate weekly owner reports from all project data</li>
+        <li>Flag schedule risks before they become delays</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Digital Twin Integration</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="desc">$110B market by 2029. Construction digital twins combine BIM models with real-time sensor data, progress photos, and schedule information. Early adopters report 30% fewer safety incidents.</div>
+      <ul class="harvest-list">
+        <li>BIM model + daily progress photos = visual percent complete</li>
+        <li>IoT sensor data overlay (temperature, humidity for concrete curing)</li>
+        <li>4D simulation: schedule timeline animated on 3D model</li>
+        <li>Compare as-built scan to design model for deviation alerts</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>Computer Vision Safety</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="desc">AI-driven safety monitoring from jobsite cameras and drone footage. Detect PPE non-compliance, unsafe behaviors, and hazardous conditions in near real-time. 30% reduction in reportable incidents for early adopters.</div>
+      <ul class="harvest-list">
+        <li>Upload site photo → AI flags missing hardhats, safety vests</li>
+        <li>Drone footage analysis for fall protection compliance</li>
+        <li>Auto-generate safety inspection reports from photos</li>
+        <li>Trend analysis: which crews have most safety violations</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3>ML-Powered Scheduling</h3>
+        <span class="badge badge-build">Build</span>
+      </div>
+      <div class="desc">Machine learning algorithms processing thousands of possible scenarios simultaneously to identify optimal timelines. Weather-adjusted schedules, resource-optimized sequences, and delay prediction.</div>
+      <ul class="harvest-list">
+        <li>Historical project data → predict realistic durations</li>
+        <li>Weather forecast integration → auto-adjust outdoor activities</li>
+        <li>Resource leveling across multiple projects</li>
+        <li>"What-if" scenario modeling: what if concrete is delayed 2 weeks?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SECTION 15: IMPLEMENTATION ROADMAP -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<section id="roadmap">
+  <h2><span class="icon">🚀</span> Implementation Roadmap</h2>
+  <p class="section-desc">Prioritized by impact × feasibility. What to build in days vs. weeks vs. months.</p>
+
+  <!-- P0: THIS WEEK -->
+  <div class="priority-section">
+    <div class="priority-header">
+      <div class="priority-dot p0"></div>
+      <h3>P0 — This Week (Highest Impact, Already Possible)</h3>
+      <span class="timeline">Days 1-3</span>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p0">1</div>
+      <div>
+        <h4>Cmd+K Command Palette</h4>
+        <div class="detail">Linear's killer feature. One keyboard shortcut to navigate anywhere, create anything, search everything. 200 lines of React + Zustand. Makes the app feel 10x more powerful instantly.</div>
+        <div class="source">Pattern: Linear, Plane, Figma</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p0">2</div>
+      <div>
+        <h4>Presence Avatars on Every Page</h4>
+        <div class="detail">Show who's viewing each page with live avatar stacks. Already have useEntityPresence hook — surface it in the UI header. Supabase Presence channel is free and fast.</div>
+        <div class="source">Pattern: Figma, Google Docs · Source: Supabase Presence (already have)</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p0">3</div>
+      <div>
+        <h4>Multi-View Toggle (List / Kanban / Calendar)</h4>
+        <div class="detail">Add view switcher to punch items, tasks, and submittals. Same data, three views. Kanban uses dnd-kit (~10kb, MIT). Calendar view with @fullcalendar/react. The "Airtable effect" — users feel power.</div>
+        <div class="source">Pattern: Airtable, Notion, Plane · Libs: dnd-kit, @fullcalendar/react</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p0">4</div>
+      <div>
+        <h4>Bulk Actions on Every List</h4>
+        <div class="detail">Checkbox column on every data table. Select multiple → assign, change status, delete, export. Enterprise PM users expect this. 100 lines per list page.</div>
+        <div class="source">Pattern: React Admin, Procore, Linear</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p0">5</div>
+      <div>
+        <h4>CSV/PDF Export on Every Data Page</h4>
+        <div class="detail">Construction PMs export everything to send to owners and subs. Use jsPDF + autoTable for PDF, PapaParse for CSV. Add "Export" button to every list header.</div>
+        <div class="source">Libs: jsPDF, jspdf-autotable, PapaParse</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P1: NEXT WEEK -->
+  <div class="priority-section">
+    <div class="priority-header">
+      <div class="priority-dot p1"></div>
+      <h3>P1 — Next Sprint (High Impact, Moderate Effort)</h3>
+      <span class="timeline">Days 4-10</span>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p1">6</div>
+      <div>
+        <h4>Interactive Gantt Chart</h4>
+        <div class="detail">Replace schedule list with gantt-task-react. Drag bars to resize, link dependencies with arrows, highlight critical path. Import from the schedule_phases and schedule_activities tables already in DB.</div>
+        <div class="source">Lib: gantt-task-react (MIT) · Pattern: Procore Scheduling 2025</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p1">7</div>
+      <div>
+        <h4>Drawing Markup System</h4>
+        <div class="detail">PDF.js for rendering + Konva overlay for annotations. Cloud, arrow, pin, text, and freehand tools. Save annotations to Supabase as JSON. Pin punch items and RFIs directly on drawings.</div>
+        <div class="source">Libs: react-pdf, react-konva · Pattern: Procore, Bluebeam</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p1">8</div>
+      <div>
+        <h4>PWA + Offline Mode (Phase 1)</h4>
+        <div class="detail">vite-plugin-pwa + Workbox for service worker. Cache app shell for instant load. Add web manifest for "Add to Home Screen". Push notification registration. This alone puts SiteSync ahead of most competitors on mobile.</div>
+        <div class="source">Libs: vite-plugin-pwa, Workbox · Pattern: Fieldwire, PlanGrid</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p1">9</div>
+      <div>
+        <h4>Photo Annotation for Punch Items</h4>
+        <div class="detail">Integrate Annotorious or marker.js into PunchItemDetailPage. Circle defects, add arrows, write callouts directly on photos. Save annotations separately (non-destructive). Export flattened for reports.</div>
+        <div class="source">Libs: Annotorious, marker.js · Pattern: Fieldwire</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p1">10</div>
+      <div>
+        <h4>AI Daily Summary</h4>
+        <div class="detail">Supabase Edge Function that runs at 5 PM. Aggregates all daily log entries, weather data, crew counts, safety incidents, and RFI activity. Uses Claude API to generate a polished one-page summary. Auto-emails to project team.</div>
+        <div class="source">Tech: Supabase Edge Functions + Claude API · Pattern: Procore AI</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P2: WEEKS 2-3 -->
+  <div class="priority-section">
+    <div class="priority-header">
+      <div class="priority-dot p2"></div>
+      <h3>P2 — Weeks 2-3 (Differentiators)</h3>
+      <span class="timeline">Days 10-21</span>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p2">11</div>
+      <div>
+        <h4>BIM/IFC 3D Viewer</h4>
+        <div class="detail">Embed That Open Engine (@thatopen/components, MIT). Upload IFC → view 3D model in browser. Click elements → see linked submittals, RFIs, punch items. Floor plan extraction for 2D navigation.</div>
+        <div class="source">Lib: @thatopen/components (MIT) · Pattern: OpenProject BIM</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p2">12</div>
+      <div>
+        <h4>Full Offline CRUD</h4>
+        <div class="detail">Dexie.js for client-side IndexedDB. Cache project data locally. Queue create/update operations when offline. Background sync with conflict resolution when connectivity returns. The field superintendent's dream.</div>
+        <div class="source">Lib: Dexie.js (Apache 2.0) · Pattern: CouchDB sync</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p2">13</div>
+      <div>
+        <h4>Multiplayer Co-Editing (Yjs)</h4>
+        <div class="detail">Yjs CRDT for simultaneous editing of daily logs, meeting minutes, and specs. y-websocket provider connecting through Supabase. Shared cursors, offline support, version snapshots.</div>
+        <div class="source">Lib: Yjs (MIT) · Pattern: Figma, Notion</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p2">14</div>
+      <div>
+        <h4>AI Spec Parser</h4>
+        <div class="detail">Upload project specifications PDF → AI extracts every submittal requirement, creates submittal log automatically. Edge Function calls Claude with structured extraction prompts. Saves PMs hours of manual log creation.</div>
+        <div class="source">Tech: Claude API + PDF parsing · Pattern: Procore AI 2025</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p2">15</div>
+      <div>
+        <h4>Custom Dashboard Builder</h4>
+        <div class="detail">Drag-and-drop dashboard with widget library (KPI cards, charts, lists, activity feed). Users save custom layouts per project. CEO dashboard vs. Super dashboard vs. PM dashboard.</div>
+        <div class="source">Pattern: Ant Design Pro, Metabase · Lib: react-grid-layout</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P3: MONTH 2+ -->
+  <div class="priority-section">
+    <div class="priority-header">
+      <div class="priority-dot p3"></div>
+      <h3>P3 — Month 2+ (Category-Defining Features)</h3>
+      <span class="timeline">Weeks 4-8</span>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p3">16</div>
+      <div>
+        <h4>Proactive AI Assistant</h4>
+        <div class="detail">Morning briefing, delay prediction, auto-generated owner reports, safety trend analysis, budget forecast alerts. Moves from reactive (answer questions) to proactive (surface insights before you ask).</div>
+        <div class="source">Pattern: Procore AI + Linear auto-workflows</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p3">17</div>
+      <div>
+        <h4>Digital Twin Lite</h4>
+        <div class="detail">BIM model + progress photos + schedule = 4D visualization. Upload drone photos, AI compares to model, highlights deviations. Percent complete calculated from visual analysis.</div>
+        <div class="source">Pattern: Avvir, OpenSpace · Tech: VLM + BIM viewer</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p3">18</div>
+      <div>
+        <h4>Embedded Whiteboard (Excalidraw)</h4>
+        <div class="detail">Excalidraw component embedded in meeting pages and daily logs. Quick sketches, site layout diagrams, construction sequence drawings. Collaborative with multiplayer.</div>
+        <div class="source">Lib: Excalidraw (80K stars, MIT)</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p3">19</div>
+      <div>
+        <h4>Cross-Entity Intelligence Graph</h4>
+        <div class="detail">Every entity linked to every related entity. RFI references drawing + spec section. Submittal links to schedule milestone + spec requirement. Change order links to RFI + budget line. Visualize as interactive graph.</div>
+        <div class="source">Pattern: Procore's full-lifecycle integration</div>
+      </div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="num p3">20</div>
+      <div>
+        <h4>P6 / MS Project Import/Export</h4>
+        <div class="detail">Parse .xer (Primavera) and .mpp (MS Project) files. Import into SiteSync schedule. Export back out. This single feature removes the #1 objection from enterprise GCs.</div>
+        <div class="source">Pattern: Procore 2025 · Libs: mpxj (Java, run via WASM or Edge Function)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div style="text-align:center; padding:48px 0; color:var(--text2); font-size:14px; border-top:1px solid var(--border);">
+  <p style="margin-bottom:8px;">SiteSync Enterprise Research — Compiled April 2026</p>
+  <p style="color:var(--orange); font-weight:600;">47 repos analyzed · 8 tech-giant patterns · 20 prioritized initiatives</p>
+  <p style="margin-top:16px;">The construction industry is a $13T market running on fax machines and spreadsheets.<br>SiteSync is the answer.</p>
+</div>
+
+</div>
+</body>
+</html>
