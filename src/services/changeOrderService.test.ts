@@ -62,6 +62,7 @@ function makeChain(
   chain.single = vi.fn().mockResolvedValue(singleResult)
   chain.insert = vi.fn().mockReturnValue(chain)
   chain.update = vi.fn().mockReturnValue(chain)
+  chain.delete = vi.fn().mockReturnValue(chain)
   chain.then = (resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) =>
     Promise.resolve(listResult).then(resolve, reject)
   return chain
@@ -282,6 +283,7 @@ describe('changeOrderService.updateChangeOrder', () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } } })
     const chain: Record<string, unknown> = {}
     chain.update = vi.fn().mockReturnValue(chain)
+  chain.delete = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockResolvedValue({ data: null, error: null })
     mockFrom.mockReturnValue(chain)
 
@@ -305,6 +307,7 @@ describe('changeOrderService.deleteChangeOrder', () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } } })
     const chain: Record<string, unknown> = {}
     chain.update = vi.fn().mockReturnValue(chain)
+  chain.delete = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockResolvedValue({ data: null, error: null })
     mockFrom.mockReturnValue(chain)
 
@@ -320,6 +323,7 @@ describe('changeOrderService.deleteChangeOrder', () => {
     mockGetSession.mockResolvedValue({ data: { session: null } })
     const chain: Record<string, unknown> = {}
     chain.update = vi.fn().mockReturnValue(chain)
+  chain.delete = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockResolvedValue({ data: null, error: { message: 'forbidden' } })
     mockFrom.mockReturnValue(chain)
 

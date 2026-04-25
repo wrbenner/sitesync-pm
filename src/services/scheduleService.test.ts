@@ -20,6 +20,7 @@ function makeChain(resolved: unknown) {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue(resolved),
@@ -146,6 +147,7 @@ describe('scheduleService.transitionStatus', () => {
       }
       return {
         update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: updateError }),
       };
     });
@@ -223,7 +225,8 @@ describe('scheduleService.transitionStatus', () => {
 
   it('sets percent_complete to 100 when completing', async () => {
     let callCount = 0;
-    const updateChain = { update: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) };
+    const updateChain = { update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }) };
     mockSupabase.from.mockImplementation((table: string) => {
       if (table === 'schedule_phases' && callCount === 0) {
         callCount++;
@@ -255,6 +258,7 @@ describe('scheduleService.updatePhase', () => {
   it('updates fields and sets updated_by', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -270,6 +274,7 @@ describe('scheduleService.deletePhase', () => {
   it('soft-deletes by setting deleted_at and deleted_by', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -286,6 +291,7 @@ describe('scheduleService.updateDependencies', () => {
   it('sets depends_on to first predecessor', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);
@@ -299,6 +305,7 @@ describe('scheduleService.updateDependencies', () => {
   it('sets depends_on to null for empty predecessors', async () => {
     const chain = {
       update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ error: null }),
     };
     mockSupabase.from.mockReturnValue(chain);

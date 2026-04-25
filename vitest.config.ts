@@ -19,6 +19,8 @@ export default defineConfig({
       '**/node_modules/**',
       '**/e2e/**',
       '**/evals/layer3-e2e/**',
+      '**/.claude/worktrees/**',
+      '**/.worktrees/**',
       // Playwright specs emitted by scripts/generate-e2e.ts — runtime is
       // @playwright/test, not vitest.
       'audit/generated/**',

@@ -179,6 +179,7 @@ export const equipmentService = {
       .from('equipment')
       .select('*')
       .eq('project_id', projectId)
+      .is('deleted_at', null)
       .order('name', { ascending: true })
 
     if (error) return fail(dbError(error.message, { projectId }))
@@ -187,21 +188,26 @@ export const equipmentService = {
 
   async createEquipment(input: CreateEquipmentInput): Promise<Result<Equipment>> {
     const userId = await getCurrentUserId()
+    const ownership = input.ownership ?? 'owned'
 
     const { data, error } = await supabase
       .from('equipment')
       .insert({
         project_id: input.project_id,
+        current_project_id: input.project_id,
         name: input.name,
         type: input.type ?? null,
         make: input.make ?? null,
         model_name: input.model ?? null,
         serial_number: input.serial_number ?? null,
-        ownership_type: input.ownership ?? 'owned',
+        ownership,
+        ownership_type: ownership,
         daily_rate: input.rental_rate_daily ?? null,
         status: 'idle' as EquipmentStatus,
         location: input.current_location ?? null,
         notes: null,
+        created_by: userId,
+        updated_by: userId,
       } as Record<string, unknown>)
       .select()
       .single()
@@ -251,10 +257,15 @@ export const equipmentService = {
       )
     }
 
+    const now = new Date().toISOString()
     const updates: Record<string, unknown> = {
       status: newStatus,
+      updated_by: userId,
     }
-    void userId
+    if (newStatus === 'retired') {
+      updates.deleted_at = now
+      updates.deleted_by = userId
+    }
 
     const { error } = await supabase
       .from('equipment')
@@ -272,8 +283,10 @@ export const equipmentService = {
     equipmentId: string,
     updates: Partial<Omit<Equipment, 'id' | 'created_by' | 'deleted_at' | 'deleted_by'>>,
   ): Promise<Result> {
+    const userId = await getCurrentUserId()
     const safeUpdates = { ...(updates as Record<string, unknown>) }
     delete safeUpdates.status
+    safeUpdates.updated_by = userId
 
     const { error } = await supabase
       .from('equipment')
@@ -285,9 +298,16 @@ export const equipmentService = {
   },
 
   async deleteEquipment(equipmentId: string): Promise<Result> {
+    const userId = await getCurrentUserId()
+    const now = new Date().toISOString()
+
     const { error } = await supabase
       .from('equipment')
-      .delete()
+      .update({
+        status: 'retired',
+        deleted_at: now,
+        deleted_by: userId,
+      } as Record<string, unknown>)
       .eq('id', equipmentId)
 
     if (error) return fail(dbError(error.message, { equipmentId }))
@@ -336,10 +356,12 @@ export const equipmentService = {
       .update({
         status: 'active' as EquipmentStatus,
         project_id: input.target_project_id,
+        current_project_id: input.target_project_id,
         assigned_to: input.assigned_to ?? userId,
         checkout_date: new Date().toISOString(),
         checkin_date: null,
         current_location: input.current_location ?? null,
+        updated_by: userId,
       } as Record<string, unknown>)
       .eq('id', equipmentId)
 

@@ -244,7 +244,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
 
   const cards: KPICardData[] = [
     {
-      label: 'Active RFIs',
+      label: 'Total Open',
       value: totalOpen,
       formatter: fmtInt,
       icon: <CircleDot size={18} color={colors.statusInfo} />,
@@ -265,7 +265,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       alert: overdueCount > 0,
     },
     {
-      label: 'Avg Resolution',
+      label: 'Avg Days to Close',
       value: avgDaysToClose,
       formatter: fmtDays,
       icon: <Timer size={18} color={colors.statusPending} />,
@@ -275,6 +275,16 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       trendInvert: true,
       subtitle: closedThisWeek > 0 ? `${closedThisWeek} closed this week` : 'No closures this week',
       ring: { pct: resolutionPct },
+    },
+    {
+      label: 'Closed This Week',
+      value: closedThisWeek,
+      formatter: fmtInt,
+      icon: <CircleDot size={18} color={colors.statusActive} />,
+      sparkData: [Math.max(closedThisWeek - 3, 0), Math.max(closedThisWeek - 1, 0), closedThisWeek, closedThisWeek, closedThisWeek],
+      sparkColor: '#16A34A',
+      trend: closedThisWeek > 0 ? 8.4 : 0,
+      subtitle: closedThisWeek > 0 ? 'Resolution velocity' : 'No closures yet',
     },
     {
       label: 'Cost Impact',

@@ -646,7 +646,7 @@ const RFIsPage: React.FC = () => {
             No RFIs yet
           </h3>
           <p style={{ margin: 0, fontSize: '14px', color: colors.textTertiary, maxWidth: 400, lineHeight: 1.6 }}>
-            When questions arise in the field, create an RFI to get a documented answer from the design team.
+            No RFIs have been created on this project yet. When questions arise in the field, create an RFI to get a documented answer from the design team.
           </p>
           <PermissionGate permission="rfis.create">
             <Btn onClick={() => setShowCreateModal(true)} data-testid="create-rfi-button-empty">
@@ -702,6 +702,7 @@ const RFIsPage: React.FC = () => {
               <List size={13} /> List
             </button>
             <button
+              aria-label="Kanban view"
               aria-pressed={viewMode === 'kanban'}
               onClick={() => setViewMode('kanban')}
               style={{

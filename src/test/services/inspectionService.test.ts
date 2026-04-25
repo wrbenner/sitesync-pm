@@ -62,6 +62,7 @@ function makeChain(
   chain.single = vi.fn().mockResolvedValue(singleResult)
   chain.insert = vi.fn().mockReturnValue(chain)
   chain.update = vi.fn().mockReturnValue(chain)
+  chain.delete = vi.fn().mockReturnValue(chain)
   chain.then = (resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) =>
     Promise.resolve(listResult).then(resolve, reject)
   return chain

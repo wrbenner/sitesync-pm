@@ -386,7 +386,10 @@ export function computeThirteenWeekCashFlow(
   void changeOrders // reserved for future CO-driven inflow adjustments
 
   const start = startDate ? new Date(startDate) : new Date()
-  start.setHours(0, 0, 0, 0)
+  // Use UTC midnight so the YYYY-MM-DD string round-trips identically
+  // regardless of the runner's local timezone (avoids 2026-06-01 → 2026-05-31
+  // off-by-one in zones west of UTC).
+  start.setUTCHours(0, 0, 0, 0)
 
   // Net-of-retainage factor (e.g. 10% retainage → pay out 90%)
   const netFactor = 1 - retainageRate

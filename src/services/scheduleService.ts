@@ -55,9 +55,11 @@ type AugmentedUpdate = SchedulePhaseUpdate & {
 const SCHEDULE_PHASE_COLUMNS = new Set([
   'project_id', 'name', 'description', 'status',
   'start_date', 'end_date', 'actual_start', 'actual_end',
-  'percent_complete', 'float_days', 'lag_days',
+  'baseline_start', 'baseline_end',
+  'percent_complete', 'float_days', 'lag_days', 'total_float',
   'is_critical', 'is_critical_path', 'is_milestone',
-  'assigned_crew_id', 'depends_on', 'dependency_type', 'predecessor_ids',
+  'assigned_crew_id', 'depends_on', 'dependencies', 'dependency_type', 'predecessor_ids',
+  'created_by', 'updated_by',
   'updated_at', 'deleted_at', 'deleted_by',
 ]);
 
@@ -100,7 +102,7 @@ export const scheduleService = {
       .order('end_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
-    const milestones = (data ?? []).filter((p) => (p as Record<string, unknown>)['is_critical_path']);
+    const milestones = (data ?? []).filter((p) => (p as Record<string, unknown>)['is_milestone']);
     return { data: milestones, error: null };
   },
 
@@ -108,6 +110,8 @@ export const scheduleService = {
    * Create a new phase in 'upcoming' status with provenance.
    */
   async createPhase(input: CreatePhaseInput): Promise<ScheduleServiceResult<unknown>> {
+    const userId = await getCurrentUserId();
+    const extras = input as Record<string, unknown>;
     const payload: AugmentedInsert = {
       project_id: input.project_id,
       name: input.name,
@@ -116,9 +120,15 @@ export const scheduleService = {
       end_date: input.end_date ?? null,
       percent_complete: input.percent_complete ?? 0,
       is_critical_path: input.is_critical_path ?? false,
+      is_milestone: (extras.is_milestone as boolean | undefined) ?? false,
       depends_on: input.depends_on ?? null,
       assigned_crew_id: input.assigned_crew_id ?? null,
-    };
+      baseline_start: (extras.baseline_start as string | undefined) ?? null,
+      baseline_end: (extras.baseline_end as string | undefined) ?? null,
+      float_days: (extras.float_days as number | undefined) ?? null,
+      created_by: userId,
+      updated_by: userId,
+    } as AugmentedInsert;
 
     const { data, error } = await supabase
       .from('schedule_phases')
@@ -172,8 +182,9 @@ export const scheduleService = {
     // 4. Execute transition with provenance
     const updates: AugmentedUpdate = {
       status: newStatus,
+      updated_by: userId,
       ...(newStatus === 'completed' ? { percent_complete: 100 } : {}),
-    };
+    } as AugmentedUpdate;
 
     const { error } = await supabase
       .from('schedule_phases')
@@ -192,9 +203,11 @@ export const scheduleService = {
     phaseId: string,
     updates: Partial<CreatePhaseInput>,
   ): Promise<ScheduleServiceResult> {
+    const userId = await getCurrentUserId();
     const payload = sanitizeSchedulePhaseData({
       ...(updates as Record<string, unknown>),
       updated_at: new Date().toISOString(),
+      updated_by: userId,
     });
 
     const { error } = await supabase
@@ -207,12 +220,17 @@ export const scheduleService = {
   },
 
   /**
-   * Delete a phase.
+   * Soft-delete a phase by setting deleted_at + deleted_by.
    */
   async deletePhase(phaseId: string): Promise<ScheduleServiceResult> {
+    const userId = await getCurrentUserId();
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from('schedule_phases')
-      .delete()
+      .update({
+        deleted_at: now,
+        deleted_by: userId,
+      } as unknown as SchedulePhaseUpdate)
       .eq('id', phaseId);
 
     if (error) return { data: null, error: error.message };
@@ -220,17 +238,19 @@ export const scheduleService = {
   },
 
   /**
-   * Update phase dependencies. Writes the full array to `predecessor_ids`
+   * Update phase dependencies. Writes the full array to `dependencies`
    * and mirrors the first one to `depends_on` for legacy single-FK readers.
    */
   async updateDependencies(
     phaseId: string,
     predecessorIds: string[],
   ): Promise<ScheduleServiceResult> {
+    const userId = await getCurrentUserId();
     const payload: AugmentedUpdate = {
       depends_on: predecessorIds[0] ?? null,
-      predecessor_ids: predecessorIds.length > 0 ? predecessorIds : null,
-    };
+      dependencies: predecessorIds.length > 0 ? predecessorIds : [],
+      updated_by: userId,
+    } as AugmentedUpdate;
 
     const { error } = await supabase
       .from('schedule_phases')

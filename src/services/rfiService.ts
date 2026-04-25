@@ -151,7 +151,9 @@ export const rfiService = {
    * Update RFI fields (non-status). Use transitionStatus() for status changes.
    */
   async updateRfi(rfiId: string, updates: Partial<RFI>): Promise<Result> {
+    const userId = await getCurrentUserId();
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    safeUpdates.updated_by = userId;
 
     const { error } = await supabase
       .from('rfis')
@@ -163,9 +165,14 @@ export const rfiService = {
   },
 
   async deleteRfi(rfiId: string): Promise<Result> {
+    const userId = await getCurrentUserId();
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from('rfis')
-      .delete()
+      .update({
+        deleted_at: now,
+        deleted_by: userId,
+      } as Record<string, unknown>)
       .eq('id', rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId }));

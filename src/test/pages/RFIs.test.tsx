@@ -67,8 +67,8 @@ vi.mock('../../utils/connections', () => ({
   getRelatedItemsForRfi: () => [],
 }))
 
-vi.mock('../../components/forms/CreateRFIModal', () => ({
-  default: ({ open, onSubmit }: { open: boolean; onSubmit: (d: unknown) => void }) =>
+vi.mock('../../components/rfis/RFICreateWizard', () => ({
+  default: ({ open, onSubmit }: { open: boolean; onSubmit: (d: unknown) => void | Promise<void> }) =>
     open ? (
       <div data-testid="create-rfi-modal">
         <button onClick={() => onSubmit({ title: 'Test RFI', priority: 'medium' })}>Submit</button>
@@ -194,7 +194,7 @@ describe('RFIs page', () => {
     rfisState.error = new Error('Network error')
     rfisState.data = undefined
     render(wrap(<RFIs />))
-    expect(screen.getByText(/Unable to load RFIs|Network error/i)).toBeTruthy()
+    expect(screen.getAllByText(/Unable to load RFIs|Network error/i).length).toBeGreaterThan(0)
     const retryBtn = screen.getByRole('button', { name: /retry/i })
     expect(retryBtn).toBeTruthy()
     fireEvent.click(retryBtn)
