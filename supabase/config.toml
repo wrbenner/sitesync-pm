@@ -402,6 +402,11 @@ verify_jwt = false
 [functions.verify-audit-chain]
 verify_jwt = false
 
+# procore-import: one-shot Procore→SiteSync project import. Auth
+# happens in-handler via authenticateRequest + verifyProjectMembership
+# so the runtime JWT validator stays on (default true). No special
+# config — Procore credentials live in the request body, never env.
+
 [analytics]
 enabled = true
 port = 54327
