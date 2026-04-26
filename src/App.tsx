@@ -57,6 +57,8 @@ function lazyWithRetry(importFn: () => Promise<unknown>, retries = 3, delay = 10
 // Auth pages
 const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
 const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: m.Signup })));
+// Public, unauthenticated trust center page used by procurement reviewers.
+const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Lazy loaded overlay panels (only render when opened)
@@ -327,6 +329,7 @@ function AppRoutes() {
           <Routes location={location}>
             <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
+            <Route path="/security" element={<PageSuspense><SecurityOverview /></PageSuspense>} />
 
             {/* ── Core 10 ── */}
             <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
