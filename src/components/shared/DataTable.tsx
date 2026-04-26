@@ -246,7 +246,7 @@ export function DataTable<T>({
       );
     },
   // lastCheckedRef is a stable ref object, safe to omit from deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }), []);
 
   const effectiveColumns = useMemo(

@@ -90,7 +90,7 @@ function main(): void {
   fs.mkdirSync(OUT_DIR, { recursive: true })
   const content = generate()
   fs.writeFileSync(OUT_FILE, content, 'utf8')
-  // eslint-disable-next-line no-console
+   
   console.log(`Generated ${OUT_FILE.replace(REPO_ROOT + '/', '')}`)
 }
 

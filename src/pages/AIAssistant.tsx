@@ -423,7 +423,7 @@ export default function AIAssistant() {
         },
         {
           onError: (e) => {
-            // eslint-disable-next-line no-console
+             
             console.debug('[Iris] agent_tasks persist failed (non-blocking):', e);
           },
         },

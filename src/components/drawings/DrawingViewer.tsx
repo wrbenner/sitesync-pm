@@ -489,7 +489,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
         }
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [activeTool, activeColor, strokeWidth, isEditable]);
 
   // ── Coordinate helpers ────────────────────────────────────────────────────

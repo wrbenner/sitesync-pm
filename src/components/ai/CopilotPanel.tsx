@@ -216,7 +216,7 @@ export const CopilotPanel: React.FC = () => {
       }
     }
     loadHistory()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [isOpen, activeProjectId])
 
   // Real-time subscription for collaborative messages from other users

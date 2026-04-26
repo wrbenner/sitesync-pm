@@ -978,7 +978,7 @@ export default function SiteMap() {
     } else {
       imgOverlayRef.current.imgEl = null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mode, sitePlanUrl]);
 
   // ── Save pin ──

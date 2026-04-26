@@ -604,7 +604,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         setAutoFilledFields(new Set(['weather_condition', 'temperature_high', 'temperature_low', 'wind_speed']))
       }
     }).finally(() => setWeatherLoading(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [open, isSubmittedView, projectLat, projectLon])
 
   const set =<K extends keyof CreateDailyLogFormData>(k: K, v: CreateDailyLogFormData[K]) =>
