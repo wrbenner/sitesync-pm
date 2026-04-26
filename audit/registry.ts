@@ -854,6 +854,14 @@ export const PAGE_REGISTRY: PageContract[] = [
     expected: {},
     status: 'stub',
   },
+  {
+    route: '/security',
+    pageFile: 'src/pages/SecurityOverview.tsx',
+    title: 'Security Overview (public trust center)',
+    entity: null,
+    expected: {},
+    status: 'production',
+  },
 
   // ── Catch-all ────────────────────────────────────────────
   {
