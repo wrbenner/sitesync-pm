@@ -1,13 +1,88 @@
 {
   "totals": {
-    "as_any": 2,
+    "as_any": 45,
     "ts_ignore": 0,
-    "files": 1
+    "files": 16
   },
   "files": [
     {
+      "file": "src/pages/submittals/SubmittalDetailPage.tsx",
+      "as_any": 7,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/Workforce.tsx",
+      "as_any": 6,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/daily-log/DailySummaryPage.tsx",
+      "as_any": 6,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/rfis/RFIDetail.tsx",
+      "as_any": 5,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/queries/full-text-search.ts",
+      "as_any": 4,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/shared/PhotoAnnotation.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
       "file": "src/lib/supabase.ts",
       "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/queries/workforce.ts",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/queries/preconstruction.ts",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/ProjectGate.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/drawings/DrawingTiledViewer.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/LienWaivers.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/site-intelligence/SiteIntelligencePage.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/mutations/draw-reports.ts",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/queries/lien-waivers.ts",
+      "as_any": 1,
       "ts_ignore": 0
     }
   ]
