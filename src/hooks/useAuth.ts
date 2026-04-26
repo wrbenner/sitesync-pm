@@ -22,6 +22,38 @@ let initialized = false
 // Stored by the hook so the module-level listener can navigate on session expiry
 let navigateFn: ((path: string) => void) | null = null
 
+// ── Idle session timeout ────────────────────────────────────
+// Default 30 minutes of no user activity → forced sign-out.
+// Activity = pointer / keyboard / touch / focus events bubbling to window.
+// Per-org override can be wired in later by reading org settings.
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000
+let lastActivityAt = Date.now()
+let idleTimerHandle: ReturnType<typeof setInterval> | null = null
+let idleListenersAttached = false
+
+function recordActivity() {
+  lastActivityAt = Date.now()
+}
+
+function startIdleWatcher() {
+  if (idleListenersAttached || typeof window === 'undefined') return
+  idleListenersAttached = true
+
+  const events: (keyof WindowEventMap)[] = [
+    'mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove', 'focus',
+  ]
+  events.forEach((ev) => window.addEventListener(ev, recordActivity, { passive: true }))
+
+  // Tick once a minute. Cheap; granular enough that users notice the
+  // timeout within ~60s of the actual expiry.
+  idleTimerHandle = setInterval(() => {
+    if (!state.session || !state.user) return
+    if (Date.now() - lastActivityAt < IDLE_TIMEOUT_MS) return
+    // Idle threshold reached. Sign out.
+    void supabase.auth.signOut()
+  }, 60 * 1000)
+}
+
 function setState(partial: Partial<SharedAuthState>) {
   state = { ...state, ...partial }
   listeners.forEach(fn => fn())
@@ -46,11 +78,16 @@ async function initAuth() {
     return
   }
 
+  // Start the idle-timeout watcher once at boot. It is a no-op until
+  // a session exists.
+  startIdleWatcher()
+
   try {
     const { data: { session: s } } = await supabase.auth.getSession()
     setState({ session: s, user: s?.user ?? null })
     if (s?.user) {
       setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
+      recordActivity()
     }
   } finally {
     setState({ loading: false })
@@ -59,7 +96,10 @@ async function initAuth() {
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
       setState({ session: s, user: s?.user ?? null, error: null })
-      if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
+      if (s?.user) {
+        setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
+        recordActivity() // reset idle clock on fresh sign-in / refresh
+      }
     } else if (_event === 'SIGNED_OUT') {
       setState({ session: null, user: null, error: null })
       queryClient.clear()

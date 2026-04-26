@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { useNavigate } from 'react-router-dom';
+import { MfaEnrollment } from '../components/auth/MfaEnrollment';
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -522,12 +523,9 @@ export default function UserProfile() {
             icon={<Shield size={16} />}
             onClick={() => navigate('/settings/team')}
           />
-          <SettingsRow
-            label="Security"
-            description="Password and two-factor authentication"
-            icon={<Lock size={16} />}
-            onClick={() => toast('Security settings coming soon')}
-          />
+          <div style={{ padding: spacing['3'] }}>
+            <MfaEnrollment />
+          </div>
           <div style={{ paddingTop: spacing['3'] }}>
             <motion.button
               whileHover={{ scale: 1.01 }}
