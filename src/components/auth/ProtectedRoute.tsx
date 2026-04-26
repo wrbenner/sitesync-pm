@@ -7,6 +7,9 @@ import { colors, spacing, typography, zIndex, borderRadius } from '../../styles/
 import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
 import { ShieldAlert } from 'lucide-react'
 import { isDevBypassActive } from '../../lib/devBypass'
+import { useMfa } from '../../hooks/useMfa'
+import { useAuthStore } from '../../stores/authStore'
+import { evaluateMfaRequirement } from './MfaRequiredBanner'
 
 interface Props {
   children: React.ReactNode
@@ -193,9 +196,43 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   return (
     <>
       {isDevBypassActive() && <DevBanner />}
-      {children}
+      <MfaHardForceGuard pathname={location.pathname}>{children}</MfaHardForceGuard>
     </>
   )
+}
+
+// ── Hard-force guard ────────────────────────────────────────────
+// When a privileged-role user is past their MFA grace period AND has
+// no verified TOTP factor, redirect to /profile so they can't navigate
+// elsewhere until they enroll. The banner above the page also shows
+// non-dismissible. Profile + login + signup remain accessible so the
+// enrollment flow itself isn't blocked.
+
+const ALLOWED_DURING_HARD_FORCE = new Set(['/profile', '/login', '/signup', '/security'])
+
+const MfaHardForceGuard: React.FC<{ pathname: string; children: React.ReactNode }> = ({
+  pathname,
+  children,
+}) => {
+  const { profile } = useAuthStore()
+  const { verifiedFactors, loading } = useMfa()
+
+  if (isDevBypassActive() || loading) return <>{children}</>
+
+  const role = (profile?.role as string | undefined) ?? ''
+  const graceUntilIso = (profile as { mfa_grace_period_until?: string | null } | null)
+    ?.mfa_grace_period_until ?? null
+  const { isPrivileged, hasMfa, isPastGrace } = evaluateMfaRequirement(
+    role,
+    verifiedFactors.length > 0,
+    graceUntilIso,
+  )
+
+  if (isPrivileged && !hasMfa && isPastGrace && !ALLOWED_DURING_HARD_FORCE.has(pathname)) {
+    return <Navigate to="/profile" replace />
+  }
+
+  return <>{children}</>
 }
 
 export { ProtectedRoute }
