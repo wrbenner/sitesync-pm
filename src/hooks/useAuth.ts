@@ -28,7 +28,6 @@ let navigateFn: ((path: string) => void) | null = null
 // Per-org override can be wired in later by reading org settings.
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000
 let lastActivityAt = Date.now()
-let idleTimerHandle: ReturnType<typeof setInterval> | null = null
 let idleListenersAttached = false
 
 function recordActivity() {
@@ -45,11 +44,11 @@ function startIdleWatcher() {
   events.forEach((ev) => window.addEventListener(ev, recordActivity, { passive: true }))
 
   // Tick once a minute. Cheap; granular enough that users notice the
-  // timeout within ~60s of the actual expiry.
-  idleTimerHandle = setInterval(() => {
+  // timeout within ~60s of the actual expiry. Lives for the page
+  // lifetime — no cleanup needed since auth itself is page-scoped.
+  setInterval(() => {
     if (!state.session || !state.user) return
     if (Date.now() - lastActivityAt < IDLE_TIMEOUT_MS) return
-    // Idle threshold reached. Sign out.
     void supabase.auth.signOut()
   }, 60 * 1000)
 }
