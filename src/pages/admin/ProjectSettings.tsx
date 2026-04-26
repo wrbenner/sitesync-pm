@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Save, Users, Building2, MapPin, Calendar, DollarSign,
   FileText, HardHat, CheckCircle, Settings, ChevronDown, Shield,
-  UserPlus, Mail, Check, X, AlertCircle,
+  UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { supabase, fromTable } from '../../lib/supabase';
+import { resetDemoProject } from '../../services/demoSeed';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 
 /* ─────────────────────── Constants ─────────────────────── */
@@ -149,6 +151,103 @@ const SectionCard: React.FC<{
 );
 
 /* ─────────────────────── Main Component ─────────────────────── */
+
+// ── Demo project controls ─────────────────────────────────
+// Visible only on projects flagged is_demo = true. Lets the owner reset
+// the curated Maple Ridge fixture back to its pristine state — useful
+// during sales demos when previous demos have left the data dirty.
+
+const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
+  const [resetting, setResetting] = useState(false)
+
+  const handleReset = async () => {
+    if (!orgId) {
+      toast.error('Organization context unavailable; cannot reset demo.')
+      return
+    }
+    if (!window.confirm(
+      'Reset all demo data back to its starting state? Any changes made to RFIs, submittals, change orders, etc. on this demo project will be overwritten.',
+    )) return
+
+    setResetting(true)
+    try {
+      const result = await resetDemoProject(orgId)
+      if (result.ok) {
+        toast.success(`Demo reset complete (${result.rows_inserted} rows refreshed). Reloading…`)
+        setTimeout(() => window.location.reload(), 800)
+      } else {
+        const failedTables = result.errors.map((e) => e.table).join(', ')
+        toast.error(`Demo reset partially failed for: ${failedTables}. See console for details.`)
+        console.error('[demo reset] errors:', result.errors)
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Demo reset failed')
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  return (
+    <section
+      style={{
+        marginTop: spacing['6'],
+        padding: spacing['5'],
+        borderRadius: borderRadius.lg,
+        border: `1px dashed ${colors.borderDefault}`,
+        background: colors.surfaceInset,
+      }}
+      aria-label="Demo project controls"
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['3'] }}>
+        <div
+          aria-hidden="true"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: borderRadius.md,
+            background: `${colors.statusInfo}15`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <RefreshCw size={18} color={colors.statusInfo} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            This is the Maple Ridge demo project
+          </h3>
+          <p style={{ margin: `${spacing['1']} 0 ${spacing['3']}`, fontSize: typography.fontSize.sm, color: colors.textSecondary, lineHeight: 1.5 }}>
+            Pre-populated with realistic RFIs, submittals, change orders, daily logs, and punch items so new users never see an empty dashboard. Click below to restore the original demo data — useful before a sales walkthrough.
+          </p>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={resetting}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: spacing['2'],
+              padding: `${spacing['2']} ${spacing['4']}`,
+              border: `1px solid ${colors.borderDefault}`,
+              borderRadius: borderRadius.md,
+              background: colors.surfaceRaised,
+              color: colors.textPrimary,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.medium,
+              cursor: resetting ? 'wait' : 'pointer',
+              opacity: resetting ? 0.6 : 1,
+            }}
+          >
+            <RefreshCw size={14} />
+            {resetting ? 'Resetting…' : 'Reset demo data'}
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 export function ProjectSettings() {
   const { activeProject, updateProject, members, loadMembers } = useProjectContext();
@@ -806,6 +905,13 @@ export function ProjectSettings() {
           </>
         )}
       </SectionCard>
+
+      {/* Demo project controls — only visible on the seeded demo project. */}
+      {(activeProject as { is_demo?: boolean } | null)?.is_demo && (
+        <DemoProjectSection
+          orgId={(activeProject as { organization_id?: string }).organization_id ?? ''}
+        />
+      )}
 
       {/* Unsaved changes indicator */}
       <AnimatePresence>
