@@ -1,0 +1,86 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "SiteSync PM",
+  "logo": {
+    "light": "/logo/sitesync-light.svg",
+    "dark": "/logo/sitesync-dark.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#F47820",
+    "light": "#F89C5A",
+    "dark": "#C45F0F",
+    "anchors": {
+      "from": "#F47820",
+      "to": "#C45F0F"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Sign in",
+      "url": "https://sitesync-pm.vercel.app/login"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Start a free demo",
+    "url": "https://sitesync-pm.vercel.app/signup"
+  },
+  "navigation": [
+    {
+      "group": "Get started",
+      "pages": [
+        "introduction",
+        "getting-started/sign-up",
+        "getting-started/your-first-project",
+        "getting-started/inviting-your-team"
+      ]
+    },
+    {
+      "group": "Daily workflow",
+      "pages": [
+        "workflow/rfis",
+        "workflow/submittals",
+        "workflow/change-orders",
+        "workflow/daily-logs",
+        "workflow/punch-list",
+        "workflow/drawings"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/procore",
+        "integrations/sage-300"
+      ]
+    },
+    {
+      "group": "Mobile & field",
+      "pages": [
+        "mobile/install-pwa",
+        "mobile/voice-capture",
+        "mobile/offline"
+      ]
+    },
+    {
+      "group": "Trust & security",
+      "pages": [
+        "trust/security-overview",
+        "trust/two-factor-authentication",
+        "trust/audit-trail",
+        "trust/data-handling"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "reference/troubleshooting",
+        "reference/faq",
+        "reference/glossary",
+        "reference/release-notes"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/wrbenner/sitesync-pm"
+  }
+}

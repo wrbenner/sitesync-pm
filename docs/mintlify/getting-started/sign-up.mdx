@@ -1,0 +1,49 @@
+---
+title: Sign up
+description: Create your SiteSync PM organization and land in a populated demo project in under 60 seconds.
+---
+
+Signup at SiteSync is intentionally fast. The goal is that you're clicking around real-feeling project data within a minute of arriving.
+
+## What you'll get
+
+When you create a new organization, SiteSync immediately seeds it with the **"Maple Ridge Mixed-Use"** demo project — a realistic mid-construction storyline with:
+
+- 30 RFIs in various states (closed, in review, open)
+- 12 submittals across CSI sections
+- 6 change orders (PCO, COR, CO mix)
+- 60 punch items spread across trades and floors
+- 14 days of daily logs with weather and crew data
+- 5 drawings, 12 schedule phases, 8 vendors
+
+You can click around, edit anything, run the AI copilot against the data, generate PDFs, etc. It's a real Supabase project — just isolated to your org and read-only-via-convention so you don't have to worry about breaking anything.
+
+When you want to start clean for a real customer walkthrough, hit **Reset Demo** in Project Settings and the data springs back to its starting state.
+
+## How to sign up
+
+1. Visit [sitesync-pm.vercel.app/signup](https://sitesync-pm.vercel.app/signup).
+2. Enter your email, password, and full name.
+3. Click **Create account**.
+4. (Optional but recommended) Enable two-factor authentication from your profile — see [Two-factor authentication](../trust/two-factor-authentication).
+
+Your dashboard will load straight into the demo project. Use the project switcher in the top-left to create a real project when you're ready.
+
+## What happens behind the scenes
+
+Three things spin up in the background when you sign up:
+
+1. **Auth user** — managed by Supabase Auth. Password hashed via bcrypt; email verification optional per org policy.
+2. **Organization** — created with you as the owner. Every row in your tenant carries this `organization_id`.
+3. **Demo project seeding** — `seedDemoProject(orgId)` inserts the Maple Ridge fixture across 8 tables (projects, schedule_phases, rfis, submittals, change_orders, punch_items, daily_logs, drawings). This is fail-soft: a partial seed still leaves you with a usable dashboard.
+
+## Common issues
+
+**"This email is already registered."**
+You probably have an account from a previous trial. Use [sign in](https://sitesync-pm.vercel.app/login) or reset your password.
+
+**"Network error."**
+Often a corporate VPN blocking Supabase's API endpoints. Disable the VPN momentarily, or have your IT team allowlist `*.supabase.co`.
+
+**"Demo project didn't load."**
+Refresh once. The seeder runs async after org creation. If the issue persists, contact `support@sitesync.app` with your org name — the seeder logs partial errors to the browser console.
