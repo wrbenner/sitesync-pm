@@ -1,5 +1,5 @@
 import React from 'react'
-import { Shield, ChevronRight, X } from 'lucide-react'
+import { Shield, ChevronRight, X, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useMfa } from '../../hooks/useMfa'
 import { useAuthStore } from '../../stores/authStore'
@@ -7,26 +7,47 @@ import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 
 // ── MFA-required banner ─────────────────────────────────────
 //
-// Soft-force MFA enrollment for privileged roles (owner / admin /
-// project_manager). Renders a dismissible banner across the top of the
-// app shell when the user matches and has no verified TOTP factor.
+// Forces MFA enrollment for privileged roles (owner / admin /
+// project_manager / company_admin). Two tiers driven by the
+// profile.mfa_grace_period_until column (added in
+// supabase/migrations/20260426000004_mfa_grace_period.sql):
 //
-// Soft-force tier:
-//   * Days 0-7  → dismissible warning ("Enable MFA before {date}")
-//   * Days 8+   → non-dismissible block ("MFA required to continue")
-//
-// Phase 1 ships the warning tier only — the hard block lives behind a
-// follow-up that adds a per-user mfa_grace_period_until timestamp on
-// profiles. Until then everyone gets the dismissible warning.
+//   * Within grace (mfa_grace_period_until > now):
+//       Dismissible warning ("Enable MFA before {date}").
+//   * Past grace (or NULL):
+//       Non-dismissible critical-style banner. ProtectedRoute also
+//       redirects the user to /profile until they enroll, so they
+//       can't navigate away.
 //
 // Sidesteps:
-//   * Banner never renders if MFA is already enrolled.
-//   * Banner never renders for viewer / subcontractor / field_user roles.
-//   * Banner self-dismisses via sessionStorage so it doesn't nag inside
-//     a single tab session, but reappears on refresh.
+//   * Never renders if MFA is already enrolled.
+//   * Never renders for viewer / subcontractor / field_user roles.
+//   * Within-grace banner self-dismisses per-tab via sessionStorage.
 
 const PRIVILEGED_ROLES = new Set(['owner', 'admin', 'project_manager', 'company_admin'])
 const DISMISS_KEY = 'sitesync.mfa-banner-dismissed'
+
+interface MfaRequiredState {
+  isPrivileged: boolean
+  hasMfa: boolean
+  isPastGrace: boolean
+  graceUntil: Date | null
+}
+
+/**
+ * Pure helper for ProtectedRoute and the banner — same role/grace
+ * logic in one place so they always agree.
+ */
+export function evaluateMfaRequirement(
+  role: string | undefined | null,
+  hasMfa: boolean,
+  graceUntilIso: string | null | undefined,
+): MfaRequiredState {
+  const isPrivileged = PRIVILEGED_ROLES.has(role ?? '')
+  const graceUntil = graceUntilIso ? new Date(graceUntilIso) : null
+  const isPastGrace = !graceUntil || graceUntil.getTime() <= Date.now()
+  return { isPrivileged, hasMfa, isPastGrace, graceUntil }
+}
 
 export const MfaRequiredBanner: React.FC = () => {
   const navigate = useNavigate()
@@ -37,16 +58,22 @@ export const MfaRequiredBanner: React.FC = () => {
     return sessionStorage.getItem(DISMISS_KEY) === '1'
   })
 
-  // Roles can come from either profile.role or the org-membership role —
-  // we check both via the auth store's normalized profile.role.
   const role = (profile?.role as string | undefined) ?? ''
-  const isPrivileged = PRIVILEGED_ROLES.has(role)
+  const graceUntilIso = (profile as { mfa_grace_period_until?: string | null } | null)
+    ?.mfa_grace_period_until ?? null
+  const { isPrivileged, isPastGrace } = evaluateMfaRequirement(
+    role,
+    verifiedFactors.length > 0,
+    graceUntilIso,
+  )
   const hasMfa = verifiedFactors.length > 0
 
   if (loading) return null
   if (!isPrivileged) return null
   if (hasMfa) return null
-  if (dismissed) return null
+  // Within-grace + dismissed → hide for the rest of this tab session.
+  // Past-grace → never hide.
+  if (!isPastGrace && dismissed) return null
 
   const handleEnroll = () => {
     navigate('/profile')
@@ -57,17 +84,32 @@ export const MfaRequiredBanner: React.FC = () => {
     try {
       sessionStorage.setItem(DISMISS_KEY, '1')
     } catch {
-      // sessionStorage unavailable — banner reappears next render, fine
+      /* sessionStorage unavailable */
     }
   }
+
+  // Past-grace banner uses critical styling and locks copy.
+  const headlineColor = isPastGrace ? colors.statusCritical : colors.statusPending
+  const bgGradient = isPastGrace
+    ? `linear-gradient(90deg, ${colors.statusCritical}15 0%, ${colors.statusCritical}25 100%)`
+    : `linear-gradient(90deg, ${colors.statusPending}10 0%, ${colors.primaryOrange}10 100%)`
+  const borderColor = isPastGrace ? `${colors.statusCritical}50` : `${colors.statusPending}40`
+
+  const headline = isPastGrace
+    ? 'Two-factor authentication required'
+    : 'Two-factor authentication recommended'
+  const detail = isPastGrace
+    ? 'Your role requires a second authentication factor. Enable it now to keep using SiteSync.'
+    : 'Your role has access to sensitive project data. Add a second factor so a leaked password can’t access this account.'
+  const Icon = isPastGrace ? Lock : Shield
 
   return (
     <div
       role="alert"
-      aria-live="polite"
+      aria-live={isPastGrace ? 'assertive' : 'polite'}
       style={{
-        background: `linear-gradient(90deg, ${colors.statusPending}10 0%, ${colors.primaryOrange}10 100%)`,
-        borderBottom: `1px solid ${colors.statusPending}40`,
+        background: bgGradient,
+        borderBottom: `1px solid ${borderColor}`,
         padding: `${spacing['2.5']} ${spacing['4']}`,
         display: 'flex',
         alignItems: 'center',
@@ -81,22 +123,22 @@ export const MfaRequiredBanner: React.FC = () => {
           width: 28,
           height: 28,
           borderRadius: borderRadius.sm,
-          background: `${colors.statusPending}20`,
+          background: `${headlineColor}20`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
         }}
       >
-        <Shield size={16} color={colors.statusPending} />
+        <Icon size={16} color={headlineColor} />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-          Two-factor authentication recommended
+          {headline}
         </div>
         <div style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, marginTop: 2 }}>
-          Your role has access to sensitive project data. Add a second factor so a leaked password can&apos;t access this account.
+          {detail}
         </div>
       </div>
 
@@ -110,7 +152,7 @@ export const MfaRequiredBanner: React.FC = () => {
           padding: `${spacing['1.5']} ${spacing['3']}`,
           borderRadius: borderRadius.md,
           border: 'none',
-          background: colors.primaryOrange,
+          background: isPastGrace ? colors.statusCritical : colors.primaryOrange,
           color: '#fff',
           fontSize: typography.fontSize.sm,
           fontWeight: typography.fontWeight.medium,
@@ -122,24 +164,27 @@ export const MfaRequiredBanner: React.FC = () => {
         <ChevronRight size={14} />
       </button>
 
-      <button
-        type="button"
-        onClick={handleDismiss}
-        aria-label="Dismiss"
-        style={{
-          background: 'transparent',
-          border: 'none',
-          padding: 4,
-          color: colors.textTertiary,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <X size={16} />
-      </button>
+      {/* Dismiss button hidden once past grace — banner is mandatory. */}
+      {!isPastGrace && (
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dismiss"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 4,
+            color: colors.textTertiary,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <X size={16} />
+        </button>
+      )}
     </div>
   )
 }
