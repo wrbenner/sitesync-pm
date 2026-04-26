@@ -1,8 +1,20 @@
 // parse-ifc: Parse uploaded IFC STEP files and extract structured building data.
 // IFC STEP is plaintext — we extract entity counts and basic hierarchy
 // (IfcBuilding, IfcBuildingStorey, IfcSpace, IfcWall, IfcDoor, IfcWindow, IfcSlab, ...).
+//
+// Auth: caller must present a valid JWT. When `model_id` is supplied (i.e. the
+// caller wants results persisted to bim_elements via service role), we
+// additionally verify the caller is a member of the project that owns the
+// model with at least project_engineer role. Without this check, any user
+// with any valid JWT could write into any project's BIM model.
 
-
+import {
+  authenticateRequest,
+  errorResponse,
+  HttpError,
+  verifyProjectMembership,
+  requireMinimumRole,
+} from '../shared/auth.ts'
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -160,10 +172,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Authenticate the caller. Any valid JWT is required.
+    const { user, supabase: userClient } = await authenticateRequest(req)
+
     const body = await req.json().catch(() => ({}))
     const fileUrl: string | undefined = body.file_url
     const modelId: string | undefined = body.model_id
     const ifcText: string | undefined = body.ifc_text
+
+    // If the caller wants results persisted (model_id supplied), they must be
+    // a member of the project that owns that model with write-level role.
+    // Look up the model -> project_id under the caller's RLS scope so we
+    // can't be tricked into authorizing against a model they can't see.
+    if (modelId) {
+      const { data: model, error: modelErr } = await userClient
+        .from('bim_models')
+        .select('project_id')
+        .eq('id', modelId)
+        .single()
+      if (modelErr || !model?.project_id) {
+        throw new HttpError(404, 'BIM model not found')
+      }
+      const role = await verifyProjectMembership(userClient, user.id, model.project_id as string)
+      requireMinimumRole(role, 'project_engineer', 'parse and persist IFC into bim_elements')
+    }
 
     let text: string | null = null
     if (ifcText && typeof ifcText === 'string') {
@@ -187,6 +219,7 @@ Deno.serve(async (req) => {
     const result = parseIFCText(text)
 
     // Optionally persist to bim_elements if model_id is provided and service role is available.
+    // Authorization for this branch was checked above before the parse work.
     if (modelId) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')
       const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -230,6 +263,9 @@ Deno.serve(async (req) => {
       sampled_entities: result.entities.slice(0, 200),
     }), { status: 200, headers: CORS_HEADERS })
   } catch (e) {
+    if (e instanceof HttpError) {
+      return errorResponse(e, CORS_HEADERS)
+    }
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: CORS_HEADERS })
   }
 })
