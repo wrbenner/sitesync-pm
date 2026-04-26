@@ -15,6 +15,7 @@ import './lib/i18n';
 import { Sidebar } from './components/Sidebar';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
+import { MfaRequiredBanner } from './components/auth/MfaRequiredBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
 import { useCopilotStore } from './stores/copilotStore';
 import { colors, colorVars, spacing, typography, borderRadius } from './styles/theme';
@@ -525,6 +526,7 @@ function AppContent() {
   return isMobile ? (
     <MobileLayout>
       {user && <AuthenticatedProviders activeView={activeView} />}
+      {user && <MfaRequiredBanner />}
       <OfflineBanner />
       <ChunkLoadErrorBoundary>
         {/* key={pathname} resets the boundary on navigation so a crash on one page
@@ -571,7 +573,8 @@ function AppContent() {
             transition: 'margin-left 150ms ease-out',
           }}
         >
-          <OfflineBanner />
+          {user && <MfaRequiredBanner />}
+      <OfflineBanner />
           <ChunkLoadErrorBoundary>
             {/* key={pathname} resets the boundary on navigation so a crash on one page
                 doesn't lock the user out of every other page. */}
