@@ -425,7 +425,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
 
     prevUsersRef.current = curr;
   // Only re-run when the user list identity changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [users]);
 
   if (users.length === 0) return null;

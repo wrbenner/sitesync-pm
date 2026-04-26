@@ -112,7 +112,7 @@ function main(): void {
     emitted.push(fileName)
   }
 
-  // eslint-disable-next-line no-console
+   
   console.log(`Generated ${emitted.length} smoke tests → ${path.relative(REPO_ROOT, OUT_DIR)}/`)
 }
 

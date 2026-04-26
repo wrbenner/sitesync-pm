@@ -23,7 +23,7 @@ function main(): void {
     report.globalFindings.filter((f) => f.severity === 'P1').length +
     actionable.reduce((n, r) => n + r.findings.filter((f) => f.severity === 'P1').length, 0)
 
-  // eslint-disable-next-line no-console
+   
   console.log(
     `Audit: ${report.passingRoutes}/${report.totalRoutes} routes at 100%, avg ${report.averageScore}%. ` +
       `P0=${p0Count} P1=${p1Count}. Report → ${mdPath.replace(process.cwd() + '/', '')}, ${jsonPath.replace(process.cwd() + '/', '')}`,

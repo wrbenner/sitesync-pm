@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import DOMPurify from 'dompurify'
 import { BookOpen, Plus, Search, Sparkles, Trash2, ChevronRight, ChevronDown, FileText, History, RotateCcw, Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Link, Code, Quote, Minus, Table, Paperclip, Image, Users, Save, Eye, EyeOff } from 'lucide-react'
 import { PageContainer, Card, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
@@ -31,6 +32,9 @@ const TEMPLATES: Record<string, { title: string; content: string }> = {
 }
 
 function renderMarkdown(md: string): string {
+  // Escape user-supplied HTML, then inject only a finite allowlist of tags
+  // from markdown patterns. Final output goes through DOMPurify before
+  // dangerouslySetInnerHTML at the call site.
   const esc = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return esc
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
@@ -509,7 +513,12 @@ const Wiki: React.FC = () => {
                 {preview ? (
                   <div
                     style={{ color: colors.textPrimary, lineHeight: 1.6, fontSize: typography.fontSize.sm, padding: spacing['3'], border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, minHeight: 400 }}
-                    dangerouslySetInnerHTML={{ __html: `<p>${renderMarkdown(editContent)}</p>` }}
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(`<p>${renderMarkdown(editContent)}</p>`, {
+                        ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'strong', 'em', 'code', 'li', 'ul', 'ol', 'br'],
+                        ALLOWED_ATTR: [],
+                      }),
+                    }}
                   />
                 ) : (
                   <textarea

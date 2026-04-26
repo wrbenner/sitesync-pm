@@ -1,0 +1,61 @@
+---
+title: Two-factor authentication (2FA)
+description: How to enable, manage, and recover TOTP-based MFA on your SiteSync account.
+---
+
+Two-factor authentication adds a second proof of identity beyond your password. Even if your password leaks, an attacker without your authenticator app can't sign in.
+
+## Who should enable it
+
+Every user benefits, but it's strongly recommended (and may be required by your organization's policy) if you hold any of these roles:
+
+- **Owner** — full org-wide access
+- **Admin** — manage users, billing, and project settings
+- **Project Manager** — modify scope, change orders, pay applications
+
+If you hold one of these roles and haven't enrolled, you'll see a banner across the top of every page until you do.
+
+## What you'll need
+
+A TOTP-compatible authenticator app on your phone or laptop. Any of these work:
+
+- **1Password** (recommended — handles backup automatically)
+- **Apple Passwords** (built into iOS 17+ and macOS Sonoma+)
+- **Google Authenticator**
+- **Authy** (Twilio)
+- **Microsoft Authenticator**
+
+## How to enable
+
+1. Sign in to SiteSync PM and click your avatar in the top-right.
+2. Choose **Profile**.
+3. Scroll to **Two-factor authentication** and click **Enable**.
+4. Scan the QR code with your authenticator app, or paste the secret manually.
+5. Type the 6-digit code your app generates and click **Verify and enable**.
+
+You'll see a green "Enabled" badge once the code verifies. From now on, signing in will prompt you for the 6-digit code after your password.
+
+## Removing or replacing your authenticator
+
+1. Open **Profile**.
+2. Under **Two-factor authentication**, click **Remove**.
+3. Confirm.
+4. Re-enroll with the new device using the steps above.
+
+<Warning>
+Removing your authenticator weakens your account security. Have your replacement ready before you remove the existing one.
+</Warning>
+
+## Recovery if you lose your phone
+
+Email `support@sitesync.app` from the email on your account. We will:
+
+1. Verify your identity via a video call.
+2. Reset the MFA factor on your account.
+3. Walk you through re-enrollment immediately.
+
+There is no self-serve recovery code — the friction is intentional. An attacker who phishes one of your colleagues should not be able to bypass MFA via a "lost phone" form.
+
+## Behind the scenes
+
+We use Supabase Auth's TOTP enrollment, which generates a per-user 32-character base-32 secret and produces standard `otpauth://` QR codes (RFC 6238). Codes are validated server-side; we never trust client-supplied "verified" claims.

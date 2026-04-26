@@ -1,0 +1,69 @@
+---
+title: Procore integration
+description: Bidirectional sync between SiteSync PM and your Procore project for RFIs and submittals.
+---
+
+If your company already runs Procore, SiteSync PM can act as the daily-driver UI on top of it — keeping field data flowing into Procore for owner reporting while giving your PMs a faster, AI-assisted workflow.
+
+## What syncs
+
+| Object | Direction | Frequency |
+|---|---|---|
+| RFIs | Bidirectional | On submit (push) + every 5 min (pull) |
+| Submittals | Bidirectional | On submit (push) + every 5 min (pull) |
+| Drawings (sheet metadata only) | Procore → SiteSync | Every 30 min |
+| Daily logs | Roadmap | — |
+| Pay applications | Roadmap | — |
+
+## Setup
+
+### 1. Generate Procore credentials
+
+In Procore Developer Portal:
+
+1. Sign in with your Procore admin account.
+2. Create a new app (Construction → Project Management category).
+3. Note the **Client ID** and **Client Secret**.
+4. Add SiteSync's redirect URI: `https://sitesync-pm.vercel.app/integrations/procore/callback`.
+
+### 2. Connect from SiteSync
+
+1. In SiteSync, navigate to **Settings → Integrations**.
+2. Click **Connect Procore**.
+3. Paste your Client ID and Client Secret.
+4. Select the Procore project to bind to this SiteSync project.
+
+The connection is verified on save. You'll see a green "Connected" badge once the OAuth handshake completes.
+
+### 3. Initial sync
+
+The first connection triggers a backfill — open RFIs and submittals from the last 90 days are imported into SiteSync. This can take 5–30 minutes depending on project size. The dashboard shows progress.
+
+## How conflicts are resolved
+
+When the same RFI is edited on both sides between syncs:
+
+- **Status** — most-recent-wins per server timestamp.
+- **Body / question / response** — both versions are preserved as a numbered revision; SiteSync surfaces a "merge needed" banner on the RFI.
+- **Distribution list** — union of both sides.
+
+The audit log captures every sync action with `metadata.source = 'procore-pull'` or `'procore-push'` so you can trace anything back.
+
+## Disconnecting
+
+In **Settings → Integrations** → Procore → **Disconnect**.
+
+This:
+- Stops further syncing
+- Preserves all imported data
+- Removes the OAuth tokens from SiteSync
+
+If you reconnect later, the project binding is preserved.
+
+## Troubleshooting
+
+**"OAuth handshake failed"** — usually the redirect URI is mismatched. Ensure it's exactly `https://sitesync-pm.vercel.app/integrations/procore/callback`.
+
+**"Procore rate limit exceeded"** — SiteSync respects Procore's rate limits and backs off automatically. Backfill on very large projects (1000+ RFIs) may take 1–2 hours.
+
+**"Sync stuck on a single RFI"** — visit **Settings → Integrations → Procore → Sync log** to see the last error message. Most often: a custom field on the Procore side that maps ambiguously. Contact `support@sitesync.app` with the RFI number; we can add a per-org field map.

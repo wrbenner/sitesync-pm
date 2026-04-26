@@ -337,7 +337,7 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
       setQuery('')
       setSearchResults([])
     }
-  }, [open])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open])   
 
   // ---- Helpers ----
   const goTo = useCallback((path: string) => {

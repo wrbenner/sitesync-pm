@@ -1,23 +1,25 @@
 # FEEDBACK.md — SiteSync PM Nightly Build Priorities
 *Walker is calling GCs this week. Every overnight build must make the product more demoable.*
-*Last updated: April 25, 2026 by Chief Product Strategist*
+*Last updated: April 26, 2026 by Chief Product Strategist*
 *Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
 
 ---
 
-## Status: Builder BACK ONLINE — Massive Wave of Progress, But P0 Mock Data Still Unresolved
+## Status: BUILDER DID NOT RUN — Two Consecutive Nights With Zero Commits
 
-The builder is back. 35+ commits landed since April 24 — a massive wave covering realtime invalidation, offline sync queue, integration tracking, period locking, notifications, accessibility, 56px touch targets, PWA manifest, RLS audit + FORCE ROW LEVEL SECURITY migration, smoke tests for every route, bundle code-splitting, and lint cleanup. This is the most productive stretch in the project's history. TypeScript compiles with 0 errors. The architecture is solidifying.
+Zero builder commits between April 25 and April 26. The last automated work was the massive 35+ commit wave on April 24-25. Since then, nothing. Math.random() is still at **28**. `as any` is still at **41**. WorkflowTimeline still has **0 references** in the codebase. The quality-floor.json shows `mockCount: 31` and `anyCount: 41` — the ratchet is not enforcing.
 
-**However:** Math.random() count is now **28** (up from 26). The builder added `usePermissions.ts:272` and `useRealtimeInvalidation.ts:118` as new occurrences. The 9 demo-killing fakes in SCurve, BudgetKPIs, ScheduleKPIs, Procurement, and PaymentApplications remain untouched. WorkflowTimeline still does not exist (0 references in codebase). The `as any` count grew to 41. These are the three issues that separate "impressive codebase" from "demoable product."
+Walker is calling GCs. The Budget page (Demo Step 5) still shows different trend lines on every page refresh because of `Math.random()` in SCurve.tsx, BudgetKPIs.tsx, and ScheduleKPIs.tsx. This is the most visible, most embarrassing bug in the product. Every night it persists is a night wasted.
+
+The priorities below are carried forward for the NINTH consecutive night for Mock Data and the SECOND consecutive night for WorkflowTimeline and `as any`. They are unchanged because they remain the correct priorities — nothing else matters until a GC can refresh the Budget page without seeing numbers dance.
 
 ---
 
-## Tonight's P0 Priorities (April 25 -> April 26 2am CDT)
+## Tonight's P0 Priorities (April 26 -> April 27 2am CDT)
 
-### 1. MOCK DATA ELIMINATION — KILL ALL 28 Math.random() CALLS (CARRIED FORWARD — COUNT STILL GROWING)
+### 1. MOCK DATA ELIMINATION — KILL ALL 28 Math.random() CALLS (NIGHT NINE — UNCHANGED, STILL CRITICAL)
 **SPEC ref:** P0-1 (Mock Data Elimination — 0% complete, blocks every investor demo and GC call)
-**Files to change (28 occurrences confirmed via fresh grep — up from 26 yesterday, 16 on April 22):**
+**Files to change (28 occurrences — identical to last night, zero progress):**
 **DEMO KILLERS (fix first — these are visible in the 6-step demo flow, 9 occurrences across 5 files):**
 - `src/components/budget/SCurve.tsx:282` — fake budget variance `0.95 + Math.random() * 0.1` changes on every reload
 - `src/pages/budget/BudgetKPIs.tsx:134,139` — fake spend/committed trend data with random noise
@@ -34,8 +36,8 @@ The builder is back. 35+ commits landed since April 24 — a massive wave coveri
 - `src/components/shared/FileDropZone.tsx:32`
 - `src/components/submittals/SubmittalCreateWizard.tsx:527`
 - `src/components/punch-list/PunchItemCreateWizard.tsx:573,608` (2 occurrences)
-- `src/hooks/useRealtimeInvalidation.ts:48,118` (2 occurrences — line 118 is NEW)
-- `src/hooks/usePermissions.ts:272` (NEW)
+- `src/hooks/useRealtimeInvalidation.ts:48,118` (2 occurrences)
+- `src/hooks/usePermissions.ts:272`
 - `src/lib/scheduleHealth.ts:86`
 - `src/pages/whiteboard/WhiteboardPage.tsx:26`
 - `src/pages/drawings/index.tsx:808,937,1049,1108` (4 occurrences)
@@ -52,9 +54,9 @@ The builder is back. 35+ commits landed since April 24 — a massive wave coveri
 5. **Update `.quality-floor.json`:** set `mockCount` to 1 (IntelligenceGraph exception only).
 6. **Commit:** `git add -A && git commit -m "fix(P0-1): eliminate all 28 Math.random calls — crypto.randomUUID + real data queries [auto]"`
 **Done looks like:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v IntelligenceGraph | wc -l` returns 0. Budget S-Curve shows only planned line when no actuals exist. BudgetKPIs and ScheduleKPIs show real data or clean empty states — no random noise. PO numbers are deterministic. `.quality-floor.json` `mockCount` = 1.
-**WHY:** This is night EIGHT of carrying this priority. The count keeps growing — 16 -> 26 -> 28 — because every new feature commit sprinkles in `Math.random()` for IDs without thinking about it. The 9 demo-killing fakes are the real emergency: the Budget page (Demo Step 5) shows different trend lines on every page load. A GC CTO who refreshes the page and sees numbers change will immediately lose trust. The 19 ID-generation fixes are a mechanical find-and-replace — under 30 minutes total. The 9 demo fakes require replacing with real queries or honest empty states — under 2 hours. This is the single highest-ROI task in the codebase. Do it first. Do it completely. Verify with the grep command. Then move on.
+**WHY:** This is night NINE. The count has been 16 -> 26 -> 28 -> 28 (stalled). The 9 demo-killing fakes are the real emergency: SCurve.tsx:282 generates a random variance multiplier that makes the budget burn chart show different values on every page load. BudgetKPIs.tsx adds random noise to trend lines. ScheduleKPIs.tsx fabricates forecast data from thin air. A GC CTO who refreshes the page and sees numbers change will walk out of the demo. The 19 ID-generation fixes are a mechanical find-and-replace — literally `sed -i 's/Math.random().toString(36)/crypto.randomUUID()/g'` with minor cleanup. Total effort: under 2 hours for all 28 fixes. Do it first. Do it completely. Verify with the grep command. Then move on.
 
-### 2. WORKFLOWTIMELINE COMPONENT + RFI DETAIL WIRING — THE COMPOUNDING PLAY
+### 2. WORKFLOWTIMELINE COMPONENT + RFI DETAIL WIRING — THE COMPOUNDING PLAY (CARRIED FORWARD)
 **SPEC ref:** P0-6 (State Machine Handler Completion — 0% complete) + P1-2 (RFIs — 35% complete)
 **Files to change:** `src/components/WorkflowTimeline.tsx` (CREATE — still absent, 0 references in codebase), `src/pages/rfis/index.tsx` or wherever the RFI detail view lives, `src/machines/rfiMachine.ts`
 **What to do:**
@@ -77,9 +79,9 @@ The builder is back. 35+ commits landed since April 24 — a massive wave coveri
    - Activity feed at bottom: query `activity_log WHERE resource_type='rfi' AND resource_id=rfi.id ORDER BY created_at DESC`
 4. **Commit:** `git add -A && git commit -m "feat(P0-6): WorkflowTimeline component + wire to RFI detail page [auto]"`
 **Done looks like:** Open any RFI detail page. See the horizontal WorkflowTimeline showing current status visually. Action buttons match available transitions only. `grep -rn "WorkflowTimeline" src/ | wc -l` returns >= 3. Component renders cleanly at 768px (iPad) and 375px (iPhone).
-**WHY:** The builder has shipped realtime invalidation, offline sync, notifications, RLS, accessibility, and 56px touch targets. The infrastructure is there. What's missing is the *demo moment* — the visual that makes a superintendent say "oh, I can SEE where my RFI is in the process." Procore shows status as a text dropdown. We show it as a visual journey. The WorkflowTimeline is the single highest-leverage UI component because it's reused across RFIs, Submittals, Change Orders, Pay Apps, and Punch Items — five workflows for the price of one component. Every night this doesn't exist is five pages without their signature UI.
+**WHY:** This is the demo differentiator. Procore shows RFI status as a text dropdown in a crowded toolbar. SiteSync shows a visual journey — a superintendent glances at the screen and knows exactly where the RFI is in its lifecycle. The WorkflowTimeline component is reused across RFIs, Submittals, Change Orders, Pay Apps, and Punch Items. One component, five workflows. That's the compounding play that makes every subsequent feature cheaper to build. Every night this doesn't exist is five pages without their signature UI. Build it tonight.
 
-### 3. `as any` CLEANUP — DROP FROM 41 TO UNDER 10
+### 3. `as any` CLEANUP — DROP FROM 41 TO UNDER 10 (CARRIED FORWARD)
 **SPEC ref:** P0 Quality Gates (Zero `as any` — currently 41 violations), DECISIONS.md ADR-001 (TypeScript strict mode, no `any` casts in production code)
 **Files to change:** Run `grep -rn "as any" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v node_modules` and fix each one.
 **What to do:**
@@ -93,11 +95,17 @@ The builder is back. 35+ commits landed since April 24 — a massive wave coveri
 4. **Update `.quality-floor.json`:** set `anyCount` to the new lower number.
 5. **Commit:** `git add -A && git commit -m "fix(quality): eliminate as-any casts with proper typing [auto]"`
 **Done looks like:** `as any` count under 10. Zero `as any` in any demo-path file. `.quality-floor.json` `anyCount` updated. TypeScript still compiles with 0 errors (`npx tsc --noEmit` clean).
-**WHY:** The `as any` count has grown from 1 (the quality floor) to 41 — a 40x regression on a metric the quality ratchet is supposed to protect. Every `as any` is a type safety hole where bugs hide. More importantly, the quality floor says `anyCount: 1` but reality is 41 — the ratchet is broken for this metric. Cleaning this up now prevents the count from growing further as the builder continues shipping features at high velocity. The builder shipped 35 commits in one night — that's incredible velocity, but velocity without type safety is how you get runtime crashes during a demo. Fix the types, update the floor, and the ratchet will prevent future regression.
+**WHY:** 41 `as any` casts is a 40x regression from the quality floor target of 1. Every `as any` is a runtime crash hiding behind a compile-time lie. The quality ratchet in `.quality-floor.json` shows `anyCount: 41` — meaning the floor was raised to match reality instead of enforcing the standard. Clean this up now so the ratchet can start protecting again. Focus on demo-path files first: if the CTO opens F12 during the demo and sees a type error in the console because a Supabase response was cast to `any` and a property was undefined, the sale is dead.
 
 ---
 
 ## Completed Archive
+
+### April 25-26: BUILDER DID NOT RUN — Zero Commits
+- **Status:** No builder activity. Zero automated commits between April 25 and April 26.
+- **Priorities carried forward:** All 3 priorities (Math.random elimination, WorkflowTimeline, `as any` cleanup) unchanged.
+- **Metrics unchanged:** Math.random: 28. `as any`: 41. WorkflowTimeline references: 0.
+- **Impact:** Two consecutive nights without builder activity. The massive April 24-25 wave remains the last automated work.
 
 ### April 24-25: BUILDER RESURRECTION — 35+ Commits, Massive Feature Wave
 - **Status:** Builder came back online. Most productive stretch in project history.

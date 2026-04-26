@@ -1,0 +1,73 @@
+---
+title: Change orders
+description: Drafting, promoting, and approving change orders through the PCO → COR → CO lifecycle.
+---
+
+A change order in SiteSync follows the standard general-contractor lifecycle: a Potential CO becomes a Change Order Request, which becomes an executed Change Order. Each step has its own approval gate, documentation, and budget propagation.
+
+## The lifecycle
+
+```
+draft → pending_review → approved → executed
+                       ↘ rejected (with comments)
+```
+
+And independently, the **type** promotes through:
+
+```
+PCO  → COR  → CO
+(potential) (request) (executed)
+```
+
+A PCO can be promoted to a COR only if its status is `approved`. A COR can be promoted to a CO only if its status is `approved`. Promotion creates a new record at the next stage and links it back via `promoted_from_id` so the audit trail spans the chain.
+
+## Creating a PCO
+
+1. From **Change Orders** → **New**, choose type **PCO**.
+2. Fill in title, description, amount estimate, cost code, schedule impact, and reason (unforeseen condition / owner-requested / design clarification / code compliance / schedule recovery).
+3. Click **Save draft** to keep working, or **Submit for review** to advance to `pending_review`.
+
+## Approving
+
+A user with `change_orders.approve` permission (typically project manager, owner rep, or admin) reviews `pending_review` items.
+
+- **Approve** — sets `status: approved`, captures `approved_by`, `approved_date`, and any approval comments. Budget rollups recalculate immediately.
+- **Reject** — sets `status: rejected`, captures `rejected_at`, `rejected_by`, and rejection comments. The originator can edit and resubmit.
+
+Approval comments and rejection comments are part of the audit log forever.
+
+## Promoting types
+
+Once a PCO is approved, click **Promote to COR**. The new COR record:
+
+- Inherits title, description, amount, cost code, reason, schedule impact
+- Starts in `draft` status (you'll need to advance it through review again)
+- Links back to the PCO via `promoted_from_id`
+- The source PCO's `promoted_to_id` and `promoted_at` get set so the chain is bidirectional
+
+Same flow when promoting COR → CO.
+
+## Budget impact
+
+Approved change orders propagate to the project budget:
+
+- **Committed cost** — adjusted by the CO amount on approval
+- **Cost code rollup** — line item updates per the assigned cost code
+- **Cumulative CO total** — visible in the Budget dashboard
+
+If the CO has an explicit `approvedCost` (different from the requested `amount`), the lower value flows to the budget.
+
+## Sage 300 integration
+
+If your org has connected Sage 300, approved change orders export as journal entries to Sage's accounting ledger. Setup is in [Sage 300 integration](../integrations/sage-300).
+
+## Common questions
+
+**Can I delete a CO?**
+Approved or executed COs are soft-deleted (`deleted_at`/`deleted_by` set; row stays in the database for audit). Drafts can be hard-deleted.
+
+**What if the CO amount changes after submission?**
+Edit the draft and resubmit. Once `pending_review` or later, the value is locked except by approver action with comments.
+
+**How does the state machine handle role gates?**
+The valid transitions are role-aware: a foreman can submit but not approve. The list of valid actions for the current user is computed server-side by `getValidCOTransitionsForRole(currentStatus, role)`.

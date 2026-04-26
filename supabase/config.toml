@@ -282,9 +282,12 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
+# Phase 1 enterprise readiness: TOTP enrollment and verification are
+# enabled. The UI surfaces enrollment in src/components/auth/MfaEnrollment.tsx
+# and soft-forces it for owner/admin/project_manager roles.
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]
@@ -390,6 +393,13 @@ verify_jwt = false
 # GoTrue's /auth/v1/user endpoint, which handles any algorithm the
 # project is configured for.
 [functions.classify-drawing]
+verify_jwt = false
+
+# verify-audit-chain: cron-only function. Caller must present
+# Bearer ${CRON_SECRET}. JWT verification is bypassed because there's
+# no Supabase user session — auth is handled by authenticateCron() in
+# shared/auth.ts.
+[functions.verify-audit-chain]
 verify_jwt = false
 
 [analytics]

@@ -490,7 +490,7 @@ export const EditConflictGuard: React.FC<EditConflictGuardProps> = ({
       supabase.removeChannel(channel);
     };
   // Stable identity: only run on mount / when ids change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [entityType, entityId, userId]);
 
   const announceAlert = useUiStore(s => s.announceAlert);

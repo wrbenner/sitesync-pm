@@ -1,0 +1,89 @@
+---
+title: Security overview
+description: How SiteSync PM protects your project data — for IT, security teams, and procurement.
+---
+
+This page is the customer-facing summary of SiteSync PM's security posture. For a deeper review (CAIQ, SIG, custom questionnaires), contact `security@sitesync.app` and we'll route you to the appropriate artifact.
+
+## Architecture at a glance
+
+- **Frontend:** Vite + React 19 SPA. Served from Vercel's global edge network with HTTPS-only delivery, HSTS preload, and strict cache versioning.
+- **Backend:** Supabase (managed Postgres + auth + storage + edge functions) on AWS us-east-1.
+- **AI:** Anthropic Claude API. AI calls are server-to-server only; the client never holds the API key.
+- **Payments:** Stripe Connect for GC → subcontractor payouts when enabled. PCI scope reduced via Stripe-hosted UI.
+
+## Identity & authentication
+
+- **Email + password** with bcrypt hashing (managed by Supabase Auth).
+- **TOTP MFA** available for all users; soft-forced for owner / admin / project_manager roles.
+- **Session lifecycle:** 1-hour access tokens, refresh-token rotation enabled. Idle timeout of 30 minutes.
+- **Account lockout:** server-side rate limiting on sign-in attempts per email (configured at the auth provider).
+- **SSO/SAML:** roadmap item for Phase 2 procurement-readiness; available on the enterprise tier.
+
+## Data isolation
+
+Every row in the database carries `organization_id` and (where applicable) `project_id`. Row-Level Security policies enforce tenant isolation at the database layer, not the application layer:
+
+- A query that "forgets" to filter by org / project still returns zero rows for unauthorized users.
+- Database-level isolation means even a privileged service-role write must scope to the correct tenant.
+- Every table that holds tenant data is `FORCE ROW LEVEL SECURITY` enabled, so even superuser-equivalent roles cannot bypass policies without explicitly disabling them per-statement.
+
+## Audit trail
+
+Every mutation routes through a centralized audit logger that records:
+
+- The acting user (by email + UUID)
+- Action (`create`, `update`, `delete`, `approve`, `reject`, etc.)
+- Before / after state (full JSON snapshots on edits)
+- Which fields changed
+- IP address + user agent (in metadata)
+- Server timestamp
+
+Audit log entries form a **tamper-evident hash chain** — each entry's `entry_hash` covers its content plus the prior entry's hash. A scheduled verifier walks the chain nightly and alerts if the hash chain is ever broken. UPDATE/DELETE on `audit_log` is blocked at the database layer for non-superuser roles.
+
+## Encryption
+
+- **In transit:** TLS 1.2+ everywhere. HSTS with `preload`.
+- **At rest:** Supabase manages AES-256 encryption of database storage and object storage at the AWS layer.
+- **Field-level:** SSN, tax ID, and contract terms encrypted via Supabase Vault (separate key custody from the row itself).
+- **Secrets:** API keys and service-role tokens never reach the browser. Edge functions read them from Supabase's secret store.
+
+## Edge functions
+
+All edge functions either:
+1. Validate the caller's JWT via GoTrue's `/auth/v1/user` endpoint and resolve project membership before any privileged write, or
+2. Validate a cron `Bearer` secret for scheduled-only endpoints.
+
+There are no anonymous endpoints that can write data.
+
+## Application security
+
+- **CSP-adjacent headers** at the edge: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, locked-down `Permissions-Policy`, `Cross-Origin-Opener-Policy: same-origin`.
+- **HTML sanitization:** any user-rendered markdown passes through DOMPurify with an explicit tag/attribute allowlist.
+- **No `eval` / `new Function` / unsafe dynamic imports** in our application code.
+- **Dependency hygiene:** Dependabot opens PRs weekly; high-severity vulnerabilities are merged within 7 days.
+
+## Backup & recovery
+
+- **Automated backups:** Supabase performs daily full backups and PITR (point-in-time-recovery) for the trailing 7 days.
+- **RPO target:** 24 hours.
+- **RTO target:** 4 hours for full-tenant restore.
+- DR drill: scheduled quarterly.
+
+## Compliance posture
+
+| Framework | Status |
+|---|---|
+| SOC 2 Type I | In progress (Phase 2) |
+| SOC 2 Type II | Roadmap (Phase 3) |
+| HIPAA BAA | Roadmap (year 2, on demand) |
+| GDPR | Data export + deletion endpoints in place; DPA available |
+| Davis-Bacon / WH-347 | Computation logic + PDF export shipped |
+
+## Reporting a vulnerability
+
+Email `security@sitesync.app` with a description and reproduction steps. We acknowledge within 24 hours and aim for a fix-or-mitigation within 14 days for high-severity findings.
+
+## Get the full picture
+
+For a longer-form security questionnaire response, completed CAIQ-Lite, or a copy of our DPA, email `security@sitesync.app`.

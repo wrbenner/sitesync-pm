@@ -1,0 +1,67 @@
+---
+title: RFIs
+description: Drafting, distributing, tracking, and closing Requests for Information.
+---
+
+RFIs are the formal channel for asking the design team a question that will shape construction. SiteSync treats them as first-class workflow objects with full lifecycle tracking.
+
+## The RFI lifecycle
+
+```
+draft → submitted → in_review → answered → closed
+                              ↘ rejected (with reason + reopen path)
+```
+
+Every status transition records who, when, and what changed in the audit log.
+
+## Creating an RFI
+
+1. From the RFIs list, click **New RFI** (or use the **Cmd+K** command palette → "Create RFI").
+2. Fill out the wizard:
+   - **Title** — concise, scannable (e.g., "Curtain wall anchor at slab edge")
+   - **Description** — full question text. The AI assistant on the right can draft this from a few keywords if you want.
+   - **Discipline** — civil / structural / architectural / mechanical / electrical / plumbing / etc.
+   - **Drawing references** — pin to specific sheets if applicable. The drawing markup tool lets you annotate.
+   - **Due date** — when you need an answer to avoid schedule impact.
+   - **Distribution** — who sees this RFI on submit.
+3. Click **Submit**.
+
+Submission auto-routes the RFI to the configured ball-in-court (typically the Architect) and notifies them via email + Slack/Teams (if those integrations are connected).
+
+## AI-assisted drafting
+
+Click **Draft with AI** in the create wizard to get a templated question generated from:
+
+- The drawing context you've selected
+- Recent RFIs on the same discipline
+- Project-wide context the AI Copilot has indexed
+
+The draft is editable — review it before submitting.
+
+## Tracking and reminders
+
+The RFIs list shows ball-in-court, days-since-submission, and overdue status. Hover any row for the AI summary of the current state. Set up reminder cadences in **Settings → Notifications**.
+
+## Bulk actions
+
+- **Export to XLSX** — full RFI log with status, dates, ball-in-court, response.
+- **Export to PDF** — formatted log for monthly owner reports.
+- **Bulk close** — for legacy RFIs no longer relevant. Auditable; requires a closure note.
+
+## Procore integration
+
+If your org has connected Procore, RFIs sync bidirectionally:
+
+- New RFIs in SiteSync push to Procore on submit.
+- Architect responses received in Procore pull back to SiteSync within ~5 minutes.
+- Status changes on either side reconcile automatically.
+
+See [Procore integration](../integrations/procore) for setup.
+
+## Common patterns
+
+**Closing a stale RFI** — if it's been answered out-of-band, attach the email or meeting note as a comment, mark "answered," then close.
+
+**Rejecting an RFI** — sometimes the design team rules a question out-of-scope. Mark "rejected" with a reason; the originator can reopen if the situation changes.
+
+**Re-issuing after a change** — duplicate the original (Actions → Duplicate) and reference the old number in the new title.

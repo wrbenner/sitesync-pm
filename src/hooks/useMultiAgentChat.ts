@@ -181,7 +181,7 @@ export function useMultiAgentChat(
         isLoadingHistoryRef.current = false
       }
     })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [initialConversationId])
 
   // Persist new messages to Supabase as they are added to the store

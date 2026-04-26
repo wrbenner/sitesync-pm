@@ -141,6 +141,22 @@ export const userService = {
       >[0])
       .eq('user_id', userId);
 
+    // Seed the "Maple Ridge" demo project so the new org never lands on
+    // an empty dashboard. Best-effort — failures here log and continue
+    // because the org is already created and usable.
+    try {
+      const { seedDemoProject } = await import('./demoSeed');
+      const seedResult = await seedDemoProject(organization.id);
+      if (!seedResult.ok) {
+        console.warn(
+          `[demoSeed] partial seeding for org ${organization.id}:`,
+          seedResult.errors,
+        );
+      }
+    } catch (e) {
+      console.warn('[demoSeed] failed to seed demo project:', e);
+    }
+
     return ok(organization);
   },
 
