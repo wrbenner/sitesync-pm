@@ -22,15 +22,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import {
-  colors,
-  spacing,
-  typography,
-  borderRadius,
-  shadows,
-  transitions,
-  zIndex,
-} from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
 // ── Types ─────────────────────────────────────────────────
 

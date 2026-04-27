@@ -10,7 +10,7 @@
  */
 
 import React, { useState } from 'react';
-import { HardHat, Plus, MapPin, Calendar, Building2, ArrowRight, Search } from 'lucide-react';
+import { HardHat, Plus, MapPin, Calendar, ArrowRight, Search } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useProjects } from '../hooks/queries';
 import { useProjectContext } from '../stores/projectContextStore';

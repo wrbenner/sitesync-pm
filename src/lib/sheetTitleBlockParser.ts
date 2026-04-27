@@ -44,7 +44,7 @@ export interface TitleBlockExtraction {
 // Widened from {1,2} to {1,3} to catch non-AIA prefixes that shops use:
 // DWG-001, SK-01, CD-A01, PID-001. Scoring still gates most false matches
 // because unknown prefixes don't get the +3 VALID_PREFIXES bonus.
-const SHEET_NUMBER_RE = /\b([A-Z]{1,3})[-.\s]?(\d{1,3}(?:\s*[.\-]\s*\d{1,3})?)\b/g;
+const SHEET_NUMBER_RE = /\b([A-Z]{1,3})[-.\s]?(\d{1,3}(?:\s*[.-]\s*\d{1,3})?)\b/g;
 
 // "SHEET N OF M" pattern — used as a last-resort when no regex match hits.
 // Captures N (position in set) which we treat as the sheet number.
@@ -456,9 +456,9 @@ export function extractSheetTitleBlock(
     // Copyright / legal boilerplate — "ALL RIGHTS RESERVED", "DO NOT SCALE"
     if (/\b(all\s+rights\s+reserved|do\s+not\s+scale|not\s+for\s+construction|unauthorized\s+(copy|use|reproduction)|property\s+of|©|\(c\))\b/i.test(t)) return true;
     // Dates in common formats: 03/15/2026, 2026-03-15, 15.03.26
-    if (/^\d{1,4}[\-./]\d{1,2}[\-./]\d{1,4}$/.test(t)) return true;
+    if (/^\d{1,4}[-./]\d{1,2}[-./]\d{1,4}$/.test(t)) return true;
     // Phone numbers: (555) 123-4567, 555.123.4567
-    if (/\(?\d{3}\)?\s*[.\-]\s*\d{3}\s*[.\-]\s*\d{4}/.test(t)) return true;
+    if (/\(?\d{3}\)?\s*[.-]\s*\d{3}\s*[.-]\s*\d{4}/.test(t)) return true;
     // URLs and email addresses (firm contact boilerplate)
     if (/\b(https?:|www\.|\.com|\.net|\.org|@[a-z]+\.)/i.test(t)) return true;
     // Firm-identifier lines — standalone "ARCHITECTS", "ENGINEERS", "LLP", "LLC", "INC"
@@ -466,7 +466,7 @@ export function extractSheetTitleBlock(
     // The sheet number itself (self-reference)
     if (t.toUpperCase() === best.canonical) return true;
     // Starts with the sheet number + space (callout "ID4.0 02 12'-7...")
-    if (new RegExp(`^${best.canonical.replace(/[.\-]/g, '\\$&')}\\b`, 'i').test(t)) return true;
+    if (new RegExp(`^${best.canonical.replace(/[.-]/g, '\\$&')}\\b`, 'i').test(t)) return true;
     return false;
   };
 

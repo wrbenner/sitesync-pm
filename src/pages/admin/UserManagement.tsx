@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  UserPlus, Mail, Search, Check, Shield, Users,
-  ChevronDown, X, Copy, Clock, AlertCircle, MoreHorizontal,
-} from 'lucide-react';
+import { UserPlus, Mail, Search, Check, Shield, Users, X, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase, fromTable } from '../../lib/supabase';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import type { Profile } from '../../types/database';
-import type { UserRole } from '../../types/enums';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 
 /* ─────────────────────── Constants ─────────────────────── */

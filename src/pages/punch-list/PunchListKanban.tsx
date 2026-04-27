@@ -1,9 +1,6 @@
 import React, { useMemo } from 'react'
-import {
-  Clock, AlertTriangle, Camera, MapPin, ChevronRight,
-  Play, Eye, CheckCircle2, User
-} from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { Clock, AlertTriangle, Camera, MapPin, Play, Eye, CheckCircle2 } from 'lucide-react'
+import { colors, typography } from '../../styles/theme'
 import { KanbanBoard } from '../../components/shared/KanbanBoard'
 import type { KanbanColumn } from '../../components/shared/KanbanBoard'
 import type { PunchItem } from './types'

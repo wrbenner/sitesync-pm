@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { PageContainer } from '../../components/Primitives'
 import { IntelligenceGraph, type GraphNode, type GraphEdge } from '../../components/shared/IntelligenceGraph'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { Filter, Maximize2, Minimize2, Eye, EyeOff } from 'lucide-react'
 
 // ── Helpers ──────────────────────────────────────────────

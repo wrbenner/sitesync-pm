@@ -1,17 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Save, Users, Building2, MapPin, Calendar, DollarSign,
-  FileText, HardHat, CheckCircle, Settings, ChevronDown, Shield,
-  UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
-} from 'lucide-react';
+import { Save, Users, Building2, MapPin, Calendar, DollarSign, FileText, HardHat, CheckCircle, Settings, Shield, UserPlus, Mail, Check, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
-import { supabase, fromTable } from '../../lib/supabase';
+import { fromTable } from '../../lib/supabase';
 import { resetDemoProject } from '../../services/demoSeed';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -339,7 +335,7 @@ export function ProjectSettings() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const inputStyle = (focused?: boolean): React.CSSProperties => ({
+  const inputStyle = (_focused?: boolean): React.CSSProperties => ({
     width: '100%',
     height: 40,
     padding: `0 ${spacing['3']}`,

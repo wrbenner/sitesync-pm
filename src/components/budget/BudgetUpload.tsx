@@ -31,9 +31,9 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
   // State
   const [step, setStep] = useState<ImportStep>('upload');
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
-  const [fileName, setFileName] = useState('');
+  const [_fileName, setFileName] = useState('');
   const [sheetCandidates, setSheetCandidates] = useState<SheetCandidate[]>([]);
-  const [selectedSheetIndex, setSelectedSheetIndex] = useState<number>(0);
+  const [_selectedSheetIndex, setSelectedSheetIndex] = useState<number>(0);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set());

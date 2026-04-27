@@ -14,22 +14,15 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
-} from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { ArrowLeft, Send, Clock, Calendar, DollarSign, AlertTriangle, MessageSquare, FileText, Image, ChevronDown, User, Eye, EyeOff, Paperclip, Flag, Timer, Zap } from 'lucide-react'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import {
@@ -584,7 +577,9 @@ export function RFIDetail() {
 
   useEffect(() => {
     if (lastViewedKey) {
-      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch {}
+      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch {
+        // localStorage unavailable — view tracking is best-effort.
+      }
     }
   }, [lastViewedKey])
 

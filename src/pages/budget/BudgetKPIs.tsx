@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { TrendingUp, TrendingDown, Minus, DollarSign, ShieldCheck, AlertTriangle, PieChart, Wallet } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, DollarSign, ShieldCheck, PieChart, Wallet } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
 
 // ── Animated number (rAF ease-out cubic over 400ms) ──

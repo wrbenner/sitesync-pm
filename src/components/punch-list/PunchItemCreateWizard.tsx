@@ -15,10 +15,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Camera, X, Plus, MapPin, Wrench, User, AlertTriangle,
-  Send, Image, ChevronDown, Calendar, Clock, Zap, Shield
-} from 'lucide-react'
+import { Camera, X, Plus, MapPin, Wrench, User, AlertTriangle, Send, Image, ChevronDown, Calendar, Zap, Shield } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
 import { useRealtimeDirectoryContacts } from '../../hooks/queries/realtime'

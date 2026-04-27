@@ -16,22 +16,13 @@
 // • Search across all map items
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PageContainer, Btn, Card, Modal } from '../components/Primitives';
+import { PageContainer, Btn, Modal } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { supabase } from '../lib/supabase';
 import { useProjectId } from '../hooks/useProjectId';
 import { toast } from 'sonner';
-import {
-  MapPin, Wrench, HardHat, Package, ShieldAlert, Camera, Plus,
-  Image as ImageIcon, Globe, Search, Trash2, X, Eye, EyeOff, Crosshair,
-  Layers, Cloud, Thermometer, Wind, Droplets, ChevronDown, ChevronRight,
-  AlertTriangle, ClipboardCheck, Truck, Navigation, Ruler,
-  Filter, Building2, CircleDot, TriangleAlert, Maximize2, Minimize2,
-  RefreshCw, MapPinned, Satellite, Map as MapIcon, Mountain,
-  Clock, CheckCircle, AlertCircle, XCircle as XCircleIcon, Pencil, Save,
-  Upload, Download, ZoomIn, ZoomOut, LocateFixed,
-} from 'lucide-react';
-import type { Map as LeafletMap, LayerGroup, Marker, LatLngBoundsLiteral, TileLayer as LeafletTileLayer, Control } from 'leaflet';
+import { MapPin, Wrench, HardHat, Package, ShieldAlert, Camera, Image as ImageIcon, Globe, Search, Trash2, Eye, EyeOff, Layers, Wind, Droplets, ChevronDown, ChevronRight, AlertTriangle, ClipboardCheck, Truck, Building2, Maximize2, Minimize2, RefreshCw, MapPinned, Satellite, Map as MapIcon, Mountain, CheckCircle, XCircle as XCircleIcon, Upload, LocateFixed } from 'lucide-react';
+import type { Map as LeafletMap, LayerGroup, Marker, LatLngBoundsLiteral, TileLayer as LeafletTileLayer } from 'leaflet';
 
 import 'leaflet/dist/leaflet.css';
 

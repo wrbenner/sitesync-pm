@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, Sparkles, ListChecks, ChevronDown, ChevronRight, Trash2, Check, X, Minus, Hash, Type, Gauge, CheckSquare } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, ListChecks, ChevronDown, ChevronRight, Trash2, Check, X, Minus, Hash, Type, Gauge, CheckSquare } from 'lucide-react'
 import { PageContainer, Card, Btn, MetricBox, Modal } from '../components/Primitives'
 import { SafetyPhotoAnalyzer } from '../components/safety/SafetyPhotoAnalyzer'
 import { PermissionGate } from '../components/auth/PermissionGate'

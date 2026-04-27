@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { spacing, typography, borderRadius, zIndex } from '../../styles/theme'
 
 // ── Types ────────────────────────────────────────────────
 

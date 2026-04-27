@@ -724,7 +724,7 @@ async function fetchEPASuperfund(lat: number, lng: number): Promise<EPAFacility[
 
 // ── 8. Sun Exposure Calculation ───────────────────────────────
 
-function calculateSunData(lat: number, lng: number): SunData {
+function calculateSunData(lat: number, _lng: number): SunData {
   const now = new Date();
   const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
 

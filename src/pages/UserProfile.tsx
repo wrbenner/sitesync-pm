@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import {
-  User, Mail, Phone, Building2, Briefcase, Shield, Camera,
-  Bell, BellOff, ChevronRight, LogOut, Check, Pencil,
-  Moon, Sun, Lock, KeyRound, Palette,
-} from 'lucide-react';
+import { User, Mail, Phone, Building2, Briefcase, Shield, Camera, Bell, BellOff, ChevronRight, LogOut, Check, Pencil, Moon, Sun, KeyRound, Palette } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores';
 import { supabase } from '../lib/supabase';
@@ -251,7 +247,7 @@ export default function UserProfile() {
 
   // Edit states
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
 

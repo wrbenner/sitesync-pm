@@ -1,10 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  FileText, MessageSquare, AlertCircle, CheckCircle2,
-  DollarSign, Calendar, Shield, ChevronRight,
-} from 'lucide-react';
+import { FileText, MessageSquare, AlertCircle, CheckCircle2, DollarSign, Calendar, Shield } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useActivityFeed } from '../../hooks/queries';

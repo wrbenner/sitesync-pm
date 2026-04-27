@@ -14,7 +14,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { colors, typography, borderRadius } from '../../styles/theme';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -149,7 +148,7 @@ const ArchDimensionLine: React.FC<{
   label: string;
   sublabel?: string;
   offset?: number;
-}> = ({ p1, p2, label, sublabel, offset = 16 }) => {
+}> = ({ p1, p2, label, offset = 16 }) => {
   const perp = perpUnit(p1, p2);
   const angle = lineAngle(p1, p2);
   const angleDeg = (angle * 180) / Math.PI;
@@ -230,18 +229,6 @@ const ArchDimensionLine: React.FC<{
           {label}
         </text>
         {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
-        {false && sublabel && (
-          <text
-            x={0} y={14}
-            textAnchor="middle"
-            fill="rgba(255,255,255,0.45)"
-            fontSize={10}
-            fontWeight={500}
-            fontFamily="'SF Mono', 'Menlo', 'Consolas', monospace"
-          >
-            {sublabel}
-          </text>
-        )}
       </g>
     </g>
   );

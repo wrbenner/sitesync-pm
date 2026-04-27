@@ -27,38 +27,14 @@ import React, {
   useMemo,
 } from 'react';
 import OpenSeadragon from 'openseadragon';
-import {
-  X,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  ChevronLeft,
-  ChevronRight,
-  Layers,
-  Pencil,
-  RotateCw,
-  Grid3X3,
-  Wifi,
-  WifiOff,
-  CloudOff,
-  MessageSquarePlus,
-} from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Maximize2, ChevronLeft, ChevronRight, Layers, Pencil, RotateCw, WifiOff, CloudOff, MessageSquarePlus } from 'lucide-react';
 import CreateRFIModal from '../forms/CreateRFIModal';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useUiStore } from '../../stores';
 import { MarkupToolbar, type MarkupTool } from './MarkupToolbar';
 import { STAMP_CONFIGS, type StampType } from './tools/StampTool';
 import type { NormalizedGeometry, AnnotationLayer, AnnotationVisibility } from '../../lib/annotationGeometry';
-import {
-  toNormalized,
-  fromNormalized,
-  denormalizeStrokeWidth,
-  generateCloudPath,
-  type GeometryType,
-  type NormalizedPoint,
-  type PageDimensions,
-} from '../../lib/annotationGeometry';
+import { denormalizeStrokeWidth, generateCloudPath, type GeometryType, type NormalizedPoint } from '../../lib/annotationGeometry';
 import { useDrawingMarkups } from '../../hooks/queries/document-management';
 import { useCreateDrawingMarkup, useDeleteDrawingMarkup } from '../../hooks/mutations/documents';
 import { MeasurementOverlay, type MeasurementResult } from './MeasurementOverlay';
