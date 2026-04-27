@@ -8,6 +8,7 @@ import {
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { useDrawings } from '../../hooks/queries/drawings'
 import { useProjectId } from '../../hooks/useProjectId'
+import { PageState } from '../../components/shared/PageState'
 import type { PunchItem } from './types'
 import { STATUS_COLORS, getDaysRemaining } from './types'
 
@@ -262,7 +263,13 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   onCreateAtLocation,
 }) => {
   const projectId = useProjectId()
-  const { data: drawingsResult, isLoading: drawingsLoading } = useDrawings(projectId)
+  const {
+    data: drawingsResult,
+    isLoading: drawingsLoading,
+    isError: drawingsErrored,
+    error: drawingsError,
+    refetch: refetchDrawings,
+  } = useDrawings(projectId)
   const drawings = (drawingsResult?.data ?? []) as Drawing[]
 
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
@@ -377,20 +384,24 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   // ── Loading state ─────────────────────────────────────────
   if (drawingsLoading) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: 500, backgroundColor: colors.surfaceRaised, borderRadius: 16,
-        border: `1px solid ${colors.borderSubtle}`,
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: '50%',
-            border: `3px solid ${colors.borderSubtle}`,
-            borderTopColor: colors.primaryOrange,
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <span style={{ fontSize: 13, color: colors.textSecondary }}>Loading plans...</span>
-        </div>
+      <div style={{ minHeight: 500 }}>
+        <PageState status="loading" loading={{ rows: 6, ariaLabel: 'Loading drawings' }} />
+      </div>
+    )
+  }
+
+  // ── Error state — was previously silently falling into "no drawings" ──
+  if (drawingsErrored) {
+    return (
+      <div style={{ minHeight: 500 }}>
+        <PageState
+          status="error"
+          error={{
+            title: 'Unable to load drawings',
+            message: (drawingsError as Error)?.message ?? 'Check your connection and try again.',
+            onRetry: () => void refetchDrawings(),
+          }}
+        />
       </div>
     )
   }
@@ -728,8 +739,11 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
 
 // ── Shared Styles ─────────────────────────────────────────
 
+// Zoom controls live in the field viewport — 56×56 minimum for gloved
+// thumb taps (industrial-touch-targets). Visual icon stays small;
+// the click target is what counts.
 const zoomBtnStyle: React.CSSProperties = {
-  width: 28, height: 28, borderRadius: 6,
+  width: 56, height: 56, borderRadius: 8,
   border: `1px solid ${colors.borderSubtle}`,
   backgroundColor: 'transparent',
   cursor: 'pointer',
