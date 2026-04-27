@@ -10,10 +10,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  X, Plus, FolderOpen, FileText, Send, Calendar,
-  ChevronRight, ChevronDown, Check, GripVertical,
-} from 'lucide-react';
+import { X, Plus, FolderOpen, FileText, Send, Calendar, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 
@@ -278,10 +275,10 @@ const S = {
 export const DrawingSetPanel: React.FC<DrawingSetPanelProps> = ({
   sets,
   availableDrawings,
-  projectId,
+  _projectId,
   onClose,
   onCreateSet,
-  onUpdateSet,
+  _onUpdateSet,
   onIssueSet,
   onOpenDrawing,
 }) => {

@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { PageContainer } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import {
   Play, Pause, SkipBack, SkipForward, Maximize2, Calendar,
   AlertTriangle, TrendingUp, Users, Clock,

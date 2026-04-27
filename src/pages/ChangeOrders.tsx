@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Plus, RefreshCw, ArrowRight, Clock, DollarSign, Calendar, AlertTriangle, TrendingUp, ChevronDown, ChevronUp, CheckCircle, Circle, XCircle, FileText, Link2, Shield, Calculator } from 'lucide-react';
+import { Plus, RefreshCw, ArrowRight, Calendar, TrendingUp, ChevronDown, ChevronUp, CheckCircle, Circle, XCircle, FileText, Link2, Shield, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageContainer, Card, Btn, StatusTag, EmptyState, Modal, InputField } from '../components/Primitives';
@@ -24,9 +24,7 @@ import { useActivePeriod } from '../hooks/queries/financial-periods';
 import { useNavigate } from 'react-router-dom';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useLinkedEntities } from '../hooks/useLinkedEntities';
-import { createEntityLink } from '../services/entityLinkService';
 import type { LinkedItem } from '../components/shared/LinkedEntities';
-import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { supabase } from '../lib/supabase';
 import type { ChangeOrder } from '../types/database';
 
@@ -124,7 +122,7 @@ const ApprovalStepIcon: React.FC<{ status: ApprovalStep['status'] }> = ({ status
 };
 
 // ── Approval Chain Component ─────────────────────
-const ApprovalChain: React.FC<{ steps: ApprovalStep[]; coId: string; onAdvance?: () => void; onReturn?: () => void }> = ({ steps, coId, onAdvance, onReturn }) => {
+const ApprovalChain: React.FC<{ steps: ApprovalStep[]; _coId: string; onAdvance?: () => void; onReturn?: () => void }> = ({ steps, _coId, onAdvance, onReturn }) => {
   const currentStep = steps.find(s => s.status === 'current');
   return (
     <div style={{ padding: `${spacing['3']} 0` }}>

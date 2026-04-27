@@ -1,12 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  AlertCircle, DollarSign, HelpCircle, Calendar, ChevronRight,
-  Shield, ClipboardList, CloudSun,
-  Sparkles, Scale, FileText, Send, Clock,
-  ArrowUpRight,
-} from 'lucide-react';
+import { AlertCircle, DollarSign, HelpCircle, Calendar, ChevronRight, Shield, ClipboardList, CloudSun, Sparkles, Scale, FileText, Send, Clock } from 'lucide-react';
 import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day } from '../../lib/weather';
