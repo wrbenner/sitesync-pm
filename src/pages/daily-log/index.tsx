@@ -3,6 +3,7 @@ import { useCopilotStore } from '../../stores/copilotStore';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Users, Clock, ShieldCheck, Send, BarChart3, Zap, CalendarDays, Calendar, Lock, AlertTriangle, BookOpen, RefreshCw, FileEdit } from 'lucide-react';
 import { PageContainer, Card, Btn, useToast, EmptyState } from '../../components/Primitives';
+import { PageState } from '../../components/shared/PageState';
 import CreateDailyLogModal from '../../components/forms/CreateDailyLogModal';
 import { colors, spacing, typography, borderRadius, transitions, tradeColors } from '../../styles/theme';
 import { toast } from 'sonner';
@@ -558,20 +559,25 @@ const DailyLogPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <PageContainer title="Daily Log" subtitle="Loading...">
-        <style>{`@keyframes pulse-dl { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
-        <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} style={{ backgroundColor: colors.surfaceFlat, borderRadius: '12px', border: `1px solid ${colors.borderSubtle}`, animation: 'pulse-dl 1.5s ease-in-out infinite', height: 96 }} aria-hidden="true" />
-            ))}
-          </div>
-          <div style={{ backgroundColor: colors.white, borderRadius: borderRadius.xl, border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden' }}>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{ height: 48, margin: `${spacing['2']} ${spacing['5']}`, backgroundColor: colors.borderLight, borderRadius: 8, animation: 'pulse-dl 1.5s ease-in-out infinite', borderBottom: i < 4 ? `1px solid ${colors.borderSubtle}` : 'none' }} aria-hidden="true" />
-            ))}
-          </div>
-        </div>
+      <PageContainer title="Daily Log" subtitle="Loading…">
+        <PageState status="loading" loading={{ rows: 8, ariaLabel: 'Loading daily logs' }} />
+      </PageContainer>
+    );
+  }
+
+  // Error path: useDailyLogs failed. Previously this fell through silently to
+  // the empty-state branch, which masked real backend errors as "no data."
+  if (logError) {
+    return (
+      <PageContainer title="Daily Log">
+        <PageState
+          status="error"
+          error={{
+            title: 'Unable to load daily logs',
+            message: (logError as Error)?.message ?? 'Check your connection and try again.',
+            onRetry: () => void refetch(),
+          }}
+        />
       </PageContainer>
     );
   }

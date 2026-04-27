@@ -369,7 +369,7 @@ const SubmittalsPage: React.FC = () => {
             <button
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 28, border: 'none', cursor: 'pointer',
+                minWidth: 56, height: 56, padding: `0 ${spacing['3']}`, border: 'none', cursor: 'pointer',
                 borderRadius: borderRadius.base,
                 backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent',
                 color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary,
@@ -384,7 +384,7 @@ const SubmittalsPage: React.FC = () => {
             <button
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 28, border: 'none', cursor: 'pointer',
+                minWidth: 56, height: 56, padding: `0 ${spacing['3']}`, border: 'none', cursor: 'pointer',
                 borderRadius: borderRadius.base,
                 backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent',
                 color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary,
