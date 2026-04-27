@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { getLienWaivers } from '../../api/endpoints/lienWaivers'
 import { toast } from 'sonner'
+import type { Database } from '../../types/database'
+
+type LienWaiverInsert = Database['public']['Tables']['lien_waivers']['Insert']
 
 
 
@@ -43,9 +46,21 @@ export function useCreateLienWaiver() {
       status: string
       notes: string | null
     }) => {
+      // The DB requires amount + through_date to be non-null. Coerce here so the
+      // Insert type matches without a wider any-cast — the form-side caller
+      // already validates that these are populated before submit.
+      const insert: LienWaiverInsert = {
+        project_id: payload.project_id,
+        contractor_name: payload.contractor_name,
+        waiver_state: payload.waiver_state,
+        amount: payload.amount ?? 0,
+        through_date: payload.through_date ?? new Date().toISOString().slice(0, 10),
+        status: payload.status,
+        notes: payload.notes,
+      }
       const { data, error } = await supabase
         .from('lien_waivers')
-        .insert(payload as any)
+        .insert(insert)
         .select()
         .single()
       if (error) throw error

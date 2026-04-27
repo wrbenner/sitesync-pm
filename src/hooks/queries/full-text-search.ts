@@ -17,6 +17,30 @@ export interface SearchResult {
   created_at: string
 }
 
+// Shape returned by each text-search query — only the columns we select are
+// guaranteed; cast through this typed interface instead of `any` so the
+// mapping below is type-checked.
+interface DocFileRow {
+  id: string
+  name: string | null
+  description: string | null
+  project_id: string
+  created_at: string
+}
+interface DrawingRow {
+  id: string
+  title: string | null
+  discipline: string | null
+  project_id: string
+  created_at: string
+}
+interface WikiRow {
+  id: string
+  title: string | null
+  project_id: string
+  created_at: string
+}
+
 export function useFullTextSearch(
   projectId: string | undefined,
   query: string,
@@ -40,10 +64,10 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocFileRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
-              title: d.name,
+              title: d.name ?? '',
               description: d.description,
               project_id: d.project_id,
               relevance: 1,
@@ -61,10 +85,10 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocFileRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
-              title: d.name,
+              title: d.name ?? '',
               description: d.description,
               project_id: d.project_id,
               relevance: 1,
@@ -82,10 +106,10 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DrawingRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
-              title: d.title,
+              title: d.title ?? '',
               description: d.discipline,
               project_id: d.project_id,
               relevance: 1,
@@ -103,10 +127,10 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as WikiRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
-              title: d.title,
+              title: d.title ?? '',
               description: null,
               project_id: d.project_id,
               relevance: 1,
