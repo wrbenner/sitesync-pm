@@ -286,11 +286,9 @@ describe('calculateSafetyScore — recommendations', () => {
   })
 
   it('Expiring certs trigger a "schedule renewal" recommendation', () => {
-    const r = calculateSafetyScore({
-      ...ZERO, totalWorkers: 10, workersWithValidCerts: 10, expiringCertsCount: 3,
-    })
-    // certScore = 100 - 9 = 91 — above the 90 threshold, so recommendation may not fire
-    // unless we drop certs further. Force the recommendation by adding more expiring:
+    // certScore at 3 expiring is 100-9=91 — above 90 threshold, so the
+    // recommendation may not fire. Use 5 expiring (score=85) to land below
+    // the 90 threshold and trigger the cert-recommendation block.
     const r2 = calculateSafetyScore({
       ...ZERO, totalWorkers: 10, workersWithValidCerts: 10, expiringCertsCount: 5,
     })
