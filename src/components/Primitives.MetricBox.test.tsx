@@ -7,17 +7,17 @@ import { MetricBox, Tag, SectionHeader } from './Primitives'
 // the rendered output (the displayed value reflects the format applied).
 
 describe('MetricBox — value formatting', () => {
-  it('currency format under \$1k displays as raw dollars', () => {
+  it('currency format under $1k displays as raw dollars', () => {
     const { getByRole } = render(<MetricBox label="Spent" value={500} format="currency" />)
     expect(getByRole('region').getAttribute('aria-label')).toContain('500')
   })
 
-  it('currency format ≥ \$1k shows the K suffix (rounded)', () => {
+  it('currency format >= $1k shows the K suffix (rounded)', () => {
     const { container } = render(<MetricBox label="Spent" value={1500} format="currency" />)
     expect(container.textContent).toContain('$2K')
   })
 
-  it('currency format ≥ \$1M shows the M suffix (1 decimal)', () => {
+  it('currency format >= $1M shows the M suffix (1 decimal)', () => {
     const { container } = render(<MetricBox label="Spent" value={2_500_000} format="currency" />)
     expect(container.textContent).toContain('$2.5M')
   })
