@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, startTransition } from 'react';
 import {
   Home, Calendar, DollarSign, FileText, BookOpen,
   CheckSquare, Users, Search,
@@ -11,13 +11,12 @@ import {
   Pin, PinOff, Box,
   HelpCircle,
   Repeat2, Grid3X3, ChevronDown, Plus, Sparkles,
-  History, Star, Settings, Bell, ArrowRight,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
-import { duration, easing } from '../styles/animations';
+import { colors, spacing, typography, borderRadius, layout, zIndex } from '../styles/theme';
 import { usePermissions } from '../hooks/usePermissions';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';
 import { AgentStatusBadge } from './ai/agentStream';
@@ -510,8 +509,10 @@ const AllToolsPanel: React.FC<AllToolsPanelProps> = ({
 
   useEffect(() => {
     if (open) {
-      setSearch('');
-      setActiveCategory(null);
+      startTransition(() => {
+        setSearch('');
+        setActiveCategory(null);
+      });
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
@@ -690,7 +691,6 @@ const AllToolsPanel: React.FC<AllToolsPanelProps> = ({
                     </div>
                     {visibleItems.map((item) => {
                       const fullItem = ITEM_MAP.get(item.id);
-                      const Icon = item.icon;
                       const isItemActive = activeView === item.id;
                       const isItemPinned = pinnedIds.has(item.id);
 
@@ -875,11 +875,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   // Track navigation for recents
   useEffect(() => {
     if (!activeView || activeView === 'dashboard') return;
-    setRecentIds((prev) => {
-      const filtered = prev.filter((id) => id !== activeView);
-      const next = [activeView, ...filtered].slice(0, 5);
-      writeJSON(RECENTS_KEY, next);
-      return next;
+    startTransition(() => {
+      setRecentIds((prev) => {
+        const filtered = prev.filter((id) => id !== activeView);
+        const next = [activeView, ...filtered].slice(0, 5);
+        writeJSON(RECENTS_KEY, next);
+        return next;
+      });
     });
   }, [activeView]);
 
