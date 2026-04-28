@@ -30,6 +30,7 @@ import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
+import { WorkflowTimeline, RFI_STEPS } from '../../components/WorkflowTimeline'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
@@ -767,6 +768,19 @@ export function RFIDetail() {
             </div>
           )}
         </div>
+
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{
+            marginBottom: '20px',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+          }}>
+            <WorkflowTimeline steps={RFI_STEPS} currentStep={currentStatus} />
+          </div>
+        )}
 
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>

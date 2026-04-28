@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 5,
-  "_updated": "2026-04-28T07:30:00Z",
-  "_updatedBy": "auto/polish-20260428-0516",
-  "_floor_realignment_note": "v5: ESLint dead-import sweep across SiteMap, RFIDetail, RFIs, Sidebar. StatusBadge component-in-render bug fixed. setState-in-effect wrapped in startTransition. eslintErrors 480→413 (-67).",
+  "_version": 6,
+  "_updated": "2026-04-28T09:30:00Z",
+  "_updatedBy": "auto/polish-20260428-extend",
+  "_floor_realignment_note": "v6: WorkflowTimeline component added + wired to RFI and Submittal detail pages. anyCount=0, mockCount=0, tsErrors=0 floors held. eslintErrors=413 (unchanged from v5).",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {

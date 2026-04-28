@@ -57,6 +57,7 @@ import {
   type SubmittalState, type SubmittalStamp,
 } from '../../machines/submittalMachine'
 import { DocumentViewer } from '../../components/submittals/DocumentViewer'
+import { WorkflowTimeline, SUBMITTAL_STEPS } from '../../components/WorkflowTimeline'
 import { supabase } from '../../lib/supabase'
 
 const SUBMITTAL_BUCKET = 'project-files'
@@ -892,6 +893,24 @@ export function SubmittalDetailPage() {
             maxHeight={540}
           />
         </motion.div>
+
+        {/* ── Workflow Timeline ───────────────────────── */}
+        {currentStatus !== 'rejected' && currentStatus !== 'resubmit' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.05 }}
+            style={{
+              marginBottom: spacing.lg,
+              padding: '16px 20px',
+              borderRadius: '12px',
+              backgroundColor: colors.surfaceRaised,
+              border: `1px solid ${colors.borderSubtle}`,
+            }}
+          >
+            <WorkflowTimeline steps={SUBMITTAL_STEPS} currentStep={currentStatus} />
+          </motion.div>
+        )}
 
         {/* ── Approval Pipeline ──────────────────────── */}
         <motion.div
