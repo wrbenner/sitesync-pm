@@ -205,14 +205,32 @@ export const userService = {
     const role = await resolveOrgRole(organizationId, userId);
     if (!role) return fail(permissionError('User is not a member of this organization'));
 
-    const { data, error } = await supabase
+    // Two-step join: PostgREST can't auto-embed `profiles` because both
+    // tables reference auth.users(id), not each other. Same pattern as
+    // projectService.loadMembers — see that function for the why.
+    const { data: members, error: mErr } = await supabase
       .from('organization_members')
-      .select('*, profile:profiles(*)')
+      .select('*')
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: true });
 
-    if (error) return fail(dbError(error.message, { organizationId }));
-    return ok((data ?? []) as unknown as OrgMemberWithProfile[]);
+    if (mErr) return fail(dbError(mErr.message, { organizationId }));
+    if (!members || members.length === 0) return ok([])
+
+    const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)))
+    const { data: profiles, error: pErr } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('user_id', userIds)
+
+    if (pErr) return fail(dbError(pErr.message, { organizationId }))
+
+    const profileByUserId = new Map((profiles ?? []).map((p) => [p.user_id, p]))
+    const merged = members.map((m) => ({
+      ...m,
+      profile: profileByUserId.get(m.user_id) ?? null,
+    }))
+    return ok(merged as unknown as OrgMemberWithProfile[]);
   },
 
   /**

@@ -200,13 +200,33 @@ export const projectService = {
   },
 
   async loadMembers(projectId: string): Promise<Result<ProjectMemberWithProfile[]>> {
-    const { data, error } = await supabase
+    // PostgREST can't auto-embed `profiles` from `project_members` because
+    // both tables reference auth.users(id) — there's no direct FK between
+    // them. So we run two queries and merge in JS instead of using
+    // `select('*, profile:profiles(*)')` (which 400s with "could not find
+    // a relationship"). Two round-trips, but they're both indexed lookups.
+    const { data: members, error: mErr } = await supabase
       .from('project_members')
-      .select('*, profile:profiles(*)')
+      .select('*')
       .eq('project_id', projectId);
 
-    if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as unknown as ProjectMemberWithProfile[]);
+    if (mErr) return fail(dbError(mErr.message, { projectId }));
+    if (!members || members.length === 0) return ok([])
+
+    const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)))
+    const { data: profiles, error: pErr } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('user_id', userIds)
+
+    if (pErr) return fail(dbError(pErr.message, { projectId }))
+
+    const profileByUserId = new Map((profiles ?? []).map((p) => [p.user_id, p]))
+    const merged = members.map((m) => ({
+      ...m,
+      profile: profileByUserId.get(m.user_id) ?? null,
+    }))
+    return ok(merged as unknown as ProjectMemberWithProfile[]);
   },
 
   async addMember(
