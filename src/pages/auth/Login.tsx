@@ -227,22 +227,21 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
       onMouseLeave={() => setIsHovering(false)}
       style={{
         flex: 1,
-        height: 44,
-        background: '#FFFFFF',
-        border: `1px solid ${isHovering && !disabled ? 'rgba(26,22,19,0.32)' : 'rgba(26,22,19,0.14)'}`,
-        borderRadius: 10,
+        height: 38,
+        background: 'transparent',
+        border: `1px solid ${isHovering && !disabled ? 'rgba(26,22,19,0.28)' : 'rgba(26,22,19,0.12)'}`,
+        borderRadius: 19,
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 10,
+        gap: 9,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled && !pending ? 0.55 : 1,
-        font: `500 13.5px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+        font: `500 13px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
         letterSpacing: '-0.005em',
         color: '#1A1613',
         padding: '0 14px',
-        transition: 'border-color 160ms ease, opacity 200ms ease',
-        boxShadow: isHovering && !disabled ? '0 1px 2px rgba(26,22,19,0.04)' : 'none',
+        transition: 'border-color 200ms ease, opacity 200ms ease, background 200ms ease',
       }}
     >
       {pending ? (
@@ -815,38 +814,21 @@ export const Login: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* ─── OAuth Divider ──────────────────────────────── */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          width: '100%',
-          marginTop: 28,
-          marginBottom: 18,
-        }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(26,22,19,0.10)' }} />
-          <span style={{
-            font: `400 11px/1 ${FONT}`,
-            color: SS_FG3,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-          }}>
-            or
-          </span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(26,22,19,0.10)' }} />
-        </div>
-
-        {/* ─── OAuth Row ──────────────────────────────────── */}
+        {/* ─── OAuth Row ──────────────────────────────────────
+            Whitespace-separated from the form (no "OR" caps divider —
+            the gap itself does the work). Buttons are quieter than a
+            primary CTA: thin border, small chip, brand glyph forward. */}
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           gap: 10,
           width: '100%',
+          marginTop: 36,
         }}>
           <OAuthButton
             label="Continue with Google"
             short="Google"
-            icon={<GoogleGlyph size={18} />}
+            icon={<GoogleGlyph size={16} />}
             onClick={() => signInWithProvider('google')}
             pending={oauthPending === 'google'}
             disabled={!!oauthPending || submitting}
@@ -855,17 +837,35 @@ export const Login: React.FC = () => {
           <OAuthButton
             label="Continue with Microsoft"
             short="Microsoft"
-            icon={<MicrosoftGlyph size={18} />}
+            icon={<MicrosoftGlyph size={16} />}
             onClick={() => signInWithProvider('azure')}
             pending={oauthPending === 'azure'}
             disabled={!!oauthPending || submitting}
             isMobile={isMobile}
           />
         </div>
+      </motion.div>
+      </div>
 
-        {/* ─── Mode Toggle ──────────────────────────────────
-            Tiny text link to flip between magic-link and password.
-            Toggling clears the password (security) and any error. */}
+      {/* ─── Bottom Anchor: secondary links ──────────────────
+          Lives at the page footer, not below the form column —
+          decongests the central composition and echoes the original
+          "Use single sign-on" placement. A middot separates the two
+          actions; one flips the form mode, the other links to signup. */}
+      <div style={{
+        position: 'absolute',
+        bottom: isMobile ? 56 : 48,
+        left: 0,
+        right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 14,
+        font: `400 12px/1 ${FONT}`,
+        color: SS_FG3,
+        letterSpacing: '0.01em',
+        pointerEvents: 'none', // children re-enable
+      }}>
         <button
           type="button"
           onClick={() => {
@@ -876,17 +876,27 @@ export const Login: React.FC = () => {
           style={{
             background: 'none',
             border: 'none',
+            padding: 0,
             cursor: 'pointer',
-            marginTop: 22,
-            padding: '4px 8px',
-            font: `400 12.5px/1 ${FONT}`,
-            color: SS_FG3,
-            letterSpacing: '0.005em',
+            font: 'inherit',
+            color: 'inherit',
+            letterSpacing: 'inherit',
+            pointerEvents: 'auto',
           }}
         >
-          {mode === 'magic' ? 'Sign in with password' : 'Use a sign-in link instead'}
+          {mode === 'magic' ? 'Sign in with password' : 'Use a sign-in link'}
         </button>
-      </motion.div>
+        <span aria-hidden="true" style={{ opacity: 0.5 }}>·</span>
+        <a
+          href="#/signup"
+          style={{
+            color: 'inherit',
+            textDecoration: 'none',
+            pointerEvents: 'auto',
+          }}
+        >
+          Sign up
+        </a>
       </div>
 
       {/* ─── Level Lines (extend from form to page edges) ─── */}

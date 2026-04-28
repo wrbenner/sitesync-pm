@@ -111,7 +111,7 @@ describe('Login (magic-link + OAuth)', () => {
       expect(screen.getByLabelText(/^password$/i)).toBeDefined()
     })
     // Toggle text flips
-    expect(screen.getByText(/use a sign-in link instead/i)).toBeDefined()
+    expect(screen.getByText(/use a sign-in link/i)).toBeDefined()
   })
 
   it('does not call signInWithPassword on empty password submit', async () => {
