@@ -153,7 +153,7 @@ export const MfaRequiredBanner: React.FC = () => {
           borderRadius: borderRadius.md,
           border: 'none',
           background: isPastGrace ? colors.statusCritical : colors.primaryOrange,
-          color: '#fff',
+          color: colors.white,
           fontSize: typography.fontSize.sm,
           fontWeight: typography.fontWeight.medium,
           cursor: 'pointer',

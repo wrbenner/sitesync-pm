@@ -39,6 +39,7 @@ const PAGES = [
   { slug: 'ai',            hash: '#/ai',             name: 'page-26-ai' },
   { slug: 'audit-trail',   hash: '#/audit-trail',    name: 'page-27-audit-trail' },
   { slug: 'integrations',  hash: '#/integrations',   name: 'page-28-integrations' },
+  { slug: 'security',      hash: '#/security',        name: 'page-29-security' },
 ]
 
 function viewportLabel(width: number): string {

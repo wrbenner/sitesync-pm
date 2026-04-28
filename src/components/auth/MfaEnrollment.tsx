@@ -240,7 +240,7 @@ export const MfaEnrollment: React.FC = () => {
                   justifyContent: 'center',
                   padding: spacing['3'],
                   borderRadius: borderRadius.md,
-                  background: '#fff',
+                  background: colors.white,
                 }}
                 // Supabase returns a `data:image/svg+xml;...` URL for the QR.
                 // Render as <img> rather than dangerouslySetInnerHTML so we never

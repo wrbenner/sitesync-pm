@@ -82,11 +82,11 @@ export function WorkflowTimeline({ steps, currentStep, stepLabels }: WorkflowTim
         if (isCompleted) {
           dotBg = colors.statusActive
           dotBorder = colors.statusActive
-          dotColor = '#ffffff'
+          dotColor = colors.white
         } else if (isCurrent) {
           dotBg = colors.primaryOrange
           dotBorder = colors.primaryOrange
-          dotColor = '#ffffff'
+          dotColor = colors.white
         } else {
           dotBg = colors.surfaceInset
           dotBorder = colors.borderDefault
@@ -134,7 +134,7 @@ export function WorkflowTimeline({ steps, currentStep, stepLabels }: WorkflowTim
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: colors.white,
                       animation: 'sitesync-pulse 2s ease-in-out infinite',
                     }}
                   />
