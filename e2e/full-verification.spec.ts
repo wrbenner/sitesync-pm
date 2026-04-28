@@ -233,15 +233,32 @@ async function checkLayoutIssues(page: Page): Promise<string[]> {
     if (document.documentElement.scrollWidth > window.innerWidth + 4) {
       issues.push(`horizontal overflow: scrollWidth=${document.documentElement.scrollWidth} viewport=${window.innerWidth}`)
     }
-    // Find elements with text overflowing their container
+    // Heuristic: an element is "visually hidden" if it's tiny OR explicitly
+    // clipped to a 1×1 box. Such elements are sr-only and the text-overflow
+    // check is a false positive on them.
+    const isVisuallyHidden = (e: HTMLElement) => {
+      const r = e.getBoundingClientRect()
+      if (r.width <= 2 || r.height <= 2) return true
+      const cs = getComputedStyle(e)
+      if (cs.clip === 'rect(0px, 0px, 0px, 0px)') return true
+      if (cs.clipPath && cs.clipPath.includes('inset(50%)')) return true
+      return false
+    }
+    // Find elements with text overflowing their container.
     const overflowed: string[] = []
     document.querySelectorAll('*').forEach((el) => {
       const e = el as HTMLElement
-      if (!e.children.length && e.textContent && e.textContent.length > 0) {
-        if (e.scrollWidth > e.clientWidth + 2) {
-          const label = (e.textContent.trim().slice(0, 40))
-          if (label.length > 8) overflowed.push(label)
-        }
+      if (e.children.length || !e.textContent || e.textContent.length === 0) return
+      if (isVisuallyHidden(e)) return
+      // Walk up: if any ancestor is visually hidden, the leaf is too.
+      let p: HTMLElement | null = e.parentElement
+      while (p && p !== document.body) {
+        if (isVisuallyHidden(p)) return
+        p = p.parentElement
+      }
+      if (e.scrollWidth > e.clientWidth + 2) {
+        const label = e.textContent.trim().slice(0, 40)
+        if (label.length > 8) overflowed.push(label)
       }
     })
     if (overflowed.length > 5) {

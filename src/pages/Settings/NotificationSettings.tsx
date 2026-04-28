@@ -200,11 +200,14 @@ const NotificationSettings: React.FC = () => {
     }
 
     const fetchPreferences = async () => {
+      // .maybeSingle() returns null without error when no row exists. New
+      // users haven't had defaults written yet — we want to fall through
+      // to DEFAULT_PREFERENCES instead of surfacing a 406 in the console.
       const { data, error } = await supabase
         .from('notification_preferences')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!error && data) {
         const row = data as Record<string, unknown>;
