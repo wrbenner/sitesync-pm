@@ -115,12 +115,15 @@ const ignoredConsoleSubstrings = [
   '[HMR]',
 ]
 
-// Verbs that signal a button is destructive — never click these during the
-// crawl. (Filter is a substring match, case-insensitive.)
+// Verbs that signal a button is destructive OR a dev-tool toggle — never
+// click these during the crawl. (Filter is a substring match,
+// case-insensitive.)
 const DESTRUCTIVE_VERBS = [
   'delete', 'remove', 'sign out', 'log out', 'discard', 'reject',
   'cancel pay', 'void', 'archive', 'reset password', 'transfer ownership',
   'leave', 'demote', 'revoke',
+  // Dev-tool toggles — opening them obscures the page and noises up the screenshots
+  'tanstack', 'react query', 'queries', 'mutations', 'devtools',
 ]
 
 interface PageResult {

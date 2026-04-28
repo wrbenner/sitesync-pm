@@ -16,11 +16,12 @@ Findings from end-to-end app verification. Status legend:
 - **Impact**: Anywhere that lists project members with profile data (Workforce, Crews, Directory, Settings/Team) likely shows missing names/avatars.
 - **Action**: Inspect `useProjectMembers` (or similar hook) — either flatten the query or fix the RLS policy on `profiles` to allow FK-joined SELECT.
 
-### 🟠 MAJOR-002 — `field_session_events` returns 404
+### 🟠 MAJOR-002 — `field_session_events` returns 404 (migrations out of sync)
 - **Symptom**: `GET /rest/v1/field_session_events?select=id` → HTTP 404
-- **Likely cause**: Table doesn't exist or migration wasn't applied. PostgREST 404 = "no such relation".
-- **Impact**: Anything that reads field-session telemetry — likely `/field` or a polling hook.
-- **Action**: Check `supabase/migrations/` for a `field_session_events` create migration. Either run it or guard the hook that queries it.
+- **Cause confirmed**: Migration `20260427000012_field_session_events.sql` exists in the repo but hasn't been applied to the hosted Supabase project. The most recent migration in the repo is `20260428000000_extend_disciplines.sql`, so several may be missing in production too.
+- **Impact**: Console noise on any route that mounts `useFieldSession` or `useFieldSuperPMF`. The hooks already try-catch and degrade gracefully (PMF returns zeros, telemetry inserts swallow), so user-visible breakage is minimal — but the noise will mask real errors during the verification crawl.
+- **Action**: Run `supabase db push` from the repo root (after `supabase login` + `supabase link --project-ref hypxrmcppjfbtlwuoafc`) OR apply the missing migrations via the Supabase dashboard SQL editor.
+- **Status**: 🟢 Hooks already handle the missing table. Migration sync is the user's call.
 
 ### 🟡 MINOR-001 — A11y: 4 color-contrast violations on /day or /dashboard
 - **Severity**: serious (per axe-core)
@@ -32,12 +33,36 @@ Findings from end-to-end app verification. Status legend:
 
 ---
 
-## TBD — Pending full crawl
+## From comprehensive crawl (2026-04-28)
 
-The full verification harness lives at `e2e/full-verification.spec.ts`. It walks every authenticated route, probes safe buttons, captures broken images / 4xx / page errors / layout overflow, and writes a structured JSON report to `/tmp/verification-report.json`.
+### `/dashboard` — ⚠️ WARN
+- **Load time**: 43.9s (heavy initial Vite compile + 22 button probes)
+- **Console errors**: 3 (all `field_session_events` 404 — see MAJOR-002)
+- **Network 4xx**: 3 (same root cause)
+- **Layout / images**: clean
+- **Buttons probed**: 22 — none crashed
 
-Run with stored auth state:
+[Full crawl is in progress. Additional routes will be appended here as they complete.]
+
+---
+
+## Verified Fixes Shipped This Run
+
+- 🟢 **MAJOR-001 fixed in ce5b6ff** — `project_members → profiles` join split into two indexed queries in `projectService.loadMembers`, `userService.listOrganizationMembers`, `teamService.listTeamMembers`
+- 🟢 **a11y reporter now logs target selectors** (main.tsx) — future runs will tell us *which* element is failing color-contrast, not just the count
+
+---
+
+## How to Run Verification
+
+```bash
+# With stored auth state (one-time setup, then re-run any time)
+BASE_URL=http://localhost:5173/sitesync-pm/ \
+  npx playwright test e2e/full-verification.spec.ts --project=chromium --reporter=list
+
+# Outputs:
+#   /tmp/verification-report.json   (structured punch list)
+#   /tmp/verification-shots/        (screenshot per WARN/FAIL route)
 ```
-npx playwright test e2e/full-verification.spec.ts --project=chromium --reporter=list
-```
-(requires `e2e/.auth/state.json` from the browser's localStorage, or `POLISH_USER` + `POLISH_PASS`).
+
+Auth state lives at `e2e/.auth/state.json` (gitignored). Refresh by pasting fresh localStorage from the browser console.

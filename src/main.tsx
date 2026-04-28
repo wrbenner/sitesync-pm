@@ -31,6 +31,15 @@ if (import.meta.env.DEV) {
           console.warn(`[a11y] ${results.violations.length} accessibility violations:`)
           results.violations.forEach((v) => {
             console.warn(`  ${v.impact} — ${v.id}: ${v.help} (${v.nodes.length} nodes)`)
+            // Log the actual offending selectors so they can be fixed —
+            // counts alone are useless without targets. Cap at 3 per
+            // violation to avoid drowning the console.
+            v.nodes.slice(0, 3).forEach((n) => {
+              const target = Array.isArray(n.target) ? n.target.join(' ') : String(n.target)
+              const summary = n.failureSummary?.split('\n')[1]?.trim() || ''
+              console.warn(`    ↳ ${target}${summary ? '  — ' + summary : ''}`)
+            })
+            if (v.nodes.length > 3) console.warn(`    ↳ …and ${v.nodes.length - 3} more`)
           })
         } else {
           console.log('[a11y] No accessibility violations found')
