@@ -35,17 +35,44 @@ export type VendorEvaluation = {
   evaluated_at: string
 }
 
+// Strict UUIDv1-v5 shape so we never send a malformed value into the
+// PostgREST `.eq.` filter. Hex blocks separated by hyphens, version
+// nibble in {1..5}, variant nibble in {8,9,a,b}. PostgREST 400s on a
+// bad UUID, which is what was producing the sporadic /estimating + /bim
+// vendors warnings during the verification crawl.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export function useVendors(projectId: string | undefined) {
+  const valid = !!projectId && UUID_RE.test(projectId)
   return useQuery({
-    queryKey: ['vendors', projectId],
+    queryKey: ['vendors', projectId ?? null],
     queryFn: async () => {
-      let q = supabase.from('vendors').select('*').order('company_name', { ascending: true })
-      if (projectId) q = q.or(`project_id.eq.${projectId},project_id.is.null`)
-      const { data, error } = await q
-      if (error) throw error
-      return (data || []) as Vendor[]
+      // Two scoped queries (project-specific + globals) merged in JS,
+      // instead of `.or('project_id.eq.X,project_id.is.null')`. This
+      // sidesteps PostgREST's embedded-filter parsing edge cases and
+      // makes RLS evaluation simpler on each branch.
+      const [scoped, globals] = await Promise.all([
+        supabase
+          .from('vendors')
+          .select('*')
+          .eq('project_id', projectId!)
+          .order('company_name', { ascending: true }),
+        supabase
+          .from('vendors')
+          .select('*')
+          .is('project_id', null)
+          .order('company_name', { ascending: true }),
+      ])
+      if (scoped.error) throw scoped.error
+      if (globals.error) throw globals.error
+      const combined = [...(scoped.data ?? []), ...(globals.data ?? [])]
+      // Stable sort by company_name across the merged set.
+      combined.sort((a, b) =>
+        ((a.company_name as string) ?? '').localeCompare((b.company_name as string) ?? '')
+      )
+      return combined as Vendor[]
     },
-    enabled: !!projectId,
+    enabled: valid,
   })
 }
 
