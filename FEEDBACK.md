@@ -1,6 +1,6 @@
 # FEEDBACK.md — SiteSync PM Nightly Build Priorities
 *Walker is calling GCs this week. Every overnight build must make the product more demoable.*
-*Last updated: April 27, 2026 (loop-directive rewrite)*
+*Last updated: April 28, 2026 (strategist priorities refresh)*
 *Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
 
 ---
@@ -75,91 +75,73 @@ The three P0 priorities from the previous FEEDBACK.md are all met.
 
 ---
 
-## Tonight's P0 Priorities (April 27 -> April 28 2am CDT)
+## Tonight's P0 Priorities (April 28 -> April 29 2am CDT)
 
-### 1. MOCK DATA ELIMINATION — KILL ALL 28 Math.random() CALLS (NIGHT TEN — UNCHANGED, STILL CRITICAL)
-**SPEC ref:** P0-1 (Mock Data Elimination — 0% complete, blocks every investor demo and GC call)
-**Files to change (28 occurrences — identical to last night, zero progress):**
-**DEMO KILLERS (fix first — these are visible in the 6-step demo flow, 9 occurrences across 5 files):**
-- `src/components/budget/SCurve.tsx:282` — fake budget variance `0.95 + Math.random() * 0.1` changes on every reload
-- `src/pages/budget/BudgetKPIs.tsx:134,139` — fake spend/committed trend data with random noise
-- `src/pages/schedule/ScheduleKPIs.tsx:95-98` — 4 lines of fake schedule forecast data
-- `src/pages/Procurement.tsx:1141` — random PO numbers on conversion `PO-${2045 + Math.floor(Math.random() * 10)}`
-- `src/pages/payment-applications/index.tsx:299` — `String(Math.random())` as fallback ID
-**ID GENERATION (mechanical fix — 19 occurrences across 15 files):**
-- `src/components/drawings/MeasurementOverlay.tsx:83`
-- `src/components/drawings/DrawingTiledViewer.tsx:331`
-- `src/components/drawings/AnnotationCanvas.tsx:39`
-- `src/components/shared/PhotoAnnotation.tsx:84`
-- `src/components/shared/DrawingMarkup.tsx:100`
-- `src/components/shared/Whiteboard.tsx:109`
-- `src/components/shared/FileDropZone.tsx:32`
-- `src/components/submittals/SubmittalCreateWizard.tsx:527`
-- `src/components/punch-list/PunchItemCreateWizard.tsx:573,608` (2 occurrences)
-- `src/hooks/useRealtimeInvalidation.ts:48,118` (2 occurrences)
-- `src/hooks/usePermissions.ts:272`
-- `src/lib/scheduleHealth.ts:86`
-- `src/pages/whiteboard/WhiteboardPage.tsx:26`
-- `src/pages/drawings/index.tsx:808,937,1049,1108` (4 occurrences)
+### 1. iPAD SIDEBAR LAYOUT FIX — ONE CSS CHANGE, 25+ PAGES FIXED
+**SPEC ref:** P0-2 (WCAG 2.1 AA Accessibility — 0% complete) + P1-1 (Dashboard — 40% complete) + all demo-path pages
+**Files to change:** `src/components/layout/AppLayout.tsx` (or wherever the main content wrapper + sidebar coexist), `src/components/layout/Sidebar.tsx`
 **What to do:**
-1. **Demo-killing fakes (9 occurrences across 5 files — fix these FIRST):**
-   - `SCurve.tsx:282` — `0.95 + Math.random() * 0.1` generates fake budget variance. Replace with: query real `actual_amount` from `budget_line_items` grouped by `period_date`. If no actuals exist, render only the planned line with label "Actuals will appear as costs are recorded." Use integer cents (LEARNINGS.md).
-   - `BudgetKPIs.tsx:134,139` — Fake spend/committed trend lines with `Math.random() * spent * 0.02`. Replace with: query actual monthly spend from `budget_line_items` grouped by month. If insufficient data, show only data points that exist — no synthetic noise. A chart with 2 real data points beats 7 fake ones.
-   - `ScheduleKPIs.tsx:95-98` — 4 lines generating fake schedule forecast data. Replace with: query real task completion data from `tasks` or `schedule_activities` grouped by week. If no data, show empty state: "Schedule data will appear as activities are tracked."
-   - `Procurement.tsx:1141` — random PO numbers. Replace with deterministic: `PO-${req.id.slice(0,8).toUpperCase()}`.
-   - `payment-applications/index.tsx:299` — `String(Math.random())` fallback. Replace with `crypto.randomUUID()`.
-2. **Mechanical ID generation fix (19 remaining occurrences across 15 files):** Every `Math.random().toString(36).slice(...)` -> `crypto.randomUUID().slice(0, N)` where N matches the original slice length. Every standalone `Math.random()` for ID purposes -> `crypto.randomUUID()`. This is a 30-second fix per file — no logic changes needed.
-3. **Exceptions:** `IntelligenceGraph.tsx` uses Math.random() for force-directed graph physics — visual algorithm, not mock data. Leave as-is.
-4. **Verify:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v "IntelligenceGraph" | wc -l` returns 0.
-5. **Update `.quality-floor.json`:** set `mockCount` to 1 (IntelligenceGraph exception only).
-6. **Commit:** `git add -A && git commit -m "fix(P0-1): eliminate all 28 Math.random calls — crypto.randomUUID + real data queries [auto]"`
-**Done looks like:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v IntelligenceGraph | wc -l` returns 0. Budget S-Curve shows only planned line when no actuals exist. BudgetKPIs and ScheduleKPIs show real data or clean empty states — no random noise. PO numbers are deterministic. `.quality-floor.json` `mockCount` = 1.
-**WHY:** This is night NINE. The count has been 16 -> 26 -> 28 -> 28 (stalled). The 9 demo-killing fakes are the real emergency: SCurve.tsx:282 generates a random variance multiplier that makes the budget burn chart show different values on every page load. BudgetKPIs.tsx adds random noise to trend lines. ScheduleKPIs.tsx fabricates forecast data from thin air. A GC CTO who refreshes the page and sees numbers change will walk out of the demo. The 19 ID-generation fixes are a mechanical find-and-replace — literally `sed -i 's/Math.random().toString(36)/crypto.randomUUID()/g'` with minor cleanup. Total effort: under 2 hours for all 28 fixes. Do it first. Do it completely. Verify with the grep command. Then move on.
+1. **Identify the main content wrapper.** The sidebar is 240px fixed/absolute positioned. The main content area does NOT offset by sidebar width on iPad (768px–1024px). This causes every page title, KPI card, and table to be clipped under the sidebar on iPad.
+2. **Fix:** Add `margin-left: 240px` (or `padding-left: var(--sidebar-width)`) to the main content wrapper at screen widths ≥ 768px where the sidebar is visible. Use inline styles with theme tokens per ADR-003. If the sidebar collapses on mobile (<768px), ensure the margin is 0 at that breakpoint.
+3. **Alternative approach:** If the sidebar is an overlay on iPad, switch it to a collapsible drawer that pushes content (triggered by hamburger icon). Pick whichever approach is simpler and consistent with existing mobile behavior.
+4. **Verify across ALL 28 page specs:** After the fix, every page should show full titles, full KPI cards, and no clipped content at 768px and 1024px widths. Run:
+   ```
+   POLISH_USER='wrbenner23@yahoo.com' POLISH_PASS='fu2zyWire20!' \
+     npx playwright test --config=playwright.polish.config.ts --project=page-e2e --grep="ipad"
+   ```
+5. **Spot-check critical pages manually:** Dashboard, RFIs, Budget, Pay Apps, Schedule — take iPad screenshots, compare to POLISH_PUNCH_LIST.md evidence.
+6. **Commit:** `git add -A && git commit -m "fix(layout): offset main content by sidebar width on iPad — fixes 25+ pages [auto]"`
+**Done looks like:** Open any page at 768px width. Page title is fully visible. KPI cards are not clipped. Table columns start after the sidebar, not under it. `POLISH_PUNCH_LIST.md` "iPad layout systematically broken" section can be marked resolved.
+**WHY:** This is the single highest-leverage fix in the entire codebase right now. Walker demos SiteSync on iPad to GCs on job sites. Every single page is broken on iPad — titles show "...sing" instead of "Merritt Crossing," KPI cards are hidden under the sidebar, table rows are clipped. One CSS change to the layout wrapper fixes all 25+ authenticated pages simultaneously. A GC who sees a broken iPad layout during a demo doesn't get to the features — they see "not ready for production." Fix this first. Everything else is irrelevant if the iPad layout is broken.
 
-### 2. WORKFLOWTIMELINE COMPONENT + RFI DETAIL WIRING — THE COMPOUNDING PLAY (NIGHT THREE — CARRIED FORWARD)
-**SPEC ref:** P0-6 (State Machine Handler Completion — 0% complete) + P1-2 (RFIs — 35% complete)
-**Files to change:** `src/components/WorkflowTimeline.tsx` (CREATE — still absent, 0 references in codebase), `src/pages/rfis/index.tsx` or wherever the RFI detail view lives, `src/machines/rfiMachine.ts`
+### 2. STUCK SKELETON LOADING RESOLUTION — BUDGET, CREWS, AND DRAWINGS NEVER LOAD
+**SPEC ref:** P1-1 (Dashboard — 40%), P1-6 (Budget — 30%), P1-8 (Drawings — 35%), Crews (25%)
+**Files to change:** `src/pages/budget/Budget*.tsx` (or budget index), `src/pages/crews/index.tsx` (or Crews page), `src/pages/drawings/index.tsx`
 **What to do:**
-1. **Create `src/components/WorkflowTimeline.tsx`** — horizontal stepper component:
-   - Props: `states: string[]`, `currentState: string`, `completedStates: string[]`, `onTransition?: (nextState: string) => void`
-   - Renders each state as a step with connecting lines. Completed states show checkmarks (green circle, white check icon). Current state is highlighted (brand blue, pulsing dot). Future states are gray with muted labels.
-   - Use inline styles with theme tokens (ADR-003). 56px minimum touch targets (LEARNINGS.md — already enforced elsewhere).
-   - Responsive: horizontal on desktop (>768px), vertical stack on mobile (<768px).
-   - Accessible: `role="progressbar"`, `aria-valuenow` set to current step index, `aria-valuemin=0`, `aria-valuemax` set to total steps. Each step has `aria-label="Step N: [state name] - [completed|current|upcoming]"`.
-   - This component is reusable across Submittals, Change Orders, Pay Apps, Punch Items — building it once enables 5 workflows. That's the compounding play.
-2. **Verify `src/machines/rfiMachine.ts` has complete handlers.** The machine exists — verify:
-   - All 5 transitions have guards checking user permission
-   - Each transition writes to `activity_log` with `{ from_state, to_state, actor_id, timestamp }`
-   - Invalid transitions throw a typed error, not a silent no-op
-   - If any handler is a stub, complete it now
-3. **Wire the RFI detail page:**
-   - Top of detail view: `<WorkflowTimeline states={['draft','submitted','under_review','responded','closed']} currentState={rfi.status} />`
-   - Action buttons computed from the machine's available events for current state. `draft` -> "Submit" only. `submitted` -> "Start Review" only. Never show unavailable transitions.
-   - Each button click: fire machine event -> optimistic UI update -> Supabase persist -> rollback + toast on error
-   - Activity feed at bottom: query `activity_log WHERE resource_type='rfi' AND resource_id=rfi.id ORDER BY created_at DESC`
-4. **Commit:** `git add -A && git commit -m "feat(P0-6): WorkflowTimeline component + wire to RFI detail page [auto]"`
-**Done looks like:** Open any RFI detail page. See the horizontal WorkflowTimeline showing current status visually. Action buttons match available transitions only. `grep -rn "WorkflowTimeline" src/ | wc -l` returns >= 3. Component renders cleanly at 768px (iPad) and 375px (iPhone).
-**WHY:** This is the demo differentiator. Procore shows RFI status as a text dropdown in a crowded toolbar. SiteSync shows a visual journey — a superintendent glances at the screen and knows exactly where the RFI is in its lifecycle. The WorkflowTimeline component is reused across RFIs, Submittals, Change Orders, Pay Apps, and Punch Items. One component, five workflows. That's the compounding play that makes every subsequent feature cheaper to build. Every night this doesn't exist is five pages without their signature UI. Build it tonight.
+1. **Diagnose why these three pages are stuck on loading skeletons.** The POLISH_PUNCH_LIST confirms Budget shows "Loading financial data..." with skeleton cards indefinitely, Crews shows "Loading crews..." with six skeleton cards, and Drawings shows 8 skeleton sheet-cards that never resolve. Common causes:
+   - The data-fetching hook (`useQuery`, `useBudgetData`, etc.) is failing silently — the query errors but the component only checks `isLoading`, not `isError`. Fix: add error state handling that renders the page with an error banner instead of eternal skeleton.
+   - The query depends on a `projectId` that is null/undefined on initial render. Fix: add a guard that shows the empty state ("Select a project") instead of loading forever.
+   - The Supabase query itself is failing (wrong table name, missing RLS policy, column mismatch). Fix: check the actual Supabase query response in the console.
+2. **Apply the loading timeout pattern from LEARNINGS.md:** If loading persists > 5 seconds, force an error/fallback state. The pattern already exists in Dashboard (5s timeout from commit 9b66222) and ProtectedRoute (8s timeout). Apply the same `useLoadingTimeout(5000)` pattern to Budget, Crews, and Drawings.
+3. **Verify each fix:** After fixing, each page should either (a) render real data if project has data, or (b) render a clean empty state ("No budget lines yet — import from CSV or add manually") if the project has no data. Never show an eternal skeleton.
+4. **Test all three viewports:** iPhone (375px), iPad (768px), Desktop (1440px). Take screenshots.
+5. **Commit:** `git add -A && git commit -m "fix(loading): resolve stuck skeletons on Budget, Crews, Drawings — timeout + error states [auto]"`
+**Done looks like:** Navigate to Budget page → see either real data or empty state within 5 seconds. Same for Crews and Drawings. No page shows an infinite loading skeleton. Playwright captures at all 3 viewports show resolved content, not skeleton placeholders.
+**WHY:** Budget is Demo Step 5. If the GC navigates to the Budget page and sees a loading spinner that never resolves, the demo is over. Crews and Drawings are in the top 10 most-visited pages for superintendents. These three stuck skeletons make the app feel broken even when the data layer is working. The fix pattern already exists in the codebase (LEARNINGS.md documents it). Apply the same 5-second timeout pattern. This is a 30-minute fix per page, not a rewrite.
 
-### 3. `as any` CLEANUP — DROP FROM 41 TO UNDER 10 (NIGHT THREE — CARRIED FORWARD)
-**SPEC ref:** P0 Quality Gates (Zero `as any` — currently 41 violations), DECISIONS.md ADR-001 (TypeScript strict mode, no `any` casts in production code)
-**Files to change:** Run `grep -rn "as any" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v node_modules` and fix each one.
+### 3. PLAYWRIGHT E2E SWEEP — RUN ALL 28 PAGE SPECS, TRIAGE, FIX TOP 5
+**SPEC ref:** P0-2 (WCAG — 0%), Quality Gates (e2ePassRate: 0), Loop Directive (run Playwright on every wake-up)
+**Files to change:** `e2e/page-*.spec.ts` (read-only — just run them), then fix whatever breaks in `src/` files
 **What to do:**
-1. **Audit all 41 `as any` casts.** Categorize each:
-   - **Type assertion fixable** (most common): `data as any` where the real type is known or inferrable. Replace with the correct type from `src/types/entities.ts` or define one.
-   - **Supabase response typing**: `supabase.from('table').select()` returns `any` by default. Use the typed pattern: `supabase.from('rfis').select('*').returns<RFI[]>()` or use the `fromTable<T>()` helper if it exists.
-   - **Third-party library gaps**: Some libraries have incomplete types. For these, create a `src/types/vendor.d.ts` with proper declarations rather than casting to `any`.
-   - **Genuinely dynamic**: If a value is truly unknown at compile time (e.g., JSON.parse output), use `unknown` with a type guard or Zod parse — never `any`.
-2. **Priority order:** Fix the `as any` casts in demo-path files first: Dashboard, RFIs, Budget, PaymentApplications, DailyLog, Procurement. Then sweep remaining files.
-3. **Verify:** `grep -rn "as any" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v node_modules | wc -l` returns < 10 (stretch: 0).
-4. **Update `.quality-floor.json`:** set `anyCount` to the new lower number.
-5. **Commit:** `git add -A && git commit -m "fix(quality): eliminate as-any casts with proper typing [auto]"`
-**Done looks like:** `as any` count under 10. Zero `as any` in any demo-path file. `.quality-floor.json` `anyCount` updated. TypeScript still compiles with 0 errors (`npx tsc --noEmit` clean).
-**WHY:** 41 `as any` casts is a 40x regression from the quality floor target of 1. Every `as any` is a runtime crash hiding behind a compile-time lie. The quality ratchet in `.quality-floor.json` shows `anyCount: 41` — meaning the floor was raised to match reality instead of enforcing the standard. Clean this up now so the ratchet can start protecting again. Focus on demo-path files first: if the CTO opens F12 during the demo and sees a type error in the console because a Supabase response was cast to `any` and a property was undefined, the sale is dead.
+1. **Run the full Playwright page sweep** after fixing priorities 1 and 2:
+   ```
+   POLISH_USER='wrbenner23@yahoo.com' POLISH_PASS='fu2zyWire20!' \
+     npx playwright test --config=playwright.polish.config.ts --project=page-e2e
+   ```
+2. **Triage the results.** For each failing spec, examine the screenshot evidence. Categorize failures:
+   - **Layout broken** (likely fixed by priority 1) → confirm fixed, no action needed
+   - **Data never loads** (likely fixed by priority 2) → confirm fixed, no action needed
+   - **Functional regression** (button doesn't work, modal doesn't open, navigation broken) → fix the top 5 by severity
+   - **Visual polish** (wrong spacing, misaligned text, color issues) → log in POLISH_PUNCH_LIST.md for next session
+3. **Fix the top 5 functional regressions** found in the sweep. Focus on demo-path pages first: Dashboard, RFIs, Budget, Daily Log, Pay Apps. Each fix must be verified with a re-run of the affected spec.
+4. **Update POLISH_PUNCH_LIST.md:** Mark resolved items from the critical section. Add any new issues found.
+5. **Update `.quality-floor.json`:** If e2e pass rate is now measurably above 0, update `e2ePassRate` to the new floor.
+6. **Commit:** `git add -A && git commit -m "fix(e2e): Playwright sweep — fix top regressions across demo pages [auto]"`
+**Done looks like:** Playwright runs against all 28 page specs. Pass rate is measurably above 0 (target: >50% of specs green). Demo-path pages (Dashboard, RFIs, Budget, Daily Log, Pay Apps, Copilot) all pass their page specs. POLISH_PUNCH_LIST.md updated with current status. `.quality-floor.json` `e2ePassRate` updated.
+**WHY:** The loop directive is explicit: "Don't just wake up and build new features each time. Use Playwright to do e2e verification." The e2ePassRate has been 0 since the specs were created. 28 page specs exist and have never been run in a verify-and-fix loop. After fixing the iPad layout (priority 1) and stuck skeletons (priority 2), a huge number of spec failures should clear automatically. The remaining failures reveal the actual bugs that need fixing before Walker puts this in front of GCs. This is the verification step that turns "code that was written" into "product that works."
 
 ---
 
 ## Completed Archive
+
+### April 27-28: ALL THREE STRATEGIC PRIORITIES MET — MASSIVE QUALITY LEAP
+- **Status:** The April 27 deep-work session ("Iris that ACTS" substrate + 38-phase polish push) completed all three priorities that had been carried forward for 10+ nights.
+- **Math.random elimination: DONE.** Count went from 28 → 0 (excluding IntelligenceGraph physics exception). All demo-killing fakes in SCurve, BudgetKPIs, ScheduleKPIs, Procurement, and PaymentApplications replaced with real data queries or `crypto.randomUUID()`. `.quality-floor.json` `mockCount` = 1.
+- **WorkflowTimeline component: DONE.** Created `src/components/WorkflowTimeline.tsx` (8.2KB, fully accessible). 7 references across the codebase — wired to RFI Detail and Pay App Detail pages. Horizontal stepper on desktop, vertical on mobile.
+- **`as any` cleanup: DONE.** Count dropped from 41 → 6. Remaining 6 are verified legitimate third-party type gaps. `.quality-floor.json` `anyCount` = 6.
+- **Bonus:** PermissionGate usage went from 0 → 328 across the app. Iris Inbox page, EntityHistoryPanel, drafted_actions infrastructure, field-super telemetry, and demo story arc seed all shipped.
+- **Metrics after session:** Math.random: 0 | `as any`: 6 | WorkflowTimeline refs: 7 | TS errors: 0 | Build: clean
+- **New blockers identified:** POLISH_PUNCH_LIST.md reveals iPad sidebar layout is broken across all 25+ pages (single CSS fix), and Budget/Crews/Drawings stuck on loading skeletons. These are tonight's priorities.
 
 ### April 26-27: BUILDER SHIPPED INFRASTRUCTURE — P0 PRIORITIES UNTOUCHED
 - **Status:** 6 commits landed. All infrastructure/hardening. Zero P0 priority progress.
