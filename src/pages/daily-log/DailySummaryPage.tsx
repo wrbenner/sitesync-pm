@@ -46,8 +46,8 @@ const DailySummaryPage: React.FC = () => {
   // Find the log for the selected date
   const dailyLog = useMemo(() => {
     if (!dailyLogData?.data) return null;
-    return dailyLogData.data.find((log: any) => {
-      const logDate = (log as any).log_date ?? (log as any).date ?? '';
+    return dailyLogData.data.find((log) => {
+      const logDate = (log as Record<string, unknown>).log_date ?? (log as Record<string, unknown>).date ?? '';
       return logDate === selectedDate;
     }) ?? null;
   }, [dailyLogData, selectedDate]);
@@ -78,8 +78,9 @@ const DailySummaryPage: React.FC = () => {
       const byTrade: Record<string, number> = {};
       if (log?.manpower && Array.isArray(log.manpower)) {
         for (const m of log.manpower) {
-          const trade = (m as any).trade ?? (m as any).category ?? 'General';
-          byTrade[trade] = (byTrade[trade] ?? 0) + Number((m as any).count ?? (m as any).workers ?? 1);
+          const entry = m as Record<string, unknown>;
+          const trade = (entry.trade ?? entry.category ?? 'General') as string;
+          byTrade[trade] = (byTrade[trade] ?? 0) + Number(entry.count ?? entry.workers ?? 1);
         }
       }
       if (Object.keys(byTrade).length === 0) {
