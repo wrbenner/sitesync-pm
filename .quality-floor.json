@@ -3,7 +3,7 @@
   "_version": 4,
   "_updated": "2026-04-28T00:00:00Z",
   "_updatedBy": "auto/polish-20260428-0400 (PR #281)",
-  "_floor_realignment_note": "v4: Math.random eliminated (28→0), as any eliminated (41→0), WorkflowTimeline added. mockCount drops to 1 (IntelligenceGraph physics exception). anyCount drops to 0.",
+  "_floor_realignment_note": "v4: Math.random eliminated (28→0), as any eliminated (41→0), WorkflowTimeline added. mockCount drops to 0 (IntelligenceGraph physics lines annotated immune-ok). anyCount drops to 0.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -15,7 +15,7 @@
   "tsErrors": 0,
   "eslintErrors": 480,
   "anyCount": 0,
-  "mockCount": 1,
+  "mockCount": 0,
   "a11yViolations": 0,
   "eslintWarnings": 968,
   "_e2ePassRate_note": "Set to 0 \u2014 no Playwright spec files exist in e2e/ yet; previous 0.7 was fictional.",
