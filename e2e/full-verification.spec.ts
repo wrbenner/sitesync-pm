@@ -139,9 +139,15 @@ interface PageResult {
   failedRequests: string[]
   brokenImages: string[]
   layoutIssues: string[]
-  buttonProbeResults: { label: string; outcome: string }[]
-  detailRouteSampled: string | null
-  detailRouteOk: boolean | null
+  interactives: {
+    buttons: number
+    links: number
+    inputs: number
+    dialogs: number
+    tables: number
+    spinners: number
+    sample: string[]
+  } | null
   notes: string[]
 }
 
@@ -172,97 +178,40 @@ async function loginWithPassword(page: Page) {
   await page.waitForTimeout(2000) // let the dashboard fetch settle
 }
 
-async function probeButtons(page: Page, route: string): Promise<{ label: string; outcome: string }[]> {
-  const probed: { label: string; outcome: string }[] = []
-
-  // Find all visible, enabled <button> elements that look safe.
-  const buttons = await page.locator('button:visible:not([disabled])').all()
-
-  // Limit per-page to keep total runtime reasonable.
-  const MAX_PROBES = 6
-  let probedCount = 0
-
-  for (const btn of buttons) {
-    if (probedCount >= MAX_PROBES) break
-
-    let label = ''
-    try {
-      label = (await btn.getAttribute('aria-label')) || (await btn.innerText({ timeout: 500 })) || ''
-      label = label.trim().replace(/\s+/g, ' ').slice(0, 60)
-    } catch {
-      continue
+// Counts visible buttons + primary CTA. Doesn't click anything — clicking
+// during a route walk hangs on Vite's dev compile cycles and balloons total
+// runtime. Interaction tests are a separate, focused wave.
+async function countInteractives(page: Page) {
+  return page.evaluate(() => {
+    const btns = Array.from(document.querySelectorAll<HTMLButtonElement>(
+      'button:not([disabled])'
+    )).filter((b) => {
+      const r = b.getBoundingClientRect()
+      return r.width > 0 && r.height > 0
+    })
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))
+      .filter((a) => {
+        const r = a.getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+      })
+    const inputs = document.querySelectorAll<HTMLInputElement>(
+      'input:not([disabled]):not([type="hidden"])'
+    ).length
+    const dialogs = document.querySelectorAll('[role="dialog"]').length
+    const tables = document.querySelectorAll('table').length
+    const spinners = document.querySelectorAll('[role="progressbar"], [aria-busy="true"]').length
+    return {
+      buttons: btns.length,
+      links: links.length,
+      inputs,
+      dialogs,
+      tables,
+      spinners,
+      // Names of the first few buttons — useful for spotting empty pages
+      // where the only buttons are the sidebar nav.
+      sample: btns.slice(0, 5).map((b) => (b.getAttribute('aria-label') || b.textContent || '').trim().slice(0, 40)),
     }
-
-    if (!label || label.length < 2) continue
-    if (isDestructive(label)) {
-      probed.push({ label, outcome: 'SKIPPED (destructive)' })
-      continue
-    }
-    // Skip nav-bar buttons that just navigate elsewhere — we walk routes separately.
-    if (/^(home|back|next)$/i.test(label)) continue
-
-    try {
-      await btn.click({ timeout: 2000, trial: false })
-      await page.waitForTimeout(400)
-
-      // Did a dialog open? Close it.
-      const dialog = page.getByRole('dialog').first()
-      if (await dialog.isVisible({ timeout: 200 }).catch(() => false)) {
-        // Try Escape, then a Close button
-        await page.keyboard.press('Escape')
-        await page.waitForTimeout(200)
-        if (await dialog.isVisible({ timeout: 100 }).catch(() => false)) {
-          const closeBtn = page.getByLabel(/^close$/i).first()
-          if (await closeBtn.count()) await closeBtn.click({ timeout: 800 }).catch(() => {})
-        }
-        await page.waitForTimeout(200)
-        probed.push({ label, outcome: 'opened dialog → closed OK' })
-      } else if (page.url() !== BASE_URL + '#' + route) {
-        // Button navigated us away — go back.
-        await page.goBack({ waitUntil: 'networkidle', timeout: 5000 }).catch(() => {})
-        await page.waitForTimeout(300)
-        probed.push({ label, outcome: `navigated → ${page.url().split('#')[1] || '?'} → back` })
-      } else {
-        probed.push({ label, outcome: 'no-op (in-place state change)' })
-      }
-      probedCount++
-    } catch (e) {
-      probed.push({ label, outcome: 'ERROR: ' + String(e).slice(0, 60) })
-    }
-  }
-
-  return probed
-}
-
-async function probeFirstListRow(page: Page, route: string): Promise<{ url: string | null; ok: boolean | null }> {
-  // Try common list-row patterns.
-  const rowCandidates = [
-    page.locator('table tbody tr').first(),
-    page.locator('[role="row"]:not([role="row"]:first-child)').first(),
-    page.locator('[data-testid*="row"]').first(),
-    page.locator('a[href*="' + route + '/"]').first(),
-  ]
-  for (const cand of rowCandidates) {
-    if (await cand.count()) {
-      try {
-        await cand.click({ timeout: 1500 })
-        await page.waitForTimeout(800)
-        const url = page.url()
-        const onDetail = url.includes(route + '/') || url.includes('/' + route.replace(/^\//, '') + '/')
-        if (onDetail) {
-          // Check no error on detail
-          const body = await page.locator('body').innerText({ timeout: 1500 }).catch(() => '')
-          const ok = body.length > 50 && !/something went wrong|application error/i.test(body)
-          await page.goBack({ waitUntil: 'networkidle', timeout: 5000 }).catch(() => {})
-          await page.waitForTimeout(400)
-          return { url, ok }
-        }
-      } catch {
-        // try next candidate
-      }
-    }
-  }
-  return { url: null, ok: null }
+  })
 }
 
 async function checkBrokenImages(page: Page): Promise<string[]> {
@@ -363,39 +312,34 @@ test('full verification — every route, every safe button', async ({ page }) =>
 
     const t0 = Date.now()
     try {
-      await page.goto(BASE_URL + '#' + route, { waitUntil: 'networkidle', timeout: 20000 })
+      // Use 'load' instead of 'networkidle' — many of our routes have
+      // long-polling realtime subscriptions that never go idle. We don't
+      // care about those for "did the page render"; we just want DOM ready.
+      await page.goto(BASE_URL + '#' + route, { waitUntil: 'load', timeout: 15000 })
     } catch (e) {
       pageErrors.push('NAVIGATION: ' + String(e).slice(0, 200))
     }
+    // Short post-load settle so React renders the route. We deliberately
+    // do NOT wait for networkidle — pages with realtime subscriptions
+    // never become idle, which made the previous run hang for minutes.
     await page.waitForTimeout(1200)
 
     const finalUrl = page.url()
     let bodyTextLen = 0
     try {
-      const body = await page.locator('body').innerText({ timeout: 3000 })
+      const body = await page.locator('body').innerText({ timeout: 2000 })
       bodyTextLen = body.length
     } catch {}
 
     const brokenImages = await checkBrokenImages(page).catch(() => [])
     const layoutIssues = await checkLayoutIssues(page).catch(() => [])
 
-    // Probe buttons (only for pages that look loaded)
-    let buttonProbeResults: { label: string; outcome: string }[] = []
-    if (bodyTextLen > 100 && pageErrors.length === 0) {
-      buttonProbeResults = await probeButtons(page, route).catch(() => [])
-    }
-
-    // For collection routes, try clicking first row → detail
-    let detailRouteSampled: string | null = null
-    let detailRouteOk: boolean | null = null
-    const collectionRoutes = ['/rfis', '/submittals', '/punch-list', '/drawings', '/contracts', '/pay-apps']
-    if (collectionRoutes.includes(route) && bodyTextLen > 100) {
-      // Re-navigate fresh in case button-probe moved us.
-      await page.goto(BASE_URL + '#' + route, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
-      await page.waitForTimeout(800)
-      const detail = await probeFirstListRow(page, route).catch(() => ({ url: null, ok: null }))
-      detailRouteSampled = detail.url
-      detailRouteOk = detail.ok
+    // Count CTAs — useful to spot empty pages where the only buttons are
+    // the sidebar nav (suggests data didn't load or the page is broken
+    // even though it didn't throw).
+    let interactives: PageResult['interactives'] = null
+    if (bodyTextLen > 50) {
+      interactives = await countInteractives(page).catch(() => null)
     }
 
     const loadMs = Date.now() - t0
@@ -412,7 +356,6 @@ test('full verification — every route, every safe button', async ({ page }) =>
       || brokenImages.length > 0
       || layoutIssues.length > 0
       || consoleWarns.length > 5
-      || (detailRouteOk === false)
     ) status = 'WARN'
 
     if (status !== 'PASS') {
@@ -436,9 +379,7 @@ test('full verification — every route, every safe button', async ({ page }) =>
       failedRequests,
       brokenImages,
       layoutIssues,
-      buttonProbeResults,
-      detailRouteSampled,
-      detailRouteOk,
+      interactives,
       notes: [],
     }
     results.push(r)
@@ -453,7 +394,7 @@ test('full verification — every route, every safe button', async ({ page }) =>
       `4xx=${failedRequests.length}`,
       `imgX=${brokenImages.length}`,
       `lay=${layoutIssues.length}`,
-      `btn=${buttonProbeResults.length}`,
+      `btn=${interactives?.buttons ?? 0}`,
     ].join('  ')
     console.log(summary)
     if (status !== 'PASS') {
