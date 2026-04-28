@@ -24,6 +24,48 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
 
 const TRADES = ['Electrical', 'Plumbing', 'HVAC', 'Concrete', 'Carpentry', 'Steel', 'Masonry', 'Painting', 'Roofing', 'General Labor', 'Other'] as const
 
+// ── Demo banner ──────────────────────────────────────────
+// Three Workforce tabs (Credentials, Forecast, Productivity) currently
+// render hardcoded sample data because the backing tables/integrations
+// (cert tracking, headcount forecasting, productivity time-series)
+// aren't wired yet. Surface that honestly so a GC knows what's real
+// vs synthetic instead of stumbling into "wait, who are these people?"
+const DemoBanner: React.FC<{ feature: string; integration: string }> = ({ feature, integration }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: spacing['3'],
+    padding: `${spacing['3']} ${spacing['4']}`,
+    marginBottom: spacing['4'],
+    background: 'rgba(196, 133, 12, 0.06)',
+    borderLeft: `3px solid ${colors.statusPending}`,
+    borderRadius: borderRadius.sm,
+  }}>
+    <AlertTriangle size={16} style={{ color: colors.statusPending, flexShrink: 0, marginTop: 2 }} />
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{
+        fontFamily: typography.fontFamily,
+        fontSize: '11px',
+        fontWeight: 500,
+        letterSpacing: '0.18em',
+        textTransform: 'uppercase',
+        color: colors.statusPending,
+        marginBottom: 4,
+      }}>
+        Demo data
+      </div>
+      <div style={{
+        fontSize: typography.fontSize.sm,
+        color: colors.textSecondary,
+        lineHeight: 1.5,
+      }}>
+        {feature} is shown with synthetic data while we finish wiring {integration}.
+        These workers, credentials, and trends are not from your project.
+      </div>
+    </div>
+  </div>
+)
+
 // ── Credential Demo Data ────────────────────────────────
 interface Certification {
   certName: string; authority: string; certNumber: string; issueDate: string; expirationDate: string; status: 'current' | 'expiring' | 'expired'
@@ -521,6 +563,7 @@ export const Workforce: React.FC = () => {
         const certStatusBg = (s: string) => s === 'expired' ? colors.statusCriticalSubtle : s === 'expiring' ? colors.statusPendingSubtle : colors.statusActiveSubtle
         return (
           <>
+            <DemoBanner feature="Credential tracking" integration="certification uploads + expiry monitoring" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
               <MetricBox label="Workers Tracked" value={credentialDemoData.length} />
               <MetricBox label="Current Credentials" value={`${currentPct}%`} change={1} changeLabel="compliant" />
@@ -610,6 +653,7 @@ export const Workforce: React.FC = () => {
         const maxHeadcount = Math.max(...forecastDemoData.flatMap(t => [...t.planned, ...t.actual, ...t.needed]))
         return (
           <>
+            <DemoBanner feature="Headcount forecasting" integration="schedule-driven manpower planning" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
               <MetricBox label="Planned (Apr)" value={totalPlanned} />
               <MetricBox label="Actual (Apr)" value={totalActual} change={totalActual >= totalPlanned ? 1 : -1} />
@@ -734,6 +778,7 @@ export const Workforce: React.FC = () => {
         const overallAvg = avgRatios.reduce((s, r) => s + r.avg, 0) / avgRatios.length
         return (
           <>
+            <DemoBanner feature="Productivity tracking" integration="time-entry rollups + benchmark comparisons" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
               <MetricBox label="Overall Productivity" value={`${(overallAvg * 100).toFixed(0)}%`} change={overallAvg >= 1 ? 1 : -1} changeLabel="of plan" />
               <MetricBox label="Top Performer" value={bestPerformer.trade} />
@@ -833,6 +878,7 @@ export const Workforce: React.FC = () => {
         const dispatchStatusBg = (s: string) => s === 'completed' ? colors.statusActiveSubtle : s === 'in-progress' ? colors.statusInfoSubtle : colors.statusPendingSubtle
         return (
           <>
+            <DemoBanner feature="Crew dispatch" integration="vehicle GPS + crew location pings" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
               <MetricBox label="Crews Today" value={dispatchDemoData.length} />
               <MetricBox label="Workers Assigned" value={assigned} />
