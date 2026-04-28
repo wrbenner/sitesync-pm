@@ -1,7 +1,12 @@
 import { test, expect, devices } from '@playwright/test'
 
 test.describe('Mobile Experience', () => {
-  test.use({ ...devices['iPhone 14'] })
+  test.use({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+  })
 
   test('shows mobile layout with bottom tabs', async ({ page }) => {
     await page.goto('#/dashboard')

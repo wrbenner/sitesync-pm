@@ -48,6 +48,18 @@ import { useCreateContract } from '../hooks/queries/enterprise-modules'
 
 type ViewKey = 'dashboard' | 'packages' | 'leveling' | 'subs'
 
+interface AiBidAnalysis {
+  bids: PreconBidSubmission[]
+  avg: number
+  median: number
+  spread: number
+  variancePct: number
+  coeffVar: number
+  unusuallyLow: PreconBidSubmission[]
+  unusuallyHigh: PreconBidSubmission[]
+  insights: { type: string; text: string }[]
+}
+
 const VIEWS: { key: ViewKey; label: string; icon: React.ElementType }[] = [
   { key: 'dashboard', label: 'Dashboard', icon: Activity },
   { key: 'packages', label: 'Bid Packages', icon: Package },
@@ -980,7 +992,7 @@ function PackagesView({
   invitationList: PreconBidInvitation[]
   searchQuery: string
   statusFilter: string
-  aiAnalysis: ReturnType<typeof Object> | null
+  aiAnalysis: AiBidAnalysis | null
   onSearch: (v: string) => void
   onFilterStatus: (v: string) => void
   onSelectPackage: (id: string | null) => void
@@ -1125,14 +1137,14 @@ function PackagesView({
           {detailTab === 'overview' && (
             <div>
               {/* AI Analysis */}
-              {aiAnalysis && (aiAnalysis as any).insights && (
+              {aiAnalysis && aiAnalysis.insights.length > 0 && (
                 <div style={{ marginBottom: spacing['4'] }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
                     <Sparkles size={16} style={{ color: colors.indigo }} />
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.indigo }}>AI Analysis</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                    {((aiAnalysis as any).insights as { type: string; text: string }[]).map((insight, i) => (
+                    {aiAnalysis.insights.map((insight, i) => (
                       <div key={i} style={{
                         display: 'flex', gap: spacing['2'], padding: spacing['3'],
                         borderRadius: borderRadius.base, fontSize: typography.fontSize.sm,
@@ -1166,7 +1178,7 @@ function PackagesView({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
                     <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                       {selectedSubmissions.length} submission{selectedSubmissions.length !== 1 ? 's' : ''} · Low: {fmt(selectedSubmissions[0]?.bid_amount || 0)}
-                      {aiAnalysis && ` · Avg: ${fmt((aiAnalysis as any).avg || 0)}`}
+                      {aiAnalysis && ` · Avg: ${fmt(aiAnalysis.avg || 0)}`}
                     </div>
                     <Btn variant="secondary" icon={<Plus size={14} />} onClick={onAddBid}>Add Bid</Btn>
                   </div>
@@ -1277,7 +1289,7 @@ function LevelingView({
   selectedSubmissions: PreconBidSubmission[]
   scopeItemList: PreconScopeItem[]
   scopeResponseList: PreconBidScopeResponse[]
-  aiAnalysis: ReturnType<typeof Object> | null
+  aiAnalysis: AiBidAnalysis | null
   onSelectPackage: (id: string | null) => void
   onScopeResponse: (scopeItemId: string, bidSubmissionId: string, response: string) => void
   onAddScope: () => void
