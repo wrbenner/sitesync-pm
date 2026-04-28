@@ -73,13 +73,20 @@ export const userService = {
   },
 
   async loadProfile(userId: string): Promise<Result<Profile>> {
+    // .maybeSingle() returns null without error when no row exists. Users
+    // who signed in via magic-link or OAuth before the auto-create trigger
+    // existed (migration 20260428000010) won't have a profile row yet —
+    // we don't want every page that mounts the auth store to surface a
+    // PostgREST error in that case. Treat missing row as a NotFound, not
+    // a hard failure.
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) return fail(dbError(error.message, { userId }));
+    if (!data) return fail(notFoundError('Profile', userId));
     return ok(data as Profile);
   },
 
