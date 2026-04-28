@@ -300,6 +300,23 @@ export const Login: React.FC = () => {
     return () => clearTimeout(t)
   }, [])
 
+  // ── Redirect URL helper ─────────────────────────────────
+  // Lands the user back at the app root, including Vite's base path
+  // (`/sitesync-pm/` in dev, `/` on Vercel). We can't append a hash
+  // route here because supabase overwrites the URL fragment with auth
+  // tokens; instead we rely on detectSessionInUrl + ProtectedRoute to
+  // get the user from "/" to "/dashboard" once the session lands.
+  // returnTo (if present) is stashed in sessionStorage so the global
+  // SIGNED_IN handler can navigate after the auth state settles.
+  const buildRedirectUrl = useCallback(() => {
+    const baseUrl = import.meta.env.BASE_URL || '/'
+    const returnTo = searchParams.get('returnTo')
+    if (returnTo) {
+      try { sessionStorage.setItem('ss:returnTo', returnTo) } catch { /* noop */ }
+    }
+    return window.location.origin + baseUrl
+  }, [searchParams])
+
   // ── Submit Handler ────────────────────────────────────
 
   const handleSubmit = useCallback(async () => {
@@ -319,7 +336,7 @@ export const Login: React.FC = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email: parsed.data.email,
         options: {
-          emailRedirectTo: window.location.origin + (searchParams.get('returnTo') || '/dashboard'),
+          emailRedirectTo: buildRedirectUrl(),
         },
       })
       if (error) {
@@ -339,7 +356,7 @@ export const Login: React.FC = () => {
     } finally {
       setSubmitting(false)
     }
-  }, [email, submitting, searchParams])
+  }, [email, submitting, buildRedirectUrl])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -367,7 +384,7 @@ export const Login: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: window.location.origin + (searchParams.get('returnTo') || '/dashboard'),
+          redirectTo: buildRedirectUrl(),
         },
       })
       if (error) {
@@ -379,7 +396,7 @@ export const Login: React.FC = () => {
       setOauthPending(null)
       setErrorMessage('Check your connection and try again.')
     }
-  }, [oauthPending, submitting, searchParams])
+  }, [oauthPending, submitting, buildRedirectUrl])
 
   // ── Measurements ──────────────────────────────────────
   //

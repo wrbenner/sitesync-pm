@@ -105,6 +105,20 @@ async function initAuth() {
           if (firstName) localStorage.setItem('ss:last-name', firstName)
           localStorage.setItem('ss:returning', '1')
         } catch { /* localStorage unavailable */ }
+
+        // Honor a stashed returnTo from the magic-link/OAuth handoff.
+        // Login can't put a route in the URL fragment (supabase fills the
+        // fragment with auth tokens), so it parks the destination in
+        // sessionStorage. Pop it here, exactly once, on SIGNED_IN only.
+        if (_event === 'SIGNED_IN') {
+          try {
+            const returnTo = sessionStorage.getItem('ss:returnTo')
+            if (returnTo) {
+              sessionStorage.removeItem('ss:returnTo')
+              if (returnTo.startsWith('/')) navigateFn?.(returnTo)
+            }
+          } catch { /* sessionStorage unavailable */ }
+        }
       }
       // Invalidate React Query so any queries that ran before the JWT was
       // attached (e.g. useProjects mounted by the Dashboard at the moment
