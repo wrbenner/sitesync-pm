@@ -61,7 +61,12 @@ const PHASES = [
   {
     id: 'ph-1',
     name: 'Foundation',
-    status: 'complete',
+    // Status values match the schedule_phases CHECK constraint:
+    // ('completed', 'active', 'upcoming', 'at_risk', 'delayed').
+    // Older fixtures used 'complete'/'in_progress' which silently never
+    // matched, masking the production bug where Reports showed 0 / total
+    // Remaining for any project.
+    status: 'completed',
     percent_complete: 100,
     start_date: '2026-01-01',
     end_date: '2026-02-28',
@@ -69,7 +74,7 @@ const PHASES = [
   {
     id: 'ph-2',
     name: 'Structural Steel',
-    status: 'in_progress',
+    status: 'active',
     percent_complete: 60,
     start_date: '2026-03-01',
     end_date: '2026-05-30',
