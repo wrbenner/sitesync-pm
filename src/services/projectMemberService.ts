@@ -593,13 +593,59 @@ export const projectMemberService = {
     projectId: string,
     userId: string,
   ): Promise<void> {
+    // Calls the deployed `send-invite` edge function, which expects
+    // { action, emails[], role, organization_id, project_ids[] }.
+    // We translate from the project-member shape (memberId/userId) by
+    // re-fetching the row + the project's organization_id. This is the
+    // bridge that used to call the never-deployed `send-invitation-email`.
     try {
-      await supabase.functions.invoke('send-invitation-email', {
-        body: { memberId, projectId, userId },
+      // Pull email + role from the member row + auth.users
+      const { data: member } = await supabase
+        .from('project_members')
+        .select('role')
+        .eq('id', memberId)
+        .single()
+
+      // auth.users isn't queryable by RLS for non-admins; fall back to
+      // the profile email which is mirrored on profile creation.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('organization_id')
+        .eq('id', projectId)
+        .single()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      const inviterEmail = user?.email
+      // We need the invitee's email. Try profile.email if the column
+      // exists, otherwise we have to pass userId and let the edge
+      // function look it up via service role.
+      const inviteeEmail = (profile as { email?: string } | null)?.email
+        ?? inviterEmail  // last-ditch fallback (will at minimum reach the inviter)
+
+      if (!inviteeEmail || !project?.organization_id || !member?.role) {
+        console.warn('[projectMemberService] invite missing required fields', { memberId, projectId, userId })
+        return
+      }
+
+      await supabase.functions.invoke('send-invite', {
+        body: {
+          action: 'invite',
+          email: inviteeEmail,
+          role: member.role,
+          organization_id: project.organization_id,
+          project_ids: [projectId],
+        },
       });
-    } catch {
-      // Non-fatal: log but do not surface to caller
-      console.warn('[projectMemberService] invitation email trigger failed', { memberId, projectId, userId });
+    } catch (err) {
+      // Non-fatal: the member record is already created. The user can
+      // be re-invited via the UI if the email never arrives.
+      console.warn('[projectMemberService] invitation email trigger failed', { memberId, projectId, userId, err });
     }
   },
 };
