@@ -4,14 +4,14 @@ import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, EmptyState } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
+import { PageContainer, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, EmptyState } from '../components/Primitives';
+import { colors, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { RFIKPIs } from './rfis/RFIKPIs';
 import { RFITabBar, type RFIStatusFilter } from './rfis/RFITabBar';
 import { useRFIs, useRFI, useProject } from '../hooks/queries';
 import { exportRFILogXlsx } from '../lib/exportXlsx';
 import { ExportButton } from '../components/shared/ExportButton';
-import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, TrendingUp, CircleDot, Timer, CheckCircle2, AlertCircle, ArrowUpRight, ChevronRight, DollarSign } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FilterX, Plus, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, AlertCircle, ChevronRight, DollarSign } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -189,7 +189,7 @@ const RFIsPage: React.FC = () => {
   const [showAIDraftModal, setShowAIDraftModal] = useState(false);
   const [aiDraftInput, setAiDraftInput] = useState('');
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
-  const [aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
+  const [_aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
   const [aiPrefillKey, setAiPrefillKey] = useState(0);
 
   // Response text state (shared between manual entry and AI suggestion)
@@ -197,7 +197,7 @@ const RFIsPage: React.FC = () => {
   const [responseSubmitting, setResponseSubmitting] = useState(false);
 
   // AI Suggest Response state (detail panel)
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [_aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [aiSuggestionError, setAiSuggestionError] = useState(false);
 
