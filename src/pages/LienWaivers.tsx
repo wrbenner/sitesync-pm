@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import type { TableRow } from '../types/database';
+
+type LienWaiver = TableRow<'lien_waivers'>;
 import { FileCheck, Plus, Trash2, Send } from 'lucide-react';
 import { PageContainer, MetricBox, Skeleton, Btn, Modal, InputField } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions, touchTarget } from '../styles/theme';
@@ -52,8 +55,7 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  const waivers = (rawWaivers ?? []) as LienWaiver[];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');

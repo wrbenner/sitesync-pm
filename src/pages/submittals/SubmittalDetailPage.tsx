@@ -35,6 +35,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import type { Submittal } from '../../types/database'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -622,7 +623,7 @@ export function SubmittalDetailPage() {
 
   // Normalize legacy DB statuses (pending, under_review) to machine states so
   // that the XState-driven workflow, stepper, and action buttons all render.
-  const rawStatus = ((submittal as any)?.status as string) || 'draft'
+  const rawStatus = ((submittal as Submittal | null)?.status as string) || 'draft'
   const currentStatus: SubmittalState = (() => {
     switch (rawStatus) {
       case 'pending': return 'draft'
@@ -635,7 +636,7 @@ export function SubmittalDetailPage() {
   const statusConfig = getSubmittalStatusConfig(currentStatus)
   const transitions = getValidSubmittalTransitions(currentStatus)
 
-  const sub = (submittal as Record<string, any>) || {}
+  const sub = (submittal as Submittal | null) ?? {} as Submittal
 
   // ── Construct files for DocumentViewer ──────────────────
   // Uses signed URLs since project-files is a private bucket. We normalize
@@ -646,7 +647,7 @@ export function SubmittalDetailPage() {
   useEffect(() => {
     let cancelled = false
     if (!submittal) { setResolvedFiles([]); return }
-    const attachments = ((submittal as any).attachments || []) as unknown[]
+    const attachments = (((submittal as Submittal | null)?.attachments as unknown[] | null) || []) as unknown[]
     const normalized = attachments.map((att: unknown, i: number) => {
       if (typeof att === 'string') {
         return { name: att.split('/').pop() || `Document ${i + 1}`, path: att, url: '' }
@@ -686,7 +687,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Cannot upload: missing project context')
       return
     }
-    const storagePath = `submittals/${projectId}/${(submittal as any).id}/${Date.now()}_${file.name}`
+    const storagePath = `submittals/${projectId}/${(submittal as Submittal).id}/${Date.now()}_${file.name}`
     const { error: uploadErr } = await supabase.storage
       .from(SUBMITTAL_BUCKET)
       .upload(storagePath, file, { contentType: file.type, upsert: false })
@@ -694,7 +695,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Failed to upload: ' + uploadErr.message)
       return
     }
-    const currentAttachments = ((submittal as any).attachments || []) as unknown[]
+    const currentAttachments = (((submittal as Submittal | null)?.attachments as unknown[] | null) || []) as unknown[]
     const newAttachment = {
       path: storagePath,
       name: file.name,
@@ -704,7 +705,7 @@ export function SubmittalDetailPage() {
     }
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: (submittal as Submittal).id,
         projectId,
         updates: { attachments: [...currentAttachments, newAttachment] },
       })
@@ -730,7 +731,7 @@ export function SubmittalDetailPage() {
     setTransitioning(action)
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: (submittal as Submittal).id,
         projectId,
         updates: { status: toDbStatus(nextStatus) },
       })
@@ -786,7 +787,7 @@ export function SubmittalDetailPage() {
             Submittal not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: typography.fontSize.body }}>
-            {(error as any)?.message || 'This submittal may have been deleted or you don\'t have access.'}
+            {(error as Error | null)?.message || 'This submittal may have been deleted or you don\'t have access.'}
           </p>
           <Btn onClick={() => navigate('/submittals')}>Back to Submittals</Btn>
         </div>

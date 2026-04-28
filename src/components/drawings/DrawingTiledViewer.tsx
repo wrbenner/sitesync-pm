@@ -1212,8 +1212,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
     const viewer = new OpenSeadragon.Viewer({
       id: VIEWER_ID,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tileSources: osdTileSource as any,
+      tileSources: osdTileSource as unknown as OpenSeadragon.TileSourceOptions,
       prefixUrl: '', // We use custom controls
       showNavigationControl: false,
       showNavigator: true,
