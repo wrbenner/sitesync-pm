@@ -32,6 +32,7 @@ import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
@@ -279,15 +280,6 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
-          <span style={{
-            fontSize: '10px', color: colors.textTertiary,
-            padding: '1px 6px', borderRadius: '10px',
-            backgroundColor: colors.surfaceInset,
-          }}>
-            {(response as any).company}
-          </span>
-        )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
           {relativeTime(response.created_at)}
         </span>
@@ -602,6 +594,11 @@ export function RFIDetail() {
   const currentStatus = (rfi?.status as RFIState) || 'draft'
   const statusConfig = getRFIStatusConfig(currentStatus)
   const transitions = getValidTransitions(currentStatus, 'admin')
+  const RFI_ORDERED_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+  const rfiCompletedStates = RFI_ORDERED_STATES.slice(
+    0,
+    RFI_ORDERED_STATES.indexOf(currentStatus === 'void' ? 'closed' : currentStatus)
+  )
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
   const newResponseCount = useMemo(() => {
@@ -708,6 +705,17 @@ export function RFIDetail() {
           <ArrowLeft size={14} /> Back to RFIs
         </button>
 
+        {/* ── Workflow Timeline ───────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{ marginBottom: '16px', background: colors.surfaceRaised, borderRadius: borderRadius.lg, overflow: 'hidden' }}>
+            <WorkflowTimeline
+              states={RFI_ORDERED_STATES}
+              currentState={currentStatus}
+              completedStates={rfiCompletedStates}
+            />
+          </div>
+        )}
+
         {/* ── Header ─────────────────────────────────────── */}
         <div style={{ marginBottom: '20px' }}>
           {/* Top row: number + status badges + actions */}
@@ -801,15 +809,6 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
-                  <span style={{
-                    marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
-                    padding: '1px 6px', borderRadius: '10px',
-                    backgroundColor: colors.surfaceInset,
-                  }}>
-                    {(rfi as any).from_company}
-                  </span>
-                )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
                   {formatDateTime(rfi.created_at)}
                 </div>
@@ -826,7 +825,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || rfi.title}
             </div>
 
             {/* Metadata pills */}
