@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 3,
-  "_updated": "2026-04-25T00:00:00Z",
-  "_updatedBy": "sprint-zero-consolidation",
-  "_floor_realignment_note": "Floors realigned in v3 to reflect the codebase state after sprint-zero-consolidation (PR #206). Previous floors were aspirational targets that pre-dated the v2 feature wave; ratchets had been failing on every commit on main. New floors capture today's reality so future regressions actually fail. Targets in _targets remain the goal.",
+  "_version": 4,
+  "_updated": "2026-04-28T06:38:00Z",
+  "_updatedBy": "auto/polish-20260428-0638",
+  "_floor_realignment_note": "v4: ESLint errors reduced 480→463 by removing dead imports in RFIDetail, RFIs, Sidebar, SiteMap. WorkflowTimeline component added (0 errors). Math.random and as-any unchanged on main (covered by open PRs #282-284).",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 480,
+  "eslintErrors": 463,
   "anyCount": 41,
   "mockCount": 31,
   "a11yViolations": 0,
