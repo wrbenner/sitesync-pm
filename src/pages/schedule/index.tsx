@@ -38,24 +38,18 @@ const HealthPill: React.FC<{
   grade: string;
   critical: number;
   onExpand: () => void;
-}> = ({ score, grade, critical, onExpand }) => {
-  // Tone bands. Imported P6/Procore schedules typically score < 20 because
+}> = ({ score, critical, onExpand }) => {
+  // Tone bands. Imported P6/Procore schedules typically score low because
   // their CPM logic carries open ends and missing predecessors out of the
-  // box. Reading that as "Critical · F" alarmed users on otherwise on-time
-  // projects, so the bottom band is now treated as "needs cleanup" amber
-  // rather than "everything is on fire" red. Real critical-rail red is
-  // reserved for cases where a previously-good schedule has regressed.
+  // box. The pill leads with score + tone label only — no school-letter
+  // grade — because a red "F" sits adjacent to "100% on track" KPIs in
+  // healthy projects and reads as a UI bug rather than a finding.
   const tone = (() => {
     if (score >= 85) return { bg: '#E9F2EC', fg: '#1F4A34', rail: '#65A57D', label: 'Healthy' };
     if (score >= 60) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Watch' };
-    if (score >= 20) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Needs cleanup' };
+    if (score >= 20 || critical > 0) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Needs cleanup' };
     return                  { bg: '#F2F4F7', fg: '#3F4754', rail: '#9AA4B2', label: 'Not analyzed' };
   })();
-
-  // Don't lead with the grade letter when there are no real findings
-  // (a fresh import with score 0 should not display "F"). Show the
-  // numeric score; the grade is supplementary.
-  const showGrade = critical > 0 || score >= 20;
 
   return (
     <button
@@ -73,7 +67,7 @@ const HealthPill: React.FC<{
       }}
     >
       <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-        Logic quality {score}/100{showGrade ? ` · ${grade}` : ''}
+        Logic quality {score}/100
       </span>
       <span style={{ opacity: 0.6, fontWeight: typography.fontWeight.normal }}>·</span>
       <span>{tone.label}</span>

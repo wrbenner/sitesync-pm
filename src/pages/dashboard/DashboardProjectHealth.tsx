@@ -161,7 +161,7 @@ export const DashboardProjectHealth: React.FC<Props> = ({ metrics, onClick }) =>
                   {sub.label}
                 </span>
                 <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: c, fontVariantNumeric: 'tabular-nums' }}>
-                  {sub.value}
+                  {sub.value}<span style={{ fontWeight: typography.fontWeight.normal, color: colors.textTertiary, fontSize: '10px' }}>/100</span>
                 </span>
               </div>
               <div style={{ height: 4, borderRadius: 2, backgroundColor: colors.surfaceInset, overflow: 'hidden' }}>

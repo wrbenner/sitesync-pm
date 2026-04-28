@@ -348,7 +348,7 @@ export const Workforce: React.FC = () => {
       cell: (info) => {
         const row = info.row.original as MemberRow
         return (
-          <PermissionGate permission="project.settings">
+          <PermissionGate permission="crews.manage">
             <button
               title="Delete worker"
               onClick={() => setConfirmDeleteId(row.id)}
@@ -372,7 +372,7 @@ export const Workforce: React.FC = () => {
         const row = info.row.original as TimeEntryRow
         if (row.approved) return null
         return (
-          <PermissionGate permission="project.settings">
+          <PermissionGate permission="crews.manage">
             <Btn
               variant="ghost"
               size="sm"
@@ -407,7 +407,7 @@ export const Workforce: React.FC = () => {
       subtitle="Manage your crew roster, track time, and plan labor needs"
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <PermissionGate permission="project.settings" fallback={<Btn variant="primary" icon={<Plus size={14} />} disabled>Add Worker</Btn>}>
+          <PermissionGate permission="crews.manage" fallback={<Btn variant="primary" icon={<Plus size={14} />} disabled>Add Worker</Btn>}>
             <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddWorker(true)}>Add Worker</Btn>
           </PermissionGate>
           <ExportButton pdfFilename="SiteSync_Workforce_Report" />
@@ -468,7 +468,7 @@ export const Workforce: React.FC = () => {
           <MetricBox label="Total Workers" value={totalWorkers} />
           <MetricBox label="Active Today" value={activeToday} change={activeToday > 0 ? 1 : 0} />
           <MetricBox label="Hours This Week" value={totalRegularHrs.toFixed(0)} />
-          <MetricBox label="OT Hours" value={totalOTHrs.toFixed(1)} change={totalOTHrs > 40 ? -1 : 0} changeLabel="overtime" />
+          <MetricBox label="OT Hours" value={totalOTHrs.toFixed(1)} change={totalOTHrs > 40 ? -1 : undefined} changeLabel={totalOTHrs > 40 ? 'overtime' : undefined} />
         </div>
       )}
 
@@ -493,7 +493,7 @@ export const Workforce: React.FC = () => {
         <Card padding={spacing['4']}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionHeader title="Time Entries" />
-            <PermissionGate permission="project.settings" fallback={<Btn variant="primary" icon={<Clock size={14} />} disabled>Log Time</Btn>}>
+            <PermissionGate permission="crews.manage" fallback={<Btn variant="primary" icon={<Clock size={14} />} disabled>Log Time</Btn>}>
               <Btn variant="primary" icon={<Clock size={14} />} onClick={() => setShowLogTime(true)}>Log Time</Btn>
             </PermissionGate>
           </div>

@@ -1210,17 +1210,19 @@ export const Safety: React.FC = () => {
         </div>
       )}
 
-      {/* Tab Switcher */}
+      {/* Tab Switcher — wrapped so the right-edge gradient hint stays
+          aligned with the scroll container even when more tabs are
+          present than fit on iPhone width. */}
+      <div style={{ position: 'relative', marginBottom: spacing.lg }}>
       <div
         role="tablist"
         aria-label="Safety sections"
         style={{
           display: 'flex',
-          gap: spacing['1'],
+          gap: spacing['2'],
           backgroundColor: colors.surfaceInset,
           borderRadius: borderRadius.lg,
           padding: spacing['1'],
-          marginBottom: spacing.lg,
           overflowX: 'auto',
           overflowY: 'hidden',
           WebkitOverflowScrolling: 'touch',
@@ -1263,6 +1265,16 @@ export const Safety: React.FC = () => {
             </button>
           )
         })}
+      </div>
+      {/* Right-edge fade hint that more tabs are scrollable. Pointer-events
+          off so it never swallows clicks on the rightmost tab. */}
+      <div aria-hidden style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
+        background: `linear-gradient(to left, ${colors.surfaceInset}, transparent)`,
+        borderTopRightRadius: borderRadius.lg,
+        borderBottomRightRadius: borderRadius.lg,
+        pointerEvents: 'none',
+      }} />
       </div>
 
       {/* Skeleton loaders while fetching */}

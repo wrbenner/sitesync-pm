@@ -213,7 +213,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
               <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, textAlign: 'center' }}>
                 <span style={{ fontSize: spacing['12'] }}>{data.weather.icon}</span>
                 <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: `${spacing['2']} 0 0` }}>
-                  {data.weather.temp_high}F / {data.weather.temp_low}F
+                  H {data.weather.temp_high}° / L {data.weather.temp_low}°
                 </p>
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
                   {data.weather.conditions} · Wind {data.weather.wind_speed}

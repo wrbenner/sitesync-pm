@@ -137,10 +137,15 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
   const threeWeeksOut = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)
 
   // ── Schedule Summary ───────────────────────────────────
-  const completedPhases = phases.filter((p) => p.status === 'complete')
-  const inProgressPhases = phases.filter((p) => p.status === 'in_progress')
+  // Status values are constrained by the schedule_phases CHECK constraint:
+  // ('completed', 'active', 'upcoming', 'at_risk', 'delayed'). Filtering on
+  // 'complete' or 'in_progress' (the older convention) silently returned 0
+  // for both, which made Reports show 0 / 247 Remaining while Schedule
+  // showed 219/247 from the same data.
+  const completedPhases = phases.filter((p) => p.status === 'completed')
+  const inProgressPhases = phases.filter((p) => p.status === 'active')
   const behindPhases = phases.filter((p) => {
-    if (p.status === 'complete') return false
+    if (p.status === 'completed') return false
     const end = p.end_date ? new Date(p.end_date as string) : null
     return end && end < now
   })
@@ -298,7 +303,7 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
       const end = p.end_date ? new Date(p.end_date as string) : null
       const pct = (p.percent_complete as number) ?? 0
       let status: MilestoneItem['status'] = 'on_track'
-      if (p.status === 'complete') status = 'complete'
+      if (p.status === 'completed') status = 'complete'
       else if (end && end < now) status = 'behind'
       else if (pct > 0 && pct < 50 && end && daysBetween(now, end) < 14) status = 'at_risk'
       return {

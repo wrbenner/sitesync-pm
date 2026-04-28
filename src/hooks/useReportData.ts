@@ -314,10 +314,10 @@ export function useMonthlyProgressData() {
       periodEnd: fmtDate(now.toISOString()),
       scheduledProgress: 65,
       actualProgress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
-      milestonesAchieved: phases.filter((p) => p.status === 'complete').slice(0, 5).map((p) => ({
+      milestonesAchieved: phases.filter((p) => p.status === 'completed').slice(0, 5).map((p) => ({
         name: p.name ?? '', date: fmtDate(p.end_date),
       })),
-      milestonesUpcoming: phases.filter((p) => p.status === 'not_started' || p.status === 'in_progress').slice(0, 5).map((p) => ({
+      milestonesUpcoming: phases.filter((p) => p.status === 'upcoming' || p.status === 'active').slice(0, 5).map((p) => ({
         name: p.name ?? '', date: fmtDate(p.start_date),
       })),
       originalContract,
@@ -344,7 +344,7 @@ export function useMonthlyProgressData() {
         amount: co.amount ?? 0,
         status: co.status ?? 'draft',
       })),
-      workPerformed: phases.filter((p) => p.status === 'in_progress').slice(0, 10).map((p) => ({
+      workPerformed: phases.filter((p) => p.status === 'active').slice(0, 10).map((p) => ({
         area: p.name ?? '',
         description: '',
         percentComplete: p.percent_complete ?? 50,
@@ -379,7 +379,7 @@ export function useCostReportData() {
 
   // Schedule % (from phases)
   const totalPhases = phases.length || 1
-  const completedPhases = phases.filter((p) => p.status === 'complete').length
+  const completedPhases = phases.filter((p) => p.status === 'completed').length
   const scheduledPct = totalPhases > 0 ? completedPhases / totalPhases : 0
   const projectRecord = project.data as Record<string, unknown>
   const rawPctComplete = projectRecord.percent_complete as number | undefined
@@ -493,19 +493,19 @@ export function useScheduleReportData() {
 
   // Milestones
   const milestones = phaseList
-    .filter((p) => (p as Record<string, unknown>).is_milestone || p.status === 'complete')
+    .filter((p) => (p as Record<string, unknown>).is_milestone || p.status === 'completed')
     .slice(0, 15)
     .map((p) => {
       const planned = p.end_date ? new Date(p.end_date) : null
       const phaseRecord = p as Record<string, unknown>
       const actualEndDate = phaseRecord.actual_end_date as string | null | undefined
-      const actual = p.status === 'complete' ? actualEndDate ? new Date(actualEndDate) : planned : null
+      const actual = p.status === 'completed' ? actualEndDate ? new Date(actualEndDate) : planned : null
       const variance = planned && actual ? Math.round((actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24)) : 0
       return {
         name: p.name ?? '',
         plannedDate: fmtDate(p.end_date),
         actualDate: actual ? fmtDate(actual.toISOString()) : '',
-        status: p.status === 'complete' ? 'achieved' : (planned && planned < now ? 'late' : 'upcoming'),
+        status: p.status === 'completed' ? 'achieved' : (planned && planned < now ? 'late' : 'upcoming'),
         varianceDays: variance,
       }
     })
@@ -513,7 +513,7 @@ export function useScheduleReportData() {
   // Delay analysis: tasks/phases that are behind schedule
   const delays = phaseList
     .filter((p) => {
-      if (p.status === 'complete') return false
+      if (p.status === 'completed') return false
       const end = p.end_date ? new Date(p.end_date) : null
       return end && end < now
     })
@@ -533,7 +533,7 @@ export function useScheduleReportData() {
 
   // Summary
   const totalActivities = phaseList.length
-  const completedActivities = phaseList.filter((p) => p.status === 'complete').length
+  const completedActivities = phaseList.filter((p) => p.status === 'completed').length
   const behindSchedule = delays.length
   const overallProgress = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0
 

@@ -610,13 +610,18 @@ export const EquipmentPage: React.FC = () => {
         marginBottom: spacing['2xl'],
       }}>
         <MetricBox label="Total Equipment" value={loading ? '—' : totalEquipment} />
-        <MetricBox label="Active" value={loading ? '—' : activeCount} change={1} changeLabel="operational" />
-        <MetricBox label="Idle" value={loading ? '—' : idleCount} change={idleCount > 0 ? -1 : 0} />
+        <MetricBox
+          label="Active"
+          value={loading ? '—' : activeCount}
+          change={activeCount > 0 ? 1 : undefined}
+          changeLabel={activeCount > 0 ? 'operational' : undefined}
+        />
+        <MetricBox label="Idle" value={loading ? '—' : idleCount} change={idleCount > 0 ? -1 : undefined} />
         <MetricBox
           label="Maintenance Due"
           value={loading ? '—' : maintenanceDue}
-          change={maintenanceDue > 0 ? -1 : 1}
-          changeLabel={maintenanceDue > 0 ? 'needs service' : 'all clear'}
+          change={maintenanceDue > 0 ? -1 : undefined}
+          changeLabel={maintenanceDue > 0 ? 'needs service' : undefined}
         />
       </div>
 

@@ -161,6 +161,12 @@ const fmt = (n: number): string => {
   return negative ? `−${formatted}` : formatted;
 };
 
+// "Remaining" display: when negative, render as "Over by $X" so the column
+// reads as a finding rather than a math glitch ("$-500"). Used in budget
+// hierarchy rows where children with $0 budgeted but real spend would
+// otherwise show "−$500" in red and look like a UI bug to a sharp PM.
+const fmtRemaining = (n: number): string => (n < 0 ? `Over by ${fmt(Math.abs(n))}` : fmt(n));
+
 // ── Enterprise Feature Types ──────────────────────
 
 // BudgetSnapshot is now backed by Supabase via budgetSnapshotService
@@ -488,7 +494,7 @@ const CostCodesSection: React.FC<CostCodesSectionProps> = ({ divisions, fmt, onO
               <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.budget)}</span>
               <span style={{ fontSize: 13, color: colors.textPrimary, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.spent)}</span>
               <span style={{ fontSize: 13, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' }}>{fmt(d.committed)}</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: remaining < 0 ? colors.statusCritical : colors.statusActive, fontVariantNumeric: 'tabular-nums' }}>{fmt(remaining)}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: remaining < 0 ? colors.statusCritical : colors.statusActive, fontVariantNumeric: 'tabular-nums' }}>{fmtRemaining(remaining)}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                 <div style={{ flex: 1, height: 6, backgroundColor: colors.surfaceInset, borderRadius: 3, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, backgroundColor: pct > 90 ? colors.statusCritical : pct > 60 ? colors.statusPending : colors.statusActive, borderRadius: 3 }} />
@@ -1609,7 +1615,7 @@ const BudgetPage: React.FC = () => {
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: depth === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal, color: colors.textPrimary }}>{fmt(node.budget)}</span>
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary }}>{fmt(node.spent)}</span>
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(node.committed)}</span>
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmt(remaining)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmtRemaining(remaining)}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
                       <div style={{ flex: 1, height: 6, backgroundColor: colors.surfaceInset, borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${Math.min(pctSpent, 100)}%`, backgroundColor: pctSpent > 90 ? colors.statusCritical : pctSpent > 60 ? colors.statusPending : colors.statusActive, borderRadius: 3 }} />
@@ -1800,7 +1806,7 @@ const BudgetPage: React.FC = () => {
                     <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>{fmt(division.committed)}</span>
 
                     {/* Remaining (computed, static) */}
-                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmt(remaining)}</span>
+                    <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: remaining < 0 ? colors.statusCritical : colors.statusActive }}>{fmtRemaining(remaining)}</span>
 
                     {/* % Complete (editable) */}
                     <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>

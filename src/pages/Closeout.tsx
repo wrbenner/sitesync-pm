@@ -86,7 +86,7 @@ export const Closeout: React.FC = () => {
         <MetricBox label="Total items" value={totalItems} />
         <MetricBox label="Approved" value={approvedItems} colorOverride={approvedItems === totalItems && totalItems > 0 ? 'success' : undefined} />
         <MetricBox label="Outstanding" value={totalItems - approvedItems} colorOverride={totalItems - approvedItems > 0 ? 'warning' : 'success'} />
-        <MetricBox label="Complete" value={`${pctComplete}%`} colorOverride={pctComplete === 100 ? 'success' : pctComplete >= 75 ? 'warning' : 'danger'} />
+        <MetricBox label="Complete" value={pctComplete} unit="%" colorOverride={pctComplete === 100 ? 'success' : pctComplete >= 75 ? 'warning' : 'danger'} />
       </div>
 
       <Card padding={spacing['4']}>

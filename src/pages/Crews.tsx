@@ -396,27 +396,47 @@ export const Crews: React.FC = () => {
               border: `1px solid ${colors.borderSubtle}`,
             }}
           >
-            {/* Grid lines */}
-            {[25, 50, 75].map((p) => (
-              <React.Fragment key={p}>
-                <div style={{ position: 'absolute', left: `${p}%`, top: 0, bottom: 0, width: 1, backgroundColor: colors.borderSubtle, opacity: 0.5 }} />
-                <div style={{ position: 'absolute', top: `${p}%`, left: 0, right: 0, height: 1, backgroundColor: colors.borderSubtle, opacity: 0.5 }} />
-              </React.Fragment>
-            ))}
+            {/* Grid lines + building outline + floor labels render as the
+                map "scaffold". With no crews to plot they read as a broken
+                map, so the scaffold is suppressed and an inline empty
+                state takes over until crews check in. */}
+            {crews.length > 0 && (
+              <>
+                {[25, 50, 75].map((p) => (
+                  <React.Fragment key={p}>
+                    <div style={{ position: 'absolute', left: `${p}%`, top: 0, bottom: 0, width: 1, backgroundColor: colors.borderSubtle, opacity: 0.5 }} />
+                    <div style={{ position: 'absolute', top: `${p}%`, left: 0, right: 0, height: 1, backgroundColor: colors.borderSubtle, opacity: 0.5 }} />
+                  </React.Fragment>
+                ))}
+                <div style={{ position: 'absolute', left: '15%', top: '10%', width: '70%', height: '80%', border: `1.5px dashed ${colors.borderDefault}`, borderRadius: borderRadius.sm }} />
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <span key={i} style={{
+                    position: 'absolute',
+                    left: '16%', top: `${12 + i * 5.8}%`,
+                    fontSize: '8px', color: colors.textTertiary, opacity: 0.5,
+                  }}>
+                    F{12 - i}
+                  </span>
+                ))}
+              </>
+            )}
 
-            {/* Building outline */}
-            <div style={{ position: 'absolute', left: '15%', top: '10%', width: '70%', height: '80%', border: `1.5px dashed ${colors.borderDefault}`, borderRadius: borderRadius.sm }} />
-
-            {/* Floor labels */}
-            {Array.from({ length: 12 }).map((_, i) => (
-              <span key={i} style={{
-                position: 'absolute',
-                left: '16%', top: `${12 + i * 5.8}%`,
-                fontSize: '8px', color: colors.textTertiary, opacity: 0.5,
+            {crews.length === 0 && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: spacing.xs, padding: spacing.xl, textAlign: 'center',
               }}>
-                F{12 - i}
-              </span>
-            ))}
+                <MapPin size={28} color={colors.textTertiary} aria-hidden />
+                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
+                  No crews on site
+                </p>
+                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, maxWidth: 320 }}>
+                  Crews will appear here when they check in from the field. Add a crew or run a check-in to see live positions.
+                </p>
+              </div>
+            )}
 
             {/* Crew dots */}
             {crews.map((crew) => {
