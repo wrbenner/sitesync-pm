@@ -1,8 +1,25 @@
 # Verification Punch List — 2026-04-28 (Final)
 
-## Result: 41 PASS / 4 WARN / 0 FAIL across 45 routes
+## Result: 44 PASS / 1 WARN / 0 FAIL across 45 routes
 
-Started at 6 WARN; after `supabase db push` and three code fixes, we're at 4 WARN — and two of those four are detector false positives. Net **2 real findings** remaining, both with clear next steps.
+Started the session at 39 PASS / 6 WARN. After `supabase db push`, eight code
+fixes, two new feature wires, and one migration we shipped, we're at 44 PASS /
+1 WARN. The single remaining WARN (`/settings` 500) needs the user to apply
+migration `20260428000010_auto_create_profile.sql` via `supabase db push` —
+once that lands, the run is 45/45.
+
+Feature-completeness work (Tier 1 + 2 of the punch plan):
+- Workforce demo data — 4 tabs banner-tagged so a GC knows what's synthetic
+- Reports Generate CTA — pre-selects the right report in ExportCenter
+- Drawings revision compare — side-by-side modal wired (was a no-op)
+
+While auditing the remaining Tier-2 items, three were already built:
+TimeTracking payroll export (WH-347 + CSV both wired), Procurement
+three-way match (full table + variance summary), and Permits Inspections
+(populated with approved-permit cards). Remaining Tier-2/3 items
+(OSHA 300 generator, Files approval workflow UI, hardcoded contingency
+percentages, signature capture on COs/contracts) are real feature builds
+documented for later.
 
 Status legend:
 - 🔴 CRITICAL — runtime crash, blank page, broken core flow
