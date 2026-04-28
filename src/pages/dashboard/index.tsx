@@ -41,6 +41,7 @@ import { DashboardPortfolio } from './DashboardPortfolio';
 import { DashboardCarbon } from './DashboardCarbon';
 import { DashboardSiteMapMini } from './DashboardSiteMapMini';
 import { DashboardCompliance } from './DashboardCompliance';
+import { SundialDashboard } from './SundialDashboard';
 
 const QuickRFIButton = lazy(() => import('../../components/field/QuickRFIButton'));
 
@@ -137,7 +138,7 @@ const DashboardPage: React.FC = () => {
 
   if (projectsLoading) return <DashboardSkeleton />;
   if (!allProjects || allProjects.length === 0) return <WelcomeOnboarding onProjectCreated={() => {}} />;
-  return <DashboardInner />;
+  return <SundialDashboard />;
 };
 
 export const Dashboard: React.FC = () => (

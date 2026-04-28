@@ -98,6 +98,13 @@ async function initAuth() {
       if (s?.user) {
         setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
         recordActivity() // reset idle clock on fresh sign-in / refresh
+        // Persist greeting data for "The Threshold" login page.
+        // On next visit the greeting will say "Good morning, Alex."
+        try {
+          const firstName = s.user.user_metadata?.first_name as string | undefined
+          if (firstName) localStorage.setItem('ss:last-name', firstName)
+          localStorage.setItem('ss:returning', '1')
+        } catch { /* localStorage unavailable */ }
       }
       // Invalidate React Query so any queries that ran before the JWT was
       // attached (e.g. useProjects mounted by the Dashboard at the moment
@@ -109,6 +116,9 @@ async function initAuth() {
       setState({ session: null, user: null, error: null })
       queryClient.clear()
       clearSentryUser()
+      // Clear the named greeting but keep the returning flag so
+      // next visit shows "Welcome back." instead of "Welcome."
+      try { localStorage.removeItem('ss:last-name') } catch { /* noop */ }
       navigateFn?.('/login')
     } else if (_event === 'INITIAL_SESSION') {
       setState({ session: s, user: s?.user ?? null, loading: false })
