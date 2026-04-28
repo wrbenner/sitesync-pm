@@ -340,9 +340,19 @@ export const Login: React.FC = () => {
         },
       })
       if (error) {
-        const msg = error.message.toLowerCase()
-        if (msg.includes('rate limit') || msg.includes('too many')) {
-          setErrorMessage('Try again in a moment.')
+        const raw = error.message
+        const msg = raw.toLowerCase()
+        if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('security purposes')) {
+          // Supabase commonly returns "For security purposes, you can only
+          // request this after N seconds." — surface N when present so the
+          // user knows whether to wait 30s or come back tomorrow.
+          const secondsMatch = raw.match(/(\d+)\s*second/i)
+          if (secondsMatch) {
+            const s = Number(secondsMatch[1])
+            setErrorMessage(`Too many requests. Try again in ${s} second${s === 1 ? '' : 's'}.`)
+          } else {
+            setErrorMessage('Too many requests. Try again in about a minute, or use Google / Microsoft.')
+          }
         } else if (msg.includes('not found') || msg.includes('invalid')) {
           setErrorMessage("We couldn't find that address.")
         } else {
