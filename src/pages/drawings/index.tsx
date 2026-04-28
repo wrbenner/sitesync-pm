@@ -26,6 +26,8 @@ import { DrawingUpload, RevisionUpload } from './DrawingUpload';
 import { extractDrawingFilesFromZip } from '../../components/files/UploadZone';
 import {
   classifyPdfByFilename,
+  inferDisciplineFromFilename,
+  extractRevisionFromFilename,
   parseCoverMetadata,
   mergeCoverMetadata,
   looksLikeCoverText,
@@ -52,19 +54,8 @@ import type { DrawingDiscrepancy, DrawingPair } from '../../types/ai';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Parse a revision number out of a filename.
- * Matches "Rev 06", "Rev_05", "_R06_", "Revision 2", etc.
- * We normalize underscores to spaces first so `\b` boundaries actually
- * fire (underscore is a regex word-char, which was the bug).
- * Returns the raw revision string ("5", "06" → "6", "1.0") or null.
- */
-function extractRevisionFromFilename(name: string): string | null {
-  const normalized = name.replace(/_+/g, ' ');
-  const m = normalized.match(/\b(?:rev(?:ision)?|r)[\s-]?(\d{1,3}(?:\.\d{1,2})?)\b/i);
-  if (!m) return null;
-  return m[1].replace(/^0+(?=\d)/, '');
-}
+// extractRevisionFromFilename moved to src/lib/pdfClassifier.ts
+// (imported above) — single source of truth shared with the local tester.
 
 /**
  * Clean a source filename down to a readable title.
@@ -93,93 +84,8 @@ function cleanFilenameTitle(name: string): string {
   return s;
 }
 
-/**
- * Infer discipline from a filename.
- *
- * Two-pass strategy — the filename can be either a raw sheet number like
- * "A-101" OR a full source filename like
- * "25.04.02_Merritt Crossing_Mechanical_IFC_stamped_Rev 05.pdf".
- *
- *   Pass 1: search the filename for explicit discipline words. This handles
- *           descriptive filenames where the discipline is spelled out.
- *   Pass 2: fall back to the single-letter sheet prefix (A-101 → arch).
- *
- * WHY: Synthetic sheet numbers like "P001" (our fallback when a real sheet
- * number can't be parsed) used to hit the prefix map's `P: 'plumbing'` entry
- * and tag everything as plumbing. Word-based detection runs first now, so
- * a file whose name contains "Mechanical" returns 'mechanical' regardless
- * of any stray leading `P`.
- */
-function inferDisciplineFromFilename(name: string): string | null {
-  // Pass 1: discipline words
-  const normalized = name
-    .toLowerCase()
-    .replace(/\.[^.]+$/, '')
-    .replace(/[_\-/\\.]+/g, ' ')
-    .replace(/\s+/g, ' ');
-
-  // Ordering matters: more specific patterns first so "cover sheet" doesn't
-  // get swallowed by another partial match, and compound terms like
-  // "fire protection" are checked before anything shorter might win.
-  const wordPatterns: Array<{ re: RegExp; discipline: string }> = [
-    // Meta / pre-construction
-    { re: /\b(covers?|title\s*sheet|cover\s*sheets?|project\s*data|code\s*(summary|analysis)|general\s*(notes|info))\b/, discipline: 'cover' },
-    { re: /\b(hazmat|hazardous\s*materials?|asbestos|lead\s*paint|environmental|swppp|erosion\s*control)\b/, discipline: 'hazmat' },
-    { re: /\b(demo(lition)?|existing\s*conditions)\b/, discipline: 'demolition' },
-    { re: /\b(survey|topo(graphic)?|alta)\b/, discipline: 'survey' },
-    { re: /\b(geotechnical|geotech|soils?\s*report)\b/, discipline: 'geotechnical' },
-    // Site + envelope
-    { re: /\b(civil)\b/, discipline: 'civil' },
-    { re: /\b(landscape)\b/, discipline: 'landscape' },
-    // Building
-    { re: /\b(structural|struct)\b/, discipline: 'structural' },
-    { re: /\b(architectural|architecture|arch)\b/, discipline: 'architectural' },
-    { re: /\b(interior(\s+design)?)\b/, discipline: 'interior' },
-    { re: /\b(id)\b/, discipline: 'interior' },
-    // Systems (order matters: FP before electrical/plumbing so "fire alarm" is caught correctly)
-    { re: /\b(fire\s*protection|fire\s*alarm|fp)\b/, discipline: 'fire_protection' },
-    { re: /\b(plumbing|plumb)\b/, discipline: 'plumbing' },
-    { re: /\b(mechanical|mech|hvac)\b/, discipline: 'mechanical' },
-    { re: /\b(electrical|elec)\b/, discipline: 'electrical' },
-    { re: /\b(telecommunications?|telecom|low\s*voltage|lv|tele\b)\b/, discipline: 'telecommunications' },
-  ];
-  for (const { re, discipline } of wordPatterns) {
-    if (re.test(normalized)) return discipline;
-  }
-
-  // Pass 2: sheet-prefix fallback per AIA US National CAD Standard.
-  // We omit `D` (ambiguous: Process/Demolition) — demolition must come from
-  // a word match, not a single-letter prefix.
-  const prefixMap: Record<string, string> = {
-    G: 'cover',          // General (cover, index, code summary)
-    H: 'hazmat',         // Hazmat / Environmental
-    V: 'survey',
-    B: 'geotechnical',
-    C: 'civil',
-    L: 'landscape',
-    S: 'structural',
-    A: 'architectural',
-    I: 'interior',
-    Q: 'interior',       // Equipment / FF&E — no dedicated bucket yet, closest is interior
-    F: 'fire_protection',
-    P: 'plumbing',
-    M: 'mechanical',
-    E: 'electrical',
-    T: 'telecommunications',
-  };
-  const m = name.match(/^([A-Z]{1,2})-?\d/i);
-  if (m) {
-    const prefix = m[1].toUpperCase();
-    // Two-letter prefix special cases (AIA + common industry conventions)
-    if (prefix === 'CS') return 'cover';               // Cover Sheet
-    if (prefix === 'ID') return 'interior';            // Interior Design
-    if (prefix === 'PF') return 'plumbing';            // Plumbing Fixtures
-    if (prefix === 'FA') return 'fire_protection';     // Fire Alarm
-    if (prefix === 'LV') return 'telecommunications';  // Low Voltage
-    return prefixMap[prefix[0]] ?? null;
-  }
-  return null;
-}
+// inferDisciplineFromFilename now lives in src/lib/pdfClassifier.ts
+// (imported above) — single source of truth shared with tests.
 
 // ─── Drawing File Viewer — single path through OpenSeadragon ──────────────
 // Every drawing goes through DrawingTiledViewer (OpenSeadragon):
@@ -262,6 +168,9 @@ const DrawingsPage: React.FC = () => {
 
   // ── Revision state ──────────────────────────────────────
   const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
+  // Side-by-side rev comparison: holds the prior revision the user
+  // wants to diff against the current sheet. Null = no compare modal.
+  const [compareRev, setCompareRev] = useState<DrawingRevision | null>(null);
   const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
 
   // ── Overlay (any two drawings) ──────────────────────────
@@ -599,13 +508,17 @@ const DrawingsPage: React.FC = () => {
   const triggerClassification = useCallback(
     async (drawingId: string, pageImageUrl: string, fileName?: string, fullPageUrl?: string) => {
       if (!projectId) return;
-      // Must match the 18-value CHECK constraint on drawings.discipline
-      // (see migration 20260422200000_fix_drawing_constraints.sql).
+      // Must match the construction_discipline DOMAIN values.
+      // Source of truth: supabase/migrations/20260423000001_discipline_domain.sql
+      // + 20260428000000_extend_disciplines.sql (adds food_service, laundry,
+      // vertical_transportation). Keep aligned with src/pages/drawings/constants.ts
+      // and src/lib/pdfClassifier.ts:Discipline.
       const VALID_DISCIPLINES = new Set([
         'architectural', 'structural', 'mechanical', 'electrical', 'plumbing',
         'civil', 'fire_protection', 'landscape', 'interior', 'interior_design',
         'mep', 'unclassified', 'cover', 'demolition', 'survey', 'geotechnical',
         'hazmat', 'telecommunications',
+        'food_service', 'laundry', 'vertical_transportation',
       ]);
       const DISCIPLINE_REMAP: Record<string, string> = {
         hvac: 'mechanical',
@@ -956,7 +869,20 @@ const DrawingsPage: React.FC = () => {
           continue;
         }
 
-        const pageDiscipline = opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name);
+        // Infer discipline from filename, then clamp to DB-allowed values.
+        // The construction_discipline domain has a fixed set; values outside
+        // it (food_service, laundry, vertical_transportation) fall back to
+        // null — AI classification fills the real value later.
+        const ALLOWED_DISCIPLINES = new Set([
+          'architectural','structural','mechanical','electrical','plumbing',
+          'civil','fire_protection','landscape','interior','interior_design',
+          'mep','unclassified','cover','demolition','survey','geotechnical',
+          'hazmat','telecommunications',
+        ]);
+        const rawDiscipline = opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name);
+        const pageDiscipline = rawDiscipline && ALLOWED_DISCIPLINES.has(rawDiscipline)
+          ? rawDiscipline
+          : (opts.isCover ? 'cover' : null);
 
         const created = await drawingService.createDrawing({
           project_id: projectId,
@@ -1147,7 +1073,10 @@ const DrawingsPage: React.FC = () => {
     for (let idx = 0; idx < queue.length; idx++) {
       const item = queue[idx];
       const displayName = item.kind === 'file' ? item.file.name : item.displayName;
-      const route = /\.pdf$/i.test(displayName) ? classifyPdfByFilename(displayName) : 'drawing';
+      // Pass the zip-internal path when available so /Specifications/ folders
+      // route as 'spec' even when their CSI-numbered filenames don't say "spec".
+      const fullPath = item.kind === 'zip-entry' ? item.entryName : displayName;
+      const route = /\.pdf$/i.test(displayName) ? classifyPdfByFilename(displayName, fullPath) : 'drawing';
 
       setUploadProgressText(`[${idx + 1}/${total}] Reading "${displayName}"...`);
       const file = await getFileForItem(item);
@@ -1681,7 +1610,7 @@ const DrawingsPage: React.FC = () => {
               if (!isCurrent) setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
             }
           }}
-          onCompareVersions={() => {}}
+          onCompareVersions={(rev) => setCompareRev(rev)}
           setViewingRevisionNum={setViewingRevisionNum}
           classification={processing.byDrawing(String(selectedDrawing.id))}
           classificationStatus={processing.statusByDrawing(String(selectedDrawing.id))}
@@ -1812,6 +1741,84 @@ const DrawingsPage: React.FC = () => {
           title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
           onClose={() => setViewRevPdfUrl(null)}
         />
+      )}
+
+      {/* Side-by-side revision compare. Two iframes scroll independently;
+          users can pan one against the other to spot differences. This
+          is the MVP — a future pass might overlay them with a diff
+          highlight layer. */}
+      {compareRev && selectedDrawing && (
+        <div
+          role="dialog"
+          aria-label="Compare drawing revisions"
+          onClick={(e) => { if (e.target === e.currentTarget) setCompareRev(null) }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(26, 22, 19, 0.65)',
+            display: 'flex', flexDirection: 'column',
+            padding: 24,
+          }}
+        >
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            color: '#fff', marginBottom: 12, fontFamily: typography.fontFamily,
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
+                Comparing Rev {compareRev.revision_number} → Current
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+                {selectedDrawing.title}{selectedDrawing.sheet_number ? ` · Sheet ${selectedDrawing.sheet_number}` : ''}
+              </div>
+            </div>
+            <button
+              onClick={() => setCompareRev(null)}
+              style={{
+                background: 'rgba(255,255,255,0.12)', color: '#fff', border: 'none',
+                padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, minHeight: 0 }}>
+            {[
+              { label: `Rev ${compareRev.revision_number}`, url: compareRev.file_url },
+              { label: 'Current', url: (selectedDrawing as { file_url?: string }).file_url ?? null },
+            ].map((side, i) => (
+              <div key={i} style={{
+                background: '#fff', borderRadius: 6, overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+              }}>
+                <div style={{
+                  padding: '8px 12px',
+                  borderBottom: '1px solid var(--hairline)',
+                  fontFamily: typography.fontFamily, fontSize: 11,
+                  fontWeight: 500, letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: colors.textTertiary,
+                }}>
+                  {side.label}
+                </div>
+                {side.url ? (
+                  <iframe
+                    src={side.url}
+                    title={side.label}
+                    style={{ flex: 1, border: 'none', minHeight: 0 }}
+                  />
+                ) : (
+                  <div style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: colors.textTertiary, fontSize: 13,
+                  }}>
+                    No file attached to this revision.
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {showUploadModal && (

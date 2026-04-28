@@ -42,7 +42,7 @@ interface DrawingDetailProps {
   onOpenViewer: () => void;
   onUploadRevision: () => void;
   onViewRevision: (rev: DrawingRevision) => void;
-  onCompareVersions: () => void;
+  onCompareVersions: (rev: DrawingRevision) => void;
   setViewingRevisionNum: (n: number | null) => void;
   classification?: DrawingClassification | null;
   classificationStatus?: string | null;
@@ -661,8 +661,8 @@ const OverviewTab: React.FC<{ drawing: DrawingItem; discColor: string }> = ({ dr
 const RevisionsTab: React.FC<{
   revisionHistory: DrawingRevision[] | undefined;
   onViewRevision: (rev: DrawingRevision) => void;
-  onCompareVersions: () => void;
-}> = ({ revisionHistory, onViewRevision }) => {
+  onCompareVersions: (rev: DrawingRevision) => void;
+}> = ({ revisionHistory, onViewRevision, onCompareVersions }) => {
   if (!revisionHistory || revisionHistory.length === 0) {
     return (
       <div style={S.empty}>
@@ -701,17 +701,34 @@ const RevisionsTab: React.FC<{
                   {rev.change_description}
                 </p>
               )}
-              <button
-                onClick={() => onViewRevision(rev)}
-                style={{
-                  marginTop: '6px', display: 'flex', alignItems: 'center', gap: '3px',
-                  fontSize: '11px', color: colors.primaryOrange,
-                  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                  fontFamily: typography.fontFamily, fontWeight: 500,
-                }}
-              >
-                <Eye size={10} /> View
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px' }}>
+                <button
+                  onClick={() => onViewRevision(rev)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '3px',
+                    fontSize: '11px', color: colors.primaryOrange,
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    fontFamily: typography.fontFamily, fontWeight: 500,
+                  }}
+                >
+                  <Eye size={10} /> View
+                </button>
+                {/* Compare hidden on the current rev — there's nothing
+                    to compare it to. */}
+                {!isCurrent && (
+                  <button
+                    onClick={() => onCompareVersions(rev)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '3px',
+                      fontSize: '11px', color: colors.textSecondary,
+                      background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                      fontFamily: typography.fontFamily, fontWeight: 500,
+                    }}
+                  >
+                    Compare to current
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}
