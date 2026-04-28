@@ -244,18 +244,32 @@ async function checkLayoutIssues(page: Page): Promise<string[]> {
       if (cs.clipPath && cs.clipPath.includes('inset(50%)')) return true
       return false
     }
-    // Find elements with text overflowing their container.
+    // Find elements with text overflowing their container — but ONLY count
+    // ones where the overflow is unintentional. Designer-applied
+    // `text-overflow: ellipsis` and `overflow: hidden` are deliberate
+    // truncations, not bugs.
     const overflowed: string[] = []
     document.querySelectorAll('*').forEach((el) => {
       const e = el as HTMLElement
       if (e.children.length || !e.textContent || e.textContent.length === 0) return
       if (isVisuallyHidden(e)) return
-      // Walk up: if any ancestor is visually hidden, the leaf is too.
+      const cs = getComputedStyle(e)
+      if (cs.textOverflow === 'ellipsis') return
+      if (cs.overflow === 'hidden' || cs.overflowX === 'hidden') return
+      // Walk up: any ancestor that's clipping or sr-only means this is
+      // intentional, not a bug.
       let p: HTMLElement | null = e.parentElement
+      let hasClippingAncestor = false
       while (p && p !== document.body) {
         if (isVisuallyHidden(p)) return
+        const pcs = getComputedStyle(p)
+        if (pcs.overflow === 'hidden' || pcs.overflowX === 'hidden' || pcs.textOverflow === 'ellipsis') {
+          hasClippingAncestor = true
+          break
+        }
         p = p.parentElement
       }
+      if (hasClippingAncestor) return
       if (e.scrollWidth > e.clientWidth + 2) {
         const label = e.textContent.trim().slice(0, 40)
         if (label.length > 8) overflowed.push(label)
