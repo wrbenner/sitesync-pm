@@ -282,7 +282,8 @@ export const Login: React.FC = () => {
   const markGap        = isMobile ? 44 : 56
   const greetingSize   = isMobile ? 28 : 36
   const fieldHeight    = isMobile ? 52 : 56
-  const buttonSize     = isMobile ? 52 : 56
+  const pillWidth      = isMobile ? 60 : 68
+  const pillHeight     = isMobile ? 34 : 38
   const columnOffset   = isMobile ? 182 : 212
   const columnWidth    = isMobile ? undefined : 360
   const pagePadding    = isMobile ? 32 : 0
@@ -401,7 +402,7 @@ export const Login: React.FC = () => {
             style={{
               position: 'absolute',
               left: 0,
-              right: buttonSize + 20,
+              right: pillWidth + 16,
               top: 0,
               bottom: 1,
               width: 'auto',
@@ -419,29 +420,22 @@ export const Login: React.FC = () => {
           />
 
           {/* Underline = the level line at field-bottom.
-              The line ENDS just before the circle's left edge — the circle
-              is the period at the end of the line, not a stamp on top of it.
-              We can't extend the line under the button: the button sits at
-              0.45 opacity until the email parses valid, and a translucent
-              circle would let the line bleed through the arrow.
-              On hover the line creeps a few pixels closer to the circle —
-              a tiny "the arrow leads you out" cue. */}
+              The pill now floats ABOVE the line (at the input's vertical
+              middle), so the line runs uninterrupted across the full field
+              width — no more arrow-through-line collision. */}
           <div style={{
             position: 'absolute',
             left: 0,
-            right: isHovering && !submitting ? buttonSize + 4 : buttonSize + 10,
+            right: 0,
             bottom: 0,
             height: 1,
             background: SS_FG1,
-            transition: 'right 160ms cubic-bezier(0.32, 0.72, 0, 1)',
           }} />
 
-          {/* Circle button — center sits ON the line.
-              Three feedback layers compose the "alive" feel:
-              1. Opacity: 0.45 idle → 1.0 once email parses valid (the
-                 circle "wakes up" the instant you finish typing).
-              2. Hover: 5px slide right with a fast ease — feels like
-                 the arrow physically leans toward its destination.
+          {/* Pill button — sits in the middle of the typed-email row,
+              above the line. Three feedback layers:
+              1. Opacity: 0.45 idle → 1.0 once email parses valid.
+              2. Hover: 4px slide right — the arrow leans toward its destination.
               3. Press: scale 0.96 — tactile click moment. */}
           <button
             type="submit"
@@ -456,13 +450,13 @@ export const Login: React.FC = () => {
             style={{
               position: 'absolute',
               right: 0,
-              bottom: -(buttonSize / 2),
-              width: buttonSize,
-              height: buttonSize,
+              top: (fieldHeight - pillHeight) / 2,
+              width: pillWidth,
+              height: pillHeight,
               background: SS_FG1,
               color: '#fff',
               border: 'none',
-              borderRadius: '50%',
+              borderRadius: pillHeight / 2,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -470,7 +464,7 @@ export const Login: React.FC = () => {
               transform: isPressed
                 ? 'scale(0.96)'
                 : isHovering && !submitting
-                  ? 'translateX(5px)'
+                  ? 'translateX(4px)'
                   : 'translateX(0)',
               transition: 'transform 80ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease',
               zIndex: 2,
