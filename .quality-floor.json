@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 4,
-  "_updated": "2026-04-28T12:00:00Z",
+  "_version": 5,
+  "_updated": "2026-04-28T17:00:00Z",
   "_updatedBy": "auto/polish-20260428-1200",
-  "_floor_realignment_note": "v4: Math.random eliminated (28→0), as-any eliminated (41→0), WorkflowTimeline component added (0→6 refs). Ratchets now protect against regression.",
+  "_floor_realignment_note": "v5: ESLint errors 514→466 (48 fewer). Fixes: WorkflowTimeline unused imports, ProcoreImportModal ternary-expression, useMfa eslint-disable placement, sheetTitleBlockParser regex escapes + _insideRegion, GroupedSubmittalsView regex escape, classify-drawing template-literal quote escapes (35 in one sweep).",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 480,
+  "eslintErrors": 466,
   "anyCount": 0,
   "mockCount": 1,
   "a11yViolations": 0,

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Check } from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../styles/theme'
+import { colors, spacing, typography } from '../styles/theme'
 
 export interface WorkflowStep {
   key: string
@@ -69,7 +69,6 @@ export function WorkflowTimeline({ steps, currentStep, stepLabels }: WorkflowTim
       {steps.map((step, i) => {
         const isCompleted = i < currentIndex
         const isCurrent = i === currentIndex
-        const isUpcoming = i > currentIndex
 
         const label = stepLabels?.[step.key] ?? step.label
 

@@ -59,7 +59,11 @@ export const ProcoreImportModal: React.FC<Props> = ({ open, onClose, targetProje
   const toggleScope = (k: ImportScope) => {
     setSelectedScopes((prev) => {
       const next = new Set(prev)
-      next.has(k) ? next.delete(k) : next.add(k)
+      if (next.has(k)) {
+        next.delete(k)
+      } else {
+        next.add(k)
+      }
       return next
     })
   }

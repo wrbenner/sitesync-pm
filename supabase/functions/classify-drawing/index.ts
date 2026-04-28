@@ -66,16 +66,16 @@ const PROMPT_SCALE = `
 Find the MAIN drawing scale on this construction sheet.
 
 Scan for ANY of these patterns:
-1. Under a viewport title: "BUILDING B - THIRD FLOOR PLAN / SCALE: 1/8\" = 1'-0\""
-2. Under a detail callout: "01 DETAIL / SCALE: 3\" = 1'-0\""
+1. Under a viewport title: "BUILDING B - THIRD FLOOR PLAN / SCALE: 1/8" = 1'-0""
+2. Under a detail callout: "01 DETAIL / SCALE: 3" = 1'-0""
 3. "SCALE: NONE" / "NOT TO SCALE" / "N.T.S." → return 'NTS'
-4. On site plans: "1 inch = 50 ft." or "1\" = 40'-0\""
+4. On site plans: "1 inch = 50 ft." or "1" = 40'-0""
 5. On vicinity maps: "NTS" label directly under the map
 
 Return JSON:
 {
   "scale_text": "string | null — EXACT scale text as printed. For 'NOT TO SCALE' / 'SCALE: NONE' / 'NTS' / 'NONE' return 'NTS'. Otherwise return the literal text. Null only if no scale of any kind is printed.",
-  "scale_ratio": "number | null — the numeric ratio. Architectural: 1/16\"=1'-0\" → 192, 3/32\"=1'-0\" → 128, 1/8\"=1'-0\" → 96, 3/16\"=1'-0\" → 64, 1/4\"=1'-0\" → 48, 3/8\"=1'-0\" → 32, 1/2\"=1'-0\" → 24, 3/4\"=1'-0\" → 16, 1\"=1'-0\" → 12, 1-1/2\"=1'-0\" → 8, 3\"=1'-0\" → 4. Engineering: 1\"=10' → 120, 1\"=20' → 240, 1\"=30' → 360, 1\"=40' → 480, 1\"=50' → 600, 1\"=60' → 720, 1\"=100' → 1200. For NTS → null."
+  "scale_ratio": "number | null — the numeric ratio. Architectural: 1/16"=1'-0" → 192, 3/32"=1'-0" → 128, 1/8"=1'-0" → 96, 3/16"=1'-0" → 64, 1/4"=1'-0" → 48, 3/8"=1'-0" → 32, 1/2"=1'-0" → 24, 3/4"=1'-0" → 16, 1"=1'-0" → 12, 1-1/2"=1'-0" → 8, 3"=1'-0" → 4. Engineering: 1"=10' → 120, 1"=20' → 240, 1"=30' → 360, 1"=40' → 480, 1"=50' → 600, 1"=60' → 720, 1"=100' → 1200. For NTS → null."
 }
 
 DO NOT guess from drawing type. If no scale text appears, null.
