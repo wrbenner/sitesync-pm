@@ -19,7 +19,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
-import { magicLinkSchema } from '../../schemas/auth'
+import { magicLinkSchema, loginSchema } from '../../schemas/auth'
+import { useAuth } from '../../hooks/useAuth'
 
 // ── Design Tokens (raw values — this page opts out of CSS vars for
 //    pixel-perfect control on the only page that lives OUTSIDE the app shell) ──
@@ -110,6 +111,94 @@ const MicrosoftGlyph: React.FC<{ size?: number }> = ({ size = 18 }) => (
     <rect x="0"  y="10" width="8" height="8" fill="#00A4EF" />
     <rect x="10" y="10" width="8" height="8" fill="#FFB900" />
   </svg>
+)
+
+// ── Submit Pill (shared between magic-link and password rows) ──
+
+interface SubmitPillProps {
+  buttonSize: number
+  pillWidth: number
+  pillHeight: number
+  fieldHeight: number
+  isMobile: boolean
+  submitting: boolean
+  isValid: boolean
+  isHovering: boolean
+  isPressed: boolean
+  setIsHovering: (v: boolean) => void
+  setIsPressed: (v: boolean) => void
+}
+
+const SubmitPill: React.FC<SubmitPillProps> = ({
+  pillWidth, pillHeight, fieldHeight, isMobile, submitting, isValid,
+  isHovering, isPressed, setIsHovering, setIsPressed,
+}) => (
+  <button
+    type="submit"
+    aria-label="Continue"
+    disabled={submitting}
+    onMouseEnter={() => !submitting && setIsHovering(true)}
+    onMouseLeave={() => { setIsHovering(false); setIsPressed(false) }}
+    onMouseDown={() => !submitting && setIsPressed(true)}
+    onMouseUp={() => setIsPressed(false)}
+    onTouchStart={() => !submitting && setIsPressed(true)}
+    onTouchEnd={() => setIsPressed(false)}
+    style={{
+      position: 'absolute',
+      right: 0,
+      top: (fieldHeight - pillHeight) / 2,
+      width: pillWidth,
+      height: pillHeight,
+      background: '#1A1613',
+      color: '#fff',
+      border: 'none',
+      borderRadius: pillHeight / 2,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: submitting ? 'wait' : 'pointer',
+      transform: isPressed
+        ? 'scale(0.96)'
+        : isHovering && !submitting
+          ? 'translateX(4px)'
+          : 'translateX(0)',
+      transition: 'transform 80ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease',
+      zIndex: 2,
+      opacity: submitting ? 0.7 : isValid ? 1 : 0.45,
+    }}
+  >
+    {submitting ? (
+      <svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth={2}
+        strokeLinecap="round"
+        style={{ animation: 'ss-spin 0.8s linear infinite' }}
+        aria-hidden="true"
+      >
+        <path d="M12 2a10 10 0 0 1 10 10" />
+      </svg>
+    ) : (
+      <svg
+        width={isMobile ? 17 : 18}
+        height={isMobile ? 17 : 18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth={2.25}
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+        aria-hidden="true"
+        style={{ display: 'block' }}
+      >
+        <path d="M5 12h14" />
+        <path d="m12 5 7 7-7 7" />
+      </svg>
+    )}
+  </button>
 )
 
 // ── OAuth Button ────────────────────────────────────────
@@ -267,8 +356,11 @@ const CheckInbox: React.FC<{ email: string; onBack: () => void }> = ({ email, on
 export const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { signIn } = useAuth()
 
+  const [mode, setMode] = useState<'magic' | 'password'>('magic')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [oauthPending, setOauthPending] = useState<null | 'google' | 'azure'>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -278,10 +370,12 @@ export const Login: React.FC = () => {
   const [isPressed, setIsPressed] = useState(false)
 
   // Validity is parsed live so the circle "wakes up" the moment the
-  // user finishes typing a credible address. Empty input keeps the
-  // circle dimmed, which makes the affordance read as "not ready yet"
-  // without forcing a separate disabled visual.
-  const isValid = magicLinkSchema.safeParse({ email }).success
+  // user finishes typing a credible address (magic mode) or finishes
+  // both fields (password mode). Empty input keeps the circle dimmed,
+  // which reads as "not ready yet" without a separate disabled visual.
+  const isValid = mode === 'magic'
+    ? magicLinkSchema.safeParse({ email }).success
+    : loginSchema.safeParse({ email, password }).success
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -323,7 +417,34 @@ export const Login: React.FC = () => {
     if (submitting) return
     setErrorMessage(null)
 
-    // Validate
+    // ── Password Mode ─────────────────────────────────────
+    if (mode === 'password') {
+      const parsed = loginSchema.safeParse({ email, password })
+      if (!parsed.success) {
+        const fields = parsed.error.flatten().fieldErrors
+        const firstErr = fields.email?.[0] ?? fields.password?.[0]
+        setErrorMessage(firstErr ?? 'Check your email and password.')
+        return
+      }
+      setSubmitting(true)
+      try {
+        const { error } = await signIn(parsed.data.email, parsed.data.password)
+        if (error) {
+          // signIn already maps + handles lockout; just surface the message.
+          setErrorMessage(error)
+        } else {
+          // SIGNED_IN listener in useAuth.ts handles redirect to dashboard.
+          // Land on success state briefly in case routing takes a tick.
+        }
+      } catch {
+        setErrorMessage('Check your connection and try again.')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    // ── Magic-Link Mode (default) ─────────────────────────
     const parsed = magicLinkSchema.safeParse({ email })
     if (!parsed.success) {
       const fieldErr = parsed.error.flatten().fieldErrors.email?.[0]
@@ -366,7 +487,7 @@ export const Login: React.FC = () => {
     } finally {
       setSubmitting(false)
     }
-  }, [email, submitting, buildRedirectUrl])
+  }, [mode, email, password, submitting, buildRedirectUrl, signIn])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -422,7 +543,12 @@ export const Login: React.FC = () => {
   const fieldHeight    = isMobile ? 52 : 56
   const pillWidth      = isMobile ? 60 : 68
   const pillHeight     = isMobile ? 34 : 38
-  const columnOffset   = isMobile ? 182 : 212
+  // In password mode the strong level line moves to the password row,
+  // which is one fieldHeight below the email row. Lift the column by
+  // that delta so the strong line still meets the page-wide level
+  // gradients at viewport center.
+  const baseOffset     = isMobile ? 182 : 212
+  const columnOffset   = mode === 'password' ? baseOffset + fieldHeight : baseOffset
   const columnWidth    = isMobile ? undefined : 360
   const pagePadding    = isMobile ? 32 : 0
 
@@ -511,121 +637,153 @@ export const Login: React.FC = () => {
         {/* Greeting */}
         <Greeting size={greetingSize} />
 
-        {/* ─── Field Block ─────────────────────────────── */}
+        {/* ─── Field Block ───────────────────────────────
+            Two stacked rows in password mode (email + password), one row
+            in magic mode (email only). The pill button + strong level
+            line attach to whichever row is the "submit row" — email when
+            magic, password when password. The non-submit email row in
+            password mode gets a thin separator underline so the rows
+            still feel connected without two competing strong lines. */}
         <form
           onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
           style={{
             width: '100%',
-            height: fieldHeight,
+            display: 'flex',
+            flexDirection: 'column',
             position: 'relative',
           }}
-          aria-label="Sign in with email"
+          aria-label={mode === 'password' ? 'Sign in with email and password' : 'Sign in with email'}
         >
-          {/* Email input — sits ABOVE the line */}
-          <input
-            ref={inputRef}
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              if (errorMessage) setErrorMessage(null)
-            }}
-            onKeyDown={handleKeyDown}
-            aria-label="Email"
-            aria-invalid={!!errorMessage}
-            aria-describedby={errorMessage ? 'login-error' : undefined}
-            autoComplete="email"
-            autoCapitalize="none"
-            spellCheck={false}
-            disabled={submitting}
-            placeholder=""
-            className="ss-login-input"
-            style={{
+          {/* ─── Email Row ────────────────────────────── */}
+          <div style={{ width: '100%', height: fieldHeight, position: 'relative' }}>
+            <input
+              ref={inputRef}
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (errorMessage) setErrorMessage(null)
+              }}
+              onKeyDown={handleKeyDown}
+              aria-label="Email"
+              aria-invalid={!!errorMessage}
+              aria-describedby={errorMessage ? 'login-error' : undefined}
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              disabled={submitting}
+              placeholder={mode === 'password' ? 'Email' : ''}
+              className="ss-login-input"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: mode === 'magic' ? pillWidth + 16 : 0,
+                top: 0,
+                bottom: 1,
+                width: 'auto',
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                borderRadius: 0,
+                font: `400 ${isMobile ? 16 : 17}px/1 ${FONT}`,
+                letterSpacing: '-0.011em',
+                color: SS_FG1,
+                caretColor: SS_FG1,
+              }}
+            />
+
+            {/* Underline: strong (level line) in magic mode,
+                thin separator in password mode (the strong line moves
+                to the password row). */}
+            <div style={{
               position: 'absolute',
               left: 0,
-              right: pillWidth + 16,
-              top: 0,
-              bottom: 1,
-              width: 'auto',
-              padding: 0,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              borderRadius: 0,
-              font: `400 ${isMobile ? 16 : 17}px/1 ${FONT}`,
-              letterSpacing: '-0.011em',
-              color: SS_FG1,
-              caretColor: SS_FG1,
-              // iOS: 16px minimum prevents auto-zoom on focus
-            }}
-          />
-
-          {/* Underline = the level line at field-bottom.
-              The pill now floats ABOVE the line (at the input's vertical
-              middle), so the line runs uninterrupted across the full field
-              width — no more arrow-through-line collision. */}
-          <div style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 1,
-            background: SS_FG1,
-          }} />
-
-          {/* Pill button — sits in the middle of the typed-email row,
-              above the line. Three feedback layers:
-              1. Opacity: 0.45 idle → 1.0 once email parses valid.
-              2. Hover: 4px slide right — the arrow leans toward its destination.
-              3. Press: scale 0.96 — tactile click moment. */}
-          <button
-            type="submit"
-            aria-label="Continue"
-            disabled={submitting}
-            onMouseEnter={() => !submitting && setIsHovering(true)}
-            onMouseLeave={() => { setIsHovering(false); setIsPressed(false) }}
-            onMouseDown={() => !submitting && setIsPressed(true)}
-            onMouseUp={() => setIsPressed(false)}
-            onTouchStart={() => !submitting && setIsPressed(true)}
-            onTouchEnd={() => setIsPressed(false)}
-            style={{
-              position: 'absolute',
               right: 0,
-              top: (fieldHeight - pillHeight) / 2,
-              width: pillWidth,
-              height: pillHeight,
-              background: SS_FG1,
-              color: '#fff',
-              border: 'none',
-              borderRadius: pillHeight / 2,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: submitting ? 'wait' : 'pointer',
-              transform: isPressed
-                ? 'scale(0.96)'
-                : isHovering && !submitting
-                  ? 'translateX(4px)'
-                  : 'translateX(0)',
-              transition: 'transform 80ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease',
-              zIndex: 2,
-              opacity: submitting ? 0.7 : isValid ? 1 : 0.45,
-            }}
-          >
-            {submitting ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-                style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round">
-                  <path d="M12 2a10 10 0 0 1 10 10" />
-                </svg>
-              </motion.div>
-            ) : (
-              <ArrowRightIcon size={isMobile ? 17 : 18} color="#fff" />
+              bottom: 0,
+              height: 1,
+              background: mode === 'magic' ? SS_FG1 : 'rgba(26,22,19,0.16)',
+              transition: 'background 200ms ease',
+            }} />
+
+            {mode === 'magic' && (
+              <SubmitPill
+                buttonSize={pillWidth}
+                pillWidth={pillWidth}
+                pillHeight={pillHeight}
+                fieldHeight={fieldHeight}
+                isMobile={isMobile}
+                submitting={submitting}
+                isValid={isValid}
+                isHovering={isHovering}
+                isPressed={isPressed}
+                setIsHovering={setIsHovering}
+                setIsPressed={setIsPressed}
+              />
             )}
-          </button>
+          </div>
+
+          {/* ─── Password Row (conditional) ──────────── */}
+          {mode === 'password' && (
+            <div style={{ width: '100%', height: fieldHeight, position: 'relative' }}>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (errorMessage) setErrorMessage(null)
+                }}
+                onKeyDown={handleKeyDown}
+                aria-label="Password"
+                aria-invalid={!!errorMessage}
+                aria-describedby={errorMessage ? 'login-error' : undefined}
+                autoComplete="current-password"
+                disabled={submitting}
+                placeholder="Password"
+                className="ss-login-input"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: pillWidth + 16,
+                  top: 0,
+                  bottom: 1,
+                  width: 'auto',
+                  padding: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  borderRadius: 0,
+                  font: `400 ${isMobile ? 16 : 17}px/1 ${FONT}`,
+                  letterSpacing: '-0.011em',
+                  color: SS_FG1,
+                  caretColor: SS_FG1,
+                }}
+              />
+
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 1,
+                background: SS_FG1,
+              }} />
+
+              <SubmitPill
+                buttonSize={pillWidth}
+                pillWidth={pillWidth}
+                pillHeight={pillHeight}
+                fieldHeight={fieldHeight}
+                isMobile={isMobile}
+                submitting={submitting}
+                isValid={isValid}
+                isHovering={isHovering}
+                isPressed={isPressed}
+                setIsHovering={setIsHovering}
+                setIsPressed={setIsPressed}
+              />
+            </div>
+          )}
         </form>
 
         {/* ─── Hint / Error Slot ─────────────────────────── */}
@@ -644,13 +802,15 @@ export const Login: React.FC = () => {
         >
           <AnimatePresence mode="wait">
             <motion.span
-              key={errorMessage || 'hint'}
+              key={errorMessage || `hint-${mode}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {errorMessage || "We'll send a sign-in link."}
+              {errorMessage || (mode === 'password'
+                ? 'Sign in with your password.'
+                : "We'll send a sign-in link.")}
             </motion.span>
           </AnimatePresence>
         </div>
@@ -702,6 +862,30 @@ export const Login: React.FC = () => {
             isMobile={isMobile}
           />
         </div>
+
+        {/* ─── Mode Toggle ──────────────────────────────────
+            Tiny text link to flip between magic-link and password.
+            Toggling clears the password (security) and any error. */}
+        <button
+          type="button"
+          onClick={() => {
+            setMode((m) => (m === 'magic' ? 'password' : 'magic'))
+            setPassword('')
+            setErrorMessage(null)
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            marginTop: 22,
+            padding: '4px 8px',
+            font: `400 12.5px/1 ${FONT}`,
+            color: SS_FG3,
+            letterSpacing: '0.005em',
+          }}
+        >
+          {mode === 'magic' ? 'Sign in with password' : 'Use a sign-in link instead'}
+        </button>
       </motion.div>
       </div>
 

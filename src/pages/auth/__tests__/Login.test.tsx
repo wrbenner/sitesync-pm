@@ -12,14 +12,17 @@ const { signInWithOtpMock, signInWithOAuthMock } = vi.hoisted(() => ({
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
     auth: {
-      signInWithPassword: vi.fn(),
+      signInWithPassword: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       signUp: vi.fn(),
       signInWithOtp: signInWithOtpMock,
       signInWithOAuth: signInWithOAuthMock,
       resetPasswordForEmail: vi.fn(),
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+      signOut: vi.fn(),
     },
     from: vi.fn(),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   },
   isSupabaseConfigured: true,
 }))
@@ -97,6 +100,28 @@ describe('Login (magic-link + OAuth)', () => {
       expect(signInWithOAuthMock).toHaveBeenCalledWith(expect.objectContaining({
         provider: 'azure',
       }))
+    })
+  })
+
+  it('toggles to password mode and reveals a password field', async () => {
+    render(wrap(<Login />))
+    expect(screen.queryByLabelText(/^password$/i)).toBeNull()
+    fireEvent.click(screen.getByText(/sign in with password/i))
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^password$/i)).toBeDefined()
+    })
+    // Toggle text flips
+    expect(screen.getByText(/use a sign-in link instead/i)).toBeDefined()
+  })
+
+  it('does not call signInWithPassword on empty password submit', async () => {
+    render(wrap(<Login />))
+    fireEvent.click(screen.getByText(/sign in with password/i))
+    const email = screen.getByLabelText(/^email$/i) as HTMLInputElement
+    fireEvent.change(email, { target: { value: 'user@example.com' } })
+    fireEvent.submit(screen.getByRole('form', { name: /sign in with email and password/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeDefined()
     })
   })
 })
