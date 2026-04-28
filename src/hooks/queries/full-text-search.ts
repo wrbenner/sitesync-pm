@@ -17,6 +17,10 @@ export interface SearchResult {
   created_at: string
 }
 
+type DocRow = { id: string; name: string; description: string | null; project_id: string; created_at: string }
+type DrawingRow = { id: string; title: string; discipline: string | null; project_id: string; created_at: string }
+type WikiRow = { id: string; title: string; project_id: string; created_at: string }
+
 export function useFullTextSearch(
   projectId: string | undefined,
   query: string,
@@ -40,7 +44,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
               title: d.name,
@@ -61,7 +65,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
               title: d.name,
@@ -82,7 +86,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DrawingRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title,
@@ -103,7 +107,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as WikiRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title,
