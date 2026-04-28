@@ -419,13 +419,17 @@ export const Login: React.FC = () => {
           />
 
           {/* Underline = the level line at field-bottom.
-              On button hover we let the line trail 4px past its anchor —
-              a tiny "the arrow leads you out" cue. Pure CSS transition,
-              no layout thrash. */}
+              The line ENDS just before the circle's left edge — the circle
+              is the period at the end of the line, not a stamp on top of it.
+              We can't extend the line under the button: the button sits at
+              0.45 opacity until the email parses valid, and a translucent
+              circle would let the line bleed through the arrow.
+              On hover the line creeps a few pixels closer to the circle —
+              a tiny "the arrow leads you out" cue. */}
           <div style={{
             position: 'absolute',
             left: 0,
-            right: isHovering && !submitting ? -4 : 0,
+            right: isHovering && !submitting ? buttonSize + 4 : buttonSize + 10,
             bottom: 0,
             height: 1,
             background: SS_FG1,
