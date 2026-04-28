@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { isDevBypassActive } from '../../lib/devBypass'
 import type {
   Project,
 } from '../../types/database'
@@ -9,7 +10,10 @@ import type {
 export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Project[]> => {
+      // Dev bypass has no Supabase backend — return empty list immediately so
+      // the Dashboard resolves to WelcomeOnboarding rather than hanging in skeleton.
+      if (isDevBypassActive()) return []
       const { data, error } = await supabase
         .from('projects')
         .select('*')
