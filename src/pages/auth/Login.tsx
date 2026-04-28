@@ -92,6 +92,87 @@ const ArrowRightIcon: React.FC<{ size: number; color: string }> = ({ size, color
   </svg>
 )
 
+// ── Provider Logos (brand-correct, official palettes) ───
+
+const GoogleGlyph: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" style={{ display: 'block' }}>
+    <path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" />
+    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+    <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
+    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
+  </svg>
+)
+
+const MicrosoftGlyph: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" style={{ display: 'block' }}>
+    <rect x="0"  y="0"  width="8" height="8" fill="#F25022" />
+    <rect x="10" y="0"  width="8" height="8" fill="#7FBA00" />
+    <rect x="0"  y="10" width="8" height="8" fill="#00A4EF" />
+    <rect x="10" y="10" width="8" height="8" fill="#FFB900" />
+  </svg>
+)
+
+// ── OAuth Button ────────────────────────────────────────
+
+interface OAuthButtonProps {
+  label: string
+  short: string
+  icon: React.ReactNode
+  onClick: () => void
+  pending: boolean
+  disabled: boolean
+  isMobile: boolean
+}
+
+const OAuthButton: React.FC<OAuthButtonProps> = ({
+  label, short, icon, onClick, pending, disabled, isMobile,
+}) => {
+  const [isHovering, setIsHovering] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      onMouseEnter={() => !disabled && setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      style={{
+        flex: 1,
+        height: 44,
+        background: '#FFFFFF',
+        border: `1px solid ${isHovering && !disabled ? 'rgba(26,22,19,0.32)' : 'rgba(26,22,19,0.14)'}`,
+        borderRadius: 10,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled && !pending ? 0.55 : 1,
+        font: `500 13.5px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+        letterSpacing: '-0.005em',
+        color: '#1A1613',
+        padding: '0 14px',
+        transition: 'border-color 160ms ease, opacity 200ms ease',
+        boxShadow: isHovering && !disabled ? '0 1px 2px rgba(26,22,19,0.04)' : 'none',
+      }}
+    >
+      {pending ? (
+        <span aria-live="polite" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" style={{ animation: 'ss-spin 0.8s linear infinite' }}>
+            <path d="M12 2a10 10 0 0 1 10 10" />
+          </svg>
+          Connecting…
+        </span>
+      ) : (
+        <>
+          {icon}
+          <span>{isMobile ? label : short}</span>
+        </>
+      )}
+    </button>
+  )
+}
+
 // ── Greeting Component ──────────────────────────────────
 
 const Greeting: React.FC<{ size: number }> = ({ size }) => {
@@ -189,6 +270,7 @@ export const Login: React.FC = () => {
 
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [oauthPending, setOauthPending] = useState<null | 'google' | 'azure'>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -270,6 +352,35 @@ export const Login: React.FC = () => {
     }
   }, [handleSubmit])
 
+  // ── OAuth Handler ────────────────────────────────────
+  // Hands the browser off to the provider's consent screen. On success
+  // the provider redirects back to redirectTo with tokens in the URL
+  // fragment; supabase's `detectSessionInUrl: true` picks them up and
+  // fires SIGNED_IN, which the global onAuthStateChange listener handles
+  // (see hooks/useAuth.ts). This function never returns to a rendered
+  // success state — the page navigates away mid-call.
+  const signInWithProvider = useCallback(async (provider: 'google' | 'azure') => {
+    if (oauthPending || submitting) return
+    setErrorMessage(null)
+    setOauthPending(provider)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + (searchParams.get('returnTo') || '/dashboard'),
+        },
+      })
+      if (error) {
+        setOauthPending(null)
+        const friendly = provider === 'azure' ? 'Microsoft' : 'Google'
+        setErrorMessage(`We couldn't reach ${friendly}. Try again.`)
+      }
+    } catch {
+      setOauthPending(null)
+      setErrorMessage('Check your connection and try again.')
+    }
+  }, [oauthPending, submitting, searchParams])
+
   // ── Measurements ──────────────────────────────────────
   //
   // Desktop column: 24(mark) + 56(gap) + 36(h1) + 40(gap) + 56(field) = 212
@@ -332,6 +443,9 @@ export const Login: React.FC = () => {
         .ss-login-input:focus-visible {
           outline: none !important;
           box-shadow: none !important;
+        }
+        @keyframes ss-spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
 
@@ -513,6 +627,54 @@ export const Login: React.FC = () => {
             </motion.span>
           </AnimatePresence>
         </div>
+
+        {/* ─── OAuth Divider ──────────────────────────────── */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          width: '100%',
+          marginTop: 28,
+          marginBottom: 18,
+        }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(26,22,19,0.10)' }} />
+          <span style={{
+            font: `400 11px/1 ${FONT}`,
+            color: SS_FG3,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+          }}>
+            or
+          </span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(26,22,19,0.10)' }} />
+        </div>
+
+        {/* ─── OAuth Row ──────────────────────────────────── */}
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 10,
+          width: '100%',
+        }}>
+          <OAuthButton
+            label="Continue with Google"
+            short="Google"
+            icon={<GoogleGlyph size={18} />}
+            onClick={() => signInWithProvider('google')}
+            pending={oauthPending === 'google'}
+            disabled={!!oauthPending || submitting}
+            isMobile={isMobile}
+          />
+          <OAuthButton
+            label="Continue with Microsoft"
+            short="Microsoft"
+            icon={<MicrosoftGlyph size={18} />}
+            onClick={() => signInWithProvider('azure')}
+            pending={oauthPending === 'azure'}
+            disabled={!!oauthPending || submitting}
+            isMobile={isMobile}
+          />
+        </div>
       </motion.div>
       </div>
 
@@ -545,26 +707,6 @@ export const Login: React.FC = () => {
           pointerEvents: 'none',
         }}
       />
-
-      {/* ─── SSO Link ────────────────────────────────────── */}
-      <a
-        href="#/login/sso"
-        aria-label="Use single sign-on"
-        style={{
-          position: 'absolute',
-          bottom: isMobile ? 64 : 56,
-          left: 0, right: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          font: `400 12px/1 ${FONT}`,
-          color: SS_FG3,
-          letterSpacing: '0.01em',
-          textDecoration: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        Use single sign-on
-      </a>
 
       {/* ─── Surveyor's Dot ──────────────────────────────── */}
       <div

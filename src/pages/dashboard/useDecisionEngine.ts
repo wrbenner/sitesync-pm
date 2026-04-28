@@ -288,7 +288,7 @@ function generateRFIDecision(
       },
       {
         primary: false,
-        label: 'Not yet — I'll follow up myself.',
+        label: "Not yet — I'll follow up myself.",
         hint: 'Draft email, call log, timeline',
       },
     ],

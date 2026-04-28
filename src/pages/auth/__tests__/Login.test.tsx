@@ -4,24 +4,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 // ── Mocks ──────────────────────────────────────────────
-const signInMock = vi.fn()
+const { signInWithOtpMock, signInWithOAuthMock } = vi.hoisted(() => ({
+  signInWithOtpMock: vi.fn(),
+  signInWithOAuthMock: vi.fn(),
+}))
 
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
     auth: {
       signInWithPassword: vi.fn(),
       signUp: vi.fn(),
-      signInWithOtp: vi.fn(),
+      signInWithOtp: signInWithOtpMock,
+      signInWithOAuth: signInWithOAuthMock,
       resetPasswordForEmail: vi.fn(),
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
     },
     from: vi.fn(),
   },
   isSupabaseConfigured: true,
-}))
-
-vi.mock('../../../hooks/useAuth', () => ({
-  useAuth: () => ({ signIn: signInMock }),
 }))
 
 // Import AFTER mocks
@@ -31,57 +31,72 @@ function wrap(ui: React.ReactElement) {
   return <MemoryRouter>{ui}</MemoryRouter>
 }
 
-describe('Login', () => {
+describe('Login (magic-link + OAuth)', () => {
   beforeEach(() => {
-    signInMock.mockReset()
-    signInMock.mockResolvedValue({ error: null })
+    signInWithOtpMock.mockReset()
+    signInWithOtpMock.mockResolvedValue({ error: null })
+    signInWithOAuthMock.mockReset()
+    signInWithOAuthMock.mockResolvedValue({ error: null })
   })
 
-  it('renders email and password fields', () => {
+  it('renders the email input and the OAuth provider buttons', () => {
     render(wrap(<Login />))
-    expect(screen.getByLabelText(/email address/i)).toBeDefined()
-    expect(screen.getByLabelText(/^password$/i)).toBeDefined()
+    expect(screen.getByLabelText(/^email$/i)).toBeDefined()
+    expect(screen.getByLabelText(/continue with google/i)).toBeDefined()
+    expect(screen.getByLabelText(/continue with microsoft/i)).toBeDefined()
   })
 
-  it('shows Zod validation errors for empty fields on submit', async () => {
+  it('does not call signInWithOtp on empty submit (Zod blocks it)', async () => {
     render(wrap(<Login />))
-    const form = screen.getByRole('form', { name: /sign in to sitesync/i })
-    // Bypass native HTML5 validation by submitting the form directly
+    const form = screen.getByRole('form', { name: /sign in with email/i })
     fireEvent.submit(form)
     await waitFor(() => {
-      expect(screen.getAllByRole('alert').length).toBeGreaterThan(0)
+      expect(screen.getByRole('alert')).toBeDefined()
     })
-    expect(signInMock).not.toHaveBeenCalled()
+    expect(signInWithOtpMock).not.toHaveBeenCalled()
   })
 
-  it('shows Zod validation error for invalid email', async () => {
+  it('rejects an invalid email format', async () => {
     render(wrap(<Login />))
-    const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement
-    const passwordInput = screen.getByLabelText(/^password$/i) as HTMLInputElement
-    fireEvent.change(emailInput, { target: { value: 'not-an-email' } })
-    fireEvent.change(passwordInput, { target: { value: 'password123' } })
-    const form = screen.getByRole('form', { name: /sign in to sitesync/i })
-    fireEvent.submit(form)
+    const input = screen.getByLabelText(/^email$/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'not-an-email' } })
+    fireEvent.submit(screen.getByRole('form', { name: /sign in with email/i }))
     await waitFor(() => {
-      const alerts = screen.getAllByRole('alert')
-      const hasEmailError = alerts.some((el) =>
-        /valid email/i.test(el.textContent || '')
-      )
-      expect(hasEmailError).toBe(true)
+      const alert = screen.getByRole('alert')
+      expect(/valid email/i.test(alert.textContent || '')).toBe(true)
     })
-    expect(signInMock).not.toHaveBeenCalled()
+    expect(signInWithOtpMock).not.toHaveBeenCalled()
   })
 
-  it('calls auth signIn with valid data on submit', async () => {
+  it('sends a magic link for a valid email', async () => {
     render(wrap(<Login />))
-    const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement
-    const passwordInput = screen.getByLabelText(/^password$/i) as HTMLInputElement
-    fireEvent.change(emailInput, { target: { value: 'user@example.com' } })
-    fireEvent.change(passwordInput, { target: { value: 'secretpw' } })
-    const form = screen.getByRole('form', { name: /sign in to sitesync/i })
-    fireEvent.submit(form)
+    const input = screen.getByLabelText(/^email$/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'user@example.com' } })
+    fireEvent.submit(screen.getByRole('form', { name: /sign in with email/i }))
     await waitFor(() => {
-      expect(signInMock).toHaveBeenCalledWith('user@example.com', 'secretpw')
+      expect(signInWithOtpMock).toHaveBeenCalledWith(expect.objectContaining({
+        email: 'user@example.com',
+      }))
+    })
+  })
+
+  it('starts the Google OAuth flow when the Google button is clicked', async () => {
+    render(wrap(<Login />))
+    fireEvent.click(screen.getByLabelText(/continue with google/i))
+    await waitFor(() => {
+      expect(signInWithOAuthMock).toHaveBeenCalledWith(expect.objectContaining({
+        provider: 'google',
+      }))
+    })
+  })
+
+  it('starts the Microsoft (azure) OAuth flow when the Microsoft button is clicked', async () => {
+    render(wrap(<Login />))
+    fireEvent.click(screen.getByLabelText(/continue with microsoft/i))
+    await waitFor(() => {
+      expect(signInWithOAuthMock).toHaveBeenCalledWith(expect.objectContaining({
+        provider: 'azure',
+      }))
     })
   })
 })
