@@ -17,12 +17,12 @@ test('login page supports password mode toggle', async ({ page }) => {
 
   await expect(page.getByLabel('Password', { exact: true })).toBeVisible()
   await expect(page.getByText(/sign in with your password/i)).toBeVisible()
-  await expect(page.getByText(/use a sign-in link instead/i)).toBeVisible()
+  await expect(page.getByText(/use a sign-in link/i)).toBeVisible()
 
   await page.screenshot({ path: '/tmp/login-password.png', fullPage: false })
 
   // Toggle back
-  await page.getByText('Use a sign-in link instead').click()
+  await page.getByText('Use a sign-in link').click()
   await page.waitForTimeout(200)
   expect(await page.locator('input[type="password"]').count()).toBe(0)
   await expect(page.getByText(/we'll send a sign-in link/i)).toBeVisible()

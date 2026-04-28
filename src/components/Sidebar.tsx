@@ -3,11 +3,11 @@ import {
   Home, Calendar, DollarSign, FileText, BookOpen,
   CheckSquare, Users, Search,
   Shield, Calculator, Package, Truck,
-  Sun, Moon, ClipboardCheck, BarChart3,
+  Sun, Sunrise, MessageCircle, Moon, ClipboardCheck, BarChart3,
   FileDiff, Send, HardHat,
   Receipt, Clock, X, MoreHorizontal,
   ChevronRight, CheckCircle2,
-  FileSignature,
+  FileSignature, Map as MapIcon, Wallet, Layers, FolderOpen, Landmark,
   Pin, PinOff, Box,
   HelpCircle,
   Repeat2, Grid3X3, ChevronDown, Plus, Sparkles,
@@ -52,6 +52,16 @@ interface SidebarProps {
 // Every navigable page in the app. This is the single source of truth.
 
 const ALL_ITEMS: NavItem[] = [
+  // ── The Nine ──
+  { id: 'day', label: 'The Day', icon: Sunrise, description: 'What do I need to do right now?' },
+  { id: 'field', label: 'The Field', icon: Sun, description: 'What happened on site today?' },
+  { id: 'conversation', label: 'The Conversation', icon: MessageCircle, description: 'What is waiting on me?' },
+  { id: 'plan', label: 'The Plan', icon: MapIcon, description: 'Are we on track?' },
+  { id: 'ledger', label: 'The Ledger', icon: Wallet, description: 'Where is the money?' },
+  { id: 'crew', label: 'The Crew', icon: HardHat, description: 'Who is on site?' },
+  { id: 'set', label: 'The Set', icon: Layers, description: 'What does the building look like?' },
+  { id: 'file', label: 'The File', icon: FolderOpen, description: 'Where is that document?' },
+  { id: 'site', label: 'The Site', icon: Landmark, description: 'What is the state of the project?' },
   // ── Core 10 (always in primary nav) ──
   { id: 'dashboard', label: 'Home', icon: Home, description: 'Project overview & KPIs' },
   { id: 'daily-log', label: 'Daily Log', icon: BookOpen, description: 'Daily reports & logs' },
@@ -94,16 +104,18 @@ const ITEM_MAP = new Map(ALL_ITEMS.map((i) => [i.id, i]));
 // got to focus on. It means saying no to the hundred other good ideas."
 
 const CORE_NAV: NavItem[] = [
+  // ── The Nine ──
+  { id: 'day', label: 'The Day', icon: Sunrise },
+  { id: 'field', label: 'The Field', icon: Sun },
+  { id: 'conversation', label: 'The Conversation', icon: MessageCircle },
+  { id: 'plan', label: 'The Plan', icon: MapIcon },
+  { id: 'ledger', label: 'The Ledger', icon: Wallet },
+  { id: 'crew', label: 'The Crew', icon: HardHat },
+  { id: 'set', label: 'The Set', icon: Layers },
+  { id: 'file', label: 'The File', icon: FolderOpen },
+  { id: 'site', label: 'The Site', icon: Landmark },
+  // ── Legacy (accessible via All Tools) ──
   { id: 'dashboard', label: 'Home', icon: Home },
-  { id: 'daily-log', label: 'Daily Log', icon: BookOpen },
-  { id: 'schedule', label: 'Schedule', icon: Calendar },
-  { id: 'budget', label: 'Budget', icon: DollarSign },
-  { id: 'rfis', label: 'RFIs', icon: HelpCircle },
-  { id: 'submittals', label: 'Submittals', icon: Send },
-  { id: 'punch-list', label: 'Punch List', icon: CheckSquare },
-  { id: 'drawings', label: 'Drawings', icon: FileText },
-  { id: 'change-orders', label: 'Change Orders', icon: FileDiff },
-  { id: 'safety', label: 'Safety', icon: Shield },
 ];
 
 const CORE_NAV_IDS = new Set(CORE_NAV.map((i) => i.id));
@@ -169,6 +181,16 @@ const TOOL_CATEGORIES: NavGroup[] = [
 // ── Prefetch map ──────────────────────────────────────────
 
 const PAGE_PREFETCH_MAP: Record<string, () => void> = {
+  // ── The Nine ──
+  day:             () => import('../pages/day/index').catch(() => {}),
+  field:           () => import('../pages/field/index').catch(() => {}),
+  conversation:    () => import('../pages/conversation/index').catch(() => {}),
+  plan:            () => import('../pages/plan/index').catch(() => {}),
+  ledger:          () => import('../pages/ledger/index').catch(() => {}),
+  crew:            () => import('../pages/crew/index').catch(() => {}),
+  set:             () => import('../pages/set/index').catch(() => {}),
+  file:            () => import('../pages/file/index').catch(() => {}),
+  site:            () => import('../pages/site/index').catch(() => {}),
   // ── Core 10 ──
   dashboard:       () => import('../pages/dashboard').catch(() => {}),
   'daily-log':     () => import('../pages/daily-log').catch(() => {}),
