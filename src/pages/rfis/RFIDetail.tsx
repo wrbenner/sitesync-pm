@@ -32,6 +32,8 @@ import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
+import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
@@ -42,7 +44,7 @@ import type { RFI, RFIResponse } from '../../types/database'
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const formatDate = (d: string | null) => {
   if (!d) return null
@@ -279,13 +281,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {(response as RFIResponse & { company?: string }).company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {(response as RFIResponse & { company?: string }).company}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -669,7 +671,13 @@ export function RFIDetail() {
             RFI not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: '14px' }}>
-            {error?.message || 'This RFI may have been deleted or you don\'t have access.'}
+            {/*
+              Hide raw Supabase / PostgREST errors like "Cannot coerce the
+              result to a single JSON object" or "JSON object requested,
+              multiple (or no) rows returned" — pure developer-speak.
+              Always render the friendly explanation in the not-found state.
+            */}
+            This RFI may have been deleted or you don&apos;t have access.
           </p>
           <Btn onClick={() => navigate('/rfis')}>Back to RFIs</Btn>
         </div>
@@ -775,9 +783,37 @@ export function RFIDetail() {
           )}
         </div>
 
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        <div
+          style={{
+            marginBottom: '24px',
+            padding: spacing['4'],
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.lg,
+            border: `1px solid ${colors.borderSubtle}`,
+          }}
+        >
+          <WorkflowTimeline
+            ariaLabel={`RFI ${rfiNumber} workflow status`}
+            currentState={currentStatus === 'void' ? 'closed' : currentStatus}
+            states={[
+              { key: 'draft', label: 'Draft' },
+              { key: 'open', label: 'Open', mobileLabel: 'Open' },
+              { key: 'under_review', label: 'Under Review', mobileLabel: 'Reviewing' },
+              { key: 'answered', label: 'Answered' },
+              { key: 'closed', label: 'Closed' },
+            ]}
+          />
+        </div>
+
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
+        </div>
+
+        {/* ── Audit timeline (the moat) ──────────────────── */}
+        <div style={{ marginBottom: '24px' }}>
+          <EntityHistoryPanel entityType="rfi" entityId={rfi.id} />
         </div>
 
         {/* ── The Question + Thread Card ──────────────────── */}
@@ -801,13 +837,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {(rfi as RFI & { from_company?: string }).from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {(rfi as RFI & { from_company?: string }).from_company}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -826,7 +862,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || (rfi as RFI & { question?: string }).question || rfi.title}
             </div>
 
             {/* Metadata pills */}

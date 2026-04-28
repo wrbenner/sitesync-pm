@@ -1138,7 +1138,7 @@ export const Procurement: React.FC = () => {
                   <div style={{ display: 'flex', gap: spacing['1'], justifyContent: 'flex-end' }}>
                     {req.status === 'open' && (
                       <Btn size="sm" variant="primary" onClick={() => {
-                        setRequisitions(prev => prev.map(r => r.id === req.id ? { ...r, status: 'converted' as ReqStatus, converted_po: `PO-${2045 + Math.floor(Math.random() * 10)}` } : r))
+                        setRequisitions(prev => prev.map(r => r.id === req.id ? { ...r, status: 'converted' as ReqStatus, converted_po: `PO-${String(req.id).slice(0, 8).toUpperCase()}` } : r))
                         toast.success(`${req.id} converted to PO — items pre-filled`)
                       }}>Convert to PO</Btn>
                     )}

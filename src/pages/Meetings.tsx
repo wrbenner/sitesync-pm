@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw, Trash2, Clock, Users, FileText, ChevronDown, ChevronUp, CheckCircle, UserPlus, Video, Link2, Copy, Download, Bell, ArrowRight, Layout } from 'lucide-react';
+import { ProjectGate } from '../components/ProjectGate';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState, Modal, InputField, SectionHeader, Card,
@@ -1289,15 +1290,7 @@ export const Meetings: React.FC = () => {
   }));
 
   if (!projectId) {
-    return (
-      <PageContainer title="Meetings">
-        <EmptyState
-          icon={<Calendar size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view meetings."
-        />
-      </PageContainer>
-    );
+    return <ProjectGate />;
   }
 
   if (isPending) return <MeetingsSkeleton />;

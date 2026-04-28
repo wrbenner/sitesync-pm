@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
+import { ProjectGate } from '../../components/ProjectGate';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
 import { colors, spacing, typography, borderRadius, shadows, transitions, layout } from '../../styles/theme';
 import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
@@ -171,15 +172,7 @@ const SubmittalsPage: React.FC = () => {
   const selected = allSubmittals.find((s) => s.id === selectedId) || null;
 
   if (!projectId) {
-    return (
-      <PageContainer title="Submittals">
-        <EmptyState
-          icon={<ClipboardList size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view and manage submittals."
-        />
-      </PageContainer>
-    );
+    return <ProjectGate />;
   }
 
   if (loading) {

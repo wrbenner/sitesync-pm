@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { FileText, AlertTriangle, Scale } from 'lucide-react'
 import { Card, Skeleton, EmptyState } from '../../components/Primitives'
 import { PermissionGate } from '../../components/auth/PermissionGate'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { usePayAppSOV } from '../../hooks/queries'
 import type { G702Data, G703LineItem } from '../../machines/paymentMachine'
@@ -79,6 +80,27 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
             </button>
           </PermissionGate>
         )}
+      </div>
+
+      {/* Workflow timeline — visual journey of pay-app status */}
+      <div
+        style={{
+          padding: spacing['4'],
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: borderRadius.lg,
+          border: `1px solid ${colors.borderSubtle}`,
+        }}
+      >
+        <WorkflowTimeline
+          ariaLabel={`Pay application ${appNumber} workflow status`}
+          currentState={appStatus || 'draft'}
+          states={[
+            { key: 'draft', label: 'Draft' },
+            { key: 'submitted', label: 'Submitted' },
+            { key: 'approved', label: 'Approved' },
+            { key: 'paid', label: 'Paid' },
+          ]}
+        />
       </div>
 
       {showMissingWarning && (

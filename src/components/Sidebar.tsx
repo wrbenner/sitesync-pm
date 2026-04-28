@@ -84,6 +84,7 @@ const ALL_ITEMS: NavItem[] = [
   { id: 'bim', label: 'BIM', icon: Box, description: '3D model coordination' },
   // ── Intelligence ──
   { id: 'ai', label: 'Iris', icon: Sparkles, description: 'Project intelligence — ask anything' },
+  { id: 'iris/inbox', label: 'Iris Inbox', icon: Sparkles, description: 'AI-drafted actions awaiting your approval' },
 ];
 
 const ITEM_MAP = new Map(ALL_ITEMS.map((i) => [i.id, i]));
@@ -829,8 +830,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   const { canAccessModule, role, loading: permissionsLoading } = usePermissions();
   const authProfile = useAuthStore((s) => s.profile);
   const authUser = useAuthStore((s) => s.user);
-  const displayName = authProfile?.full_name || authUser?.email || '';
-  const displayInitials = (displayName.match(/\b\w/g) || []).slice(0, 2).join('').toUpperCase() || '?';
+  // Identity fallback chain: full_name → derived from email (capitalize the
+  // local-part) → "You". The user identity strip should never read as a
+  // missing value (raw "—" or "?") because it appears on every page.
+  const fullName = authProfile?.full_name?.trim() || ''
+  const email = authUser?.email?.trim() || ''
+  const emailLocal = email.split('@')[0] ?? ''
+  const derivedFromEmail = emailLocal
+    .replace(/[._-]+/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+  const displayName = fullName || derivedFromEmail || 'You'
+  const displayInitials = (displayName.match(/\b\w/g) || []).slice(0, 2).join('').toUpperCase() || displayName.slice(0, 1).toUpperCase() || 'Y'
   const isOverlay = mode === 'overlay';
 
   // ── Mobile detection ──
@@ -1055,15 +1065,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   }
 
   // ── Desktop render ──
+  // Layout pattern: the sidebar lives inside a CSS Grid track sized by
+  // `--sidebar-w` (set on the shell). It uses `position: sticky` so it
+  // stays visible while the main column scrolls, and its width is owned
+  // by the grid track — never by an inline `width` that could desync
+  // from the main column's offset.
   return (
     <>
       <nav
         aria-label="Main navigation"
         style={{
           ...(isOverlay
-            ? { position: 'relative', height: '100%' }
-            : { position: 'fixed', left: 0, top: 0, bottom: 0, zIndex: zIndex.sticky }),
-          width: layout.sidebarWidth,
+            ? { position: 'relative', height: '100%', width: layout.sidebarWidth }
+            : {
+                position: 'sticky',
+                top: 0,
+                alignSelf: 'start',
+                height: '100vh',
+                width: '100%',
+                zIndex: zIndex.sticky,
+              }),
           backgroundColor: colors.surfaceSidebar,
           borderRight: `1px solid ${colors.borderSubtle}`,
           display: 'flex',
@@ -1080,6 +1101,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
           <img
             src={`${import.meta.env.BASE_URL}logos/sitesync-symbol.png`}
             alt=""
+            // If the logo asset 404s in some deployment, hide the broken
+            // image icon entirely — the wordmark beside it carries the
+            // brand on its own.
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
             style={{
               height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0,
             }}
@@ -1308,7 +1333,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
               color: colors.textPrimary, margin: 0,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {displayName || '\u2014'}
+              {displayName}
             </p>
             <p style={{ fontSize: '10px', color: colors.textTertiary, margin: 0, textTransform: 'capitalize' }}>
               {role ? role.replace('_', ' ') : ''}

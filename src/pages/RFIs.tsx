@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ProjectGate } from '../components/ProjectGate';
 import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
@@ -522,15 +523,7 @@ const RFIsPage: React.FC = () => {
   // ─── Early returns ─────────────────────────────────────
 
   if (!projectId) {
-    return (
-      <PageContainer title="RFIs">
-        <EmptyState
-          icon={<FileQuestion size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view and manage RFIs."
-        />
-      </PageContainer>
-    );
+    return <ProjectGate />;
   }
 
   if (rfisLoading) {

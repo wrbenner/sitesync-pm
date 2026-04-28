@@ -40,7 +40,7 @@ function getRoleConfig(role: string) {
 }
 
 function getInitials(first?: string | null, last?: string | null): string {
-  return `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase() || '?';
+  return `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase() || 'U';
 }
 
 /* ─────────────────────── Main Component ─────────────────────── */
@@ -63,7 +63,14 @@ export function UserManagement() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   const loadMembers = async () => {
-    if (!company?.id) return;
+    // Without a company, there's nothing to fetch — but we still need to
+    // exit the loading state so the page renders the empty state instead
+    // of pulsing skeleton cards forever.
+    if (!company?.id) {
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data } = await supabase
       .from('profiles')

@@ -96,12 +96,19 @@ export const dailyLogService = {
   async loadTodayLog(projectId: string): Promise<DailyLogServiceResult<DailyLog>> {
     const today = new Date().toISOString().split('T')[0];
 
+    // Defensively .limit(1) before maybeSingle: at least one production
+    // project has duplicate daily_logs rows for the same (project_id, log_date),
+    // which makes maybeSingle throw "multiple (or no) rows returned" and
+    // strands the user with a red error toast on /daily-log. Order by
+    // created_at desc so we always pick the most recent if a duplicate
+    // exists; a follow-up migration should add a uniqueness constraint.
     const { data: existingLog, error: fetchError } = await supabase
       .from('daily_logs')
       .select('*')
       .eq('project_id', projectId)
       .eq('log_date', today)
       .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (fetchError) return { data: null, error: fetchError.message };

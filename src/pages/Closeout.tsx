@@ -11,6 +11,7 @@ import {
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { ProjectGate } from '../components/ProjectGate'
 import { useCloseoutData, type CloseoutItemRow } from '../hooks/queries/closeout'
 import { usePunchItems } from '../hooks/queries/punch-items'
 import { useWarranties, type WarrantyWithStatus } from '../hooks/queries/warranties'
@@ -76,7 +77,12 @@ export const Closeout: React.FC = () => {
       subtitle="Punch list verification, warranties, O&M manuals, training, and final sign-offs"
     >
       {/* ── Completion bar ───────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: spacing['3'],
+        marginBottom: spacing['4'],
+      }}>
         <MetricBox label="Total items" value={totalItems} />
         <MetricBox label="Approved" value={approvedItems} colorOverride={approvedItems === totalItems && totalItems > 0 ? 'success' : undefined} />
         <MetricBox label="Outstanding" value={totalItems - approvedItems} colorOverride={totalItems - approvedItems > 0 ? 'warning' : 'success'} />
@@ -108,7 +114,20 @@ export const Closeout: React.FC = () => {
       </Card>
 
       {/* ── Tabs ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, margin: `${spacing['4']} 0 ${spacing['4']}` }}>
+      <div
+        role="tablist"
+        aria-label="Closeout sections"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          margin: `${spacing['4']} 0 ${spacing['4']}`,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}
+      >
         {TABS.map(t => {
           const Icon = t.icon
           const active = activeTab === t.key
@@ -121,6 +140,8 @@ export const Closeout: React.FC = () => {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
+              role="tab"
+              aria-selected={active}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['3']}`,
@@ -130,6 +151,8 @@ export const Closeout: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
                 cursor: 'pointer',
+                flex: '0 0 auto',
+                whiteSpace: 'nowrap',
               }}
             >
               <Icon size={14} />
@@ -149,12 +172,12 @@ export const Closeout: React.FC = () => {
         })}
       </div>
 
-      {loading ? (
+      {loading || !projectId ? (
+        // Brief skeleton while the project resolves. The route-level
+        // ProjectGate in App.tsx handles the genuine "no project" case;
+        // rendering it here too caused the welcome-onboarding screen to
+        // flash inside an already-active project.
         <Skeleton width="100%" height="320px" />
-      ) : !projectId ? (
-        <Card padding={spacing['5']}>
-          <EmptyState icon={<Shield size={48} />} title="No project selected" description="Select a project from the sidebar to manage closeout." />
-        </Card>
       ) : (
         <>
           {activeTab === 'punch' && (

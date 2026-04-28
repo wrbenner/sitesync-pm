@@ -304,7 +304,7 @@ export const ScheduleHealthPanel: React.FC<ScheduleHealthPanelProps> = ({
           fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
           color: colors.textPrimary,
         }}>
-          Schedule Health
+          Schedule Logic Quality
         </span>
         <span style={{
           fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.bold,

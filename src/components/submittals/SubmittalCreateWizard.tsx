@@ -46,7 +46,7 @@ interface SubmittalCreateWizardProps {
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const formatFileSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
@@ -524,7 +524,7 @@ const SubmittalCreateWizard: React.FC<SubmittalCreateWizardProps> = ({
 
   const handleAddFiles = useCallback((newFiles: File[]) => {
     const mapped: SubmittalFile[] = newFiles.map(f => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: `${Date.now()}-${crypto.randomUUID()}`,
       file: f, name: f.name, size: f.size, type: f.type,
     }))
     setFiles(prev => [...prev, ...mapped])

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, lazy, Suspense } from 'react'
+import { useIsMobile } from '../hooks/useWindowSize'
 import { useNavigate } from 'react-router-dom'
 import { FileText, Play, Calendar, Download, BarChart3, DollarSign, HardHat, ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles, Loader2 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, TabBar, Skeleton, Tag } from '../components/Primitives'
@@ -69,6 +70,7 @@ const TABS = [
 export const Reports: React.FC = () => {
   const projectId = useProjectId()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const { data: customReports } = useCustomReports(projectId)
   const { data: recentRuns, isLoading: runsLoading } = useReportRuns(projectId)
 
@@ -216,10 +218,15 @@ export const Reports: React.FC = () => {
           background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
           borderRadius: borderRadius.lg,
           padding: spacing['5'],
-          marginBottom: spacing['5'],
+          // Add bottom padding on mobile so the AI sparkle FAB
+          // (fixed bottom-right at zIndex.popover) doesn't crash into
+          // the Open Portal CTA when this card is at the bottom of the
+          // viewport.
+          marginBottom: isMobile ? spacing['8'] : spacing['5'],
           cursor: 'pointer',
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'flex-start' : 'center',
           justifyContent: 'space-between',
           gap: spacing['4'],
         }}

@@ -22,6 +22,7 @@ const indigo = {
 } as const;
 
 import { useProjectContext } from '../stores/projectContextStore';
+import { useIsMobile } from '../hooks/useWindowSize';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -278,13 +279,17 @@ function TypingIndicator() {
 // ── Main Component ────────────────────────────────────────
 
 export default function AIAssistant() {
-  const { currentProject } = useProjectContext();
+  const { activeProject: currentProject } = useProjectContext();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const isMobile = useIsMobile();
+  // Default the conversation rail closed on phones — at 393px wide the
+  // 260px rail leaves Iris with ~130px to render in, which is unusable.
+  // Users can open it from the toolbar button.
+  const [showSidebar, setShowSidebar] = useState(!isMobile);
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   // Agent-tasks side panel.
@@ -483,7 +488,9 @@ export default function AIAssistant() {
     }
   }, [activeConvId]);
 
-  const projectName = currentProject?.name || 'Project';
+  // When no project is loaded, address it generically so the sentence
+  // still scans ("happening on your project") instead of "on Project".
+  const projectName = currentProject?.name ?? 'your project';
 
   return (
     <div style={{ display: 'flex', height: '100%', background: 'white', overflow: 'hidden' }}>

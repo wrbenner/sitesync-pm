@@ -30,13 +30,18 @@ body {
   font-feature-settings: 'cv01' 1, 'cv02' 1, 'ss01' 1;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.011em;
+  /* Tabular figures by default — every dollar amount, count, percentage,
+     and timestamp aligns at the digit. Stripe / Bloomberg craft.
+     Prose-heavy components (Iris responses, RFI body copy) opt out via
+     `font-variant-numeric: normal`. */
+  font-variant-numeric: tabular-nums;
 }
 
-/* Tabular numbers for data, metrics, and timestamps */
-.tabular-nums,
-table, th, td,
-[data-metric] {
-  font-variant-numeric: tabular-nums;
+/* Prose contexts opt out of tabular figures — proportional reads better
+   in body copy where numbers don't need to align column-wise. */
+.prose,
+[data-prose] {
+  font-variant-numeric: normal;
 }
 
 /* Heading resets */
@@ -55,7 +60,7 @@ p {
 
 /* Precise orange ring for keyboard users, animated in */
 *:focus-visible {
-  outline: 2px solid #F47820;
+  outline: 2px solid var(--color-primaryOrange);
   outline-offset: 2px;
   border-radius: 4px;
   transition: outline-offset 120ms ease-out, box-shadow 120ms ease-out;
@@ -198,6 +203,82 @@ button, input, textarea, select {
 
 @media (max-width: 1024px) {
   .responsive-grid-2 { grid-template-columns: 1fr !important; }
+}
+
+/* ── Print Stylesheet ─────────────────────────────────── */
+/* Make printed pay apps, RFIs, and reports look like documents, not
+   screenshots of an app. Hide the chrome (sidebar, FAB, banners),
+   collapse the layout to single-column with proper page margins, and
+   force black-on-white so saved PDFs are legible without re-styling. */
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+
+  /* Hide the app shell — navigation isn't useful on paper */
+  nav[aria-label="Main navigation"],
+  nav[aria-label="Mobile navigation"],
+  [role="banner"],
+  .offline-banner,
+  [data-skeleton="true"],
+  button[aria-label="Show navigation menu"],
+  button[aria-label="Open AI assistant"],
+  [aria-label*="floating"],
+  [aria-label*="Floating"] {
+    display: none !important;
+  }
+
+  /* Reset the grid layout so content fills the page */
+  body, #root, [role="main"] {
+    display: block !important;
+    grid-template-columns: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Prevent giant gradient hero backgrounds from eating ink */
+  *, *::before, *::after {
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Cards/sections shouldn't break in the middle of a row */
+  .sitesync-metric-box,
+  [role="region"],
+  table,
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Hide interactive buttons (no value to print) but keep inputs/selects/
+     textareas visible so their VALUES print as static-looking fields.
+     A pay-app form is unreadable without its numbers. */
+  button:not([data-print="keep"]) {
+    display: none !important;
+  }
+  button[data-print="keep"] {
+    display: inline-flex !important;
+  }
+  input, select, textarea {
+    border: 1px solid #999 !important;
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure table borders print */
+  table, th, td {
+    border-color: #000 !important;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
 }
 
 /* ── React Grid Layout overrides ──────────────────────── */

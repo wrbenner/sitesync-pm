@@ -28,7 +28,7 @@ import type { DirectoryContact } from '../../types/database'
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const isoDate = (d: Date) => d.toISOString().split('T')[0]
 

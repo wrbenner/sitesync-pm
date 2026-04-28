@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive } from 'lucide-react';
 import { Btn, useToast, PageContainer, EmptyState, TabBar } from '../../components/Primitives';
+import { ProjectGate } from '../../components/ProjectGate';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography } from '../../styles/theme';
@@ -304,15 +305,7 @@ const FilesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FilesTabId>('files');
 
   if (!projectId) {
-    return (
-      <PageContainer title="Files">
-        <EmptyState
-          icon={<FilesIcon size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view project files."
-        />
-      </PageContainer>
-    );
+    return <ProjectGate />;
   }
 
   const renderFilesTab = () => {

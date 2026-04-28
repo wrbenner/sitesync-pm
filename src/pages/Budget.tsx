@@ -148,9 +148,17 @@ const AddBudgetLineItemModal: React.FC<AddBudgetLineItemModalProps> = ({ project
 };
 
 const fmt = (n: number): string => {
-  if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
-  return `$${n.toLocaleString()}`;
+  // Place the minus sign before the dollar sign, never between them.
+  // Default `toLocaleString()` produces strings like "$-500" which read
+  // as a typo; "-$500" reads as a real negative. Magnitude-formatted
+  // shorthands ("$1.2M") get the same treatment.
+  const negative = n < 0;
+  const abs = Math.abs(n);
+  let formatted: string;
+  if (abs >= 1000000) formatted = `$${(abs / 1000000).toFixed(1)}M`;
+  else if (abs >= 1000) formatted = `$${(abs / 1000).toFixed(0)}K`;
+  else formatted = `$${abs.toLocaleString()}`;
+  return negative ? `−${formatted}` : formatted;
 };
 
 // ── Enterprise Feature Types ──────────────────────
@@ -996,7 +1004,11 @@ const BudgetPage: React.FC = () => {
   return (
     <PageContainer
       title="Budget"
-      subtitle={`${fmt(spent)} spent of ${fmt(projectData.totalValue)} total`}
+      subtitle={
+        projectData.totalValue > 0
+          ? `${fmt(spent)} spent of ${fmt(projectData.totalValue)} total`
+          : `${fmt(spent)} spent · set a contract value to track utilization`
+      }
       actions={
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
           <PresenceAvatars page="budget" size={28} />

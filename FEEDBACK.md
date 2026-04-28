@@ -1,19 +1,77 @@
 # FEEDBACK.md — SiteSync PM Nightly Build Priorities
 *Walker is calling GCs this week. Every overnight build must make the product more demoable.*
-*Last updated: April 27, 2026 by Chief Product Strategist*
+*Last updated: April 27, 2026 (loop-directive rewrite)*
 *Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
 
 ---
 
-## Status: BUILDER SHIPPED INFRASTRUCTURE — BUT SKIPPED ALL THREE P0 PRIORITIES
+## ⚙️ Loop directive (READ ON EVERY SCHEDULED WAKE-UP)
 
-Six commits landed between April 26-27: Phase 1 pilot-ready trust floor (#208), STRATEGY.md + security trust-center (#209), Procore import (#211), MFA hard-force (#212), shared PageState polish (#213), and ApprovalChain test coverage. Good work — these harden the platform for enterprise. But **none addressed the three P0 priorities**:
+This file is loaded by the hourly autonomous polish agent. Walker's
+explicit instruction:
 
-- **Math.random(): still 28** (unchanged for 3 consecutive nights, 10th night overall)
-- **`as any`: still 41** (unchanged for 3 consecutive nights)
-- **WorkflowTimeline: still 0 references** (unchanged for 3 consecutive nights)
+> Don't just wake up and build new features each time. Use Playwright
+> to do e2e verification of each page and the entire workflows.
 
-The Budget page (Demo Step 5) still shows different trend lines on every page refresh. Walker is calling GCs. A superintendent who refreshes the Budget page and sees the S-curve jump is walking out. The three priorities below are the ONLY things that matter tonight. Do not add new features. Do not polish infrastructure. Fix these three things.
+**Default order of work for every loop iteration:**
+
+1. **Read `VISION.md`, `ROADMAP.md`, this file, `.quality-floor.json`,
+   `POLISH_PUNCH_LIST.md`, recent `git log`.** Understand what landed in
+   the last 1–2 sessions before touching anything.
+
+2. **Run the Playwright sweep.** All 28 `e2e/page-N-*.spec.ts` × iPhone /
+   iPad / desktop. Background it, then triage screenshots.
+   ```
+   POLISH_USER='wrbenner23@yahoo.com' POLISH_PASS='fu2zyWire20!' \
+     npx playwright test --config=playwright.polish.config.ts --project=page-e2e
+   ```
+
+3. **Fix what you find. Verify each fix.** Re-run the affected spec to
+   confirm the screenshot now shows the issue gone. No fix is "done"
+   without a fresh capture.
+
+4. **Verify the floor before committing.** `tsc --noEmit` clean, build
+   clean, `Math.random()` count = 0, `as any` count must NOT exceed
+   `.quality-floor.json` `anyCount`.
+
+5. **One PR per session.** Branch `auto/polish-{YYYYMMDD-HHMM}`. Commit
+   message specific. PR body lists every issue + screenshot evidence.
+
+**Do NOT in any loop iteration:**
+
+- Add new features unless a `ROADMAP.md` milestone is genuinely
+  unblocked AND the polish punch list is empty.
+- Touch `supabase/migrations/`, `.env*`, `docs/legal/`, or dependency
+  versions.
+- Force-push, amend shared commits, or skip pre-commit hooks.
+- Commit `polish-review/`, `playwright-report/`, `test-results/`, or
+  `node_modules/`.
+- Mark a task done without a verifying screenshot.
+
+**If you find nothing actionable** after a thorough triage: commit a
+`polish-audit-clean-{timestamp}.md` log noting what you checked and why
+nothing needed work. Honesty beats make-work.
+
+---
+
+## Status: vision substrate landed (April 27 evening session)
+
+The April 27 deep-work pass shipped the substrate for "Iris that ACTS,
+not chats" — `drafted_actions` migration, type-safe payload union,
+draft/execute services, three executor handlers (RFI / Daily Log /
+Pay App), tool definitions for the LLM loop, the Iris Inbox page at
+`/iris/inbox`, the EntityHistoryPanel (audit-log-as-product), the
+field-super telemetry table + PMF dashboard tile, and the demo-story
+arc seed.
+
+Polish floor at end of session:
+- **Math.random()**: 0 (was 28)
+- **`as any`**: 6 (was 41; verified 6 are legitimate third-party gaps)
+- **WorkflowTimeline references**: 7 (RFI Detail + Pay App Detail wired)
+- **TypeScript errors**: 0
+- **Build**: clean
+
+The three P0 priorities from the previous FEEDBACK.md are all met.
 
 ---
 

@@ -31,6 +31,7 @@ import { useProjectId } from './hooks/useProjectId';
 import { useProjectInit } from './hooks/useProjectInit';
 import { ProjectGate } from './components/ProjectGate';
 import { useAuth } from './hooks/useAuth';
+import { useFieldSession } from './hooks/useFieldSession';
 import { SkipToContent } from './components/ui/SkipToContent';
 import { RouteAnnouncer } from './components/ui/RouteAnnouncer';
 import { LiveRegion } from './components/ui/LiveRegion';
@@ -65,7 +66,11 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 const AIContextPanel = lazy(() => import('./components/ai/AIContextPanel').then((m) => ({ default: m.AIContextPanel })));
 const FloatingAIButton = lazy(() => import('./components/ai/FloatingAIButton').then((m) => ({ default: m.FloatingAIButton })));
 const CopilotPanel = lazy(() => import('./components/ai/CopilotPanel').then((m) => ({ default: m.CopilotPanel })));
-const NotificationCenter = lazy(() => import('./components/notifications/NotificationCenter').then((m) => ({ default: m.NotificationCenter })));
+// NotificationList from this same module is statically imported by
+// MobileLayout, which pulls the whole file into the eager bundle anyway.
+// Keeping NotificationCenter lazy here would just trigger a duplicate
+// chunking warning without saving bytes — import directly instead.
+import { NotificationCenter } from './components/notifications/NotificationCenter';
 const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').then((m) => ({ default: m.ShortcutOverlay })));
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
@@ -106,6 +111,7 @@ const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m
 const BIMViewerPage = lazy(() => import('./pages/bim/BIMViewerPage'));
 // Intelligence
 const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+const IrisInbox = lazy(() => import('./pages/iris/IrisInboxPage'));
 // Utility & Admin
 const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
 const Integrations = lazy(() => import('./pages/Integrations'));
@@ -375,6 +381,7 @@ function AppRoutes() {
 
             {/* ── Intelligence ── */}
             <Route path="/ai" element={<PageSuspense><ProtectedRoute moduleId="ai" moduleName="AI Assistant"><AIAssistant /></ProtectedRoute></PageSuspense>} />
+            <Route path="/iris/inbox" element={<PageSuspense><ProtectedRoute moduleId="ai" moduleName="Iris Inbox"><IrisInbox /></ProtectedRoute></PageSuspense>} />
 
             {/* ── Utility & Admin ── */}
             <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
@@ -438,6 +445,10 @@ function AppContent() {
   usePrefetchRoutes(!!user);
   const { conflictCount } = useOfflineStatus();
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  // PMF telemetry: the metric that decides whether the vision is working.
+  // See VISION.md and useFieldSuperPMF — target is 8+ field sessions/day
+  // per super within 30 days of onboarding.
+  useFieldSession('view');
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
@@ -468,10 +479,13 @@ function AppContent() {
   const prevDesktopCollapsed = useRef(sidebarCollapsed);
 
   useEffect(() => {
+    // Mobile uses MobileLayout entirely — collapse so any flicker through the
+    // desktop tree doesn't widen the layout. iPad keeps the full sidebar
+    // because (a) the Sidebar component renders at a fixed 252px regardless of
+    // the `collapsed` flag, so collapsing only desyncs the main margin and
+    // hides content behind the sidebar, and (b) 1024px viewports comfortably
+    // fit 252px sidebar + 772px content.
     if (isMobile) {
-      prevDesktopCollapsed.current = sidebarCollapsed;
-      setSidebarCollapsed(true);
-    } else if (isTablet) {
       prevDesktopCollapsed.current = sidebarCollapsed;
       setSidebarCollapsed(true);
     } else {
@@ -550,17 +564,22 @@ function AppContent() {
     <SidebarContext.Provider value={{ collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed }}>
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'row',
+          // CSS Grid is the layout's single source of truth: the sidebar
+          // lives in the first track sized by --sidebar-w, the main column
+          // takes the rest. Sidebar width and main offset cannot desync
+          // because they are literally the same grid track.
+          display: 'grid',
+          gridTemplateColumns: `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
           height: '100vh',
           backgroundColor: colorVars.surfacePage,
           fontFamily: typographyConfig.fontFamily,
           touchAction: 'manipulation',
+          transition: 'grid-template-columns 150ms ease-out',
         }}
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+        {!sidebarCollapsed && <Sidebar activeView={activeView} onNavigate={handleNavigate} />}
 
         <main
           id="main-content"
@@ -568,14 +587,57 @@ function AppContent() {
           aria-label="Page content"
           tabIndex={-1}
           style={{
-            flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            marginLeft: isMobile ? 0 : (sidebarCollapsed ? 64 : 252),
+            minWidth: 0,
             overflow: 'auto',
-            transition: 'margin-left 150ms ease-out',
+            position: 'relative',
           }}
         >
+          {/* Floating "show menu" button when sidebar is collapsed.
+              Without this, hiding the sidebar via Cmd+B left the user
+              with no visible affordance to bring it back. */}
+          {sidebarCollapsed && !isMobile && (
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(false)}
+              aria-label="Show navigation menu"
+              title="Show navigation (⌘B)"
+              style={{
+                position: 'fixed',
+                top: 16,
+                left: 16,
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                border: `1px solid var(--color-borderSubtle)`,
+                backgroundColor: 'var(--color-surfaceRaised)',
+                color: 'var(--color-textSecondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 50,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
           {user && <MfaRequiredBanner />}
       <OfflineBanner />
           <ChunkLoadErrorBoundary>
@@ -591,7 +653,7 @@ function AppContent() {
         </main>
 
         <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
-        {notificationsOpen && <Suspense fallback={null}><NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} /></Suspense>}
+        {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
         {shortcutsOpen && <Suspense fallback={null}><ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} /></Suspense>}
         {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
         {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}

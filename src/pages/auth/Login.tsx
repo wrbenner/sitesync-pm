@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
+import { useIsMobile } from '../../hooks/useWindowSize'
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
 import { loginSchema, signupSchema, magicLinkSchema, resetPasswordSchema } from '../../schemas/auth'
 
@@ -43,10 +44,10 @@ function getPasswordStrength(pw: string): { score: number; label: string; color:
 const APPLE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
 
 const FEATURES = [
-  { icon: HardHat, label: 'Project Management', desc: 'RFIs, submittals, and change orders' },
-  { icon: BarChart3, label: 'Real-Time Analytics', desc: 'Budget tracking and schedule insights' },
-  { icon: FileCheck, label: 'Punch Lists', desc: 'Photo-attached, location-tagged items' },
-  { icon: Cloud, label: 'AI-Powered', desc: 'Weather forecasts and risk analysis' },
+  { icon: HardHat, label: 'Daily Log',  desc: 'Capture the field in 90 seconds' },
+  { icon: BarChart3, label: 'Forecasts', desc: 'See cost overruns 6 weeks out' },
+  { icon: FileCheck, label: 'Punch List', desc: 'Pinned to drawings, signed off in one tap' },
+  { icon: Cloud,    label: 'Iris AI',   desc: 'A copilot that reads your project' },
 ]
 
 /* ─────────────────────── Sub-components ─────────────────────── */
@@ -88,7 +89,9 @@ const PremiumInput: React.FC<{
       </label>
       {required && <span aria-hidden="true" style={{
         color: colors.primaryOrange, marginLeft: 2, position: 'relative',
-        top: -spacing['1.5'], fontSize: typography.fontSize.sm,
+        // spacing['1.5'] is the string '6px' — `-spacing['1.5']` would be
+        // NaN. Use a template string so the unary minus produces valid CSS.
+        top: `-${spacing['1.5']}`, fontSize: typography.fontSize.sm,
       }}>*</span>}
       <div style={{ position: 'relative' }}>
         {icon && (
@@ -192,6 +195,7 @@ export const Login: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { signIn } = useAuth()
+  const isMobile = useIsMobile()
 
   // Tab state
   const [tab, setTab] = useState<'signin' | 'signup' | 'magic'>('signin')
@@ -229,6 +233,18 @@ export const Login: React.FC = () => {
   const [signupPasswordError, setSignupPasswordError] = useState<string | null>(null)
   const [signupConfirmError, setSignupConfirmError] = useState<string | null>(null)
   const [showSignupPassword, setShowSignupPassword] = useState(false)
+
+  // Close the Reset Password modal on Esc — the existing implementation
+  // only closed via backdrop click + Cancel button, leaving keyboard
+  // users without a fast exit. (Discovered during Page-1 e2e walk.)
+  useEffect(() => {
+    if (!showReset) return
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setShowReset(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showReset])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -380,7 +396,8 @@ export const Login: React.FC = () => {
         @keyframes float-glow { 0%, 100% { opacity: 0.4; transform: translateY(0); } 50% { opacity: 0.7; transform: translateY(-8px); } }
       `}</style>
 
-      {/* ─── Left Panel — Brand Showcase ─── */}
+      {/* ─── Left Panel — Brand Showcase (desktop/tablet only) ─── */}
+      {!isMobile && (
       <div style={{
         flex: 1,
         display: 'flex',
@@ -446,7 +463,7 @@ export const Login: React.FC = () => {
             lineHeight: typography.lineHeight.relaxed,
             maxWidth: 360,
           }}>
-            Construction management powered by real-time data and AI insights.
+            Construction PM that thinks. RFIs, daily logs, drawings, and a copilot that reads your project — all in one app.
           </p>
 
           {/* Feature cards */}
@@ -488,18 +505,23 @@ export const Login: React.FC = () => {
           </div>
         </motion.div>
       </div>
+      )}
 
       {/* ─── Right Panel — Auth Forms ─── */}
       <div style={{
-        width: 520,
-        minWidth: 420,
+        width: isMobile ? '100%' : 520,
+        minWidth: isMobile ? 0 : 420,
+        flex: isMobile ? 1 : 'none',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: `${spacing['10']} ${spacing['12']}`,
+        padding: isMobile
+          ? `${spacing['8']} ${spacing['5']}`
+          : `${spacing['10']} ${spacing['12']}`,
         backgroundColor: colors.surfacePage,
         overflowY: 'auto',
+        minHeight: '100vh',
       }}>
         <div style={{ width: '100%', maxWidth: 380 }}>
           {/* Header */}
@@ -595,7 +617,14 @@ export const Login: React.FC = () => {
                     type="email"
                     label="Email address"
                     value={email}
-                    onChange={(v) => { setEmail(v); if (emailError) setEmailError(null) }}
+                    onChange={(v) => {
+                      setEmail(v)
+                      if (emailError) setEmailError(null)
+                      // Clear the bad-credentials error as soon as the
+                      // user starts editing — Stripe-style "errors don't
+                      // persist past the action that caused them".
+                      if (error) setError(null)
+                    }}
                     placeholder="you@company.com"
                     icon={<Mail size={16} />}
                     required
@@ -610,7 +639,10 @@ export const Login: React.FC = () => {
                     type={showPassword ? 'text' : 'password'}
                     label="Password"
                     value={password}
-                    onChange={setPassword}
+                    onChange={(v) => {
+                      setPassword(v)
+                      if (error) setError(null)
+                    }}
                     placeholder="Enter your password"
                     icon={<Lock size={16} />}
                     required

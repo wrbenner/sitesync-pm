@@ -101,9 +101,16 @@ const UtilizationRing: React.FC<{ pct: number; size?: number; stroke?: number }>
 
 // ── Format helpers ──
 const fmtCurrency = (n: number): string => {
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`
-  return `$${n.toLocaleString()}`
+  // Render negatives as "−$1.2M" not "$-1.2M". The minus belongs outside
+  // the dollar sign, and a Unicode minus (U+2212) reads cleaner than a
+  // hyphen at body-text sizes.
+  const negative = n < 0
+  const abs = Math.abs(n)
+  let formatted: string
+  if (abs >= 1_000_000) formatted = `$${(abs / 1_000_000).toFixed(1)}M`
+  else if (abs >= 1_000) formatted = `$${(abs / 1_000).toFixed(0)}K`
+  else formatted = `$${abs.toLocaleString()}`
+  return negative ? `−${formatted}` : formatted
 }
 const fmtPct = (n: number): string => `${Math.round(n)}%`
 
@@ -128,15 +135,17 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
   const utilizationPct = totalBudget > 0 ? ((spent + committed) / totalBudget) * 100 : 0
   const spentPct = totalBudget > 0 ? (spent / totalBudget) * 100 : 0
 
-  // Synthetic trend data (in a real app, these would come from historical snapshots)
+  // Linear trend from base → current value. Until historical snapshots
+  // exist we render a smooth deterministic ramp instead of fabricating
+  // variance, so the sparkline never changes between page reloads.
   const spentTrend = useMemo(() => {
     const base = spent * 0.6
-    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (spent - base) * (i / 6) + Math.random() * spent * 0.02)
+    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (spent - base) * (i / 6))
   }, [spent])
 
   const committedTrend = useMemo(() => {
     const base = committed * 0.5
-    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (committed - base) * (i / 6) + Math.random() * committed * 0.01)
+    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (committed - base) * (i / 6))
   }, [committed])
 
   const spentDelta = previousBilledToDate > 0
@@ -270,12 +279,14 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
                 {card.sparkData ? (
                   <MiniSparkline data={card.sparkData} color={card.color} />
                 ) : i === 0 ? (
+                  // Don't render math nonsense like "100% utilized" when
+                  // the project has no budget set yet — guide instead.
                   <span style={{ fontSize: 11, color: colors.textTertiary }}>
-                    {fmtPct(spentPct)} utilized
+                    {totalBudget > 0 ? `${fmtPct(spentPct)} utilized` : 'Set a contract value'}
                   </span>
                 ) : i === 3 ? (
                   <span style={{ fontSize: 11, color: remaining >= 0 ? '#16A34A' : '#DC2626', fontWeight: 500 }}>
-                    {remaining >= 0 ? 'Under budget' : 'Over budget'}
+                    {totalBudget <= 0 ? '—' : remaining >= 0 ? 'Under budget' : 'Over budget'}
                   </span>
                 ) : (
                   <span />

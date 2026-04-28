@@ -38,11 +38,13 @@ const PROJECT_TYPE_LABELS: Record<string, string> = {
   infrastructure: 'Infrastructure',
 };
 
+// Project lifecycle status colors — use semantic tokens so dark mode and
+// future theme changes flow through automatically.
 const STATUS_COLORS: Record<string, string> = {
-  active: '#10B981',
-  planning: '#6366F1',
-  completed: '#6B7280',
-  on_hold: '#F59E0B',
+  active:    colors.statusActive,
+  planning:  colors.indigo,
+  completed: colors.textTertiary,
+  on_hold:   colors.statusPending,
 };
 
 /* ── Main Component ─────────────────────────────────────── */
@@ -233,7 +235,7 @@ export const ProjectGate: React.FC = () => {
                   useProjectContext.setState((s) => ({
                     projects: s.projects.some((p) => p.id === project.id)
                       ? s.projects
-                      : [...s.projects, project as any],
+                      : [...s.projects, project as unknown as typeof s.projects[number]],
                   }));
                   setActiveProject(project.id);
                 }}
