@@ -360,17 +360,11 @@ interface NarrativeInput {
 }
 
 export async function generateNarrative(input: NarrativeInput): Promise<string> {
-  try {
-    const { data, error } = await supabase.functions.invoke('generate-narrative', {
-      body: input,
-    })
-    if (!error && data?.narrative) {
-      return data.narrative as string
-    }
-  } catch {
-    // Fall back to template-based narrative
-  }
-
+  // The `generate-narrative` edge function was scoped but never built —
+  // the frontend was invoking it speculatively, taking a CORS error on
+  // every call, and silently falling back to the template path. Skip
+  // the dead call until the function exists. When it ships, restore
+  // the try/catch + supabase.functions.invoke('generate-narrative') here.
   return buildTemplateNarrative(input)
 }
 
