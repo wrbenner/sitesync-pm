@@ -82,9 +82,9 @@ const ArrowRightIcon: React.FC<{ size: number; color: string }> = ({ size, color
     viewBox="0 0 24 24"
     fill="none"
     stroke={color}
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
+    strokeWidth={2.25}
+    strokeLinecap="square"
+    strokeLinejoin="miter"
     style={{ display: 'block' }}
   >
     <path d="M5 12h14" />
@@ -192,6 +192,14 @@ export const Login: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const [isPressed, setIsPressed] = useState(false)
+
+  // Validity is parsed live so the circle "wakes up" the moment the
+  // user finishes typing a credible address. Empty input keeps the
+  // circle dimmed, which makes the affordance read as "not ready yet"
+  // without forcing a separate disabled visual.
+  const isValid = magicLinkSchema.safeParse({ email }).success
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -410,19 +418,37 @@ export const Login: React.FC = () => {
             }}
           />
 
-          {/* Underline = the level line at field-bottom */}
+          {/* Underline = the level line at field-bottom.
+              On button hover we let the line trail 4px past its anchor —
+              a tiny "the arrow leads you out" cue. Pure CSS transition,
+              no layout thrash. */}
           <div style={{
             position: 'absolute',
-            left: 0, right: 0, bottom: 0,
+            left: 0,
+            right: isHovering && !submitting ? -4 : 0,
+            bottom: 0,
             height: 1,
             background: SS_FG1,
+            transition: 'right 160ms cubic-bezier(0.32, 0.72, 0, 1)',
           }} />
 
-          {/* Circle button — center sits ON the line */}
+          {/* Circle button — center sits ON the line.
+              Three feedback layers compose the "alive" feel:
+              1. Opacity: 0.45 idle → 1.0 once email parses valid (the
+                 circle "wakes up" the instant you finish typing).
+              2. Hover: 5px slide right with a fast ease — feels like
+                 the arrow physically leans toward its destination.
+              3. Press: scale 0.96 — tactile click moment. */}
           <button
             type="submit"
             aria-label="Continue"
             disabled={submitting}
+            onMouseEnter={() => !submitting && setIsHovering(true)}
+            onMouseLeave={() => { setIsHovering(false); setIsPressed(false) }}
+            onMouseDown={() => !submitting && setIsPressed(true)}
+            onMouseUp={() => setIsPressed(false)}
+            onTouchStart={() => !submitting && setIsPressed(true)}
+            onTouchEnd={() => setIsPressed(false)}
             style={{
               position: 'absolute',
               right: 0,
@@ -437,15 +463,14 @@ export const Login: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: submitting ? 'wait' : 'pointer',
-              transition: 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)',
+              transform: isPressed
+                ? 'scale(0.96)'
+                : isHovering && !submitting
+                  ? 'translateX(5px)'
+                  : 'translateX(0)',
+              transition: 'transform 80ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease',
               zIndex: 2,
-              opacity: submitting ? 0.7 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!submitting) e.currentTarget.style.transform = 'translateX(3px)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateX(0)'
+              opacity: submitting ? 0.7 : isValid ? 1 : 0.45,
             }}
           >
             {submitting ? (
