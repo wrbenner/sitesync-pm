@@ -81,18 +81,16 @@ const CUSTOM_PROPS = ['_annotationType', '_annotationColor', '_annotationId'] as
 // ── Helpers ──────────────────────────────────────────────
 
 function uid(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${crypto.randomUUID()}`
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 function getMeta(obj: FabricObject, key: string): unknown {
-  return (obj as any)[key]
+  return (obj as Record<string, unknown>)[key]
 }
 
 function setMeta(obj: FabricObject, key: string, value: unknown) {
-  ;(obj as any)[key] = value
+  ;(obj as Record<string, unknown>)[key] = value
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function getAnnotationType(obj: FabricObject): AnnotationData['type'] {
   const custom = getMeta(obj, '_annotationType') as AnnotationData['type'] | undefined

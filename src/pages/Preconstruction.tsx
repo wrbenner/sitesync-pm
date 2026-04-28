@@ -1125,14 +1125,14 @@ function PackagesView({
           {detailTab === 'overview' && (
             <div>
               {/* AI Analysis */}
-              {aiAnalysis && (aiAnalysis as any).insights && (
+              {aiAnalysis && (aiAnalysis as Record<string, unknown>).insights && (
                 <div style={{ marginBottom: spacing['4'] }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
                     <Sparkles size={16} style={{ color: colors.indigo }} />
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.indigo }}>AI Analysis</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                    {((aiAnalysis as any).insights as { type: string; text: string }[]).map((insight, i) => (
+                    {((aiAnalysis as Record<string, unknown>).insights as { type: string; text: string }[]).map((insight, i) => (
                       <div key={i} style={{
                         display: 'flex', gap: spacing['2'], padding: spacing['3'],
                         borderRadius: borderRadius.base, fontSize: typography.fontSize.sm,
@@ -1166,7 +1166,7 @@ function PackagesView({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
                     <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                       {selectedSubmissions.length} submission{selectedSubmissions.length !== 1 ? 's' : ''} · Low: {fmt(selectedSubmissions[0]?.bid_amount || 0)}
-                      {aiAnalysis && ` · Avg: ${fmt((aiAnalysis as any).avg || 0)}`}
+                      {aiAnalysis && ` · Avg: ${fmt(Number((aiAnalysis as Record<string, unknown>).avg) || 0)}`}
                     </div>
                     <Btn variant="secondary" icon={<Plus size={14} />} onClick={onAddBid}>Add Bid</Btn>
                   </div>

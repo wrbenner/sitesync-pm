@@ -1,4 +1,8 @@
 import React, { useState } from 'react'
+import type { TableRow } from '../types/database'
+
+type WorkforceMember = TableRow<'workforce_members'>
+type TimeEntryRow = TableRow<'time_entries'> & { worker_name?: string }
 import { Users, Clock, Calendar, Plus, Trash2, ShieldCheck, TrendingUp, BarChart3, Truck, AlertTriangle, Send, CheckCircle2 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, Btn } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
@@ -320,16 +324,19 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const memberList = (members ?? []) as WorkforceMember[]
+  const entryList = (timeEntries ?? []) as TimeEntryRow[]
+
+  const activeToday = memberList.filter((m) => m.status === 'active').length
+  const totalRegularHrs = entryList.reduce((s, e) => s + (Number(e.regular_hours) || 0), 0)
+  const totalOTHrs = entryList.reduce((s, e) => s + (Number(e.overtime_hours) || 0), 0)
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  memberList.forEach((m) => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +347,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as WorkforceMember
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +370,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as TimeEntryRow
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
