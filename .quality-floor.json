@@ -3,7 +3,7 @@
   "_version": 3,
   "_updated": "2026-04-28T00:00:00Z",
   "_updatedBy": "auto/polish-20260428-1013",
-  "_floor_realignment_note": "Floors realigned in v3 to reflect the codebase state after sprint-zero-consolidation (PR #206). Previous floors were aspirational targets that pre-dated the v2 feature wave; ratchets had been failing on every commit on main. New floors capture today's reality so future regressions actually fail. Targets in _targets remain the goal. v3.1: all 28 production Math.random() calls eliminated; mockCount reduced from 31 to 3 (IntelligenceGraph physics algorithm — intentional exception).",
+  "_floor_realignment_note": "Floors realigned in v3 to reflect the codebase state after sprint-zero-consolidation (PR #206). Previous floors were aspirational targets that pre-dated the v2 feature wave; ratchets had been failing on every commit on main. New floors capture today's reality so future regressions actually fail. Targets in _targets remain the goal. v3.1: all 28 production Math.random() calls eliminated; mockCount reduced from 31 to 3 (IntelligenceGraph physics algorithm — intentional exception). v3.2: as-any casts reduced from 41 to 4 — 90% elimination; remaining 4 are justified library workarounds (Leaflet, OpenSeadragon, Supabase dynamic table, lien-waiver payload mismatch).",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -14,7 +14,7 @@
   },
   "tsErrors": 0,
   "eslintErrors": 480,
-  "anyCount": 41,
+  "anyCount": 4,
   "mockCount": 3,
   "a11yViolations": 0,
   "eslintWarnings": 968,
