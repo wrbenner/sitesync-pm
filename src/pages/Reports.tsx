@@ -76,7 +76,7 @@ export const Reports: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<TabId>('standard')
   const [exportOpen, setExportOpen] = useState(false)
-  const [, setSelectedType] = useState<string | null>(null)
+  const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const [downloadingRunId, setDownloadingRunId] = useState<string | null>(null)
 
   // Metrics
@@ -428,7 +428,13 @@ export const Reports: React.FC = () => {
 
       {/* Export Center Modal */}
       <Suspense fallback={null}>
-        {exportOpen && <ExportCenter open={exportOpen} onClose={() => { setExportOpen(false); setSelectedType(null); }} />}
+        {exportOpen && (
+          <ExportCenter
+            open={exportOpen}
+            initialReport={selectedType ?? undefined}
+            onClose={() => { setExportOpen(false); setSelectedType(null); }}
+          />
+        )}
       </Suspense>
     </PageContainer>
   )

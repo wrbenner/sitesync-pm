@@ -50,13 +50,30 @@ type Step = 'select' | 'configure' | 'generate';
 interface ExportCenterProps {
   open: boolean;
   onClose: () => void;
+  /**
+   * Pre-select a report when opening from a "Generate" CTA on the
+   * Reports page. Without this, the modal always opens on Executive
+   * Summary and the user has to re-pick — making the Generate button
+   * feel broken for any other report type.
+   */
+  initialReport?: ReportType;
 }
 
 // ── Component ────────────────────────────────────────────
 
-export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose }) => {
-  const [step, setStep] = useState<Step>('select');
-  const [selectedReport, setSelectedReport] = useState<ReportType>('executive_summary');
+export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose, initialReport }) => {
+  const [step, setStep] = useState<Step>(initialReport ? 'configure' : 'select');
+  const [selectedReport, setSelectedReport] = useState<ReportType>(initialReport ?? 'executive_summary');
+
+  // Re-sync if the modal is opened with a different initialReport
+  // after having been closed. Without this, a second "Generate Daily
+  // Log" click after closing on "RFI Log" would still show RFI Log.
+  React.useEffect(() => {
+    if (open && initialReport) {
+      setSelectedReport(initialReport);
+      setStep('configure');
+    }
+  }, [open, initialReport]);
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
