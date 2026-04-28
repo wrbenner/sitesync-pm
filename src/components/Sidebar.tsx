@@ -356,10 +356,14 @@ const ProjectSwitcher: React.FC = () => {
                   onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = isActive ? colors.overlayBlackLight : 'transparent'; }}
                 >
                   <div style={{
-                    width: 16, height: 16, borderRadius: borderRadius.sm, flexShrink: 0,
-                    backgroundColor: isActive ? colors.primaryOrange : colors.textTertiary,
+                    width: 18, height: 18, borderRadius: borderRadius.sm, flexShrink: 0,
+                    background: isActive
+                      ? `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`
+                      : colors.surfaceFlat,
+                    border: isActive ? 'none' : `1px solid ${colors.borderDefault}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '8px', fontWeight: typography.fontWeight.bold, color: colors.white,
+                    fontSize: '9px', fontWeight: typography.fontWeight.bold,
+                    color: isActive ? colors.white : colors.textSecondary,
                   }}>
                     {p.name[0].toUpperCase()}
                   </div>

@@ -1814,7 +1814,24 @@ export const Meetings: React.FC = () => {
               </div>
             );
           })}
-          <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
+          {/* Sticky action footer — keeps Cancel / Create from Template
+              visible without forcing the user to scroll past the
+              template list, which on iPhone clipped both buttons below
+              the modal fold. */}
+          <div style={{
+            position: 'sticky',
+            bottom: 0,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: spacing.sm,
+            justifyContent: 'flex-end',
+            marginTop: spacing.sm,
+            paddingTop: spacing.sm,
+            paddingBottom: spacing.xs,
+            backgroundColor: colors.surfaceRaised,
+            borderTop: `1px solid ${colors.borderSubtle}`,
+            zIndex: 1,
+          }}>
             <Btn variant="secondary" onClick={() => { setShowTemplates(false); setSelectedTemplate(null); }}>Cancel</Btn>
             <Btn
               variant="primary"
