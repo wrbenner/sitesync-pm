@@ -271,18 +271,19 @@ function generateDefaultCurve(totalBudget: number): number[] {
 }
 
 function generateActualFromSpent(spent: number, planned: number[]): number[] {
-  // Find where actual spend falls on the planned curve
+  // No actuals yet — render only the planned line. The empty array is a
+  // contract with the chart caller: zero data points means "actuals will
+  // appear as costs are recorded" rather than a synthetic random curve.
   const spentM = spent / 1_000_000;
   if (spentM <= 0 || planned.length === 0) return [];
 
+  // Linear ramp from 0 → spentM, mapped onto the planned timeline so the
+  // actual line tracks the real spend total without fabricating variance.
   const result: number[] = [];
   for (let i = 0; i < planned.length; i++) {
     if (planned[i] <= spentM) {
-      // Apply slight variance from planned (realistic)
-      const variance = 0.95 + Math.random() * 0.1;
-      result.push(Math.round(planned[i] * variance * 100) / 100);
+      result.push(Math.round(planned[i] * 100) / 100);
     } else if (result.length > 0) {
-      // One more point at current spend level
       result.push(Math.round(spentM * 100) / 100);
       break;
     }

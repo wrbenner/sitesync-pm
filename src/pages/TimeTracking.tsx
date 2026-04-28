@@ -420,7 +420,7 @@ const TimeTracking: React.FC = () => {
       }
     >
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'] }}>
+      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {([
           { key: 'timesheet', label: 'Timesheet', icon: Clock },
           { key: 'payroll', label: 'Certified Payroll', icon: FileText },
@@ -438,6 +438,7 @@ const TimeTracking: React.FC = () => {
               color: activeTab === tab.key ? colors.brand : colors.textSecondary,
               background: activeTab === tab.key ? colors.surfaceInset : 'transparent',
               border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+              whiteSpace: 'nowrap', flexShrink: 0,
             }}
           >
             <tab.icon size={14} /> {tab.label}

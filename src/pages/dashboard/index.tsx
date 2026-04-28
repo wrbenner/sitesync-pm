@@ -22,6 +22,7 @@ import {
 import { useProjectMetrics } from '../../hooks/useProjectMetrics';
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useIsMobile } from '../../hooks/useWindowSize';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import type { AIInsight } from '../../types/ai';
 import { useProjectContext } from '../../stores/projectContextStore';
@@ -51,7 +52,7 @@ function getGreeting(hour: number): string {
   return 'Good evening';
 }
 
-function getFirstName(user: { user_metadata?: { full_name?: string }; email?: string } | null): string {
+function getFirstName(user: { user_metadata?: { full_name?: string }; email?: string } | null): string | null {
   const fullName = user?.user_metadata?.full_name;
   if (fullName) return fullName.split(' ')[0];
   // Don't show raw email prefixes like "wrbenner23" — they look unprofessional.
@@ -61,7 +62,7 @@ function getFirstName(user: { user_metadata?: { full_name?: string }; email?: st
     const prefix = email.split('@')[0];
     if (/^[a-zA-Z]{3,}$/.test(prefix)) return prefix.charAt(0).toUpperCase() + prefix.slice(1);
   }
-  return 'there';
+  return null;
 }
 
 function relativeTime(dateStr: string): string {
@@ -193,6 +194,7 @@ const DashboardInner: React.FC = () => {
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const { user } = useAuth();
 
   const { data: project, isError: projectError, error: projectErrorObj } = useProject(projectId);
@@ -386,7 +388,7 @@ const DashboardInner: React.FC = () => {
               letterSpacing: '0.3px',
               fontWeight: typography.fontWeight.medium,
             }}>
-              {greeting}, {firstName}
+              {firstName ? `${greeting}, ${firstName}` : greeting}
             </p>
             <p style={{
               margin: 0,
@@ -453,7 +455,7 @@ const DashboardInner: React.FC = () => {
             LABEL → BIG NUMBER → context line
             The ring sits at the end as a visual anchor.
         ═══════════════════════════════════════════════════════════ */}
-        <motion.div {...m(0.05)} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['8'] }}>
+        <motion.div {...m(0.05)} style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['8'] }}>
           <MetricTile
             label="Schedule"
             value={scheduleHealth.days === 0 ? '0' : `${scheduleHealth.positive ? '+' : '–'}${scheduleHealth.days}`}

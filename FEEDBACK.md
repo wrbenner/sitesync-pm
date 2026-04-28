@@ -1,23 +1,83 @@
 # FEEDBACK.md — SiteSync PM Nightly Build Priorities
 *Walker is calling GCs this week. Every overnight build must make the product more demoable.*
-*Last updated: April 26, 2026 by Chief Product Strategist*
+*Last updated: April 27, 2026 (loop-directive rewrite)*
 *Standard: A Fortune 500 GC's CTO opens this and thinks "this is better than the $80K/year Procore we use."*
 
 ---
 
-## Status: BUILDER DID NOT RUN — Two Consecutive Nights With Zero Commits
+## ⚙️ Loop directive (READ ON EVERY SCHEDULED WAKE-UP)
 
-Zero builder commits between April 25 and April 26. The last automated work was the massive 35+ commit wave on April 24-25. Since then, nothing. Math.random() is still at **28**. `as any` is still at **41**. WorkflowTimeline still has **0 references** in the codebase. The quality-floor.json shows `mockCount: 31` and `anyCount: 41` — the ratchet is not enforcing.
+This file is loaded by the hourly autonomous polish agent. Walker's
+explicit instruction:
 
-Walker is calling GCs. The Budget page (Demo Step 5) still shows different trend lines on every page refresh because of `Math.random()` in SCurve.tsx, BudgetKPIs.tsx, and ScheduleKPIs.tsx. This is the most visible, most embarrassing bug in the product. Every night it persists is a night wasted.
+> Don't just wake up and build new features each time. Use Playwright
+> to do e2e verification of each page and the entire workflows.
 
-The priorities below are carried forward for the NINTH consecutive night for Mock Data and the SECOND consecutive night for WorkflowTimeline and `as any`. They are unchanged because they remain the correct priorities — nothing else matters until a GC can refresh the Budget page without seeing numbers dance.
+**Default order of work for every loop iteration:**
+
+1. **Read `VISION.md`, `ROADMAP.md`, this file, `.quality-floor.json`,
+   `POLISH_PUNCH_LIST.md`, recent `git log`.** Understand what landed in
+   the last 1–2 sessions before touching anything.
+
+2. **Run the Playwright sweep.** All 28 `e2e/page-N-*.spec.ts` × iPhone /
+   iPad / desktop. Background it, then triage screenshots.
+   ```
+   POLISH_USER='wrbenner23@yahoo.com' POLISH_PASS='fu2zyWire20!' \
+     npx playwright test --config=playwright.polish.config.ts --project=page-e2e
+   ```
+
+3. **Fix what you find. Verify each fix.** Re-run the affected spec to
+   confirm the screenshot now shows the issue gone. No fix is "done"
+   without a fresh capture.
+
+4. **Verify the floor before committing.** `tsc --noEmit` clean, build
+   clean, `Math.random()` count = 0, `as any` count must NOT exceed
+   `.quality-floor.json` `anyCount`.
+
+5. **One PR per session.** Branch `auto/polish-{YYYYMMDD-HHMM}`. Commit
+   message specific. PR body lists every issue + screenshot evidence.
+
+**Do NOT in any loop iteration:**
+
+- Add new features unless a `ROADMAP.md` milestone is genuinely
+  unblocked AND the polish punch list is empty.
+- Touch `supabase/migrations/`, `.env*`, `docs/legal/`, or dependency
+  versions.
+- Force-push, amend shared commits, or skip pre-commit hooks.
+- Commit `polish-review/`, `playwright-report/`, `test-results/`, or
+  `node_modules/`.
+- Mark a task done without a verifying screenshot.
+
+**If you find nothing actionable** after a thorough triage: commit a
+`polish-audit-clean-{timestamp}.md` log noting what you checked and why
+nothing needed work. Honesty beats make-work.
 
 ---
 
-## Tonight's P0 Priorities (April 26 -> April 27 2am CDT)
+## Status: vision substrate landed (April 27 evening session)
 
-### 1. MOCK DATA ELIMINATION — KILL ALL 28 Math.random() CALLS (NIGHT NINE — UNCHANGED, STILL CRITICAL)
+The April 27 deep-work pass shipped the substrate for "Iris that ACTS,
+not chats" — `drafted_actions` migration, type-safe payload union,
+draft/execute services, three executor handlers (RFI / Daily Log /
+Pay App), tool definitions for the LLM loop, the Iris Inbox page at
+`/iris/inbox`, the EntityHistoryPanel (audit-log-as-product), the
+field-super telemetry table + PMF dashboard tile, and the demo-story
+arc seed.
+
+Polish floor at end of session:
+- **Math.random()**: 0 (was 28)
+- **`as any`**: 6 (was 41; verified 6 are legitimate third-party gaps)
+- **WorkflowTimeline references**: 7 (RFI Detail + Pay App Detail wired)
+- **TypeScript errors**: 0
+- **Build**: clean
+
+The three P0 priorities from the previous FEEDBACK.md are all met.
+
+---
+
+## Tonight's P0 Priorities (April 27 -> April 28 2am CDT)
+
+### 1. MOCK DATA ELIMINATION — KILL ALL 28 Math.random() CALLS (NIGHT TEN — UNCHANGED, STILL CRITICAL)
 **SPEC ref:** P0-1 (Mock Data Elimination — 0% complete, blocks every investor demo and GC call)
 **Files to change (28 occurrences — identical to last night, zero progress):**
 **DEMO KILLERS (fix first — these are visible in the 6-step demo flow, 9 occurrences across 5 files):**
@@ -56,7 +116,7 @@ The priorities below are carried forward for the NINTH consecutive night for Moc
 **Done looks like:** `grep -rn "Math\.random" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v IntelligenceGraph | wc -l` returns 0. Budget S-Curve shows only planned line when no actuals exist. BudgetKPIs and ScheduleKPIs show real data or clean empty states — no random noise. PO numbers are deterministic. `.quality-floor.json` `mockCount` = 1.
 **WHY:** This is night NINE. The count has been 16 -> 26 -> 28 -> 28 (stalled). The 9 demo-killing fakes are the real emergency: SCurve.tsx:282 generates a random variance multiplier that makes the budget burn chart show different values on every page load. BudgetKPIs.tsx adds random noise to trend lines. ScheduleKPIs.tsx fabricates forecast data from thin air. A GC CTO who refreshes the page and sees numbers change will walk out of the demo. The 19 ID-generation fixes are a mechanical find-and-replace — literally `sed -i 's/Math.random().toString(36)/crypto.randomUUID()/g'` with minor cleanup. Total effort: under 2 hours for all 28 fixes. Do it first. Do it completely. Verify with the grep command. Then move on.
 
-### 2. WORKFLOWTIMELINE COMPONENT + RFI DETAIL WIRING — THE COMPOUNDING PLAY (CARRIED FORWARD)
+### 2. WORKFLOWTIMELINE COMPONENT + RFI DETAIL WIRING — THE COMPOUNDING PLAY (NIGHT THREE — CARRIED FORWARD)
 **SPEC ref:** P0-6 (State Machine Handler Completion — 0% complete) + P1-2 (RFIs — 35% complete)
 **Files to change:** `src/components/WorkflowTimeline.tsx` (CREATE — still absent, 0 references in codebase), `src/pages/rfis/index.tsx` or wherever the RFI detail view lives, `src/machines/rfiMachine.ts`
 **What to do:**
@@ -81,7 +141,7 @@ The priorities below are carried forward for the NINTH consecutive night for Moc
 **Done looks like:** Open any RFI detail page. See the horizontal WorkflowTimeline showing current status visually. Action buttons match available transitions only. `grep -rn "WorkflowTimeline" src/ | wc -l` returns >= 3. Component renders cleanly at 768px (iPad) and 375px (iPhone).
 **WHY:** This is the demo differentiator. Procore shows RFI status as a text dropdown in a crowded toolbar. SiteSync shows a visual journey — a superintendent glances at the screen and knows exactly where the RFI is in its lifecycle. The WorkflowTimeline component is reused across RFIs, Submittals, Change Orders, Pay Apps, and Punch Items. One component, five workflows. That's the compounding play that makes every subsequent feature cheaper to build. Every night this doesn't exist is five pages without their signature UI. Build it tonight.
 
-### 3. `as any` CLEANUP — DROP FROM 41 TO UNDER 10 (CARRIED FORWARD)
+### 3. `as any` CLEANUP — DROP FROM 41 TO UNDER 10 (NIGHT THREE — CARRIED FORWARD)
 **SPEC ref:** P0 Quality Gates (Zero `as any` — currently 41 violations), DECISIONS.md ADR-001 (TypeScript strict mode, no `any` casts in production code)
 **Files to change:** Run `grep -rn "as any" src/ --include="*.ts" --include="*.tsx" | grep -v test | grep -v spec | grep -v node_modules` and fix each one.
 **What to do:**
@@ -100,6 +160,13 @@ The priorities below are carried forward for the NINTH consecutive night for Moc
 ---
 
 ## Completed Archive
+
+### April 26-27: BUILDER SHIPPED INFRASTRUCTURE — P0 PRIORITIES UNTOUCHED
+- **Status:** 6 commits landed. All infrastructure/hardening. Zero P0 priority progress.
+- **What shipped:** Phase 1 pilot-ready trust floor + demo project + idle timeout (#208), STRATEGY.md vision + /security trust-center page (#209), one-shot Procore→SiteSync project import (#211), MFA hard-force tier with 7-day grace (#212), shared PageState + loading/empty/error consistency (#213), +11 ApprovalChain component-render tests
+- **Priorities carried forward:** All 3 priorities (Math.random elimination, WorkflowTimeline, `as any` cleanup) unchanged.
+- **Metrics unchanged:** Math.random: 28. `as any`: 41. WorkflowTimeline references: 0.
+- **Impact:** The platform is now more enterprise-hardened (MFA, trust center, Procore import). But the demo-killing bug — random numbers on every Budget page refresh — persists for the 10th consecutive night.
 
 ### April 25-26: BUILDER DID NOT RUN — Zero Commits
 - **Status:** No builder activity. Zero automated commits between April 25 and April 26.

@@ -7,6 +7,7 @@ import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs, useInspectionChecklists, useChecklistTemplates, useChecklistItems } from '../hooks/queries'
 import { useCreateIncident, useCreateSafetyInspection, useCreateCorrectiveAction, useUpdateCorrectiveAction, useCreateChecklist, useCreateChecklistFromTemplate, useUpdateChecklistItem, useDeleteChecklist } from '../hooks/mutations'
 import { toast } from 'sonner'
@@ -719,6 +720,7 @@ export const Safety: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('incidents')
   const [nowMs] = useState(() => Date.now())
   const projectId = useProjectId()
+  const isNarrow = useMediaQuery('(max-width: 640px)')
 
   const { data: inspections, isLoading: loadingInspections, isError: errorInspections } = useSafetyInspections(projectId)
   const { data: incidents, isLoading: loadingIncidents, isError: errorIncidents, refetch: refetchIncidents } = useIncidents(projectId)
@@ -1209,28 +1211,39 @@ export const Safety: React.FC = () => {
       )}
 
       {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing.lg,
-        overflowX: 'auto',
-      }}>
+      <div
+        role="tablist"
+        aria-label="Safety sections"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          marginBottom: spacing.lg,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          minWidth: 0,
+        }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
+                padding: isNarrow ? `${spacing['2']} ${spacing['3']}` : `${spacing['2']} ${spacing['4']}`,
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
@@ -1241,10 +1254,12 @@ export const Safety: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                flex: '0 0 auto',
+                minWidth: 'max-content',
               }}
             >
               {React.createElement(Icon, { size: 14 })}
-              {tab.label}
+              <span>{tab.label}</span>
             </button>
           )
         })}

@@ -3,6 +3,7 @@ import { X, Search, CheckCircle, AlertTriangle, Info, XCircle, ChevronRight, Lay
 import type { RelatedItem, EntityType } from '../utils/connections';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex, layout } from '../styles/theme';
 import { motion as motionTokens, easing, duration } from '../styles/animations';
+import { useIsMobile } from '../hooks/useWindowSize';
 
 // ─── Sidebar Context ────────────────────────────────────────────────────────
 // Shared context so PageContainer and TopBar can respond to sidebar state
@@ -31,6 +32,7 @@ interface PageContainerProps {
 }
 
 export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, actions, children, 'aria-label': ariaLabel }) => {
+  const isMobile = useIsMobile()
   return (
     <div
       role="region"
@@ -53,8 +55,10 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
           <div
             style={{
               display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
               justifyContent: 'space-between',
-              alignItems: 'flex-start',
+              alignItems: isMobile ? 'stretch' : 'flex-start',
+              gap: isMobile ? spacing.md : 0,
               marginBottom: spacing['2xl'],
             }}
           >
@@ -86,7 +90,26 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
                 </p>
               )}
             </div>
-            {actions && <div style={{ display: 'flex', gap: spacing.md, alignItems: 'center' }}>{actions}</div>}
+            {actions && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: spacing.md,
+                  alignItems: 'center',
+                  flexWrap: isMobile ? 'wrap' : 'nowrap',
+                  flexShrink: 0,
+                  // On mobile, let the row scroll horizontally if it
+                  // overflows so action labels stay legible instead of
+                  // squashing the title.
+                  overflowX: isMobile ? 'auto' : 'visible',
+                  overflowY: 'visible',
+                  paddingBottom: isMobile ? spacing['1'] : 0,
+                  WebkitOverflowScrolling: 'touch',
+                }}
+              >
+                {actions}
+              </div>
+            )}
           </div>
         )}
         {children}
@@ -251,12 +274,17 @@ export const Btn: React.FC<BtnProps> = ({
         fontSize: s.fontSize,
         fontWeight: typography.fontWeight.medium,
         fontFamily: typography.fontFamily,
-        backgroundColor: v.bg,
-        color: v.color,
+        // Disabled primary buttons used to render as a faded peach (orange
+        // at 50% opacity) which read as "broken CTA" in audit screenshots.
+        // A disabled button must look intentionally inert: neutral surface,
+        // muted text, no orange. Loading is not the same as disabled — keep
+        // the original color while the spinner is shown.
+        backgroundColor: disabled && !loading ? colors.surfaceDisabled : v.bg,
+        color: disabled && !loading ? colors.textDisabled : v.color,
         border: v.border,
         borderRadius: borderRadius.md,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled && !loading ? 1 : 1,
         transition: `all ${duration.instant}ms ${easing.standard}, transform ${duration.fast}ms ${easing.spring}`,
         transform: 'scale(1)',
         alignItems: 'center',
@@ -846,7 +874,21 @@ interface TabBarProps {
 }
 
 export const TabBar: React.FC<TabBarProps> = React.memo(({ tabs, activeTab, onChange }) => (
-  <div role="tablist" style={{ display: 'flex', gap: spacing.xl, position: 'relative' }}>
+  <div
+    role="tablist"
+    style={{
+      display: 'flex',
+      gap: spacing.xl,
+      position: 'relative',
+      // On phones the labels of 4–5 tabs ("Certified Payroll", "T&M Tickets",
+      // "Pay Application") overflow and overlap. Allow horizontal scroll
+      // so each label keeps its room; whitespace prevents wrapping.
+      overflowX: 'auto',
+      overflowY: 'visible',
+      WebkitOverflowScrolling: 'touch',
+      scrollbarWidth: 'none',
+    }}
+  >
     {tabs.map((tab) => {
       const isActive = tab.id === activeTab;
       return (
@@ -871,6 +913,8 @@ export const TabBar: React.FC<TabBarProps> = React.memo(({ tabs, activeTab, onCh
             display: 'flex',
             alignItems: 'center',
             gap: spacing.sm,
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = colors.textSecondary;
@@ -1747,6 +1791,7 @@ export const Skeleton: React.FC<SkeletonProps> = React.memo(({ width = '100%', h
   return (
     <div
       aria-hidden="true"
+      data-skeleton="true"
       style={{
         width,
         height: resolvedHeight,
@@ -1768,29 +1813,49 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   secondaryActionLabel,
   onSecondaryAction,
 }) => (
+  // Tier-2 empty-state pattern, matched against the bespoke RFI/Submittal/
+  // Meeting versions: a 72×72 surfaceInset tile with a muted icon, title at
+  // 18px/600, description at 14px/regular, generous vertical breathing room.
+  // Pages that previously rendered a custom empty block can switch to this
+  // primitive without losing visual polish.
   <div
+    role="status"
     style={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      maxWidth: '420px',
+      maxWidth: '440px',
       margin: '0 auto',
-      padding: '48px',
+      padding: '64px 24px',
+      gap: '12px',
       textAlign: 'center',
     }}
   >
-    <div style={{ color: colors.textTertiary, width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div
+      aria-hidden
+      style={{
+        width: 72,
+        height: 72,
+        borderRadius: '20px',
+        backgroundColor: colors.surfaceInset,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: colors.textTertiary,
+        marginBottom: '4px',
+      }}
+    >
       {icon}
     </div>
-    <div style={{ marginTop: '16px', fontSize: '18px', fontWeight: 600, color: colors.textPrimary, lineHeight: 1.3 }}>
+    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: colors.textPrimary, lineHeight: 1.3 }}>
       {title}
-    </div>
-    <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: 400, color: colors.textSecondary, lineHeight: 1.6 }}>
+    </h3>
+    <p style={{ margin: 0, fontSize: '14px', fontWeight: 400, color: colors.textSecondary, lineHeight: 1.6 }}>
       {description}
-    </div>
+    </p>
     {(actionLabel || secondaryActionLabel) && (
-      <div style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <div style={{ marginTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
         {actionLabel && onAction && (
           <Btn variant="primary" onClick={onAction}>{actionLabel}</Btn>
         )}

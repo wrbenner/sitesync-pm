@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Activity } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import type { ProjectMetrics } from '../../types/api';
 
 // ────────────────────────────────────────────────────────────────
@@ -86,6 +87,7 @@ function scoreColor(score: number): string {
 }
 
 export const DashboardProjectHealth: React.FC<Props> = ({ metrics, onClick }) => {
+  const isNarrow = useMediaQuery('(max-width: 640px)');
   const subs = useMemo(() => computeSubScores(metrics), [metrics]);
   const unified = useMemo(() => {
     if (subs.length === 0) return 0;
@@ -109,8 +111,9 @@ export const DashboardProjectHealth: React.FC<Props> = ({ metrics, onClick }) =>
         textAlign: 'left',
         fontFamily: typography.fontFamily,
         display: 'flex',
-        alignItems: 'stretch',
-        gap: spacing['6'],
+        flexDirection: isNarrow ? 'column' : 'row',
+        alignItems: isNarrow ? 'stretch' : 'stretch',
+        gap: isNarrow ? spacing['4'] : spacing['6'],
         transition: 'transform 0.2s ease, border-color 0.15s ease',
       }}
       onMouseEnter={onClick ? (e) => { e.currentTarget.style.borderColor = 'var(--color-borderDefault)'; } : undefined}
@@ -142,7 +145,13 @@ export const DashboardProjectHealth: React.FC<Props> = ({ metrics, onClick }) =>
       </div>
 
       {/* Right: breakdown bars */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], alignItems: 'center' }}>
+      <div style={{
+        flex: 1,
+        display: 'grid',
+        gridTemplateColumns: isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: spacing['4'],
+        alignItems: 'center',
+      }}>
         {subs.map((sub) => {
           const c = scoreColor(sub.value);
           return (

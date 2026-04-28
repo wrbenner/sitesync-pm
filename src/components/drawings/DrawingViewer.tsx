@@ -842,7 +842,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
                     fontSize: '8px', fontWeight: 700, color: colors.white,
                     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
                   }}>
-                    {other.presence.initials || '?'}
+                    {other.presence.initials || (other.presence.name?.[0]?.toUpperCase() ?? 'U')}
                   </div>
                   {/* Name label */}
                   <div style={{

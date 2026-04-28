@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { Upload, ScanSearch, FolderOpen } from 'lucide-react';
+import { Upload, ScanSearch, FolderOpen, MessageSquare } from 'lucide-react';
 import { PageContainer, Btn, useToast } from '../../components/Primitives';
 import { colors, spacing } from '../../styles/theme';
 import { getDrawings, getDrawingRevisionHistory } from '../../api/endpoints/documents';
@@ -805,7 +805,7 @@ const DrawingsPage: React.FC = () => {
       setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" (${sizeMB} MB)...`);
       const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
         ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const path = `${projectId}/specifications/${storageKey}-${file.name}`;
       let fileUrl = path;
       try {
@@ -934,7 +934,7 @@ const DrawingsPage: React.FC = () => {
         // across concurrent uploads from different users/tabs.
         const pageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
           ? globalThis.crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
         const pageImagePath = `${projectId}/drawings/pages/${pageKey}-p${page.pageNumber}.png`;
         const thumbPath = `${projectId}/drawings/thumbs/${pageKey}-p${page.pageNumber}-thumb.png`;
         let pageImageStoragePath: string | null = null;
@@ -1046,7 +1046,7 @@ const DrawingsPage: React.FC = () => {
             );
             const cropKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
               ? globalThis.crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+              : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
             const cropPath = `${projectId}/drawings/crops/${cropKey}-strip-p${page.pageNumber}.png`;
             const cropFile = new window.File([cropBlob], `strip-${cropKey}.png`, { type: 'image/png' });
             const cropUploadResult = await smartUpload('project-files', cropPath, cropFile, () => {});
@@ -1105,7 +1105,7 @@ const DrawingsPage: React.FC = () => {
       const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
       const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
         ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const storagePath = `${projectId}/drawings/${storageKey}-${file.name}`;
       let fileUrl = storagePath;
       let publicUrl: string | null = null;
@@ -1553,7 +1553,7 @@ const DrawingsPage: React.FC = () => {
           <Btn variant="ghost" size="md" icon={<FolderOpen size={16} />} onClick={() => setShowSetsPanel(true)}>
             Sets
           </Btn>
-          <Btn variant="ghost" size="md" onClick={() => setShowAnnotationPanel(true)}>
+          <Btn variant="ghost" size="md" icon={<MessageSquare size={16} />} onClick={() => setShowAnnotationPanel(true)}>
             Annotations
           </Btn>
           <PermissionGate permission="drawings.upload">

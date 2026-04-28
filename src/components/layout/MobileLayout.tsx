@@ -290,7 +290,11 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         onTouchEnd={handleTouchEnd}
         style={{
           flex: 1, overflow: 'auto',
-          paddingBottom: `${TAB_BAR_HEIGHT + 16}px`,
+          // Reserve enough space at the bottom for the tab bar, the safe-area
+          // inset, and the floating AI button (64px tall, anchored at
+          // bottom + 80px). Without this padding the last card on a page
+          // gets clipped by the FAB on iPhone.
+          paddingBottom: `calc(${TAB_BAR_HEIGHT + 80 + 16}px + env(safe-area-inset-bottom, 0px))`,
           WebkitOverflowScrolling: 'touch',
         }}
       >

@@ -32,6 +32,8 @@ export function useFullTextSearch(
       const tsQuery = query.trim().split(/\s+/).join(' & ')
       const results: SearchResult[] = []
 
+      type DocRow = { id: string; name?: string; title?: string; description?: string | null; discipline?: string | null; project_id: string; created_at: string }
+
       if (searchTypes.includes('document')) {
         const { data } = await from('documents')
           .select('id, name, description, project_id, created_at')
@@ -40,11 +42,11 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DocRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name ?? '',
+              description: d.description ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -61,11 +63,11 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DocRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name ?? '',
+              description: d.description ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -82,11 +84,11 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DocRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
-              title: d.title,
-              description: d.discipline,
+              title: d.title ?? '',
+              description: d.discipline ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -103,10 +105,10 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DocRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
-              title: d.title,
+              title: d.title ?? '',
               description: null,
               project_id: d.project_id,
               relevance: 1,

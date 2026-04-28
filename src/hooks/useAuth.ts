@@ -99,6 +99,12 @@ async function initAuth() {
         setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
         recordActivity() // reset idle clock on fresh sign-in / refresh
       }
+      // Invalidate React Query so any queries that ran before the JWT was
+      // attached (e.g. useProjects mounted by the Dashboard at the moment
+      // signIn returned) refetch with the now-authenticated client.
+      // Without this, fresh sign-ins land on an empty Welcome state until
+      // the user hard-refreshes — the bug Walker reported on 2026-04-27.
+      queryClient.invalidateQueries()
     } else if (_event === 'SIGNED_OUT') {
       setState({ session: null, user: null, error: null })
       queryClient.clear()

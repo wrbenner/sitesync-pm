@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 const THEME_STORAGE_KEY = 'sitesync-theme-mode';
+const SIDEBAR_STORAGE_KEY = 'sitesync-sidebar-collapsed';
 
 function readStoredTheme(): 'light' | 'dark' | 'system' {
   try {
@@ -8,6 +9,13 @@ function readStoredTheme(): 'light' | 'dark' | 'system' {
     if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
   } catch { /* SSR or storage unavailable */ }
   return 'light';
+}
+
+function readStoredSidebarCollapsed(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
+  } catch { /* storage unavailable */ }
+  return false;
 }
 
 export interface Toast {
@@ -49,7 +57,7 @@ let alertTimer: ReturnType<typeof setTimeout> | null = null;
 const toastTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export const useUiStore = create<UiState>((set) => ({
-  sidebarCollapsed: false,
+  sidebarCollapsed: readStoredSidebarCollapsed(),
   activeView: 'dashboard',
   commandPaletteOpen: false,
   searchQuery: '',
@@ -58,8 +66,15 @@ export const useUiStore = create<UiState>((set) => ({
   a11yAlertMessage: '',
   toasts: [],
 
-  setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
-  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  setSidebarCollapsed: (v) => {
+    try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(v)); } catch { /* noop */ }
+    set({ sidebarCollapsed: v });
+  },
+  toggleSidebar: () => set((s) => {
+    const next = !s.sidebarCollapsed;
+    try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next)); } catch { /* noop */ }
+    return { sidebarCollapsed: next };
+  }),
   setActiveView: (view) => set({ activeView: view }),
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setSearchQuery: (q) => set({ searchQuery: q }),

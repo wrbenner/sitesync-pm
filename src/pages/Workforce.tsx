@@ -319,17 +319,23 @@ export const Workforce: React.FC = () => {
   const createTimeEntry = useCreateTimeEntry()
   const approveEntry = useApproveTimeEntry()
 
-  const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  type MemberRow = { id: string; status?: string; trade?: string; name?: string }
+  type TimeEntryRow = { id: string; regular_hours?: number; overtime_hours?: number; approved?: boolean }
+
+  const memberRows = (members ?? []) as MemberRow[]
+  const timeRows = (timeEntries ?? []) as TimeEntryRow[]
+
+  const totalWorkers = memberRows.length
+  const activeToday = memberRows.filter((m) => m.status === 'active').length
+  const totalRegularHrs = timeRows.reduce((s, e) => s + (e.regular_hours || 0), 0)
+  const totalOTHrs = timeRows.reduce((s, e) => s + (e.overtime_hours || 0), 0)
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  memberRows.forEach((m) => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +346,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as MemberRow
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +369,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as TimeEntryRow
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
@@ -439,6 +445,7 @@ export const Workforce: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {React.createElement(tab.icon, { size: 14 })}

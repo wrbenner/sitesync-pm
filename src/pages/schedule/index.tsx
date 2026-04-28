@@ -39,15 +39,29 @@ const HealthPill: React.FC<{
   critical: number;
   onExpand: () => void;
 }> = ({ score, grade, critical, onExpand }) => {
+  // Tone bands. Imported P6/Procore schedules typically score < 20 because
+  // their CPM logic carries open ends and missing predecessors out of the
+  // box. Reading that as "Critical · F" alarmed users on otherwise on-time
+  // projects, so the bottom band is now treated as "needs cleanup" amber
+  // rather than "everything is on fire" red. Real critical-rail red is
+  // reserved for cases where a previously-good schedule has regressed.
   const tone = (() => {
     if (score >= 85) return { bg: '#E9F2EC', fg: '#1F4A34', rail: '#65A57D', label: 'Healthy' };
-    if (score >= 65) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Watch'   };
-    return                { bg: '#FAE1E1', fg: '#7A1F1F', rail: '#C23232', label: 'Critical' };
+    if (score >= 60) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Watch' };
+    if (score >= 20) return { bg: '#FCF2DE', fg: '#7A5C12', rail: '#D39B1A', label: 'Needs cleanup' };
+    return                  { bg: '#F2F4F7', fg: '#3F4754', rail: '#9AA4B2', label: 'Not analyzed' };
   })();
+
+  // Don't lead with the grade letter when there are no real findings
+  // (a fresh import with score 0 should not display "F"). Show the
+  // numeric score; the grade is supplementary.
+  const showGrade = critical > 0 || score >= 20;
+
   return (
     <button
       type="button"
       onClick={onExpand}
+      aria-label={`Schedule logic quality: ${score} of 100, ${tone.label}. Click for details.`}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
         padding: `${spacing['2']} ${spacing['3']}`, marginBottom: spacing['3'],
@@ -59,7 +73,7 @@ const HealthPill: React.FC<{
       }}
     >
       <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-        Health {score}/100 · {grade}
+        Logic quality {score}/100{showGrade ? ` · ${grade}` : ''}
       </span>
       <span style={{ opacity: 0.6, fontWeight: typography.fontWeight.normal }}>·</span>
       <span>{tone.label}</span>
@@ -490,7 +504,13 @@ const SchedulePage: React.FC = () => {
   return (
     <PageContainer
       title="Schedule"
-      subtitle={`${metrics.daysBeforeSchedule} days ahead · ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`}
+      subtitle={(() => {
+        const d = metrics.daysBeforeSchedule
+        const variance = d > 0 ? `${d} day${d === 1 ? '' : 's'} ahead`
+                       : d < 0 ? `${-d} day${d === -1 ? '' : 's'} behind`
+                       : 'On schedule'
+        return `${variance} · ${metrics.milestonesHit}/${metrics.milestoneTotal} milestones`
+      })()}
       actions={
         <ScheduleHeaderActions
           onImport={() => setShowImportModal(true)}

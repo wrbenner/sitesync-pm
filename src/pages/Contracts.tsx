@@ -2148,7 +2148,8 @@ export const Contracts: React.FC = () => {
       }}>
         <div style={{
           display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.lg, padding: spacing['1'], overflowX: 'auto',
+          borderRadius: borderRadius.lg, padding: spacing['1'],
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
         }}>
           {topTabs.map((tab) => {
             const isActive = topTab === tab.key
@@ -2166,6 +2167,7 @@ export const Contracts: React.FC = () => {
                   color: isActive ? colors.orangeText : colors.textSecondary,
                   backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                   transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 {React.createElement(tab.icon, { size: 14 })}
@@ -2213,7 +2215,8 @@ export const Contracts: React.FC = () => {
       <>
       <div style={{
         display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
+        borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'],
+        overflowX: 'auto', WebkitOverflowScrolling: 'touch',
       }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
@@ -2230,6 +2233,7 @@ export const Contracts: React.FC = () => {
                 color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {React.createElement(tab.icon, { size: 14 })}

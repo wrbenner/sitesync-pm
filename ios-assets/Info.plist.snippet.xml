@@ -1,0 +1,60 @@
+<!--
+  Info.plist additions for SiteSync PM iOS shell.
+
+  After running `npx cap add ios`, paste these <key>/<string> pairs
+  into ios/App/App/Info.plist before the closing </dict>. Capacitor's
+  generated Info.plist already has UIRequiredDeviceCapabilities,
+  UISupportedInterfaceOrientations, etc. — only add the items below.
+
+  Apple rejects apps that use a permission-protected API without a
+  matching Usage Description string. Each string must be specific and
+  describe the user-facing benefit, not the technical mechanism.
+  ("To take photos for your daily log" — yes. "Required by camera API" — no.)
+-->
+
+<!-- @capacitor/camera : photo capture for daily logs, punch lists, RFIs -->
+<key>NSCameraUsageDescription</key>
+<string>SiteSync uses your camera to capture jobsite photos for daily logs, punch list items, and RFIs.</string>
+
+<!-- @capacitor/camera : reading existing photos when user picks from library -->
+<key>NSPhotoLibraryUsageDescription</key>
+<string>SiteSync lets you attach existing photos from your library to project records.</string>
+
+<!-- @capacitor/camera : saving captured photos back to the library -->
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>SiteSync can save jobsite photos you take in the app to your photo library.</string>
+
+<!-- @capacitor/geolocation : tagging field captures with GPS for site verification -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>SiteSync tags jobsite photos and daily logs with your location so the office can verify which site an entry came from.</string>
+
+<!-- Voice memos on field captures (if enabled in v1; remove if not) -->
+<key>NSMicrophoneUsageDescription</key>
+<string>SiteSync records short voice notes you can attach to daily logs and field captures.</string>
+
+<!--
+  ATS exception: Capacitor's WKWebView talks to https://*.supabase.co,
+  https://*.sentry.io, https://*.posthog.com, https://*.liveblocks.io,
+  and https://api.openweathermap.org. All are HTTPS with valid certs,
+  so no NSAppTransportSecurity exception is required. DO NOT add
+  NSAllowsArbitraryLoads — Apple will reject for "broader than needed."
+-->
+
+<!--
+  Push notifications: handled by capability + entitlement, not Info.plist.
+  In Xcode: Signing & Capabilities → + Capability → Push Notifications.
+-->
+
+<!--
+  Background modes (if push wakes the app to fetch data):
+  In Xcode: Signing & Capabilities → + Capability → Background Modes →
+  check "Remote notifications". This adds UIBackgroundModes to Info.plist.
+-->
+
+<!--
+  Encryption export compliance — set this to avoid the question
+  on every TestFlight build. SiteSync uses only standard HTTPS/TLS
+  via the OS, which is exempt under U.S. EAR §740.17(b)(1).
+-->
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>

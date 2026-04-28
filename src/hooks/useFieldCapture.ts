@@ -223,7 +223,7 @@ export function useFieldCapture(): UseFieldCapture {
   const startCamera = useCallback(async () => {
     if (streamRef.current) return;
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Camera API not supported on this device');
+      setCameraError('This device or browser does not support camera capture. Use the Upload button to attach a photo from your library instead.');
       return;
     }
     setStarting(true);
@@ -240,8 +240,25 @@ export function useFieldCapture(): UseFieldCapture {
         await videoRef.current.play().catch(() => { /* autoplay can fail; <video> still shows frames */ });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Camera unavailable';
-      setCameraError(msg);
+      // Translate the raw DOMException name into actionable user copy.
+      // The browser default ("Permission denied") leaves users staring at
+      // a black box without knowing how to recover.
+      const name = (err as { name?: string })?.name ?? '';
+      let friendly: string;
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        friendly = 'Camera access was blocked. Open your browser site settings and allow camera, then tap "Try again".';
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        friendly = 'No camera was found on this device. Try a different device or upload a photo from your library.';
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        friendly = 'The camera is in use by another app. Close other apps using the camera and try again.';
+      } else if (name === 'OverconstrainedError') {
+        friendly = 'The requested camera resolution is not available. Try again — we will pick a fallback resolution.';
+      } else if (name === 'SecurityError') {
+        friendly = 'The camera can only run on a secure connection (HTTPS). Open SiteSync from its secure URL.';
+      } else {
+        friendly = err instanceof Error ? err.message : 'Camera unavailable';
+      }
+      setCameraError(friendly);
     } finally {
       setStarting(false);
     }
