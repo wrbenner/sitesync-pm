@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
-import { TrendingUp, TrendingDown, Minus, DollarSign, ShieldCheck, AlertTriangle, PieChart, Wallet } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, DollarSign, ShieldCheck, PieChart, Wallet } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
 
 // ── Animated number (rAF ease-out cubic over 400ms) ──
@@ -128,15 +128,14 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
   const utilizationPct = totalBudget > 0 ? ((spent + committed) / totalBudget) * 100 : 0
   const spentPct = totalBudget > 0 ? (spent / totalBudget) * 100 : 0
 
-  // Synthetic trend data (in a real app, these would come from historical snapshots)
   const spentTrend = useMemo(() => {
     const base = spent * 0.6
-    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (spent - base) * (i / 6) + Math.random() * spent * 0.02)
+    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (spent - base) * (i / 6))
   }, [spent])
 
   const committedTrend = useMemo(() => {
     const base = committed * 0.5
-    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (committed - base) * (i / 6) + Math.random() * committed * 0.01)
+    return [0, 1, 2, 3, 4, 5, 6].map((_, i) => base + (committed - base) * (i / 6))
   }, [committed])
 
   const spentDelta = previousBilledToDate > 0

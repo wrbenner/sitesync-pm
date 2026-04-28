@@ -796,12 +796,11 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
           <MarkupToolbar
             activeTool={activeTool}
             onToolChange={(t) => {
-              console.log('[PdfViewer] tool change →', t);
               setActiveTool(t);
             }}
             onUndo={handleUndo}
             canUndo={annotations.length > 0}
-            onCreateRFI={() => { console.log('[PdfViewer] Create RFI clicked'); handleCreateRFI(); }}
+            onCreateRFI={handleCreateRFI}
           />
         </div>
       )}
