@@ -4,7 +4,7 @@ interface AuditEntry {
   projectId: string
   entityType: string
   entityId: string
-  action: 'create' | 'update' | 'delete' | 'status_change' | 'approve' | 'reject' | 'submit' | 'close'
+  action: 'create' | 'update' | 'delete' | 'status_change' | 'approve' | 'reject' | 'submit' | 'submit_with_override' | 'close'
   beforeState?: Record<string, unknown>
   afterState?: Record<string, unknown>
   metadata?: Record<string, unknown>
