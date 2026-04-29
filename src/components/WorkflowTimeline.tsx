@@ -18,7 +18,7 @@ export function WorkflowTimeline({ states, currentState, completedStates, onTran
   const total = states.length
 
   return (
-    <nav
+    <div
       role="progressbar"
       aria-valuenow={currentIndex}
       aria-valuemin={0}
@@ -40,7 +40,6 @@ export function WorkflowTimeline({ states, currentState, completedStates, onTran
         {states.map((state, index) => {
           const isCompleted = completedStates.includes(state)
           const isCurrent = state === currentState
-          const isUpcoming = !isCompleted && !isCurrent
           const isLast = index === total - 1
 
           const nextState = states[index + 1]
@@ -174,7 +173,7 @@ export function WorkflowTimeline({ states, currentState, completedStates, onTran
           50% { transform: scale(1.35); opacity: 0.15; }
         }
       `}</style>
-    </nav>
+    </div>
   )
 }
 
