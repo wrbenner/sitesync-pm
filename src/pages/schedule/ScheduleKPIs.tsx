@@ -89,6 +89,7 @@ function AnimatedValue({ value, suffix = '', prefix = '' }: { value: number; suf
 
 function MiniSparkline({ value, color, max = 100 }: { value: number; color: string; max?: number }) {
   // Generate a plausible micro-trend from the current value
+  const valueKey = Math.round(value / 5);
   const points = React.useMemo(() => {
     const baseline = Math.max(0, value - 15);
     const pts = [
@@ -100,7 +101,7 @@ function MiniSparkline({ value, color, max = 100 }: { value: number; color: stri
     ].map(v => Math.min(max, Math.max(0, v)));
     return pts;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Math.round(value / 5), max]);
+  }, [valueKey, max]);
 
   const w = 48;
   const h = 20;

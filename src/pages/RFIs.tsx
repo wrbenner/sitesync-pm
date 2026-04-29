@@ -399,6 +399,7 @@ const RFIsPage: React.FC = () => {
         if (rfi.status === 'closed') {
           days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
         } else {
+          // eslint-disable-next-line react-hooks/purity
           days = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.textTertiary;
@@ -910,6 +911,7 @@ const RFIsPage: React.FC = () => {
           onMoveItem={handleKanbanMove}
           renderCard={(rfi) => {
             const cardOverdue = isOverdue(rfi.dueDate) && rfi.status !== 'closed';
+            // eslint-disable-next-line react-hooks/purity
             const daysOpen = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
             return (
               <div
@@ -1128,6 +1130,7 @@ const RFIsPage: React.FC = () => {
               </h3>
               {/* Days open indicator */}
               {(() => {
+                // eslint-disable-next-line react-hooks/purity
                 const daysOpen = Math.floor((Date.now() - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
                 const overdue = isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed';
                 return (

@@ -286,7 +286,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const toolbarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastMouseMoveRef = useRef<number>(Date.now());
+  const lastMouseMoveRef = useRef<number>(0);
 
   const currentFile = files[currentFileIndex] || null;
   const isImage = currentFile ? isImageFile(currentFile) : false;

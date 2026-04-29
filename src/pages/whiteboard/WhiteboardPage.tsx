@@ -42,7 +42,7 @@ export const WhiteboardPage: React.FC = () => {
   const [isEditingName, setIsEditingName] = useState(false)
   const [boardData, setBoardData] = useState<WhiteboardData>(EMPTY_DATA)
   const nameInputRef = useRef<HTMLInputElement>(null)
-  const whiteboardKeyRef = useRef(0)
+  const [whiteboardKey, setWhiteboardKey] = useState(0)
 
   // ── Handlers ──────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ export const WhiteboardPage: React.FC = () => {
   }, [boardId, boardName, boardData, toast])
 
   const handleNewBoard = useCallback(() => {
-    whiteboardKeyRef.current += 1
+    setWhiteboardKey(k => k + 1)
     setBoardId(generateBoardId())
     setBoardName('Untitled Whiteboard')
     setBoardData(EMPTY_DATA)
@@ -185,7 +185,7 @@ export const WhiteboardPage: React.FC = () => {
       {/* Whiteboard at full remaining height */}
       <div style={{ height: `calc(100vh - ${layout.topbarHeight} - 140px)` }}>
         <Whiteboard
-          key={whiteboardKeyRef.current}
+          key={whiteboardKey}
           initialData={boardData}
           onSave={setBoardData}
           height="100%"

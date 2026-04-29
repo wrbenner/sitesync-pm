@@ -111,9 +111,10 @@ const SchedulePage: React.FC = () => {
   const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
   const navigate = useNavigate();
 
+  const activeProjectId = activeProject?.id;
   const refetch = useCallback(() => {
-    if (activeProject?.id) loadSchedule(activeProject.id);
-  }, [activeProject?.id, loadSchedule]);
+    if (activeProjectId) loadSchedule(activeProjectId);
+  }, [activeProjectId, loadSchedule]);
 
   useEffect(() => { setPageContext('schedule'); }, [setPageContext]);
 

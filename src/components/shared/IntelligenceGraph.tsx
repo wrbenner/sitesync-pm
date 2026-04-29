@@ -269,6 +269,7 @@ export function IntelligenceGraph({
     lastClickNodeId: null,
   })
 
+  const [isPanning, setIsPanning] = useState(false)
   const settledRef = useRef(false)
 
   // ── Build sim data ──
@@ -386,9 +387,11 @@ export function IntelligenceGraph({
     const nodes = simNodesRef.current
     const edges = simEdgesRef.current
 
-    // Reset forces
+    // Reset forces — direct mutation is intentional in force-directed physics
     for (const n of nodes) {
+      // eslint-disable-next-line react-hooks/immutability
       n.fx = 0
+      // eslint-disable-next-line react-hooks/immutability
       n.fy = 0
     }
 
@@ -421,9 +424,13 @@ export function IntelligenceGraph({
       const force = SPRING_STRENGTH * displacement
       const fx = (dx / dist) * force
       const fy = (dy / dist) * force
+      // eslint-disable-next-line react-hooks/immutability
       e.source.fx += fx
+      // eslint-disable-next-line react-hooks/immutability
       e.source.fy += fy
+      // eslint-disable-next-line react-hooks/immutability
       e.target.fx -= fx
+      // eslint-disable-next-line react-hooks/immutability
       e.target.fy -= fy
     }
 
@@ -652,6 +659,7 @@ export function IntelligenceGraph({
       drag.startY = wy
     } else {
       drag.isPanning = true
+      setIsPanning(true)
       drag.startX = e.clientX
       drag.startY = e.clientY
     }
@@ -710,6 +718,7 @@ export function IntelligenceGraph({
     }
     drag.isDragging = false
     drag.isPanning = false
+    setIsPanning(false)
     drag.dragNode = null
     settledRef.current = false
   }, [screenToWorld])
@@ -852,7 +861,7 @@ export function IntelligenceGraph({
         background: '#0F1629',
         borderRadius: borderRadius.lg,
         overflow: 'hidden',
-        cursor: hoveredNode ? 'grab' : dragRef.current.isPanning ? 'grabbing' : 'default',
+        cursor: hoveredNode ? 'grab' : isPanning ? 'grabbing' : 'default',
       }}
     >
       {/* Search box */}
