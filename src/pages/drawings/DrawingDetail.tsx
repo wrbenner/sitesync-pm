@@ -6,7 +6,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Btn } from '../../components/Primitives';
 import { PermissionGate } from '../../components/auth/PermissionGate';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius
+} from '../../styles/theme';
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS, STATUS_CONFIG } from './constants';
 import type { DrawingRevision } from '../../types/api';
 import type { DrawingClassification, DrawingDiscrepancy } from '../../types/ai';
@@ -676,7 +677,7 @@ const RevisionsTab: React.FC<{
     <div>
       <div style={{ position: 'relative', paddingLeft: '24px' }}>
         <div style={S.timelineLine} />
-        {revisionHistory.map((rev, idx) => {
+        {revisionHistory.map((rev, _idx) => {
           const isCurrent = !rev.superseded_at;
           return (
             <div key={rev.id} style={S.timelineItem(isCurrent)}>

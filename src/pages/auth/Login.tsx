@@ -1,14 +1,14 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState
+} from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Loader2, Eye, EyeOff, Mail, Lock, User, Shield,
-  CheckCircle, ArrowRight, Sparkles, X, Building2,
-  HardHat, BarChart3, FileCheck, Cloud,
+  CheckCircle, ArrowRight, Sparkles, X, HardHat, BarChart3, FileCheck, Cloud,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
 import { loginSchema, signupSchema, magicLinkSchema, resetPasswordSchema } from '../../schemas/auth'
 
 /* ─────────────────────── Helpers ─────────────────────── */

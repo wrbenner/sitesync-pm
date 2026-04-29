@@ -5,8 +5,7 @@ import {
   AlertCircle, DollarSign, HelpCircle, Calendar, ChevronRight,
   Shield, ClipboardList, CloudSun,
   Sparkles, Scale, FileText, Send, Clock,
-  ArrowUpRight,
-} from 'lucide-react';
+  } from 'lucide-react';
 import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day } from '../../lib/weather';

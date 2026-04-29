@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { ClipboardList, AlertCircle, Timer, TrendingUp, TrendingDown, Minus, CheckCircle2 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
+import { colors, borderRadius
+} from '../../styles/theme'
 
 // ── Animated number (rAF ease-out cubic over 400ms) ──────────
 const AnimatedValue: React.FC<{ value: number; formatter: (n: number) => string }> = ({ value, formatter }) => {

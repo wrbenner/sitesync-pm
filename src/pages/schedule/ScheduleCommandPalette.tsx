@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Search, Calendar, AlertTriangle, CheckCircle2, Clock, Target, ArrowRight, Hash } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius
+} from '../../styles/theme';
 import type { SchedulePhase } from '../../stores/scheduleStore';
 
 // ── Types ──────────────────────────────────────────────────

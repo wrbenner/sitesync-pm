@@ -4,12 +4,20 @@ import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/enums'
 
 // Supabase config: env vars are injected at build time by Vite.
-// Required — no source-level fallbacks. If either is missing the client
-// creation below will throw, which is what we want: a silently-running
-// build pointed at the wrong project is worse than a hard failure.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-if (!supabaseUrl || !supabaseAnonKey) {
+// In dev-bypass mode (VITE_DEV_BYPASS=true, no Supabase vars set) we skip the
+// throw and use a dummy localhost URL so the client constructs without crashing.
+// All network calls will fail gracefully (empty/error states) — correct behaviour
+// for a no-auth sweep. In any other environment, missing env vars hard-fail.
+const _devBypass =
+  import.meta.env.DEV === true &&
+  import.meta.env.VITE_DEV_BYPASS === 'true' &&
+  !import.meta.env.VITE_SUPABASE_URL &&
+  !import.meta.env.VITE_SUPABASE_ANON_KEY
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || (_devBypass ? 'http://localhost:54321' : '')
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || (_devBypass ? 'dev-bypass-placeholder' : '')
+
+if (!_devBypass && (!supabaseUrl || !supabaseAnonKey)) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
     'Configure them in your deployment environment (Vercel project settings, .env.local, etc.).',
@@ -33,7 +41,7 @@ export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 
 /**
  * Typed table accessor that accepts tables added by migration but not yet in generated types.
- * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
+ * Use this instead of unsafe casts on supabase.from() for tables not yet in generated types.
  */
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
