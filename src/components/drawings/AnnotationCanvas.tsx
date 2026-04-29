@@ -33,10 +33,7 @@ interface AnnotationCanvasProps {
 }
 
 const genId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `anno_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 };
 
 export const AnnotationCanvas: React.FC<AnnotationCanvasProps> = ({
