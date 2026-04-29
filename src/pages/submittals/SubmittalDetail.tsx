@@ -4,6 +4,7 @@ import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { Calendar, Clock, ArrowRight, CheckCircle, Paperclip, Sparkles } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForSubmittal } from '../../utils/connections';
 import { PermissionGate } from '../../components/auth/PermissionGate';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { ApprovalChain } from '../../components/shared/ApprovalChain';
 import type { ApprovalStep } from '../../components/shared/ApprovalChain';
 import { EditableDetailField } from '../../components/forms/EditableField';
@@ -14,6 +15,14 @@ import { isOverdue, ReviewerStepper } from './types';
 import type { ReviewerRow } from './types';
 import { submittalService } from '../../services/submittalService';
 import { useQueryClient } from '@tanstack/react-query';
+import { SpecExcerptPanel } from '../../components/specifications/SpecExcerptPanel';
+import { IrisSuggests } from '../../components/iris/IrisSuggests';
+import { IrisApprovalGate } from '../../components/iris/IrisApprovalGate';
+import {
+  useDraftedActions,
+  useApproveDraftedAction,
+  useRejectDraftedAction,
+} from '../../hooks/queries/draftedActions';
 
 interface SubmittalDetailProps {
   selected: Record<string, unknown> | null;
@@ -39,6 +48,12 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
   const queryClient = useQueryClient();
   const [editingDetail, setEditingDetail] = useState(false);
   const [actionPending, setActionPending] = useState(false);
+
+  // Iris approval gate — drafts targeting THIS submittal go below IrisSuggests.
+  const submittalIdForDrafts = selected?.id ? String(selected.id) : null;
+  const { data: draftedActions = [] } = useDraftedActions('submittal', submittalIdForDrafts);
+  const approveDraft = useApproveDraftedAction();
+  const rejectDraft = useRejectDraftedAction();
 
   // Build timeline from real submittal data
   const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = useMemo(() => {
@@ -160,11 +175,19 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
     onClose();
   };
 
+  const { confirm: confirmDeleteSubmittal, dialog: deleteSubmittalDialog } = useConfirm();
+
   const handleDelete = useCallback(async () => {
     if (!selected || !projectId || !deleteSubmittalMutateAsync) return;
     const id = String(selected.id);
     const label = (selected.title as string) || (selected.submittalNumber as string) || `Submittal ${id.slice(0, 8)}`;
-    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteSubmittal({
+      title: 'Delete submittal?',
+      description: `"${label}" — submittal is a contractual artifact tied to a spec section. Deleting removes it from the legal record. Consider voiding instead.`,
+      destructiveLabel: 'Delete submittal',
+      typeToConfirm: 'DELETE',
+    });
+    if (!ok) return;
     try {
       await deleteSubmittalMutateAsync({ id, projectId });
       toast.success('Submittal deleted');
@@ -344,6 +367,36 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Spec Section</div>
                 <span style={{ fontSize: typography.fontSize.base, fontFamily: 'monospace', color: colors.textPrimary }}>{selected.spec_section as string}</span>
+                <SpecExcerptPanel
+                  projectId={selected.project_id as string | null | undefined}
+                  specSection={selected.spec_section as string | null | undefined}
+                />
+              </div>
+            )}
+            {projectId && selected.id && (
+              <IrisSuggests entityType="submittal" entityId={String(selected.id)} projectId={projectId} />
+            )}
+            {draftedActions.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginTop: spacing['3'], marginBottom: spacing['4'] }}>
+                {draftedActions.map((draft) => (
+                  <IrisApprovalGate
+                    key={draft.id}
+                    draft={draft}
+                    busy={approveDraft.isPending || rejectDraft.isPending}
+                    onApprove={async (d) => {
+                      try {
+                        await approveDraft.mutateAsync(d);
+                        toast.success('Approved');
+                      } catch {
+                        toast.error('Could not approve — please try again');
+                      }
+                    }}
+                    onReject={async (d) => {
+                      await rejectDraft.mutateAsync({ draft: d, reason: undefined });
+                      toast('Rejected');
+                    }}
+                  />
+                ))}
               </div>
             )}
             {selected.stamp && (
@@ -488,6 +541,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
           )}
         </div>
       )}
+      {deleteSubmittalDialog}
     </DetailPanel>
   );
 };

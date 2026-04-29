@@ -34,6 +34,16 @@ import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queri
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
+import { SpecExcerptPanel } from '../../components/specifications/SpecExcerptPanel'
+import { RfiSlaPanel } from '../../components/conversation/RfiSlaPanel'
+import { IrisSuggests } from '../../components/iris/IrisSuggests'
+import { IrisApprovalGate } from '../../components/iris/IrisApprovalGate'
+import {
+  useDraftedActions,
+  useApproveDraftedAction,
+  useRejectDraftedAction,
+} from '../../hooks/queries/draftedActions'
+import { toast as sonnerToast } from 'sonner'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
@@ -570,6 +580,11 @@ export function RFIDetail() {
   const { data: watchers = [] } = useRFIWatchers(rfiId)
   const updateRFI = useUpdateRFI()
 
+  // Iris approval gate — drafts targeting THIS RFI go below the IrisSuggests panel.
+  const { data: draftedActions = [] } = useDraftedActions('rfi', rfiId)
+  const approveDraft = useApproveDraftedAction()
+  const rejectDraft = useRejectDraftedAction()
+
   // Realtime: invalidate this RFI's detail cache when another user edits it.
   useRealtimeRowInvalidation('rfis', rfiId, [
     ['rfis', 'detail', rfiId],
@@ -864,6 +879,46 @@ export function RFIDetail() {
             }}>
               {rfi.description || (rfi as RFI & { question?: string }).question || rfi.title}
             </div>
+
+            {/* SLA timer + pause/resume + bounce surface */}
+            <RfiSlaPanel
+              rfiId={rfi.id}
+              projectId={rfi.project_id}
+              dueDate={(rfi as RFI & { response_due_date?: string | null }).response_due_date ?? rfi.due_date ?? null}
+              pausedAt={(rfi as RFI & { sla_paused_at?: string | null }).sla_paused_at ?? null}
+              pausedReason={(rfi as RFI & { sla_paused_reason?: string | null }).sla_paused_reason ?? null}
+            />
+
+            {/* Spec excerpt — auto-loaded when rfi.spec_section is set */}
+            <SpecExcerptPanel projectId={rfi.project_id} specSection={rfi.spec_section} />
+
+            {/* Iris suggestions — proactive draft responses, escalations, follow-ups */}
+            <IrisSuggests entityType="rfi" entityId={rfi.id} projectId={rfi.project_id} />
+
+            {/* Iris approval gates — drafted actions awaiting one-click approval */}
+            {draftedActions.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], margin: `${spacing['3']} 0 ${spacing['4']}` }}>
+                {draftedActions.map((draft) => (
+                  <IrisApprovalGate
+                    key={draft.id}
+                    draft={draft}
+                    busy={approveDraft.isPending || rejectDraft.isPending}
+                    onApprove={async (d) => {
+                      try {
+                        await approveDraft.mutateAsync(d)
+                        sonnerToast.success('Approved')
+                      } catch {
+                        sonnerToast.error('Could not approve — please try again')
+                      }
+                    }}
+                    onReject={async (d) => {
+                      await rejectDraft.mutateAsync({ draft: d, reason: undefined })
+                      sonnerToast('Rejected')
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Metadata pills */}
             <MetadataSection rfi={rfi} assignedName={assignedName} />

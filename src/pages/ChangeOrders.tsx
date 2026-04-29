@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageContainer, Card, Btn, StatusTag, EmptyState, Modal, InputField } from '../components/Primitives';
 import { PresenceAvatars } from '../components/shared/PresenceAvatars';
-import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
 import { useChangeOrders, useProject } from '../hooks/queries';
 import {
@@ -28,6 +28,12 @@ import { createEntityLink } from '../services/entityLinkService';
 import type { LinkedItem } from '../components/shared/LinkedEntities';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { supabase } from '../lib/supabase';
+import { IrisApprovalGate } from '../components/iris/IrisApprovalGate';
+import {
+  useDraftedActions,
+  useApproveDraftedAction,
+  useRejectDraftedAction,
+} from '../hooks/queries/draftedActions';
 import type { ChangeOrder } from '../types/database';
 
 type COStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'voided';
@@ -414,6 +420,13 @@ const ChangeOrdersPage: React.FC = () => {
   });
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
+  // Iris approval gate — drafts targeting the currently expanded change order.
+  // We query per expanded row id (no detail page exists for COs; gate lives in
+  // the row-expansion panel, mirroring LinkedEntities placement).
+  const { data: draftedActions = [] } = useDraftedActions('change_order', expandedRow);
+  const approveDraft = useApproveDraftedAction();
+  const rejectDraft = useRejectDraftedAction();
+
   // Fetch linked entities for the currently expanded CO
   const { data: linkedEntitiesData = [] } = useLinkedEntities(projectId, 'change_order', expandedRow);
   // Map to the local LinkedEntity shape for the existing LinkedEntities component
@@ -796,8 +809,32 @@ const ChangeOrdersPage: React.FC = () => {
             const scheduleImpact = parseInt(String(co.schedule_impact ?? '0'), 10);
             const canPromote = coType !== 'co' && (coStatus === 'draft' || coStatus === 'approved');
 
+            // Stuck in pending_review > 5 business days is the CO equivalent
+            // of "overdue" — applies the same 3px red rail used on RFI /
+            // Submittal / Punch tables so the Conversation inbox reads as
+            // one consistent ball-in-court signal.
+            const stuckInReview = (() => {
+              if (coStatus !== 'pending_review') return false;
+              const created = co.created_at ? new Date(co.created_at as string) : null;
+              if (!created || Number.isNaN(created.getTime())) return false;
+              const daysOpen = Math.floor((Date.now() - created.getTime()) / 86400000);
+              return daysOpen > 5;
+            })();
+
             return (
-              <Card key={co.id} padding={0} style={{ overflow: 'hidden' }}>
+              <Card
+                key={co.id}
+                padding={0}
+                style={{
+                  overflow: 'hidden',
+                  ...(stuckInReview ? {
+                    backgroundColor: `${colors.statusCritical}08`,
+                    // Compose the rail with the existing card shadow so
+                    // overdue rows still lift, just with a visible accent.
+                    boxShadow: `${shadows.card}, inset 3px 0 0 0 ${colors.statusCritical}`,
+                  } : {}),
+                }}
+              >
                 {/* Main row */}
                 <div
                   role="row"
@@ -919,6 +956,31 @@ const ChangeOrdersPage: React.FC = () => {
 
                     {/* Linked Entity References */}
                     <LinkedEntities entities={expandedLinkedEntities} navigate={navigate} />
+
+                    {/* Iris approval gates — drafts targeting this change order */}
+                    {draftedActions.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginBottom: spacing['4'] }}>
+                        {draftedActions.map((draft) => (
+                          <IrisApprovalGate
+                            key={draft.id}
+                            draft={draft}
+                            busy={approveDraft.isPending || rejectDraft.isPending}
+                            onApprove={async (d) => {
+                              try {
+                                await approveDraft.mutateAsync(d);
+                                toast.success('Approved');
+                              } catch {
+                                toast.error('Could not approve — please try again');
+                              }
+                            }}
+                            onReject={async (d) => {
+                              await rejectDraft.mutateAsync({ draft: d, reason: undefined });
+                              toast('Rejected');
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
 
                     {/* Inline rejection reason */}
                     {rejectingCoId === co.id && (
