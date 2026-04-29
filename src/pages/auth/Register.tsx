@@ -3,8 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus, Mail, Lock, User, Eye, EyeOff, AlertCircle,
-  Building2, CheckCircle, ArrowRight, Shield,
-  HardHat, BarChart3, FileCheck, Cloud,
+  Building2, ArrowRight, HardHat, BarChart3, FileCheck, Cloud,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';

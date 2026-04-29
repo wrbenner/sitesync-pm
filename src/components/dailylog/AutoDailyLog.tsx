@@ -7,13 +7,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Cloud, Sun, CloudRain, CloudSnow, Wind, Droplets,
-  Users, ShieldCheck, AlertTriangle, Camera,
+  Cloud, Sun, CloudRain, CloudSnow, Users, ShieldCheck, AlertTriangle, Camera,
   Clock, Check, RefreshCw, Loader2, Send,
-  Plus, ChevronDown, X, Thermometer,
-  FileText, Wrench, Truck, HardHat, Mic,
+  X, FileText, Wrench, Truck, HardHat, Mic,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions
+} from '../../styles/theme';
 import { dailyLogService } from '../../services/dailyLogService';
 import type { CompiledLog } from '../../services/dailyLogService';
 import { useProjectId } from '../../hooks/useProjectId';

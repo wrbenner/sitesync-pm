@@ -5,7 +5,7 @@ import { autoGenerateLienWaivers } from './lienWaivers'
 import { paymentService } from '../../services/paymentService'
 
 
-const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
+const _LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
 type LienWaiverType = typeof LIEN_WAIVER_TYPES[number]
 
 /**

@@ -12,8 +12,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   X, Plus, FolderOpen, FileText, Send, Calendar,
-  ChevronRight, ChevronDown, Check, GripVertical,
-} from 'lucide-react';
+  ChevronRight, ChevronDown, Check, } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 

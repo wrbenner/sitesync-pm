@@ -15,7 +15,8 @@ import {
   Rows,
   Download,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { spacing, typography, borderRadius
+} from '../../styles/theme';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';

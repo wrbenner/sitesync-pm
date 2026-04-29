@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Briefcase, Plus, FileText, BarChart3, AlertTriangle, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react'
+import { Briefcase, BarChart3, AlertTriangle, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'

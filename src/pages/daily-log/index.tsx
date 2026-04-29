@@ -9,7 +9,6 @@ import { colors, spacing, typography, borderRadius, transitions, tradeColors } f
 import { toast } from 'sonner';
 import { CalendarNav } from '../../components/dailylog/CalendarNav';
 import { AutoDailyLog } from '../../components/dailylog/AutoDailyLog';
-import { DailyLogCapture } from '../../components/dailylog/DailyLogCapture';
 import { QuickEntry } from '../../components/dailylog/QuickEntry';
 import type { QuickEntryData } from '../../components/dailylog/QuickEntry';
 import type { CrewHoursEntry as CrewHoursEntryType } from '../../components/dailylog/CrewHoursSummary';

@@ -14,8 +14,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Upload, FileText, X, Plus, ChevronDown, Calendar, Clock,
-  Send, Paperclip, Image, File, Sparkles, ArrowRight, Check
+  Upload, FileText, X, Plus, Send, Image, File, Sparkles
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'

@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
-  Package, Plus, Award, Sparkles, AlertTriangle, FileText, BarChart2,
-  Users, Send, CheckCircle, XCircle, Clock, ChevronRight, Search,
-  Filter, Calendar, DollarSign, TrendingUp, Eye, Trash2, Edit3,
-  UserPlus, Building2, Phone, Mail, Star, Shield, ArrowUpDown,
-  Layers, Target, HelpCircle, ChevronDown, Check, X, Minus,
-  AlertCircle, Hash, Timer, Activity
+  Package, Plus, Award, Sparkles, AlertTriangle, FileText, Users, Send, CheckCircle, XCircle, Clock, Search,
+  Eye, Trash2, Edit3,
+  UserPlus, Building2, Phone, Mail, Star, Shield, Layers, Target, HelpCircle, Check, X, Minus,
+  AlertCircle, Activity
 } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
+import { PageContainer, Card, SectionHeader, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
@@ -209,14 +207,14 @@ export const Preconstruction: React.FC = () => {
 
   const createPackage = useCreatePreconBidPackage()
   const updatePackage = useUpdatePreconBidPackage()
-  const deletePackage = useDeletePreconBidPackage()
+  const _deletePackage = useDeletePreconBidPackage()
   const createSubmission = useCreatePreconBidSubmission()
   const updateSubmission = useUpdatePreconBidSubmission()
   const createContract = useCreateContract()
   const createSubcontractor = useCreatePreconSubcontractor()
   const updateSubcontractor = useUpdatePreconSubcontractor()
   const createInvitation = useCreatePreconBidInvitation()
-  const updateInvitation = useUpdatePreconBidInvitation()
+  const _updateInvitation = useUpdatePreconBidInvitation()
   const createScopeItem = useCreatePreconScopeItem()
   const deleteScopeItem = useDeletePreconScopeItem()
   const upsertScopeResponse = useUpsertPreconBidScopeResponse()
@@ -376,7 +374,7 @@ export const Preconstruction: React.FC = () => {
       setPkgForm({ package_number: '', title: '', description: '', csi_division: '', trade: '', estimated_value: '', bid_due_date: '' })
       setSelectedPackageId(created.id)
       setActiveView('packages')
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
   }
@@ -398,7 +396,7 @@ export const Preconstruction: React.FC = () => {
       toast.success('Bid recorded')
       setBidModalOpen(false)
       setBidForm({ bid_package_id: '', bidder_name: '', bidder_company: '', bid_amount: '', notes: '', exclusions: '', inclusions: '', qualifications: '', schedule_days: '', bond_included: false })
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
   }
@@ -434,7 +432,7 @@ export const Preconstruction: React.FC = () => {
       } else {
         toast.success('Bid awarded')
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error('Award failed: ' + ((err as Error).message || 'unknown'))
     }
   }
@@ -459,7 +457,7 @@ export const Preconstruction: React.FC = () => {
       toast.success('Subcontractor added')
       setSubModalOpen(false)
       setSubForm({ company_name: '', contact_name: '', email: '', phone: '', primary_trade: '', city: '', state: '', notes: '' })
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
   }
@@ -481,7 +479,7 @@ export const Preconstruction: React.FC = () => {
       toast.success('Invitation sent')
       setInviteModalOpen(false)
       setInviteForm({ company_name: '', contact_name: '', email: '', phone: '', subcontractor_id: '' })
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
   }
@@ -501,7 +499,7 @@ export const Preconstruction: React.FC = () => {
       toast.success('Scope item added')
       setScopeModalOpen(false)
       setScopeForm({ description: '', category: 'General' })
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
   }
@@ -513,7 +511,7 @@ export const Preconstruction: React.FC = () => {
         bid_submission_id: bidSubmissionId,
         response,
       })
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to update scope response')
     }
   }
@@ -522,7 +520,7 @@ export const Preconstruction: React.FC = () => {
     try {
       await updatePackage.mutateAsync({ id: pkg.id, patch: { status: newStatus } as Partial<PreconBidPackage> })
       toast.success(`Package status updated to ${newStatus.replace(/_/g, ' ')}`)
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed: ' + ((err as Error).message || 'unknown'))
     }
   }

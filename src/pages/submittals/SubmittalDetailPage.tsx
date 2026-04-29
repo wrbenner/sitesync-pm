@@ -43,7 +43,8 @@ import {
   ExternalLink, Eye, Stamp, Send, Forward,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius
+} from '../../styles/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submittals'
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'

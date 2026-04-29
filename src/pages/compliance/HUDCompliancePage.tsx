@@ -2,12 +2,11 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Shield, AlertTriangle, Clock, DollarSign, Users, Building2, FileText,
   ChevronRight, ChevronDown, Search, Plus, X, Check, Edit2, TrendingUp,
-  Calendar, BarChart3, Award, Target, Percent, ArrowRight, Download,
-  CheckCircle, Info, AlertCircle, Filter, Eye, Calculator, Camera, Zap
+  Calendar, BarChart3, Target, Download,
+  CheckCircle, Info, AlertCircle, Calculator, Camera, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { fromTable } from '../../lib/supabase';
 import { useProjectId } from '../../hooks/useProjectId';
 

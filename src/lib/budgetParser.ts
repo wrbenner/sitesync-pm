@@ -361,7 +361,7 @@ function classifyRow(
 ): RowType {
   if (rowIndex <= headerRow) return 'metadata';
 
-  const codeCol = columns.find(c => c.role === 'code');
+  const _codeCol = columns.find(c => c.role === 'code');
   const budgetCol = columns.find(c => c.role === 'budget');
   const descCol = columns.find(c => c.role === 'description');
 

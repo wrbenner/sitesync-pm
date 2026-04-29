@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { AlertTriangle, Calendar, Plus, Printer, RefreshCw, Share2, X } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, EmptyState, useToast } from '../components/Primitives';
-import { PermissionGate } from '../components/auth/PermissionGate';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { LookaheadBoard } from '../components/schedule/LookaheadBoard';
