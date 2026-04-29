@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2, Clock, Target } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -506,8 +506,6 @@ const FullCards: React.FC<{
 
 export const ScheduleKPIs: React.FC<ScheduleKPIsProps> = ({
   activityMetrics,
-  metrics,
-  projectMetrics,
   isMobile,
   isNarrow,
   compact = false,

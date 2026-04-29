@@ -1,6 +1,6 @@
 import React from 'react'
 import { Check } from 'lucide-react'
-import { colors, typography, borderRadius } from '../styles/theme'
+import { colors, typography } from '../styles/theme'
 
 export interface WorkflowStep {
   key: string
@@ -108,14 +108,14 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                 }}
               >
                 {isCompleted ? (
-                  <Check size={14} color="#fff" strokeWidth={3} />
+                  <Check size={14} color={colors.white} strokeWidth={3} />
                 ) : isCurrent ? (
                   <div
                     style={{
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      backgroundColor: '#fff',
+                      backgroundColor: colors.white,
                       animation: 'wf-pulse 1.8s ease-in-out infinite',
                     }}
                   />
