@@ -119,6 +119,7 @@ const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const WorkflowSettings = lazy(() => import('./pages/Settings/WorkflowSettings'));
 const ProjectSettings = lazy(() => import('./pages/admin/ProjectSettings').then((m) => ({ default: m.ProjectSettings })));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
+const ComplianceCockpit = lazy(() => import('./pages/admin/compliance'));
 const NotificationSettings = lazy(() => import('./pages/Settings/NotificationSettings'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
@@ -390,6 +391,7 @@ function AppRoutes() {
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
+            <Route path="/admin/compliance" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Compliance"><ComplianceCockpit /></ProtectedRoute></PageSuspense>} />
             <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
 
