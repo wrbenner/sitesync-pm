@@ -24,6 +24,7 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
 } from 'react';
 import OpenSeadragon from 'openseadragon';
@@ -162,7 +163,7 @@ const OsdLoupe: React.FC<{
   // without it, high-frequency mousemove events cause needless redraws and jank.
   const rafRef = useRef<number | null>(null);
   const lastPosRef = useRef({ x: screenX, y: screenY });
-  lastPosRef.current = { x: screenX, y: screenY };
+  useLayoutEffect(() => { lastPosRef.current = { x: screenX, y: screenY }; });
 
   useEffect(() => {
     const paint = () => {
@@ -1121,6 +1122,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   // Auto-save idle timer ref so rapid edits debounce into a single save.
   const autoSaveTimerRef = useRef<number | null>(null);
+  const handleSaveRef = useRef<(() => Promise<void>) | null>(null);
   // True when the cursor is close enough to an existing measurement endpoint that we'd snap.
   // Drives the loupe's orange pulse.
   const [snapActive, setSnapActive] = useState(false);
@@ -1425,19 +1427,17 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   }, [activeTool]);
 
   // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
-  // Using a ref-held timer avoids recreating the timeout identity every render.
-  // We intentionally don't include `handleSave` in deps to avoid re-debouncing on every render
-  // (React-Query's mutate identity is stable enough for this purpose).
+  // handleSave is accessed via a ref so this effect can stay stable and not
+  // re-debounce on every render (handleSaveRef is updated after handleSave is declared below).
   useEffect(() => {
     if (localAnnotations.length === 0) return;
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
-      handleSave();
+      handleSaveRef.current?.();
     }, 1500);
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localAnnotations]);
 
   // ── Interactive drawing event handlers ─────────────────────────────────
@@ -1734,6 +1734,9 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       setIsSaving(false);
     }
   }, [projectId, drawing.id, localAnnotations, createMarkup, isOnline, enqueueOffline, broadcastMarkup]);
+
+  // Keep autosave ref in sync so the debounced timer always calls the latest version.
+  useLayoutEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
 
   // Combine DB annotations + local unsaved annotations
   const allAnnotations = useMemo(

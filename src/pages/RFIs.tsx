@@ -169,10 +169,10 @@ const RFIsPage: React.FC = () => {
     const total = closed.reduce((sum, r) => sum + Math.floor((new Date(r.closed_date!).getTime() - new Date(r.created_at!).getTime()) / 86400000), 0);
     return Math.round(total / closed.length);
   }, [rfis]);
+  const [weekAgo] = useState(() => Date.now() - 7 * 86400000);
   const closedThisWeek = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86400000;
     return rfis.filter((r) => r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo).length;
-  }, [rfis]);
+  }, [rfis, weekAgo]);
   const totalCostImpact = useMemo(() => rfis.reduce((sum, r) => sum + Number(r.cost_impact ?? 0), 0), [rfis]);
 
   const [selectedRfi, setSelectedRfi] = useState<RFIRow | null>(null);

@@ -239,8 +239,9 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
   const [activeTool, setActiveTool] = useState<Tool>('select')
   const [activeColor, setActiveColor] = useState('#EF4444')
   const [zoomLevel, setZoomLevel] = useState(1)
-  // Force re-render when history changes (for button disabled states)
-  const [, setHistoryTick] = useState(0)
+  // Drives re-render when undo/redo availability changes (for button disabled states)
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [historyLength, setHistoryLength] = useState(0)
 
   // History for undo / redo
   const historyRef = useRef<string[]>([])
@@ -259,10 +260,6 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
 
   // ── History helpers ─────────────────────────────────────
 
-  const bumpHistoryTick = useCallback(() => {
-    setHistoryTick((t) => t + 1)
-  }, [])
-
   const saveHistory = useCallback(() => {
     const canvas = fabricRef.current
     if (!canvas || isRestoringRef.current) return
@@ -271,9 +268,11 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     // Trim future history if we've undone
     historyRef.current = historyRef.current.slice(0, idx + 1)
     historyRef.current.push(json)
-    historyIndexRef.current = historyRef.current.length - 1
-    bumpHistoryTick()
-  }, [bumpHistoryTick])
+    const nextIdx = historyRef.current.length - 1
+    historyIndexRef.current = nextIdx
+    setHistoryIndex(nextIdx)
+    setHistoryLength(historyRef.current.length)
+  }, [])
 
   const restoreHistory = useCallback(
     (index: number) => {
@@ -286,10 +285,11 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
         canvas.renderAll()
         historyIndexRef.current = index
         isRestoringRef.current = false
-        bumpHistoryTick()
+        setHistoryIndex(index)
+        setHistoryLength(historyRef.current.length)
       })
     },
-    [bumpHistoryTick],
+    [],
   )
 
   const undo = useCallback(() => {
@@ -726,8 +726,8 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
-            disabled={historyIndexRef.current <= 0}
-            style={btnStyle(false, historyIndexRef.current <= 0)}
+            disabled={historyIndex <= 0}
+            style={btnStyle(false, historyIndex <= 0)}
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -736,8 +736,8 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
-            disabled={historyIndexRef.current >= historyRef.current.length - 1}
-            style={btnStyle(false, historyIndexRef.current >= historyRef.current.length - 1)}
+            disabled={historyIndex >= historyLength - 1}
+            style={btnStyle(false, historyIndex >= historyLength - 1)}
             onClick={redo}
           >
             <Redo2 size={18} />

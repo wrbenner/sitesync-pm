@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../types/database'
 
@@ -27,7 +27,7 @@ export function useDailyLogs(projectId: string) {
   // BUG-H17 FIX: Mirror state in a ref so mutation callbacks can read the latest
   // value without listing the array in their deps (which caused infinite re-creation).
   const logsRef = useRef<DailyLogRow[]>(logs)
-  logsRef.current = logs
+  useLayoutEffect(() => { logsRef.current = logs })
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -141,7 +141,7 @@ export function useIncidents(projectId: string) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   // BUG-H17 FIX: See useDailyLogs above for rationale.
   const incidentsRef = useRef<IncidentRow[]>(incidents)
-  incidentsRef.current = incidents
+  useLayoutEffect(() => { incidentsRef.current = incidents })
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -369,7 +369,7 @@ export function useCorrectiveActions(projectId: string) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   // BUG-H17 FIX: See useDailyLogs above for rationale.
   const actionsRef = useRef<CorrectiveActionRow[]>(actions)
-  actionsRef.current = actions
+  useLayoutEffect(() => { actionsRef.current = actions })
 
   const refetch = useCallback(async () => {
     if (!projectId) return

@@ -1401,8 +1401,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [prevQuery, setPrevQuery] = useState(query);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Reset keyboard selection when the search query changes (during-render adjustment,
+  // avoids an extra render cycle vs. useEffect).
+  if (prevQuery !== query) {
+    setPrevQuery(query);
+    setSelectedIndex(0);
+  }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -1486,7 +1494,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 
-  useEffect(() => { setSelectedIndex(0); }, [query]);
 
   if (!open) return null;
 

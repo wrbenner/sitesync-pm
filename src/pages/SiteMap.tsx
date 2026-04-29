@@ -15,7 +15,7 @@
 // • Measurement tool for distance/area
 // • Search across all map items
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PageContainer, Btn, Modal } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { supabase } from '../lib/supabase';
@@ -506,6 +506,10 @@ export default function SiteMap() {
   const entityMarkersRef = useRef<Map<string, Marker>>(new Map());
   const leafletRef = useRef<typeof import('leaflet') | null>(null);
   const tileLayerRef = useRef<LeafletTileLayer | null>(null);
+  // Ref lets the Leaflet click handler always read the latest mode/placingType
+  // without being recreated on every render (avoids tearing the map subscription).
+  const clickCtxRef = useRef({ mode, placingType });
+  useLayoutEffect(() => { clickCtxRef.current = { mode, placingType }; });
 
   // ── Derived state ──
   const allFloors = useMemo(() => {
@@ -854,8 +858,6 @@ export default function SiteMap() {
     }
   }, [projectCoords]);
 
-  const clickCtxRef = useRef({ mode, placingType });
-  useEffect(() => { clickCtxRef.current = { mode, placingType }; }, [mode, placingType]);
 
   // ── Switch base layer ──
   useEffect(() => {
