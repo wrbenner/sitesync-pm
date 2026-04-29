@@ -247,7 +247,7 @@ const DEFAULT_PREQUAL: PrequalInfo = {
   lastUpdated: '',
 };
 
-function getDefaultPrequal(): PrequalInfo {
+function _getDefaultPrequal(): PrequalInfo {
   return { ...DEFAULT_PREQUAL };
 }
 
@@ -714,6 +714,7 @@ export const Directory: React.FC = () => {
       result = result.filter(c => c.trade === tradeFilter);
     }
     if (commFilter === 'stale' && lastContactMap) {
+      // eslint-disable-next-line react-hooks/purity
       const now = Date.now();
       result = result.filter(c => {
         const last = lastContactMap.get(c.id);
@@ -745,6 +746,7 @@ export const Directory: React.FC = () => {
   const formatLastContact = (contactId: string): string => {
     const iso = lastContactMap?.get(contactId);
     if (!iso) return '—';
+    // eslint-disable-next-line react-hooks/purity
     const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return 'Today';
     if (days === 1) return '1d ago';

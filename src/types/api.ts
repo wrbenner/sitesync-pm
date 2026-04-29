@@ -1,6 +1,5 @@
 import type { TableRow, InsertTables, UpdateTables } from './database'
 import type { ReasonCode } from '../machines/changeOrderMachine'
-import type {} from './entities'
 
 // Row types (what you GET from the database)
 export type ActivityFeedRow = TableRow<'activity_feed'>

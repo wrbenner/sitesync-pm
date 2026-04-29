@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useSyncExternalStore, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
@@ -92,7 +92,7 @@ async function initAuth() {
     setState({ loading: false })
   }
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+  supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
       setState({ session: s, user: s?.user ?? null, error: null })
       if (s?.user) {
@@ -290,8 +290,14 @@ export function useAuth(): AuthState {
     return { error: error ? mapAuthError(error.message) : null }
   }, [])
 
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000))
+  useEffect(() => {
+    const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   const isAuthenticated = !!session
-  const isSessionValid = !!session && !!session.expires_at && session.expires_at > Math.floor(Date.now() / 1000)
+  const isSessionValid = !!session && !!session.expires_at && session.expires_at > nowSec
 
   // Enforce session expiry: if we have a user but the session has expired, sign out.
   useEffect(() => {

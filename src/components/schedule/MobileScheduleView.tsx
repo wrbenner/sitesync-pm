@@ -472,6 +472,7 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
   // Pinch-zoom state \u2014 scales the weeks list between 0.8x and 1.5x.
   const [zoom, setZoom] = useState(1);
   const pinchRef = useRef({ active: false, initialDist: 0, initialZoom: 1 });
+  const [isPinching, setIsPinching] = useState(false);
 
   // Swipe state for advancing/retreating the 3-week window.
   const swipeRef = useRef({ startX: 0, startY: 0, active: false });
@@ -511,6 +512,7 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
         initialDist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
         initialZoom: zoom,
       };
+      setIsPinching(true);
       swipeRef.current.active = false;
     }
   }, [zoom]);
@@ -518,6 +520,7 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
   const onWrapperTouchEnd = useCallback((e: React.TouchEvent) => {
     if (e.touches.length < 2) {
       pinchRef.current.active = false;
+      setIsPinching(false);
     }
   }, []);
 
@@ -727,7 +730,7 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
           // Cast via React.CSSProperties — `zoom` is valid CSS but not in the
           // default TS React.CSSProperties shape; the cast keeps tsc happy.
           ...( { zoom } as React.CSSProperties ),
-          transition: pinchRef.current.active ? 'none' : 'zoom 120ms ease-out',
+          transition: isPinching ? 'none' : 'zoom 120ms ease-out',
         }}
       >
 

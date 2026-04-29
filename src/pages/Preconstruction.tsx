@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
-  Package, Plus, Award, Sparkles, AlertTriangle, FileText, BarChart2,
-  Users, Send, CheckCircle, XCircle, Clock, ChevronRight, Search,
-  Filter, Calendar, DollarSign, TrendingUp, Eye, Trash2, Edit3,
-  UserPlus, Building2, Phone, Mail, Star, Shield, ArrowUpDown,
-  Layers, Target, HelpCircle, ChevronDown, Check, X, Minus,
-  AlertCircle, Hash, Timer, Activity
+  Package, Plus, Award, Sparkles, AlertTriangle, FileText,
+  Users, Send, CheckCircle, XCircle, Clock, Search,
+  Eye, Trash2, Edit3,
+  UserPlus, Building2, Phone, Mail, Star, Shield,
+  Layers, Target, HelpCircle, Check, X, Minus,
+  AlertCircle, Activity
 } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
+import { PageContainer, Card, SectionHeader, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
@@ -203,14 +203,14 @@ export const Preconstruction: React.FC = () => {
 
   const createPackage = useCreatePreconBidPackage()
   const updatePackage = useUpdatePreconBidPackage()
-  const deletePackage = useDeletePreconBidPackage()
+  const _deletePackage = useDeletePreconBidPackage()
   const createSubmission = useCreatePreconBidSubmission()
   const updateSubmission = useUpdatePreconBidSubmission()
   const createContract = useCreateContract()
   const createSubcontractor = useCreatePreconSubcontractor()
   const updateSubcontractor = useUpdatePreconSubcontractor()
   const createInvitation = useCreatePreconBidInvitation()
-  const updateInvitation = useUpdatePreconBidInvitation()
+  const _updateInvitation = useUpdatePreconBidInvitation()
   const createScopeItem = useCreatePreconScopeItem()
   const deleteScopeItem = useDeletePreconScopeItem()
   const upsertScopeResponse = useUpsertPreconBidScopeResponse()
@@ -507,7 +507,7 @@ export const Preconstruction: React.FC = () => {
         bid_submission_id: bidSubmissionId,
         response,
       })
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to update scope response')
     }
   }
@@ -970,7 +970,7 @@ function PackagesView({
   packages, allSubmissions, selectedPackage, selectedPackageId, selectedSubmissions,
   invitationList, searchQuery, statusFilter, aiAnalysis,
   onSearch, onFilterStatus, onSelectPackage, onStatusChange, onAward,
-  onAddBid, onInviteSub, onAddScope, onNavigateToLeveling,
+  onAddBid, onInviteSub, onAddScope: _onAddScope, onNavigateToLeveling,
 }: {
   packages: PreconBidPackage[]
   allSubmissions: PreconBidSubmission[]
@@ -980,7 +980,7 @@ function PackagesView({
   invitationList: PreconBidInvitation[]
   searchQuery: string
   statusFilter: string
-  aiAnalysis: ReturnType<typeof Object> | null
+  aiAnalysis: { insights?: { type: string; text: string }[]; avg?: number } | null
   onSearch: (v: string) => void
   onFilterStatus: (v: string) => void
   onSelectPackage: (id: string | null) => void
@@ -1125,14 +1125,14 @@ function PackagesView({
           {detailTab === 'overview' && (
             <div>
               {/* AI Analysis */}
-              {aiAnalysis && (aiAnalysis as any).insights && (
+              {aiAnalysis && aiAnalysis.insights && (
                 <div style={{ marginBottom: spacing['4'] }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
                     <Sparkles size={16} style={{ color: colors.indigo }} />
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.indigo }}>AI Analysis</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                    {((aiAnalysis as any).insights as { type: string; text: string }[]).map((insight, i) => (
+                    {(aiAnalysis.insights ?? []).map((insight, i) => (
                       <div key={i} style={{
                         display: 'flex', gap: spacing['2'], padding: spacing['3'],
                         borderRadius: borderRadius.base, fontSize: typography.fontSize.sm,
@@ -1166,7 +1166,7 @@ function PackagesView({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
                     <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                       {selectedSubmissions.length} submission{selectedSubmissions.length !== 1 ? 's' : ''} · Low: {fmt(selectedSubmissions[0]?.bid_amount || 0)}
-                      {aiAnalysis && ` · Avg: ${fmt((aiAnalysis as any).avg || 0)}`}
+                      {aiAnalysis && ` · Avg: ${fmt(aiAnalysis.avg || 0)}`}
                     </div>
                     <Btn variant="secondary" icon={<Plus size={14} />} onClick={onAddBid}>Add Bid</Btn>
                   </div>
@@ -1268,7 +1268,7 @@ function PackagesView({
 
 function LevelingView({
   packageList, selectedPackageId, selectedPackage, selectedSubmissions,
-  scopeItemList, scopeResponseList, aiAnalysis,
+  scopeItemList, scopeResponseList, aiAnalysis: _aiAnalysis,
   onSelectPackage, onScopeResponse, onAddScope, onDeleteScope, onAward,
 }: {
   packageList: PreconBidPackage[]
@@ -1277,7 +1277,7 @@ function LevelingView({
   selectedSubmissions: PreconBidSubmission[]
   scopeItemList: PreconScopeItem[]
   scopeResponseList: PreconBidScopeResponse[]
-  aiAnalysis: ReturnType<typeof Object> | null
+  aiAnalysis: { insights?: { type: string; text: string }[]; avg?: number } | null
   onSelectPackage: (id: string | null) => void
   onScopeResponse: (scopeItemId: string, bidSubmissionId: string, response: string) => void
   onAddScope: () => void

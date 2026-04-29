@@ -111,9 +111,10 @@ const SchedulePage: React.FC = () => {
   const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
   const navigate = useNavigate();
 
+  const activeProjectId = activeProject?.id;
   const refetch = useCallback(() => {
-    if (activeProject?.id) loadSchedule(activeProject.id);
-  }, [activeProject?.id, loadSchedule]);
+    if (activeProjectId) loadSchedule(activeProjectId);
+  }, [activeProjectId, loadSchedule]);
 
   useEffect(() => { setPageContext('schedule'); }, [setPageContext]);
 
@@ -392,13 +393,14 @@ const SchedulePage: React.FC = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleTabChange]);
 
+  const [now] = useState(() => Date.now());
   const overallHealthStatus = useMemo(() => {
     if (schedulePhases.length === 0) return { status: 'green', label: 'On Track' };
     const behind = schedulePhases.filter(p => {
       if (p.status === 'delayed') return true;
       if (p.start_date && p.end_date) {
         const totalDuration = new Date(p.end_date).getTime() - new Date(p.start_date).getTime();
-        const elapsed = Date.now() - new Date(p.start_date).getTime();
+        const elapsed = now - new Date(p.start_date).getTime();
         if (totalDuration > 0) {
           const expectedPct = Math.min(100, (elapsed / totalDuration) * 100);
           if ((p.percent_complete ?? p.progress ?? 0) < expectedPct * 0.8) return true;
@@ -410,7 +412,7 @@ const SchedulePage: React.FC = () => {
     if (pct > 20) return { status: 'red', label: `At Risk: ${behind.length} behind` };
     if (pct > 10) return { status: 'amber', label: `Monitoring: ${behind.length} behind` };
     return { status: 'green', label: 'On Track' };
-  }, [schedulePhases]);
+  }, [schedulePhases, now]);
 
   const criticalPathAtRisk = useMemo(() => {
     return schedulePhases

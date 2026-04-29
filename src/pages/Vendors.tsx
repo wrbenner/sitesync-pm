@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Users, Plus, Search, Star, Sparkles, AlertTriangle, Shield, ShieldAlert, ClipboardCheck, Award, Mail, Send, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Users, Plus, Search, Star, Sparkles, AlertTriangle, Shield, ShieldAlert, ClipboardCheck, Award, Mail, Send, CheckCircle, Clock } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -39,7 +39,6 @@ const PREQUAL_STATUS_COLORS: Record<PrequalStatus, { c: string; bg: string }> = 
   'Rejected': { c: colors.statusCritical, bg: colors.statusCriticalSubtle },
 }
 
-
 /* ── DBE/MBE/WBE Certification Data ──────────────────────── */
 type CertType = 'DBE' | 'MBE' | 'WBE' | 'SDVOSB' | 'HUBZone' | '8(a)'
 interface DiversityCert { type: CertType; certNumber: string; agency: string; expiry: string; verified: boolean }
@@ -60,7 +59,6 @@ const DIVERSITY_GOAL_TARGETS: { category: CertType; targetPct: number }[] = [
 type BidResponse = 'Pending' | 'Yes' | 'No Bid'
 interface BidInvite { vendorName: string; trade: string; contact: string; invitedDate: string; response: BidResponse; bidAmount: number | null }
 interface BidList { id: string; name: string; scope: string; createdDate: string; invites: BidInvite[] }
-
 
 const BID_RESPONSE_COLORS: Record<BidResponse, { c: string; bg: string }> = {
   'Pending': { c: colors.statusPending, bg: colors.statusPendingSubtle },

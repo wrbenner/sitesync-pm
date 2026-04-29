@@ -7,13 +7,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Cloud, Sun, CloudRain, CloudSnow, Wind, Droplets,
+  Cloud, Sun, CloudRain, CloudSnow,
   Users, ShieldCheck, AlertTriangle, Camera,
   Clock, Check, RefreshCw, Loader2, Send,
-  Plus, ChevronDown, X, Thermometer,
+  X,
   FileText, Wrench, Truck, HardHat, Mic,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { dailyLogService } from '../../services/dailyLogService';
 import type { CompiledLog } from '../../services/dailyLogService';
 import { useProjectId } from '../../hooks/useProjectId';
@@ -31,7 +31,7 @@ interface AutoDailyLogProps {
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function timeAgo(iso: string): string {
+function _timeAgo(iso: string): string {
   try {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);

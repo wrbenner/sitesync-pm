@@ -31,11 +31,6 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function toPageImportPath(pageFile: string): string {
-  // pageFile is 'src/pages/RFIs.tsx' → '../../../pages/RFIs'
-  const relFromTest = path.relative('src/test/pages/smoke', pageFile)
-  return relFromTest.replace(/\\/g, '/').replace(/\.tsx?$/, '')
-}
 
 function inferExportName(pageFile: string, title: string): string {
   // Use default-or-named import; emit a flexible two-variant import.

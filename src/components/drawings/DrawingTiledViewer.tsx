@@ -24,6 +24,7 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
 } from 'react';
 import OpenSeadragon from 'openseadragon';
@@ -37,8 +38,7 @@ import {
   Layers,
   Pencil,
   RotateCw,
-  Grid3X3,
-  Wifi,
+
   WifiOff,
   CloudOff,
   MessageSquarePlus,
@@ -46,18 +46,15 @@ import {
 import CreateRFIModal from '../forms/CreateRFIModal';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useUiStore } from '../../stores';
 import { MarkupToolbar, type MarkupTool } from './MarkupToolbar';
 import { STAMP_CONFIGS, type StampType } from './tools/StampTool';
 import type { NormalizedGeometry, AnnotationLayer, AnnotationVisibility } from '../../lib/annotationGeometry';
 import {
-  toNormalized,
-  fromNormalized,
+
   denormalizeStrokeWidth,
   generateCloudPath,
   type GeometryType,
   type NormalizedPoint,
-  type PageDimensions,
 } from '../../lib/annotationGeometry';
 import { useDrawingMarkups } from '../../hooks/queries/document-management';
 import { useCreateDrawingMarkup, useDeleteDrawingMarkup } from '../../hooks/mutations/documents';
@@ -166,7 +163,19 @@ const OsdLoupe: React.FC<{
   // without it, high-frequency mousemove events cause needless redraws and jank.
   const rafRef = useRef<number | null>(null);
   const lastPosRef = useRef({ x: screenX, y: screenY });
-  lastPosRef.current = { x: screenX, y: screenY };
+  useLayoutEffect(() => { lastPosRef.current = { x: screenX, y: screenY }; });
+
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>(
+    () => ({ width: window.innerWidth, height: window.innerHeight }),
+  );
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setContainerSize({ width: el.clientWidth, height: el.clientHeight });
+    const ro = new ResizeObserver(() => setContainerSize({ width: el.clientWidth, height: el.clientHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [containerRef]);
 
   useEffect(() => {
     const paint = () => {
@@ -219,10 +228,9 @@ const OsdLoupe: React.FC<{
 
   // Position via transform (GPU-accelerated) — no CSS transition so the loupe sticks to the cursor.
   const OFFSET = 64;
-  const containerEl = containerRef.current;
-  const maxRight = (containerEl?.clientWidth ?? window.innerWidth) - SIZE - 16;
+  const maxRight = containerSize.width - SIZE - 16;
   const leftPos = screenX + OFFSET + SIZE > maxRight ? Math.max(16, screenX - OFFSET - SIZE) : screenX + OFFSET;
-  const topPos = Math.max(16, Math.min((containerEl?.clientHeight ?? window.innerHeight) - SIZE - 16, screenY - SIZE / 2));
+  const topPos = Math.max(16, Math.min(containerSize.height - SIZE - 16, screenY - SIZE / 2));
 
   return (
     <div style={{
@@ -325,10 +333,7 @@ const InlineTextPrompt: React.FC<{
 
 // ── ID generator ───────────────────────────────────────────────────────────
 const genId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `anno_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 };
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -379,9 +384,9 @@ interface AnnotationOverlayItem {
 
 const VIEWER_ID = 'osd-tiled-viewer';
 const NAVIGATOR_ID = 'osd-navigator';
-const EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
+const _EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
 
-const TOOLBAR_HEIGHT = 52;
+const _TOOLBAR_HEIGHT = 52;
 const HEADER_HEIGHT = 48;
 
 // ── Styles ─────────────────────────────────────────────────────────────────
@@ -1128,6 +1133,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   // Auto-save idle timer ref so rapid edits debounce into a single save.
   const autoSaveTimerRef = useRef<number | null>(null);
+  const handleSaveRef = useRef<(() => Promise<void>) | null>(null);
   // True when the cursor is close enough to an existing measurement endpoint that we'd snap.
   // Drives the loupe's orange pulse.
   const [snapActive, setSnapActive] = useState(false);
@@ -1141,6 +1147,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   } | null>(null);
   const [localAnnotations, setLocalAnnotations] = useState<AnnotationOverlayItem[]>([]);
   const undoStack = useRef<AnnotationOverlayItem[][]>([]);
+  const [undoStackSize, setUndoStackSize] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const activeColor = '#E05252'; // Default red for construction markups
   const [calibrationScale, setCalibrationScale] = useState<number | null>(null);
@@ -1217,8 +1224,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
     const viewer = new OpenSeadragon.Viewer({
       id: VIEWER_ID,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tileSources: osdTileSource as any,
+      tileSources: osdTileSource as OpenSeadragon.Options['tileSources'],
       prefixUrl: '', // We use custom controls
       showNavigationControl: false,
       showNavigator: true,
@@ -1404,6 +1410,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     const isLocal = localAnnotations.some((a) => a.id === selectedId);
     if (isLocal) {
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => prev.filter((a) => a.id !== selectedId));
     } else {
       // Persisted — delete from DB; react-query invalidation will refresh the list.
@@ -1433,19 +1440,17 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   }, [activeTool]);
 
   // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
-  // Using a ref-held timer avoids recreating the timeout identity every render.
-  // We intentionally don't include `handleSave` in deps to avoid re-debouncing on every render
-  // (React-Query's mutate identity is stable enough for this purpose).
+  // handleSave is accessed via a ref so this effect can stay stable and not
+  // re-debounce on every render (handleSaveRef is updated after handleSave is declared below).
   useEffect(() => {
     if (localAnnotations.length === 0) return;
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
-      handleSave();
+      handleSaveRef.current?.();
     }, 1500);
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localAnnotations]);
 
   // ── Interactive drawing event handlers ─────────────────────────────────
@@ -1470,6 +1475,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           stampType: stampTypeSel,
         };
         undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
         setLocalAnnotations((prev) => [...prev, newAnn]);
         return;
       }
@@ -1507,6 +1513,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           uiTool: activeTool,
         };
         undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
         setLocalAnnotations((prev) => [...prev, newAnn]);
         return;
       }
@@ -1581,6 +1588,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       };
 
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => [...prev, newAnn]);
       setDrawingInProgress(null);
     },
@@ -1590,6 +1598,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // ── Undo ───────────────────────────────────────────────────────────────
   const handleUndo = useCallback(() => {
     const prev = undoStack.current.pop();
+    setUndoStackSize(undoStack.current.length);
     if (prev) setLocalAnnotations(prev);
   }, []);
 
@@ -1611,6 +1620,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         uiTool: 'text',
       };
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => [...prev, newAnn]);
     }
     setTextPrompt(null);
@@ -1729,6 +1739,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       // Drop successful ones from local state; keep failed ones so retry just means clicking Save again.
       setLocalAnnotations(failedAnnotations);
       undoStack.current = [];
+      setUndoStackSize(0);
       if (failedAnnotations.length === 0) {
         setSaveConfirmedAt(Date.now());
         window.setTimeout(() => setSaveConfirmedAt(null), 2200);
@@ -1742,6 +1753,9 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       setIsSaving(false);
     }
   }, [projectId, drawing.id, localAnnotations, createMarkup, isOnline, enqueueOffline, broadcastMarkup]);
+
+  // Keep autosave ref in sync so the debounced timer always calls the latest version.
+  useLayoutEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
 
   // Combine DB annotations + local unsaved annotations
   const allAnnotations = useMemo(
@@ -2226,7 +2240,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               activeTool={activeTool}
               onToolChange={(t) => { setExtendedTool(null); setActiveTool(t); }}
               onUndo={handleUndo}
-              canUndo={undoStack.current.length > 0 || localAnnotations.length > 0}
+              canUndo={undoStackSize > 0 || localAnnotations.length > 0}
               canSave={localAnnotations.length > 0}
               unsavedCount={localAnnotations.length}
               onSave={handleSave}
