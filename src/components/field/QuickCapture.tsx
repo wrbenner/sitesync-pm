@@ -213,7 +213,7 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
 
     // Waveform animation
     waveRef.current = window.setInterval(() => {
-      setWaveform(Array(24).fill(0).map(() => 4 + (Math.sin(Date.now() / 200 + i * 0.5) * 0.5 + 0.5) * 28));
+      setWaveform(Array(24).fill(0).map((_, i) => 4 + (Math.sin(Date.now() / 200 + i * 0.5) * 0.5 + 0.5) * 28));
     }, 80);
 
     // Start MediaRecorder for actual audio

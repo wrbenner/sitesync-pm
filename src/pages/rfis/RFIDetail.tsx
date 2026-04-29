@@ -38,6 +38,10 @@ import {
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import type { RFI, RFIResponse } from '../../types/database'
 
+// ─── Constants ─────────────────────────────────────────────
+
+const RFI_STATES = ['draft', 'open', 'under_review', 'answered', 'closed'] as const
+
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
@@ -597,7 +601,6 @@ export function RFIDetail() {
   const transitions = getValidTransitions(currentStatus, 'admin')
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
-  const RFI_STATES = ['draft', 'open', 'under_review', 'answered', 'closed'] as const
   const timelineStatus = currentStatus === 'void' ? 'closed' : currentStatus
   const timelineStatusIndex = RFI_STATES.indexOf(timelineStatus as typeof RFI_STATES[number])
   const completedRfiStates = timelineStatusIndex > 0 ? [...RFI_STATES].slice(0, timelineStatusIndex) : []
