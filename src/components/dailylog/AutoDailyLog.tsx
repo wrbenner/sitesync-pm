@@ -30,7 +30,7 @@ interface AutoDailyLogProps {
 
 // ── Helpers ─────────────────────────────────────────────────
 
-function timeAgo(iso: string): string {
+function _timeAgo(iso: string): string {
   try {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);

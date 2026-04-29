@@ -216,7 +216,7 @@ export const submitDailyLog = async (
   projectId: string,
   id: string,
   signatureUrl?: string,
-  userId?: string
+  _userId?: string
 ): Promise<DailyLogRow> => {
   validateProjectId(projectId)
   const updates: Record<string, unknown> = {

@@ -25,7 +25,7 @@ import {
   MapPin, Wrench, HardHat, Package, ShieldAlert, Camera, Image as ImageIcon, Globe, Search, Trash2, Eye, EyeOff, Layers, Wind, Droplets, ChevronDown, ChevronRight,
   AlertTriangle, ClipboardCheck, Truck, Building2, Maximize2, Minimize2,
   RefreshCw, MapPinned, Satellite, Map as MapIcon, Mountain,
-  CheckCircle, AlertCircle, XCircle as Pencil, Save,
+  CheckCircle,
   Upload, LocateFixed,
 } from 'lucide-react';
 import type { Map as LeafletMap, LayerGroup, Marker, LatLngBoundsLiteral, TileLayer as LeafletTileLayer

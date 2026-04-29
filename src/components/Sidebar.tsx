@@ -396,7 +396,7 @@ const NavItemButton: React.FC<NavItemButtonProps> = ({
   item, isActive, onNavigate, isPinned, onTogglePin, showPin = false, compact = false,
 }) => {
   const [hovered, setHovered] = useState(false);
-  const _Icon = item.icon;
+  const Icon = item.icon;
 
   return (
     <button
@@ -689,7 +689,7 @@ const AllToolsPanel: React.FC<AllToolsPanelProps> = ({
                     </div>
                     {visibleItems.map((item) => {
                       const fullItem = ITEM_MAP.get(item.id);
-                      const Icon = item.icon;
+                      const _Icon = item.icon;
                       const isItemActive = activeView === item.id;
                       const isItemPinned = pinnedIds.has(item.id);
 

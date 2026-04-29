@@ -50,7 +50,7 @@ export function uploadResumable({
 }: ResumableUploadOptions): { promise: Promise<ResumableUploadResult>; abort: () => void } {
   let tusUpload: tus.Upload | null = null
 
-  const promise = new Promise<ResumableUploadResult>((resolve, reject) => {
+  const promise = new Promise<ResumableUploadResult>((resolve, _reject) => {
     void (async () => {
     try {
       const { data: sessionData } = await supabase.auth.getSession()

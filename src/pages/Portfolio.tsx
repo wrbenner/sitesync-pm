@@ -7,7 +7,6 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjects } from '../hooks/queries/projects'
 import { captureException } from '../lib/errorTracking'
-import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 

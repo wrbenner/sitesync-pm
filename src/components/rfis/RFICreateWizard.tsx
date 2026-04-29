@@ -355,7 +355,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const [files, setFiles] = useState<File[]>([])
   const [priority, setPriority] = useState('medium')
   const [dueDate, setDueDate] = useState(defaultDueDate())
-  const [showMore, setShowMore] = useState(false)
+  const [_showMore, setShowMore] = useState(false)
 
   const [sending, setSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)

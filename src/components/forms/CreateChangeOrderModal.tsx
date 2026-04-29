@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef } from 'react'
 import { EntityFormModal } from './EntityFormModal'
 import { changeOrderSchema } from './schemas'
 import type { FieldConfig } from './EntityFormModal'
-import { Btn } from '../Primitives'
 import { Upload, FileText, X, Loader2
 } from 'lucide-react'
 import { colors, spacing, borderRadius } from '../../styles/theme'

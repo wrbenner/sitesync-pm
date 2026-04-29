@@ -1544,7 +1544,7 @@ const BudgetPage: React.FC = () => {
               ))}
             </div>
             {(() => {
-              const renderNode = (node: WBSNode, depth: number, isLast: boolean): React.ReactNode[] => {
+              const renderNode = (node: WBSNode, depth: number, _isLast: boolean): React.ReactNode[] => {
                 const remaining = node.budget - node.spent - node.committed;
                 const pctSpent = node.budget > 0 ? Math.round((node.spent / node.budget) * 100) : 0;
                 const hasChildren = !!node.children?.length;

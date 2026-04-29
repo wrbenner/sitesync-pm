@@ -729,7 +729,7 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data
 
   // Checklist hooks
-  const { data: checklists, isLoading: loadingChecklists, refetch: refetchChecklists } = useInspectionChecklists(projectId)
+  const { data: checklists, isLoading: loadingChecklists, refetch: _refetchChecklists } = useInspectionChecklists(projectId)
   const { data: checklistTemplatesData } = useChecklistTemplates(projectId)
 
   const createIncident = useCreateIncident()
