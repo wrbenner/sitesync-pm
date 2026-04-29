@@ -54,7 +54,7 @@ const SubmittalsPage: React.FC = () => {
   const _queryClient = useQueryClient();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
   const { data: project } = useProject(projectId);
-  const { data: aiInsights } = useAIInsights(projectId, 'submittals');
+  const { data: _aiInsights } = useAIInsights(projectId, 'submittals');
   const specFileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time subscription for all project tables (submittals + adjacent entities).

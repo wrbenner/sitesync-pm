@@ -116,7 +116,7 @@ const S = {
   } as React.CSSProperties),
 
   // Status badge overlay — subtle, frosted glass
-  statusBadge: (bg: string, color: string) => ({
+  statusBadge: (_bg: string, _color: string) => ({
     position: 'absolute' as const,
     top: '8px',
     right: '8px',
@@ -279,8 +279,8 @@ const DrawingThumbnail: React.FC<{
 export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
   drawings,
   loading,
-  error,
-  refetch,
+  error: _error,
+  refetch: _refetch,
   selectedIds,
   onToggleSelect,
   onSelectDrawing,

@@ -79,12 +79,6 @@ const relativeTime = (d: string | null) => {
 
 // ─── Types ────────────────────────────────────────────────
 
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
-}
-
 // ─── Watchers Hook ────────────────────────────────────────
 
 function useRFIWatchers(rfiId: string | undefined) {

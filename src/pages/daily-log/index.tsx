@@ -80,7 +80,7 @@ const DailyLogPage: React.FC = () => {
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [activeView, setActiveView] = useState<'auto' | 'calendar' | 'log'>('auto');
-  const [showCaptureBar, setShowCaptureBar] = useState(true);
+
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherIsAuto, setWeatherIsAuto] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);

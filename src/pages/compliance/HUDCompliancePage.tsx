@@ -182,7 +182,7 @@ const HUDCompliancePage: React.FC = () => {
 
   // ── State for Supabase data ─────────────────────────────
   const [programs, setPrograms] = useState<ComplianceProgram[]>([]);
-  const [lihtcUnits, setLihtcUnits] = useState<LIHTCUnit[]>([]);
+  const [lihtcUnits, _setLihtcUnits] = useState<LIHTCUnit[]>([]);
   const [wageRates, setWageRates] = useState<WageRate[]>([]);
   const [payrollEntries, setPayrollEntries] = useState<PayrollEntry[]>([]);
   const [section3Workers, setSection3Workers] = useState<Section3Worker[]>([]);
@@ -206,7 +206,7 @@ const HUDCompliancePage: React.FC = () => {
 
         if (!cancelled && reports && reports.length > 0) {
           // Map compliance_reports to ComplianceProgram shape
-          const mapped: ComplianceProgram[] = reports.map((r: Record<string, unknown>, i: number) => ({
+          const mapped: ComplianceProgram[] = reports.map((r: Record<string, unknown>, _i: number) => ({
             id: String(r.id),
             name: String(r.report_type ?? 'Compliance Report'),
             code: String(r.report_type ?? 'Report').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),

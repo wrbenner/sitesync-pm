@@ -974,7 +974,7 @@ function PackagesView({
   packages, allSubmissions, selectedPackage, selectedPackageId, selectedSubmissions,
   invitationList, searchQuery, statusFilter, aiAnalysis,
   onSearch, onFilterStatus, onSelectPackage, onStatusChange, onAward,
-  onAddBid, onInviteSub, onAddScope, onNavigateToLeveling,
+  onAddBid, onInviteSub, onAddScope: _onAddScope, onNavigateToLeveling,
 }: {
   packages: PreconBidPackage[]
   allSubmissions: PreconBidSubmission[]
@@ -1272,8 +1272,8 @@ function PackagesView({
 
 function LevelingView({
   packageList, selectedPackageId, selectedPackage, selectedSubmissions,
-  scopeItemList, scopeResponseList, aiAnalysis,
-  onSelectPackage, onScopeResponse, onAddScope, onDeleteScope, onAward,
+  scopeItemList, scopeResponseList, aiAnalysis: _aiAnalysis,
+  onSelectPackage, onScopeResponse, onAddScope: _onAddScope, onDeleteScope, onAward,
 }: {
   packageList: PreconBidPackage[]
   selectedPackageId: string | null

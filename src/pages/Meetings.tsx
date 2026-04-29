@@ -1662,7 +1662,7 @@ export const Meetings: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(groupedByAssignee).map(([assignee, items]) =>
+                    {Object.entries(groupedByAssignee).map(([_assignee, items]) =>
                       items.map((item, idx) => {
                         const daysOver = getDaysOverdue(item.dueDate);
                         const isOverdue = item.status === 'open' && daysOver > 0;

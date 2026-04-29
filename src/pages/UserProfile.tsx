@@ -251,7 +251,7 @@ export default function UserProfile() {
 
   // Edit states
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
 

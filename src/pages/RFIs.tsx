@@ -190,7 +190,7 @@ const RFIsPage: React.FC = () => {
   const [showAIDraftModal, setShowAIDraftModal] = useState(false);
   const [aiDraftInput, setAiDraftInput] = useState('');
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
-  const [aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
+  const [_aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
   const [aiPrefillKey, setAiPrefillKey] = useState(0);
 
   // Response text state (shared between manual entry and AI suggestion)
@@ -198,7 +198,7 @@ const RFIsPage: React.FC = () => {
   const [responseSubmitting, setResponseSubmitting] = useState(false);
 
   // AI Suggest Response state (detail panel)
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [_aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [aiSuggestionError, setAiSuggestionError] = useState(false);
 

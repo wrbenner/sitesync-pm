@@ -8,7 +8,6 @@ import { supabase, fromTable } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows
 } from '../../styles/theme';
 import type { Profile } from '../../types/database';
-import type { UserRole } from '../../types/enums';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 
 /* ─────────────────────── Constants ─────────────────────── */

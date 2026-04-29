@@ -677,7 +677,7 @@ const RevisionsTab: React.FC<{
     <div>
       <div style={{ position: 'relative', paddingLeft: '24px' }}>
         <div style={S.timelineLine} />
-        {revisionHistory.map((rev, idx) => {
+        {revisionHistory.map((rev, _idx) => {
           const isCurrent = !rev.superseded_at;
           return (
             <div key={rev.id} style={S.timelineItem(isCurrent)}>

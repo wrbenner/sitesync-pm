@@ -45,7 +45,6 @@ import {
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
 import { colors, spacing, typography, borderRadius
 } from '../../styles/theme'
-import { useAuth } from '../../hooks/useAuth'
 import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submittals'
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'
 import { useProjectId } from '../../hooks/useProjectId'
@@ -619,7 +618,6 @@ export function SubmittalDetailPage() {
   const navigate = useNavigate()
   const projectId = useProjectId()
   const { addToast } = useToast()
-  const { user } = useAuth()
 
   const { data: submittal, isLoading, error } = useSubmittal(submittalId)
   const { data: reviewers = [] } = useSubmittalReviewers(submittalId)

@@ -151,7 +151,7 @@ const PhotoHero: React.FC<{
   const [showAfter, _setShowAfter] = useState(false)
   const [sliderPos, setSliderPos] = useState(50) // For before/after slider
   const [isSliding, setIsSliding] = useState(false)
-  const [_fullscreen, setFullscreen] = useState(false)
+  const [_fullscreen, _setFullscreen] = useState(false)
 
   const hasBeforeAfter = beforeUrl && afterUrl
 

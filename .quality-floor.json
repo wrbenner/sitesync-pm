@@ -1,8 +1,8 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
   "_version": 3,
-  "_updated": "2026-04-29T05:30:00Z",
-  "_updatedBy": "auto/polish-20260428-2108 (session 4 — eslint 455→186)",
+  "_updated": "2026-04-29T08:00:00Z",
+  "_updatedBy": "auto/polish-20260428-2108 (session 5 — eslint 186→117, unused-vars sweep)",
   "_floor_realignment_note": "Floors realigned in v3 to reflect the codebase state after sprint-zero-consolidation (PR #206). Previous floors were aspirational targets that pre-dated the v2 feature wave; ratchets had been failing on every commit on main. New floors capture today's reality so future regressions actually fail. Targets in _targets remain the goal.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 186,
+  "eslintErrors": 117,
   "anyCount": 0,
   "mockCount": 1,
   "a11yViolations": 0,

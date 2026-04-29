@@ -3,7 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { VirtualDataTable } from '../../components/shared/VirtualDataTable';
 import { Card, PriorityTag } from '../../components/Primitives';
 import { Search, Camera, MapPin, ChevronRight, X } from 'lucide-react';
-import { colors, spacing, typography } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 import { InlineEditCell } from '../../components/forms/EditableField';
 import { toast } from 'sonner';
 import type { PunchItem } from './types';

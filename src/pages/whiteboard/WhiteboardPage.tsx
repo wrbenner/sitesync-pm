@@ -9,7 +9,6 @@ import {
   spacing,
   typography,
   borderRadius,
-  shadows,
   transitions,
   layout,
 } from '../../styles/theme'

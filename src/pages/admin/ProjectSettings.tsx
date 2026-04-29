@@ -341,7 +341,7 @@ export function ProjectSettings() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const inputStyle = (focused?: boolean): React.CSSProperties => ({
+  const inputStyle = (_focused?: boolean): React.CSSProperties => ({
     width: '100%',
     height: 40,
     padding: `0 ${spacing['3']}`,
