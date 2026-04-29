@@ -50,8 +50,8 @@ export function uploadResumable({
 }: ResumableUploadOptions): { promise: Promise<ResumableUploadResult>; abort: () => void } {
   let tusUpload: tus.Upload | null = null
 
-  const promise = new Promise<ResumableUploadResult>(async (resolve, reject) => {
-    try {
+  const promise = new Promise<ResumableUploadResult>((resolve) => {
+    const run = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
       const accessToken = sessionData.session?.access_token
       if (!accessToken) {
@@ -95,9 +95,10 @@ export function uploadResumable({
         tusUpload.resumeFromPreviousUpload(previousUploads[0])
       }
       tusUpload.start()
-    } catch (err) {
-      resolve({ storagePath: '', error: (err as Error).message || 'Upload setup failed' })
     }
+    run().catch((err) => {
+      resolve({ storagePath: '', error: (err as Error).message || 'Upload setup failed' })
+    })
   })
 
   return {

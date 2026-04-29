@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { Plus, Save, CheckCircle } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 import { Whiteboard } from '../../components/shared/Whiteboard'
 import type { WhiteboardData } from '../../components/shared/Whiteboard'
 import { PageContainer, Btn, useToast } from '../../components/Primitives'
@@ -8,7 +8,7 @@ import {
   spacing,
   typography,
   borderRadius,
-  shadows,
+
   transitions,
   layout,
 } from '../../styles/theme'

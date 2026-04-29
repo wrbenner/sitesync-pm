@@ -29,7 +29,7 @@ import {
   borderRadius,
   shadows,
   transitions,
-  zIndex,
+
 } from '../../styles/theme'
 
 // ── Types ─────────────────────────────────────────────────
@@ -897,7 +897,7 @@ export default function DrawingMarkup({
   )
 
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
+    (_e: React.PointerEvent) => {
       if (isPanningRef.current) {
         isPanningRef.current = false
         return

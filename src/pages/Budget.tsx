@@ -12,8 +12,6 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useQuery } from '../hooks/useQuery';
 import { fetchBudgetDivisions, getCostCodesByDivision } from '../api/endpoints/budget';
 import { usePayApplications } from '../hooks/queries';
-import { getAiInsights } from '../api/endpoints/ai';
-import { aiService } from '../lib/aiService';
 import type { MappedDivision } from '../api/endpoints/budget';
 import { getProject } from '../api/endpoints/projects';
 import { Drawer } from '../components/Drawer';
@@ -27,9 +25,9 @@ import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiA
 import { SCurve } from '../components/budget/SCurve';
 import { EarnedValueDashboard } from '../components/budget/EarnedValueDashboard';
 import { WaterfallChart } from '../components/budget/WaterfallChart';
-import { AlertTriangle, ChevronRight, ChevronDown, ArrowRight, DollarSign, Sparkles, RefreshCw, Pencil, Trash2, ShieldCheck, TrendingUp, TrendingDown, GitCompare, CheckCircle, XCircle, Clock, Users, Calendar, Layers, Plus, MoreHorizontal } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ChevronDown, ArrowRight, DollarSign, RefreshCw, Pencil, Trash2, TrendingUp, GitCompare, CheckCircle, XCircle, Clock, Users, Calendar, Layers, Plus, MoreHorizontal } from 'lucide-react';
 import { computeDivisionFinancials, computeProjectFinancials, detectBudgetAnomalies } from '../lib/financialEngine';
-import { buildWBSFromDivisions, computeContingency, computeCashFlow, computeMilestoneAlignment, generateSCurveData } from '../lib/budgetComputations';
+import { buildWBSFromDivisions, computeContingency, computeCashFlow, generateSCurveData } from '../lib/budgetComputations';
 import type { WBSNode as ComputedWBSNode } from '../lib/budgetComputations';
 import { budgetSnapshotService } from '../services/budgetSnapshotService';
 import type { BudgetSnapshotRow } from '../services/budgetSnapshotService';
@@ -171,7 +169,6 @@ interface BudgetAmendment {
 // WBSNode is now imported from budgetComputations as ComputedWBSNode
 type WBSNode = ComputedWBSNode;
 
-
 const AMENDMENT_STAGES = [
   { key: 'requested', label: 'Requested', color: colors.statusInfo, bg: colors.statusInfoSubtle },
   { key: 'pm_review', label: 'PM Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
@@ -184,7 +181,7 @@ const fadeUp: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.18, ease: 'easeOut' as const } },
 };
 
-const staggerContainer: Variants = {
+const _staggerContainer: Variants = {
   hidden: { opacity: 1 },
   visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
 };
@@ -846,9 +843,9 @@ const BudgetPage: React.FC = () => {
   // Budget Summary by Category — REMOVED (Jobs redesign)
 
   // Budget Health status
-  const budgetHealthStatus = useMemo(() => {
+  const _budgetHealthStatus = useMemo(() => {
     const totalBudget = projectData?.totalValue ?? 0;
-    const variance = totalBudget - spent - committed;
+    const _variance = totalBudget - spent - committed;
     const pctUsed = totalBudget > 0 ? ((spent + committed) / totalBudget) * 100 : 0;
     if (pctUsed > 100) return { label: 'Over Budget', color: colors.statusCritical, bg: colors.statusCriticalSubtle };
     if (pctUsed > 80) return { label: 'At Risk', color: colors.statusPending, bg: colors.statusPendingSubtle };
@@ -1546,7 +1543,7 @@ const BudgetPage: React.FC = () => {
               ))}
             </div>
             {(() => {
-              const renderNode = (node: WBSNode, depth: number, isLast: boolean): React.ReactNode[] => {
+              const renderNode = (node: WBSNode, depth: number, _isLast: boolean): React.ReactNode[] => {
                 const remaining = node.budget - node.spent - node.committed;
                 const pctSpent = node.budget > 0 ? Math.round((node.spent / node.budget) * 100) : 0;
                 const hasChildren = !!node.children?.length;

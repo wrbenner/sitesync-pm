@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react'
-import { Truck, Plus, Sparkles, Calendar as CalendarIcon, AlertCircle, CheckCircle2, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Upload, Loader2, X } from 'lucide-react'
+import { Truck, Plus, Sparkles, Calendar as CalendarIcon, AlertCircle, CheckCircle2, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Loader2, X } from 'lucide-react'
 import { PageContainer, Card, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -57,7 +57,6 @@ const SEVERITY_COLORS: Record<DamageSeverity, { c: string; bg: string }> = {
   moderate: { c: colors.statusCritical, bg: colors.statusCriticalSubtle },
   severe: { c: colors.statusCritical, bg: colors.statusCriticalSubtle },
 }
-
 
 // ── Schedule impact helpers ──
 function getDaysLate(d: Delivery): number {
