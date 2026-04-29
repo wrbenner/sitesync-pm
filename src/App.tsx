@@ -18,7 +18,7 @@ import { OfflineBanner } from './components/ui/OfflineBanner';
 import { MfaRequiredBanner } from './components/auth/MfaRequiredBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
 import { useCopilotStore } from './stores/copilotStore';
-import { colors, colorVars, spacing, typography, borderRadius } from './styles/theme';
+import { colors, colorVars, spacing, typography, borderRadius, skeleton } from './styles/theme';
 import { keyframes as animationKeyframes } from './styles/animations';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import type { Shortcut } from './hooks/useKeyboardShortcuts';
@@ -146,7 +146,7 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
 
 function PageSkeleton() {
   const skeletonStyle: React.CSSProperties = {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: skeleton.baseColor,
     borderRadius: '12px',
     animation: 'page-skeleton-pulse 1.5s ease-in-out infinite',
   };
