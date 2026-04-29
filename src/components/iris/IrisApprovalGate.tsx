@@ -25,7 +25,7 @@ export interface IrisApprovalGateProps {
   busy?: boolean
 }
 
-const ACTION_LABELS: Record<DraftedAction['action_type'], string> = {
+export const ACTION_LABELS: Record<DraftedAction['action_type'], string> = {
   'rfi.draft': 'RFI',
   'daily_log.draft': 'Daily log',
   'pay_app.draft': 'Pay app',
