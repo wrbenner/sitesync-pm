@@ -176,8 +176,13 @@ const TYPE_ROUTE: Record<StreamItem['type'], string> = {
 }
 
 function destinationFor(item: StreamItem): string {
-  const first = item.sourceTrail[0]
-  return first?.url ?? TYPE_ROUTE[item.type] ?? '/day'
+  // Find the sourceTrail entry that points back to the ITEM ITSELF (e.g. for
+  // an RFI item, the entry with type='rfi' — its own /rfis/:id deep link).
+  // Other entries (drawing/spec references) are supplementary; using
+  // sourceTrail[0] would send a clicked RFI to the Drawings page.
+  const own = item.sourceTrail.find((s) => s.type === item.type)
+  if (own?.url) return own.url
+  return TYPE_ROUTE[item.type] ?? '/day'
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────
