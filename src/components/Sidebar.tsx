@@ -109,15 +109,29 @@ function writeStoredCollapsed(v: boolean) {
 // ── Project switcher (compact) ──────────────────────────────────────────────
 
 const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
+  const navigate = useNavigate()
   const { data: projects } = useProjects()
   const activeProjectId = useProjectContext((s) => s.activeProjectId)
   const setActiveProject = useProjectContext((s) => s.setActiveProject)
   const [open, setOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [filter, setFilter] = useState('')
 
   const activeProject = projects?.find((p) => p.id === activeProjectId)
   const hasProjects = !!projects && projects.length > 0
   const initial = activeProject?.name?.[0]?.toUpperCase() ?? '+'
+  const showSearch = (projects?.length ?? 0) > 5
+  const filtered = useMemo(() => {
+    if (!projects) return []
+    const q = filter.trim().toLowerCase()
+    if (!q) return projects
+    return projects.filter((p) => p.name?.toLowerCase().includes(q))
+  }, [projects, filter])
+
+  // Reset the search whenever the dropdown closes so the next open starts fresh.
+  useEffect(() => {
+    if (!open) setFilter('')
+  }, [open])
 
   if (collapsed) {
     return (
@@ -229,10 +243,50 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
               padding: spacing['1'],
             }}
           >
+            {showSearch && (
+              <div style={{ padding: `${spacing['1']} ${spacing['1']}` }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: `6px ${spacing['2']}`,
+                    backgroundColor: colors.surfaceFlat,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: borderRadius.sm,
+                  }}
+                >
+                  <Search size={12} color={colors.textTertiary} />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search projects…"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    aria-label="Search projects"
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      outline: 'none',
+                      backgroundColor: 'transparent',
+                      fontSize: typography.fontSize.sm,
+                      fontFamily: typography.fontFamily,
+                      color: colors.textPrimary,
+                      minWidth: 0,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
             <button
               onClick={() => {
+                // Project creation now lives at /onboarding — owned by the
+                // T-Onboarding tab and styled to match the cockpit. The
+                // legacy modal stays mounted (line below) for callers that
+                // still open createOpen=true, but the sidebar's primary
+                // entry point now goes to the full-page flow.
                 setOpen(false)
-                setCreateOpen(true)
+                navigate('/onboarding')
               }}
               style={{
                 width: '100%',
@@ -254,7 +308,19 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
               <Plus size={14} />
               <span style={{ fontWeight: typography.fontWeight.medium }}>New project</span>
             </button>
-            {hasProjects && projects?.map((p) => {
+            {hasProjects && filtered.length === 0 && (
+              <div
+                style={{
+                  padding: `${spacing['2']} ${spacing['2']}`,
+                  fontSize: typography.fontSize.caption,
+                  color: colors.textTertiary,
+                  textAlign: 'center',
+                }}
+              >
+                No matches.
+              </div>
+            )}
+            {hasProjects && filtered.map((p) => {
               const isActive = p.id === activeProjectId
               return (
                 <button
@@ -464,7 +530,7 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
           {initials}
         </span>
         {!collapsed && (
-          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: 2 }}>
             <span
               style={{
                 fontWeight: typography.fontWeight.medium,
@@ -477,11 +543,18 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
             </span>
             <span
               style={{
-                fontSize: typography.fontSize.caption,
-                color: colors.textTertiary,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                alignSelf: 'flex-start',
+                display: 'inline-block',
+                padding: '1px 6px',
+                fontSize: 10,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textSecondary,
+                backgroundColor: colors.surfaceInset,
+                border: `1px solid ${colors.borderSubtle}`,
+                borderRadius: 999,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                lineHeight: 1.4,
               }}
             >
               {roleLabel}
@@ -561,17 +634,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     writeStoredCollapsed(sidebarCollapsed)
   }, [sidebarCollapsed, location.pathname])
 
-  // Keyboard: `[` toggles the sidebar. Cmd+B is also wired by App.tsx so we
-  // don't double-bind it here — `[` is the lighter-touch chord per spec.
+  // Keyboard: `[` toggles the sidebar (light-touch chord). Cmd+\ is the
+  // platform-standard sidebar toggle and works even while typing in an
+  // input. Cmd+B remains wired by App.tsx for the legacy chord.
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== '[' || e.metaKey || e.ctrlKey || e.altKey) return
-      const target = e.target as HTMLElement | null
-      const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
-      e.preventDefault()
-      setSidebarCollapsed(!sidebarCollapsed)
+      // Cmd/Ctrl + \ — works regardless of focus target
+      if (e.key === '\\' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setSidebarCollapsed(!sidebarCollapsed)
+        return
+      }
+      // Bare `[` — only when not typing in a field
+      if (e.key === '[' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const target = e.target as HTMLElement | null
+        const tag = target?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+        e.preventDefault()
+        setSidebarCollapsed(!sidebarCollapsed)
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -604,6 +686,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
         flexDirection: 'column',
         overflowY: 'auto',
         overflowX: 'hidden',
+        transition: 'width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
       {/* Brand row */}

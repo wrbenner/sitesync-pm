@@ -16,7 +16,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { ProjectGate } from '../../components/ProjectGate'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { useProjectId } from '../../hooks/useProjectId'
-import { useProject } from '../../hooks/queries'
+import { useProject, useProjects } from '../../hooks/queries'
 import { useActionStream } from '../../hooks/useActionStream'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useIsOnline } from '../../hooks/useOfflineStatus'
@@ -225,6 +225,7 @@ function ZoneFallback({ label }: { label: string }) {
 const DayPage: React.FC = () => {
   const projectId = useProjectId()
   const { data: project } = useProject(projectId)
+  const { isLoading: projectsLoading } = useProjects()
   const { setPageContext } = useCopilotStore()
   const isMobile = useIsMobile()
   const isOnline = useIsOnline()
@@ -297,7 +298,31 @@ const DayPage: React.FC = () => {
     [navigate],
   )
 
-  if (!projectId) return <ProjectGate />
+  // While projects load, render the cockpit chrome with skeleton rows
+  // instead of ProjectGate's tiny pulsing dot — the user should see the
+  // dashboard SHAPE on first paint, not what looks like a blank page.
+  // ProjectGate is reserved for the genuine "no projects yet" state.
+  if (!projectId) {
+    if (projectsLoading) {
+      return (
+        <Cockpit
+          header={<CockpitHeader projectName="LOADING…" />}
+          metrics={null}
+          irisLane={null}
+          needsYou={
+            <ZonePanel title="Needs You" subtitle="Loading…" contentStyle={{ padding: 0 }}>
+              <TableSkeleton rows={6} />
+            </ZonePanel>
+          }
+          projectNow={
+            <ZonePanel title="Project Now"><div style={{ padding: spacing[4], color: colors.ink3, fontFamily: typography.fontFamily, fontSize: 13 }}>Loading project context…</div></ZonePanel>
+          }
+          isMobile={isMobile}
+        />
+      )
+    }
+    return <ProjectGate />
+  }
 
   const projectName = project?.name?.toUpperCase() ?? 'PROJECT'
 
