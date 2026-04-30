@@ -97,7 +97,7 @@ const LINKED_ITEM_COLORS: Record<string, { bg: string; border: string }> = {
 }
 
 function generateId(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${crypto.randomUUID().replace(/-/g, '').slice(0, 7)}`
 }
 
 // ── Canvas Drawing Helpers ────────────────────────────────
