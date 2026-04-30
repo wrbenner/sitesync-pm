@@ -36,7 +36,15 @@ interface Metric {
   href?: string
 }
 
-function Cell({ metric, onClick }: { metric: Metric; onClick?: () => void }) {
+function Cell({
+  metric,
+  onClick,
+  isLast,
+}: {
+  metric: Metric
+  onClick?: () => void
+  isLast: boolean
+}) {
   const valueColor =
     metric.tone === 'critical'
       ? '#C93B3B'
@@ -60,7 +68,7 @@ function Cell({ metric, onClick }: { metric: Metric; onClick?: () => void }) {
         padding: `${spacing[3]} ${spacing[5]}`,
         background: 'transparent',
         border: 'none',
-        borderRight: `1px solid ${colors.borderSubtle}`,
+        borderRight: isLast ? 'none' : `1px solid ${colors.borderSubtle}`,
         cursor: onClick ? 'pointer' : 'default',
         textAlign: 'left',
         minWidth: 0,
@@ -152,10 +160,11 @@ export const CockpitMetrics: React.FC<CockpitMetricsProps> = ({ items }) => {
         borderBottom: `1px solid ${colors.borderDefault}`,
       }}
     >
-      {metrics.map((m) => (
+      {metrics.map((m, i) => (
         <Cell
           key={m.label}
           metric={m}
+          isLast={i === metrics.length - 1}
           onClick={m.href ? () => navigate(m.href!) : undefined}
         />
       ))}
