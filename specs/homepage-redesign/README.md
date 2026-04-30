@@ -13,7 +13,14 @@ A role-native construction productivity operating system. Same data, same storag
 - **Work Layer** (inline): act on items without leaving the stream
 - **Record Layer** (deep pages): RFIs, Submittals, Schedule, Budget, Drawings, etc.
 
-## Wave 1 — 4 Parallel Tabs (tonight)
+## Status
+
+| Wave | Status | Notes |
+|------|--------|-------|
+| Wave 1 | ✅ Shipped (`0c3f561`) | 4-tab parallel landed clean. 13 tests passing. Polish-mandate paused for the duration of the redesign initiative. |
+| Wave 2 | Ready to launch | 4 parallel tabs (Sessions 5–8). See `CONTRACT-WAVE-2.md`. |
+
+## Wave 1 — 4 Parallel Tabs (shipped)
 
 All four run **simultaneously** against the locked contract committed pre-flight on this branch. Zero file overlap (see `CONTRACT.md`).
 
@@ -37,15 +44,27 @@ After all four tabs complete:
 3. Tab B third (UI consumes both)
 4. Tab C last (navigation — independent, can merge anytime after A)
 
-## Wave 2 (post-Wave-1)
+## Wave 2 — 4 Parallel Tabs (ready to launch)
+
+Builds on the Wave 1 surface. `src/types/stream.ts` remains the locked contract. See `CONTRACT-WAVE-2.md` for ownership map.
+
+| Tab | Session | Builds |
+|-----|---------|--------|
+| A | [SESSION-5](SESSION-5-commitment-tracker.md) — Commitment Tracker | `/commitments` page (currently broken — nav points there but page doesn't exist), derivation hook, table UI |
+| B | [SESSION-6](SESSION-6-source-trail.md) — Universal Source Trail | Reusable `<SourceTrail>` component + integration into RFI / Submittal / Punch detail pages |
+| C | [SESSION-7](SESSION-7-magic-link-backend.md) — Magic Link + Audit | Real `/sub/:token` validator (Edge Function), `actor_kind` audit attribution wired through hash-chain writes |
+| D | [SESSION-8](SESSION-8-iris-wave2.md) — Iris Wave 2 | Verify draft flow end-to-end, build Owner Update generator on Reports page, full `owner_update` template |
+
+Merge order: **C → A → B → D** (audit foundation first, then commitments, then additive source-trail integration, then Iris wire-up).
+
+## Wave 3 (post-Wave-2)
 | Session | Builds |
 |---------|--------|
-| 5 | Commitment Tracker dedicated page |
-| 6 | Source Trail integration across record-layer pages |
-| 7 | Walk Mode (Super mobile) |
-| 8 | Owner Update generator |
-| 9 | Cmd+K natural-language Iris queries |
-| 10 | Architect Response Packet |
+| 9 | Walk Mode (Super mobile guided field walk) |
+| 10 | Cmd+K natural-language Iris queries |
+| 11 | Architect Response Packet (AI-bundled RFI context) |
+| 12 | Iris Phase 4: proactive risk detection + impact-chain text on Risk Cards |
+| 13 | Executive Portfolio view (multi-project) |
 
 ## How to Run Each Tab in Claude Code
 
