@@ -6,6 +6,7 @@ import type { AIDailySummaryProps } from '../../components/ai/AIDailySummary';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
+import type { ExtendedDailyLog } from './types';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -46,10 +47,7 @@ const DailySummaryPage: React.FC = () => {
   // Find the log for the selected date
   const dailyLog = useMemo(() => {
     if (!dailyLogData?.data) return null;
-    return dailyLogData.data.find((log: any) => {
-      const logDate = log.log_date ?? '';
-      return logDate === selectedDate;
-    }) ?? null;
+    return dailyLogData.data.find((log: ExtendedDailyLog) => log.log_date === selectedDate) ?? null;
   }, [dailyLogData, selectedDate]);
 
   // Fetch entries for that log
@@ -104,10 +102,10 @@ const DailySummaryPage: React.FC = () => {
     // Daily log entries
     let dailyLogEntries: AIDailySummaryProps['dailyLogEntries'] | undefined;
     if (entriesRaw && Array.isArray(entriesRaw) && entriesRaw.length > 0) {
-      dailyLogEntries = entriesRaw.map((e: any) => ({
-        category: e.category ?? e.entry_type ?? 'General',
-        description: e.description ?? e.notes ?? e.content ?? '',
-        author: e.author ?? e.created_by ?? 'Field Staff',
+      dailyLogEntries = entriesRaw.map((e: Record<string, unknown>) => ({
+        category: String(e.category ?? e.type ?? e.entry_type ?? 'General'),
+        description: String(e.description ?? e.notes ?? e.content ?? ''),
+        author: String(e.author ?? e.created_by ?? 'Field Staff'),
       }));
     } else if (log?.summary || log?.work_performed) {
       // Fall back to log-level summary
