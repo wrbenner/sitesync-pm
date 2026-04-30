@@ -237,7 +237,7 @@ function isPrequalExpired(lastUpdated: string): boolean {
 // TODO: Wire to Supabase tables: 'prequalifications', 'communication_logs'
 // These tables need to be created. For now, using local state with empty defaults.
 
-const DEFAULT_PREQUAL: PrequalInfo = {
+const _DEFAULT_PREQUAL: PrequalInfo = {
   status: 'not_started',
   bondingCapacity: '',
   insuranceLimits: '',
@@ -247,9 +247,6 @@ const DEFAULT_PREQUAL: PrequalInfo = {
   lastUpdated: '',
 };
 
-function getDefaultPrequal(): PrequalInfo {
-  return { ...DEFAULT_PREQUAL };
-}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
