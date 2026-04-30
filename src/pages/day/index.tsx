@@ -185,6 +185,28 @@ function destinationFor(item: StreamItem): string {
   return TYPE_ROUTE[item.type] ?? '/day'
 }
 
+// ── Per-zone error fallback — keeps a single panel failure from killing
+// the dashboard. Renders inside a ZonePanel so the layout stays stable.
+
+function ZoneFallback({ label }: { label: string }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        padding: `${spacing[4]}`,
+        fontFamily: typography.fontFamily,
+        fontSize: '12px',
+        color: colors.ink3,
+        background: colors.surfaceInset,
+        borderRadius: 6,
+        margin: spacing[3],
+      }}
+    >
+      {label} unavailable. Reload to retry.
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 
 const DayPage: React.FC = () => {
@@ -245,11 +267,18 @@ const DayPage: React.FC = () => {
             <CockpitHeader projectName={projectName} />
           </>
         }
-        metrics={<CockpitMetrics items={stream.items} />}
+        metrics={
+          <ErrorBoundary fallback={null}>
+            <CockpitMetrics items={stream.items} />
+          </ErrorBoundary>
+        }
         irisLane={
-          <IrisLane items={stream.items} onChip={handleIrisClick} />
+          <ErrorBoundary fallback={null}>
+            <IrisLane items={stream.items} onChip={handleIrisClick} />
+          </ErrorBoundary>
         }
         needsYou={
+          <ErrorBoundary fallback={<ZonePanel title="Needs You"><ZoneFallback label="Inbox" /></ZonePanel>}>
           <ZonePanel
             title="Needs You"
             count={
@@ -298,8 +327,13 @@ const DayPage: React.FC = () => {
               </>
             )}
           </ZonePanel>
+          </ErrorBoundary>
         }
-        projectNow={<ProjectNow items={stream.items} role={streamRole} />}
+        projectNow={
+          <ErrorBoundary fallback={<ZonePanel title="Project Now"><ZoneFallback label="Project status" /></ZonePanel>}>
+            <ProjectNow items={stream.items} role={streamRole} />
+          </ErrorBoundary>
+        }
         isMobile={isMobile}
       />
     </ErrorBoundary>
