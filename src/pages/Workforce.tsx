@@ -173,7 +173,7 @@ const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, display
 
 // ── Column helpers ───────────────────────────────────────
 
-const rosterCol = createColumnHelper<unknown>()
+const rosterCol = createColumnHelper<Record<string, unknown>>()
 const rosterColumns = [
   rosterCol.accessor('name', {
     header: 'Name',
@@ -245,7 +245,7 @@ const rosterColumns = [
   }),
 ]
 
-const timeCol = createColumnHelper<unknown>()
+const timeCol = createColumnHelper<Record<string, unknown>>()
 const timeColumns = [
   timeCol.accessor('date', {
     header: 'Date',
@@ -320,16 +320,16 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const activeToday = members?.filter((m) => (m as Record<string, unknown>).status === 'active').length || 0
+  const totalRegularHrs = timeEntries?.reduce((s: number, e) => s + (Number((e as Record<string, unknown>).regular_hours) || 0), 0) || 0
+  const totalOTHrs = timeEntries?.reduce((s: number, e) => s + (Number((e as Record<string, unknown>).overtime_hours) || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  members?.forEach((m) => {
+    const trade = ((m as Record<string, unknown>).trade as string) || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,12 +340,12 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original
         return (
           <PermissionGate permission="project.settings">
             <button
               title="Delete worker"
-              onClick={() => setConfirmDeleteId(row.id)}
+              onClick={() => setConfirmDeleteId(row.id as string)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}
             >
               <Trash2 size={14} />
@@ -363,7 +363,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
@@ -372,7 +372,7 @@ export const Workforce: React.FC = () => {
               size="sm"
               onClick={() => {
                 if (!projectId || !user?.id) return
-                approveEntry.mutate({ id: row.id, project_id: projectId, approved_by: user.id }, {
+                approveEntry.mutate({ id: row.id as string, project_id: projectId, approved_by: user.id }, {
                   onSuccess: () => toast.success('Time entry approved'),
                   onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to approve'),
                 })

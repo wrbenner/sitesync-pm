@@ -52,8 +52,8 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  // API endpoint maps columns to different names from the DB schema
+  const waivers = (rawWaivers ?? []) as Array<Record<string, unknown>>;
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
