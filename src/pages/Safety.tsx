@@ -1208,47 +1208,47 @@ export const Safety: React.FC = () => {
         </div>
       )}
 
-      {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing.lg,
-        overflowX: 'auto',
-      }}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              aria-pressed={isActive}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
-                border: 'none',
-                borderRadius: borderRadius.base,
-                cursor: 'pointer',
-                fontSize: typography.fontSize.sm,
-                fontFamily: typography.fontFamily,
-                fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.orangeText : colors.textSecondary,
-                backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                transition: `all ${transitions.instant}`,
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-            >
-              {React.createElement(Icon, { size: 14 })}
-              {tab.label}
-            </button>
-          )
-        })}
+      {/* Tab Switcher — outer div scrolls, inner div is sized to content */}
+      <div style={{ overflowX: 'auto', marginBottom: spacing.lg, borderRadius: borderRadius.lg }}>
+        <div style={{
+          display: 'flex',
+          gap: spacing['1'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          minWidth: 'max-content',
+        }}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['4']}`,
+                  border: 'none',
+                  borderRadius: borderRadius.base,
+                  cursor: 'pointer',
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {React.createElement(Icon, { size: 14 })}
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Skeleton loaders while fetching */}
