@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 10,
-  "_updated": "2026-04-30T22:30:00Z",
-  "_updatedBy": "auto/polish-20260430-0530",
-  "_floor_realignment_note": "v10: eslintErrors tightened 404→125 (unused-import/unused-var/no-useless-escape across 50+ files); e2ePassRate extended to 84/84 (desktop+iPad+iPhone); PageContainer header flexWrap fix — mobile title overlap resolved across 5+ pages.",
+  "_version": 11,
+  "_updated": "2026-04-30T23:50:00Z",
+  "_updatedBy": "auto/polish-20260430-0530+extend",
+  "_floor_realignment_note": "v11: eslintErrors tightened 125→120 — dead {false&&} block removed from MeasurementOverlay, void ternaries fixed in ProcoreImportModal+LinkedEntities, async-promise-executor antipattern fixed in resumableUpload, @ts-ignore→@ts-expect-error in extract-schedule-pdf.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 125,
+  "eslintErrors": 120,
   "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,

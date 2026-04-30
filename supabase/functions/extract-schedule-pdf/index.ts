@@ -1290,7 +1290,7 @@ Deno.serve(async (req) => {
       filename,
     })
 
-    // @ts-ignore — EdgeRuntime is a global provided by Supabase Edge Runtime
+    // @ts-expect-error — EdgeRuntime is a global provided by Supabase Edge Runtime
     EdgeRuntime.waitUntil(runExtraction({
       supabaseUrl,
       serviceRoleKey,
