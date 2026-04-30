@@ -32,12 +32,25 @@ import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
   type RFIState
 } from '../../machines/rfiMachine'
 import type { RFI, RFIResponse } from '../../types/database'
+
+// ─── RFI Workflow Constants ────────────────────────────────
+
+const RFI_WORKFLOW_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+
+const RFI_STATE_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  open: 'Open',
+  under_review: 'In Review',
+  answered: 'Answered',
+  closed: 'Closed',
+}
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -765,6 +778,25 @@ export function RFIDetail() {
             </div>
           )}
         </div>
+
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{
+            marginBottom: '24px',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          }}>
+            <WorkflowTimeline
+              states={RFI_WORKFLOW_STATES}
+              currentState={currentStatus}
+              completedStates={RFI_WORKFLOW_STATES.slice(0, RFI_WORKFLOW_STATES.indexOf(currentStatus))}
+              labels={RFI_STATE_LABELS}
+            />
+          </div>
+        )}
 
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
