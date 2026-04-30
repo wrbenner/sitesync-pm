@@ -284,7 +284,7 @@ export default function AIAssistant() {
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(() => window.innerWidth >= 768);
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   // Agent-tasks side panel.
