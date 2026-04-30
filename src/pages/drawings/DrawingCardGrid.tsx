@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Upload, Eye, Loader2, Zap } from 'lucide-react';
 import { Btn } from '../../components/Primitives';
-import { colors, spacing, typography } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 import type { DrawingItem } from './DrawingList';
 import { formatRevDate } from './types';
 import { useSignedUrl } from '../../hooks/useSignedUrl';

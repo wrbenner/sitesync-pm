@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 8,
-  "_updated": "2026-04-30T18:40:00Z",
+  "_version": 9,
+  "_updated": "2026-04-30T21:00:00Z",
   "_updatedBy": "auto/polish-20260430-0530",
-  "_floor_realignment_note": "v8: eslintErrors tightened 480→404 and eslintWarnings 968→917 after removing 69 unused-import/unused-var errors across 14 files (all no-unused-vars, safe removals). Zero new code paths changed.",
+  "_floor_realignment_note": "v9: eslintErrors tightened 404→125 after removing unused-import/unused-var/no-useless-escape errors across 50+ files (safe removals only — no logic changes). tsErrors=0, Math.random=0, as-any=0 maintained.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 404,
+  "eslintErrors": 125,
   "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,

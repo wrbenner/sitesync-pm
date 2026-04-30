@@ -34,7 +34,6 @@ export interface TitleBlockRegion {
 
 // pdfjs operator codes. Not exported from the library type defs, so we
 // hard-code them; they've been stable since pdfjs 2.x.
-const OP_SET_FILL_RGB = 31;
 const OP_CONSTRUCT_PATH = 91;
 const SUB_OP_RECT = 19;
 const SUB_OP_MOVE_TO = 13;
@@ -50,7 +49,7 @@ interface RawRect {
 // Sheet-number regex — loose enough for anything that looks like an AIA
 // sheet number. The parser has a stricter version; this is just for
 // "is there a plausible sheet number inside this rectangle?"
-const PLAUSIBLE_SHEET_RE = /\b[A-Z]{1,2}\s*[-.]?\s*\d{1,3}(?:\s*[.\-]\s*\d{1,3})?\b/;
+const PLAUSIBLE_SHEET_RE = /\b[A-Z]{1,2}\s*[-.]?\s*\d{1,3}(?:\s*[.-]\s*\d{1,3})?\b/;
 
 /**
  * Extract raw rectangles from the page content stream. Handles the
