@@ -31,6 +31,9 @@ interface NeedsYouTableProps {
   items: StreamItem[]
   onRowClick: (item: StreamItem) => void
   onIrisClick: (item: StreamItem) => void
+  /** Optional UUID-aware name resolver. UUID inputs become display names;
+   *  free-text labels (companies, ball-in-court strings) pass through. */
+  resolveName?: (value: string | null | undefined) => string | null
 }
 
 const TYPE_ICON: Record<StreamItemType, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
@@ -112,7 +115,7 @@ const COL_WIDTHS = {
   chevron: 28,
 } as const
 
-export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick, onIrisClick }) => {
+export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick, onIrisClick, resolveName }) => {
   const now = useMemo(() => new Date(), [])
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [focusIndex, setFocusIndex] = useState<number>(-1)
@@ -281,6 +284,7 @@ export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick,
                     rowIndex={flatIdx}
                     hovered={hoveredId === item.id}
                     focused={focused}
+                    resolveName={resolveName}
                     onMouseEnter={() => setHoveredId(item.id)}
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => {
@@ -326,6 +330,7 @@ function Row({
   rowIndex,
   hovered,
   focused,
+  resolveName,
   onMouseEnter,
   onMouseLeave,
   onClick,
@@ -336,6 +341,7 @@ function Row({
   rowIndex: number
   hovered: boolean
   focused: boolean
+  resolveName?: (value: string | null | undefined) => string | null
   onMouseEnter: () => void
   onMouseLeave: () => void
   onClick: () => void
@@ -411,7 +417,7 @@ function Row({
             textOverflow: 'ellipsis',
           }}
         >
-          {item.assignedTo ?? item.party ?? '—'}
+          {(resolveName ? resolveName(item.assignedTo ?? item.party) : (item.assignedTo ?? item.party)) ?? '—'}
         </span>
       </Td>
       <Td style={{ textAlign: 'right' }}>

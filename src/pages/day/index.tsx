@@ -33,6 +33,7 @@ import { TableSkeleton } from '../../components/cockpit/TableSkeleton'
 import { TypeFilterChips } from '../../components/cockpit/TypeFilterChips'
 import { InboxClearState } from '../../components/cockpit/InboxClearState'
 import { IrisDraftDrawer } from '../../components/cockpit/IrisDraftDrawer'
+import { useProfileNames, displayName as profileDisplayName } from '../../hooks/queries/profiles'
 import { toStreamRole } from '../../types/stream'
 import type { StreamItem, StreamItemType } from '../../types/stream'
 import { WifiOff } from 'lucide-react'
@@ -177,13 +178,24 @@ const TYPE_ROUTE: Record<StreamItem['type'], string> = {
 }
 
 function destinationFor(item: StreamItem): string {
-  // Find the sourceTrail entry that points back to the ITEM ITSELF (e.g. for
-  // an RFI item, the entry with type='rfi' — its own /rfis/:id deep link).
-  // Other entries (drawing/spec references) are supplementary; using
-  // sourceTrail[0] would send a clicked RFI to the Drawings page.
-  const own = item.sourceTrail.find((s) => s.type === item.type)
-  if (own?.url) return own.url
-  return TYPE_ROUTE[item.type] ?? '/day'
+  // Type-canonical detail route. Each item knows its own detail page; we
+  // strip the prefix the transformer added to item.id (e.g. "rfi-uuid" →
+  // "uuid") and route to the per-id detail page where one exists. For types
+  // without a detail page, fall back to the list page (with a query param
+  // to focus the right activity / date when supported).
+  const id = item.id.replace(/^[a-z_]+-/, '')
+  switch (item.type) {
+    case 'rfi':          return `/rfis/${id}`
+    case 'submittal':    return `/submittals/${id}`
+    case 'punch':        return `/punch-list/${id}`
+    case 'change_order': return `/change-orders?focus=${id}`
+    case 'task':         return `/tasks?focus=${id}`
+    case 'daily_log':    return `/daily-log${item.dueDate ? `?date=${item.dueDate}` : ''}`
+    case 'incident':     return `/safety?incident=${id}`
+    case 'schedule':     return `/schedule?activity=${encodeURIComponent(id)}`
+    case 'commitment':   return '/commitments'
+    default:             return TYPE_ROUTE[item.type] ?? '/day'
+  }
 }
 
 // ── Per-zone error fallback — keeps a single panel failure from killing
@@ -237,6 +249,31 @@ const DayPage: React.FC = () => {
 
   const showSkeleton = stream.isLoading && stream.items.length === 0
 
+  // Resolve user IDs in `assignedTo` / `party` to display names. Items can
+  // carry either a UUID (assigned_to user id) or a free-text label (e.g.
+  // "Smith Architects" as ball_in_court). UUID-shaped values get looked up;
+  // anything else is passed through.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const userIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const it of stream.items) {
+      if (it.assignedTo && UUID_RE.test(it.assignedTo)) set.add(it.assignedTo)
+      if (it.party && UUID_RE.test(it.party)) set.add(it.party)
+    }
+    return Array.from(set)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream.items])
+  const { data: profileMap } = useProfileNames(userIds)
+  const resolveName = useCallback(
+    (value: string | null | undefined): string | null => {
+      if (!value) return null
+      if (!UUID_RE.test(value)) return value
+      return profileDisplayName(profileMap, value, value.slice(0, 6))
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profileMap],
+  )
+
   useEffect(() => {
     setPageContext('day')
   }, [setPageContext])
@@ -280,7 +317,7 @@ const DayPage: React.FC = () => {
         }
         irisLane={
           <ErrorBoundary fallback={null}>
-            <IrisLane items={stream.items} onChip={handleIrisClick} />
+            <IrisLane items={stream.items} onChip={handleIrisClick} resolveName={resolveName} />
           </ErrorBoundary>
         }
         needsYou={
@@ -322,12 +359,14 @@ const DayPage: React.FC = () => {
                     items={filteredItems}
                     onRowClick={handleRowClick}
                     onIrisClick={handleIrisClick}
+                    resolveName={resolveName}
                   />
                 ) : (
                   <NeedsYouTable
                     items={filteredItems}
                     onRowClick={handleRowClick}
                     onIrisClick={handleIrisClick}
+                    resolveName={resolveName}
                   />
                 )}
               </>
@@ -337,7 +376,7 @@ const DayPage: React.FC = () => {
         }
         projectNow={
           <ErrorBoundary fallback={<ZonePanel title="Project Now"><ZoneFallback label="Project status" /></ZonePanel>}>
-            <ProjectNow items={stream.items} role={streamRole} />
+            <ProjectNow items={stream.items} role={streamRole} resolveName={resolveName} />
           </ErrorBoundary>
         }
         isMobile={isMobile}

@@ -18,6 +18,7 @@ import type { StreamItem, Urgency } from '../../types/stream'
 interface IrisLaneProps {
   items: StreamItem[]
   onChip: (item: StreamItem) => void
+  resolveName?: (value: string | null | undefined) => string | null
 }
 
 const IRIS_INDIGO = '#4F46E5'
@@ -38,7 +39,7 @@ function shortLabel(item: StreamItem): string {
   return item.title.length > 64 ? `${item.title.slice(0, 61)}…` : item.title
 }
 
-function reasoningFor(item: StreamItem): string {
+function reasoningFor(item: StreamItem, resolveName?: (v: string | null | undefined) => string | null): string {
   // Compose a one-line "why" from the data we have. Specific is better than
   // generic — investors should hear "3 days overdue, $42K at risk" not "AI
   // detected something."
@@ -49,7 +50,9 @@ function reasoningFor(item: StreamItem): string {
     parts.push(item.reason)
   }
   if (item.assignedTo || item.party) {
-    parts.push(`ball-in-court: ${item.assignedTo ?? item.party}`)
+    const raw = item.assignedTo ?? item.party
+    const display = resolveName ? resolveName(raw) : raw
+    if (display) parts.push(`ball-in-court: ${display}`)
   }
   if (item.costImpact && item.costImpact > 0) {
     const fmt =
@@ -66,7 +69,7 @@ function reasoningFor(item: StreamItem): string {
   return parts.join(' · ')
 }
 
-export const IrisLane: React.FC<IrisLaneProps> = ({ items, onChip }) => {
+export const IrisLane: React.FC<IrisLaneProps> = ({ items, onChip, resolveName }) => {
   const { primary, secondary } = useMemo(() => {
     const irisItems = items
       .filter((i) => i.irisEnhancement?.draftAvailable)
@@ -176,7 +179,7 @@ export const IrisLane: React.FC<IrisLaneProps> = ({ items, onChip }) => {
               lineHeight: 1.3,
             }}
           >
-            {reasoningFor(primary) || shortLabel(primary)}
+            {reasoningFor(primary, resolveName) || shortLabel(primary)}
           </span>
         </span>
         <ArrowRight size={14} strokeWidth={2.25} color={IRIS_INDIGO_STRONG} aria-hidden />

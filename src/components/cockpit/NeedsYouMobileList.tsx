@@ -31,6 +31,7 @@ interface NeedsYouMobileListProps {
   items: StreamItem[]
   onRowClick: (item: StreamItem) => void
   onIrisClick: (item: StreamItem) => void
+  resolveName?: (value: string | null | undefined) => string | null
 }
 
 const TYPE_ICON: Record<StreamItemType, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
@@ -95,6 +96,7 @@ export const NeedsYouMobileList: React.FC<NeedsYouMobileListProps> = ({
   items,
   onRowClick,
   onIrisClick,
+  resolveName,
 }) => {
   const now = useMemo(() => new Date(), [])
   const grouped = useMemo(() => {
@@ -176,6 +178,7 @@ export const NeedsYouMobileList: React.FC<NeedsYouMobileListProps> = ({
                 key={item.id}
                 item={item}
                 now={now}
+                resolveName={resolveName}
                 onClick={() => onRowClick(item)}
                 onIris={() => onIrisClick(item)}
               />
@@ -190,11 +193,13 @@ export const NeedsYouMobileList: React.FC<NeedsYouMobileListProps> = ({
 function MobileRow({
   item,
   now,
+  resolveName,
   onClick,
   onIris,
 }: {
   item: StreamItem
   now: Date
+  resolveName?: (value: string | null | undefined) => string | null
   onClick: () => void
   onIris: () => void
 }) {
@@ -204,7 +209,10 @@ function MobileRow({
   const dollars = formatDollars(item.costImpact)
   const age = ageDays(item.createdAt, now)
   const meta: string[] = []
-  if (item.assignedTo || item.party) meta.push((item.assignedTo ?? item.party)!)
+  const who = resolveName
+    ? resolveName(item.assignedTo ?? item.party)
+    : (item.assignedTo ?? item.party)
+  if (who) meta.push(who)
   if (due) meta.push(due)
   if (dollars) meta.push(dollars)
   if (age > 0 && !due) meta.push(`${age}d`)

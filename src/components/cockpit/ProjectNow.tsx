@@ -32,6 +32,8 @@ interface ProjectNowProps {
   items: StreamItem[]
   /** Stream role drives what sections appear and in what order. */
   role: StreamRole
+  /** UUID-aware name resolver — UUIDs become display names, free text passes through. */
+  resolveName?: (value: string | null | undefined) => string | null
 }
 
 // ── Pulse row ──────────────────────────────────────────────────────────────
@@ -116,7 +118,7 @@ function SectionDivider({ label }: { label: string }) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role }) => {
+export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role, resolveName }) => {
   const navigate = useNavigate()
   const projectId = useProjectId()
   const isField = role === 'superintendent'
@@ -396,7 +398,7 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role }) => {
                     }}
                   >
                     <span style={{ color: colors.ink2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {c.party ?? c.assignedTo ?? '—'} · {c.commitment ?? c.title}
+                      {(resolveName ? resolveName(c.party ?? c.assignedTo) : (c.party ?? c.assignedTo)) ?? '—'} · {c.commitment ?? c.title}
                     </span>
                     <span style={{ color: c.overdue ? '#C93B3B' : colors.ink3, fontSize: '12px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                       {c.dueDate ? formatDateShort(c.dueDate) : '—'}
