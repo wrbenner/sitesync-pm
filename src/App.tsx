@@ -3,7 +3,7 @@ import { HardHat } from 'lucide-react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SidebarContext, ToastProvider } from './components/Primitives';
-import { CommandPalette } from './components/shared/CommandPalette';
+import { CommandPalette } from './components/CommandPalette';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Sentry from './lib/sentry';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -61,6 +61,7 @@ const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: 
 // Public, unauthenticated trust center page used by procurement reviewers.
 const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+const MagicLinkSubRoute = lazy(() => import('./components/MagicLinkSubRoute'));
 
 // Lazy loaded overlay panels (only render when opened)
 const AIContextPanel = lazy(() => import('./components/ai/AIContextPanel').then((m) => ({ default: m.AIContextPanel })));
@@ -75,6 +76,16 @@ const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').the
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
 // ── Lazy loaded pages ─────────────────────────────────────
+// The Nine
+const DayPage = lazyWithRetry(() => import('./pages/day/index'));
+const FieldPage = lazyWithRetry(() => import('./pages/field/index'));
+// /conversation and /site now redirect to /day (Wave 1 homepage redesign);
+// their page components are no longer routed.
+const PlanPage = lazyWithRetry(() => import('./pages/plan/index'));
+const LedgerPage = lazyWithRetry(() => import('./pages/ledger/index'));
+const CrewPage = lazyWithRetry(() => import('./pages/crew/index'));
+const SetPage = lazyWithRetry(() => import('./pages/set/index'));
+const FilePage = lazyWithRetry(() => import('./pages/file/index'));
 // Core 10
 const Dashboard = lazyWithRetry(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })));
 const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
@@ -90,6 +101,7 @@ const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetai
 const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
 const Safety = lazy(() => import('./pages/safety/index').then((m) => ({ default: m.Safety })));
+const FieldCapture = lazy(() => import('./pages/field-capture/index').then((m) => ({ default: m.FieldCapture })));
 // People & Labor
 const Workforce = lazy(() => import('./pages/Workforce'));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
@@ -119,12 +131,18 @@ const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const WorkflowSettings = lazy(() => import('./pages/Settings/WorkflowSettings'));
 const ProjectSettings = lazy(() => import('./pages/admin/ProjectSettings').then((m) => ({ default: m.ProjectSettings })));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
-const ComplianceCockpit = lazy(() => import('./pages/admin/compliance'));
 const NotificationSettings = lazy(() => import('./pages/Settings/NotificationSettings'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
+const BulkInvitePage = lazy(() => import('./pages/admin/bulk-invite'));
+const CostCodeLibraryPage = lazy(() => import('./pages/admin/cost-code-library'));
+const ProjectTemplatesPage = lazy(() => import('./pages/admin/project-templates'));
+const ProcoreImportPage = lazy(() => import('./pages/admin/procore-import'));
+const ComplianceCockpit = lazy(() => import('./pages/admin/compliance'));
+const WalkthroughPage = lazy(() => import('./pages/walkthrough'));
+const OwnerPayAppPreviewPage = lazy(() => import('./pages/share/OwnerPayAppPreview'));
 
 const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' };
 
@@ -136,6 +154,10 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
     const prefetch = () => {
+      import('./pages/day/index');
+      import('./pages/field/index');
+      import('./pages/plan/index');
+      import('./pages/ledger/index');
       import('./pages/dashboard');
       import('./pages/RFIs');
       import('./pages/daily-log');
@@ -338,8 +360,26 @@ function AppRoutes() {
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
             <Route path="/security" element={<PageSuspense><SecurityOverview /></PageSuspense>} />
 
+            {/* ── The Nine ── */}
+            <Route path="/day" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/field" element={<PageSuspense><ProtectedRoute moduleId="field" moduleName="The Field"><FieldPage /></ProtectedRoute></PageSuspense>} />
+            {/* /conversation merges into the Command stream — Wave 1 redirect */}
+            <Route path="/conversation" element={<Navigate to="/day" replace />} />
+            <Route path="/plan" element={<PageSuspense><ProtectedRoute moduleId="plan" moduleName="The Plan"><PlanPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/ledger" element={<PageSuspense><ProtectedRoute moduleId="ledger" moduleName="The Ledger"><LedgerPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/crew" element={<PageSuspense><ProtectedRoute moduleId="crew" moduleName="The Crew"><CrewPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/set" element={<PageSuspense><ProtectedRoute moduleId="set" moduleName="The Set"><SetPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/file" element={<PageSuspense><ProtectedRoute moduleId="file" moduleName="The File"><FilePage /></ProtectedRoute></PageSuspense>} />
+            {/* /site merges into the Command stream — Wave 1 redirect */}
+            <Route path="/site" element={<Navigate to="/day" replace />} />
+
+            {/* Magic-link sub access — renders the same DayPage with an
+                ActorContext of kind 'magic_link'. Token validation is handled
+                by the wrapper; no auth session required. */}
+            <Route path="/sub/:token" element={<PageSuspense><MagicLinkSubRoute /></PageSuspense>} />
+
             {/* ── Core 10 ── */}
-            <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
+            <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/dashboard" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
             <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
             <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
@@ -391,14 +431,20 @@ function AppRoutes() {
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
+            <Route path="/admin/bulk-invite" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/admin/cost-code-library" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Cost Code Library"><CostCodeLibraryPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/admin/project-templates" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Project Templates"><ProjectTemplatesPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/admin/procore-import" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Procore Import"><ProcoreImportPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/admin/compliance" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Compliance"><ComplianceCockpit /></ProtectedRoute></PageSuspense>} />
+            <Route path="/walkthrough" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Walk-Through"><WalkthroughPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/share/owner-payapp/:token" element={<PageSuspense><OwnerPayAppPreviewPage /></PageSuspense>} />
             <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
 
             {/* ── Redirects: merged pages ── */}
             <Route path="/tasks" element={<Navigate to="/dashboard" replace />} />
             <Route path="/lookahead" element={<Navigate to="/schedule" replace />} />
-            <Route path="/field-capture" element={<Navigate to="/daily-log" replace />} />
+            <Route path="/field-capture" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute></PageSuspense>} />
             <Route path="/financials" element={<Navigate to="/budget" replace />} />
             <Route path="/cost-management" element={<Navigate to="/budget" replace />} />
             <Route path="/vendors" element={<Navigate to="/contracts" replace />} />
