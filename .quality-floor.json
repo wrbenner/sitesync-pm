@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 9,
-  "_updated": "2026-04-30T21:00:00Z",
+  "_version": 10,
+  "_updated": "2026-04-30T22:30:00Z",
   "_updatedBy": "auto/polish-20260430-0530",
-  "_floor_realignment_note": "v9: eslintErrors tightened 404→125 after removing unused-import/unused-var/no-useless-escape errors across 50+ files (safe removals only — no logic changes). tsErrors=0, Math.random=0, as-any=0 maintained.",
+  "_floor_realignment_note": "v10: eslintErrors tightened 404→125 (unused-import/unused-var/no-useless-escape across 50+ files); e2ePassRate extended to 84/84 (desktop+iPad+iPhone); PageContainer header flexWrap fix — mobile title overlap resolved across 5+ pages.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -18,7 +18,7 @@
   "mockCount": 0,
   "a11yViolations": 0,
   "eslintWarnings": 917,
-  "_e2ePassRate_note": "Raised to 1.0 — e2e/polish/page-sweep.spec.ts sweeps all 28 demo pages at desktop viewport; 28/28 passing.",
+  "_e2ePassRate_note": "1.0 — 84/84 across desktop (1440×900), iPad (1024×1366), iPhone (393×852). WebKit browsers installed; all viewports verified.",
   "e2ePassRate": 1.0,
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,
@@ -37,7 +37,7 @@
     "bundleSizeKB": 250,
     "longestResponseMs": 200
   },
-  "_e2eActual_note": "28/28 page-e2e desktop tests passing as of 2026-04-30 (polish sweep spec landed in e2e/polish/page-sweep.spec.ts).",
+  "_e2eActual_note": "84/84 page-e2e tests passing as of 2026-04-30 — all 3 viewports (desktop, iPad, iPhone). Playwright WebKit browsers now installed.",
   "_note": "Zero means zero. Rules we disagree with are deliberately downgraded to warnings in eslint.config.js. Everything remaining as an error must be zero.",
   "_ci_trigger": "final-v2"
 }
