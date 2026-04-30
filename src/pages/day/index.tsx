@@ -23,6 +23,7 @@ import { useIsOnline } from '../../hooks/useOfflineStatus'
 import { useIsMobile } from '../../hooks/useWindowSize'
 import { colors, typography, spacing } from '../../styles/theme'
 import { Cockpit } from '../../components/cockpit/Cockpit'
+import { CockpitMetrics } from '../../components/cockpit/CockpitMetrics'
 import { IrisLane } from '../../components/cockpit/IrisLane'
 import { NeedsYouTable } from '../../components/cockpit/NeedsYouTable'
 import { ProjectNow } from '../../components/cockpit/ProjectNow'
@@ -30,6 +31,52 @@ import { ZonePanel } from '../../components/cockpit/ZonePanel'
 import { toStreamRole } from '../../types/stream'
 import type { StreamItem } from '../../types/stream'
 import { WifiOff } from 'lucide-react'
+
+// ── Keyboard hint chip — surfaces j/k/Enter shortcuts ────────────────────
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd
+      style={{
+        fontFamily: typography.fontFamily,
+        fontSize: '10px',
+        fontWeight: 600,
+        color: colors.ink2,
+        background: colors.surfaceRaised,
+        border: `1px solid ${colors.borderDefault}`,
+        borderRadius: 4,
+        padding: '1px 4px',
+        lineHeight: 1.2,
+      }}
+    >
+      {children}
+    </kbd>
+  )
+}
+
+function KeyboardHint() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontFamily: typography.fontFamily,
+        fontSize: '11px',
+        color: colors.ink3,
+      }}
+    >
+      <Kbd>j</Kbd>
+      <Kbd>k</Kbd>
+      <span>move</span>
+      <Kbd>↵</Kbd>
+      <span>open</span>
+      <Kbd>e</Kbd>
+      <span>act</span>
+    </div>
+  )
+}
 
 // ── Header ────────────────────────────────────────────────────────────────
 
@@ -175,6 +222,7 @@ const DayPage: React.FC = () => {
             <CockpitHeader projectName={projectName} />
           </>
         }
+        metrics={<CockpitMetrics items={stream.items} />}
         irisLane={
           <IrisLane items={stream.items} onChip={handleIrisClick} />
         }
@@ -186,8 +234,13 @@ const DayPage: React.FC = () => {
               stream.isLoading
                 ? 'Loading…'
                 : stream.items.length === 0
-                ? 'Inbox clear'
-                : undefined
+                  ? 'Inbox clear'
+                  : undefined
+            }
+            action={
+              !isMobile && stream.items.length > 0 ? (
+                <KeyboardHint />
+              ) : undefined
             }
             contentStyle={{ padding: 0 }}
           >

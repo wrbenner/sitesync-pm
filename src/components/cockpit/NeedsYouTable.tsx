@@ -10,7 +10,7 @@
 // small section headers separating tiers.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MessageCircle,
   FileCheck,
@@ -115,12 +115,68 @@ const COL_WIDTHS = {
 export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick, onIrisClick }) => {
   const now = useMemo(() => new Date(), [])
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [focusIndex, setFocusIndex] = useState<number>(-1)
+  const tableRef = useRef<HTMLTableElement | null>(null)
+
+  // Sorted-flat items in the same order they're rendered (urgency-banded).
+  const orderedItems = useMemo(() => {
+    const buckets: Record<Urgency, StreamItem[]> = { critical: [], high: [], medium: [], low: [] }
+    for (const it of items) buckets[it.urgency].push(it)
+    return [...buckets.critical, ...buckets.high, ...buckets.medium, ...buckets.low]
+  }, [items])
 
   const grouped = useMemo(() => {
     const buckets: Record<Urgency, StreamItem[]> = { critical: [], high: [], medium: [], low: [] }
     for (const it of items) buckets[it.urgency].push(it)
     return buckets
   }, [items])
+
+  // Keyboard nav: j/k row movement, Enter to open, e for primary action,
+  // / focus is owned by the global Cmd-K palette so we leave it alone.
+  useEffect(() => {
+    if (orderedItems.length === 0) return
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const editable =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      if (editable) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        setFocusIndex((i) => Math.min(orderedItems.length - 1, i < 0 ? 0 : i + 1))
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        setFocusIndex((i) => Math.max(0, i - 1))
+      } else if (e.key === 'Enter') {
+        if (focusIndex >= 0 && focusIndex < orderedItems.length) {
+          e.preventDefault()
+          onRowClick(orderedItems[focusIndex])
+        }
+      } else if (e.key === 'e') {
+        if (focusIndex >= 0 && focusIndex < orderedItems.length) {
+          const item = orderedItems[focusIndex]
+          if (item.irisEnhancement?.draftAvailable) {
+            e.preventDefault()
+            onIrisClick(item)
+          }
+        }
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [orderedItems, focusIndex, onRowClick, onIrisClick])
+
+  // Scroll focused row into view.
+  useEffect(() => {
+    if (focusIndex < 0) return
+    const node = tableRef.current?.querySelector<HTMLTableRowElement>(
+      `tr[data-row-index="${focusIndex}"]`,
+    )
+    node?.scrollIntoView({ block: 'nearest' })
+  }, [focusIndex])
 
   if (items.length === 0) {
     return (
@@ -140,6 +196,7 @@ export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick,
 
   return (
     <table
+      ref={tableRef}
       style={{
         width: '100%',
         borderCollapse: 'collapse',
@@ -213,18 +270,27 @@ export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick,
                   </span>
                 </td>
               </tr>
-              {rows.map((item) => (
-                <Row
-                  key={item.id}
-                  item={item}
-                  now={now}
-                  hovered={hoveredId === item.id}
-                  onMouseEnter={() => setHoveredId(item.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  onClick={() => onRowClick(item)}
-                  onIris={() => onIrisClick(item)}
-                />
-              ))}
+              {rows.map((item) => {
+                const flatIdx = orderedItems.indexOf(item)
+                const focused = flatIdx === focusIndex
+                return (
+                  <Row
+                    key={item.id}
+                    item={item}
+                    now={now}
+                    rowIndex={flatIdx}
+                    hovered={hoveredId === item.id}
+                    focused={focused}
+                    onMouseEnter={() => setHoveredId(item.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={() => {
+                      setFocusIndex(flatIdx)
+                      onRowClick(item)
+                    }}
+                    onIris={() => onIrisClick(item)}
+                  />
+                )
+              })}
             </React.Fragment>
           )
         })}
@@ -257,7 +323,9 @@ function Th({ children, style }: { children?: React.ReactNode; style?: React.CSS
 function Row({
   item,
   now,
+  rowIndex,
   hovered,
+  focused,
   onMouseEnter,
   onMouseLeave,
   onClick,
@@ -265,7 +333,9 @@ function Row({
 }: {
   item: StreamItem
   now: Date
+  rowIndex: number
   hovered: boolean
+  focused: boolean
   onMouseEnter: () => void
   onMouseLeave: () => void
   onClick: () => void
@@ -276,15 +346,24 @@ function Row({
   const due = dueRelative(item.dueDate, now)
   const overdue = item.overdue
 
+  const bg = focused
+    ? colors.surfaceSelected
+    : hovered
+      ? colors.surfaceHover
+      : colors.surfaceRaised
+
   return (
     <tr
+      data-row-index={rowIndex}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
       style={{
         cursor: 'pointer',
-        background: hovered ? colors.surfaceHover : colors.surfaceRaised,
+        background: bg,
         transition: 'background 80ms linear',
+        outline: focused ? `2px solid ${colors.borderFocus}` : 'none',
+        outlineOffset: -2,
       }}
     >
       <Td>

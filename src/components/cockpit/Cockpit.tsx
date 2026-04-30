@@ -20,6 +20,7 @@ import { colors, spacing } from '../../styles/theme'
 
 interface CockpitProps {
   header: React.ReactNode
+  metrics?: React.ReactNode
   irisLane?: React.ReactNode
   needsYou: React.ReactNode
   projectNow: React.ReactNode
@@ -32,6 +33,7 @@ const HEADER_HEIGHT = 56
 
 export const Cockpit: React.FC<CockpitProps> = ({
   header,
+  metrics,
   irisLane,
   needsYou,
   projectNow,
@@ -46,6 +48,7 @@ export const Cockpit: React.FC<CockpitProps> = ({
     }}
   >
     <div style={{ flexShrink: 0 }}>{header}</div>
+    {metrics}
     {irisLane}
 
     {isMobile ? (
