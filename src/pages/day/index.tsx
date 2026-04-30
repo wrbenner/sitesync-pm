@@ -251,7 +251,7 @@ const DayPage: React.FC = () => {
             />
           </ZonePanel>
         }
-        projectNow={<ProjectNow items={stream.items} />}
+        projectNow={<ProjectNow items={stream.items} role={streamRole} />}
         isMobile={isMobile}
       />
     </ErrorBoundary>

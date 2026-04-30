@@ -14,20 +14,24 @@
 import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, ImageIcon } from 'lucide-react'
+import { ArrowUpRight, ImageIcon, AlertTriangle } from 'lucide-react'
 import { colors, typography, spacing } from '../../styles/theme'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useProject, useWorkforceMembers } from '../../hooks/queries'
 import { useScheduleActivities } from '../../hooks/useScheduleActivities'
 import { useBudgetData } from '../../hooks/useBudgetData'
 import { useFieldCaptures } from '../../hooks/queries/field-captures'
+import { useIncidents } from '../../hooks/queries/incidents'
+import { useDailyLogs } from '../../hooks/queries/daily-logs'
 import { fetchWeatherForProject, type WeatherSnapshot } from '../../lib/weather'
 import { ZonePanel } from './ZonePanel'
-import type { StreamItem } from '../../types/stream'
+import type { StreamItem, StreamRole } from '../../types/stream'
 
 interface ProjectNowProps {
   /** All stream items, used to derive "Owed to you" commitments. */
   items: StreamItem[]
+  /** Stream role drives what sections appear and in what order. */
+  role: StreamRole
 }
 
 // ── Pulse row ──────────────────────────────────────────────────────────────
@@ -112,15 +116,21 @@ function SectionDivider({ label }: { label: string }) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export const ProjectNow: React.FC<ProjectNowProps> = ({ items }) => {
+export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role }) => {
   const navigate = useNavigate()
   const projectId = useProjectId()
+  const isField = role === 'superintendent'
 
   const { data: project } = useProject(projectId)
   const { data: scheduleActs } = useScheduleActivities(projectId ?? '')
   const { budgetItems } = useBudgetData()
   const { data: workforce } = useWorkforceMembers(projectId)
   const { data: photos } = useFieldCaptures(projectId)
+  const { data: incidents } = useIncidents(isField ? projectId : undefined)
+  const { data: dailyLogPage } = useDailyLogs(
+    isField ? projectId : undefined,
+    { page: 1, pageSize: 5 },
+  )
   const { data: weather } = useQuery<WeatherSnapshot>({
     queryKey: ['cockpit_weather', projectId],
     queryFn: () =>
@@ -212,30 +222,80 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items }) => {
     [photos],
   )
 
+  // Super-only: open safety items (incidents not closed).
+  const openSafety = useMemo(() => {
+    if (!isField) return []
+    return (incidents ?? [])
+      .filter((i) => {
+        const status = (i as { status?: string | null }).status
+        return !status || !['closed', 'resolved'].includes(status.toLowerCase())
+      })
+      .slice(0, 3)
+  }, [incidents, isField])
+
+  // Super-only: today's daily log status.
+  const dailyLogStatus = useMemo(() => {
+    if (!isField) return null
+    const todayIso = new Date().toISOString().split('T')[0]
+    const logs = (dailyLogPage as { data?: Array<{ log_date?: string; status?: string }> } | undefined)?.data ?? []
+    const todays = logs.find((l) => l.log_date === todayIso)
+    if (!todays) return { label: 'Not started', tone: 'negative' as const }
+    const status = (todays.status ?? '').toLowerCase()
+    if (status === 'submitted' || status === 'approved') {
+      return { label: status === 'approved' ? 'Approved' : 'Submitted', tone: 'positive' as const }
+    }
+    return { label: 'Drafting', tone: 'neutral' as const }
+  }, [dailyLogPage, isField])
+
   return (
     <ZonePanel
       title="Project Now"
       subtitle={project?.name ?? undefined}
       contentStyle={{ padding: 0 }}
     >
+      {/* Pulse — order changes per role: PM leads with money/schedule;
+          Super leads with weather + crew (the field's lived metrics). */}
       <div style={{ paddingTop: spacing[2], paddingBottom: spacing[2] }}>
-        <PulseRow
-          label="Schedule"
-          value={scheduleStatus.value}
-          tone={scheduleStatus.tone}
-          href="/schedule"
-        />
-        <PulseRow
-          label="Budget"
-          value={budgetStatus.value}
-          tone={budgetStatus.tone}
-          href="/budget"
-        />
-        <PulseRow label="Crew" value={crewValue} href="/workforce" />
-        <PulseRow label="Weather" value={weatherValue} />
+        {isField ? (
+          <>
+            <PulseRow label="Weather" value={weatherValue} />
+            <PulseRow label="Crew" value={crewValue} href="/workforce" />
+            <PulseRow
+              label="Schedule"
+              value={scheduleStatus.value}
+              tone={scheduleStatus.tone}
+              href="/schedule"
+            />
+            {dailyLogStatus && (
+              <PulseRow
+                label="Today's Log"
+                value={dailyLogStatus.label}
+                tone={dailyLogStatus.tone}
+                href="/daily-log"
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <PulseRow
+              label="Schedule"
+              value={scheduleStatus.value}
+              tone={scheduleStatus.tone}
+              href="/schedule"
+            />
+            <PulseRow
+              label="Budget"
+              value={budgetStatus.value}
+              tone={budgetStatus.tone}
+              href="/budget"
+            />
+            <PulseRow label="Crew" value={crewValue} href="/workforce" />
+            <PulseRow label="Weather" value={weatherValue} />
+          </>
+        )}
       </div>
 
-      <SectionDivider label="Today's Lookahead" />
+      <SectionDivider label={isField ? "Today's Field Plan" : "Today's Lookahead"} />
       <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[3]}` }}>
         {lookahead.length === 0 ? (
           <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
@@ -273,38 +333,81 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items }) => {
         )}
       </div>
 
-      <SectionDivider label="Owed to you" />
-      <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[3]}` }}>
-        {owedToYou.length === 0 ? (
-          <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
-            No outstanding commitments.
-          </span>
-        ) : (
-          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-            {owedToYou.map((c) => (
-              <li
-                key={c.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  justifyContent: 'space-between',
-                  gap: spacing[2],
-                  padding: `${spacing[1]} 0`,
-                  fontFamily: typography.fontFamily,
-                  fontSize: '13px',
-                }}
-              >
-                <span style={{ color: colors.ink2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.party ?? c.assignedTo ?? '—'} · {c.commitment ?? c.title}
-                </span>
-                <span style={{ color: c.overdue ? '#C93B3B' : colors.ink3, fontSize: '12px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                  {c.dueDate ? formatDateShort(c.dueDate) : '—'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {isField ? (
+        <>
+          <SectionDivider label="Open safety" />
+          <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[3]}` }}>
+            {openSafety.length === 0 ? (
+              <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
+                No open incidents. Keep it that way.
+              </span>
+            ) : (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                {openSafety.map((i) => {
+                  const inc = i as unknown as { id: string; type?: string | null; description?: string | null; date?: string | null }
+                  return (
+                    <li
+                      key={inc.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        gap: spacing[2],
+                        padding: `${spacing[1]} 0`,
+                        fontFamily: typography.fontFamily,
+                        fontSize: '13px',
+                      }}
+                    >
+                      <span style={{ color: colors.ink2, display: 'inline-flex', alignItems: 'center', gap: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <AlertTriangle size={12} color="#C93B3B" strokeWidth={2} aria-hidden />
+                        {inc.type ?? 'Incident'} · {inc.description ?? '—'}
+                      </span>
+                      <span style={{ color: colors.ink3, fontSize: '12px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                        {inc.date ? formatDateShort(inc.date) : '—'}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <SectionDivider label="Owed to you" />
+          <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[3]}` }}>
+            {owedToYou.length === 0 ? (
+              <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
+                No outstanding commitments.
+              </span>
+            ) : (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                {owedToYou.map((c) => (
+                  <li
+                    key={c.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      gap: spacing[2],
+                      padding: `${spacing[1]} 0`,
+                      fontFamily: typography.fontFamily,
+                      fontSize: '13px',
+                    }}
+                  >
+                    <span style={{ color: colors.ink2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.party ?? c.assignedTo ?? '—'} · {c.commitment ?? c.title}
+                    </span>
+                    <span style={{ color: c.overdue ? '#C93B3B' : colors.ink3, fontSize: '12px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                      {c.dueDate ? formatDateShort(c.dueDate) : '—'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
 
       <SectionDivider label="Recent photos" />
       <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[4]}` }}>
