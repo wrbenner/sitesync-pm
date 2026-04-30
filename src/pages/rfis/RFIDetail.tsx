@@ -782,12 +782,12 @@ export function RFIDetail() {
         {/* ── Workflow Timeline ──────────────────────────── */}
         {currentStatus !== 'void' && (
           <div style={{
-            marginBottom: '24px',
-            padding: '16px 20px',
-            borderRadius: '12px',
+            marginBottom: spacing['6'],
+            padding: `${spacing['4']} ${spacing['5']}`,
+            borderRadius: borderRadius.md,
             backgroundColor: colors.surfaceRaised,
             border: `1px solid ${colors.borderSubtle}`,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            boxShadow: shadows.card,
           }}>
             <WorkflowTimeline
               states={RFI_WORKFLOW_STATES}
