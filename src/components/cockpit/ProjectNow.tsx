@@ -1,0 +1,398 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ProjectNow — the right-rail snapshot panel of the cockpit.
+// ─────────────────────────────────────────────────────────────────────────────
+// Everything ABOUT the project right now, all in one panel:
+//   • Pulse strip — schedule, budget, crew, weather (real numbers)
+//   • Today's lookahead — schedule activities active today + next 2 days
+//   • Owed to you — commitments where the user is the receiving party
+//   • Recent photos — 4-thumb strip from field captures
+//
+// One ZonePanel wraps the whole thing with internal sub-sections separated by
+// hairlines. Glanceable. No tabs.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import React, { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowUpRight, ImageIcon } from 'lucide-react'
+import { colors, typography, spacing } from '../../styles/theme'
+import { useProjectId } from '../../hooks/useProjectId'
+import { useProject, useWorkforceMembers } from '../../hooks/queries'
+import { useScheduleActivities } from '../../hooks/useScheduleActivities'
+import { useBudgetData } from '../../hooks/useBudgetData'
+import { useFieldCaptures } from '../../hooks/queries/field-captures'
+import { fetchWeatherForProject, type WeatherSnapshot } from '../../lib/weather'
+import { ZonePanel } from './ZonePanel'
+import type { StreamItem } from '../../types/stream'
+
+interface ProjectNowProps {
+  /** All stream items, used to derive "Owed to you" commitments. */
+  items: StreamItem[]
+}
+
+// ── Pulse row ──────────────────────────────────────────────────────────────
+
+function PulseRow({
+  label,
+  value,
+  tone = 'neutral',
+  href,
+}: {
+  label: string
+  value: string
+  tone?: 'positive' | 'negative' | 'neutral'
+  href?: string
+}) {
+  const navigate = useNavigate()
+  const valueColor =
+    tone === 'positive' ? '#2D8A6E' : tone === 'negative' ? '#C93B3B' : colors.ink
+  return (
+    <button
+      type="button"
+      onClick={href ? () => navigate(href) : undefined}
+      disabled={!href}
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        width: '100%',
+        padding: `${spacing[2]} ${spacing[4]}`,
+        background: 'transparent',
+        border: 'none',
+        cursor: href ? 'pointer' : 'default',
+        textAlign: 'left',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: typography.fontFamily,
+          fontSize: '12px',
+          fontWeight: 500,
+          color: colors.ink3,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: typography.fontFamily,
+          fontVariantNumeric: 'tabular-nums',
+          fontSize: '14px',
+          fontWeight: 500,
+          color: valueColor,
+        }}
+      >
+        {value}
+      </span>
+    </button>
+  )
+}
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        padding: `${spacing[3]} ${spacing[4]} ${spacing[1]}`,
+        fontFamily: typography.fontFamily,
+        fontSize: '11px',
+        fontWeight: 600,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: colors.ink3,
+        borderTop: `1px solid ${colors.borderSubtle}`,
+        marginTop: spacing[2],
+      }}
+    >
+      {label}
+    </div>
+  )
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
+
+export const ProjectNow: React.FC<ProjectNowProps> = ({ items }) => {
+  const navigate = useNavigate()
+  const projectId = useProjectId()
+
+  const { data: project } = useProject(projectId)
+  const { data: scheduleActs } = useScheduleActivities(projectId ?? '')
+  const { budgetItems } = useBudgetData()
+  const { data: workforce } = useWorkforceMembers(projectId)
+  const { data: photos } = useFieldCaptures(projectId)
+  const { data: weather } = useQuery<WeatherSnapshot>({
+    queryKey: ['cockpit_weather', projectId],
+    queryFn: () =>
+      fetchWeatherForProject(
+        projectId!,
+        project?.latitude ?? undefined,
+        project?.longitude ?? undefined,
+      ),
+    enabled: !!projectId,
+    staleTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+
+  // Schedule status
+  const scheduleStatus = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const behind = (scheduleActs ?? []).filter(
+      (a) =>
+        a.is_critical_path &&
+        a.end_date &&
+        a.end_date < today &&
+        (a.percent_complete ?? 0) < 100,
+    ).length
+    return {
+      value: behind === 0 ? 'On track' : `${behind} behind`,
+      tone: (behind === 0 ? 'positive' : 'negative') as 'positive' | 'negative',
+    }
+  }, [scheduleActs])
+
+  // Budget %
+  const budgetStatus = useMemo(() => {
+    const totals = budgetItems.reduce(
+      (acc, b) => {
+        const approved = Number(b.original_amount ?? 0)
+        const committed = Number(
+          (b as Record<string, unknown>).committed_amount ?? b.actual_amount ?? 0,
+        )
+        acc.approved += approved
+        acc.committed += committed
+        return acc
+      },
+      { approved: 0, committed: 0 },
+    )
+    const pct = totals.approved > 0 ? Math.round((totals.committed / totals.approved) * 100) : 0
+    return {
+      value: totals.approved > 0 ? `${pct}% committed` : '—',
+      tone: (pct > 100 ? 'negative' : 'neutral') as 'negative' | 'neutral',
+    }
+  }, [budgetItems])
+
+  const crewValue = `${(workforce ?? []).length} on site`
+  const weatherValue = weather
+    ? `${weather.conditions.toLowerCase().includes('rain') ? '🌧' : weather.conditions.toLowerCase().includes('cloud') ? '☁' : '☀'} ${weather.temperature_high}°`
+    : '—'
+
+  // Lookahead — schedule activities active today, tomorrow, day-after.
+  const lookahead = useMemo(() => {
+    const today = startOfDay(new Date())
+    const out: { id: string; name: string; when: string }[] = []
+    for (const a of scheduleActs ?? []) {
+      if (!a.start_date || !a.end_date) continue
+      const start = startOfDay(new Date(a.start_date))
+      const end = startOfDay(new Date(a.end_date))
+      const todayMs = today.getTime()
+      const day = 86_400_000
+      if (start.getTime() <= todayMs + 2 * day && end.getTime() >= todayMs) {
+        out.push({
+          id: a.id,
+          name: a.name,
+          when:
+            start.getTime() <= todayMs ? 'in progress' :
+            start.getTime() === todayMs + day ? 'tomorrow' : 'in 2d',
+        })
+      }
+      if (out.length >= 4) break
+    }
+    return out
+  }, [scheduleActs])
+
+  // Owed to you — commitment-type stream items.
+  const owedToYou = useMemo(
+    () => items.filter((i) => i.type === 'commitment' || i.cardType === 'commitment').slice(0, 4),
+    [items],
+  )
+
+  // Photo thumbs — top 4 most recent with file_url.
+  const photoStrip = useMemo(
+    () => (photos ?? []).filter((p) => !!p.file_url).slice(0, 4),
+    [photos],
+  )
+
+  return (
+    <ZonePanel
+      title="Project Now"
+      subtitle={project?.name ?? undefined}
+      contentStyle={{ padding: 0 }}
+    >
+      <div style={{ paddingTop: spacing[2], paddingBottom: spacing[2] }}>
+        <PulseRow
+          label="Schedule"
+          value={scheduleStatus.value}
+          tone={scheduleStatus.tone}
+          href="/schedule"
+        />
+        <PulseRow
+          label="Budget"
+          value={budgetStatus.value}
+          tone={budgetStatus.tone}
+          href="/budget"
+        />
+        <PulseRow label="Crew" value={crewValue} href="/workforce" />
+        <PulseRow label="Weather" value={weatherValue} />
+      </div>
+
+      <SectionDivider label="Today's Lookahead" />
+      <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[3]}` }}>
+        {lookahead.length === 0 ? (
+          <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
+            Nothing scheduled.
+          </span>
+        ) : (
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {lookahead.map((a) => (
+              <li
+                key={a.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: spacing[2],
+                  padding: `${spacing[1]} 0`,
+                  fontFamily: typography.fontFamily,
+                  fontSize: '13px',
+                }}
+              >
+                <span
+                  style={{
+                    color: colors.ink2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {a.name}
+                </span>
+                <span style={{ color: colors.ink3, fontSize: '12px' }}>{a.when}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <SectionDivider label="Owed to you" />
+      <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[3]}` }}>
+        {owedToYou.length === 0 ? (
+          <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
+            No outstanding commitments.
+          </span>
+        ) : (
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {owedToYou.map((c) => (
+              <li
+                key={c.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: spacing[2],
+                  padding: `${spacing[1]} 0`,
+                  fontFamily: typography.fontFamily,
+                  fontSize: '13px',
+                }}
+              >
+                <span style={{ color: colors.ink2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.party ?? c.assignedTo ?? '—'} · {c.commitment ?? c.title}
+                </span>
+                <span style={{ color: c.overdue ? '#C93B3B' : colors.ink3, fontSize: '12px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                  {c.dueDate ? formatDateShort(c.dueDate) : '—'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <SectionDivider label="Recent photos" />
+      <div style={{ padding: `${spacing[1]} ${spacing[4]} ${spacing[4]}` }}>
+        {photoStrip.length === 0 ? (
+          <span style={{ fontSize: '13px', color: colors.ink3, fontFamily: typography.fontFamily }}>
+            No photos yet.
+          </span>
+        ) : (
+          <div style={{ display: 'flex', gap: spacing[2] }}>
+            {photoStrip.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => navigate('/field-capture')}
+                type="button"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 6,
+                  border: `1px solid ${colors.borderDefault}`,
+                  background: `url(${p.file_url}) center/cover ${colors.surfaceInset}`,
+                  cursor: 'pointer',
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+                aria-label={p.content ?? 'Field capture'}
+              />
+            ))}
+            <button
+              onClick={() => navigate('/field-capture')}
+              type="button"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 6,
+                border: `1px dashed ${colors.borderDefault}`,
+                background: 'transparent',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: colors.ink3,
+                flexShrink: 0,
+              }}
+              aria-label="Open photos"
+            >
+              <ArrowUpRight size={14} strokeWidth={2} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {photoStrip.length === 0 && (
+        <button
+          onClick={() => navigate('/field-capture')}
+          type="button"
+          style={{
+            margin: `0 ${spacing[4]} ${spacing[4]}`,
+            padding: `${spacing[2]} ${spacing[3]}`,
+            background: colors.surfaceInset,
+            border: `1px dashed ${colors.borderDefault}`,
+            borderRadius: 6,
+            color: colors.ink3,
+            fontFamily: typography.fontFamily,
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: spacing[2],
+          }}
+        >
+          <ImageIcon size={13} strokeWidth={1.75} />
+          Capture a field photo
+        </button>
+      )}
+    </ZonePanel>
+  )
+}
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+function formatDateShort(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+export default ProjectNow

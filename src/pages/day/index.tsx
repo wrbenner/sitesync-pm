@@ -1,126 +1,93 @@
 /**
- * The Day — Command stream homepage.
+ * The Day — Command Cockpit homepage.
  *
- * "What matters, what do I owe, who owes me, what changed, what is blocked,
- * and what should happen next?"
+ * Replaces the 720px-wide editorial stream with a full-viewport cockpit:
+ * Iris lane on top → Needs You (dense aggregate inbox) on the left →
+ * Project Now (pulse + lookahead + commitments + photos) on the right.
  *
- * Single prioritized stream answering those six questions, role-filtered.
- * The action stream is the page; everything else (Pulse, Nav) supports it.
+ * Glanceable, dense, role-dynamic. Same skeleton for every role; the
+ * underlying useActionStream(role) produces a role-filtered set, and the
+ * Project Now panel emphasises whatever the role cares about.
  */
 
-import React, { useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { ProjectGate } from '../../components/ProjectGate';
-import { useCopilotStore } from '../../stores/copilotStore';
-import { useProjectId } from '../../hooks/useProjectId';
-import { useProject } from '../../hooks/queries';
-import { useActionStream } from '../../hooks/useActionStream';
-import { usePermissions } from '../../hooks/usePermissions';
-import { useIsOnline } from '../../hooks/useOfflineStatus';
-import { useIsMobile } from '../../hooks/useWindowSize';
-import { colors, typography, spacing } from '../../styles/theme';
-import { Eyebrow, Hairline } from '../../components/atoms';
-import { ActionStream } from '../../components/stream/ActionStream';
-import { StreamEmpty } from '../../components/stream/StreamEmpty';
-import { StreamPulse } from '../../components/stream/StreamPulse';
-import { StreamNav } from '../../components/stream/StreamNav';
-import { fetchWeatherForProject, type WeatherSnapshot } from '../../lib/weather';
-import { toStreamRole } from '../../types/stream';
-import type {
-  StreamItem,
-  StreamAction,
-  SourceReference,
-} from '../../types/stream';
-import { WifiOff } from 'lucide-react';
+import React, { useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ErrorBoundary } from '../../components/ErrorBoundary'
+import { ProjectGate } from '../../components/ProjectGate'
+import { useCopilotStore } from '../../stores/copilotStore'
+import { useProjectId } from '../../hooks/useProjectId'
+import { useProject } from '../../hooks/queries'
+import { useActionStream } from '../../hooks/useActionStream'
+import { usePermissions } from '../../hooks/usePermissions'
+import { useIsOnline } from '../../hooks/useOfflineStatus'
+import { useIsMobile } from '../../hooks/useWindowSize'
+import { colors, typography, spacing } from '../../styles/theme'
+import { Cockpit } from '../../components/cockpit/Cockpit'
+import { IrisLane } from '../../components/cockpit/IrisLane'
+import { NeedsYouTable } from '../../components/cockpit/NeedsYouTable'
+import { ProjectNow } from '../../components/cockpit/ProjectNow'
+import { ZonePanel } from '../../components/cockpit/ZonePanel'
+import { toStreamRole } from '../../types/stream'
+import type { StreamItem } from '../../types/stream'
+import { WifiOff } from 'lucide-react'
 
-// ── Header — project name, date, weather ──────────────────────
+// ── Header ────────────────────────────────────────────────────────────────
 
-function StreamHeader({ projectName }: { projectName: string }) {
-  const projectId = useProjectId();
-  const { data: project } = useProject(projectId);
-  const { data: weather } = useQuery<WeatherSnapshot>({
-    queryKey: ['stream_pulse_weather', projectId],
-    queryFn: () =>
-      fetchWeatherForProject(
-        projectId!,
-        project?.latitude ?? undefined,
-        project?.longitude ?? undefined,
-      ),
-    enabled: !!projectId,
-    staleTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const today = new Date();
+function CockpitHeader({ projectName }: { projectName: string }) {
+  const today = new Date()
   const dateLabel = today.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
-  });
-
-  const weatherIcon = weather
-    ? weather.conditions.toLowerCase().includes('rain')
-      ? '🌧️'
-      : weather.conditions.toLowerCase().includes('cloud')
-        ? '☁️'
-        : '☀️'
-    : null;
-
+  })
   return (
     <header
       style={{
         display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        gap: spacing[4],
-        paddingTop: spacing[6],
-        paddingBottom: spacing[4],
-        paddingLeft: spacing[5],
-        paddingRight: spacing[5],
+        alignItems: 'baseline',
+        gap: spacing[3],
+        padding: `${spacing[3]} ${spacing[5]}`,
+        background: colors.surfaceFlat,
+        borderBottom: `1px solid ${colors.borderDefault}`,
+        minHeight: 56,
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-        <Eyebrow>{projectName}</Eyebrow>
-        <span
-          style={{
-            fontFamily: typography.fontFamily,
-            fontSize: 14,
-            fontWeight: 400,
-            color: colors.ink2,
-            lineHeight: 1.4,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {dateLabel}
-        </span>
-      </div>
-      {weather && weatherIcon && (
-        <div
-          aria-label={`Weather: ${weather.conditions}, ${weather.temperature_high}°F`}
-          style={{
-            fontFamily: typography.fontFamily,
-            fontSize: 14,
-            color: colors.ink3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <span aria-hidden="true">{weatherIcon}</span>
-          <span>{weather.temperature_high}°</span>
-        </div>
-      )}
+      <h1
+        style={{
+          margin: 0,
+          fontFamily: typography.fontFamily,
+          fontSize: '15px',
+          fontWeight: 700,
+          color: colors.ink,
+          letterSpacing: '0.02em',
+          textTransform: 'uppercase',
+          lineHeight: 1.2,
+          maxWidth: '60ch',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {projectName}
+      </h1>
+      <span
+        style={{
+          fontFamily: typography.fontFamily,
+          fontSize: '13px',
+          fontWeight: 400,
+          color: colors.ink3,
+          lineHeight: 1.2,
+        }}
+      >
+        {dateLabel}
+      </span>
     </header>
-  );
+  )
 }
 
-// ── Offline banner ─────────────────────────────────────────────
+// ── Offline banner ────────────────────────────────────────────────────────
 
-function OfflineHairlineBanner() {
+function OfflineBanner() {
   return (
     <div
       role="status"
@@ -129,22 +96,21 @@ function OfflineHairlineBanner() {
         display: 'flex',
         alignItems: 'center',
         gap: spacing[2],
-        paddingTop: spacing[2],
-        paddingBottom: spacing[2],
-        paddingLeft: spacing[5],
-        paddingRight: spacing[5],
+        padding: `${spacing[2]} ${spacing[5]}`,
         fontFamily: typography.fontFamily,
-        fontSize: 12,
+        fontSize: '12px',
         fontWeight: 500,
         color: colors.statusPending,
         background: 'var(--color-warningBannerBg)',
       }}
     >
-      <WifiOff size={12} aria-hidden="true" />
+      <WifiOff size={12} aria-hidden />
       <span>Showing cached items — offline</span>
     </div>
-  );
+  )
 }
+
+// ── Routing helper ────────────────────────────────────────────────────────
 
 const TYPE_ROUTE: Record<StreamItem['type'], string> = {
   rfi: '/rfis',
@@ -155,108 +121,88 @@ const TYPE_ROUTE: Record<StreamItem['type'], string> = {
   daily_log: '/daily-log',
   incident: '/safety',
   schedule: '/schedule',
-  commitment: '/day',
-};
+  commitment: '/commitments',
+}
 
-// ── Page ───────────────────────────────────────────────────────
+function destinationFor(item: StreamItem): string {
+  const first = item.sourceTrail[0]
+  return first?.url ?? TYPE_ROUTE[item.type] ?? '/day'
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────
 
 const DayPage: React.FC = () => {
-  const projectId = useProjectId();
-  const { data: project } = useProject(projectId);
-  const { setPageContext } = useCopilotStore();
-  const isMobile = useIsMobile();
-  const isOnline = useIsOnline();
-  const navigate = useNavigate();
-  const { role: projectRole } = usePermissions();
-  const streamRole = toStreamRole(projectRole);
+  const projectId = useProjectId()
+  const { data: project } = useProject(projectId)
+  const { setPageContext } = useCopilotStore()
+  const isMobile = useIsMobile()
+  const isOnline = useIsOnline()
+  const navigate = useNavigate()
+  const { role: projectRole } = usePermissions()
+  const streamRole = toStreamRole(projectRole)
 
-  const stream = useActionStream(streamRole);
+  const stream = useActionStream(streamRole)
 
   useEffect(() => {
-    setPageContext('day');
-  }, [setPageContext]);
+    setPageContext('day')
+  }, [setPageContext])
 
-  const handleSourceOpen = useCallback(
-    (source: SourceReference) => {
-      if (source.url) navigate(source.url);
+  const handleRowClick = useCallback(
+    (item: StreamItem) => navigate(destinationFor(item)),
+    [navigate],
+  )
+
+  const handleIrisClick = useCallback(
+    (item: StreamItem) => {
+      // For Wave 1, Iris click navigates to the source page where the draft
+      // is presented inline. The full inline-draft preview ships with Tab D
+      // of Wave 2.
+      navigate(destinationFor(item))
     },
     [navigate],
-  );
+  )
 
-  const handleAction = useCallback(
-    (action: StreamAction, item: StreamItem) => {
-      if (action.handler === 'dismiss') {
-        stream.dismiss(item.id);
-        return;
-      }
-      const first = item.sourceTrail[0];
-      navigate(first?.url ?? TYPE_ROUTE[item.type]);
-    },
-    [navigate, stream],
-  );
+  if (!projectId) return <ProjectGate />
 
-  // Wave 1: only dismiss-draft is wired here. Send/edit flow lands when Tab D
-  // merges the Iris service; until then those buttons are no-ops at this layer.
-  const handleIrisAction = useCallback(
-    (handler: 'send_draft' | 'edit_draft' | 'dismiss_draft', item: StreamItem) => {
-      if (handler === 'dismiss_draft') stream.dismiss(item.id);
-    },
-    [stream],
-  );
-
-  if (!projectId) return <ProjectGate />;
-
-  const projectName = project?.name?.toUpperCase() ?? 'PROJECT';
+  const projectName = project?.name?.toUpperCase() ?? 'PROJECT'
 
   return (
     <ErrorBoundary>
-      <div
-        style={{
-          maxWidth: 720,
-          margin: '0 auto',
-          minHeight: '100vh',
-          background: 'var(--color-surfacePage)',
-          paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : 0,
-        }}
-      >
-        {!isOnline && <OfflineHairlineBanner />}
-
-        <StreamHeader projectName={projectName} />
-        <Hairline weight={3} spacing="tight" style={{ margin: 0 }} />
-
-        {stream.isLoading && stream.items.length === 0 ? (
-          <div
-            role="status"
-            style={{
-              padding: spacing[8],
-              textAlign: 'center',
-              fontFamily: typography.fontFamily,
-              fontSize: 13,
-              color: colors.ink3,
-            }}
+      <Cockpit
+        header={
+          <>
+            {!isOnline && <OfflineBanner />}
+            <CockpitHeader projectName={projectName} />
+          </>
+        }
+        irisLane={
+          <IrisLane items={stream.items} onChip={handleIrisClick} />
+        }
+        needsYou={
+          <ZonePanel
+            title="Needs You"
+            count={stream.items.length}
+            subtitle={
+              stream.isLoading
+                ? 'Loading…'
+                : stream.items.length === 0
+                ? 'Inbox clear'
+                : undefined
+            }
+            contentStyle={{ padding: 0 }}
           >
-            Loading…
-          </div>
-        ) : stream.items.length === 0 ? (
-          <StreamEmpty />
-        ) : (
-          <ActionStream
-            items={stream.items}
-            isMobile={isMobile}
-            onAction={handleAction}
-            onDismiss={stream.dismiss}
-            onSnooze={stream.snooze}
-            onSourceOpen={handleSourceOpen}
-            onIrisAction={handleIrisAction}
-            onRefresh={stream.refetch}
-          />
-        )}
-
-        <StreamPulse />
-        <StreamNav role={streamRole} items={stream.items} />
-      </div>
+            <NeedsYouTable
+              items={stream.items}
+              onRowClick={handleRowClick}
+              onIrisClick={handleIrisClick}
+            />
+          </ZonePanel>
+        }
+        projectNow={<ProjectNow items={stream.items} />}
+        isMobile={isMobile}
+      />
     </ErrorBoundary>
-  );
-};
+  )
+}
 
-export default DayPage;
+export default DayPage
