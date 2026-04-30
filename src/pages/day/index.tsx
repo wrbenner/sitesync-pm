@@ -10,7 +10,7 @@
  * Project Now panel emphasises whatever the role cares about.
  */
 
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { ProjectGate } from '../../components/ProjectGate'
@@ -28,8 +28,10 @@ import { IrisLane } from '../../components/cockpit/IrisLane'
 import { NeedsYouTable } from '../../components/cockpit/NeedsYouTable'
 import { ProjectNow } from '../../components/cockpit/ProjectNow'
 import { ZonePanel } from '../../components/cockpit/ZonePanel'
+import { TableSkeleton } from '../../components/cockpit/TableSkeleton'
+import { TypeFilterChips } from '../../components/cockpit/TypeFilterChips'
 import { toStreamRole } from '../../types/stream'
-import type { StreamItem } from '../../types/stream'
+import type { StreamItem, StreamItemType } from '../../types/stream'
 import { WifiOff } from 'lucide-react'
 
 // ── Keyboard hint chip — surfaces j/k/Enter shortcuts ────────────────────
@@ -190,6 +192,20 @@ const DayPage: React.FC = () => {
 
   const stream = useActionStream(streamRole)
 
+  // Type filter — local UI state, not persisted. Resets when items change
+  // shape dramatically (e.g., logout/login).
+  const [typeFilter, setTypeFilter] = useState<StreamItemType | 'all'>('all')
+
+  const filteredItems = useMemo(
+    () =>
+      typeFilter === 'all'
+        ? stream.items
+        : stream.items.filter((i) => i.type === typeFilter),
+    [stream.items, typeFilter],
+  )
+
+  const showSkeleton = stream.isLoading && stream.items.length === 0
+
   useEffect(() => {
     setPageContext('day')
   }, [setPageContext])
@@ -229,13 +245,17 @@ const DayPage: React.FC = () => {
         needsYou={
           <ZonePanel
             title="Needs You"
-            count={stream.items.length}
+            count={
+              typeFilter === 'all' ? stream.items.length : filteredItems.length
+            }
             subtitle={
-              stream.isLoading
+              showSkeleton
                 ? 'Loading…'
                 : stream.items.length === 0
                   ? 'Inbox clear'
-                  : undefined
+                  : typeFilter !== 'all'
+                    ? `Filtered to ${typeFilter}`
+                    : undefined
             }
             action={
               !isMobile && stream.items.length > 0 ? (
@@ -244,11 +264,24 @@ const DayPage: React.FC = () => {
             }
             contentStyle={{ padding: 0 }}
           >
-            <NeedsYouTable
-              items={stream.items}
-              onRowClick={handleRowClick}
-              onIrisClick={handleIrisClick}
-            />
+            {showSkeleton ? (
+              <TableSkeleton rows={6} />
+            ) : (
+              <>
+                {stream.items.length > 0 && (
+                  <TypeFilterChips
+                    items={stream.items}
+                    selected={typeFilter}
+                    onSelect={setTypeFilter}
+                  />
+                )}
+                <NeedsYouTable
+                  items={filteredItems}
+                  onRowClick={handleRowClick}
+                  onIrisClick={handleIrisClick}
+                />
+              </>
+            )}
           </ZonePanel>
         }
         projectNow={<ProjectNow items={stream.items} role={streamRole} />}
