@@ -1,5 +1,6 @@
-/* SiteSync PM Design Tokens
+/* SiteSync PM Design Tokens — The Nine
    Single source of truth for all CSS custom properties.
+   Palette derived from The Nine manifesto: parchment, ink, orange surveyor's mark.
    Components use these via inline styles (theme.ts CSS var references)
    or directly in stylesheets. */
 
@@ -11,20 +12,20 @@
   --color-brand-amber: #F5A623;
   --color-brand-danger: #E74C3C;
   --color-brand-info: #3B82F6;
-  --color-surface-page: #F7F8FA;
+  --color-surface-page: #FAF7F0;
   --color-surface-card: #FFFFFF;
   --color-surface-sidebar: #0F1629;
-  --color-text-primary: #1A1A2E;
-  --color-text-muted: #6B7280;
-  --color-text-disabled: #9CA3AF;
-  --color-border: #E5E7EB;
+  --color-text-primary: #1A1613;
+  --color-text-muted: #5C5550;
+  --color-text-disabled: #C4BDB4;
+  --color-border: #E5E1DC;
 
   /* ── Semantic Aliases (used by Tailwind CSS var mappings) ── */
   --color-success: #4EC896;
   --color-warning: #F5A623;
   --color-danger: #E74C3C;
   --color-info: #3B82F6;
-  --color-bg-page: #F7F8FA;
+  --color-bg-page: #FAF7F0;
   --color-bg-card: #FFFFFF;
   --color-sidebar: #0F1629;
 
@@ -36,29 +37,54 @@
   --color-primary-light: rgba(244, 120, 32, 0.12);
   --color-primary-text: #C45A0C;
 
-  /* ── Surfaces ─────────────────────────────────────── */
-  --color-surfacePage: #FAFAF8;
-  --color-surfaceSidebar: #F6F3F0;
-  --color-surfaceRaised: #FFFFFF;
-  --color-surfaceInset: #F3EFEC;
-  --color-surfaceHover: #F0EDE8;
-  --color-surfaceSelected: #FEF7F2;
-  --color-surfaceFlat: #F6F3F0;
-  --color-surfaceDisabled: #EDEDEB;
-  --color-surfaceOverlay: #E5E1DC;
+  /* ── The Orange Dot — surveyor's mark ─────────────── */
+  --color-orangeHalo: rgba(244, 120, 32, 0.12);
+  --dot-size: 9px;
+  --dot-halo-spread: 4px;
 
-  /* ── Borders ──────────────────────────────────────── */
-  --color-borderSubtle: #F0EDE9;
-  --color-borderDefault: #E5E1DC;
-  --color-borderLight: #F0EDE9;
-  --color-borderHover: #D5D0CA;
+  /* ── Manifesto Palette ────────────────────────────── */
+  --color-parchment:   #FAF7F0;
+  --color-parchment-2: #F5F0E5;
+  --color-parchment-3: #EFE9DD;
+  --color-ink:    #1A1613;
+  --color-ink-2:  #5C5550;
+  --color-ink-3:  #8C857E;
+  --color-ink-4:  #C4BDB4;
+  --color-ink-5:  #E5DFD4;
+  --color-rust:   #B8472E;
+  --color-moss:   #4A5D3A;
+
+  /* ── Hairlines — the only divider ─────────────────── */
+  --hairline:   rgba(26, 22, 19, 0.10);
+  --hairline-2: rgba(26, 22, 19, 0.05);
+  --hairline-3: rgba(26, 22, 19, 0.025);
+
+  /* ── Surfaces (enterprise-neutral; parchment retained for brand surfaces only) */
+  /* Subtle drift from parchment-warm to neutral so data pages read as
+     industrial PM software instead of editorial magazine. Brand surfaces
+     (login, marketing, share-link covers) keep parchment via --color-parchment. */
+  --color-surfacePage: #FAFAF8;
+  --color-surfaceSidebar: #F6F6F4;
+  --color-surfaceRaised: #FFFFFF;
+  --color-surfaceInset: #F4F4F2;
+  --color-surfaceHover: #EEEEEC;
+  --color-surfaceSelected: #FEF7F2;
+  --color-surfaceFlat: #F4F4F2;
+  --color-surfaceDisabled: #EEEEEC;
+  --color-surfaceOverlay: #E2E2E0;
+
+  /* ── Borders (hairline-weight, warm) ──────────────── */
+  --color-borderSubtle: rgba(26, 22, 19, 0.05);
+  --color-borderDefault: rgba(26, 22, 19, 0.10);
+  --color-borderLight: rgba(26, 22, 19, 0.05);
+  --color-borderHover: rgba(26, 22, 19, 0.18);
   --color-borderFocus: #F47820;
 
-  /* ── Text ─────────────────────────────────────────── */
+  /* ── Text (ink hierarchy from manifesto) ──────────── */
   --color-textPrimary: #1A1613;
   --color-textSecondary: #5C5550;
-  --color-textTertiary: #767170;
-  --color-textDisabled: #C5C0BB;
+  --color-textTertiary: #8C857E;
+  --color-textDisabled: #C4BDB4;
   --color-textOnDark: rgba(255, 255, 255, 0.92);
   --color-textOnDarkMuted: rgba(255, 255, 255, 0.5);
 
@@ -116,7 +142,15 @@
 
   /* ── Typography ───────────────────────────────────── */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-serif: 'EB Garamond', Garamond, 'Times New Roman', serif;
   --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Eyebrow / Chrome Typography ─────────────────── */
+  --eyebrow-size: 11px;
+  --eyebrow-weight: 500;
+  --eyebrow-spacing: 0.18em;
+  --kicker-size: 11px;
+  --kicker-spacing: 0.22em;
   --font-size-caption: 11px;
   --font-size-label: 12px;
   --font-size-sm: 13px;
@@ -155,8 +189,11 @@
   /* ── Shadows ──────────────────────────────────────── */
   --shadow-none: none;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.015);
-  --shadow-card-hover: 0 3px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  /* Card shadows use warm ink (the manifesto palette is parchment +
+     ink, never gray + white). The 1px ring is the hairline equivalent
+     of a card border — cards are raised surfaces, not boxes. */
+  --shadow-card: 0 1px 2px rgba(26, 22, 19, 0.04), 0 0 0 1px rgba(26, 22, 19, 0.06);
+  --shadow-card-hover: 0 2px 8px rgba(26, 22, 19, 0.05), 0 0 0 1px rgba(26, 22, 19, 0.10);
   --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.03);
   --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.12);
   --shadow-pressed: inset 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -260,4 +297,30 @@
 .sitesync-grid-row:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 0;
+}
+
+/* Mobile-only: keep page-header buttons at natural width and scroll the
+   row instead of letting them wrap mid-shrink (the Equipment "Export
+   clipped on right" capture). Desktop keeps default flex behavior. */
+[data-pagecontainer-actions="mobile"] > * {
+  flex-shrink: 0;
+}
+
+/* Crews "Live Site Map" — hide F1-F12 floor labels on narrow viewports.
+   The building outline gets too small for them to read; without the
+   building outline visible the labels alone read as a broken map. */
+@media (max-width: 600px) {
+  .crew-map-floor-labels {
+    display: none;
+  }
+}
+
+/* Command palette open: dim and disable the docked AI Copilot rail so
+   the palette doesn't visually compete with it. The Copilot uses its
+   own stacking context (transform/filter), which means the palette's
+   inset:0 backdrop can't reach it via z-index alone. */
+body[data-palette-open] aside[aria-label="AI Assistant"] {
+  filter: brightness(0.6) saturate(0.8);
+  pointer-events: none;
+  transition: filter 160ms ease-out;
 }
