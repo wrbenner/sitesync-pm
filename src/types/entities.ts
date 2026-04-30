@@ -29,6 +29,7 @@ export type FieldCapture = Tables['field_captures']['Row']
 export type SchedulePhase = Tables['schedule_phases']['Row']
 export type Notification = Tables['notifications']['Row']
 export type ActivityFeedRow = Tables['activity_feed']['Row']
+export type WorkforceMember = Tables['workforce_members']['Row']
 
 /** Enriched activity feed item with resolved actor info and entity label. */
 export interface ActivityFeedItem {

@@ -55,6 +55,7 @@ import {
 } from '../../machines/submittalMachine'
 import { DocumentViewer } from '../../components/submittals/DocumentViewer'
 import { supabase } from '../../lib/supabase'
+import type { SubmittalApproval } from '../../types/entities'
 
 const SUBMITTAL_BUCKET = 'project-files'
 
@@ -106,7 +107,7 @@ interface ApprovalNode {
   status: 'complete' | 'active' | 'waiting' | 'rejected'
 }
 
-const ApprovalPipeline: React.FC<{ status: SubmittalState; reviewers: any[] }> = ({ status, reviewers }) => {
+const ApprovalPipeline: React.FC<{ status: SubmittalState; reviewers: SubmittalApproval[] }> = ({ status, reviewers }) => {
   const nodes: ApprovalNode[] = useMemo(() => {
     const getNodeStatus = (threshold: SubmittalState[]): ApprovalNode['status'] => {
       if (status === 'rejected' || status === 'resubmit') {
@@ -272,7 +273,7 @@ const ActionButtons: React.FC<{
 // ─── Review Comment Bubble ────────────────────────────────
 
 const ReviewBubble: React.FC<{
-  reviewer: any
+  reviewer: SubmittalApproval
   index: number
 }> = ({ reviewer, index }) => {
   const stampConfig = reviewer.stamp ? getStampConfig(reviewer.stamp as SubmittalStamp) : null
@@ -925,7 +926,7 @@ export function SubmittalDetailPage() {
                 display: 'flex', flexDirection: 'column', gap: spacing.md,
                 padding: `${spacing.md} 0`,
               }}>
-                {reviewers.map((r: any, i: number) => (
+                {reviewers.map((r, i) => (
                   <ReviewBubble key={r.id || i} reviewer={r} index={i} />
                 ))}
               </div>
