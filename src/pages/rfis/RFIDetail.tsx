@@ -38,6 +38,17 @@ import {
   type RFIState
 } from '../../machines/rfiMachine'
 import type { RFI, RFIResponse } from '../../types/database'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
+
+// Linear happy-path states shown in the timeline (void is a terminal exception, omitted).
+const RFI_TIMELINE_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+const RFI_TIMELINE_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  open: 'Open',
+  under_review: 'In Review',
+  answered: 'Answered',
+  closed: 'Closed',
+}
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -604,6 +615,11 @@ export function RFIDetail() {
   const transitions = getValidTransitions(currentStatus, 'admin')
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
+  const completedRFIStates = RFI_TIMELINE_STATES.slice(
+    0,
+    Math.max(0, RFI_TIMELINE_STATES.indexOf(currentStatus))
+  )
+
   const newResponseCount = useMemo(() => {
     if (!lastViewed || responses.length === 0) return 0
     return responses.filter(r => r.created_at && r.created_at > lastViewed).length
@@ -773,6 +789,23 @@ export function RFIDetail() {
               Ball in court: {rfi.ball_in_court}
             </div>
           )}
+        </div>
+
+        {/* ── Workflow Timeline ─────────────────────────── */}
+        <div style={{
+          marginBottom: '20px',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          backgroundColor: colors.surfaceRaised,
+          border: `1px solid ${colors.borderSubtle}`,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        }}>
+          <WorkflowTimeline
+            states={RFI_TIMELINE_STATES}
+            currentState={currentStatus}
+            completedStates={completedRFIStates}
+            labels={RFI_TIMELINE_LABELS}
+          />
         </div>
 
         {/* ── Approval Workflow ──────────────────────────── */}
