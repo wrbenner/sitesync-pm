@@ -32,6 +32,10 @@ export function useFullTextSearch(
       const tsQuery = query.trim().split(/\s+/).join(' & ')
       const results: SearchResult[] = []
 
+      type NamedRow = { id: string; name: string; description: string | null; project_id: string; created_at: string }
+      type TitledRow = { id: string; title: string; project_id: string; created_at: string }
+      type DrawingRow = TitledRow & { discipline: string | null }
+
       if (searchTypes.includes('document')) {
         const { data } = await from('documents')
           .select('id, name, description, project_id, created_at')
@@ -40,7 +44,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as NamedRow[]).map(d => ({
               id: d.id,
               type: 'document' as const,
               title: d.name,
@@ -61,7 +65,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as NamedRow[]).map(d => ({
               id: d.id,
               type: 'file' as const,
               title: d.name,
@@ -82,7 +86,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DrawingRow[]).map(d => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title,
@@ -103,7 +107,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as TitledRow[]).map(d => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title,

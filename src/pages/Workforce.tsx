@@ -173,7 +173,10 @@ const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, display
 
 // ── Column helpers ───────────────────────────────────────
 
-const rosterCol = createColumnHelper<unknown>()
+type WorkforceRow = { id: string; name?: string | null; company?: string | null; trade?: string | null; role?: string | null; crew?: string | null; hourly_rate?: number | null; status?: string | null }
+type TimeRow = { id: string; date?: string | null; worker_name?: string | null; clock_in?: string | null; clock_out?: string | null; regular_hours?: number | null; overtime_hours?: number | null; cost_code?: string | null; approved?: boolean | null; project_id?: string; approved_by?: string }
+
+const rosterCol = createColumnHelper<WorkforceRow>()
 const rosterColumns = [
   rosterCol.accessor('name', {
     header: 'Name',
@@ -245,7 +248,7 @@ const rosterColumns = [
   }),
 ]
 
-const timeCol = createColumnHelper<unknown>()
+const timeCol = createColumnHelper<TimeRow>()
 const timeColumns = [
   timeCol.accessor('date', {
     header: 'Date',
@@ -320,16 +323,16 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const activeToday = members?.filter(m => m.status === 'active').length || 0
+  const totalRegularHrs = timeEntries?.reduce((s, e) => s + (e.regular_hours || 0), 0) || 0
+  const totalOTHrs = timeEntries?.reduce((s, e) => s + (e.overtime_hours || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  members?.forEach(m => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +343,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +366,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
