@@ -120,14 +120,14 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                   }}
                 >
                   {isCompleted ? (
-                    <Check size={13} color="#fff" strokeWidth={2.5} aria-hidden />
+                    <Check size={13} color={colors.white} strokeWidth={2.5} aria-hidden />
                   ) : isCurrent ? (
                     <div
                       style={{
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        backgroundColor: '#fff',
+                        backgroundColor: colors.white,
                       }}
                       aria-hidden
                     />

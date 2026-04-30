@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 7,
-  "_updated": "2026-04-30T17:30:00Z",
+  "_version": 8,
+  "_updated": "2026-04-30T18:40:00Z",
   "_updatedBy": "auto/polish-20260430-0530",
-  "_floor_realignment_note": "v7: e2ePassRate raised 0→1.0 — 28/28 page-sweep desktop tests pass. Note updated to reflect spec existence. All prior v6 ratchets retained.",
+  "_floor_realignment_note": "v8: eslintErrors tightened 480→404 and eslintWarnings 968→917 after removing 69 unused-import/unused-var errors across 14 files (all no-unused-vars, safe removals). Zero new code paths changed.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,11 +13,11 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 480,
+  "eslintErrors": 404,
   "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,
-  "eslintWarnings": 968,
+  "eslintWarnings": 917,
   "_e2ePassRate_note": "Raised to 1.0 — e2e/polish/page-sweep.spec.ts sweeps all 28 demo pages at desktop viewport; 28/28 passing.",
   "e2ePassRate": 1.0,
   "tsIgnoreComments": 0,
