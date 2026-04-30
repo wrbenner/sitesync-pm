@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { Upload, ScanSearch, FolderOpen, MessageSquare } from 'lucide-react';
+import { Upload, ScanSearch, FolderOpen, MessageSquare, Ruler } from 'lucide-react';
 import { PageContainer, Btn, useToast } from '../../components/Primitives';
 import { colors, spacing } from '../../styles/theme';
 import { getDrawings, getDrawingRevisionHistory } from '../../api/endpoints/documents';
@@ -47,6 +47,7 @@ import {
 } from '../../hooks/useDrawingIntelligence';
 import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
 import { DrawingSetPanel, type DrawingSetItem, type SetType } from '../../components/drawings/DrawingSetPanel';
+import { ScaleAuditPanel } from '../../components/drawings/ScaleAuditPanel';
 import { TransmittalModal, type TransmittalData } from '../../components/drawings/TransmittalModal';
 import { DiscrepancyDetailModal } from '../../components/drawings/DiscrepancyDetailModal';
 import { useProjectDrawingPairs } from '../../hooks/useDrawingIntelligence';
@@ -135,6 +136,7 @@ const DrawingFileViewer: React.FC<{
 const DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
+  const navigate = useNavigate();
   const { data: drawings, loading, error, refetch } = useQuery(
     `drawings-${projectId}`,
     () => getDrawings(projectId!),
@@ -150,6 +152,59 @@ const DrawingsPage: React.FC = () => {
     }
     if (!error) errorToastShown.current = false;
   }, [error, addToast]);
+
+  // ── Revision-impact banner ────────────────────────────────
+  // Find RFIs that were flagged by a recent revision upload (within the last
+  // 14 days) by the drawing-revised cross-feature chain. Surfacing this on
+  // the drawings page is the right place because it answers "what did my
+  // revision break?" — the question someone asks when looking at drawings.
+  const [revisionImpact, setRevisionImpact] = useState<{
+    rfiCount: number;
+    sheetNumbers: string[];
+  } | null>(null);
+  const [revisionImpactDismissed, setRevisionImpactDismissed] = useState(false);
+  React.useEffect(() => {
+    if (!projectId || revisionImpactDismissed) return;
+    let cancelled = false;
+    (async () => {
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      // We can't index on jsonb keys we don't know, so query open RFIs whose
+      // metadata.last_revision_flagged_at is recent. Volume is low.
+      // The generated Database types lag behind the live schema (rfis.metadata
+      // is jsonb added in 20260428100000), so route through an `any`-typed
+      // client. Same pattern as src/lib/crossFeatureWorkflows.ts.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      // Status values per migration 00028_rfi_workflow.sql.
+      const { data, error: rfiErr } = await sb
+        .from('rfis')
+        .select('id, drawing_reference, metadata')
+        .eq('project_id', projectId)
+        .in('status', ['draft', 'open', 'under_review']);
+      if (cancelled || rfiErr || !data) return;
+      const recent = (data as Array<{ id: string; drawing_reference: string | null; metadata: Record<string, unknown> | null }>)
+        .filter((rfi) => {
+          const m = rfi.metadata ?? {};
+          const flaggedAt = m.last_revision_flagged_at as string | undefined;
+          if (!flaggedAt) return false;
+          return new Date(flaggedAt) >= fourteenDaysAgo;
+        });
+      if (recent.length === 0) {
+        setRevisionImpact(null);
+        return;
+      }
+      const sheetNumbers = Array.from(
+        new Set(
+          recent
+            .map((rfi) => rfi.drawing_reference)
+            .filter((s): s is string => !!s),
+        ),
+      );
+      setRevisionImpact({ rfiCount: recent.length, sheetNumbers });
+    })();
+    return () => { cancelled = true; };
+  }, [projectId, drawings, revisionImpactDismissed]);
 
   // ── View & filter state ─────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -240,6 +295,7 @@ const DrawingsPage: React.FC = () => {
 
   // ── Drawing Sets state ─────────────────────────────────
   const [showSetsPanel, setShowSetsPanel] = useState(false);
+  const [showScaleAuditPanel, setShowScaleAuditPanel] = useState(false);
   const { data: drawingSets, refetch: refetchSets } = useQuery(
     `drawing-sets-${projectId}`,
     async () => {
@@ -1485,6 +1541,9 @@ const DrawingsPage: React.FC = () => {
           <Btn variant="ghost" size="md" icon={<MessageSquare size={16} />} onClick={() => setShowAnnotationPanel(true)}>
             Annotations
           </Btn>
+          <Btn variant="ghost" size="md" icon={<Ruler size={16} />} onClick={() => setShowScaleAuditPanel(true)}>
+            Scale Audit
+          </Btn>
           <PermissionGate permission="drawings.upload">
             <Btn
               variant="ghost" size="md"
@@ -1529,6 +1588,54 @@ const DrawingsPage: React.FC = () => {
             <Upload size={40} color={colors.primaryOrange} />
             <p style={{ fontSize: 17, fontWeight: 600, color: colors.primaryOrange, margin: 0 }}>Drop drawings here</p>
             <p style={{ fontSize: 12, color: colors.primaryOrange, margin: 0, opacity: 0.7 }}>.pdf, .dwg, .dxf, .zip files accepted</p>
+          </div>
+        )}
+
+        {/* Revision-impact banner — surfaces RFIs flagged by recent revisions */}
+        {revisionImpact && !revisionImpactDismissed && (
+          <div
+            role="status"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '12px 16px',
+              marginBottom: 12,
+              background: 'rgba(255, 152, 0, 0.08)',
+              border: `1px solid ${colors.primaryOrange}`,
+              borderRadius: 8,
+              color: 'inherit',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+              <ScanSearch size={18} color={colors.primaryOrange} style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  Revision impact: {revisionImpact.rfiCount} open{' '}
+                  {revisionImpact.rfiCount === 1 ? 'RFI references' : 'RFIs reference'} a recently revised sheet
+                </div>
+                {revisionImpact.sheetNumbers.length > 0 && (
+                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                    Sheets: {revisionImpact.sheetNumbers.slice(0, 5).join(', ')}
+                    {revisionImpact.sheetNumbers.length > 5 ? ` +${revisionImpact.sheetNumbers.length - 5} more` : ''}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <Btn variant="primary" size="sm" onClick={() => navigate('/rfis')}>
+                Review RFIs
+              </Btn>
+              <Btn
+                variant="ghost"
+                size="sm"
+                onClick={() => setRevisionImpactDismissed(true)}
+                aria-label="Dismiss revision impact banner"
+              >
+                Dismiss
+              </Btn>
+            </div>
           </div>
         )}
 
@@ -1692,6 +1799,26 @@ const DrawingsPage: React.FC = () => {
         loading={annotationsStore.isLoading}
         error={annotationsStore.error}
       />
+
+      {showScaleAuditPanel && projectId && (
+        <div
+          role="dialog"
+          aria-label="Scale audit"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowScaleAuditPanel(false); }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: 24,
+          }}
+        >
+          <div style={{ width: 'min(900px, 100%)', maxHeight: '90vh', overflow: 'auto' }}>
+            <ScaleAuditPanel projectId={projectId} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <Btn variant="ghost" onClick={() => setShowScaleAuditPanel(false)}>Close</Btn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showSetsPanel && projectId && (
         <DrawingSetPanel

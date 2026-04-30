@@ -281,7 +281,10 @@ export const DrawingSetPanel: React.FC<DrawingSetPanelProps> = ({
   projectId,
   onClose,
   onCreateSet,
-  onUpdateSet,
+  // onUpdateSet is accepted for a future "edit drawings in this set" UI;
+  // not yet referenced inside the component. Underscore prefix marks the
+  // intentional gap so the dead-click linter stays clean.
+  onUpdateSet: _onUpdateSet,
   onIssueSet,
   onOpenDrawing,
 }) => {

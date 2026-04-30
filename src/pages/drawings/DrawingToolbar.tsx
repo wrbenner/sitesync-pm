@@ -13,6 +13,8 @@ export type ViewMode = 'table' | 'grid';
 
 export { type DrawingStatus } from './constants';
 
+export type QuickFilter = 'all' | 'recently_updated' | 'with_markups' | 'issued_for_construction';
+
 export interface ToolbarFilters {
   search: string;
   disciplines: Set<string>;
@@ -27,6 +29,8 @@ interface DrawingToolbarProps {
   totalCount: number;
   filteredCount: number;
   selectedCount: number;
+  quickFilter?: QuickFilter;
+  onQuickFilterChange?: (q: QuickFilter) => void;
   onBulkDownload?: () => void;
   onBulkStatusChange?: (status: DrawingStatus) => void;
   onBulkDelete?: () => void;
@@ -35,7 +39,17 @@ interface DrawingToolbarProps {
   onSelectAll?: () => void;
   onClearSelection?: () => void;
   availableDisciplines: string[];
+  /** Optional ref forwarded to the inner search <input> so the parent page
+   *  can implement a global "/" focus shortcut. */
+  searchInputRef?: React.Ref<HTMLInputElement>;
 }
+
+const QUICK_FILTERS: Array<{ id: QuickFilter; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'recently_updated', label: 'Recently Updated' },
+  { id: 'with_markups', label: 'With Markups' },
+  { id: 'issued_for_construction', label: 'Issued for Construction' },
+];
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
@@ -213,6 +227,30 @@ const S = {
     marginTop: '10px',
     flexWrap: 'wrap' as const,
   } as React.CSSProperties,
+
+  // Quick filter chips (above the toolbar bar)
+  quickRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginBottom: '10px',
+    flexWrap: 'wrap' as const,
+  } as React.CSSProperties,
+  quickChip: (isActive: boolean) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    height: '28px',
+    padding: '0 12px',
+    border: `1px solid ${isActive ? colors.primaryOrange : colors.borderSubtle}`,
+    borderRadius: '999px',
+    backgroundColor: isActive ? `${colors.primaryOrange}10` : 'transparent',
+    color: isActive ? colors.primaryOrange : colors.textSecondary,
+    fontSize: '12px',
+    fontFamily: typography.fontFamily,
+    fontWeight: isActive ? 600 : 500,
+    cursor: 'pointer',
+    transition: 'background-color 120ms ease, color 120ms ease, border-color 120ms ease',
+  } as React.CSSProperties),
   chip: (color: string) => ({
     display: 'inline-flex',
     alignItems: 'center',
@@ -285,6 +323,8 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   totalCount,
   filteredCount,
   selectedCount,
+  quickFilter = 'all',
+  onQuickFilterChange,
   onBulkDownload,
   onBulkStatusChange,
   onBulkDelete,
@@ -293,23 +333,30 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onSelectAll,
   onClearSelection,
   availableDisciplines,
+  searchInputRef,
 }) => {
-  const searchRef = useRef<HTMLInputElement>(null);
+  const localSearchRef = useRef<HTMLInputElement>(null);
+  // Forward the input element to the parent if a ref was passed in.
+  const setSearchRef = useCallback((node: HTMLInputElement | null) => {
+    (localSearchRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
+    if (typeof searchInputRef === 'function') {
+      searchInputRef(node);
+    } else if (searchInputRef && typeof searchInputRef === 'object') {
+      (searchInputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
+    }
+  }, [searchInputRef]);
   const [showDisciplineDropdown, setShowDisciplineDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showBulkStatusMenu, setShowBulkStatusMenu] = useState(false);
   const disciplineRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
-  // ⌘K / Ctrl+K to focus search
+  // Escape to clear/blur search. Page-level "/" focus is owned by the parent
+  // (so it works even when this toolbar isn't mounted in a "with search" mode).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        searchRef.current?.focus();
-      }
-      if (e.key === 'Escape' && document.activeElement === searchRef.current) {
-        searchRef.current?.blur();
+      if (e.key === 'Escape' && document.activeElement === localSearchRef.current) {
+        localSearchRef.current?.blur();
         if (filters.search) onFiltersChange({ ...filters, search: '' });
       }
     };
@@ -413,22 +460,42 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   // ── Normal toolbar ───────────────────────────────────────
   return (
     <div style={S.wrapper}>
+      {/* Quick-filter chips */}
+      {onQuickFilterChange && (
+        <div style={S.quickRow} role="group" aria-label="Quick drawing filters">
+          {QUICK_FILTERS.map((q) => {
+            const isActive = quickFilter === q.id;
+            return (
+              <button
+                key={q.id}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => onQuickFilterChange(q.id)}
+                style={S.quickChip(isActive)}
+              >
+                {q.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div style={S.bar}>
         {/* Search */}
         <div style={S.searchWrap}>
           <Search size={14} style={S.searchIcon} />
           <input
-            ref={searchRef}
+            ref={setSearchRef}
             type="text"
             value={filters.search}
             onChange={e => onFiltersChange({ ...filters, search: e.target.value })}
-            placeholder="Search sheets..."
+            placeholder="Search sheets — try A3.2"
             aria-label="Search drawings"
             style={S.searchInput}
             onFocus={e => { e.currentTarget.style.borderColor = colors.primaryOrange; e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.primaryOrange}12`; }}
             onBlur={e => { e.currentTarget.style.borderColor = colors.borderSubtle; e.currentTarget.style.boxShadow = 'none'; }}
           />
-          {!filters.search && <span style={S.searchKbd}>⌘K</span>}
+          {!filters.search && <span style={S.searchKbd}>/</span>}
           {filters.search && (
             <button onClick={() => onFiltersChange({ ...filters, search: '' })} aria-label="Clear search" style={S.searchClear}>
               <X size={13} />
