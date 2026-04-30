@@ -32,6 +32,7 @@ import { ZonePanel } from '../../components/cockpit/ZonePanel'
 import { TableSkeleton } from '../../components/cockpit/TableSkeleton'
 import { TypeFilterChips } from '../../components/cockpit/TypeFilterChips'
 import { InboxClearState } from '../../components/cockpit/InboxClearState'
+import { IrisDraftDrawer } from '../../components/cockpit/IrisDraftDrawer'
 import { toStreamRole } from '../../types/stream'
 import type { StreamItem, StreamItemType } from '../../types/stream'
 import { WifiOff } from 'lucide-react'
@@ -224,6 +225,7 @@ const DayPage: React.FC = () => {
   // Type filter — local UI state, not persisted. Resets when items change
   // shape dramatically (e.g., logout/login).
   const [typeFilter, setTypeFilter] = useState<StreamItemType | 'all'>('all')
+  const [draftItem, setDraftItem] = useState<StreamItem | null>(null)
 
   const filteredItems = useMemo(
     () =>
@@ -246,10 +248,14 @@ const DayPage: React.FC = () => {
 
   const handleIrisClick = useCallback(
     (item: StreamItem) => {
-      // For Wave 1, Iris click navigates to the source page where the draft
-      // is presented inline. The full inline-draft preview ships with Tab D
-      // of Wave 2.
-      navigate(destinationFor(item))
+      // Open the inline Iris draft drawer. The drawer auto-generates the draft
+      // (or reuses an in-memory cached one) and offers Send / Edit / Dismiss.
+      // No navigation — the AI loop happens on the dashboard.
+      if (item.irisEnhancement?.draftAvailable) {
+        setDraftItem(item)
+      } else {
+        navigate(destinationFor(item))
+      }
     },
     [navigate],
   )
@@ -335,6 +341,18 @@ const DayPage: React.FC = () => {
           </ErrorBoundary>
         }
         isMobile={isMobile}
+      />
+      <IrisDraftDrawer
+        item={draftItem}
+        onClose={() => setDraftItem(null)}
+        onSend={(item) => {
+          // Iris approve flow: mark dismissed in the stream so the row vanishes
+          // after a successful send. The actual side-effect (email send, RFI
+          // response post, etc.) is owned by the destination feature page;
+          // we just navigate the user there with the draft pre-applied.
+          stream.dismiss(item.id)
+          navigate(destinationFor(item))
+        }}
       />
     </ErrorBoundary>
   )
