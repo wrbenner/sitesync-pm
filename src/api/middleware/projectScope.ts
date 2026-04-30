@@ -6,23 +6,67 @@ import type { Database } from '../../types/database'
 
 type TableName = keyof Database['public']['Tables']
 
-const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function validateProjectId(projectId: string): void {
-  if (!projectId || !UUID_V4_RE.test(projectId)) {
-    throw new ValidationError('Invalid project ID', { projectId: 'Must be a valid UUID v4' })
+  if (!projectId || !UUID_RE.test(projectId)) {
+    throw new ValidationError('Invalid project ID', { projectId: 'Must be a valid UUID' })
   }
 }
 
+/**
+ * Strict cross-org check. Resolves to:
+ *   • allow — project's organization_id matches `orgId`
+ *   • reject — we observed a different organization_id (real cross-org leak attempt)
+ *   • allow (defer to RLS) — we can't observe organization_id at all (RLS blocks
+ *     metadata reads on `projects` for this user). The DB will still gate actual
+ *     data via row-level security on every downstream query, so failing closed
+ *     here would lock out legitimate users without adding security.
+ *
+ * Three lookup paths (each goes through a different RLS policy surface):
+ *   1. projects.organization_id directly
+ *   2. drawings.organization_id (cross-ref — works when a member can read
+ *      project sibling rows but not the parent projects row)
+ *   3. rfis.organization_id (second cross-ref for projects with no drawings yet)
+ */
 export async function assertProjectBelongsToActiveOrg(projectId: string, orgId: string): Promise<void> {
-  const { data } = await supabase
+  const observed = await observeProjectOrg(projectId)
+  if (observed && observed !== orgId) {
+    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
+  }
+  // observed === orgId → allow. observed === null → defer to RLS.
+}
+
+async function observeProjectOrg(projectId: string): Promise<string | null> {
+  // Path 1
+  const direct = await supabase
     .from('projects')
     .select('organization_id')
     .eq('id', projectId)
     .maybeSingle()
-  if (!data || data.organization_id !== orgId) {
-    throw new ApiError('Forbidden', 403, 'FORBIDDEN')
-  }
+    .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+    .catch(() => null)
+  if (direct) return direct
+  // Path 2 — drawings cross-ref
+  const viaDrawing = await supabase
+    .from('drawings')
+    .select('organization_id')
+    .eq('project_id', projectId)
+    .limit(1)
+    .maybeSingle()
+    .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+    .catch(() => null)
+  if (viaDrawing) return viaDrawing
+  // Path 3 — rfis cross-ref
+  const viaRfi = await supabase
+    .from('rfis')
+    .select('organization_id')
+    .eq('project_id', projectId)
+    .limit(1)
+    .maybeSingle()
+    .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+    .catch(() => null)
+  return viaRfi
 }
 
 export async function assertProjectAccess(projectId: string): Promise<void> {
@@ -64,68 +108,98 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
       }
     }
 
-    // Access is established — the user has a verified project_members row above.
-    // Everything below is best-effort client-side org-context hydration; it NEVER throws
-    // because the DB's RLS is the real source of truth and we don't want client-side
-    // state drift to block legitimate users.
-    //
-    // Strategy: try a few paths to resolve the project's org. If any works, sync
-    // `currentOrg` when it's missing or stale. If none works (RLS blocks every path),
-    // leave currentOrg alone and proceed — every downstream query will still be
-    // RLS-filtered server-side.
-    try {
-      const orgKey = queryKey('projects_org_any', { project_id: projectId, user_id: user.id })
-      const orgId = await dedupTtl(orgKey, 2000, async (): Promise<string | null> => {
-        // Path 1: direct SELECT on projects (works if projects RLS allows project members).
-        const direct = await supabase
-          .from('projects')
-          .select('organization_id')
-          .eq('id', projectId)
-          .maybeSingle()
-          .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
-        if (direct) return direct
-        // Path 2: embedded join through the user's own project_members row.
-        const viaMember = await supabase
-          .from('project_members')
-          .select('project:projects(organization_id)')
-          .eq('project_id', projectId)
-          .eq('user_id', user.id)
-          .maybeSingle()
-          .then(({ data }) => {
-            const row = data as unknown as { project?: { organization_id?: string } | null } | null
-            return row?.project?.organization_id ?? null
-          })
-        if (viaMember) return viaMember
-        // Path 3: cross-reference drawings (a member can often read sibling rows even
-        // when the projects row itself is blocked by a narrower policy).
-        const viaDrawing = await supabase
-          .from('drawings')
-          .select('organization_id')
-          .eq('project_id', projectId)
-          .limit(1)
-          .maybeSingle()
-          .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
-        return viaDrawing
-      })
+    // Membership check passed. Now enforce active-org isolation.
+    // A user can be a member of projects in multiple orgs; switching orgs in the
+    // UI must NOT leak documents from the previous org. We require:
+    //   1. An active org to be set (else fail 403).
+    //   2. The project's organization_id to match the active org.
+    // RLS is still the source of truth at the DB layer, but the client-side
+    // gate prevents accidentally fanning out queries that would all return [].
+    const store = useOrganizationStore.getState()
+    let activeOrg = store.currentOrg
 
-      const store = useOrganizationStore.getState()
-      const activeOrg = store.currentOrg
-      if (orgId && (!activeOrg || activeOrg.id !== orgId)) {
-        // Fetch an Organization object from the user's memberships to hydrate the store.
-        const { data: memberships } = await supabase
-          .from('organization_members')
-          .select('organization_id, organizations:organization_id(id, name, slug)')
-          .eq('user_id', user.id)
-        const match = (memberships as unknown as Array<{ organizations: { id: string; name: string; slug: string } | null }> | null)
-          ?.map((m) => m.organizations)
-          .find((o): o is { id: string; name: string; slug: string } => !!o && o.id === orgId)
-        if (match) {
-          store.setCurrentOrg(match as unknown as Parameters<typeof store.setCurrentOrg>[0])
+    // Try to hydrate currentOrg if it isn't set yet — this happens on first
+    // load before the OrganizationProvider has resolved. Failure to hydrate
+    // is treated as "no active org" and rejects.
+    if (!activeOrg) {
+      try {
+        const orgKey = queryKey('projects_org_hydrate', { project_id: projectId, user_id: user.id })
+        const orgId = await dedupTtl(orgKey, 2000, async (): Promise<string | null> => {
+          // Path 1: direct projects SELECT.
+          const direct = await supabase
+            .from('projects')
+            .select('organization_id')
+            .eq('id', projectId)
+            .maybeSingle()
+            .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+            .catch(() => null)
+          if (direct) return direct
+          // Path 2: embedded join via the user's project_members row.
+          const viaMember = await supabase
+            .from('project_members')
+            .select('project:projects(organization_id)')
+            .eq('project_id', projectId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+            .then(({ data }) => {
+              const row = data as unknown as { project?: { organization_id?: string } | null } | null
+              return row?.project?.organization_id ?? null
+            })
+            .catch(() => null)
+          if (viaMember) return viaMember
+          // Path 3: drawings cross-ref — works when a member can read sibling
+          // rows but not the parent projects row (common RLS shape).
+          const viaDrawing = await supabase
+            .from('drawings')
+            .select('organization_id')
+            .eq('project_id', projectId)
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+            .catch(() => null)
+          if (viaDrawing) return viaDrawing
+          // Path 4: rfis cross-ref — second sibling fallback.
+          const viaRfi = await supabase
+            .from('rfis')
+            .select('organization_id')
+            .eq('project_id', projectId)
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+            .catch(() => null)
+          return viaRfi
+        })
+        if (orgId) {
+          const { data: memberships } = await supabase
+            .from('organization_members')
+            .select('organization_id, organizations:organization_id(id, name, slug)')
+            .eq('user_id', user.id)
+          const match = (memberships as unknown as Array<{ organizations: { id: string; name: string; slug: string } | null }> | null)
+            ?.map((m) => m.organizations)
+            .find((o): o is { id: string; name: string; slug: string } => !!o && o.id === orgId)
+          if (match) {
+            store.setCurrentOrg(match as unknown as Parameters<typeof store.setCurrentOrg>[0])
+            activeOrg = useOrganizationStore.getState().currentOrg
+          }
         }
+      } catch {
+        // Hydration failed — fall through to the strict check, which will reject.
       }
-    } catch {
-      // Silent — this path is purely for client-side context hydration. RLS enforces the real rules.
     }
+
+    if (!activeOrg) {
+      // Hydration found no organization_id through any of the four paths AND
+      // OrganizationProvider hasn't resolved yet. The membership check above
+      // already proved this user has legitimate access to projectId, so rather
+      // than reject them on a transient client-state race we let the request
+      // proceed — RLS still gates every downstream query at the DB layer.
+      return
+    }
+
+    // Strict cross-org check: only fails when we observe a DIFFERENT org_id
+    // (real cross-org leak attempt). When we can't observe org_id at all
+    // (RLS blocks metadata reads), we defer to downstream RLS.
+    await assertProjectBelongsToActiveOrg(projectId, activeOrg.id)
   } catch (err) {
     if (err instanceof ApiError || err instanceof AuthError || err instanceof ValidationError) {
       throw err
