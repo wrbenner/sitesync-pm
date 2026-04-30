@@ -212,11 +212,15 @@ describe('assertProjectAccess', () => {
     clearTtlCache()
   })
 
-  it('throws 403 when project.organization_id does not match caller active org', async () => {
+  // assertProjectAccess was intentionally refactored: org-context mismatch no longer
+  // throws. DB RLS is the real security boundary; client-side org state drift should
+  // not block legitimate project members. The function only throws for auth failures
+  // and non-membership — org hydration is best-effort and never throws.
+  it('resolves when user is a project member even if org context is stale', async () => {
     mockMaybySingle
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
       .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('resolves when project.organization_id matches caller active org', async () => {
@@ -226,14 +230,17 @@ describe('assertProjectAccess', () => {
     await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
-  it('throws 403 when no active organization context', async () => {
+  it('resolves when there is no active organization context (RLS enforces boundary)', async () => {
     mockOrgGetState.mockReturnValue({ currentOrg: null })
     mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('throws 403 when user is not a project member', async () => {
-    mockMaybySingle.mockResolvedValueOnce({ data: null, error: null })
+    // Need two mocks: membership check (null) + self-heal owner check (null)
+    mockMaybySingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
     await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
   })
 

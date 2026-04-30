@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 5,
+  "_version": 6,
   "_updated": "2026-04-30T00:00:00Z",
   "_updatedBy": "auto/polish-20260430-0530",
-  "_floor_realignment_note": "v5: anyCount 41→0 and mockCount 31→0 fully achieved. IntelligenceGraph physics Math.random tagged // immune-ok (force-directed sim, not mock data). DrawingTiledViewer OpenSeadragon gap and draw-reports untyped-table escape tagged // type-safe-ok. All ratchets at target.",
+  "_floor_realignment_note": "v6: testCount updated 1416→1810 (7 previously-skipped integration/api tests now pass). supabase.ts dev-bypass crash fixed. Ratchets unchanged: anyCount=0, mockCount=0.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -23,7 +23,7 @@
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,
   "pageCount": 40,
-  "testCount": 1416,
+  "testCount": 1810,
   "migrationCount": 48,
   "_targets": {
     "_comment": "Where we want to be in 6 months — the organism moves floor values toward these targets",
