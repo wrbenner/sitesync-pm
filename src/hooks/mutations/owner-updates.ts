@@ -29,11 +29,13 @@ export function useCreateOwnerUpdate() {
         published_at: publish ? new Date().toISOString() : null,
       }
 
-      const { data, error } = await supabase
-        .from('owner_updates')
-        .insert(payload)
+      // owner_updates is added at runtime via migration; the generated types
+      // bundled at build time may not include it yet. Cast through unknown.
+      const { data, error } = await (supabase
+        .from('owner_updates' as never)
+        .insert(payload as never)
         .select()
-        .single()
+        .single() as unknown as Promise<{ data: unknown; error: Error | null }>)
       if (error) throw error
       return data as OwnerUpdate
     },

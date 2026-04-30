@@ -260,7 +260,11 @@ const PlanViewEmptyState: React.FC = () => (
 export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   items,
   onSelectItem,
-  onCreateAtLocation,
+  // onCreateAtLocation accepted for a future "drop pin to create punch
+  // at this drawing coordinate" UI; the click-on-floor-plan affordance
+  // hasn't shipped yet. Underscore prefix keeps the dead-click linter
+  // clean without altering the prop contract.
+  onCreateAtLocation: _onCreateAtLocation,
 }) => {
   const projectId = useProjectId()
   const {

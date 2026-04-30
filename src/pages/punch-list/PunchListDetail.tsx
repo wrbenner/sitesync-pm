@@ -8,6 +8,7 @@ import {
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { EditableDetailField } from '../../components/forms/EditableField';
 import { PermissionGate } from '../../components/auth/PermissionGate';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../../components/ui/EditingLockBanner';
 import { getRelatedItemsForPunchItem, useAppNavigate } from '../../utils/connections';
@@ -22,7 +23,8 @@ import {
   getDaysRemaining,
   getBallInCourt,
 } from './types';
-import { StatusDot } from './PunchListTable';
+import { StatusDot } from './PunchListPrimitives';
+import { IrisSuggests } from '../../components/iris/IrisSuggests';
 
 // ── Verification Pipeline ───────────────────────────────
 const PIPELINE = [
@@ -199,10 +201,17 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
     }
   }, [commentText, onAddComment]);
 
+  const { confirm: confirmDeletePunch, dialog: deletePunchDialog } = useConfirm();
+
   const handleDelete = React.useCallback(async () => {
     if (!selected || !projectId || !deletePunchItem) return;
     const label = selected.description || `Punch item ${selected.itemNumber}`;
-    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return;
+    const ok = await confirmDeletePunch({
+      title: 'Delete punch item?',
+      description: `"${label}" — closeout reports reference this item. Deletion removes it from the closeout PDF.`,
+      destructiveLabel: 'Delete punch item',
+    });
+    if (!ok) return;
     try {
       await deletePunchItem.mutateAsync({ id: String(selected.id), projectId });
       toast.success('Punch item deleted');
@@ -210,7 +219,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete punch item');
     }
-  }, [selected, projectId, deletePunchItem, onClose]);
+  }, [selected, projectId, deletePunchItem, onClose, confirmDeletePunch]);
 
   return (
     <DetailPanel
@@ -775,6 +784,11 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
             {/* Related Items */}
             <RelatedItems items={getRelatedItemsForPunchItem(selected.id)} onNavigate={appNavigate} />
 
+            {/* Iris suggestions — verification follow-ups, escalation drafts */}
+            {projectId && (
+              <IrisSuggests entityType="punch_item" entityId={String(selected.id)} projectId={projectId} />
+            )}
+
             {/* Photo Add Button (if no photo hero) */}
             {!selected.before_photo_url && selected.verification_status !== 'verified' && (
               <PermissionGate permission="punch_list.edit">
@@ -794,6 +808,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
           </div>
         </div>
       )}
+      {deletePunchDialog}
     </DetailPanel>
   );
 };

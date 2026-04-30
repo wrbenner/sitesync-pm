@@ -39,15 +39,17 @@ export function useOwnerUpdatesForProject(projectId: string | undefined) {
   return useQuery({
     queryKey: ownerUpdatesKeys.byProject(projectId),
     queryFn: async (): Promise<OwnerUpdate[]> => {
-      const { data, error } = await supabase
-        .from('owner_updates')
+      // owner_updates is added at runtime via migration; generated types may
+      // lag. Cast through unknown so TS doesn't reject the column list.
+      const { data, error } = await (supabase
+        .from('owner_updates' as never)
         .select(
-          'id, project_id, title, content, schedule_summary, budget_summary, weather_summary, photos, milestone_updates, published, published_at, created_by, created_at, updated_at',
+          'id, project_id, title, content, schedule_summary, budget_summary, weather_summary, photos, milestone_updates, published, published_at, created_by, created_at, updated_at' as never,
         )
-        .eq('project_id', projectId!)
-        .order('created_at', { ascending: false })
+        .eq('project_id' as never, projectId! as never)
+        .order('created_at' as never, { ascending: false }) as unknown as Promise<{ data: unknown[] | null; error: Error | null }>)
       if (error) throw error
-      return (data ?? []) as OwnerUpdate[]
+      return ((data ?? []) as unknown) as OwnerUpdate[]
     },
     enabled: !!projectId,
   })

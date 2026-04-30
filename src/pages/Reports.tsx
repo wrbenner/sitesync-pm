@@ -1,36 +1,50 @@
-import React, { useState, useCallback, lazy, Suspense } from 'react'
-import { useIsMobile } from '../hooks/useWindowSize'
+import React, { useCallback, useMemo, useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Play, Calendar, Download, BarChart3, DollarSign, HardHat, ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles, Loader2 } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, TabBar, Skeleton, Tag } from '../components/Primitives'
+import {
+  FileText, Play, Calendar, Download, BarChart3, DollarSign, HardHat,
+  ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles, Loader2, Plus,
+} from 'lucide-react'
+import { toast } from 'sonner'
+
 import { colors, spacing, typography, borderRadius, colorVars } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useCustomReports, useReportRuns } from '../hooks/queries'
 import { REPORT_TYPES, type ReportType } from '../hooks/useReportData'
+import { useActionStream } from '../hooks/useActionStream'
+import { useProjectContext } from '../stores/projectContextStore'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { toast } from 'sonner'
 
-const ExportCenter = lazy(() => import('../components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })))
+import { OwnerUpdateGenerator } from '../components/reports/OwnerUpdateGenerator'
+import type {
+  OwnerUpdateRisk,
+  OwnerUpdateDecision,
+  ProjectContextSnapshot,
+} from '../services/iris/types'
 
-// ── Report Category Icons ───────────────────────────────
+const ExportCenter = lazy(() =>
+  import('../components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })),
+)
+
+// ── Report category metadata ────────────────────────────────────────────────
 
 const reportIcons: Record<string, React.ReactNode> = {
-  owner_report: <Sparkles size={18} />,
-  executive_summary: <BarChart3 size={18} />,
-  monthly_progress: <CalendarDays size={18} />,
-  cost_report: <DollarSign size={18} />,
-  schedule_report: <Calendar size={18} />,
-  subcontractor_performance: <Users size={18} />,
-  rfi_log: <ClipboardList size={18} />,
-  submittal_log: <FileText size={18} />,
-  punch_list: <Wrench size={18} />,
-  daily_log_summary: <HardHat size={18} />,
-  safety_report: <Shield size={18} />,
-  budget_report: <DollarSign size={18} />,
+  owner_report: <Sparkles size={16} />,
+  executive_summary: <BarChart3 size={16} />,
+  monthly_progress: <CalendarDays size={16} />,
+  cost_report: <DollarSign size={16} />,
+  schedule_report: <Calendar size={16} />,
+  subcontractor_performance: <Users size={16} />,
+  rfi_log: <ClipboardList size={16} />,
+  submittal_log: <FileText size={16} />,
+  punch_list: <Wrench size={16} />,
+  daily_log_summary: <HardHat size={16} />,
+  safety_report: <Shield size={16} />,
+  budget_report: <DollarSign size={16} />,
 }
 
 const reportCategories: Record<string, string> = {
-  owner_report: 'AI Powered',
+  owner_report: 'AI',
   executive_summary: 'Overview',
   monthly_progress: 'Overview',
   cost_report: 'Financial',
@@ -44,10 +58,10 @@ const reportCategories: Record<string, string> = {
   budget_report: 'Financial',
 }
 
-// ── Helpers ─────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatTimeAgo(dateStr: string | null): string {
-  if (!dateStr) return 'Never'
+  if (!dateStr) return '—'
   const diff = Date.now() - new Date(dateStr).getTime()
   const minutes = Math.floor(diff / 60000)
   if (minutes < 1) return 'Just now'
@@ -58,31 +72,79 @@ function formatTimeAgo(dateStr: string | null): string {
   return `${days}d ago`
 }
 
-type TabId = 'standard' | 'history'
+type ViewId = 'recent' | 'templates'
 
-const TABS = [
-  { id: 'standard' as const, label: 'Standard Reports' },
-  { id: 'history' as const, label: 'Run History' },
+const VIEW_TABS: Array<{ id: ViewId; label: string }> = [
+  { id: 'recent', label: 'Recent' },
+  { id: 'templates', label: 'Templates' },
 ]
 
-// ── Main Component ──────────────────────────────────────
+// ── Owner-update context assembler ──────────────────────────────────────────
+//
+// Pulls the most readily-available signals for the Iris owner-update template.
+// Sections we don't have wiring for (schedule status, budget status, lookahead,
+// progress) are intentionally left undefined — the template renders
+// "No material change" rather than inventing.
+
+function useOwnerUpdateContext(): ProjectContextSnapshot {
+  const { activeProject } = useProjectContext()
+  const { user } = useAuth()
+  // Action stream feeds risks + decisions from one place. PM lens — that's
+  // who's filing the owner update.
+  const stream = useActionStream('pm')
+
+  return useMemo<ProjectContextSnapshot>(() => {
+    const firstName = (user?.user_metadata?.first_name as string | undefined) ?? null
+    const userName = firstName
+      ?? (user?.email ? user.email.split('@')[0] : null)
+
+    const topRisks: OwnerUpdateRisk[] = (stream.items ?? [])
+      .filter((i) => i.cardType === 'risk')
+      .slice(0, 3)
+      .map((i) => ({
+        title: i.title,
+        summary: i.reason,
+        sourceLabel: `Risk: ${i.type} ${i.id}`,
+      }))
+
+    const decisionsNeeded: OwnerUpdateDecision[] = (stream.items ?? [])
+      .filter((i) => i.cardType === 'decision')
+      .slice(0, 5)
+      .map((i) => ({
+        title: i.title,
+        summary: i.reason,
+        sourceLabel: `Decision: ${i.type} ${i.id}`,
+      }))
+
+    return {
+      projectId: activeProject?.id ?? null,
+      projectName: activeProject?.name ?? null,
+      userName,
+      reportingPeriodDays: 7,
+      // Schedule / budget / progress / lookahead intentionally absent —
+      // the template fills them with "No material change" until a future
+      // pass wires real schedule/budget signals.
+      topRisks: topRisks.length > 0 ? topRisks : undefined,
+      decisionsNeeded: decisionsNeeded.length > 0 ? decisionsNeeded : undefined,
+    }
+  }, [activeProject, user, stream.items])
+}
+
+// ── Main component ──────────────────────────────────────────────────────────
 
 export const Reports: React.FC = () => {
   const projectId = useProjectId()
   const navigate = useNavigate()
-  const isMobile = useIsMobile()
   const { data: customReports } = useCustomReports(projectId)
   const { data: recentRuns, isLoading: runsLoading } = useReportRuns(projectId)
+  const ownerUpdateContext = useOwnerUpdateContext()
 
-  const [activeTab, setActiveTab] = useState<TabId>('standard')
+  const [view, setView] = useState<ViewId>('recent')
   const [exportOpen, setExportOpen] = useState(false)
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const [downloadingRunId, setDownloadingRunId] = useState<string | null>(null)
 
-  // Metrics
   const totalReports = REPORT_TYPES.length + (customReports?.length ?? 0)
-  const scheduledCount = customReports?.filter((r: Record<string, unknown>) => r.schedule != null).length ?? 0
-  const recentRunCount = recentRuns?.length ?? 0
 
   const handleRunReport = (type: ReportType) => {
     if (type === 'owner_report') {
@@ -96,34 +158,26 @@ export const Reports: React.FC = () => {
   const handleDownloadRun = useCallback(async (run: Record<string, unknown>) => {
     const runId = run.id as string
     setDownloadingRunId(runId)
-
     try {
       const storagePath = run.storage_path as string | null
       if (storagePath) {
-        // Download from Supabase storage
-        const { data, error } = await supabase.storage
-          .from('reports')
-          .download(storagePath)
+        const { data, error } = await supabase.storage.from('reports').download(storagePath)
         if (error) throw error
-
         const url = URL.createObjectURL(data)
         const a = document.createElement('a')
         a.href = url
-        const fileName = storagePath.split('/').pop() || `report_${runId}.pdf`
-        a.download = fileName
+        a.download = storagePath.split('/').pop() || `report_${runId}.pdf`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
         toast.success('Report downloaded')
       } else {
-        // Generate a simple summary PDF on the fly using pdf-lib
         const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
         const pdfDoc = await PDFDocument.create()
         const page = pdfDoc.addPage([612, 792])
         const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
         const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica)
-
         const reportConfig = REPORT_TYPES.find((r) => r.type === run.report_type)
         const reportLabel = reportConfig?.label ?? (run.report_type as string)
         const format = ((run.format as string) || 'pdf').toUpperCase()
@@ -131,13 +185,11 @@ export const Reports: React.FC = () => {
         const generatedAt = run.generated_at
           ? new Date(run.generated_at as string).toLocaleString()
           : 'N/A'
-
         let y = 720
-        page.drawText('SiteSync PM - Report', { x: 50, y, font: fontBold, size: 20, color: rgb(0.96, 0.47, 0.13) })
+        page.drawText('SiteSync PM — Report', { x: 50, y, font: fontBold, size: 20, color: rgb(0.96, 0.47, 0.13) })
         y -= 30
         page.drawLine({ start: { x: 50, y }, end: { x: 562, y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) })
         y -= 30
-
         const rows: Array<[string, string]> = [
           ['Report Type:', reportLabel],
           ['Format:', format],
@@ -145,41 +197,27 @@ export const Reports: React.FC = () => {
           ['Generated:', generatedAt],
           ['Run ID:', runId],
         ]
-
         for (const [label, value] of rows) {
           page.drawText(label, { x: 50, y, font: fontBold, size: 11, color: rgb(0.3, 0.3, 0.3) })
           page.drawText(value, { x: 170, y, font: fontReg, size: 11, color: rgb(0.1, 0.1, 0.1) })
           y -= 22
         }
-
-        y -= 20
-        page.drawText(
-          'This report was generated by SiteSync PM. For full report content, run a new',
-          { x: 50, y, font: fontReg, size: 10, color: rgb(0.5, 0.5, 0.5) },
-        )
-        y -= 14
-        page.drawText(
-          'report from the Standard Reports tab using the Export Center.',
-          { x: 50, y, font: fontReg, size: 10, color: rgb(0.5, 0.5, 0.5) },
-        )
-
-        // Footer
-        page.drawText(
-          `Generated by SiteSync PM on ${new Date().toLocaleDateString()}`,
-          { x: 50, y: 30, font: fontReg, size: 8, color: rgb(0.6, 0.6, 0.6) },
-        )
-
         const pdfBytes = await pdfDoc.save()
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+        // pdf-lib returns Uint8Array<ArrayBufferLike>; Blob wants a plain
+        // ArrayBuffer slice, which we get via .buffer + slice over byteOffset/length.
+        const blob = new Blob(
+          [pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer],
+          { type: 'application/pdf' },
+        )
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `SiteSync_${reportLabel.replace(/\s+/g, '_')}_${(run.generated_at as string)?.slice(0, 10) || 'report'}.pdf`
+        a.download = `SiteSync_${reportLabel.replace(/\s+/g, '_')}.pdf`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
-        toast.success('Report PDF generated and downloaded')
+        toast.success('Report PDF generated')
       }
     } catch (err) {
       console.error('Download failed:', err)
@@ -190,254 +228,432 @@ export const Reports: React.FC = () => {
   }, [])
 
   return (
-    <PageContainer
-      title="Reports"
-      subtitle="Generate, schedule, and export construction reports"
-      actions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <Btn variant="primary" icon={<Download size={16} />} onClick={() => setExportOpen(true)}>
-            Export Report
-          </Btn>
-        </div>
-      }
+    <div
+      role="region"
+      aria-label="Reports"
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: colors.surfacePage,
+        overflow: 'hidden',
+      }}
     >
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['5'] }}>
-        <MetricBox label="Available Reports" value={totalReports} />
-        <MetricBox label="Scheduled" value={scheduledCount} />
-        <MetricBox label="Recent Runs" value={recentRunCount} />
-      </div>
-
-      {/* Owner Portal featured card */}
-      <div
-        onClick={() => navigate('/reports/owner')}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/reports/owner') }}
+      {/* ── Sticky page header ──────────────────────────────────────── */}
+      <header
         style={{
-          background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
-          borderRadius: borderRadius.lg,
-          padding: spacing['5'],
-          // Add bottom padding on mobile so the AI sparkle FAB
-          // (fixed bottom-right at zIndex.popover) doesn't crash into
-          // the Open Portal CTA when this card is at the bottom of the
-          // viewport.
-          marginBottom: isMobile ? spacing['8'] : spacing['5'],
-          cursor: 'pointer',
+          position: 'sticky',
+          top: 0,
+          zIndex: 5,
+          backgroundColor: colors.surfacePage,
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          padding: `${spacing['4']} ${spacing['6']}`,
           display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'flex-start' : 'center',
-          justifyContent: 'space-between',
+          alignItems: 'center',
           gap: spacing['4'],
+          flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: borderRadius.md,
-            backgroundColor: 'rgba(255,255,255,0.2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: colors.white, flexShrink: 0,
-          }}>
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <div style={{
-              fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-              color: colors.white, letterSpacing: typography.letterSpacing.wider,
-              textTransform: 'uppercase', opacity: 0.9, marginBottom: spacing['1'],
-            }}>
-              Owner Portal
-            </div>
-            <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.white, marginBottom: spacing['1'] }}>
-              Interactive Owner Report
-            </div>
-            <div style={{ fontSize: typography.fontSize.sm, color: 'rgba(255,255,255,0.9)' }}>
-              Progress ring, milestone timeline, owner updates — everything the owner needs in one place.
-            </div>
-          </div>
-        </div>
-        <Btn variant="secondary" size="sm" icon={<Sparkles size={14} />} onClick={() => navigate('/reports/owner')}>
-          Open Portal
-        </Btn>
-      </div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 600,
+            fontFamily: typography.fontFamily,
+            color: colors.textPrimary,
+            letterSpacing: '-0.005em',
+          }}
+        >
+          Reports
+        </h1>
+        <span
+          style={{
+            fontSize: typography.fontSize.caption,
+            color: colors.textTertiary,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {totalReports} templates
+        </span>
 
-      {/* Tabs */}
-      <div style={{ marginBottom: spacing['5'] }}>
-        <TabBar
-          tabs={TABS}
-          activeId={activeTab}
-          onTabChange={(id) => setActiveTab(id as TabId)}
-        />
-      </div>
-
-      {/* Standard Reports Gallery */}
-      {activeTab === 'standard' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: spacing['4'] }}>
-          {REPORT_TYPES.map((report) => {
-            const isOwner = report.type === 'owner_report'
+        {/* View toggle */}
+        <div
+          role="tablist"
+          aria-label="Reports view"
+          style={{
+            marginLeft: spacing['4'],
+            display: 'inline-flex',
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: borderRadius.md,
+            overflow: 'hidden',
+          }}
+        >
+          {VIEW_TABS.map((t) => {
+            const active = view === t.id
             return (
-              <Card
-                key={report.type}
-                padding={spacing['5']}
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setView(t.id)}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  fontWeight: active ? 600 : 500,
+                  color: active ? colors.textPrimary : colors.textSecondary,
+                  backgroundColor: active ? colors.surfaceInset : 'transparent',
+                  border: 'none',
+                  borderRight: t.id === VIEW_TABS[0].id ? `1px solid ${colors.borderSubtle}` : 'none',
+                  cursor: 'pointer',
+                }}
               >
-                {isOwner && (
-                  <div style={{
-                    margin: `-${spacing['5']}`,
-                    marginBottom: spacing['4'],
-                    padding: `${spacing['2']} ${spacing['5']}`,
-                    background: `linear-gradient(135deg, ${colors.primaryOrange}, #FF9C42)`,
-                    borderRadius: `${borderRadius.lg} ${borderRadius.lg} 0 0`,
-                  }}>
-                    <span style={{
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.semibold,
-                      color: colors.white,
-                      letterSpacing: typography.letterSpacing.wider,
-                      textTransform: 'uppercase',
-                    }}>
-                      Recommended for OAC Meetings
-                    </span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: borderRadius.md,
-                    backgroundColor: isOwner ? colors.primaryOrange : colors.orangeSubtle,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isOwner ? colors.white : colors.orangeText,
-                  }}>
-                    {reportIcons[report.type] ?? <FileText size={18} />}
-                  </div>
-                  <Tag
-                    label={reportCategories[report.type] ?? 'General'}
-                    color={isOwner ? colors.primaryOrange : undefined}
-                    backgroundColor={isOwner ? colors.orangeSubtle : undefined}
-                  />
-                </div>
-
-                <h3 style={{
-                  fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
-                  color: colorVars.textPrimary, margin: 0, marginBottom: spacing['1'],
-                }}>
-                  {report.label}
-                </h3>
-                <p style={{
-                  fontSize: typography.fontSize.sm, color: colorVars.textTertiary,
-                  margin: 0, marginBottom: spacing['2'], lineHeight: '1.5',
-                }}>
-                  {report.description}
-                </p>
-
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: spacing['1'],
-                  fontSize: typography.fontSize.caption, color: colorVars.textTertiary,
-                  marginBottom: spacing['3'],
-                }}>
-                  <FileText size={11} /> {report.estimatedPages} pages
-                </div>
-
-                <div style={{ display: 'flex', gap: spacing['2'] }}>
-                  <Btn
-                    variant="primary" size="sm"
-                    icon={isOwner ? <Sparkles size={14} /> : <Play size={14} />}
-                    onClick={() => handleRunReport(report.type)}
-                  >
-                    {isOwner ? 'Open Report' : 'Generate'}
-                  </Btn>
-                </div>
-              </Card>
+                {t.label}
+              </button>
             )
           })}
         </div>
-      )}
 
-      {/* Run History */}
-      {activeTab === 'history' && (
-        <Card padding={spacing['4']}>
-          <SectionHeader title="Recent Report Runs" />
+        <div style={{ flex: 1 }} />
 
-          {runsLoading && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginTop: spacing['3'] }}>
-              {[1, 2, 3, 4].map((i) => <Skeleton key={i} height="56px" />)}
-            </div>
-          )}
+        <button
+          type="button"
+          onClick={() => setExportOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '8px 14px',
+            backgroundColor: colors.primaryOrange,
+            color: colors.white,
+            border: 'none',
+            borderRadius: borderRadius.md,
+            fontSize: typography.fontSize.sm,
+            fontWeight: typography.fontWeight.semibold,
+            fontFamily: typography.fontFamily,
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} strokeWidth={2.5} />
+          New Report
+        </button>
+      </header>
 
-          {!runsLoading && (!recentRuns || recentRuns.length === 0) && (
-            <div style={{ textAlign: 'center', padding: spacing['8'], color: colorVars.textTertiary }}>
-              <FileText size={32} style={{ marginBottom: spacing['3'], opacity: 0.3 }} />
-              <p style={{ fontSize: typography.fontSize.body, margin: 0, marginBottom: spacing['1'] }}>No reports generated yet</p>
-              <p style={{ fontSize: typography.fontSize.sm, margin: 0 }}>Run a report from the Standard Reports tab to get started</p>
-            </div>
-          )}
+      {/* ── Body ─────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'auto',
+          padding: spacing['6'],
+        }}
+      >
+        {/* Demo finale — Iris Owner Update */}
+        <OwnerUpdateGenerator context={ownerUpdateContext} />
 
-          {recentRuns && recentRuns.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginTop: spacing['3'] }}>
-              {recentRuns.map((run: Record<string, unknown>) => {
-                const statusColor = run.status === 'completed' ? colors.statusActive
-                  : run.status === 'generating' ? colors.statusInfo
-                  : run.status === 'failed' ? colors.statusCritical
-                  : colors.textTertiary
-                const reportConfig = REPORT_TYPES.find((r) => r.type === run.report_type)
+        {/* Recent runs (dense table) */}
+        {view === 'recent' && (
+          <div
+            style={{
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: borderRadius.md,
+              overflow: 'hidden',
+              backgroundColor: colors.white,
+            }}
+          >
+            <RunsTable
+              runs={(recentRuns ?? []) as unknown as Array<Record<string, unknown>>}
+              loading={runsLoading}
+              downloadingId={downloadingRunId}
+              onDownload={handleDownloadRun}
+            />
+          </div>
+        )}
 
-                return (
-                  <div
-                    key={run.id as string}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: spacing['3'],
-                      padding: spacing['3'], backgroundColor: colorVars.surfaceInset,
-                      borderRadius: borderRadius.md,
-                    }}
-                  >
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%', backgroundColor: statusColor, flexShrink: 0,
-                    }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{
-                          fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
-                          color: colorVars.textPrimary,
-                        }}>
-                          {reportConfig?.label ?? (run.report_type as string)}
-                        </span>
-                        <span style={{ fontSize: typography.fontSize.caption, color: colorVars.textTertiary }}>
-                          {formatTimeAgo(run.generated_at as string)}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: typography.fontSize.caption, color: colorVars.textTertiary, marginTop: '2px' }}>
-                        {(run.format as string).toUpperCase()} · {(run.status as string)}
-                      </div>
-                    </div>
-                    {run.status === 'completed' && (
-                      <Btn
-                        variant="ghost"
-                        size="sm"
-                        icon={downloadingRunId === (run.id as string) ? <Loader2 size={14} className="spin" /> : <Download size={14} />}
-                        disabled={downloadingRunId === (run.id as string)}
-                        onClick={() => handleDownloadRun(run)}
-                      >
-                        {downloadingRunId === (run.id as string) ? 'Downloading...' : 'Download'}
-                      </Btn>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </Card>
-      )}
+        {/* Templates gallery */}
+        {view === 'templates' && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: spacing['3'],
+            }}
+          >
+            {REPORT_TYPES.map((report) => (
+              <TemplateCard
+                key={report.type}
+                type={report.type}
+                label={report.label}
+                description={report.description}
+                category={reportCategories[report.type] ?? 'General'}
+                icon={reportIcons[report.type] ?? <FileText size={16} />}
+                onRun={() => handleRunReport(report.type)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Export Center Modal */}
+      {/* Export Center modal */}
       <Suspense fallback={null}>
         {exportOpen && (
           <ExportCenter
             open={exportOpen}
             initialReport={selectedType ?? undefined}
-            onClose={() => { setExportOpen(false); setSelectedType(null); }}
+            onClose={() => { setExportOpen(false); setSelectedType(null) }}
           />
         )}
       </Suspense>
-    </PageContainer>
+    </div>
   )
 }
+
+// ── Subcomponents ───────────────────────────────────────────────────────────
+
+const RunsTable: React.FC<{
+  runs: Array<Record<string, unknown>>
+  loading: boolean
+  downloadingId: string | null
+  onDownload: (run: Record<string, unknown>) => void
+}> = ({ runs, loading, downloadingId, onDownload }) => {
+  if (loading) {
+    return (
+      <div style={{ padding: spacing['6'], color: colorVars.textTertiary, fontSize: typography.fontSize.sm }}>
+        Loading recent runs…
+      </div>
+    )
+  }
+  if (runs.length === 0) {
+    return (
+      <div
+        style={{
+          padding: spacing['8'],
+          textAlign: 'center',
+          color: colorVars.textTertiary,
+          fontSize: typography.fontSize.sm,
+        }}
+      >
+        No reports generated yet. Run one from the Templates tab to populate this list.
+      </div>
+    )
+  }
+
+  return (
+    <table
+      style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+        fontFamily: typography.fontFamily,
+        fontSize: typography.fontSize.sm,
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      <thead>
+        <tr style={{ backgroundColor: colors.surfaceInset, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+          <Th>Title</Th>
+          <Th>Type</Th>
+          <Th>Generated</Th>
+          <Th>By</Th>
+          <Th>Status</Th>
+          <Th align="right">{''}</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {runs.map((run) => {
+          const reportConfig = REPORT_TYPES.find((r) => r.type === run.report_type)
+          const status = (run.status as string) || 'completed'
+          const statusColor = status === 'completed' ? colors.statusActive
+            : status === 'generating' ? colors.statusInfo
+            : status === 'failed' ? colors.statusCritical
+            : colors.textTertiary
+          const isDownloading = downloadingId === run.id
+          return (
+            <tr
+              key={run.id as string}
+              style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}
+            >
+              <Td>
+                <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                  {reportConfig?.label ?? (run.report_type as string)}
+                </span>
+              </Td>
+              <Td color={colors.textSecondary}>
+                {reportCategories[run.report_type as string] ?? 'General'}
+              </Td>
+              <Td color={colors.textSecondary}>
+                {formatTimeAgo(run.generated_at as string | null)}
+              </Td>
+              <Td color={colors.textSecondary}>
+                {(run.generated_by_name as string) ?? '—'}
+              </Td>
+              <Td>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: typography.fontSize.caption,
+                    color: statusColor,
+                    fontWeight: typography.fontWeight.medium,
+                  }}
+                >
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: statusColor }} />
+                  {status}
+                </span>
+              </Td>
+              <Td align="right">
+                {status === 'completed' && (
+                  <button
+                    type="button"
+                    onClick={() => onDownload(run)}
+                    disabled={isDownloading}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '4px 10px',
+                      fontSize: typography.fontSize.caption,
+                      color: colors.textSecondary,
+                      border: `1px solid ${colors.borderSubtle}`,
+                      backgroundColor: colors.white,
+                      borderRadius: borderRadius.sm,
+                      cursor: isDownloading ? 'wait' : 'pointer',
+                      fontFamily: typography.fontFamily,
+                    }}
+                  >
+                    {isDownloading ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={11} />}
+                    {isDownloading ? 'Downloading' : 'Download'}
+                  </button>
+                )}
+              </Td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
+const Th: React.FC<{ children: React.ReactNode; align?: 'left' | 'right' }> = ({ children, align = 'left' }) => (
+  <th
+    style={{
+      textAlign: align,
+      padding: `${spacing['2']} ${spacing['3']}`,
+      fontSize: 11,
+      fontWeight: 600,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em',
+    }}
+  >
+    {children}
+  </th>
+)
+
+const Td: React.FC<{ children: React.ReactNode; align?: 'left' | 'right'; color?: string }> = ({ children, align = 'left', color }) => (
+  <td
+    style={{
+      textAlign: align,
+      padding: `${spacing['2']} ${spacing['3']}`,
+      color: color ?? colors.textPrimary,
+      verticalAlign: 'middle',
+    }}
+  >
+    {children}
+  </td>
+)
+
+const TemplateCard: React.FC<{
+  type: string
+  label: string
+  description: string
+  category: string
+  icon: React.ReactNode
+  onRun: () => void
+}> = ({ label, description, category, icon, onRun }) => (
+  <div
+    style={{
+      border: `1px solid ${colors.borderSubtle}`,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.white,
+      padding: spacing['4'],
+      display: 'flex',
+      flexDirection: 'column',
+      gap: spacing['2'],
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 32,
+          height: 32,
+          borderRadius: borderRadius.sm,
+          backgroundColor: colors.surfaceInset,
+          color: colors.textSecondary,
+        }}
+      >
+        {icon}
+      </div>
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: colors.textTertiary,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {category}
+      </span>
+    </div>
+    <div
+      style={{
+        fontSize: typography.fontSize.body,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary,
+      }}
+    >
+      {label}
+    </div>
+    <p
+      style={{
+        margin: 0,
+        fontSize: typography.fontSize.sm,
+        color: colors.textSecondary,
+        lineHeight: 1.5,
+        flex: 1,
+      }}
+    >
+      {description}
+    </p>
+    <button
+      type="button"
+      onClick={onRun}
+      style={{
+        alignSelf: 'flex-start',
+        marginTop: spacing['1'],
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 12px',
+        backgroundColor: colors.surfaceInset,
+        color: colors.textPrimary,
+        border: `1px solid ${colors.borderSubtle}`,
+        borderRadius: borderRadius.sm,
+        fontSize: typography.fontSize.caption,
+        fontWeight: typography.fontWeight.semibold,
+        fontFamily: typography.fontFamily,
+        cursor: 'pointer',
+      }}
+    >
+      <Play size={11} />
+      Generate
+    </button>
+  </div>
+)
 
 export default Reports

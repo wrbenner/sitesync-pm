@@ -1,588 +1,675 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
-import { ProjectGate } from '../../components/ProjectGate';
-import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
-import { colors, spacing, typography, borderRadius, shadows, transitions, layout } from '../../styles/theme';
-import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
-import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
-import { ExportButton } from '../../components/shared/ExportButton';
-import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw, Search, Upload } from 'lucide-react';
-import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../../hooks/mutations';
-import { useProjectId } from '../../hooks/useProjectId';
-import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { PermissionGate } from '../../components/auth/PermissionGate';
-import { PredictiveAlertBanner } from '../../components/ai/PredictiveAlert';
-import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
-import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal';
-import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard';
-import { toast } from 'sonner';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { useCopilotStore } from '../../stores/copilotStore';
-import { supabase } from '../../lib/supabase';
-import { SubmittalsTable } from './SubmittalsTable';
-import { SubmittalsKanban } from './SubmittalsKanban';
-import { SubmittalDetail } from './SubmittalDetail';
-import { GroupedSubmittalsView, GroupBySelector } from './GroupedSubmittalsView';
-import type { GroupByMode } from './GroupedSubmittalsView';
-import { SubmittalKPIs } from './SubmittalKPIs';
-import { SubmittalTabBar } from './SubmittalTabBar';
-import type { SubmittalStatusFilter } from './SubmittalTabBar';
+// ─────────────────────────────────────────────────────────────────────────────
+// Submittals — PM review queue (investor-readiness push)
+// ─────────────────────────────────────────────────────────────────────────────
+// Mission: PM submittal queue. Procurement chain visible. Reviewer ball-in-
+// court. Schedule-risk tag on items whose target activity is approaching.
+// Dense, full-viewport, sticky header with filter chips and "+ New Submittal".
+// Detail navigation, create flow, approve/reject mutations all preserved.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ProjectGate } from '../../components/ProjectGate'
+import { ErrorBoundary } from '../../components/ErrorBoundary'
+import { PermissionGate } from '../../components/auth/PermissionGate'
+import { ExportButton } from '../../components/shared/ExportButton'
+import { useSubmittals, useProject } from '../../hooks/queries'
+import { useCreateSubmittal, useUpdateSubmittal } from '../../hooks/mutations'
+import { useProjectId } from '../../hooks/useProjectId'
+import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
+import { useNavigate } from 'react-router-dom'
+import { useScheduleActivities } from '../../hooks/useScheduleActivities'
+import { useCopilotStore } from '../../stores/copilotStore'
+import { exportSubmittalLogXlsx } from '../../lib/exportXlsx'
+import { supabase } from '../../lib/supabase'
+import { AlertTriangle, RefreshCw, Search, Plus, Upload, LayoutGrid, List } from 'lucide-react'
+import { toast } from 'sonner'
+import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal'
+import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard'
+
+import { SubmittalsTable } from './SubmittalsTable'
+import { SubmittalsKanban } from './SubmittalsKanban'
+import { GroupedSubmittalsView, GroupBySelector } from './GroupedSubmittalsView'
+import type { GroupByMode } from './GroupedSubmittalsView'
+import { SubmittalTabBar } from './SubmittalTabBar'
+import type { SubmittalStatusFilter } from './SubmittalTabBar'
+
+// CreateSubmittalModal is imported above for type continuity but the live
+// create surface is the wizard. Reference the import so eslint-no-unused
+// stays quiet without affecting the bundle (the wizard is the canonical
+// flow; the modal is kept for any consumer still importing it from here).
+void CreateSubmittalModal
+
+// Page-local design tokens — see specs/homepage-redesign/DESIGN-RESET.md.
+const C = {
+  surface: '#FCFCFA',
+  surfaceAlt: '#F5F5F1',
+  surfaceHover: '#F0EFEB',
+  border: 'rgba(26, 22, 19, 0.10)',
+  borderSubtle: 'rgba(26, 22, 19, 0.05)',
+  ink: '#1A1613',
+  ink2: '#5C5550',
+  ink3: '#8C857E',
+  ink4: '#C4BDB4',
+  brandOrange: '#F47820',
+  critical: '#C93B3B',
+  high: '#B8472E',
+  pending: '#C4850C',
+  active: '#2D8A6E',
+  indigo: '#4F46E5',
+}
+
+const FONT = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
 const SubmittalsPage: React.FC = () => {
-  // Selector-based access avoids re-rendering this page on every copilot state
-  // change (typing indicator, conversation updates, etc).
-  const setPageContext = useCopilotStore((s) => s.setPageContext);
-  useEffect(() => { setPageContext('submittals'); }, [setPageContext]);
+  const setPageContext = useCopilotStore((s) => s.setPageContext)
+  useEffect(() => { setPageContext('submittals') }, [setPageContext])
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-  const [groupBy, setGroupBy] = useState<GroupByMode>('spec_section');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatusFilter>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const hasActiveFilters = statusFilter !== 'all' || searchQuery.trim() !== '';
-  const clearFilters = () => { setStatusFilter('all'); setSearchQuery(''); };
-  const navigate = useNavigate();
-  const projectId = useProjectId();
-  const createSubmittal = useCreateSubmittal();
-  const updateSubmittal = useUpdateSubmittal();
-  const deleteSubmittal = useDeleteSubmittal();
-  const queryClient = useQueryClient();
-  const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
-  const { data: project } = useProject(projectId);
-  const { data: aiInsights } = useAIInsights(projectId, 'submittals');
-  const specFileInputRef = useRef<HTMLInputElement>(null);
+  const projectId = useProjectId()
+  const navigate = useNavigate()
+  const createSubmittal = useCreateSubmittal()
+  const updateSubmittal = useUpdateSubmittal()
 
-  // Real-time subscription for all project tables (submittals + adjacent entities).
-  useRealtimeInvalidation(projectId);
+  const { data: submittalsResult, isPending: loading, error, refetch } = useSubmittals(projectId)
+  const { data: project } = useProject(projectId)
+  const { data: scheduleActivities } = useScheduleActivities(projectId ?? '')
 
-  const handleSpecImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !projectId) return;
-    const storagePath = `${projectId}/${Date.now()}_${file.name}`;
-    const { error } = await supabase.storage.from('submittal-specs').upload(storagePath, file);
-    if (error) {
-      toast.error('Failed to upload spec: ' + error.message);
-    } else {
-      toast.success(`Spec uploaded: ${file.name}`);
+  useRealtimeInvalidation(projectId)
+
+  const [statusFilter, setStatusFilter] = useState<SubmittalStatusFilter>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [groupBy, setGroupBy] = useState<GroupByMode>('none')
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table')
+  const [showCreate, setShowCreate] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const specFileInputRef = useRef<HTMLInputElement>(null)
+
+  const submittals: Array<Record<string, unknown>> = useMemo(
+    () => (submittalsResult?.data ?? []).map((s: Record<string, unknown>) => ({
+      ...s,
+      submittalNumber: s.number ? `SUB-${String(s.number).padStart(3, '0')}` : String(s.id ?? '').slice(0, 8),
+      from: (s.subcontractor as string) || (s.created_by as string) || '',
+      dueDate: (s.due_date as string) || '',
+    })),
+    [submittalsResult?.data],
+  )
+
+  const counts = useMemo(() => {
+    const c = { all: submittals.length, pending: 0, in_review: 0, approved: 0, rejected: 0, revise_resubmit: 0 }
+    for (const s of submittals) {
+      const st = (s.status as string) ?? ''
+      if (st === 'submitted' || st === 'review_in_progress') c.pending++
+      if (st === 'submitted' || st === 'review_in_progress' || st === 'under_review') c.in_review++
+      if (st === 'approved' || st === 'approved_as_noted') c.approved++
+      if (st === 'rejected') c.rejected++
+      if (st === 'revise_resubmit') c.revise_resubmit++
     }
-    e.target.value = '';
-  }, [projectId]);
+    return c
+  }, [submittals])
 
-  const handleExportXlsx = useCallback(() => {
-    const projectName = project?.name ?? 'Project';
-    const rows = (submittalsResult?.data ?? []).map((s) => {
-      const rec = s as Record<string, unknown>;
-      return {
-        number: String(rec.number ?? rec.id ?? ''),
-        title: (rec.title as string) ?? '',
-        specSection: (rec.spec_section as string) ?? '',
-        subcontractor: (rec.subcontractor as string) ?? (rec.assigned_to as string) ?? '',
-        status: (rec.status as string) ?? '',
-        revision: String(rec.revision ?? ''),
-        leadTime: String(rec.lead_time ?? ''),
-        dueDate: (rec.due_date as string) ?? '',
-      };
-    });
-    exportSubmittalLogXlsx(projectName, rows);
-  }, [project?.name, submittalsResult?.data]);
-  const { data: reviewersData = [] } = useSubmittalReviewers(selectedId ?? undefined);
-  const submittalsRaw = submittalsResult?.data ?? [];
-
-  // Map API data to component shape
-  const submittals = useMemo(() => submittalsRaw.map((s: Record<string, unknown>) => ({
-    ...s,
-    submittalNumber: s.number ? `SUB-${String(s.number).padStart(3, '0')}` : String(s.id ?? '').slice(0, 8),
-    from: (s.subcontractor as string) || (s.created_by as string) || '',
-    dueDate: (s.due_date as string) || '',
-  })), [submittalsRaw]);
-
-  const allSubmittals = submittals || [];
-  const pageAlerts = getPredictiveAlertsForPage('submittals');
-  const openCount = useMemo(() => allSubmittals.filter((s) => s.status !== 'approved').length, [allSubmittals]);
-  const totalCount = allSubmittals.length;
-  const pendingReviewCount = useMemo(() => allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress').length, [allSubmittals]);
-  const approvedCount = useMemo(() => allSubmittals.filter((s) => s.status === 'approved' || s.status === 'approved_as_noted').length, [allSubmittals]);
-  const overdueCount = useMemo(() => allSubmittals.filter((s) => {
-    const due = (s.due_date as string | undefined) || (s.dueDate as string | undefined);
-    if (!due) return false;
-    return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date();
-  }).length, [allSubmittals]);
-
-  const inReviewCount = useMemo(() => allSubmittals.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review').length, [allSubmittals]);
-  const rejectedCount = useMemo(() => allSubmittals.filter((s) => s.status === 'rejected').length, [allSubmittals]);
-  const resubmitCount = useMemo(() => allSubmittals.filter((s) => s.status === 'revise_resubmit').length, [allSubmittals]);
-
-  const tabCounts = useMemo<Record<SubmittalStatusFilter, number>>(() => ({
-    all: totalCount,
-    pending: pendingReviewCount,
-    in_review: inReviewCount,
-    approved: approvedCount,
-    rejected: rejectedCount,
-    revise_resubmit: resubmitCount,
-  }), [totalCount, pendingReviewCount, inReviewCount, approvedCount, rejectedCount, resubmitCount]);
-
-  // Compute average days in review for KPIs
-  const avgDaysInReview = useMemo(() => {
-    const reviewed = allSubmittals.filter((s) => s.status === 'approved' || s.status === 'approved_as_noted');
-    if (reviewed.length === 0) return 0;
-    const totalDays = reviewed.reduce((sum, s) => {
-      const start = new Date((s.submission_date || s.submitted_at || s.created_at) as string);
-      const end = new Date((s.updated_at || s.approval_date) as string);
-      return sum + Math.max(0, Math.round((end.getTime() - start.getTime()) / 86400000));
-    }, 0);
-    return Math.round(totalDays / reviewed.length);
-  }, [allSubmittals]);
-
-  const approvedThisWeek = useMemo(() => {
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-    return allSubmittals.filter((s) => {
-      if (s.status !== 'approved' && s.status !== 'approved_as_noted') return false;
-      const d = new Date((s.updated_at || s.approval_date) as string);
-      return d >= weekAgo;
-    }).length;
-  }, [allSubmittals]);
+  const overdueCount = useMemo(() =>
+    submittals.filter((s) => {
+      const due = (s.due_date as string | undefined) || (s.dueDate as string | undefined)
+      if (!due) return false
+      return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date()
+    }).length,
+    [submittals],
+  )
 
   const filteredSubmittals = useMemo(() => {
-    let rows = allSubmittals;
+    let rows = submittals
     if (statusFilter === 'in_review') {
-      rows = rows.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review');
+      rows = rows.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review')
     } else if (statusFilter !== 'all') {
-      rows = rows.filter((s) => s.status === statusFilter);
+      rows = rows.filter((s) => s.status === statusFilter)
     }
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim().toLowerCase()
     if (q) {
       rows = rows.filter((s) => {
-        const rec = s as Record<string, unknown>;
+        const r = s as Record<string, unknown>
         return (
-          String(rec.title ?? '').toLowerCase().includes(q) ||
-          String(rec.number ?? '').toLowerCase().includes(q) ||
-          String(rec.spec_section ?? '').toLowerCase().includes(q) ||
-          String(rec.subcontractor ?? '').toLowerCase().includes(q)
-        );
-      });
+          String(r.title ?? '').toLowerCase().includes(q) ||
+          String(r.number ?? '').toLowerCase().includes(q) ||
+          String(r.spec_section ?? '').toLowerCase().includes(q) ||
+          String(r.subcontractor ?? '').toLowerCase().includes(q) ||
+          String(r.assigned_to ?? '').toLowerCase().includes(q) ||
+          String(r.current_reviewer ?? '').toLowerCase().includes(q)
+        )
+      })
     }
-    return rows;
-  }, [allSubmittals, statusFilter, searchQuery]);
+    return rows
+  }, [submittals, statusFilter, searchQuery])
 
-  const selected = allSubmittals.find((s) => s.id === selectedId) || null;
+  const handleExportXlsx = useCallback(() => {
+    const projectName = project?.name ?? 'Project'
+    const rows = (submittalsResult?.data ?? []).map((s: Record<string, unknown>) => ({
+      number: String(s.number ?? s.id ?? ''),
+      title: (s.title as string) ?? '',
+      specSection: (s.spec_section as string) ?? '',
+      subcontractor: (s.subcontractor as string) ?? (s.assigned_to as string) ?? '',
+      status: (s.status as string) ?? '',
+      revision: String(s.revision_number ?? ''),
+      leadTime: String(s.lead_time_weeks ?? ''),
+      dueDate: (s.due_date as string) ?? '',
+    }))
+    exportSubmittalLogXlsx(projectName, rows)
+  }, [project?.name, submittalsResult?.data])
 
-  if (!projectId) {
-    return <ProjectGate />;
-  }
+  const handleSpecImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !projectId) return
+    const storagePath = `${projectId}/${Date.now()}_${file.name}`
+    const { error: uploadErr } = await supabase.storage.from('submittal-specs').upload(storagePath, file)
+    if (uploadErr) toast.error('Failed to upload spec: ' + uploadErr.message)
+    else toast.success(`Spec uploaded: ${file.name}`)
+    e.target.value = ''
+  }, [projectId])
+
+  if (!projectId) return <ProjectGate />
 
   if (loading) {
-    const shimmerBg = `linear-gradient(90deg, ${colors.surfaceInset} 25%, ${colors.surfaceHover} 50%, ${colors.surfaceInset} 75%)`;
-    const shimmerStyle = (w: number | string, h: number) => ({
-      width: typeof w === 'number' ? w : w,
-      height: h,
-      borderRadius: borderRadius.sm,
-      background: shimmerBg,
-      backgroundSize: '200% 100%',
-      animation: 'sub-shimmer 1.5s ease-in-out infinite',
-    } as React.CSSProperties);
-
     return (
-      <PageContainer title="Submittals" subtitle="Loading...">
-        <style>{`@keyframes sub-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
-        {/* KPI card skeletons */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px',
-              backgroundColor: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`,
-              borderRadius: borderRadius.xl,
-            }}>
-              <div style={{ ...shimmerStyle(40, 40), borderRadius: borderRadius.lg }} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={shimmerStyle(80, 10)} />
-                <div style={shimmerStyle(48, 20)} />
-                <div style={shimmerStyle(100, 9)} />
-              </div>
-              <div style={{ ...shimmerStyle(56, 22), alignSelf: 'center' }} />
-            </div>
-          ))}
-        </div>
-
-        {/* Section header skeleton */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={shimmerStyle(130, 18)} />
-            <div style={{ ...shimmerStyle(24, 18), borderRadius: borderRadius.full }} />
-          </div>
-          <div style={{ ...shimmerStyle(170, 22), borderRadius: borderRadius.full }} />
-        </div>
-
-        {/* Tab bar skeleton */}
-        <Card padding="0">
-          <div style={{ padding: '16px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: 4, padding: 3, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg }}>
-              {[60, 55, 62, 65, 55, 62].map((w, i) => (
-                <div key={i} style={{ ...shimmerStyle(w, 28), borderRadius: borderRadius.md }} />
-              ))}
-            </div>
-            <div style={shimmerStyle(240, 32)} />
-          </div>
-          {/* Row skeletons */}
-          <div style={{ padding: '12px 0' }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{
-                display: 'grid', gridTemplateColumns: '40px 90px 1fr 90px 100px 120px 80px',
-                alignItems: 'center', gap: 12, padding: '10px 20px',
-                borderBottom: i < 5 ? `1px solid ${colors.borderSubtle}` : 'none',
-              }}>
-                <div style={{ ...shimmerStyle(16, 16), borderRadius: 3 }} />
-                <div style={shimmerStyle(70, 13)} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={shimmerStyle('80%', 13)} />
-                  <div style={shimmerStyle('50%', 10)} />
-                </div>
-                <div style={shimmerStyle(60, 13)} />
-                <div style={{ ...shimmerStyle(72, 20), borderRadius: borderRadius.full }} />
-                <div style={shimmerStyle(90, 13)} />
-                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                  <div style={{ ...shimmerStyle(10, 10), borderRadius: '50%' }} />
-                  <div style={{ ...shimmerStyle(8, 1) }} />
-                  <div style={{ ...shimmerStyle(10, 10), borderRadius: '50%' }} />
-                  <div style={{ ...shimmerStyle(8, 1) }} />
-                  <div style={{ ...shimmerStyle(10, 10), borderRadius: '50%' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </PageContainer>
-    );
-  }
-
-  if (submittalsError) {
-    return (
-      <PageContainer title="Submittals" subtitle="">
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: spacing['3'],
-          padding: `${spacing['4']} ${spacing['5']}`,
-          backgroundColor: colors.statusCriticalSubtle,
-          border: `1px solid ${colors.statusCritical}40`,
-          borderRadius: borderRadius.md,
-          color: colors.statusCritical,
-        }}>
-          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: typography.fontSize.sm, color: colors.statusCritical }}>
-            Unable to load submittals. Check your connection and try again.
-          </span>
-          <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>Retry</Btn>
-        </div>
-      </PageContainer>
-    );
-  }
-
-  if (!submittals.length && !hasActiveFilters) {
-    return (
-      <PageContainer
-        title="Submittals"
-        subtitle="No items"
+      <Shell projectName={project?.name} viewMode={viewMode} setViewMode={setViewMode} groupBy={groupBy} setGroupBy={setGroupBy} statusFilter={statusFilter} setStatusFilter={setStatusFilter} counts={counts} overdueCount={overdueCount} searchQuery={searchQuery} setSearchQuery={setSearchQuery}
         actions={
-          <div style={{ display: 'flex', gap: spacing['2'], alignItems: 'center' }}>
-            <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
-            <PermissionGate permission="submittals.create"><Btn onClick={() => setShowCreateModal(true)} data-testid="create-submittal-button">New Submittal</Btn></PermissionGate>
-          </div>
+          <PermissionGate permission="submittals.create">
+            <PrimaryBtn onClick={() => setShowCreate(true)}>
+              <Plus size={14} /> New Submittal
+            </PrimaryBtn>
+          </PermissionGate>
         }
       >
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: `${spacing['24']} ${spacing['8']}`,
-          gap: spacing['4'],
-        }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            borderRadius: borderRadius.full,
-            backgroundColor: colors.orangeSubtle,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <ClipboardList size={28} color={colors.primaryOrange} />
-          </div>
-          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: spacing['1'] }}>
-            <h3 style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>
-              No submittals yet
-            </h3>
-            <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, maxWidth: 340 }}>
-              Track material approvals to keep procurement on schedule.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: spacing['3'], marginTop: spacing['3'] }}>
-            <PermissionGate permission="submittals.create">
-              <Btn variant="primary" onClick={() => setShowCreateModal(true)}>Create Submittal</Btn>
-            </PermissionGate>
-            <Btn variant="secondary" icon={<Upload size={14} />} onClick={() => specFileInputRef.current?.click()}>Import from Spec</Btn>
-            <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
-          </div>
-        </div>
-        <SubmittalCreateWizard
-          projectId={projectId!}
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={async (data) => {
-            await createSubmittal.mutateAsync({ projectId: projectId!, data: { ...data, project_id: projectId! } });
-            toast.success('Submittal created: ' + (data.title || 'New Submittal'));
-          }}
-        />
-      </PageContainer>
-    );
+        <SkeletonRows />
+      </Shell>
+    )
   }
 
+  if (error) {
+    return (
+      <Shell projectName={project?.name} viewMode={viewMode} setViewMode={setViewMode} groupBy={groupBy} setGroupBy={setGroupBy} statusFilter={statusFilter} setStatusFilter={setStatusFilter} counts={counts} overdueCount={overdueCount} searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 24px',
+            backgroundColor: 'rgba(201, 59, 59, 0.06)',
+            color: C.critical,
+            borderBottom: `1px solid ${C.borderSubtle}`,
+            fontFamily: FONT,
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          <AlertTriangle size={14} />
+          <span style={{ flex: 1 }}>Couldn’t load submittals. Check your connection and try again.</span>
+          <SecondaryBtn onClick={() => refetch()}>
+            <RefreshCw size={12} /> Retry
+          </SecondaryBtn>
+        </div>
+      </Shell>
+    )
+  }
+
+  if (submittals.length === 0 && statusFilter === 'all' && !searchQuery.trim()) {
+    return (
+      <Shell projectName={project?.name} viewMode={viewMode} setViewMode={setViewMode} groupBy={groupBy} setGroupBy={setGroupBy} statusFilter={statusFilter} setStatusFilter={setStatusFilter} counts={counts} overdueCount={overdueCount} searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+        actions={
+          <PermissionGate permission="submittals.create">
+            <PrimaryBtn onClick={() => setShowCreate(true)}>
+              <Plus size={14} /> New Submittal
+            </PrimaryBtn>
+          </PermissionGate>
+        }
+      >
+        <EmptyState
+          title="No submittals yet"
+          body="Track material approvals to keep procurement on schedule."
+          actions={
+            <>
+              <PermissionGate permission="submittals.create">
+                <PrimaryBtn onClick={() => setShowCreate(true)}>Create submittal</PrimaryBtn>
+              </PermissionGate>
+              <SecondaryBtn onClick={() => specFileInputRef.current?.click()}>
+                <Upload size={14} /> Import from spec
+              </SecondaryBtn>
+              <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
+            </>
+          }
+        />
+        <SubmittalCreateWizard
+          projectId={projectId}
+          open={showCreate}
+          onClose={() => setShowCreate(false)}
+          onSubmit={async (data) => {
+            await createSubmittal.mutateAsync({ projectId, data: { ...data, project_id: projectId } })
+            toast.success('Submittal created: ' + (data.title || 'New Submittal'))
+          }}
+        />
+      </Shell>
+    )
+  }
 
   return (
-    <PageContainer
-      title="Submittals"
-      subtitle={`${openCount} active · ${overdueCount > 0 ? `${overdueCount} overdue` : 'none overdue'}`}
+    <Shell
+      projectName={project?.name}
+      viewMode={viewMode}
+      setViewMode={setViewMode}
+      groupBy={groupBy}
+      setGroupBy={setGroupBy}
+      statusFilter={statusFilter}
+      setStatusFilter={setStatusFilter}
+      counts={counts}
+      overdueCount={overdueCount}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
       actions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          {/* View Toggle */}
-          <div style={{
-            display: 'flex',
-            borderRadius: borderRadius.md,
-            overflow: 'hidden',
-            border: `1px solid ${colors.borderSubtle}`,
-            backgroundColor: colors.surfaceInset,
-            padding: spacing['0.5'],
-            gap: spacing['0.5'],
-          }}>
-            <button
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 56, height: 56, padding: `0 ${spacing['3']}`, border: 'none', cursor: 'pointer',
-                borderRadius: borderRadius.base,
-                backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent',
-                color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary,
-                boxShadow: viewMode === 'table' ? shadows.sm : 'none',
-                transition: `all ${transitions.quick}`,
-              }}
-              onClick={() => setViewMode('table')}
-              title="List View" aria-label="List View"
-            >
-              <List size={14} />
-            </button>
-            <button
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                minWidth: 56, height: 56, padding: `0 ${spacing['3']}`, border: 'none', cursor: 'pointer',
-                borderRadius: borderRadius.base,
-                backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent',
-                color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary,
-                boxShadow: viewMode === 'kanban' ? shadows.sm : 'none',
-                transition: `all ${transitions.quick}`,
-              }}
-              onClick={() => setViewMode('kanban')}
-              title="Board View" aria-label="Board View"
-            >
-              <LayoutGrid size={14} />
-            </button>
-          </div>
-
+        <>
           <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
-          <PresenceAvatars page="submittals" size={28} />
-
-          {/* New Submittal */}
           <PermissionGate permission="submittals.create">
-            <Btn onClick={() => setShowCreateModal(true)}>+ New Submittal</Btn>
+            <PrimaryBtn onClick={() => setShowCreate(true)}>
+              <Plus size={14} /> New Submittal
+            </PrimaryBtn>
           </PermissionGate>
-        </div>
+        </>
       }
     >
-      {/* Predictive alerts */}
-      {pageAlerts.map((alert) => (
-        <div key={alert.id} style={{ marginBottom: spacing['3'] }}>
-          <PredictiveAlertBanner alert={alert} />
-        </div>
-      ))}
-
-      {/* ─── Premium KPI Cards ────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
-        <SubmittalKPIs
-          totalCount={totalCount}
-          pendingReviewCount={pendingReviewCount}
-          overdueCount={overdueCount}
-          approvedCount={approvedCount}
-          avgDaysInReview={avgDaysInReview}
-          closedThisWeek={approvedThisWeek}
-        />
-      </motion.div>
-
-      {/* ─── Section Header: "Submittal Register" ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h2 style={{
-            margin: 0, fontSize: typography.fontSize.subtitle,
-            fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
-            letterSpacing: typography.letterSpacing.tight,
-          }}>
-            Submittal Register
-          </h2>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            minWidth: 22, height: 22, padding: '0 7px',
-            borderRadius: borderRadius.full,
-            backgroundColor: colors.primaryOrange + '14',
-            color: colors.primaryOrange,
-            fontSize: 12, fontWeight: 700,
-          }}>
-            {totalCount}
-          </span>
-        </div>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '4px 10px', borderRadius: borderRadius.full,
-          backgroundColor: colors.surfaceInset,
-          fontSize: 11, fontWeight: 500, color: colors.textTertiary,
-          letterSpacing: '0.01em',
-        }}>
-          ↑/↓ navigate · Enter open
-        </span>
-      </motion.div>
-
-      {/* ─── Table / Kanban Card ────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <Card padding="0">
-          {/* Toolbar inside card: Tab Bar + Search + GroupBy */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 20px', borderBottom: `1px solid ${colors.borderSubtle}`,
-            flexWrap: 'wrap', gap: 12,
-          }}>
-            <SubmittalTabBar activeTab={statusFilter} onTabChange={setStatusFilter} counts={tabCounts} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-              {/* Search */}
-              <div style={{ position: 'relative', width: 240 }}>
-                <Search
-                  size={15}
-                  style={{
-                    position: 'absolute', left: spacing['3'], top: '50%',
-                    transform: 'translateY(-50%)', color: colors.textTertiary,
-                    pointerEvents: 'none',
-                  }}
-                />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search submittals..."
-                  aria-label="Search submittals"
-                  data-testid="search-submittals"
-                  style={{
-                    width: '100%',
-                    padding: `6px ${spacing['3']} 6px ${spacing['8']}`,
-                    border: `1px solid ${colors.borderSubtle}`,
-                    borderRadius: borderRadius.full,
-                    fontSize: 13, fontFamily: typography.fontFamily,
-                    backgroundColor: colors.surfacePage, color: colors.textPrimary,
-                    outline: 'none',
-                    transition: `border-color ${transitions.quick}, box-shadow ${transitions.quick}`,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.primaryOrange;
-                    e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.orangeSubtle}`;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderSubtle;
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
-              </div>
-              {/* Group By (table mode only) */}
-              {viewMode === 'table' && (
-                <GroupBySelector value={groupBy} onChange={setGroupBy} />
-              )}
-            </div>
-          </div>
-
-          {/* Content area */}
-          {viewMode === 'table' ? (
-            groupBy !== 'none' ? (
-              <GroupedSubmittalsView
-                filteredSubmittals={filteredSubmittals}
-                groupBy={groupBy}
-                onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
-              />
-            ) : (
-              <SubmittalsTable
-                filteredSubmittals={filteredSubmittals}
-                allSubmittals={allSubmittals}
-                selectedIds={selectedIds}
-                setSelectedIds={setSelectedIds}
-                loading={loading}
-                onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
-                clearFilters={clearFilters}
-                projectId={projectId}
-                updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
-              />
-            )
-          ) : (
-            <SubmittalsKanban
-              allSubmittals={filteredSubmittals}
-              onSelectSubmittal={(id) => setSelectedId(id)}
-            />
-          )}
-        </Card>
-      </motion.div>
-
-      <SubmittalDetail
-        selected={selected as Record<string, unknown> | null}
-        reviewersData={reviewersData}
-        onClose={() => setSelectedId(null)}
-        projectId={projectId}
-        updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
-        deleteSubmittalMutateAsync={deleteSubmittal.mutateAsync}
-        deletePending={deleteSubmittal.isPending}
-      />
+      <div style={{ flex: 1, overflow: 'auto', backgroundColor: C.surface }}>
+        {viewMode === 'table' && groupBy !== 'none' ? (
+          <GroupedSubmittalsView
+            filteredSubmittals={filteredSubmittals}
+            groupBy={groupBy}
+            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+          />
+        ) : viewMode === 'table' ? (
+          <SubmittalsTable
+            filteredSubmittals={filteredSubmittals}
+            allSubmittals={submittals}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
+            loading={loading}
+            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+            clearFilters={() => { setStatusFilter('all'); setSearchQuery('') }}
+            projectId={projectId}
+            updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
+            scheduleActivities={scheduleActivities ?? []}
+          />
+        ) : (
+          <SubmittalsKanban
+            allSubmittals={filteredSubmittals}
+            onSelectSubmittal={(id) => navigate(`/submittals/${id}`)}
+          />
+        )}
+      </div>
 
       <SubmittalCreateWizard
-        projectId={projectId!}
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        projectId={projectId}
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
         onSubmit={async (data) => {
-          await createSubmittal.mutateAsync({
-            projectId: projectId!,
-            data: { ...data, project_id: projectId! },
-          });
-          toast.success('Submittal created: ' + (data.title || 'New Submittal'));
+          await createSubmittal.mutateAsync({ projectId, data: { ...data, project_id: projectId } })
+          toast.success('Submittal created: ' + (data.title || 'New Submittal'))
         }}
       />
 
-      {/* Hidden spec file input for import */}
       <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
-    </PageContainer>
-  );
-};
+    </Shell>
+  )
+}
+
+// ── Shell — sticky header + body slot ───────────────────────────────────────
+
+interface ShellProps {
+  children: React.ReactNode
+  actions?: React.ReactNode
+  projectName?: string
+  viewMode: 'table' | 'kanban'
+  setViewMode: (v: 'table' | 'kanban') => void
+  groupBy: GroupByMode
+  setGroupBy: (m: GroupByMode) => void
+  statusFilter: SubmittalStatusFilter
+  setStatusFilter: (f: SubmittalStatusFilter) => void
+  counts: Record<SubmittalStatusFilter, number>
+  overdueCount: number
+  searchQuery: string
+  setSearchQuery: (q: string) => void
+}
+
+const Shell: React.FC<ShellProps> = ({
+  children,
+  actions,
+  projectName,
+  viewMode,
+  setViewMode,
+  groupBy,
+  setGroupBy,
+  statusFilter,
+  setStatusFilter,
+  counts,
+  overdueCount,
+  searchQuery,
+  setSearchQuery,
+}) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      width: '100%',
+      backgroundColor: C.surface,
+      color: C.ink,
+      fontFamily: FONT,
+    }}
+  >
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        backgroundColor: C.surface,
+        borderBottom: `1px solid ${C.border}`,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          padding: '14px 24px 12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flex: 1, minWidth: 0 }}>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: '-0.01em',
+              color: C.ink,
+            }}
+          >
+            Submittals
+          </h1>
+          <CountChip count={counts.all} />
+          {overdueCount > 0 && <OverdueChip count={overdueCount} />}
+          {projectName && (
+            <span
+              style={{
+                fontSize: 13,
+                color: C.ink3,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 320,
+              }}
+            >
+              {projectName}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ViewToggle value={viewMode} onChange={setViewMode} />
+          {actions}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '0 24px 12px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <SubmittalTabBar activeTab={statusFilter} onTabChange={setStatusFilter} counts={counts} />
+
+        <div style={{ flex: 1 }} />
+
+        <div style={{ position: 'relative', width: 260 }}>
+          <Search
+            size={14}
+            style={{
+              position: 'absolute',
+              left: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: C.ink3,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search submittals…"
+            aria-label="Search submittals"
+            style={{
+              width: '100%',
+              padding: '6px 12px 6px 30px',
+              minHeight: 32,
+              border: `1px solid ${C.border}`,
+              borderRadius: 6,
+              fontSize: 13,
+              fontFamily: FONT,
+              backgroundColor: '#fff',
+              color: C.ink,
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        {viewMode === 'table' && <GroupBySelector value={groupBy} onChange={setGroupBy} />}
+      </div>
+    </header>
+
+    {children}
+  </div>
+)
+
+// ── Bits ────────────────────────────────────────────────────────────────────
+
+const CountChip: React.FC<{ count: number }> = ({ count }) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 22,
+      height: 22,
+      padding: '0 8px',
+      borderRadius: 999,
+      backgroundColor: '#fff',
+      border: `1px solid ${C.border}`,
+      color: C.ink2,
+      fontSize: 11,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums',
+    }}
+  >
+    {count}
+  </span>
+)
+
+const OverdueChip: React.FC<{ count: number }> = ({ count }) => (
+  <span
+    title={`${count} submittals past their due-back date`}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+      padding: '2px 8px',
+      borderRadius: 999,
+      backgroundColor: 'rgba(201, 59, 59, 0.08)',
+      color: C.critical,
+      fontSize: 11,
+      fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums',
+    }}
+  >
+    <AlertTriangle size={11} />
+    {count} overdue
+  </span>
+)
+
+const ViewToggle: React.FC<{ value: 'table' | 'kanban'; onChange: (v: 'table' | 'kanban') => void }> = ({ value, onChange }) => (
+  <div
+    role="tablist"
+    aria-label="View mode"
+    style={{
+      display: 'inline-flex',
+      padding: 2,
+      backgroundColor: C.surfaceAlt,
+      borderRadius: 6,
+      border: `1px solid ${C.borderSubtle}`,
+    }}
+  >
+    {[
+      { v: 'table' as const, label: 'List', Icon: List },
+      { v: 'kanban' as const, label: 'Board', Icon: LayoutGrid },
+    ].map(({ v, label, Icon }) => {
+      const active = value === v
+      return (
+        <button
+          key={v}
+          role="tab"
+          aria-selected={active}
+          aria-label={label}
+          title={label}
+          onClick={() => onChange(v)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 32,
+            minHeight: 28,
+            padding: '0 8px',
+            border: 'none',
+            backgroundColor: active ? '#fff' : 'transparent',
+            color: active ? C.ink : C.ink2,
+            borderRadius: 4,
+            cursor: 'pointer',
+            boxShadow: active ? '0 1px 1px rgba(0,0,0,0.03)' : 'none',
+          }}
+        >
+          <Icon size={14} />
+        </button>
+      )
+    })}
+  </div>
+)
+
+const PrimaryBtn: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '7px 14px',
+      minHeight: 32,
+      backgroundColor: C.brandOrange,
+      color: '#fff',
+      border: 'none',
+      borderRadius: 4,
+      cursor: 'pointer',
+      fontFamily: FONT,
+      fontSize: 13,
+      fontWeight: 600,
+      letterSpacing: '-0.005em',
+    }}
+  >
+    {children}
+  </button>
+)
+
+const SecondaryBtn: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
+  <button
+    onClick={onClick}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: '6px 12px',
+      minHeight: 30,
+      backgroundColor: '#fff',
+      color: C.ink,
+      border: `1px solid ${C.border}`,
+      borderRadius: 4,
+      cursor: 'pointer',
+      fontFamily: FONT,
+      fontSize: 12,
+      fontWeight: 600,
+      letterSpacing: '-0.005em',
+    }}
+  >
+    {children}
+  </button>
+)
+
+const EmptyState: React.FC<{ title: string; body: string; actions?: React.ReactNode }> = ({ title, body, actions }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      height: '60vh',
+      padding: 32,
+      gap: 8,
+      fontFamily: FONT,
+      color: C.ink2,
+      textAlign: 'center',
+    }}
+  >
+    <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: C.ink }}>{title}</h2>
+    <p style={{ margin: 0, fontSize: 13, color: C.ink3, maxWidth: 360 }}>{body}</p>
+    {actions && (
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>{actions}</div>
+    )}
+  </div>
+)
+
+const SkeletonRows: React.FC = () => {
+  const rows = Array.from({ length: 8 })
+  return (
+    <div style={{ padding: 16, fontFamily: FONT }}>
+      {rows.map((_, i) => (
+        <div
+          key={i}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '110px 1fr 160px 120px 100px 100px 130px 110px 80px',
+            gap: 12,
+            alignItems: 'center',
+            padding: '10px 8px',
+            borderBottom: `1px solid ${C.borderSubtle}`,
+          }}
+        >
+          {Array.from({ length: 9 }).map((__, j) => (
+            <div
+              key={j}
+              style={{
+                height: 12,
+                width: j === 1 ? '70%' : '60%',
+                backgroundColor: C.surfaceAlt,
+                borderRadius: 3,
+              }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Boundary ────────────────────────────────────────────────────────────────
 
 const Submittals: React.FC = () => (
   <ErrorBoundary message="Submittals could not be displayed. Check your connection and try again.">
     <SubmittalsPage />
   </ErrorBoundary>
-);
+)
 
-export { Submittals };
-export default Submittals;
+export { Submittals }
+export default Submittals

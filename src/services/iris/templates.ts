@@ -187,32 +187,134 @@ const scheduleSuggestion: IrisTemplate = {
   },
 }
 
-// ── 4. Owner update (on-demand only — not auto-detected in v1) ──────────────
+// ── 4. Owner update (on-demand only — generated from rich project context) ──
+
+/**
+ * Render a single section's facts block for the prompt. Returns either the
+ * structured bullets (when data exists) or a single "No material change"
+ * line — never invents.
+ */
+function renderSection(
+  heading: string,
+  bullets: string[],
+): string {
+  const body = bullets.length > 0
+    ? bullets.map((b) => `  - ${b}`).join('\n')
+    : '  - No material change'
+  return `${heading}\n${body}`
+}
 
 const ownerUpdate: IrisTemplate = {
   confidence: 0.5,
-  buildPrompt: (item, ctx) => [
-    ROLE_PREAMBLE,
-    '',
-    PROJECT_LINE(ctx),
-    FROM_LINE(ctx),
-    '',
-    'Task: Draft an executive summary update for the project owner.',
-    '',
-    'Facts you may use:',
-    `- Trigger note: ${item.reason}`,
-    `- Subject: ${item.title}`,
-    '',
-    'Format:',
-    '- 4 short sections labeled inline (no markdown headings):',
-    '  Schedule. Budget. Key risks. Decisions needed.',
-    '- 1–2 sentences per section.',
-    '- Plain professional tone.',
-    '- If a section has no data provided, write "No material change" rather than invent.',
-  ].join('\n'),
-  getSources: (item) => {
-    const trail = describeSources(item.sourceTrail)
-    return trail.length > 0 ? trail : ['Project status snapshot']
+  buildPrompt: (_item, ctx) => {
+    const period = ctx.reportingPeriodDays ?? 7
+
+    // ── Schedule section ──
+    const scheduleBullets: string[] = []
+    if (ctx.scheduleStatus) {
+      const behind = ctx.scheduleStatus.behindActivities ?? []
+      const hit = ctx.scheduleStatus.milestonesHit ?? []
+      const missed = ctx.scheduleStatus.milestonesMissed ?? []
+      for (const a of behind.slice(0, 5)) {
+        scheduleBullets.push(`Behind: "${a.name}" — ${pluralizeDays(a.daysBehind)} behind. (Source: ${a.sourceLabel})`)
+      }
+      for (const m of hit.slice(0, 3)) {
+        scheduleBullets.push(`Milestone hit: "${m.name}" on ${m.dateLabel}. (Source: ${m.sourceLabel})`)
+      }
+      for (const m of missed.slice(0, 3)) {
+        scheduleBullets.push(`Milestone missed: "${m.name}" (target ${m.dateLabel}). (Source: ${m.sourceLabel})`)
+      }
+    }
+
+    // ── Budget section ──
+    const budgetBullets: string[] = []
+    if (ctx.budgetStatus) {
+      const { percentCommitted, approvedTotal, changeOrderExposure, sourceLabel } = ctx.budgetStatus
+      const moneyFmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
+      const parts: string[] = []
+      parts.push(`${percentCommitted.toFixed(1)}% committed`)
+      if (typeof approvedTotal === 'number' && approvedTotal > 0) {
+        parts.push(`approved total ${moneyFmt(approvedTotal)}`)
+      }
+      if (typeof changeOrderExposure === 'number' && changeOrderExposure !== 0) {
+        parts.push(`change-order exposure ${moneyFmt(changeOrderExposure)}`)
+      }
+      budgetBullets.push(`${parts.join(', ')}. (Source: ${sourceLabel})`)
+    }
+
+    // ── Top 3 risks ──
+    const riskBullets: string[] = []
+    for (const r of (ctx.topRisks ?? []).slice(0, 3)) {
+      riskBullets.push(`"${r.title}" — ${r.summary} (Source: ${r.sourceLabel})`)
+    }
+
+    // ── Decisions needed ──
+    const decisionBullets: string[] = []
+    for (const d of (ctx.decisionsNeeded ?? []).slice(0, 5)) {
+      decisionBullets.push(`"${d.title}" — ${d.summary} (Source: ${d.sourceLabel})`)
+    }
+
+    // ── Progress highlights ──
+    const progressBullets: string[] = []
+    for (const p of (ctx.progressHighlights ?? []).slice(0, 5)) {
+      progressBullets.push(`${p.summary} (Source: ${p.sourceLabel})`)
+    }
+
+    // ── Lookahead (next 14 days) ──
+    const lookaheadBullets: string[] = []
+    for (const l of (ctx.lookahead14Days ?? []).slice(0, 6)) {
+      lookaheadBullets.push(`${l.activity} — ${l.dateLabel}. (Source: ${l.sourceLabel})`)
+    }
+
+    return [
+      ROLE_PREAMBLE,
+      '',
+      PROJECT_LINE(ctx),
+      FROM_LINE(ctx),
+      '',
+      `Task: Draft an executive owner update covering the last ${period} day${period === 1 ? '' : 's'} of project activity.`,
+      'Length: aim for ~400 words. Structured email-style narrative — short paragraphs, plain professional tone.',
+      'CRITICAL: Use only the facts in the data block below. Do NOT invent activities, dollars, dates, or names.',
+      'Every section that has data must cite its source(s) inline — quote the "(Source: …)" labels from the data block in parentheses at the end of the relevant sentence.',
+      'For sections marked "No material change", write that phrase (or a one-sentence equivalent) and skip the citation.',
+      '',
+      '--- Project Data Block ---',
+      renderSection('Schedule status:', scheduleBullets),
+      '',
+      renderSection('Budget status:', budgetBullets),
+      '',
+      renderSection('Top risks (max 3):', riskBullets),
+      '',
+      renderSection('Decisions needed from owner:', decisionBullets),
+      '',
+      renderSection('Progress highlights:', progressBullets),
+      '',
+      renderSection('Lookahead — next 14 days:', lookaheadBullets),
+      '--- end data ---',
+      '',
+      'Format:',
+      '- Begin with one sentence naming the project and reporting period.',
+      `- Then 6 short paragraphs in this exact order, each labeled inline (no markdown headings, no bullets):`,
+      '  Schedule. Budget. Key risks. Decisions needed. Progress. Lookahead.',
+      '- 1–3 sentences per paragraph.',
+      `- Sign off "${ctx.userName ?? 'Project team'}". No subject line.`,
+    ].join('\n')
+  },
+  getSources: (_item, ctx) => {
+    const labels: string[] = []
+    if (ctx.scheduleStatus) {
+      for (const a of ctx.scheduleStatus.behindActivities ?? []) labels.push(a.sourceLabel)
+      for (const m of ctx.scheduleStatus.milestonesHit ?? []) labels.push(m.sourceLabel)
+      for (const m of ctx.scheduleStatus.milestonesMissed ?? []) labels.push(m.sourceLabel)
+    }
+    if (ctx.budgetStatus) labels.push(ctx.budgetStatus.sourceLabel)
+    for (const r of ctx.topRisks ?? []) labels.push(r.sourceLabel)
+    for (const d of ctx.decisionsNeeded ?? []) labels.push(d.sourceLabel)
+    for (const p of ctx.progressHighlights ?? []) labels.push(p.sourceLabel)
+    for (const l of ctx.lookahead14Days ?? []) labels.push(l.sourceLabel)
+    // De-dupe; keep at least one fallback so the UI always renders a citation row.
+    const unique = Array.from(new Set(labels.filter(Boolean)))
+    return unique.length > 0 ? unique : ['Project status snapshot']
   },
 }
 

@@ -148,10 +148,14 @@ describe('approveAndExecute', () => {
   it('refuses unknown action_type instead of crashing', async () => {
     const chain = makeChain()
     mockFrom.mockReturnValue(chain)
+    // schedule.resequence is intentionally unwired in executeAction.ts
+    // because phase resequencing needs the schedule editor's diff/apply
+    // path, not a one-shot executor. Use it as the no-executor probe so
+    // the test stays valid as new handlers are added.
     const weirdDraft: DraftedAction = {
       ...fakeDraft,
-      action_type: 'punch_item.draft',
-      payload: { title: 'P', description: 'D' },
+      action_type: 'schedule.resequence',
+      payload: { parallelize_pairs: [], days_recovered: 0 },
     }
     mockSelectSingle.mockResolvedValueOnce({ data: weirdDraft, error: null })
 

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, Truck, UserPlus, FileEdit, Plus, Trash2, ClipboardList, Search, Wrench, Package, HardHat } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, UserPlus, FileEdit, Plus, Trash2, ClipboardList, Search, Wrench, Package, HardHat } from 'lucide-react';
 import { Card, Btn, SectionHeader, useToast, Modal, InputField } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme';
 import { useCreateDailyLogEntry, useDeleteDailyLogEntry } from '../../hooks/mutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProjectId } from '../../hooks/useProjectId';
 import { toast } from 'sonner';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { AutoNarrative } from '../../components/dailylog/AutoNarrative';
 import { DayComparison } from '../../components/dailylog/DayComparison';
 import { PhotoGrid } from '../../components/dailylog/PhotoGrid';
@@ -299,9 +300,16 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
     } catch { toast.error('Failed to add entry'); }
   };
 
+  const { confirm: confirmDeleteEntry, dialog: deleteEntryDialog } = useConfirm();
+
   const handleDeleteEntry = async (entryId: string) => {
     if (!today.id || !projectId) return;
-    if (!window.confirm('Delete this entry?')) return;
+    const ok = await confirmDeleteEntry({
+      title: 'Delete log entry?',
+      description: 'This entry is removed from today\'s daily log. Linked photos and observations remain in the project record.',
+      destructiveLabel: 'Delete entry',
+    });
+    if (!ok) return;
     try {
       await deleteEntry.mutateAsync({ id: entryId, dailyLogId: today.id, projectId });
       toast.success('Entry deleted');
@@ -901,7 +909,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
       </Card>
 
       {/* ── Auto Narrative ─────────────────────────────── */}
-      <AutoNarrative logData={today as Record<string, unknown>} />
+      <AutoNarrative logData={today as unknown as Record<string, unknown>} />
 
       {/* ── Day Comparison ─────────────────────────────── */}
       {showComparison && yesterday && (
@@ -1041,6 +1049,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
           </PermissionGate>
         </div>
       )}
+      {deleteEntryDialog}
     </div>
   );
 };

@@ -5,7 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
 // ── Mocks ──────────────────────────────────────────────
-const permissionsState = { hasPermission: (p?: string): boolean => { void p; return true } }
+const permissionsState = {
+  hasPermission: (p?: string): boolean => { void p; return true },
+  role: 'project_manager' as string,
+}
 const punchItemsState = {
   data: { data: [] as unknown[] } as { data: unknown[] } | undefined,
   isLoading: false,
@@ -24,6 +27,12 @@ vi.mock('../../../lib/supabase', () => ({
     },
     channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn().mockReturnThis() })),
     removeChannel: vi.fn(),
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn().mockResolvedValue({ error: null }),
+        getPublicUrl: vi.fn(() => ({ data: { publicUrl: 'mock://url' } })),
+      })),
+    },
   },
   isSupabaseConfigured: true,
 }))
@@ -31,14 +40,6 @@ vi.mock('../../../lib/supabase', () => ({
 vi.mock('../../../hooks/queries', () => ({
   usePunchItems: () => punchItemsState,
   useProject: () => ({ data: { id: 'test-project-id', name: 'Test Project' } }),
-}))
-
-vi.mock('../../../components/shared/ExportButton', () => ({
-  ExportButton: () => null,
-}))
-
-vi.mock('../../../lib/exportXlsx', () => ({
-  exportPunchListXlsx: vi.fn(),
 }))
 
 vi.mock('../../../hooks/mutations', () => ({
@@ -51,6 +52,18 @@ vi.mock('../../../hooks/useProjectId', () => ({
   useProjectId: () => 'test-project-id',
 }))
 
+vi.mock('../../../hooks/useRealtimeInvalidation', () => ({
+  useRealtimeInvalidation: () => undefined,
+}))
+
+vi.mock('../../../hooks/useAuth', () => ({
+  useAuth: () => ({ user: { email: 'pm@example.com', user_metadata: { full_name: 'PM User' } } }),
+}))
+
+vi.mock('../../../hooks/usePhotoAnalysis', () => ({
+  usePhotoAnalysis: () => ({ analyzePhoto: vi.fn(), state: 'idle', result: null, error: null }),
+}))
+
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => permissionsState,
 }))
@@ -59,36 +72,38 @@ vi.mock('../../../stores/copilotStore', () => ({
   useCopilotStore: () => ({ setPageContext: vi.fn() }),
 }))
 
-vi.mock('../../../data/aiAnnotations', () => ({
-  getPredictiveAlertsForPage: () => [],
-  getAnnotationsForEntity: () => [],
+vi.mock('../../../stores/punchListStore', () => ({
+  usePunchListStore: (selector?: (s: unknown) => unknown) => {
+    const state = { comments: {}, loadComments: vi.fn(), addComment: vi.fn() }
+    return selector ? selector(state) : state
+  },
 }))
 
-vi.mock('../../../components/forms/CreatePunchItemModal', () => ({
-  default: () => null,
-}))
-
-vi.mock('../PunchListTable', () => ({
-  PunchListTable: () => <div data-testid="punch-list-table" />,
-}))
-
+// Heavy children — replaced with stubs so the page mounts without their deps.
 vi.mock('../PunchListDetail', () => ({
   PunchListDetail: () => null,
 }))
-
-vi.mock('../PunchListBulk', () => ({
-  PunchListBulk: () => null,
+vi.mock('../PunchListPlanView', () => ({
+  PunchListPlanView: () => <div data-testid="plan-view" />,
+}))
+vi.mock('../../../components/punch-list/PunchItemCreateWizard', () => ({
+  default: () => null,
 }))
 
-vi.mock('../PunchListFilters', () => ({
-  PunchListFilters: () => <div data-testid="punch-list-filters" />,
-}))
-
-// PermissionGate — real behavior: renders children only if permitted.
-// Respect the permissions mock.
+// PermissionGate — respect the mock so we can test the disabled fallback path.
 vi.mock('../../../components/auth/PermissionGate', () => ({
-  PermissionGate: ({ permission, children }: { permission: string; children: React.ReactNode }) =>
-    permissionsState.hasPermission(permission) ? <>{children}</> : null,
+  PermissionGate: ({
+    permission,
+    fallback,
+    children,
+  }: {
+    permission: string
+    fallback?: React.ReactNode
+    children: React.ReactNode
+  }) =>
+    permissionsState.hasPermission(permission)
+      ? <>{children}</>
+      : <>{fallback ?? null}</>,
 }))
 
 import { PunchList } from '../index'
@@ -105,6 +120,7 @@ function wrap(ui: React.ReactElement) {
 describe('PunchList', () => {
   beforeEach(() => {
     permissionsState.hasPermission = () => true
+    permissionsState.role = 'project_manager'
     punchItemsState.data = { data: [] }
     punchItemsState.isLoading = false
     punchItemsState.error = null
@@ -120,32 +136,31 @@ describe('PunchList', () => {
     punchItemsState.isLoading = true
     punchItemsState.fetchStatus = 'fetching'
     const { container } = render(wrap(<PunchList />))
-    // Loading subtitle appears in PageContainer
     expect(container.textContent).toMatch(/loading/i)
   })
 
   it('shows empty state when no items', () => {
     punchItemsState.data = { data: [] }
     render(wrap(<PunchList />))
-    expect(
-      screen.getByText(/no punch list items/i)
-    ).toBeDefined()
+    expect(screen.getByText(/no punch items yet/i)).toBeDefined()
   })
 
   it('hides create button for viewers without permission', () => {
     permissionsState.hasPermission = () => false
     punchItemsState.data = { data: [] }
     render(wrap(<PunchList />))
-    expect(screen.queryByRole('button', { name: /new item/i })).toBeNull()
-    expect(screen.queryByRole('button', { name: /add punch item/i })).not.toBeNull()
+    // The fallback is a disabled "New Punch" placeholder — no enabled
+    // create-action button should be reachable for viewers.
+    const newPunchBtns = screen.queryAllByRole('button', { name: /new punch/i })
+    expect(newPunchBtns.every((b) => (b as HTMLButtonElement).disabled)).toBe(true)
   })
 
   it('shows create button when user has permission', () => {
     permissionsState.hasPermission = () => true
     punchItemsState.data = { data: [] }
     render(wrap(<PunchList />))
-    // New Item button appears in the header
-    const buttons = screen.queryAllByRole('button', { name: /new item/i })
-    expect(buttons.length).toBeGreaterThan(0)
+    const newPunchBtns = screen.queryAllByRole('button', { name: /new punch/i })
+    expect(newPunchBtns.length).toBeGreaterThan(0)
+    expect(newPunchBtns.some((b) => !(b as HTMLButtonElement).disabled)).toBe(true)
   })
 })

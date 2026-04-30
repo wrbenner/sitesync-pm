@@ -19,6 +19,8 @@ import type { DraftedAction, DraftedActionType } from '../../types/draftedAction
 import { executeDraftedRfi } from './executors/rfi'
 import { executeDraftedDailyLog } from './executors/dailyLog'
 import { executeDraftedPayApp } from './executors/payApp'
+import { executeDraftedPunchItem } from './executors/punchItem'
+import { executeDraftedSubmittalTransmittal } from './executors/submittalTransmittal'
 
 export interface ExecuteActionInput {
   draftId: string
@@ -45,10 +47,11 @@ const executors: Partial<Record<DraftedActionType, Executor>> = {
   'rfi.draft': executeDraftedRfi,
   'daily_log.draft': executeDraftedDailyLog,
   'pay_app.draft': executeDraftedPayApp,
-  // Remaining handlers will ship as the vision unfolds:
-  //   'punch_item.draft':           executeDraftedPunchItem
-  //   'schedule.resequence':        executeScheduleResequence
-  //   'submittal.transmittal_draft': executeSubmittalTransmittal
+  'punch_item.draft': executeDraftedPunchItem,
+  'submittal.transmittal_draft': executeDraftedSubmittalTransmittal,
+  // schedule.resequence stays unwired until the dependency-graph rewriter
+  // lands — resequencing phases is much more invasive than a simple insert
+  // and needs the schedule editor's diff/apply path, not a one-shot executor.
 }
 
 /**

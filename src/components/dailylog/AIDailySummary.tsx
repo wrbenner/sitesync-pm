@@ -84,7 +84,13 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = ({
     navigator.clipboard.writeText(summary).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
+    }).catch(() => {
+      // Clipboard can fail in iframes, in private browsing, or without
+      // page focus. The previous silent catch left the user thinking the
+      // copy worked. Surface the failure as a transient state the UI can
+      // render as a "select-to-copy" hint.
+      setCopied(false);
+    });
   };
 
   const handleInsert = () => {

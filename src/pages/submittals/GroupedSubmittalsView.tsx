@@ -13,7 +13,7 @@ import {
 
 // ── Types ───────────────────────────────────────────────
 
-export type GroupByMode = 'spec_section' | 'subcontractor' | 'none';
+export type GroupByMode = 'spec_section' | 'subcontractor' | 'reviewer' | 'none';
 
 interface GroupedSubmittalsViewProps {
   filteredSubmittals: Array<Record<string, unknown>>;
@@ -40,7 +40,7 @@ interface SubmittalGroup {
 
 function getCSIDivisionCode(specSection: string | null | undefined): string {
   if (!specSection) return '00';
-  const digits = specSection.replace(/[\s\-]/g, '');
+  const digits = specSection.replace(/[\s-]/g, '');
   return digits.slice(0, 2);
 }
 
@@ -138,6 +138,34 @@ function groupBySubcontractor(submittals: Array<Record<string, unknown>>): Submi
     .map(([key, subs]) => ({
       key,
       label: key,
+      submittals: subs,
+      stats: computeStats(subs),
+    }));
+}
+
+function groupByReviewer(submittals: Array<Record<string, unknown>>): SubmittalGroup[] {
+  const map = new Map<string, Array<Record<string, unknown>>>();
+
+  for (const s of submittals) {
+    const reviewer =
+      (s.current_reviewer as string) ||
+      (s.assigned_to as string) ||
+      '';
+    const key = reviewer || 'Unassigned';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+
+  return [...map.entries()]
+    .sort(([a], [b]) => {
+      if (a === 'Unassigned') return 1;
+      if (b === 'Unassigned') return -1;
+      return a.localeCompare(b);
+    })
+    .map(([key, subs]) => ({
+      key,
+      label: key,
+      sublabel: subs.length === 1 ? '1 in queue' : `${subs.length} in queue`,
       submittals: subs,
       stats: computeStats(subs),
     }));
@@ -243,7 +271,7 @@ const SubmittalRow: React.FC<{
           {submittal.title as string}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          {showSpecSection && submittal.spec_section && (
+          {showSpecSection && Boolean(submittal.spec_section) && (
             <span style={{
               fontSize: 10,
               fontFamily: typography.fontFamilyMono,
@@ -256,7 +284,7 @@ const SubmittalRow: React.FC<{
               {formatCSICode(submittal.spec_section as string)}
             </span>
           )}
-          {showSubcontractor && (submittal.subcontractor || submittal.from) && (
+          {showSubcontractor && Boolean(submittal.subcontractor || submittal.from) && (
             <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
               {(submittal.subcontractor as string) || (submittal.from as string)}
             </span>
@@ -463,6 +491,7 @@ export const GroupedSubmittalsView: React.FC<GroupedSubmittalsViewProps> = ({
   const groups = useMemo(() => {
     if (groupBy === 'spec_section') return groupBySpecSection(filteredSubmittals);
     if (groupBy === 'subcontractor') return groupBySubcontractor(filteredSubmittals);
+    if (groupBy === 'reviewer') return groupByReviewer(filteredSubmittals);
     return [];
   }, [filteredSubmittals, groupBy]);
 
@@ -498,7 +527,12 @@ export const GroupedSubmittalsView: React.FC<GroupedSubmittalsViewProps> = ({
           fontSize: typography.fontSize.caption,
           color: colors.textTertiary,
         }}>
-          {groups.length} {groupBy === 'spec_section' ? 'divisions' : 'subcontractors'}
+          {groups.length}{' '}
+          {groupBy === 'spec_section'
+            ? 'divisions'
+            : groupBy === 'reviewer'
+              ? 'reviewers'
+              : 'subcontractors'}
           {' · '}
           {filteredSubmittals.length} submittals
         </span>
@@ -571,9 +605,10 @@ export const GroupBySelector: React.FC<{
   onChange: (mode: GroupByMode) => void;
 }> = ({ value, onChange }) => {
   const options: Array<{ mode: GroupByMode; label: string }> = [
-    { mode: 'spec_section', label: 'Spec Section' },
-    { mode: 'subcontractor', label: 'Subcontractor' },
-    { mode: 'none', label: 'None' },
+    { mode: 'none', label: 'Flat' },
+    { mode: 'spec_section', label: 'Spec' },
+    { mode: 'reviewer', label: 'Reviewer' },
+    { mode: 'subcontractor', label: 'Sub' },
   ];
 
   return (
