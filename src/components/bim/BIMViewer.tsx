@@ -440,7 +440,7 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
       },
       undefined,
       (err) => {
-        console.error('Failed to load model:', err);
+        if (import.meta.env.DEV) console.error('Failed to load model:', err);
       },
     );
   }, [modelUrl, updateCameraFromSpherical]);

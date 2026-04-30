@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 6,
-  "_updated": "2026-04-30T00:00:00Z",
+  "_version": 7,
+  "_updated": "2026-04-30T17:30:00Z",
   "_updatedBy": "auto/polish-20260430-0530",
-  "_floor_realignment_note": "v6: testCount updated 1416→1810 (7 previously-skipped integration/api tests now pass). supabase.ts dev-bypass crash fixed. Ratchets unchanged: anyCount=0, mockCount=0.",
+  "_floor_realignment_note": "v7: e2ePassRate raised 0→1.0 — 28/28 page-sweep desktop tests pass. Note updated to reflect spec existence. All prior v6 ratchets retained.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -18,8 +18,8 @@
   "mockCount": 0,
   "a11yViolations": 0,
   "eslintWarnings": 968,
-  "_e2ePassRate_note": "Set to 0 — no Playwright spec files exist in e2e/ yet; previous 0.7 was fictional.",
-  "e2ePassRate": 0,
+  "_e2ePassRate_note": "Raised to 1.0 — e2e/polish/page-sweep.spec.ts sweeps all 28 demo pages at desktop viewport; 28/28 passing.",
+  "e2ePassRate": 1.0,
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,
   "pageCount": 40,
@@ -37,6 +37,7 @@
     "bundleSizeKB": 250,
     "longestResponseMs": 200
   },
+  "_e2eActual_note": "28/28 page-e2e desktop tests passing as of 2026-04-30 (polish sweep spec landed in e2e/polish/page-sweep.spec.ts).",
   "_note": "Zero means zero. Rules we disagree with are deliberately downgraded to warnings in eslint.config.js. Everything remaining as an error must be zero.",
   "_ci_trigger": "final-v2"
 }

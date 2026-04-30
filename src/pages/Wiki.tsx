@@ -256,7 +256,7 @@ const Wiki: React.FC = () => {
       setSelectedId((created as { id: string }).id)
     } catch (e) {
       toast.error('Failed to create page')
-      console.error(e)
+      if (import.meta.env.DEV) console.error(e)
     }
   }
 
@@ -270,7 +270,7 @@ const Wiki: React.FC = () => {
       toast.success('Saved')
     } catch (e) {
       toast.error('Failed to save')
-      console.error(e)
+      if (import.meta.env.DEV) console.error(e)
     }
   }
 
@@ -283,7 +283,7 @@ const Wiki: React.FC = () => {
       setSelectedId(null)
     } catch (e) {
       toast.error('Failed to delete')
-      console.error(e)
+      if (import.meta.env.DEV) console.error(e)
     }
   }
 
@@ -303,7 +303,7 @@ const Wiki: React.FC = () => {
       setSelectedId((created as { id: string }).id)
     } catch (e) {
       toast.error('Failed to generate summary')
-      console.error(e)
+      if (import.meta.env.DEV) console.error(e)
     }
   }
 

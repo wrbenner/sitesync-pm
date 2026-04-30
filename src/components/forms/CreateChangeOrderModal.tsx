@@ -105,7 +105,7 @@ const FileUploadSection: React.FC<{
         .upload(path, file, { cacheControl: '3600', upsert: false })
 
       if (error) {
-        console.error('[CO Upload]', error)
+        if (import.meta.env.DEV) console.error('[CO Upload]', error)
         toast.error(`Upload failed: ${file.name}`)
         continue
       }
