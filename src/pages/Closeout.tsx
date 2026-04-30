@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react'
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react'
 import {
   CheckCircle2, Plus, Shield, BookOpen, GraduationCap, ClipboardList,
   Trash2, Upload, Eye, AlertTriangle, FileSignature, Pencil, X,
@@ -53,6 +53,13 @@ export const Closeout: React.FC = () => {
   const { data: warranties, isLoading: loadingWarranties } = useWarranties(projectId ?? undefined)
 
   const [activeTab, setActiveTab] = useState<Tab>('punch')
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth)
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const isMobile = windowWidth < 768
 
   const items = closeoutData?.items ?? []
   const totalItems = items.length
@@ -76,7 +83,7 @@ export const Closeout: React.FC = () => {
       subtitle="Punch list verification, warranties, O&M manuals, training, and final sign-offs"
     >
       {/* ── Completion bar ───────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
         <MetricBox label="Total items" value={totalItems} />
         <MetricBox label="Approved" value={approvedItems} colorOverride={approvedItems === totalItems && totalItems > 0 ? 'success' : undefined} />
         <MetricBox label="Outstanding" value={totalItems - approvedItems} colorOverride={totalItems - approvedItems > 0 ? 'warning' : 'success'} />
@@ -108,7 +115,7 @@ export const Closeout: React.FC = () => {
       </Card>
 
       {/* ── Tabs ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, margin: `${spacing['4']} 0 ${spacing['4']}` }}>
+      <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, margin: `${spacing['4']} 0 ${spacing['4']}`, overflowX: 'auto', flexWrap: 'nowrap' }}>
         {TABS.map(t => {
           const Icon = t.icon
           const active = activeTab === t.key
@@ -130,6 +137,8 @@ export const Closeout: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               <Icon size={14} />

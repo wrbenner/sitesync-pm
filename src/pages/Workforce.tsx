@@ -440,6 +440,7 @@ export const Workforce: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {React.createElement(tab.icon, { size: 14 })}

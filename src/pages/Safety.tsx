@@ -1241,6 +1241,7 @@ export const Safety: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {React.createElement(Icon, { size: 14 })}
