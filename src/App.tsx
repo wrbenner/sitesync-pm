@@ -62,6 +62,7 @@ const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: 
 const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 const MagicLinkSubRoute = lazy(() => import('./components/MagicLinkSubRoute'));
+const MagicLinkOwnerRoute = lazy(() => import('./components/MagicLinkOwnerRoute'));
 
 // Lazy loaded overlay panels (only render when opened)
 const AIContextPanel = lazy(() => import('./components/ai/AIContextPanel').then((m) => ({ default: m.AIContextPanel })));
@@ -101,7 +102,7 @@ const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetai
 const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
 const Safety = lazy(() => import('./pages/safety/index').then((m) => ({ default: m.Safety })));
-const FieldCapture = lazy(() => import('./pages/field-capture/index').then((m) => ({ default: m.FieldCapture })));
+const FieldCapture = lazy(() => import('./pages/field-capture/index').then((m) => ({ default: m.FieldCapturePage })));
 // People & Labor
 const Workforce = lazy(() => import('./pages/Workforce'));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
@@ -377,6 +378,7 @@ function AppRoutes() {
                 ActorContext of kind 'magic_link'. Token validation is handled
                 by the wrapper; no auth session required. */}
             <Route path="/sub/:token" element={<PageSuspense><MagicLinkSubRoute /></PageSuspense>} />
+            <Route path="/owner/:token" element={<PageSuspense><MagicLinkOwnerRoute /></PageSuspense>} />
 
             {/* ── Core 10 ── */}
             <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />

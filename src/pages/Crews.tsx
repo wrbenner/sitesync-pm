@@ -1,31 +1,82 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart3, MapPin, Award, AlertTriangle, RefreshCw, Users, Plus } from 'lucide-react';
+/**
+ * Crews — refined per DESIGN-RESET.md.
+ *
+ * Sticky header, dense list, detail slide-over. Active / Archived toggle.
+ * Existing CRUD + schedule-assignment flows preserved (AddCrewModal,
+ * useDeleteCrew, useCreateCrewSchedule, useDeleteCrewSchedule).
+ */
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus, X, Trash2, Pencil } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import { PageContainer, Card, Btn, ProgressBar, Skeleton, SectionHeader, EmptyState, Modal, InputField } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
+import { toast } from 'sonner';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ProjectGate } from '../components/ProjectGate';
+import { PermissionGate } from '../components/auth/PermissionGate';
+import { useConfirm } from '../components/ConfirmDialog';
+import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { supabase } from '../lib/supabase';
 import { useCrewStore } from '../stores/crewStore';
 import { useProjectContext } from '../stores/projectContextStore';
-import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
-import { PredictiveAlertBanner } from '../components/ai/PredictiveAlert';
-import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
-import { PermissionGate } from '../components/auth/PermissionGate';
-import { supabase } from '../lib/supabase';
-import { toast } from 'sonner';
 import { useDeleteCrew } from '../hooks/mutations';
 import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
 import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
 import { useTimesheets } from '../hooks/queries/timesheets';
 
-interface AddCrewModalProps { onClose: () => void; projectId: string; onCreated: () => void }
-const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreated }) => {
+// ── Types ──────────────────────────────────────────────────────
+
+interface CrewRow {
+  id: string;
+  name: string;
+  trade: string | null;
+  lead_id: string | null;
+  lead_name?: string | null;
+  size: number | null;
+  status: string | null;
+  current_task: string | null;
+  productivity_score: number | null;
+}
+
+type ViewKey = 'active' | 'archived';
+
+const VIEWS: Array<{ key: ViewKey; label: string }> = [
+  { key: 'active', label: 'Active' },
+  { key: 'archived', label: 'Archived' },
+];
+
+// ── Add Crew Modal (preserved API) ─────────────────────────────
+
+interface AddCrewModalProps {
+  open: boolean;
+  onClose: () => void;
+  projectId: string;
+  onCreated: () => void;
+}
+
+function AddCrewModal({ open, onClose, projectId, onCreated }: AddCrewModalProps) {
   const [form, setForm] = useState({ name: '', trade: '', size: '' });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const submit = async () => {
-    if (!form.name.trim()) { setErr('Name required'); return; }
-    setSaving(true); setErr(null);
+
+  useEffect(() => {
+    if (!open) {
+      setForm({ name: '', trade: '', size: '' });
+      setErr(null);
+    }
+  }, [open]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) {
+      setErr('Name required');
+      return;
+    }
+    setSaving(true);
+    setErr(null);
     try {
-      const { error } = await supabase.from('crews').insert({
+      const { error } = await (supabase.from('crews') as unknown as {
+        insert: (row: Record<string, unknown>) => Promise<{ error: Error | null }>
+      }).insert({
         project_id: projectId,
         name: form.name,
         trade: form.trade || null,
@@ -35,163 +86,185 @@ const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreat
       });
       if (error) throw error;
       toast.success('Crew added');
-      onCreated(); onClose();
+      onCreated();
+      onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
-  const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: spacing.md, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
+
+  if (!open) return null;
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 10px',
+    border: `1px solid ${colors.borderSubtle}`,
+    borderRadius: 6,
+    fontSize: 13,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    background: colors.surfaceRaised,
+    boxSizing: 'border-box',
+  };
+  const labelStyle: React.CSSProperties = {
+    fontFamily: typography.fontFamily,
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: colors.textTertiary,
+    marginBottom: 4,
+    display: 'block',
+  };
+
   return (
-    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: spacing.xl, width: '100%', maxWidth: 480 }}>
-        <h2 style={{ margin: 0, marginBottom: spacing.lg, fontSize: 18 }}>Add Crew</h2>
-        <label style={{ fontSize: 13, fontWeight: 500 }}>Name *</label>
-        <input style={input} value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} />
-        <label style={{ fontSize: 13, fontWeight: 500 }}>Trade</label>
-        <input style={input} value={form.trade} onChange={(e) => setForm(p => ({ ...p, trade: e.target.value }))} />
-        <label style={{ fontSize: 13, fontWeight: 500 }}>Size</label>
-        <input style={input} type="number" value={form.size} onChange={(e) => setForm(p => ({ ...p, size: e.target.value }))} />
-        {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: spacing.md }}>
-          <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={submit} disabled={saving}>{saving ? 'Saving...' : 'Add Crew'}</Btn>
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0,0,0,0.40)',
+      }}
+    >
+      <form
+        onSubmit={submit}
+        style={{
+          width: 460,
+          maxWidth: '92vw',
+          background: colors.surfaceRaised,
+          borderRadius: 8,
+          padding: spacing[6],
+          boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[4] }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>New Crew</h2>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}>
+            <X size={16} />
+          </button>
         </div>
-      </div>
+        <div style={{ display: 'grid', gap: spacing[3] }}>
+          <div>
+            <label style={labelStyle}>Name *</label>
+            <input style={inputStyle} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+            <div>
+              <label style={labelStyle}>Trade</label>
+              <input style={inputStyle} value={form.trade} onChange={(e) => setForm((p) => ({ ...p, trade: e.target.value }))} />
+            </div>
+            <div>
+              <label style={labelStyle}>Size</label>
+              <input style={inputStyle} type="number" value={form.size} onChange={(e) => setForm((p) => ({ ...p, size: e.target.value }))} />
+            </div>
+          </div>
+          {err && <p style={{ color: colors.statusCritical, margin: 0, fontSize: 12 }}>{err}</p>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing[2], marginTop: spacing[5] }}>
+          <button type="button" onClick={onClose} style={{ padding: '8px 14px', background: 'transparent', border: `1px solid ${colors.borderSubtle}`, borderRadius: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary, cursor: 'pointer', fontFamily: typography.fontFamily }}>Cancel</button>
+          <button type="submit" disabled={saving} style={{ padding: '8px 14px', background: colors.primaryOrange, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: typography.fontFamily }}>
+            {saving ? 'Saving…' : 'Add Crew'}
+          </button>
+        </div>
+      </form>
     </div>
   );
-};
+}
 
-// Rotating palette for crew dot colors on map
-const CREW_COLOR_PALETTE = [
-  colors.statusInfo,
-  colors.statusActive,
-  colors.statusPending,
-  colors.statusReview,
-  colors.primaryOrange,
-  colors.statusNeutral,
-];
+// ── Status chip ────────────────────────────────────────────────
+
+function CrewStatusChip({ status }: { status: string | null }) {
+  const key = (status ?? 'active').toLowerCase();
+  const tokens = key === 'archived' || key === 'inactive'
+    ? { fg: '#5C5550', bg: '#F1ECE2', label: 'Archived' }
+    : key === 'standby'
+      ? { fg: '#7A5C12', bg: '#FCF2DE', label: 'Standby' }
+      : key === 'off_site' || key === 'off-site'
+        ? { fg: '#3F4754', bg: '#EEF0F4', label: 'Off site' }
+        : { fg: '#1F6F4F', bg: '#E5F2EC', label: 'Active' };
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '2px 8px',
+        borderRadius: 999,
+        background: tokens.bg,
+        color: tokens.fg,
+        fontFamily: typography.fontFamily,
+        fontSize: 11,
+        fontWeight: 500,
+      }}
+    >
+      <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: tokens.fg, flexShrink: 0 }} />
+      {tokens.label}
+    </span>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────
 
 export const Crews: React.FC = () => {
   const { crews, loading, error: crewError, loadCrews } = useCrewStore();
   const { activeProject } = useProjectContext();
+  const projectId = activeProject?.id;
   const deleteCrew = useDeleteCrew();
+  const { confirm: confirmDeleteCrew, dialog: deleteCrewDialog } = useConfirm();
 
-  // New: crew_schedules-based phase assignment + productivity rollup
-  const csProjectId = activeProject?.id;
-  const { data: crewSchedules = [] } = useCrewSchedules(csProjectId);
-  const { data: phasesForAssignment = [] } = useSchedulePhasesForAssignment(csProjectId);
-  const { data: projectTimesheets = [] } = useTimesheets(csProjectId);
+  const { data: crewSchedules = [] } = useCrewSchedules(projectId);
+  const { data: phasesForAssignment = [] } = useSchedulePhasesForAssignment(projectId);
+  const { data: projectTimesheets = [] } = useTimesheets(projectId);
   const createCrewSchedule = useCreateCrewSchedule();
   const deleteCrewSchedule = useDeleteCrewSchedule();
-  const [csForm, setCsForm] = useState({
-    crew_name: '',
-    phase_id: '',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: (() => { const d = new Date(); d.setDate(d.getDate() + 5); return d.toISOString().split('T')[0]; })(),
-    headcount: '4',
-  });
-  const submitCrewSchedule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!csProjectId) { toast.error('No active project'); return; }
-    if (!csForm.crew_name.trim()) { toast.error('Crew name required'); return; }
-    const headcount = Number(csForm.headcount);
-    if (!Number.isFinite(headcount) || headcount < 0) { toast.error('Invalid headcount'); return; }
-    if (csForm.end_date < csForm.start_date) { toast.error('End must be ≥ start'); return; }
-    try {
-      await createCrewSchedule.mutateAsync({
-        project_id: csProjectId,
-        phase_id: csForm.phase_id || null,
-        crew_name: csForm.crew_name.trim(),
-        start_date: csForm.start_date,
-        end_date: csForm.end_date,
-        headcount,
-      });
-      toast.success('Crew assigned');
-      setCsForm((p) => ({ ...p, crew_name: '', phase_id: '' }));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to assign');
-    }
-  };
-  const removeCrewSchedule = async (id: string) => {
-    if (!csProjectId) return;
-    try {
-      await deleteCrewSchedule.mutateAsync({ id, project_id: csProjectId });
-      toast.success('Assignment removed');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove');
-    }
-  };
-  const crewProductivity = useMemo(() => {
-    const phaseById = new Map(phasesForAssignment.map((p) => [p.id, p]));
-    const hoursByPhase = new Map<string, number>();
-    for (const t of projectTimesheets) {
-      const act = (t.activity || '').toLowerCase().trim();
-      if (!act) continue;
-      for (const p of phasesForAssignment) {
-        const pname = (p.name || '').toLowerCase().trim();
-        if (!pname) continue;
-        if (act === pname || act.includes(pname) || pname.includes(act)) {
-          hoursByPhase.set(p.id, (hoursByPhase.get(p.id) ?? 0) + t.hours);
-          break;
-        }
-      }
-    }
-    return crewSchedules.map((s) => {
-      const phase = s.phase_id ? phaseById.get(s.phase_id) : null;
-      const hours = s.phase_id ? (hoursByPhase.get(s.phase_id) ?? 0) : 0;
-      const progress = phase?.percent_complete ?? 0;
-      return {
-        scheduleId: s.id,
-        crewName: s.crew_name,
-        phaseName: phase?.name ?? s.phase_name ?? '(unassigned)',
-        phaseId: s.phase_id,
-        headcount: s.headcount,
-        start: s.start_date,
-        end: s.end_date,
-        hours: Math.round(hours * 10) / 10,
-        progress: Math.round(progress),
-        efficiency: progress > 0 ? Math.round((hours / progress) * 10) / 10 : null,
-      };
-    });
-  }, [crewSchedules, phasesForAssignment, projectTimesheets]);
 
-  const handleDeleteCrew = async (crew: { id: string; name: string }) => {
-    if (!activeProject?.id) return;
-    if (!window.confirm(`Delete crew "${crew.name}"? This cannot be undone.`)) return;
-    try {
-      await deleteCrew.mutateAsync({ id: crew.id, projectId: activeProject.id });
-      toast.success('Crew deleted');
-      loadCrews(activeProject.id);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete crew');
-    }
-  };
-  const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
-  const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
+  const [view, setView] = useState<ViewKey>('active');
+  const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
   const [showAddCrew, setShowAddCrew] = useState(false);
-  const [editingCrew, setEditingCrew] = useState<any | null>(null);
-  const [editCrewForm, setEditCrewForm] = useState({ name: '', trade: '', size: '', lead_name: '', status: 'active' });
+  const [editingCrew, setEditingCrew] = useState<CrewRow | null>(null);
+  const [editCrewForm, setEditCrewForm] = useState({ name: '', trade: '', size: '', status: 'active' });
+
+  useEffect(() => {
+    if (projectId) loadCrews(projectId);
+  }, [projectId, loadCrews]);
 
   const updateCrewMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await supabase.from('crews').update(updates).eq('id', id).select().single();
+      const { data, error } = await (supabase.from('crews') as unknown as {
+        update: (u: Record<string, unknown>) => {
+          eq: (col: string, v: string) => {
+            select: () => { single: () => Promise<{ data: unknown; error: Error | null }> }
+          }
+        }
+      }).update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       toast.success('Crew updated');
       setEditingCrew(null);
-      if (activeProject?.id) loadCrews(activeProject.id);
+      if (projectId) loadCrews(projectId);
     },
-    onError: (err: Error) => { toast.error(err.message || 'Failed to update crew'); },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to update crew');
+    },
   });
 
-  const openEditCrew = (crew: any) => {
+  const openEditCrew = (crew: CrewRow) => {
     setEditCrewForm({
       name: crew.name ?? '',
       trade: crew.trade ?? '',
       size: String(crew.size ?? ''),
-      lead_name: crew.lead_name ?? '',
       status: crew.status ?? 'active',
     });
     setEditingCrew(crew);
@@ -210,694 +283,540 @@ export const Crews: React.FC = () => {
     });
   };
 
-  useEffect(() => {
-    // REACT-04 FIX: include loadCrews in deps.
-    if (activeProject?.id) {
-      loadCrews(activeProject.id);
+  const handleDeleteCrew = useCallback(
+    async (crew: CrewRow) => {
+      if (!projectId) return;
+      const ok = await confirmDeleteCrew({
+        title: 'Delete crew?',
+        description: `"${crew.name}" — schedule assignments and historical timesheets remain attached to the project for payroll integrity.`,
+        destructiveLabel: 'Delete crew',
+      });
+      if (!ok) return;
+      try {
+        await deleteCrew.mutateAsync({ id: crew.id, projectId });
+        toast.success('Crew deleted');
+        loadCrews(projectId);
+        setSelectedCrewId(null);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete crew');
+      }
+    },
+    [projectId, confirmDeleteCrew, deleteCrew, loadCrews],
+  );
+
+  // ── Derived data ──
+  const visibleCrews = useMemo<CrewRow[]>(() => {
+    const all = (crews as CrewRow[]) ?? [];
+    if (view === 'archived') return all.filter((c) => (c.status ?? '').toLowerCase() === 'archived');
+    return all.filter((c) => (c.status ?? '').toLowerCase() !== 'archived');
+  }, [crews, view]);
+
+  // Hours this week per crew, derived from timesheets matching crew name
+  const hoursWeekByCrew = useMemo(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() + diff);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekStartIso = weekStart.toISOString().slice(0, 10);
+    const map = new Map<string, number>();
+    for (const t of projectTimesheets) {
+      const tDate = (t as { date?: string }).date ?? '';
+      if (tDate < weekStartIso) continue;
+      const crewName = ((t as { crew_name?: string | null }).crew_name ?? '').trim();
+      if (!crewName) continue;
+      map.set(crewName, (map.get(crewName) ?? 0) + Number((t as { hours?: number }).hours ?? 0));
     }
-  }, [activeProject?.id, loadCrews]);
+    return map;
+  }, [projectTimesheets]);
 
-  // Derive color per crew from palette
-  const getCrewColor = useMemo(() => {
-    const map = new Map<string, string>();
-    crews.forEach((c, i) => map.set(c.id, CREW_COLOR_PALETTE[i % CREW_COLOR_PALETTE.length]));
-    return (id: string) => map.get(id) || colors.statusNeutral;
-  }, [crews]);
+  const selectedCrew = visibleCrews.find((c) => c.id === selectedCrewId)
+    ?? (crews as CrewRow[]).find((c) => c.id === selectedCrewId)
+    ?? null;
+  const selectedCrewSchedules = useMemo(
+    () => (selectedCrew ? crewSchedules.filter((s) => s.crew_name === selectedCrew.name) : []),
+    [crewSchedules, selectedCrew],
+  );
 
-  // Placeholder layout (circle). No real GPS yet — positions are cosmetic.
-  const initialPositions = useMemo(() => {
-    const pos: Record<string, { x: number; y: number }> = {};
-    crews.forEach((c, i) => {
-      const angle = (i / Math.max(crews.length, 1)) * 2 * Math.PI;
-      pos[c.id] = { x: 50 + 30 * Math.cos(angle), y: 50 + 30 * Math.sin(angle) };
-    });
-    return pos;
-  }, [crews]);
+  const totalsHeaderCount = visibleCrews.length;
+  const totalsHeaderHeadcount = visibleCrews.reduce((acc, c) => acc + Number(c.size ?? 0), 0);
 
-  const [dotPositions, setDotPositions] = useState(initialPositions);
-
-  // Sync positions when crews change
-  useEffect(() => {
-    setDotPositions(initialPositions);
-  }, [initialPositions]);
-
-  // Subscribe to crew_locations changes for live GPS updates.
-  useEffect(() => {
-    const pid = activeProject?.id;
-    if (!pid) return;
-    const channel = supabase
-      .channel(`crew-locations-${pid}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'crew_locations', filter: `project_id=eq.${pid}` },
-        () => {
-          loadCrews(pid);
-        },
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [activeProject?.id, loadCrews]);
-
-  if (loading) {
-    return (
-      <PageContainer title="Crews" subtitle="Loading crews...">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: spacing.lg }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} padding={spacing.xl}>
-              <Skeleton width="60%" height="18px" />
-              <div style={{ marginTop: spacing.sm }}><Skeleton width="80%" height="14px" /></div>
-              <div style={{ marginTop: spacing.lg }}><Skeleton width="100%" height="8px" /></div>
-              <div style={{ marginTop: spacing.md }}><Skeleton width="40%" height="14px" /></div>
-            </Card>
-          ))}
-        </div>
-      </PageContainer>
-    );
-  }
-
-  if (crewError) {
-    return (
-      <PageContainer title="Crews" subtitle="Unable to load">
-        <Card padding={spacing['6']}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing['4'], padding: spacing['6'], textAlign: 'center' }}>
-            <AlertTriangle size={40} color={colors.statusCritical} />
-            <div>
-              <p style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0, marginBottom: spacing['2'] }}>Failed to load crews</p>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0 }}>{crewError}</p>
-            </div>
-            <Btn variant="primary" size="sm" icon={<RefreshCw size={14} />} onClick={() => activeProject?.id && loadCrews(activeProject.id)}>Try Again</Btn>
-          </div>
-        </Card>
-      </PageContainer>
-    );
-  }
-
-  if (crews.length === 0) {
-    return (
-      <PageContainer title="Crews" subtitle="No crews">
-        <EmptyState
-          icon={<Users size={40} color={colors.textTertiary} />}
-          title="No crews yet"
-          description="Add crews to track workforce, productivity, and certifications across the project."
-          actionLabel="Add Crew"
-          onAction={() => setShowAddCrew(true)}
-        />
-        {showAddCrew && activeProject?.id && (
-          <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
-        )}
-      </PageContainer>
-    );
-  }
-
-  const pageAlerts = getPredictiveAlertsForPage('crews');
-
-  const activeCrews = crews.filter((c) => c.status === 'active');
-  const totalWorkers = crews.reduce((sum, c) => sum + c.size, 0);
-
-  const getProductivityColor = (p: number) => {
-    if (p >= 90) return colors.statusActive;
-    if (p >= 75) return colors.statusInfo;
-    return colors.primaryOrange;
-  };
-
-  const tabs: { key: 'cards' | 'map' | 'performance'; label: string; icon: React.ReactNode }[] = [
-    { key: 'cards', label: 'Cards', icon: null },
-    { key: 'map', label: 'Map', icon: <MapPin size={14} /> },
-    { key: 'performance', label: 'Performance', icon: <BarChart3 size={14} /> },
-  ];
-
-  const sortedByProductivity = [...crews].sort((a, b) => b.productivity - a.productivity);
+  if (!projectId) return <ProjectGate />;
 
   return (
-    <PageContainer
-      title="Crews"
-      subtitle={`${activeCrews.length} active crews \u00B7 ${totalWorkers} workers on site`}
-      actions={<PermissionGate permission="crews.manage" fallback={<span title="Your role doesn't allow adding crews. Request access from your admin."><Btn variant="primary" icon={<Plus size={14} />} disabled>Add Crew</Btn></span>}><Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowAddCrew(true)} data-testid="create-crew-button">Add Crew</Btn></PermissionGate>}
+    <div
+      style={{
+        width: '100%',
+        minHeight: '100vh',
+        background: '#FCFCFA',
+        fontFamily: typography.fontFamily,
+      }}
     >
-      {pageAlerts.map((alert) => (
-        <PredictiveAlertBanner key={alert.id} alert={alert} />
-      ))}
-
-      {/* Tab Toggle */}
-      <div
+      <header
         style={{
-          display: 'inline-flex',
-          backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.full,
-          padding: '3px',
-          marginBottom: spacing.xl,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          background: '#FCFCFA',
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          paddingLeft: spacing[6],
+          paddingRight: spacing[6],
+          paddingTop: spacing[4],
+          paddingBottom: spacing[4],
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing[4],
+          flexWrap: 'wrap',
         }}
       >
-        {tabs.map((tab) => (
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.textPrimary, letterSpacing: '-0.01em' }}>Crews</h1>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '3px 10px',
+            borderRadius: 999,
+            background: '#F1ECE2',
+            fontSize: 12,
+            fontWeight: 500,
+            color: colors.textSecondary,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          <span style={{ fontWeight: 600, color: colors.textPrimary }}>{totalsHeaderCount}</span>
+          {totalsHeaderCount === 1 ? 'crew' : 'crews'}
+          <span style={{ opacity: 0.4 }}>·</span>
+          <span style={{ color: colors.textPrimary, fontWeight: 600 }}>{totalsHeaderHeadcount}</span>
+          headcount
+        </span>
+
+        <div role="tablist" aria-label="Crew views" style={{ display: 'inline-flex', background: '#F1ECE2', borderRadius: 6, padding: 2 }}>
+          {VIEWS.map((v) => {
+            const active = view === v.key;
+            return (
+              <button
+                key={v.key}
+                role="tab"
+                type="button"
+                aria-selected={active}
+                onClick={() => setView(v.key)}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  borderRadius: 4,
+                  background: active ? colors.surfaceRaised : 'transparent',
+                  color: active ? colors.textPrimary : colors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 500,
+                  fontFamily: typography.fontFamily,
+                  cursor: 'pointer',
+                  boxShadow: active ? '0 1px 2px rgba(26,22,19,0.04)' : 'none',
+                }}
+              >
+                {v.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        <PermissionGate permission="crews.manage">
           <button
-            key={tab.key}
-            aria-pressed={activeTab === tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            type="button"
+            onClick={() => setShowAddCrew(true)}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: spacing.xs,
-              padding: `${spacing.md} ${spacing.lg}`,
-              borderRadius: borderRadius.full,
+              gap: 6,
+              padding: '8px 14px',
+              background: colors.primaryOrange,
               border: 'none',
+              borderRadius: 6,
+              color: '#FFFFFF',
+              fontSize: 13,
+              fontWeight: 600,
               cursor: 'pointer',
-              fontSize: typography.fontSize.sm,
-              fontWeight: activeTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
-              color: activeTab === tab.key ? colors.textPrimary : colors.textTertiary,
-              backgroundColor: activeTab === tab.key ? colors.surfaceRaised : 'transparent',
-              boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-              transition: transitions.quick,
-              minHeight: '56px',
             }}
           >
-            {tab.icon}
-            {tab.label}
+            <Plus size={14} aria-hidden="true" />
+            New Crew
           </button>
+        </PermissionGate>
+      </header>
+
+      <main style={{ paddingLeft: spacing[6], paddingRight: spacing[6], paddingTop: spacing[4], paddingBottom: spacing[8] }}>
+        {crewError && (
+          <div role="alert" style={{ padding: spacing[3], marginBottom: spacing[4], background: '#FCE7E7', border: '1px solid rgba(201,59,59,0.20)', borderRadius: 6, color: '#9A2929', fontSize: 13 }}>
+            Failed to load crews: {String(crewError)}
+          </div>
+        )}
+
+        {loading && visibleCrews.length === 0 ? (
+          <div role="status" style={{ padding: spacing[8], textAlign: 'center', color: colors.textTertiary, fontSize: 13 }}>Loading crews…</div>
+        ) : (
+          <CrewTable
+            crews={visibleCrews}
+            hoursWeekByCrew={hoursWeekByCrew}
+            selectedId={selectedCrewId}
+            onSelect={setSelectedCrewId}
+          />
+        )}
+      </main>
+
+      <CrewDetailPanel
+        crew={selectedCrew}
+        crewSchedules={selectedCrewSchedules}
+        phasesForAssignment={phasesForAssignment}
+        hoursWeek={selectedCrew ? hoursWeekByCrew.get(selectedCrew.name) ?? 0 : 0}
+        onClose={() => setSelectedCrewId(null)}
+        onEdit={() => selectedCrew && openEditCrew(selectedCrew)}
+        onDelete={() => selectedCrew && handleDeleteCrew(selectedCrew)}
+        onAssignPhase={async (phaseId, headcount, start, end) => {
+          if (!selectedCrew) return;
+          try {
+            await createCrewSchedule.mutateAsync({
+              project_id: projectId,
+              phase_id: phaseId || null,
+              crew_name: selectedCrew.name,
+              start_date: start,
+              end_date: end,
+              headcount,
+            });
+            toast.success('Phase assigned');
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to assign');
+          }
+        }}
+        onRemoveAssignment={async (id) => {
+          try {
+            await deleteCrewSchedule.mutateAsync({ id, project_id: projectId });
+            toast.success('Assignment removed');
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to remove');
+          }
+        }}
+      />
+
+      <AddCrewModal
+        open={showAddCrew}
+        onClose={() => setShowAddCrew(false)}
+        projectId={projectId}
+        onCreated={() => loadCrews(projectId)}
+      />
+
+      {editingCrew && (
+        <EditCrewModal
+          open={!!editingCrew}
+          form={editCrewForm}
+          setForm={setEditCrewForm}
+          onClose={() => setEditingCrew(null)}
+          onSave={handleEditCrewSave}
+          saving={updateCrewMutation.isPending}
+        />
+      )}
+
+      {deleteCrewDialog}
+    </div>
+  );
+};
+
+// ── Dense crew table ───────────────────────────────────────────
+
+interface CrewTableProps {
+  crews: CrewRow[];
+  hoursWeekByCrew: Map<string, number>;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}
+
+function CrewTable({ crews, hoursWeekByCrew, selectedId, onSelect }: CrewTableProps) {
+  const grid = 'minmax(200px, 2fr) minmax(140px, 1.5fr) 100px minmax(120px, 1fr) minmax(180px, 2fr) 100px 120px';
+  const headers = ['Crew', 'Foreman', 'Members', 'Trade', "Today's activity", 'Hours week', 'Status'];
+  const aligns: Array<'left' | 'right'> = ['left', 'left', 'right', 'left', 'left', 'right', 'left'];
+
+  return (
+    <div role="grid" aria-label="Crews" style={{ background: colors.surfaceRaised, border: `1px solid ${colors.borderSubtle}`, borderRadius: 6, overflow: 'hidden' }}>
+      <div role="row" style={{ display: 'grid', gridTemplateColumns: grid, height: 36, alignItems: 'center', background: '#FCFCFA', borderBottom: `1px solid ${colors.borderSubtle}`, position: 'sticky', top: 0, zIndex: 1 }}>
+        {headers.map((h, i) => (
+          <div key={h} role="columnheader" style={{ padding: `0 ${spacing[3]}`, textAlign: aligns[i], fontFamily: typography.fontFamily, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: colors.textTertiary }}>{h}</div>
         ))}
       </div>
 
-      {/* ─── Map View ─── */}
-      {activeTab === 'map' && (
-        <Card padding={spacing.xl}>
-          <SectionHeader title="Live Site Map" action={
-            <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusActive, animation: 'pulse 2s infinite' }} />
-              <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.statusActive }}>{totalWorkers}</span>
-              <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>on site</span>
-            </span>
-          } />
-          <div
-            style={{
-              position: 'relative',
-              aspectRatio: '16 / 9',
-              backgroundColor: colors.surfaceInset,
-              borderRadius: borderRadius.md,
-              overflow: 'hidden',
-              border: `1px solid ${colors.borderSubtle}`,
-            }}
-          >
-            {/* Grid lines + building outline + floor labels render as the
-                map "scaffold". With no crews to plot they read as a broken
-                map, so the scaffold is suppressed and an inline empty
-                state takes over until crews check in. */}
-            {crews.length > 0 && (
-              <>
-                {[25, 50, 75].map((p) => (
-                  <React.Fragment key={p}>
-                    <div style={{ position: 'absolute', left: `${p}%`, top: 0, bottom: 0, width: 1, backgroundColor: colors.borderSubtle, opacity: 0.5 }} />
-                    <div style={{ position: 'absolute', top: `${p}%`, left: 0, right: 0, height: 1, backgroundColor: colors.borderSubtle, opacity: 0.5 }} />
-                  </React.Fragment>
-                ))}
-                <div style={{ position: 'absolute', left: '15%', top: '10%', width: '70%', height: '80%', border: `1.5px dashed ${colors.borderDefault}`, borderRadius: borderRadius.sm }} />
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <span key={i} style={{
-                    position: 'absolute',
-                    left: '16%', top: `${12 + i * 5.8}%`,
-                    fontSize: '8px', color: colors.textTertiary, opacity: 0.5,
-                  }}>
-                    F{12 - i}
-                  </span>
-                ))}
-              </>
-            )}
+      {crews.length === 0 ? (
+        <div style={{ padding: spacing[6], textAlign: 'center', color: colors.textTertiary, fontFamily: typography.fontFamily, fontSize: 13 }}>No crews in this view.</div>
+      ) : (
+        crews.map((c) => {
+          const focused = selectedId === c.id;
+          const hours = hoursWeekByCrew.get(c.name) ?? 0;
+          return (
+            <div key={c.id} role="row" data-crew-id={c.id} onClick={() => onSelect(c.id)} style={{ display: 'grid', gridTemplateColumns: grid, height: 36, alignItems: 'center', borderBottom: `1px solid ${colors.borderSubtle}`, background: focused ? '#F4F2EF' : 'transparent', cursor: 'pointer' }}>
+              <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: 500, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+              <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, color: colors.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.lead_name || '—'}</div>
+              <div style={{ padding: `0 ${spacing[3]}`, textAlign: 'right', fontFamily: typography.fontFamily, fontSize: 12, fontVariantNumeric: 'tabular-nums', color: colors.textSecondary }}>{c.size ?? 0}</div>
+              <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, color: colors.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.trade || '—'}</div>
+              <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, color: colors.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={c.current_task || ''}>{c.current_task || '—'}</div>
+              <div style={{ padding: `0 ${spacing[3]}`, textAlign: 'right', fontFamily: typography.fontFamily, fontSize: 12, fontVariantNumeric: 'tabular-nums', color: hours > 0 ? colors.textSecondary : colors.textTertiary }}>{hours > 0 ? `${hours.toFixed(1)}h` : '—'}</div>
+              <div style={{ padding: `0 ${spacing[3]}` }}><CrewStatusChip status={c.status} /></div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
 
-            {crews.length === 0 && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                gap: spacing.xs, padding: spacing.xl, textAlign: 'center',
-              }}>
-                <MapPin size={28} color={colors.textTertiary} aria-hidden />
-                <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary, fontWeight: typography.fontWeight.medium }}>
-                  No crews on site
-                </p>
-                <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary, maxWidth: 320 }}>
-                  Crews will appear here when they check in from the field. Add a crew or run a check-in to see live positions.
-                </p>
+// ── Detail panel (slide-over) ──────────────────────────────────
+
+interface CrewDetailPanelProps {
+  crew: CrewRow | null;
+  crewSchedules: Array<{ id: string; phase_id: string | null; phase_name?: string | null; start_date: string; end_date: string; headcount: number }>;
+  phasesForAssignment: Array<{ id: string; name: string }>;
+  hoursWeek: number;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAssignPhase: (phaseId: string | null, headcount: number, start: string, end: string) => Promise<void>;
+  onRemoveAssignment: (id: string) => Promise<void>;
+}
+
+function CrewDetailPanel({
+  crew,
+  crewSchedules,
+  phasesForAssignment,
+  hoursWeek,
+  onClose,
+  onEdit,
+  onDelete,
+  onAssignPhase,
+  onRemoveAssignment,
+}: CrewDetailPanelProps) {
+  const [phaseId, setPhaseId] = useState('');
+  const [headcount, setHeadcount] = useState('4');
+  const [start, setStart] = useState(() => new Date().toISOString().slice(0, 10));
+  const [end, setEnd] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 5);
+    return d.toISOString().slice(0, 10);
+  });
+
+  if (!crew) return null;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const hc = Number(headcount);
+    if (!Number.isFinite(hc) || hc < 0) {
+      toast.error('Invalid headcount');
+      return;
+    }
+    if (end < start) {
+      toast.error('End must be ≥ start');
+      return;
+    }
+    await onAssignPhase(phaseId || null, hc, start, end);
+    setPhaseId('');
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '6px 8px',
+    border: `1px solid ${colors.borderSubtle}`,
+    borderRadius: 4,
+    fontSize: 12,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    background: colors.surfaceRaised,
+    boxSizing: 'border-box',
+  };
+  const labelStyle: React.CSSProperties = {
+    fontFamily: typography.fontFamily,
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: colors.textTertiary,
+    marginBottom: 2,
+    display: 'block',
+  };
+
+  return (
+    <div role="dialog" aria-label={`${crew.name} detail`} style={{ position: 'fixed', inset: 0, zIndex: 150, display: 'flex', justifyContent: 'flex-end' }}>
+      <div onClick={onClose} aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+      <aside style={{ position: 'relative', width: 420, maxWidth: '92vw', height: '100%', background: colors.surfaceRaised, borderLeft: `1px solid ${colors.borderSubtle}`, boxShadow: '-8px 0 32px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <header style={{ padding: `${spacing[5]} ${spacing[5]} ${spacing[3]}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing[3] }}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{crew.name}</h2>
+              <div style={{ marginTop: 4, fontSize: 12, color: colors.textSecondary, fontFamily: typography.fontFamily }}>
+                {crew.trade ?? '—'} · {crew.size ?? 0} members · {hoursWeek > 0 ? `${hoursWeek.toFixed(1)}h this week` : 'No hours logged this week'}
+              </div>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}>
+              <X size={16} />
+            </button>
+          </div>
+          <div style={{ marginTop: spacing[3], display: 'flex', gap: spacing[2] }}>
+            <PermissionGate permission="crews.manage">
+              <button type="button" onClick={onEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: `1px solid ${colors.borderSubtle}`, borderRadius: 4, color: colors.textSecondary, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: typography.fontFamily }}>
+                <Pencil size={12} aria-hidden="true" />
+                Edit
+              </button>
+              <button type="button" onClick={onDelete} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'transparent', border: `1px solid ${colors.borderSubtle}`, borderRadius: 4, color: colors.statusCritical, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: typography.fontFamily }}>
+                <Trash2 size={12} aria-hidden="true" />
+                Delete
+              </button>
+            </PermissionGate>
+          </div>
+        </header>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: spacing[5] }}>
+          <section>
+            <h3 style={{ margin: 0, marginBottom: spacing[2], fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: colors.textTertiary }}>Phase assignments</h3>
+            {crewSchedules.length === 0 ? (
+              <div style={{ fontSize: 12, color: colors.textTertiary, padding: spacing[2] }}>No phases assigned.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {crewSchedules.map((s) => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing[2], padding: `${spacing[2]} ${spacing[3]}`, background: '#FCFCFA', border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.base }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.phase_name ?? phasesForAssignment.find((p) => p.id === s.phase_id)?.name ?? '(unassigned)'}
+                      </div>
+                      <div style={{ fontSize: 11, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' }}>
+                        {s.start_date} → {s.end_date} · {s.headcount} headcount
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => onRemoveAssignment(s.id)} aria-label="Remove assignment" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
+          </section>
 
-            {/* Crew dots */}
-            {crews.map((crew) => {
-              const pos = dotPositions[crew.id] || { x: 50, y: 50 };
-              const dotColor = getCrewColor(crew.id);
-              const isActive = crew.status === 'active';
-              return (
-                <div
-                  key={crew.id}
-                  onMouseEnter={() => setHoveredCrew(crew.id)}
-                  onMouseLeave={() => setHoveredCrew(null)}
-                  style={{
-                    position: 'absolute',
-                    left: `${pos.x}%`,
-                    top: `${pos.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    transition: 'left 2s ease-in-out, top 2s ease-in-out',
-                    cursor: 'pointer',
-                    zIndex: hoveredCrew === crew.id ? 10 : 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: isActive ? 14 : 10,
-                      height: isActive ? 14 : 10,
-                      borderRadius: '50%',
-                      backgroundColor: dotColor,
-                      border: `2px solid ${colors.surfaceRaised}`,
-                      boxShadow: `0 0 0 ${isActive ? '3px' : '0'} ${dotColor}33`,
-                      animation: isActive ? 'pulse 3s infinite' : 'none',
-                    }}
-                  />
-                  {hoveredCrew === crew.id && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        marginBottom: 4,
-                        padding: `${spacing.xs} ${spacing.sm}`,
-                        backgroundColor: colors.surfaceRaised,
-                        borderRadius: borderRadius.sm,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                        whiteSpace: 'nowrap',
-                        fontSize: typography.fontSize.caption,
-                        zIndex: 20,
-                      }}
-                    >
-                      <div style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{crew.name}</div>
-                      <div style={{ color: colors.textTertiary, marginTop: 1 }}>{crew.size} workers, {crew.task}</div>
-                    </div>
-                  )}
+          <PermissionGate permission="crews.manage">
+            <section style={{ marginTop: spacing[5] }}>
+              <h3 style={{ margin: 0, marginBottom: spacing[2], fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: colors.textTertiary }}>Assign to phase</h3>
+              <form onSubmit={submit} style={{ display: 'grid', gap: spacing[3] }}>
+                <div>
+                  <label style={labelStyle}>Phase</label>
+                  <select style={inputStyle} value={phaseId} onChange={(e) => setPhaseId(e.target.value)}>
+                    <option value="">— Unassigned —</option>
+                    {phasesForAssignment.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: spacing.lg,
-              marginTop: spacing.lg,
-              paddingTop: spacing.md,
-              borderTop: `1px solid ${colors.borderSubtle}`,
-            }}
-          >
-            {crews.map((crew) => (
-              <div key={crew.id} style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: getCrewColor(crew.id) }} />
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary }}>{crew.name}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* ─── Cards View ─── */}
-      {activeTab === 'cards' && (
-        <>
-          {/* Productivity Legend */}
-          <div style={{ display: 'flex', gap: spacing['3'], marginBottom: spacing['3'] }}>
-            {[
-              { color: colors.tealSuccess, label: 'Above target (90%+)' },
-              { color: colors.amber, label: 'On target (75% to 89%)' },
-              { color: colors.red, label: 'Below target' },
-            ].map(l => (
-              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>
-                <div style={{ width: 8, height: 4, borderRadius: 2, backgroundColor: l.color }} />
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{l.label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: spacing.lg,
-            }}
-          >
-            {crews.map((crew) => {
-              const isBehind = crew.eta.toLowerCase().includes('behind');
-              return (
-                <Card key={crew.id} padding={spacing.xl}>
-                  <div style={{
-                    opacity: crew.status === 'standby' ? 0.6 : 1,
-                    borderLeft: isBehind ? `4px solid ${colors.chartRed}` : '4px solid transparent',
-                    marginLeft: `-${spacing.xl}`,
-                    paddingLeft: `calc(${spacing.xl} - 4px)`,
-                  }}>
-                    {/* Name and task */}
-                    <div style={{ marginBottom: spacing.lg }}>
-                      <p
-                        style={{
-                          fontSize: typography.fontSize.base,
-                          fontWeight: typography.fontWeight.semibold,
-                          color: colors.textPrimary,
-                          margin: 0,
-                          lineHeight: typography.lineHeight.tight,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: spacing.sm,
-                        }}
-                      >
-                        {crew.name}
-                        {crew.status === 'standby' && (
-                          <span style={{
-                            fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium,
-                            color: colors.statusNeutral,
-                            backgroundColor: colors.statusNeutralSubtle,
-                            padding: '1px 6px',
-                            borderRadius: borderRadius.full,
-                          }}>
-                            Standby
-                          </span>
-                        )}
-                        {getAnnotationsForEntity('crew', crew.id).map((ann) => (
-                          <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                        ))}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: typography.fontSize.sm,
-                          color: colors.textTertiary,
-                          margin: 0,
-                          marginTop: '2px',
-                        }}
-                      >
-                        {crew.task}
-                      </p>
-                    </div>
-
-                    {/* Details row */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: spacing.xl,
-                        marginBottom: spacing.lg,
-                        fontSize: typography.fontSize.sm,
-                      }}
-                    >
-                      <div>
-                        <p style={{ margin: 0, color: colors.textTertiary, marginBottom: '2px' }}>Location</p>
-                        <p style={{ margin: 0, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
-                          {crew.location}
-                        </p>
-                      </div>
-                      <div>
-                        <p style={{ margin: 0, color: colors.textTertiary, marginBottom: '2px' }}>Size</p>
-                        <p style={{ margin: 0, color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>
-                          {crew.size}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Productivity */}
-                    <div style={{ marginBottom: spacing.lg }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'baseline',
-                          marginBottom: spacing.sm,
-                        }}
-                      >
-                        <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
-                          Productivity
-                        </span>
-                        <span
-                          style={{
-                            fontSize: typography.fontSize.sm,
-                            fontWeight: typography.fontWeight.semibold,
-                            color: getProductivityColor(crew.productivity),
-                          }}
-                        >
-                          {crew.productivity}%
-                        </span>
-                      </div>
-                      <ProgressBar
-                        value={crew.productivity}
-                        color={getProductivityColor(crew.productivity)}
-                      />
-                    </div>
-
-                    {/* ETA */}
-                    <p
-                      style={{
-                        fontSize: typography.fontSize.sm,
-                        color: isBehind ? colors.chartRed : colors.textSecondary,
-                        fontWeight: typography.fontWeight.medium,
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      {isBehind && <AlertTriangle size={12} color={colors.chartRed} style={{ marginRight: 4 }} />}
-                      {crew.eta}
-                    </p>
-
-                    {/* Crew Task */}
-                    {crew.task && crew.task !== 'Unassigned' && (
-                      <div style={{ marginTop: spacing.md, borderTop: `1px solid ${colors.borderLight}`, paddingTop: spacing.sm }}>
-                        <p style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, margin: 0, padding: `${spacing.xs} ${spacing.sm}` }}>
-                          {crew.task}
-                        </p>
-                      </div>
-                    )}
-
-                    <PermissionGate permission="crews.manage">
-                      <div style={{ marginTop: spacing.md, display: 'flex', justifyContent: 'flex-end', gap: spacing['1'] }}>
-                        <Btn
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => openEditCrew(crew)}
-                        >
-                          Edit
-                        </Btn>
-                        <Btn
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteCrew(crew)}
-                          disabled={deleteCrew.isPending}
-                          aria-label={`Delete crew ${crew.name}`}
-                          data-testid="delete-crew-button"
-                        >
-                          {deleteCrew.isPending ? 'Deleting…' : 'Delete'}
-                        </Btn>
-                      </div>
-                    </PermissionGate>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: spacing[2] }}>
+                  <div>
+                    <label style={labelStyle}>Start</label>
+                    <input style={inputStyle} type="date" value={start} onChange={(e) => setStart(e.target.value)} />
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* ─── Performance View ─── */}
-      {activeTab === 'performance' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xl }}>
-          {/* Productivity Bar Chart */}
-          <Card padding={spacing.xl}>
-            <SectionHeader title="Crew Productivity" action={
-              <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                <BarChart3 size={14} color={colors.textTertiary} />
-                <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Sorted by output</span>
-              </span>
-            } />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
-              {sortedByProductivity.map((crew) => {
-                const barColor = getProductivityColor(crew.productivity);
-                return (
-                  <div key={crew.id} style={{ display: 'flex', alignItems: 'center', gap: spacing.lg }}>
-                    {/* Crew name */}
-                    <div style={{ width: 140, flexShrink: 0 }}>
-                      <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-                        {crew.name}
-                      </span>
-                    </div>
-                    {/* Bar */}
-                    <div style={{ flex: 1, position: 'relative', height: 28, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.sm, overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: `${crew.productivity}%`,
-                          backgroundColor: barColor,
-                          borderRadius: borderRadius.sm,
-                          opacity: 0.85,
-                          transition: transitions.smooth,
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: `${crew.productivity}%`,
-                          top: '50%',
-                          transform: 'translate(8px, -50%)',
-                          fontSize: typography.fontSize.sm,
-                          fontWeight: typography.fontWeight.semibold,
-                          color: barColor,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {crew.productivity}%
-                      </div>
-                    </div>
-                    {/* Worker count */}
-                    <div style={{ width: 70, flexShrink: 0, textAlign: 'right' }}>
-                      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{crew.size} workers</span>
-                    </div>
+                  <div>
+                    <label style={labelStyle}>End</label>
+                    <input style={inputStyle} type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
                   </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Certifications (placeholder for future certification tracking) */}
-          <Card padding={spacing.xl}>
-            <SectionHeader title="Certifications" action={
-              <span style={{ display: 'flex', alignItems: 'center', gap: spacing.xs }}>
-                <Award size={14} color={colors.textTertiary} />
-              </span>
-            } />
-            <div style={{ padding: spacing.lg, textAlign: 'center' }}>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>Certification tracking will be available when crew certification data is configured.</p>
-            </div>
-          </Card>
+                  <div>
+                    <label style={labelStyle}>HC</label>
+                    <input style={inputStyle} type="number" value={headcount} onChange={(e) => setHeadcount(e.target.value)} />
+                  </div>
+                </div>
+                <button type="submit" style={{ padding: '6px 12px', background: colors.ink, border: 'none', borderRadius: 6, color: colors.parchment, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: typography.fontFamily, justifySelf: 'start' }}>Assign</button>
+              </form>
+            </section>
+          </PermissionGate>
         </div>
-      )}
-      {showAddCrew && activeProject?.id && (
-        <AddCrewModal projectId={activeProject.id} onClose={() => setShowAddCrew(false)} onCreated={() => activeProject?.id && loadCrews(activeProject.id)} />
-      )}
+      </aside>
+    </div>
+  );
+}
 
-      {/* Phase assignment + productivity (crew_schedules) */}
-      <Card>
-        <SectionHeader title="Assign crew to schedule phase" />
-        <form
-          onSubmit={submitCrewSchedule}
-          style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.6fr 1fr 1fr 0.8fr auto', gap: spacing['3'], alignItems: 'end', marginBottom: spacing['3'] }}
-        >
-          <div>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Crew name</label>
-            <input
-              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
-              value={csForm.crew_name}
-              onChange={(e) => setCsForm((p) => ({ ...p, crew_name: e.target.value }))}
-              placeholder="Steel Frame Alpha"
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Phase</label>
-            <select
-              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
-              value={csForm.phase_id}
-              onChange={(e) => setCsForm((p) => ({ ...p, phase_id: e.target.value }))}
-            >
-              <option value="">(unassigned)</option>
-              {phasesForAssignment.map((ph) => (
-                <option key={ph.id} value={ph.id}>{ph.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Start</label>
-            <input
-              type="date"
-              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
-              value={csForm.start_date}
-              onChange={(e) => setCsForm((p) => ({ ...p, start_date: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>End</label>
-            <input
-              type="date"
-              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
-              value={csForm.end_date}
-              onChange={(e) => setCsForm((p) => ({ ...p, end_date: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: 4, fontSize: typography.fontSize.caption, color: colors.textSecondary }}>HC</label>
-            <input
-              type="number"
-              min="0"
-              style={{ width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', background: colors.surfaceRaised, color: colors.textPrimary }}
-              value={csForm.headcount}
-              onChange={(e) => setCsForm((p) => ({ ...p, headcount: e.target.value }))}
-            />
-          </div>
-          <Btn type="submit" variant="primary" icon={<Plus size={14} />} loading={createCrewSchedule.isPending}>Assign</Btn>
-        </form>
+// ── Edit modal ─────────────────────────────────────────────────
 
-        <SectionHeader title="Crew schedule & productivity" />
-        {crewProductivity.length === 0 ? (
-          <EmptyState
-            icon={<BarChart3 size={32} color={colors.textTertiary} />}
-            title="No crew assignments yet"
-            description="Assign a crew to a schedule phase above to start tracking productivity."
-          />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr 0.6fr 1.4fr 0.7fr 1fr 0.8fr auto', gap: spacing['2'], padding: spacing['2'], fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              <div>Crew</div>
-              <div>Phase</div>
-              <div>HC</div>
-              <div>Dates</div>
-              <div>Hours</div>
-              <div>Progress</div>
-              <div>h / %</div>
-              <div></div>
+interface EditCrewModalProps {
+  open: boolean;
+  form: { name: string; trade: string; size: string; status: string };
+  setForm: React.Dispatch<React.SetStateAction<{ name: string; trade: string; size: string; status: string }>>;
+  onClose: () => void;
+  onSave: () => void;
+  saving: boolean;
+}
+
+function EditCrewModal({ open, form, setForm, onClose, onSave, saving }: EditCrewModalProps) {
+  if (!open) return null;
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 10px',
+    border: `1px solid ${colors.borderSubtle}`,
+    borderRadius: 6,
+    fontSize: 13,
+    fontFamily: typography.fontFamily,
+    color: colors.textPrimary,
+    background: colors.surfaceRaised,
+    boxSizing: 'border-box',
+  };
+  const labelStyle: React.CSSProperties = {
+    fontFamily: typography.fontFamily,
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: colors.textTertiary,
+    marginBottom: 4,
+    display: 'block',
+  };
+  return (
+    <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.40)' }}>
+      <div style={{ width: 460, maxWidth: '92vw', background: colors.surfaceRaised, borderRadius: 8, padding: spacing[6], boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[4] }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>Edit Crew</h2>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}>
+            <X size={16} />
+          </button>
+        </div>
+        <div style={{ display: 'grid', gap: spacing[3] }}>
+          <div>
+            <label style={labelStyle}>Name</label>
+            <input style={inputStyle} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+            <div>
+              <label style={labelStyle}>Trade</label>
+              <input style={inputStyle} value={form.trade} onChange={(e) => setForm((p) => ({ ...p, trade: e.target.value }))} />
             </div>
-            {crewProductivity.map((row) => (
-              <div key={row.scheduleId} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr 0.6fr 1.4fr 0.7fr 1fr 0.8fr auto', gap: spacing['2'], padding: spacing['3'], alignItems: 'center', borderTop: `1px solid ${colors.borderSubtle}`, fontSize: typography.fontSize.sm }}>
-                <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.medium }}>{row.crewName}</div>
-                <div style={{ color: row.phaseId ? colors.textPrimary : colors.textTertiary }}>{row.phaseName}</div>
-                <div style={{ color: colors.textSecondary }}>{row.headcount}</div>
-                <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.xs }}>{row.start} → {row.end}</div>
-                <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{row.hours}h</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ flex: 1, height: 6, background: colors.surfaceInset, borderRadius: borderRadius.base }}>
-                    <div style={{ height: '100%', width: `${Math.min(100, row.progress)}%`, background: colors.primaryOrange, borderRadius: borderRadius.base }} />
-                  </div>
-                  <span style={{ color: colors.textSecondary, fontSize: typography.fontSize.xs, width: 32 }}>{row.progress}%</span>
-                </div>
-                <div style={{ color: colors.textSecondary, fontSize: typography.fontSize.xs }}>{row.efficiency != null ? `${row.efficiency}` : '—'}</div>
-                <Btn variant="ghost" size="sm" onClick={() => removeCrewSchedule(row.scheduleId)} aria-label="Remove assignment">×</Btn>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <Modal open={!!editingCrew} onClose={() => setEditingCrew(null)} title="Edit Crew">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-          <InputField label="Name" value={editCrewForm.name} onChange={(v) => setEditCrewForm({ ...editCrewForm, name: v })} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
-            <InputField label="Trade" value={editCrewForm.trade} onChange={(v) => setEditCrewForm({ ...editCrewForm, trade: v })} />
-            <InputField label="Size" value={editCrewForm.size} onChange={(v) => setEditCrewForm({ ...editCrewForm, size: v })} type="number" />
+            <div>
+              <label style={labelStyle}>Size</label>
+              <input style={inputStyle} type="number" value={form.size} onChange={(e) => setForm((p) => ({ ...p, size: e.target.value }))} />
+            </div>
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: spacing['1'], fontSize: typography.fontSize.caption, color: colors.textSecondary }}>Status</label>
-            <select value={editCrewForm.status} onChange={(e) => setEditCrewForm({ ...editCrewForm, status: e.target.value })} style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}>
+            <label style={labelStyle}>Status</label>
+            <select style={inputStyle} value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}>
               <option value="active">Active</option>
               <option value="standby">Standby</option>
               <option value="off_site">Off Site</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end' }}>
-            <Btn variant="secondary" onClick={() => setEditingCrew(null)}>Cancel</Btn>
-            <Btn variant="primary" onClick={handleEditCrewSave} loading={updateCrewMutation.isPending}>{updateCrewMutation.isPending ? 'Saving...' : 'Save'}</Btn>
-          </div>
         </div>
-      </Modal>
-    </PageContainer>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: spacing[2], marginTop: spacing[5] }}>
+          <button type="button" onClick={onClose} style={{ padding: '8px 14px', background: 'transparent', border: `1px solid ${colors.borderSubtle}`, borderRadius: 6, fontSize: 13, fontWeight: 500, color: colors.textSecondary, cursor: 'pointer', fontFamily: typography.fontFamily }}>Cancel</button>
+          <button type="button" onClick={onSave} disabled={saving} style={{ padding: '8px 14px', background: colors.primaryOrange, border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, color: '#FFFFFF', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: typography.fontFamily }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
-};
+}
+
+const CrewsPage: React.FC = () => (
+  <ErrorBoundary>
+    <Crews />
+  </ErrorBoundary>
+);
+
+export default CrewsPage;
