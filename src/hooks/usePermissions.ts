@@ -269,7 +269,7 @@ export function usePermissions(): PermissionsResult {
   useEffect(() => {
     if (!projectId || !user?.id) return
 
-    const suffix = Math.random().toString(36).slice(2, 8)
+    const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 8)
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     try {
