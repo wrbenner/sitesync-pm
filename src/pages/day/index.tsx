@@ -26,10 +26,12 @@ import { Cockpit } from '../../components/cockpit/Cockpit'
 import { CockpitMetrics } from '../../components/cockpit/CockpitMetrics'
 import { IrisLane } from '../../components/cockpit/IrisLane'
 import { NeedsYouTable } from '../../components/cockpit/NeedsYouTable'
+import { NeedsYouMobileList } from '../../components/cockpit/NeedsYouMobileList'
 import { ProjectNow } from '../../components/cockpit/ProjectNow'
 import { ZonePanel } from '../../components/cockpit/ZonePanel'
 import { TableSkeleton } from '../../components/cockpit/TableSkeleton'
 import { TypeFilterChips } from '../../components/cockpit/TypeFilterChips'
+import { InboxClearState } from '../../components/cockpit/InboxClearState'
 import { toStreamRole } from '../../types/stream'
 import type { StreamItem, StreamItemType } from '../../types/stream'
 import { WifiOff } from 'lucide-react'
@@ -266,20 +268,28 @@ const DayPage: React.FC = () => {
           >
             {showSkeleton ? (
               <TableSkeleton rows={6} />
+            ) : stream.items.length === 0 ? (
+              <InboxClearState />
             ) : (
               <>
-                {stream.items.length > 0 && (
-                  <TypeFilterChips
-                    items={stream.items}
-                    selected={typeFilter}
-                    onSelect={setTypeFilter}
+                <TypeFilterChips
+                  items={stream.items}
+                  selected={typeFilter}
+                  onSelect={setTypeFilter}
+                />
+                {isMobile ? (
+                  <NeedsYouMobileList
+                    items={filteredItems}
+                    onRowClick={handleRowClick}
+                    onIrisClick={handleIrisClick}
+                  />
+                ) : (
+                  <NeedsYouTable
+                    items={filteredItems}
+                    onRowClick={handleRowClick}
+                    onIrisClick={handleIrisClick}
                   />
                 )}
-                <NeedsYouTable
-                  items={filteredItems}
-                  onRowClick={handleRowClick}
-                  onIrisClick={handleIrisClick}
-                />
               </>
             )}
           </ZonePanel>
