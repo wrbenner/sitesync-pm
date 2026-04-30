@@ -1,13 +1,19 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// IrisLane — single horizontal strip at the top of the cockpit listing items
-// Iris detected as worth the user's attention. NOT per-row sparkles. NOT a
-// chat. A glanceable lane with one click to act.
+// IrisLane — single horizontal strip at the top of the cockpit.
+// ─────────────────────────────────────────────────────────────────────────────
+// Two-tier layout:
+//   1. PRIMARY recommendation chip — the single item Iris thinks the user
+//      should start with. Bigger, with explicit reasoning. Has its own
+//      "Start here" button.
+//   2. SECONDARY chips — the rest of Iris-detected items, smaller, scrolling.
+//
+// NOT per-row sparkles. NOT a chat. A glanceable lane with one click to act.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Sparkles, ArrowRight } from 'lucide-react'
 import { colors, typography, spacing, borderRadius } from '../../styles/theme'
-import type { StreamItem } from '../../types/stream'
+import type { StreamItem, Urgency } from '../../types/stream'
 
 interface IrisLaneProps {
   items: StreamItem[]
@@ -17,52 +23,166 @@ interface IrisLaneProps {
 const IRIS_INDIGO = '#4F46E5'
 const IRIS_INDIGO_BG = 'rgba(79, 70, 229, 0.06)'
 const IRIS_INDIGO_BORDER = 'rgba(79, 70, 229, 0.20)'
+const IRIS_INDIGO_STRONG = 'rgba(79, 70, 229, 0.40)'
+
+const URGENCY_RANK: Record<Urgency, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+}
 
 function shortLabel(item: StreamItem): string {
-  // Prefer the Iris summary; fall back to the item title trimmed.
   const summary = item.irisEnhancement?.summary
   if (summary && summary.length <= 80) return summary
   return item.title.length > 64 ? `${item.title.slice(0, 61)}…` : item.title
 }
 
+function reasoningFor(item: StreamItem): string {
+  // Compose a one-line "why" from the data we have. Specific is better than
+  // generic — investors should hear "3 days overdue, $42K at risk" not "AI
+  // detected something."
+  const parts: string[] = []
+  if (item.overdue) {
+    parts.push(item.reason || 'Overdue')
+  } else if (item.dueDate) {
+    parts.push(item.reason)
+  }
+  if (item.assignedTo || item.party) {
+    parts.push(`ball-in-court: ${item.assignedTo ?? item.party}`)
+  }
+  if (item.costImpact && item.costImpact > 0) {
+    const fmt =
+      Math.abs(item.costImpact) >= 1_000_000
+        ? `$${(item.costImpact / 1_000_000).toFixed(1)}M`
+        : Math.abs(item.costImpact) >= 1_000
+          ? `$${Math.round(item.costImpact / 1_000)}K`
+          : `$${Math.round(item.costImpact)}`
+    parts.push(`${fmt} at risk`)
+  }
+  if (item.scheduleImpactDays && item.scheduleImpactDays > 0) {
+    parts.push(`+${item.scheduleImpactDays}d schedule impact`)
+  }
+  return parts.join(' · ')
+}
+
 export const IrisLane: React.FC<IrisLaneProps> = ({ items, onChip }) => {
-  const irisItems = items.filter((i) => i.irisEnhancement?.draftAvailable).slice(0, 8)
-  if (irisItems.length === 0) return null
+  const { primary, secondary } = useMemo(() => {
+    const irisItems = items
+      .filter((i) => i.irisEnhancement?.draftAvailable)
+      .sort((a, b) => {
+        const u = URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency]
+        if (u !== 0) return u
+        return (b.costImpact ?? 0) - (a.costImpact ?? 0)
+      })
+    const [head, ...rest] = irisItems
+    return { primary: head, secondary: rest.slice(0, 6) }
+  }, [items])
+
+  if (!primary) return null
 
   return (
     <div
       role="region"
-      aria-label="Iris detected items"
+      aria-label="Iris recommendations"
       style={{
         display: 'flex',
-        alignItems: 'center',
-        gap: spacing[3],
-        padding: `${spacing[2]} ${spacing[5]}`,
-        borderBottom: `1px solid ${colors.borderDefault}`,
+        alignItems: 'stretch',
         background: IRIS_INDIGO_BG,
-        minHeight: 44,
+        borderBottom: `1px solid ${colors.borderDefault}`,
+        minHeight: 64,
       }}
     >
+      {/* Eyebrow rail */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: spacing[2],
+          padding: `0 ${spacing[5]}`,
+          background: IRIS_INDIGO_BG,
           color: IRIS_INDIGO,
           fontFamily: typography.fontFamily,
-          fontSize: '12px',
-          fontWeight: 600,
-          letterSpacing: '0.06em',
+          fontSize: '11px',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
           textTransform: 'uppercase',
+          borderRight: `1px solid ${IRIS_INDIGO_BORDER}`,
           flexShrink: 0,
         }}
       >
         <Sparkles size={14} strokeWidth={2} aria-hidden />
-        <span>Iris detected</span>
-        <span style={{ color: colors.ink3, fontWeight: 500, letterSpacing: 0, textTransform: 'none' }}>
-          {irisItems.length}
-        </span>
+        <span>Iris</span>
       </div>
+
+      {/* Primary recommendation */}
+      <button
+        type="button"
+        onClick={() => onChip(primary)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: spacing[3],
+          padding: `${spacing[2]} ${spacing[4]}`,
+          background: colors.surfaceRaised,
+          border: 'none',
+          borderRight: `1px solid ${IRIS_INDIGO_BORDER}`,
+          textAlign: 'left',
+          cursor: 'pointer',
+          flexShrink: 0,
+          maxWidth: '50%',
+          minWidth: 0,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: typography.fontFamily,
+            fontSize: '10px',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: IRIS_INDIGO,
+            background: 'rgba(79, 70, 229, 0.10)',
+            padding: '3px 7px',
+            borderRadius: 4,
+            flexShrink: 0,
+          }}
+        >
+          Start here
+        </span>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+          <span
+            style={{
+              fontFamily: typography.fontFamily,
+              fontSize: '13px',
+              fontWeight: 600,
+              color: colors.ink,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.2,
+            }}
+          >
+            {primary.title}
+          </span>
+          <span
+            style={{
+              fontFamily: typography.fontFamily,
+              fontSize: '12px',
+              color: colors.ink2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.3,
+            }}
+          >
+            {reasoningFor(primary) || shortLabel(primary)}
+          </span>
+        </span>
+        <ArrowRight size={14} strokeWidth={2.25} color={IRIS_INDIGO_STRONG} aria-hidden />
+      </button>
+
+      {/* Secondary chips */}
       <div
         style={{
           display: 'flex',
@@ -70,11 +190,27 @@ export const IrisLane: React.FC<IrisLaneProps> = ({ items, onChip }) => {
           alignItems: 'center',
           overflowX: 'auto',
           scrollbarWidth: 'none',
+          padding: `0 ${spacing[4]}`,
           flex: 1,
           minWidth: 0,
         }}
       >
-        {irisItems.map((item) => (
+        {secondary.length > 0 && (
+          <span
+            style={{
+              fontFamily: typography.fontFamily,
+              fontSize: '10px',
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: colors.ink3,
+              flexShrink: 0,
+            }}
+          >
+            Also detected
+          </span>
+        )}
+        {secondary.map((item) => (
           <button
             key={item.id}
             onClick={() => onChip(item)}
@@ -99,7 +235,6 @@ export const IrisLane: React.FC<IrisLaneProps> = ({ items, onChip }) => {
           >
             <span style={{ color: IRIS_INDIGO, fontWeight: 600 }}>{labelForType(item.type)}</span>
             <span style={{ color: colors.ink2 }}>{shortLabel(item)}</span>
-            <ArrowRight size={11} strokeWidth={2.25} color={colors.ink3} aria-hidden />
           </button>
         ))}
       </div>
