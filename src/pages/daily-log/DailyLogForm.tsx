@@ -246,7 +246,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
     { value: 'visitor', label: 'Visitor', color: colors.statusInfo },
     { value: 'equipment', label: 'Equipment', color: colors.statusPending },
     { value: 'material_received', label: 'Material Received', color: colors.primaryOrange },
-    { value: 'note', label: 'Safety / General Note', color: '#8B5CF6' },
+    { value: 'note', label: 'Safety / General Note', color: colors.indigo },
   ];
 
   const typedLogEntries = logEntries as Array<{

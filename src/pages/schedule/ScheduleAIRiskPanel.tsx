@@ -21,9 +21,9 @@ type Finding = {
 }
 
 const SEVERITY_CONFIG: Record<Finding['severity'], { fg: string; bg: string; label: string }> = {
-  low:    { fg: '#6B7280', bg: '#F3F4F6', label: 'Low' },
-  medium: { fg: '#D97706', bg: '#FEF3C7', label: 'Med' },
-  high:   { fg: '#DC2626', bg: '#FEF2F2', label: 'High' },
+  low:    { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle, label: 'Low' },
+  medium: { fg: colors.statusPending, bg: colors.statusPendingSubtle, label: 'Med' },
+  high:   { fg: colors.statusCritical, bg: colors.statusCriticalSubtle, label: 'High' },
 }
 
 const TYPE_ICONS: Record<FindingType, React.ElementType> = {
@@ -43,11 +43,11 @@ const TYPE_LABELS: Record<FindingType, string> = {
 }
 
 const TYPE_COLORS: Record<FindingType, { fg: string; bg: string }> = {
-  floating:            { fg: '#6366F1', bg: '#EEF2FF' },
-  unrealistic:         { fg: '#D97706', bg: '#FEF3C7' },
-  critical_bottleneck: { fg: '#DC2626', bg: '#FEF2F2' },
+  floating:            { fg: colors.indigo, bg: colors.indigoSubtle },
+  unrealistic:         { fg: colors.statusPending, bg: colors.statusPendingSubtle },
+  critical_bottleneck: { fg: colors.statusCritical, bg: colors.statusCriticalSubtle },
   weather:             { fg: '#0891B2', bg: '#ECFEFF' },
-  ai_prediction:       { fg: '#7C3AED', bg: '#F5F3FF' },
+  ai_prediction:       { fg: colors.chartPurple, bg: '#F5F3FF' },
 }
 
 interface RiskPredictionRow {
@@ -250,7 +250,7 @@ export const ScheduleAIRiskPanel: React.FC<Props> = ({ schedulePhases, projectId
               : 'linear-gradient(135deg, #F0FDF4, #BBF7D0)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Brain size={16} color={findings.length > 0 ? '#D97706' : '#16A34A'} />
+            <Brain size={16} color={findings.length > 0 ? colors.statusPending : colors.statusActive} />
           </div>
           <span style={{
             fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.body,
@@ -261,7 +261,7 @@ export const ScheduleAIRiskPanel: React.FC<Props> = ({ schedulePhases, projectId
           {findings.length > 0 && (
             <span style={{
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
-              backgroundColor: totalHigh > 0 ? '#FEF2F2' : '#FEF3C7',
+              backgroundColor: totalHigh > 0 ? colors.statusCriticalSubtle : colors.statusPendingSubtle,
               color: totalHigh > 0 ? '#991B1B' : '#92400E',
               padding: `2px ${spacing['2.5']}`, borderRadius: borderRadius.full,
             }}>
@@ -275,7 +275,7 @@ export const ScheduleAIRiskPanel: React.FC<Props> = ({ schedulePhases, projectId
             <span style={{
               padding: `2px ${spacing['2.5']}`, borderRadius: borderRadius.full,
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
-              color: '#DC2626', backgroundColor: '#FEF2F2',
+              color: colors.statusCritical, backgroundColor: colors.statusCriticalSubtle,
             }}>
               {totalHigh} critical
             </span>
@@ -284,7 +284,7 @@ export const ScheduleAIRiskPanel: React.FC<Props> = ({ schedulePhases, projectId
             <span style={{
               padding: `2px ${spacing['2.5']}`, borderRadius: borderRadius.full,
               fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.bold,
-              color: '#D97706', backgroundColor: '#FEF3C7',
+              color: colors.statusPending, backgroundColor: colors.statusPendingSubtle,
             }}>
               {totalMed} warning
             </span>
@@ -299,11 +299,11 @@ export const ScheduleAIRiskPanel: React.FC<Props> = ({ schedulePhases, projectId
           {findings.length === 0 ? (
             <div style={{
               display: 'flex', alignItems: 'center', gap: spacing['3'],
-              padding: spacing['4'], backgroundColor: '#F0FDF4',
-              borderRadius: borderRadius.lg, border: '1px solid #BBF7D0',
+              padding: spacing['4'], backgroundColor: colors.statusActiveSubtle,
+              borderRadius: borderRadius.lg, border: `1px solid ${colors.statusActive}30`,
             }}>
-              <ShieldCheck size={18} color="#16A34A" />
-              <span style={{ fontSize: typography.fontSize.sm, color: '#166534', fontWeight: typography.fontWeight.medium }}>
+              <ShieldCheck size={18} color={colors.statusActive} />
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.statusActive, fontWeight: typography.fontWeight.medium }}>
                 No schedule risks detected — the network looks clean.
               </span>
             </div>

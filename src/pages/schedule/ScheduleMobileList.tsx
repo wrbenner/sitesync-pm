@@ -30,10 +30,10 @@ const STATUS_CONFIG: Record<VisualStatus, {
   fg: string; bg: string; label: string;
   Icon: React.ComponentType<{ size?: number; color?: string }>;
 }> = {
-  completed: { fg: '#16A34A', bg: '#F0FDF4', label: 'Completed', Icon: CheckCircle2 },
-  active:    { fg: '#2563EB', bg: '#EFF6FF', label: 'Active',    Icon: Clock },
-  behind:    { fg: '#DC2626', bg: '#FEF2F2', label: 'Behind',    Icon: AlertTriangle },
-  upcoming:  { fg: '#6B7280', bg: '#F3F4F6', label: 'Upcoming',  Icon: Circle },
+  completed: { fg: colors.statusActive, bg: colors.statusActiveSubtle, label: 'Completed', Icon: CheckCircle2 },
+  active:    { fg: colors.statusInfo, bg: colors.statusInfoSubtle, label: 'Active',    Icon: Clock },
+  behind:    { fg: colors.statusCritical, bg: colors.statusCriticalSubtle, label: 'Behind',    Icon: AlertTriangle },
+  upcoming:  { fg: colors.statusNeutral, bg: colors.statusNeutralSubtle, label: 'Upcoming',  Icon: Circle },
 };
 
 function formatDate(iso: string): string {
@@ -253,7 +253,7 @@ export const ScheduleMobileList: React.FC<ScheduleMobileListProps> = ({
                 backgroundColor: colors.surfaceRaised,
                 borderRadius: borderRadius.lg,
                 border: `1px solid ${colors.borderSubtle}`,
-                borderLeft: isCritical ? `3px solid #DC2626` : `1px solid ${colors.borderSubtle}`,
+                borderLeft: isCritical ? `3px solid ${colors.statusCritical}` : `1px solid ${colors.borderSubtle}`,
                 padding: spacing['4'],
                 cursor: 'pointer',
                 outline: 'none',
@@ -283,7 +283,7 @@ export const ScheduleMobileList: React.FC<ScheduleMobileListProps> = ({
                     {isCritical && (
                       <span style={{
                         fontSize: 9, fontWeight: 700,
-                        backgroundColor: '#FEE2E2', color: '#991B1B',
+                        backgroundColor: colors.statusCriticalSubtle, color: colors.statusCritical,
                         padding: '1px 5px', borderRadius: 3,
                         letterSpacing: '0.04em',
                       }}>CP</span>
@@ -368,8 +368,8 @@ export const ScheduleMobileList: React.FC<ScheduleMobileListProps> = ({
                 }}>
                   {hasFloat && vs !== 'completed' && (
                     <span style={{
-                      color: Number(floatDays) === 0 ? '#DC2626'
-                        : Number(floatDays) <= 5 ? '#D97706'
+                      color: Number(floatDays) === 0 ? colors.statusCritical
+                        : Number(floatDays) <= 5 ? colors.statusPending
                         : colors.textTertiary,
                       fontWeight: Number(floatDays) === 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
                       fontVariantNumeric: 'tabular-nums',
@@ -379,7 +379,7 @@ export const ScheduleMobileList: React.FC<ScheduleMobileListProps> = ({
                   )}
                   {phase.baselineEndDate && phase.slippageDays !== 0 && (
                     <span style={{
-                      color: (phase.slippageDays ?? 0) > 0 ? '#DC2626' : '#16A34A',
+                      color: (phase.slippageDays ?? 0) > 0 ? colors.statusCritical : colors.statusActive,
                       fontWeight: typography.fontWeight.medium,
                     }}>
                       {(phase.slippageDays ?? 0) > 0 ? `+${phase.slippageDays}d` : `${phase.slippageDays}d`}

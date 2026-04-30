@@ -61,14 +61,14 @@ const MiniSparkline: React.FC<{ data: number[]; color: string; width?: number; h
 // ── Trend badge ──
 const TrendBadge: React.FC<{ value: number; invert?: boolean }> = ({ value, invert }) => {
   if (value === 0) return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 600, color: '#6B7280' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 600, color: colors.statusNeutral }}>
       <Minus size={10} /> 0%
     </span>
   )
   // For "remaining", positive trend is good. For "spent", positive trend means more spent (bad).
   const isPositive = invert ? value < 0 : value > 0
   const Icon = value > 0 ? TrendingUp : TrendingDown
-  const col = isPositive ? '#16A34A' : '#DC2626'
+  const col = isPositive ? colors.statusActive : colors.statusCritical
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 600, color: col }}>
       <Icon size={10} /> {Math.abs(value).toFixed(1)}%
@@ -83,10 +83,10 @@ const UtilizationRing: React.FC<{ pct: number; size?: number; stroke?: number }>
   const r = (size - stroke) / 2
   const circ = 2 * Math.PI * r
   const offset = circ - (Math.min(pct, 100) / 100) * circ
-  const ringColor = pct > 100 ? '#DC2626' : pct > 80 ? '#D97706' : '#16A34A'
+  const ringColor = pct > 100 ? colors.statusCritical : pct > 80 ? colors.statusPending : colors.statusActive
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F3F4F6" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.statusNeutralSubtle} strokeWidth={stroke} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={ringColor} strokeWidth={stroke}
@@ -149,7 +149,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       value: totalBudget,
       formatter: fmtCurrency,
       icon: DollarSign,
-      color: '#F47820',
+      color: colors.brand400,
       sparkData: null as number[] | null,
       trend: null as number | null,
       trendInvert: false,
@@ -159,7 +159,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       value: spent,
       formatter: fmtCurrency,
       icon: Wallet,
-      color: '#2563EB',
+      color: colors.statusInfo,
       sparkData: spentTrend,
       trend: spentDelta,
       trendInvert: true, // spending going up is bad
@@ -169,7 +169,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       value: committed,
       formatter: fmtCurrency,
       icon: PieChart,
-      color: '#7C3AED',
+      color: colors.chartPurple,
       sparkData: committedTrend,
       trend: null,
       trendInvert: false,
@@ -179,7 +179,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
       value: remaining,
       formatter: fmtCurrency,
       icon: ShieldCheck,
-      color: remaining >= 0 ? '#16A34A' : '#DC2626',
+      color: remaining >= 0 ? colors.statusActive : colors.statusCritical,
       sparkData: null,
       trend: null,
       trendInvert: false,
@@ -199,8 +199,8 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
           backgroundColor: colors.primaryOrange, borderRadius: borderRadius.full,
           animation: 'fadeInDown 0.15s ease-out',
         }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#fff', display: 'inline-block' }} />
-          <span style={{ fontSize: 11, fontWeight: 500, color: '#fff', whiteSpace: 'nowrap' }}>Budget updated</span>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.white, display: 'inline-block' }} />
+          <span style={{ fontSize: 11, fontWeight: 500, color: colors.white, whiteSpace: 'nowrap' }}>Budget updated</span>
         </div>
       )}
 
@@ -274,7 +274,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
                     {fmtPct(spentPct)} utilized
                   </span>
                 ) : i === 3 ? (
-                  <span style={{ fontSize: 11, color: remaining >= 0 ? '#16A34A' : '#DC2626', fontWeight: 500 }}>
+                  <span style={{ fontSize: 11, color: remaining >= 0 ? colors.statusActive : colors.statusCritical, fontWeight: 500 }}>
                     {remaining >= 0 ? 'Under budget' : 'Over budget'}
                   </span>
                 ) : (
@@ -297,18 +297,18 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
           border: `1px solid ${colors.borderSubtle}`,
           display: 'flex', alignItems: 'center', gap: spacing['3'],
         }}>
-          <ShieldCheck size={15} color={contingencyPct > 80 ? '#DC2626' : contingencyPct > 50 ? '#D97706' : '#16A34A'} />
+          <ShieldCheck size={15} color={contingencyPct > 80 ? colors.statusCritical : contingencyPct > 50 ? colors.statusPending : colors.statusActive} />
           <span style={{ fontSize: typography.fontSize.sm, fontWeight: 600, color: colors.textPrimary }}>
             Contingency
           </span>
           <div style={{
-            flex: 1, height: 6, backgroundColor: '#F3F4F6',
+            flex: 1, height: 6, backgroundColor: colors.statusNeutralSubtle,
             borderRadius: borderRadius.full, overflow: 'hidden',
           }}>
             <div style={{
               height: '100%',
               width: `${Math.min(contingencyPct, 100)}%`,
-              backgroundColor: contingencyPct > 80 ? '#DC2626' : contingencyPct > 50 ? '#D97706' : '#16A34A',
+              backgroundColor: contingencyPct > 80 ? colors.statusCritical : contingencyPct > 50 ? colors.statusPending : colors.statusActive,
               borderRadius: borderRadius.full,
               transition: `width 0.6s cubic-bezier(0.16,1,0.3,1)`,
             }} />
@@ -319,8 +319,8 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
           <span style={{
             fontSize: 10, fontWeight: 700, padding: '1px 6px',
             borderRadius: borderRadius.full, textTransform: 'uppercase' as const, letterSpacing: '0.04em',
-            backgroundColor: contingencyPct > 80 ? '#FEF2F2' : contingencyPct > 50 ? '#FEF3C7' : '#F0FDF4',
-            color: contingencyPct > 80 ? '#DC2626' : contingencyPct > 50 ? '#D97706' : '#16A34A',
+            backgroundColor: contingencyPct > 80 ? colors.statusCriticalSubtle : contingencyPct > 50 ? colors.statusPendingSubtle : colors.statusActiveSubtle,
+            color: contingencyPct > 80 ? colors.statusCritical : contingencyPct > 50 ? colors.statusPending : colors.statusActive,
           }}>
             {100 - Math.round(contingencyPct)}%
           </span>

@@ -622,7 +622,7 @@ const DailyLogPage: React.FC = () => {
           {!error && (
             <Card padding={spacing['10']}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-                <Calendar size={48} color="#9CA3AF" />
+                <Calendar size={48} color={colors.statusNeutral} />
                 <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>No daily logs yet</p>
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
                   The daily log is your project official record. Start documenting site conditions today.
