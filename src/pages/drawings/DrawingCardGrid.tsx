@@ -1,12 +1,12 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Upload, Eye, Loader2, ChevronRight, CloudOff, Zap } from 'lucide-react';
+import { FileText, Upload, Eye, Loader2, Zap } from 'lucide-react';
 import { Btn } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 import type { DrawingItem } from './DrawingList';
 import { formatRevDate } from './types';
 import { useSignedUrl } from '../../hooks/useSignedUrl';
-import { DISCIPLINE_COLORS, DISCIPLINE_ABBREV, DISCIPLINE_LABELS, STATUS_CONFIG, groupByDiscipline } from './constants';
+import { DISCIPLINE_COLORS, STATUS_CONFIG, groupByDiscipline } from './constants';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ const S = {
   } as React.CSSProperties),
 
   // Status badge overlay — subtle, frosted glass
-  statusBadge: (bg: string, color: string) => ({
+  statusBadge: (_bg: string, _color: string) => ({
     position: 'absolute' as const,
     top: '8px',
     right: '8px',
@@ -277,8 +277,8 @@ const DrawingThumbnail: React.FC<{
 export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
   drawings,
   loading,
-  error,
-  refetch,
+  error: _error,
+  refetch: _refetch,
   selectedIds,
   onToggleSelect,
   onSelectDrawing,
