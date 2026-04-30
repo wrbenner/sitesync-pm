@@ -4,7 +4,16 @@
 The definitive product direction for SiteSync AI's homepage redesign and role-based command architecture. Every spec in this folder derives from this document. Read this first, then `CONTRACT.md`, then your assigned `SESSION-N-*.md`.
 
 ## Initiative Status
-**Active as of 2026-04-30.** This homepage redesign is the agreed re-architecture. The standing polish-only mandate is **explicitly paused** for the duration of Wave 1; it resumes once Wave 1 merges to main. Polish discipline still applies to all *other* pages during Wave 1 — no new decorative features on RFIs, Budget, Schedule, etc.
+**Active as of 2026-04-30.** This homepage redesign is the agreed re-architecture. The standing polish-only mandate is **explicitly paused** for the duration of the initiative; it resumes once Wave 2 merges to main. Polish discipline still applies to all *other* pages during the initiative — no new decorative features on RFIs, Budget, Schedule, etc.
+
+## Locked Vision Clause (do not violate)
+**Only the dashboard (Command stream at `/day`) is role-dynamic.** The dashboard's content, sort order, and visual emphasis change based on the user's role; that's where role-tailoring lives.
+
+**Every other page is reachable by every authenticated user.** No role hides RFIs, Drawings, Budget, Schedule, or any other Record-layer page from anyone. Permissions (admin-managed via `Permission` keys + `PermissionGate`) gate per-action behavior **inside** pages — they do not gate page visibility.
+
+**AI is geared to your occupation.** Iris drafts, suggestions, and emphasis adapt to the user's role. The platform itself does not.
+
+This was clarified after Wave 1 over-applied role filtering to the navigation. Wave 1 nav has been corrected: `getNavForRole(_role)` returns the full `NAV_ITEMS` list for every role. Mobile bottom-tab primary set still varies by role for a tailored first-screen UX, but every page is one tap away in the More sheet.
 
 ## Core Mission
 SiteSync is the place where every construction stakeholder goes to answer:
@@ -307,27 +316,39 @@ Every AI insight, every risk card, every commitment links back to its source rec
 
 ## Navigation
 
-### Structure (role-filtered)
-One nav, shared across all roles. Each role sees a subset.
+### Structure (universal)
+One nav, shared across all roles. **Every authenticated user sees every nav item.** Permissions handle what they can do once on the page.
 
-| Nav Item | Icon | PM | Super | Owner | Sub | Architect | Executive |
-|----------|------|-----|-------|-------|-----|-----------|-----------|
-| Command | Zap | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| RFIs | MessageCircle | ✓ | | | ✓\* | ✓ | |
-| Submittals | FileCheck | ✓ | | | ✓\* | ✓ | |
-| Schedule | Calendar | ✓ | ✓ | ✓ | ✓\* | | |
-| Budget | DollarSign | ✓ | | ✓ | | | |
-| Drawings | Layers | ✓ | ✓ | | | ✓ | |
-| Daily Log | BookOpen | ✓ | ✓ | | | | |
-| Reports | FileText | ✓ | | ✓ | | | ✓ |
-| Documents | FolderOpen | ✓ | | | ✓\* | | |
-| Punch | CheckCircle | ✓ | ✓ | | ✓\* | | |
-| Photos | Camera | | ✓ | ✓ | ✓\* | | |
-| Inspections | ClipboardCheck | | ✓ | | | | |
-| Commitments | Handshake | ✓ | | ✓ | ✓ | ✓ | |
-| Portfolio | BarChart3 | | | | | | (post-Wave-1) |
+| Nav Item | Icon | Route |
+|----------|------|-------|
+| Command | Zap | `/day` |
+| RFIs | MessageCircle | `/rfis` |
+| Submittals | FileCheck | `/submittals` |
+| Schedule | Calendar | `/schedule` |
+| Budget | DollarSign | `/budget` |
+| Drawings | Layers | `/drawings` |
+| Daily Log | BookOpen | `/daily-log` |
+| Punch | CheckCircle | `/punch-list` |
+| Photos | Camera | `/field-capture` |
+| Inspections | ClipboardCheck | `/permits` |
+| Reports | FileText | `/reports` |
+| Documents | FolderOpen | `/files` |
+| Commitments | Handshake | `/commitments` |
 
-\*Sub sees only their items within these pages
+Subcontractors see all pages but, once on each page, RLS + permission gates restrict their view to items assigned to their company.
+
+### Mobile primary tabs (role-tailored first-screen UX)
+
+The bottom tab bar surfaces 4 primary tabs per role + a "More" sheet that exposes the rest of the nav. Nothing is hidden.
+
+| Role | Primary tabs |
+|------|--------------|
+| PM | Command, RFIs, Schedule, Budget |
+| Superintendent | Command, Daily Log, Punch, Photos |
+| Owner | Command, Budget, Schedule, Reports |
+| Subcontractor | Command, Punch, Photos, Documents |
+| Architect | Command, RFIs, Submittals, Drawings |
+| Executive | Command, Reports, Budget, Schedule |
 
 ### Command Palette (Cmd+K)
 

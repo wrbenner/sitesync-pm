@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useId } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface ScheduleActivity {
@@ -27,6 +27,9 @@ export function useScheduleActivities(projectId: string) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // Unique per hook instance — Supabase channels are singletons per name,
+  // and multiple consumers (homepage stream + Schedule page) collide otherwise.
+  const instanceId = useId()
 
   const refetch = useCallback(async () => {
     try {
@@ -77,7 +80,7 @@ export function useScheduleActivities(projectId: string) {
     refetch()
 
     const channel = supabase
-      .channel('schedule_phases_changes')
+      .channel(`schedule_phases_changes:${projectId}:${instanceId}`)
       .on(
         'postgres_changes',
         {
@@ -98,7 +101,7 @@ export function useScheduleActivities(projectId: string) {
         channelRef.current = null
       }
     }
-  }, [projectId, refetch])
+  }, [projectId, refetch, instanceId])
 
   return { data, isLoading, error, refetch }
 }
