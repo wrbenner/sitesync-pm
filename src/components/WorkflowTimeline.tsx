@@ -180,13 +180,13 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
     return (
       <React.Fragment key={state}>
         <div
+          role={isClickable ? 'button' : 'listitem'}
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
             cursor: isClickable ? 'pointer' : 'default',
             minWidth: 56, minHeight: 56,
             borderRadius: 10, padding: '8px 4px',
           }}
-          role={isClickable ? 'button' : undefined}
           tabIndex={isClickable ? 0 : undefined}
           onClick={() => isClickable && onTransition!(state)}
           onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTransition!(state) } } : undefined}
