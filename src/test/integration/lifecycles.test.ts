@@ -473,18 +473,30 @@ describe('Cross-Org Document Access Control', () => {
   // -------------------------------------------------------------------------
   describe('getDrawings cross-org access', () => {
     it('returns 403 when project belongs to a different org (criterion 1)', async () => {
-      // assertProjectAccess: project_members membership check passes
+      // Updated contract (src/api/middleware/projectScope.ts:32-38):
+      // `assertProjectBelongsToActiveOrg` only rejects when it OBSERVES a
+      // different org_id; null observation defers to RLS. So the test must
+      // make `observeProjectOrg` return a different org via the projects
+      // path (the first probe).
       mockMaybySingle
+        // 1) project_members membership check → found
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        // assertProjectBelongsToOrg: project not found under active org
-        .mockResolvedValueOnce({ data: null, error: null })
+        // 2) observeProjectOrg projects path → DIFFERENT org_id (real cross-org leak)
+        .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
       await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
     })
 
-    it('returns 403 when there is no active organization context', async () => {
+    it('defers to RLS when there is no active organization context (membership proven)', async () => {
+      // Behavior change: with proven membership but unhydrated org context,
+      // `assertProjectAccess` defers to RLS rather than rejecting outright,
+      // so legitimate users on first load aren't punished by a transient
+      // client-state race. RLS still enforces org isolation at the DB layer.
       mockOrgGetState.mockReturnValue({ currentOrg: null })
-      mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        .mockResolvedValue({ data: null, error: null })
+      const result = await getDrawings(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
     })
 
     it('returns drawings array when project belongs to the active org (criterion 3)', async () => {
@@ -501,9 +513,12 @@ describe('Cross-Org Document Access Control', () => {
   // -------------------------------------------------------------------------
   describe('getFiles cross-org access', () => {
     it('returns 403 when project belongs to a different org (criterion 1)', async () => {
+      // Same updated contract as getDrawings — observe a DIFFERENT org_id
+      // to trigger the cross-org-leak 403 path. Null observation defers
+      // to RLS at the DB layer.
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
       await expect(getFiles(PROJ_ID)).rejects.toMatchObject({ status: 403 })
     })
 

@@ -159,6 +159,10 @@ const SchedulePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [irisNotePhase, setIrisNotePhase] = useState<SchedulePhase | null>(null);
+  // Hide completed activities by default — large imported P6 schedules
+  // (e.g. Merritt Crossing has 219/247 complete) overwhelm the timeline
+  // and bury the active/upcoming work the PM cares about.
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     setPageContext('schedule');
@@ -168,15 +172,21 @@ const SchedulePage: React.FC = () => {
     if (activeProject?.id) loadSchedule(activeProject.id);
   }, [activeProject?.id, loadSchedule]);
 
+  const completedCount = useMemo(
+    () => phases.filter((p) => p.status === 'completed').length,
+    [phases],
+  );
+
   const visiblePhases = useMemo(() => {
     const sorted = [...phases].sort((a, b) => {
       const sa = a.start_date ?? '9999-12-31';
       const sb = b.start_date ?? '9999-12-31';
       return sa.localeCompare(sb);
     });
-    if (view === 'critical') return sorted.filter((p) => p.is_critical_path === true);
-    return sorted;
-  }, [phases, view]);
+    let filtered = showCompleted ? sorted : sorted.filter((p) => p.status !== 'completed');
+    if (view === 'critical') filtered = filtered.filter((p) => p.is_critical_path === true);
+    return filtered;
+  }, [phases, view, showCompleted]);
 
   const status = useMemo(() => projectStatusFor(phases), [phases]);
 
@@ -360,6 +370,35 @@ const SchedulePage: React.FC = () => {
         </div>
 
         <div style={{ flex: 1 }} />
+
+        {completedCount > 0 && (
+          <label
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: 6,
+              background: showCompleted ? '#F4F2EF' : 'transparent',
+              color: colors.textSecondary,
+              fontFamily: typography.fontFamily,
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showCompleted}
+              onChange={(e) => setShowCompleted(e.target.checked)}
+              style={{ accentColor: colors.primaryOrange, cursor: 'pointer' }}
+              aria-label={`Show ${completedCount} completed activities`}
+            />
+            Show completed ({completedCount})
+          </label>
+        )}
 
         <button
           type="button"

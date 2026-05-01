@@ -616,3 +616,353 @@ export function getAvailableProviders(): Record<AIProvider, boolean> {
     perplexity: Boolean(Deno.env.get('PERPLEXITY_API_KEY')),
   }
 }
+
+// ── Streaming ────────────────────────────────────────────────────────────────
+//
+// `routeAIStream` is the streaming counterpart to `routeAI`. It returns an
+// async iterable of stream events that callers can pipe into an SSE response
+// (see supabase/functions/iris-call). The shape:
+//
+//   { type: 'delta', text }       — text chunk to render incrementally
+//   { type: 'done', response }    — final AIResponse with usage + total content
+//   { type: 'error', message }    — terminal error
+//
+// Streaming is wired natively for Anthropic and OpenAI (their HTTP APIs both
+// support SSE). Gemini and Perplexity buffer through a single-delta path —
+// the caller's UX is identical, only the latency profile differs. This keeps
+// the iris-call edge function provider-agnostic.
+
+export type StreamEvent =
+  | { type: 'delta'; text: string }
+  | { type: 'done'; response: AIResponse }
+  | { type: 'error'; message: string }
+
+export async function* routeAIStream(
+  request: AIRequest,
+  config: Partial<AIRouterConfig> = {},
+): AsyncGenerator<StreamEvent, void, void> {
+  const cfg = { ...DEFAULT_CONFIG, ...config }
+  const spec = TASK_ROUTING[request.task]
+  if (!spec) {
+    yield { type: 'error', message: `Unknown AI task type: ${request.task}` }
+    return
+  }
+
+  // Dispatch by provider. Anthropic + OpenAI stream natively; the rest fall
+  // through to a buffer-then-yield path so all providers expose the same
+  // event sequence.
+  try {
+    yield* streamFromProvider(spec.primary, spec.model, request)
+    return
+  } catch (primaryError) {
+    console.error(`[aiRouter] streaming primary ${spec.primary}/${spec.model} failed:`, primaryError)
+    if (cfg.fallback_enabled && spec.fallback) {
+      try {
+        console.warn(`[aiRouter] streaming fallback to ${spec.fallback.provider}/${spec.fallback.model}`)
+        yield* streamFromProvider(spec.fallback.provider, spec.fallback.model, request)
+        return
+      } catch (fallbackError) {
+        const message = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+        yield { type: 'error', message: `Fallback ${spec.fallback.provider} failed: ${message}` }
+        return
+      }
+    }
+    const message = primaryError instanceof Error ? primaryError.message : String(primaryError)
+    yield { type: 'error', message }
+    return
+  }
+}
+
+async function* streamFromProvider(
+  provider: AIProvider,
+  model: string,
+  request: AIRequest,
+): AsyncGenerator<StreamEvent, void, void> {
+  const maxTokens = request.max_tokens ?? 1024
+  const temperature = request.temperature ?? 0.3
+
+  switch (provider) {
+    case 'anthropic':
+      yield* streamAnthropic(model, request, maxTokens, temperature)
+      return
+    case 'openai':
+      yield* streamOpenAI(model, request, maxTokens, temperature)
+      return
+    case 'gemini':
+    case 'perplexity': {
+      // Buffered fallthrough — call the existing path then yield as a single
+      // delta + done. The UX skeleton (stream consumer) doesn't notice; the
+      // only observable difference is one big chunk instead of many small
+      // ones. Worth migrating to native streaming later.
+      const response = await callProvider(provider, model, request)
+      if (response.content.length > 0) {
+        yield { type: 'delta', text: response.content }
+      }
+      yield { type: 'done', response }
+      return
+    }
+    default:
+      yield { type: 'error', message: `Streaming not implemented for provider: ${provider}` }
+      return
+  }
+}
+
+// ── Anthropic streaming ─────────────────────────────────────────────────────
+// Anthropic's Messages API streams SSE events. We care about three:
+//   • content_block_delta { delta: { type: 'text_delta', text } }  → emit delta
+//   • message_delta       { usage: { output_tokens } }             → capture tokens
+//   • message_start       { message: { usage: { input_tokens } } } → capture input tokens
+
+async function* streamAnthropic(
+  model: string,
+  request: AIRequest,
+  maxTokens: number,
+  temperature: number,
+): AsyncGenerator<StreamEvent, void, void> {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured')
+
+  const start = Date.now()
+
+  const apiMessages = request.messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => {
+      if (m.role === 'user' && request.images?.length) {
+        const content: Array<{ type: string; text?: string; source?: object }> = []
+        for (const img of request.images) {
+          if (img.base64) {
+            content.push({
+              type: 'image',
+              source: { type: 'base64', media_type: img.media_type, data: img.base64 },
+            })
+          }
+        }
+        content.push({ type: 'text', text: m.content })
+        return { role: m.role, content }
+      }
+      return { role: m.role, content: m.content }
+    })
+
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: maxTokens,
+    messages: apiMessages,
+    temperature,
+    stream: true,
+  }
+  if (request.system) body.system = request.system
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'accept': 'text/event-stream',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok || !response.body) {
+    const errText = await response.text().catch(() => '')
+    throw new Error(`Anthropic ${response.status}: ${errText}`)
+  }
+
+  let collectedContent = ''
+  let inputTokens = 0
+  let outputTokens = 0
+
+  for await (const event of parseSSE(response.body)) {
+    if (!event.data) continue
+    if (event.data === '[DONE]') break
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(event.data) as Record<string, unknown>
+    } catch {
+      continue
+    }
+    const type = parsed.type as string | undefined
+    if (type === 'message_start') {
+      const message = parsed.message as { usage?: { input_tokens?: number } } | undefined
+      inputTokens = message?.usage?.input_tokens ?? 0
+    } else if (type === 'content_block_delta') {
+      const delta = parsed.delta as { type?: string; text?: string } | undefined
+      if (delta?.type === 'text_delta' && delta.text) {
+        collectedContent += delta.text
+        yield { type: 'delta', text: delta.text }
+      }
+    } else if (type === 'message_delta') {
+      const usage = (parsed.usage as { output_tokens?: number } | undefined)
+      if (usage?.output_tokens != null) outputTokens = usage.output_tokens
+    } else if (type === 'message_stop') {
+      break
+    }
+  }
+
+  yield {
+    type: 'done',
+    response: {
+      provider: 'anthropic',
+      model,
+      content: collectedContent,
+      usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+      latency_ms: Date.now() - start,
+      cached: false,
+    },
+  }
+}
+
+// ── OpenAI streaming ────────────────────────────────────────────────────────
+// chat.completions with stream:true returns SSE chunks. Each chunk:
+//   { choices: [{ delta: { content: '...' } }] }
+// Final chunk includes { usage } when stream_options.include_usage = true.
+
+async function* streamOpenAI(
+  model: string,
+  request: AIRequest,
+  maxTokens: number,
+  temperature: number,
+): AsyncGenerator<StreamEvent, void, void> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!apiKey) throw new Error('OPENAI_API_KEY not configured')
+
+  const start = Date.now()
+
+  // Embedding models don't support streaming — fall back to buffered.
+  if (model.startsWith('text-embedding-')) {
+    const response = await callProvider('openai', model, request)
+    if (response.content.length > 0) yield { type: 'delta', text: response.content }
+    yield { type: 'done', response }
+    return
+  }
+
+  const apiMessages: Array<{ role: string; content: string }> = []
+  if (request.system) apiMessages.push({ role: 'system', content: request.system })
+  for (const m of request.messages) {
+    if (m.role !== 'system') apiMessages.push({ role: m.role, content: m.content })
+  }
+
+  const body: Record<string, unknown> = {
+    model,
+    max_tokens: maxTokens,
+    messages: apiMessages,
+    temperature,
+    stream: true,
+    stream_options: { include_usage: true },
+  }
+  if (request.json_schema) {
+    // JSON mode + streaming is supported but the deltas may not parse until
+    // the stream completes. We still yield deltas; the caller can choose to
+    // wait for `done` before parsing.
+    body.response_format = { type: 'json_schema', json_schema: { name: 'response', schema: request.json_schema } }
+  }
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok || !response.body) {
+    const errText = await response.text().catch(() => '')
+    throw new Error(`OpenAI ${response.status}: ${errText}`)
+  }
+
+  let collectedContent = ''
+  let inputTokens = 0
+  let outputTokens = 0
+
+  for await (const event of parseSSE(response.body)) {
+    if (!event.data) continue
+    if (event.data === '[DONE]') break
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(event.data) as Record<string, unknown>
+    } catch {
+      continue
+    }
+    const choices = parsed.choices as Array<{ delta?: { content?: string } }> | undefined
+    const delta = choices?.[0]?.delta?.content
+    if (typeof delta === 'string' && delta.length > 0) {
+      collectedContent += delta
+      yield { type: 'delta', text: delta }
+    }
+    const usage = parsed.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined
+    if (usage) {
+      inputTokens = usage.prompt_tokens ?? inputTokens
+      outputTokens = usage.completion_tokens ?? outputTokens
+    }
+  }
+
+  yield {
+    type: 'done',
+    response: {
+      provider: 'openai',
+      model,
+      content: collectedContent,
+      usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+      latency_ms: Date.now() - start,
+      cached: false,
+    },
+  }
+}
+
+// ── SSE parser ──────────────────────────────────────────────────────────────
+// Minimal SSE line decoder. Yields { event, data } per event. Both Anthropic
+// and OpenAI use the standard `event:` / `data:` format with empty-line
+// terminators — no fancy retry/id handling needed.
+
+interface SSEEvent {
+  event: string | null
+  data: string
+}
+
+async function* parseSSE(stream: ReadableStream<Uint8Array>): AsyncGenerator<SSEEvent, void, void> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let currentEvent: string | null = null
+  let currentData = ''
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) {
+        if (currentData.length > 0) {
+          yield { event: currentEvent, data: currentData }
+        }
+        return
+      }
+      buffer += decoder.decode(value, { stream: true })
+      // Process complete lines
+      let newlineIdx: number
+      while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+        const rawLine = buffer.slice(0, newlineIdx)
+        buffer = buffer.slice(newlineIdx + 1)
+        const line = rawLine.replace(/\r$/, '')
+        if (line === '') {
+          // End of event
+          if (currentData.length > 0) {
+            yield { event: currentEvent, data: currentData }
+          }
+          currentEvent = null
+          currentData = ''
+        } else if (line.startsWith(':')) {
+          // Comment — ignore
+        } else if (line.startsWith('event:')) {
+          currentEvent = line.slice(6).trim()
+        } else if (line.startsWith('data:')) {
+          const chunk = line.slice(5).trimStart()
+          currentData = currentData.length > 0 ? `${currentData}\n${chunk}` : chunk
+        }
+        // Other fields (id:, retry:) ignored
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}

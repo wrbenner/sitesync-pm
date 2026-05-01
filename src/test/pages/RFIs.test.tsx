@@ -204,8 +204,14 @@ describe('RFIs page', () => {
   it('shows empty state with CTA when no RFIs exist', () => {
     rfisState.data = { data: [] }
     render(wrap(<RFIs />))
-    expect(screen.getByText(/No RFIs have been created/i)).toBeTruthy()
-    expect(screen.getByRole('button', { name: /create first rfi/i })).toBeTruthy()
+    // The empty-state copy ("No RFIs yet on this project") is rendered
+    // *inside* VirtualDataTable's `emptyMessage` prop — this test mocks
+    // VirtualDataTable to a bare div, so we don't see the copy here.
+    // What we *can* verify is the user-facing affordances: the data-table
+    // is mounted and the "+ New RFI" CTA in the header is reachable so
+    // a user with zero RFIs can still create one.
+    expect(screen.getByTestId('rfi-data-table')).toBeTruthy()
+    expect(screen.getByTestId('create-rfi-button')).toBeTruthy()
   })
 
   it('shows data table when RFIs are loaded', () => {
@@ -240,22 +246,18 @@ describe('RFIs page', () => {
     expect(screen.getByRole('tab', { name: /^Closed/i })).toBeTruthy()
   })
 
-  it('switches to Kanban view when button is pressed', async () => {
-    rfisState.data = { data: [sampleRfi] }
-    render(wrap(<RFIs />))
-    const kanbanBtn = screen.getByRole('button', { name: /kanban/i })
-    fireEvent.click(kanbanBtn)
-    await waitFor(() => {
-      expect(screen.getByTestId('rfi-kanban')).toBeTruthy()
-    })
-  })
+  // The Kanban view was removed from the RFIs page — the dense sortable
+  // table is the canonical view now. Three tests that exercised the
+  // kanban toggle / drag-and-drop were retired with the feature.
 
   // ── Create RFI ────────────────────────────────────────────
 
   it('opens create modal when New RFI is clicked', () => {
     rfisState.data = { data: [sampleRfi] }
     render(wrap(<RFIs />))
-    const newBtn = screen.getByRole('button', { name: /create new request for information/i })
+    // The "New RFI" button has aria-label="Create new RFI" and a stable
+    // data-testid — prefer the test-id for resilience.
+    const newBtn = screen.getByTestId('create-rfi-button')
     fireEvent.click(newBtn)
     expect(screen.getByTestId('create-rfi-modal')).toBeTruthy()
   })
@@ -263,7 +265,7 @@ describe('RFIs page', () => {
   it('calls createRFI mutation when modal is submitted', async () => {
     rfisState.data = { data: [sampleRfi] }
     render(wrap(<RFIs />))
-    fireEvent.click(screen.getByRole('button', { name: /create new request for information/i }))
+    fireEvent.click(screen.getByTestId('create-rfi-button'))
     fireEvent.click(screen.getByRole('button', { name: /^Submit$/i }))
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
@@ -274,50 +276,14 @@ describe('RFIs page', () => {
 
   // ── Empty state CTA ───────────────────────────────────────
 
-  it('opens create modal from empty state CTA', () => {
+  it('opens create modal from empty state via the header New RFI button', () => {
+    // The empty state shows guidance copy; the action affordance is
+    // the persistent "+ New RFI" button in the header (data-testid:
+    // create-rfi-button), not a separate "Create first RFI" button.
     rfisState.data = { data: [] }
     render(wrap(<RFIs />))
-    fireEvent.click(screen.getByRole('button', { name: /create first rfi/i }))
+    fireEvent.click(screen.getByTestId('create-rfi-button'))
     expect(screen.getByTestId('create-rfi-modal')).toBeTruthy()
-  })
-
-  // ── Kanban drag-and-drop ──────────────────────────────────
-
-  it('wires kanban onMoveItem to call updateRFI mutation with new status', async () => {
-    capturedOnMoveItem = undefined
-    rfisState.data = { data: [sampleRfi] }
-    render(wrap(<RFIs />))
-
-    // Switch to kanban view so KanbanBoard renders and captures onMoveItem
-    fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
-    await waitFor(() => {
-      expect(screen.getByTestId('rfi-kanban')).toBeTruthy()
-      expect(capturedOnMoveItem).toBeDefined()
-    })
-
-    // Simulate dragging rfi-1 from 'open' to 'answered'
-    await act(async () => {
-      capturedOnMoveItem!('rfi-1', 'open', 'answered')
-    })
-
-    await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'rfi-1',
-          updates: expect.objectContaining({ status: 'answered' }),
-          projectId: 'test-project-id',
-        }),
-      )
-    })
-  })
-
-  it('passes onMoveItem to kanban board (drag-and-drop is not a no-op)', async () => {
-    rfisState.data = { data: [sampleRfi] }
-    capturedOnMoveItem = undefined
-    render(wrap(<RFIs />))
-    fireEvent.click(screen.getByRole('button', { name: /kanban/i }))
-    await waitFor(() => expect(capturedOnMoveItem).toBeDefined())
-    expect(typeof capturedOnMoveItem).toBe('function')
   })
 })
 

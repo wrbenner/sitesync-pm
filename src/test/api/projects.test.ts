@@ -226,10 +226,22 @@ describe('assertProjectAccess', () => {
     await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
-  it('throws 403 when no active organization context', async () => {
+  it('defers to RLS when no active organization context and membership exists', async () => {
+    // Behavior change (src/api/middleware/projectScope.ts:188-196): when
+    // membership is proven but the organization context hasn't hydrated
+    // yet (and all four hydration paths come up empty), the gate now
+    // *defers* rather than rejecting. The rationale is that this only
+    // happens during a transient client-state race; RLS still enforces
+    // org isolation at the database layer for every downstream query.
+    // The previous "throws 403" behavior was incorrectly punishing
+    // legitimate users on first load before OrganizationProvider resolved.
     mockOrgGetState.mockReturnValue({ currentOrg: null })
-    mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    mockMaybySingle
+      // 1st call: membership lookup → found
+      .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+      // hydration paths all return null → activeOrg stays null → defer
+      .mockResolvedValue({ data: null, error: null })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('throws 403 when user is not a project member', async () => {

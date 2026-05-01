@@ -129,7 +129,7 @@ Return a JSON array of conflicts:
 
 Only include genuine conflicts where timeline or dependency issues exist. Empty array if no conflicts found.`
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages/create', {
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': anthropicApiKey,
@@ -137,7 +137,7 @@ Only include genuine conflicts where timeline or dependency issues exist. Empty 
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-4-6-20250930',
         max_tokens: 2048,
         messages: [
           {

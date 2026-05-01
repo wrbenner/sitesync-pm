@@ -624,7 +624,11 @@ function AppContent() {
           // CSS Grid is the layout's single source of truth: the sidebar
           // lives in the first track sized by --sidebar-w, the main column
           // takes the rest. Sidebar width and main offset cannot desync
-          // because they are literally the same grid track.
+          // because they are literally the same grid track. Both children
+          // explicitly pin themselves to their column so adding any future
+          // sibling (overlays, providers, dev banners) cannot perturb the
+          // auto-flow and push <main> into column 1 — that exact bug
+          // collapsed the entire viewport when the sidebar was hidden.
           display: 'grid',
           gridTemplateColumns: `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
           height: '100vh',
@@ -636,7 +640,11 @@ function AppContent() {
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        {!sidebarCollapsed && <Sidebar activeView={activeView} onNavigate={handleNavigate} />}
+        {!sidebarCollapsed && (
+          <div style={{ gridColumn: '1 / 2', minWidth: 0, overflow: 'hidden' }}>
+            <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+          </div>
+        )}
 
         <main
           id="main-content"
@@ -644,6 +652,11 @@ function AppContent() {
           aria-label="Page content"
           tabIndex={-1}
           style={{
+            // Always live in column 2 regardless of which siblings are
+            // mounted. Without this, when <Sidebar> is unmounted on
+            // collapse, <main> auto-flows into column 1 (which is 0px
+            // wide while collapsed) and the viewport goes blank.
+            gridColumn: '2 / 3',
             display: 'flex',
             flexDirection: 'column',
             minWidth: 0,

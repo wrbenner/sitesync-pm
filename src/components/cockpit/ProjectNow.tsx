@@ -116,6 +116,87 @@ function SectionDivider({ label }: { label: string }) {
   )
 }
 
+// ── PhotoThumb ─────────────────────────────────────────────────────────────
+// 64×64 dignified thumbnail. Real <img> element so we can detect load failure
+// and fall back to a labeled placeholder instead of leaving a broken tile.
+// Subtle warm shadow + hairline ring; orange ring + 1.5px lift on hover.
+
+function PhotoThumb({
+  src,
+  alt,
+  onClick,
+}: {
+  src: string | null
+  alt: string
+  onClick: () => void
+}) {
+  const [errored, setErrored] = React.useState(false)
+  const showImage = !!src && !errored
+  return (
+    <button
+      onClick={onClick}
+      type="button"
+      aria-label={alt}
+      title={alt}
+      style={{
+        width: 64,
+        height: 64,
+        borderRadius: 8,
+        border: `1px solid ${colors.borderSubtle}`,
+        background: colors.surfaceInset,
+        cursor: 'pointer',
+        padding: 0,
+        flexShrink: 0,
+        overflow: 'hidden',
+        position: 'relative',
+        boxShadow: '0 1px 2px rgba(26, 22, 19, 0.06), 0 0 0 1px rgba(26, 22, 19, 0.04)',
+        transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-1.5px)'
+        e.currentTarget.style.boxShadow =
+          '0 4px 12px rgba(26, 22, 19, 0.10), 0 0 0 1px rgba(244, 120, 32, 0.45)'
+        e.currentTarget.style.borderColor = colors.primaryOrange
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow =
+          '0 1px 2px rgba(26, 22, 19, 0.06), 0 0 0 1px rgba(26, 22, 19, 0.04)'
+        e.currentTarget.style.borderColor = colors.borderSubtle
+      }}
+    >
+      {showImage ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={() => setErrored(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      ) : (
+        <span
+          aria-hidden
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            color: colors.ink3,
+          }}
+        >
+          <ImageIcon size={18} strokeWidth={1.5} />
+        </span>
+      )}
+    </button>
+  )
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role, resolveName }) => {
@@ -420,30 +501,20 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role, resolveName
         ) : (
           <div style={{ display: 'flex', gap: spacing[2] }}>
             {photoStrip.map((p) => (
-              <button
+              <PhotoThumb
                 key={p.id}
+                src={p.file_url ?? null}
+                alt={p.content ?? 'Field capture'}
                 onClick={() => navigate('/field-capture')}
-                type="button"
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 6,
-                  border: `1px solid ${colors.borderDefault}`,
-                  background: `url(${p.file_url}) center/cover ${colors.surfaceInset}`,
-                  cursor: 'pointer',
-                  padding: 0,
-                  flexShrink: 0,
-                }}
-                aria-label={p.content ?? 'Field capture'}
               />
             ))}
             <button
               onClick={() => navigate('/field-capture')}
               type="button"
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 6,
+                width: 64,
+                height: 64,
+                borderRadius: 8,
                 border: `1px dashed ${colors.borderDefault}`,
                 background: 'transparent',
                 cursor: 'pointer',
@@ -452,10 +523,20 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role, resolveName
                 justifyContent: 'center',
                 color: colors.ink3,
                 flexShrink: 0,
+                transition: 'border-color 160ms ease, color 160ms ease, transform 160ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = colors.primaryOrange
+                e.currentTarget.style.color = colors.primaryOrange
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = colors.borderDefault
+                e.currentTarget.style.color = colors.ink3
               }}
               aria-label="Open photos"
+              title="See all field photos"
             >
-              <ArrowUpRight size={14} strokeWidth={2} />
+              <ArrowUpRight size={16} strokeWidth={2} />
             </button>
           </div>
         )}

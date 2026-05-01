@@ -67,6 +67,35 @@ const TONE_CRITICAL = '#C93B3B';  // DESIGN-RESET critical / overdue
 const TONE_TRACK = '#2D8A6E';     // DESIGN-RESET on track
 const TONE_INK3 = '#8C857E';
 
+/**
+ * Count approvers still pending AFTER the current ball-in-court.
+ *
+ * Reads the `approval_chain` jsonb (e.g. `["gc_pm", "architect", "engineer"]`)
+ * and the `current_reviewer` text. Returns the number of approvers that
+ * follow the current step. Returns 0 when:
+ *   • approval_chain is missing/empty (single-reviewer flow), or
+ *   • current_reviewer matches the *last* chain step (no one's after them), or
+ *   • current_reviewer can't be matched to a chain step (we don't guess).
+ *
+ * The chain matching is fuzzy — `current_reviewer` is free text, so we
+ * match by substring (case-insensitive) against each chain step. Good
+ * enough for the common labels (`gc_pm`, `architect`, `engineer`); a
+ * cleaner schema would put a chain index on the row.
+ */
+function countRemainingApprovers(sub: Record<string, unknown>): number {
+  const chain = sub.approval_chain;
+  if (!Array.isArray(chain) || chain.length === 0) return 0;
+  const reviewer = (sub.current_reviewer as string | null | undefined) ?? '';
+  if (!reviewer) return 0;
+  const needle = reviewer.toLowerCase();
+  const idx = chain.findIndex((step) => {
+    const s = String(step).toLowerCase();
+    return s === needle || needle.includes(s) || s.includes(needle);
+  });
+  if (idx < 0) return 0;
+  return Math.max(0, chain.length - 1 - idx);
+}
+
 function pickRiskTone(days: number | null, status: string | undefined): { color: string; label: string } | null {
   if (days == null) return null;
   if (status === 'approved' || status === 'approved_as_noted') return null;
@@ -193,12 +222,14 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
         );
       },
     }),
-    // ── Reviewer ──
-    // Prefer current_reviewer when it's a real name; if it's a uuid (legacy
-    // rows) or absent, fall through to assigned_to via the profile map.
-    // Both `current_reviewer` (text) and `assigned_to` (uuid) might be
-    // identifiers — resolve them through useProfileNames so we never render
-    // a raw uuid.
+    // ── Ball-in-Court ──
+    // Submittals have no `ball_in_court` column; the workflow puts the ball
+    // on `current_reviewer` (text or legacy uuid) with `assigned_to` (uuid)
+    // as the next-best fallback. Both are resolved through the profile map
+    // so we never render a raw uuid. The accessor returns just the name
+    // (for sortability); the cell adds a `+N more` chain-tail hint when
+    // there are pending approvers beyond the current one — a multi-reviewer
+    // submittal is the common case, not the edge.
     subColHelper.accessor((row: Record<string, unknown>) => {
       const reviewer = row.current_reviewer as string | null | undefined;
       const assigned = row.assigned_to as string | null | undefined;
@@ -208,24 +239,32 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       return assigned ?? null;
     },
     {
-      id: 'reviewer',
-      header: 'Reviewer',
-      size: 160,
+      id: 'ball_in_court',
+      header: 'Ball-in-Court',
+      size: 180,
       cell: (info) => {
         const val = info.getValue() as string | null;
         if (!val) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>;
+        const sub = info.row.original as Record<string, unknown>;
+        const remaining = countRemainingApprovers(sub);
         return (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusInfo, flexShrink: 0, opacity: 0.7 }} />
-            <span style={{ fontSize: 13, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val}</span>
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: colors.statusInfo, flexShrink: 0, opacity: 0.7 }} />
+              <span style={{ fontSize: 13, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{val}</span>
+            </span>
+            {remaining > 0 && (
+              <span
+                title="Approvers still pending after the current ball-in-court"
+                style={{ fontSize: 11, color: colors.textTertiary, paddingLeft: 11, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+              >
+                +{remaining} more
+              </span>
+            )}
+          </div>
         );
       },
     }),
-    // (Submittals have no `ball_in_court` column — workflow ball-of-yarn lives
-    // on `current_reviewer` + `approval_chain`. The Reviewer column above
-    // surfaces the actual person; a separate Ball-in-Court column would
-    // always render empty.)
     // ── Submitted ──
     subColHelper.accessor((row: Record<string, unknown>) =>
       (row.submitted_date as string | null) ?? (row.created_at as string | null),
