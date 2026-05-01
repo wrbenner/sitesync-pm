@@ -39,6 +39,9 @@ import {
 } from '../../machines/rfiMachine'
 import type { RFI, RFIResponse } from '../../types/database'
 
+type RFIWithExtras = RFI & { from_company?: string; question?: string }
+type RFIResponseWithExtras = RFIResponse & { company?: string }
+
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
@@ -245,7 +248,7 @@ const StatusControl: React.FC<{
 // ─── Response Bubble ──────────────────────────────────────
 
 const ResponseBubble: React.FC<{
-  response: RFIResponse
+  response: RFIResponseWithExtras
   index: number
   isNew?: boolean
   profileMap?: ProfileMap
@@ -279,13 +282,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {response.company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {response.company}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -471,7 +474,7 @@ const WatchButton: React.FC<{
 
 // ─── Metadata Section ────────────────────────────────────
 
-const MetadataSection: React.FC<{ rfi: RFI; assignedName?: string | null }> = ({ rfi, assignedName }) => {
+const MetadataSection: React.FC<{ rfi: RFIWithExtras; assignedName?: string | null }> = ({ rfi, assignedName }) => {
   const [expanded, setExpanded] = useState(false)
   const urgency = getDueDateUrgency(rfi.due_date ?? null)
 
@@ -588,7 +591,7 @@ export function RFIDetail() {
     }
   }, [lastViewedKey])
 
-  const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
+  const rfi = rfiData as (RFIWithExtras & { responses?: RFIResponseWithExtras[] }) | undefined
   const responses = rfi?.responses ?? []
 
   const userIdsToResolve = useMemo(
@@ -801,13 +804,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {rfi.from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {rfi.from_company}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -826,7 +829,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || rfi.question || rfi.title}
             </div>
 
             {/* Metadata pills */}

@@ -38,14 +38,14 @@ export function useCreateLienWaiver() {
       project_id: string
       contractor_name: string
       waiver_state: string
-      amount: number | null
-      through_date: string | null
+      amount: number
+      through_date: string
       status: string
       notes: string | null
     }) => {
       const { data, error } = await supabase
         .from('lien_waivers')
-        .insert(payload as any)
+        .insert(payload)
         .select()
         .single()
       if (error) throw error
