@@ -23,9 +23,9 @@ export function useTimeEntries(projectId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase.from('time_entries').select('*, workforce_members(name)').eq('project_id', projectId!).order('date', { ascending: false }).limit(100)
       if (error) throw error
-      return (data ?? []).map((d: Record<string, unknown>) => ({
+      return (data ?? []).map((d) => ({
         ...d,
-        worker_name: (d.workforce_members as { name: string } | null)?.name ?? '',
+        worker_name: ((d.workforce_members as { name: string } | null)?.name ?? ''),
       }))
     },
     enabled: !!projectId,
