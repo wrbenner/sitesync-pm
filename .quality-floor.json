@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 12,
-  "_updated": "2026-05-01T00:15:00Z",
+  "_version": 13,
+  "_updated": "2026-04-30T12:00:00Z",
   "_updatedBy": "auto/polish-20260430-0530+extend",
-  "_floor_realignment_note": "v12: eslintErrors 125→120, eslintWarnings 917→864 — dead code + void ternaries + async executor fixed; react-hooks/exhaustive-deps ??[] pattern memoized in RFIs, Budget, Submittals, Daily-log, Preconstruction, Drawings, DashboardCarbon, RFIDetail, useAccessibleStatus (53 fewer warnings total).",
+  "_floor_realignment_note": "v13: eslintWarnings 825→821 — no-explicit-any fixed in SiteIntelligencePage (Leaflet map/layer refs typed via import type * as L); Crews.tsx any→CrewWithDetails; LienWaivers/siteIntelligenceService any→Record<string,unknown>/typed interfaces.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -14,7 +14,7 @@
   },
   "tsErrors": 0,
   "eslintErrors": 120,
-  "eslintWarnings": 825,
+  "eslintWarnings": 821,
   "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,

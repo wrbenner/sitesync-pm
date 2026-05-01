@@ -12,6 +12,7 @@ import { PermissionGate } from '../components/auth/PermissionGate';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useDeleteCrew } from '../hooks/mutations';
+import type { CrewWithDetails } from '../stores/crewStore';
 import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
 import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
 import { useTimesheets } from '../hooks/queries/timesheets';
@@ -169,7 +170,7 @@ export const Crews: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
   const [showAddCrew, setShowAddCrew] = useState(false);
-  const [editingCrew, setEditingCrew] = useState<any | null>(null);
+  const [editingCrew, setEditingCrew] = useState<CrewWithDetails | null>(null);
   const [editCrewForm, setEditCrewForm] = useState({ name: '', trade: '', size: '', lead_name: '', status: 'active' });
 
   const updateCrewMutation = useMutation({
@@ -186,7 +187,7 @@ export const Crews: React.FC = () => {
     onError: (err: Error) => { toast.error(err.message || 'Failed to update crew'); },
   });
 
-  const openEditCrew = (crew: any) => {
+  const openEditCrew = (crew: CrewWithDetails) => {
     setEditCrewForm({
       name: crew.name ?? '',
       trade: crew.trade ?? '',
