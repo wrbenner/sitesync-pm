@@ -233,7 +233,11 @@ describe('assertProjectAccess', () => {
   })
 
   it('throws 403 when user is not a project member', async () => {
-    mockMaybySingle.mockResolvedValueOnce({ data: null, error: null })
+    // assertProjectAccess: 1st maybeSingle → membership miss
+    // self-heal path: 2nd maybeSingle → owner lookup, also miss → throws 403
+    mockMaybySingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
     await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
   })
 

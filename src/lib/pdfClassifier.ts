@@ -36,6 +36,8 @@ const SPEC_PATTERNS = [
   /\bspec(s)?\s+sheet\b/,
   /^specs?\b/,
   /\bspecs?\b.*\b(index|list|pages?)\b/,
+  // CSI MasterFormat 6-digit section numbers: 017900-Demonstration…, 033000-Cast-in-Place…
+  /^\d{6}\b/,
 ];
 
 const COVER_PATTERNS = [
@@ -54,11 +56,191 @@ const COVER_PATTERNS = [
   /\b[gt]\s*[-\s]?\s*0*0*0\b/,
 ];
 
-export function classifyPdfByFilename(name: string): PdfRoute {
+/**
+ * Classify a PDF as drawing / spec / cover.
+ *
+ * Pass `fullPath` (e.g. zip-internal path like
+ * "26-0421 Procore Current/Specifications/03-Concrete/033000-Cast-in-Place.pdf")
+ * when available — a `/Specifications/` folder is a strong spec signal that
+ * works even when filenames are CSI numbers without the word "spec".
+ */
+export function classifyPdfByFilename(name: string, fullPath?: string): PdfRoute {
+  if (fullPath && /\/specifications?\//i.test(fullPath)) return 'spec';
   const n = normalizeFilename(name);
   if (SPEC_PATTERNS.some((r) => r.test(n))) return 'spec';
   if (COVER_PATTERNS.some((r) => r.test(n))) return 'cover';
   return 'drawing';
+}
+
+// ─── Discipline inference ──────────────────────────────────────────────
+// Was duplicated in src/pages/drawings/index.tsx and src/test/pdfClassifier.test.ts.
+// One source of truth now.
+
+export type Discipline =
+  | 'cover' | 'hazmat' | 'demolition' | 'survey' | 'geotechnical'
+  | 'civil' | 'landscape' | 'structural' | 'architectural' | 'interior'
+  | 'fire_protection' | 'plumbing' | 'mechanical' | 'electrical'
+  | 'telecommunications' | 'food_service' | 'laundry' | 'vertical_transportation';
+
+export function inferDisciplineFromFilename(name: string): Discipline | null {
+  const normalized = name
+    .toLowerCase()
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_\-/\\.]+/g, ' ')
+    .replace(/\s+/g, ' ');
+
+  // Ordering matters: more specific patterns first so "cover sheet" doesn't
+  // get swallowed by another partial match, and compound terms like
+  // "fire protection" are checked before anything shorter might win.
+  const wordPatterns: Array<{ re: RegExp; discipline: Discipline }> = [
+    // Meta / pre-construction
+    { re: /\b(covers?|title\s*sheet|cover\s*sheets?|project\s*data|code\s*(summary|analysis)|general\s*(notes|info))\b/, discipline: 'cover' },
+    { re: /\b(hazmat|hazardous\s*materials?|asbestos|lead\s*paint|environmental|swppp|erosion\s*control)\b/, discipline: 'hazmat' },
+    { re: /\b(demo(lition)?|existing\s*conditions)\b/, discipline: 'demolition' },
+    { re: /\b(survey|topo(graphic)?|alta)\b/, discipline: 'survey' },
+    { re: /\b(geotechnical|geotech|soils?\s*report)\b/, discipline: 'geotechnical' },
+    // Site + envelope
+    { re: /\b(civil)\b/, discipline: 'civil' },
+    { re: /\b(landscape)\b/, discipline: 'landscape' },
+    // Building — `structure` needs its own alternation because \bstruct\b
+    // doesn't match the substring inside "structure" (no word boundary
+    // between the t and the u).
+    { re: /\b(structural|structure|struct)\b/, discipline: 'structural' },
+    { re: /\b(architectural|architecture|arch)\b/, discipline: 'architectural' },
+    { re: /\b(interior(\s+design)?)\b/, discipline: 'interior' },
+    { re: /\b(id)\b/, discipline: 'interior' },
+    // Systems (order matters: FP before electrical/plumbing so "fire alarm" is caught correctly)
+    { re: /\b(fire\s*protection|fire\s*alarm|fp)\b/, discipline: 'fire_protection' },
+    { re: /\b(plumbing|plumb)\b/, discipline: 'plumbing' },
+    { re: /\b(mechanical|mech|hvac)\b/, discipline: 'mechanical' },
+    { re: /\b(electrical|elec)\b/, discipline: 'electrical' },
+    { re: /\b(telecommunications?|telecom|low\s*voltage|lv|technology|tele\b)\b/, discipline: 'telecommunications' },
+    // Special trades (FF&E + conveyance)
+    { re: /\b(food\s*service|kitchen\s*equipment|cafeteria)\b/, discipline: 'food_service' },
+    { re: /\blaundry\b/, discipline: 'laundry' },
+    { re: /\b(vertical\s*transportation|elevators?|escalators?|conveyance)\b/, discipline: 'vertical_transportation' },
+  ];
+  for (const { re, discipline } of wordPatterns) {
+    if (re.test(normalized)) return discipline;
+  }
+
+  // Pass 2: sheet-prefix fallback per AIA US National CAD Standard.
+  // We omit `D` (ambiguous: Process/Demolition) — demolition must come from
+  // a word match, not a single-letter prefix.
+  const prefixMap: Record<string, Discipline> = {
+    G: 'cover', H: 'hazmat', V: 'survey', B: 'geotechnical',
+    C: 'civil', L: 'landscape', S: 'structural', A: 'architectural',
+    I: 'interior', Q: 'interior', F: 'fire_protection', P: 'plumbing',
+    M: 'mechanical', E: 'electrical', T: 'telecommunications',
+  };
+  const m = name.match(/^([A-Z]{1,2})-?\d/i);
+  if (m) {
+    const prefix = m[1].toUpperCase();
+    if (prefix === 'CS') return 'cover';
+    if (prefix === 'ID') return 'interior';
+    if (prefix === 'PF') return 'plumbing';
+    if (prefix === 'FA') return 'fire_protection';
+    if (prefix === 'LV') return 'telecommunications';
+    if (prefix === 'FS') return 'food_service';
+    if (prefix === 'VT') return 'vertical_transportation';
+    return prefixMap[prefix[0]] ?? null;
+  }
+  return null;
+}
+
+// ─── Revision + scale extractors (used everywhere — filename + cover + viewer) ─
+
+/**
+ * Pull a revision label out of a filename. Was duplicated across the
+ * drawings page upload flow and the test fixtures; one source of truth now.
+ *
+ * Matches `Rev 5`, `Revision 1.0`, `R12`, `_Rev_03`. Strips leading zeros so
+ * "05" comes back as "5". Returns null when the filename has no revision
+ * marker — caller decides the default ('1' in the upload flow).
+ */
+export function extractRevisionFromFilename(name: string): string | null {
+  const normalized = name.replace(/_+/g, ' ');
+  const m = normalized.match(/\b(?:rev(?:ision)?|r)[\s-]?(\d{1,3}(?:\.\d{1,2})?)\b/i);
+  if (!m) return null;
+  return m[1].replace(/^0+(?=\d)/, '');
+}
+
+/**
+ * Pull a revision label out of extracted page text. Only labeled
+ * revisions count (`REV: 5`, `REVISION 1.0`, `ISSUE B`) — bare `R5` is too
+ * ambiguous and would false-fire on radius callouts and shape grid labels.
+ */
+export function extractRevisionFromText(text: string): string | null {
+  // Two traps to avoid:
+  //   1. "REVIEW" — `rev` matches, captures "IEW". Fixed by \b after the
+  //      keyword so the label must be a complete word.
+  //   2. "REVISIONS NO. DATE…" — the "REVISIONS" title-block header is
+  //      followed by column labels ("NO", "DATE", "DESC"). Multi-letter
+  //      capture matches "NO" and we report it as the revision.
+  // Tightened capture: real construction revisions are a digit (with
+  // optional decimal like "1.0") OR a single letter (A/B/C…). Rejects
+  // any 2-3 letter all-caps word ("NO", "REX", "BTU", "PT", "IEW").
+  const m = text.match(
+    /\b(?:rev(?:ision)?|issue)\b\.?\s*[:=]?\s*(\d{1,2}(?:\.\d{1,2})?|[A-Z])\b/i,
+  );
+  if (!m) return null;
+  const raw = m[1].trim();
+  if (/^\d/.test(raw)) return raw.replace(/^0+(?=\d)/, '');
+  return raw.toUpperCase();
+}
+
+export interface ScaleExtraction {
+  /** Verbatim string from the page, e.g. `1/4" = 1'-0"` or `NTS`. */
+  text: string;
+  /** Real-world inches per drawing inch, when computable. NTS / "as noted" → null. */
+  ratio: number | null;
+}
+
+/**
+ * Find the drawing scale on a sheet's text. Recognizes:
+ *   - Imperial:   `1/4" = 1'-0"`, `3/16" = 1'-0"`, `1" = 20'`
+ *   - Metric:     `1:100`, `1:50`
+ *   - Sentinels:  `NTS`, `Not to Scale`, `As Noted`, `As Shown`
+ *
+ * Mirrors the parser in supabase/functions/generate-revision-diff for
+ * imperial → ratio conversion so what the tester reports matches what the
+ * revision-diff edge function will compute.
+ */
+export function extractScaleText(text: string): ScaleExtraction | null {
+  const normalized = text.replace(/’/g, "'");
+
+  // 1. Sentinels — NTS / not to scale / as noted
+  const sentinel = normalized.match(/\b(NTS|not\s+to\s+scale|as\s+noted|as\s+shown)\b/i);
+  if (sentinel) return { text: sentinel[0], ratio: null };
+
+  // 2. Imperial: `1/4" = 1'-0"` (most common construction scale notation)
+  const imperial = normalized.match(/([\d\s/]+)"\s*=\s*(\d+)'\s*-?\s*(\d*)"?/);
+  if (imperial) {
+    const drawingRaw = imperial[1].trim();
+    let drawingVal: number;
+    if (drawingRaw.includes('/')) {
+      const [num, den] = drawingRaw.split('/').map((s) => parseFloat(s));
+      drawingVal = den === 0 || !Number.isFinite(num) || !Number.isFinite(den) ? NaN : num / den;
+    } else {
+      drawingVal = parseFloat(drawingRaw);
+    }
+    const realFeet = parseFloat(imperial[2]);
+    const realInches = parseFloat(imperial[3] || '0');
+    let ratio: number | null = null;
+    if (Number.isFinite(drawingVal) && drawingVal > 0 && Number.isFinite(realFeet)) {
+      ratio = (realFeet * 12 + (Number.isFinite(realInches) ? realInches : 0)) / drawingVal;
+    }
+    return { text: imperial[0].trim(), ratio };
+  }
+
+  // 3. Metric: `1:100`, `1:50`. Avoid matching times ("9:30") by requiring
+  // the first number to be small (1-10) — construction scales are 1:N.
+  const metric = normalized.match(/\b(1)\s*:\s*(\d{2,4})\b/);
+  if (metric) {
+    return { text: metric[0], ratio: parseFloat(metric[2]) };
+  }
+
+  return null;
 }
 
 // ─── Cover / project-data text parsing ──────────────────────────────────────

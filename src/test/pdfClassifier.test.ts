@@ -1,19 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
   classifyPdfByFilename,
+  inferDisciplineFromFilename,
+  extractRevisionFromFilename,
+  extractRevisionFromText,
+  extractScaleText,
   parseCoverMetadata,
   looksLikeCoverText,
   mergeCoverMetadata,
 } from '../lib/pdfClassifier';
 
-// Duplicates of the inline helpers inside src/pages/drawings/index.tsx.
-// Keep in sync until these move to a shared util.
-function extractRevisionFromFilename(name: string): string | null {
-  const normalized = name.replace(/_+/g, ' ');
-  const m = normalized.match(/\b(?:rev(?:ision)?|r)[\s-]?(\d{1,3}(?:\.\d{1,2})?)\b/i);
-  if (!m) return null;
-  return m[1].replace(/^0+(?=\d)/, '');
-}
+// cleanFilenameTitle still lives in src/pages/drawings/index.tsx and isn't
+// exported. If it ever moves to a shared util, swap to a direct import.
 function cleanFilenameTitle(name: string): string {
   let s = name
     .replace(/\.[^.]+$/, '')
@@ -31,54 +29,60 @@ function cleanFilenameTitle(name: string): string {
   return s;
 }
 
-// Import the inferrer indirectly by duplicating the function logic for testing,
-// since it lives inside the drawings page module. If it's exported later,
-// switch to a direct import.
-function inferDisciplineFromFilename(name: string): string | null {
-  const normalized = name
-    .toLowerCase()
-    .replace(/\.[^.]+$/, '')
-    .replace(/[_\-/\\.]+/g, ' ')
-    .replace(/\s+/g, ' ');
-  const wordPatterns: Array<{ re: RegExp; discipline: string }> = [
-    { re: /\b(covers?|title\s*sheet|cover\s*sheets?|project\s*data|code\s*(summary|analysis)|general\s*(notes|info))\b/, discipline: 'cover' },
-    { re: /\b(hazmat|hazardous\s*materials?|asbestos|lead\s*paint|environmental|swppp|erosion\s*control)\b/, discipline: 'hazmat' },
-    { re: /\b(demo(lition)?|existing\s*conditions)\b/, discipline: 'demolition' },
-    { re: /\b(survey|topo(graphic)?|alta)\b/, discipline: 'survey' },
-    { re: /\b(geotechnical|geotech|soils?\s*report)\b/, discipline: 'geotechnical' },
-    { re: /\b(civil)\b/, discipline: 'civil' },
-    { re: /\b(landscape)\b/, discipline: 'landscape' },
-    { re: /\b(structural|struct)\b/, discipline: 'structural' },
-    { re: /\b(architectural|architecture|arch)\b/, discipline: 'architectural' },
-    { re: /\b(interior(\s+design)?)\b/, discipline: 'interior' },
-    { re: /\b(id)\b/, discipline: 'interior' },
-    { re: /\b(fire\s*protection|fire\s*alarm|fp)\b/, discipline: 'fire_protection' },
-    { re: /\b(plumbing|plumb)\b/, discipline: 'plumbing' },
-    { re: /\b(mechanical|mech|hvac)\b/, discipline: 'mechanical' },
-    { re: /\b(electrical|elec)\b/, discipline: 'electrical' },
-    { re: /\b(telecommunications?|telecom|low\s*voltage|lv|tele\b)\b/, discipline: 'telecommunications' },
-  ];
-  for (const { re, discipline } of wordPatterns) {
-    if (re.test(normalized)) return discipline;
-  }
-  const prefixMap: Record<string, string> = {
-    G: 'cover', H: 'hazmat', V: 'survey', B: 'geotechnical',
-    C: 'civil', L: 'landscape', S: 'structural', A: 'architectural',
-    I: 'interior', Q: 'interior', F: 'fire_protection', P: 'plumbing',
-    M: 'mechanical', E: 'electrical', T: 'telecommunications',
-  };
-  const m = name.match(/^([A-Z]{1,2})-?\d/i);
-  if (m) {
-    const prefix = m[1].toUpperCase();
-    if (prefix === 'CS') return 'cover';
-    if (prefix === 'ID') return 'interior';
-    if (prefix === 'PF') return 'plumbing';
-    if (prefix === 'FA') return 'fire_protection';
-    if (prefix === 'LV') return 'telecommunications';
-    return prefixMap[prefix[0]] ?? null;
-  }
-  return null;
-}
+// Procore Current set — numbered, space-separated filenames where the
+// discipline is the only signal. If any of these regress, every Procore-
+// style export will land in the wrong bucket.
+describe('inferDisciplineFromFilename — Procore Current set (26-0421)', () => {
+  it.each([
+    ['01 Civil.pdf', 'civil'],
+    ['02 Landscape.pdf', 'landscape'],
+    ['03 Architecture.pdf', 'architectural'],
+    ['04 Interior Design.pdf', 'interior'],
+    ['05 Structure.pdf', 'structural'],
+    ['06 Mechanical.pdf', 'mechanical'],
+    ['07 Electrical.pdf', 'electrical'],
+    ['08 Fire Alarm.pdf', 'fire_protection'],
+    ['09 Fire Protection.pdf', 'fire_protection'],
+    ['09 Plumbing.pdf', 'plumbing'],
+    ['11 Food Service.pdf', 'food_service'],
+    ['12 Laundry.pdf', 'laundry'],
+    ['13 Vertical Transportation.pdf', 'vertical_transportation'],
+    ['14 Technology.pdf', 'telecommunications'],
+  ])('%s → %s', (filename, expected) => {
+    expect(inferDisciplineFromFilename(filename)).toBe(expected);
+  });
+});
+
+describe('classifyPdfByFilename — Procore Current spec routing', () => {
+  it('routes CSI 6-digit filenames as spec', () => {
+    expect(classifyPdfByFilename('017900-Demonstration-and-Training_Rev_2.pdf')).toBe('spec');
+    expect(classifyPdfByFilename('033000-Cast-in-Place-Concrete_Rev_3.pdf')).toBe('spec');
+    expect(classifyPdfByFilename('260100-Electrical-General-Provisions_Rev_2.pdf')).toBe('spec');
+  });
+
+  it('routes anything inside /Specifications/ as spec, regardless of filename', () => {
+    expect(
+      classifyPdfByFilename(
+        'Random.pdf',
+        '26-0421 Procore Current/Specifications/03-Concrete/Random.pdf',
+      ),
+    ).toBe('spec');
+    // Even a name that would normally route as 'cover' becomes 'spec' when
+    // it's in the Specifications/ folder — that's the user's filing intent.
+    expect(
+      classifyPdfByFilename(
+        '003100-Available-Project-Information_Rev_2.pdf',
+        '26-0421 Procore Current/Specifications/00-Procurement-and-Contracting-Requirements/003100-Available-Project-Information_Rev_2.pdf',
+      ),
+    ).toBe('spec');
+  });
+
+  it('drawings outside /Specifications/ stay as drawing', () => {
+    expect(
+      classifyPdfByFilename('06 Mechanical.pdf', '26-0421 Procore Current/06 Mechanical.pdf'),
+    ).toBe('drawing');
+  });
+});
 
 describe('inferDisciplineFromFilename — word match wins over prefix match', () => {
   it.each([
@@ -255,6 +259,52 @@ describe('cleanFilenameTitle', () => {
     ['First Floor Plan.pdf', 'First Floor Plan'],
   ])('%s → %s', (name, expected) => {
     expect(cleanFilenameTitle(name)).toBe(expected);
+  });
+});
+
+describe('extractRevisionFromText', () => {
+  it.each([
+    ['Title block notes\nREV: 5\nMore', '5'],
+    ['REVISION 1.0', '1.0'],
+    ['Issue: B', 'B'],
+    ['Rev. 03', '3'],
+    ['No revision marker here', null],
+    // Real-world false positives from the Procore Current set:
+    //  • REV→"IEW" inside "REVIEW"
+    //  • REVISIONS→"NO" inside "REVISIONS  NO.  DATE  DESCRIPTION" (column header)
+    //  • NEX matched as a 3-letter capture from "NEXUS"
+    //  • PT, BTU as 2-3 letter captures
+    ['NOT FOR REVIEW', null],
+    ['ISSUED FOR REVIEW', null],
+    ['REVISIONS  NO.   DATE   DESCRIPTION', null],
+    ['REVISIONS\n(no entries)', null],
+    ['NEXUS DEVELOPMENT', null],
+    ['Revision PT', null],
+    ['Issue BTU rating', null],
+  ])('%s → %s', (text, expected) => {
+    expect(extractRevisionFromText(text)).toBe(expected);
+  });
+});
+
+describe('extractScaleText', () => {
+  it.each([
+    ['Architect: Acme\nSCALE: 1/4" = 1\'-0"\n', '1/4" = 1\'-0"', 48],
+    ['scale 1/8" = 1\'-0"', '1/8" = 1\'-0"', 96],
+    ['SCALE: 1" = 20\'', '1" = 20\'', 240],
+    ['scale 1:100', '1:100', 100],
+    ['NTS', 'NTS', null],
+    ['NOT TO SCALE', 'NOT TO SCALE', null],
+    ['SCALE: AS NOTED', 'AS NOTED', null],
+    ['No scale marker.', null, null],
+  ])('%s → text="%s" ratio=%s', (input, expectedText, expectedRatio) => {
+    const got = extractScaleText(input);
+    if (expectedText === null) {
+      expect(got).toBeNull();
+    } else {
+      expect(got).not.toBeNull();
+      expect(got!.text.toLowerCase()).toContain(expectedText.toLowerCase());
+      expect(got!.ratio).toBe(expectedRatio);
+    }
   });
 });
 

@@ -66,6 +66,12 @@ interface OwnerUpdateGeneratorProps {
    * toast — sufficient for the demo path.
    */
   onSend?: (body: string) => Promise<void> | void
+  /**
+   * Optional secondary action rendered below the Generate Update CTA.
+   * Tab S mounts <OwnerLinkButton> here so the magic-link share lives
+   * on the same card as the draft generator without restructuring.
+   */
+  secondaryAction?: React.ReactNode
 }
 
 /**
@@ -80,6 +86,7 @@ interface OwnerUpdateGeneratorProps {
 export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
   context,
   onSend,
+  secondaryAction,
 }) => {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -167,8 +174,8 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: spacing['4'],
+          flexDirection: 'column',
+          gap: spacing['1'],
           padding: spacing['5'],
           borderRadius: borderRadius.lg,
           border: `1px solid ${IRIS_INDIGO}25`,
@@ -176,69 +183,76 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
           marginBottom: spacing['5'],
         }}
       >
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: borderRadius.md,
-            backgroundColor: IRIS_INDIGO,
-            color: colors.white,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-          aria-hidden
-        >
-          <Sparkles size={20} strokeWidth={2.25} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['4'] }}>
           <div
             style={{
+              width: 44,
+              height: 44,
+              borderRadius: borderRadius.md,
+              backgroundColor: IRIS_INDIGO,
+              color: colors.white,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+            aria-hidden
+          >
+            <Sparkles size={20} strokeWidth={2.25} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: typography.fontSize.body,
+                fontWeight: typography.fontWeight.semibold,
+                color: colors.textPrimary,
+                fontFamily: typography.fontFamily,
+                marginBottom: 2,
+              }}
+            >
+              Owner Update
+            </div>
+            <div
+              style={{
+                fontSize: typography.fontSize.sm,
+                color: colors.textSecondary,
+                fontFamily: typography.fontFamily,
+                lineHeight: 1.5,
+              }}
+            >
+              Iris can prepare an owner update from the last {periodDays} days of project activity.
+              You'll review before sending.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={loading}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: spacing['2'],
+              padding: `${spacing['2']} ${spacing['4']}`,
+              backgroundColor: loading ? IRIS_INDIGO_HOVER : IRIS_INDIGO,
+              color: colors.white,
+              border: 'none',
+              borderRadius: borderRadius.md,
               fontSize: typography.fontSize.body,
               fontWeight: typography.fontWeight.semibold,
-              color: colors.textPrimary,
               fontFamily: typography.fontFamily,
-              marginBottom: 2,
+              cursor: loading ? 'wait' : 'pointer',
+              flexShrink: 0,
             }}
           >
-            Owner Update
-          </div>
-          <div
-            style={{
-              fontSize: typography.fontSize.sm,
-              color: colors.textSecondary,
-              fontFamily: typography.fontFamily,
-              lineHeight: 1.5,
-            }}
-          >
-            Iris can prepare an owner update from the last {periodDays} days of project activity.
-            You'll review before sending.
-          </div>
+            {loading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={14} />}
+            {loading ? 'Drafting…' : 'Generate Update'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={loading}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: spacing['2'],
-            padding: `${spacing['2']} ${spacing['4']}`,
-            backgroundColor: loading ? IRIS_INDIGO_HOVER : IRIS_INDIGO,
-            color: colors.white,
-            border: 'none',
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.body,
-            fontWeight: typography.fontWeight.semibold,
-            fontFamily: typography.fontFamily,
-            cursor: loading ? 'wait' : 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          {loading ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={14} />}
-          {loading ? 'Drafting…' : 'Generate Update'}
-        </button>
+        {secondaryAction && (
+          <div style={{ paddingLeft: 60 /* align under the description, not the icon */ }}>
+            {secondaryAction}
+          </div>
+        )}
       </div>
 
       {/* ── Preview modal ──────────────────────────────────────────────── */}

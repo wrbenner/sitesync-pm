@@ -720,9 +720,11 @@ export default function AIAssistant() {
                 I see everything happening on {projectName}. Budgets, schedules, safety, subs, documents — just ask.
               </p>
 
-              {/* Suggested prompts grid */}
+              {/* Suggested prompts grid — wider min so iPad portrait
+                  resolves to 2 cols (more breathing room) instead of 3
+                  cols squished. */}
               <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: spacing[3], width: '100%',
               }}>
                 {SUGGESTED_PROMPTS.map((item, i) => (
@@ -750,12 +752,21 @@ export default function AIAssistant() {
                     }}
                   >
                     <item.icon size={18} style={{ color: blue[500], flexShrink: 0, marginTop: '1px' }} />
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: gray[800], marginBottom: '2px' }}>
                         {item.label}
                       </div>
-                      <div style={{ fontSize: '12px', color: gray[500], lineHeight: 1.4 }}>
-                        {item.prompt.slice(0, 60)}…
+                      {/* Two-line clamp — prior `slice(0, 60)…` cut copy
+                          mid-sentence even when the card had room. Lets
+                          the card breathe to its natural height. */}
+                      <div style={{
+                        fontSize: '12px', color: gray[500], lineHeight: 1.4,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical' as React.CSSProperties['WebkitBoxOrient'],
+                        overflow: 'hidden',
+                      }}>
+                        {item.prompt}
                       </div>
                     </div>
                   </button>
@@ -768,6 +779,8 @@ export default function AIAssistant() {
               {activeConversation.messages.map((msg) => (
                 <div
                   key={msg.id}
+                  data-message-role={msg.role}
+                  data-streaming={msg.role === 'assistant' && isStreaming && msg.id === activeConversation.messages[activeConversation.messages.length - 1]?.id ? 'true' : undefined}
                   style={{
                     display: 'flex', gap: spacing[3],
                     padding: `${spacing[4]} ${spacing[6]}`,

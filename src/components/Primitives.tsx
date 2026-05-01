@@ -21,7 +21,11 @@ export const SidebarContext = createContext<SidebarContextType>({
 export const useSidebar = () => useContext(SidebarContext);
 
 // ─── PageContainer ──────────────────────────────────────────────────────────
-// Consistent page wrapper. Replaces the raw <main> with a fixed marginLeft.
+// Consistent page wrapper. Renders the title in the manifesto's voice
+// (Garamond, ink, hairline below) so every page that uses PageContainer
+// inherits the new design language without per-page edits. The Nine pages
+// (Day, Field, Conversation, etc.) opt out of this header by not passing
+// `title` and composing the atoms directly — see src/pages/day/index.tsx.
 
 interface PageContainerProps {
   title?: string;
@@ -49,68 +53,102 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
           maxWidth: layout.pageMaxWidth,
           margin: '0 auto',
           padding: `${layout.pagePaddingY} ${layout.pagePaddingX}`,
+          // PageContainer is its own scroll context (overflow: auto above).
+          // On mobile, the outer MobileLayout's paddingBottom doesn't reach
+          // here, so we add our own bottom clearance for the fixed bottom
+          // tab bar (~68px) + Iris FAB (~80px above the bar) so the last
+          // card isn't trapped behind chrome.
+          paddingBottom: isMobile
+            ? `calc(${layout.pagePaddingY} + 164px + env(safe-area-inset-bottom, 0px))`
+            : layout.pagePaddingY,
         }}
       >
         {title && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              justifyContent: 'space-between',
-              alignItems: isMobile ? 'stretch' : 'flex-start',
-              gap: isMobile ? spacing.md : 0,
-              marginBottom: spacing['2xl'],
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  fontSize: typography.fontSize.heading,
-                  fontWeight: typography.fontWeight.semibold,
-                  color: colors.textPrimary,
-                  margin: 0,
-                  letterSpacing: typography.letterSpacing.tight,
-                  lineHeight: typography.lineHeight.tight,
-                }}
-              >
-                {title}
-              </h1>
-              {subtitle && (
-                <p
+          <>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'stretch' : 'baseline',
+                gap: isMobile ? spacing.md : spacing.lg,
+                marginBottom: spacing.lg,
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <h1
                   style={{
-                    fontSize: typography.fontSize.body,
-                    color: colors.textTertiary,
+                    // Manifesto voice: Garamond, ink, balanced wrap, no
+                    // bold weight. Section heads in the codebase live
+                    // around 32px (level 2 of SectionHeading), so the
+                    // page's primary heading goes one tier above to
+                    // keep the visual hierarchy correct.
+                    fontFamily: typography.fontFamilySerif,
+                    fontSize: isMobile ? '28px' : '36px',
+                    fontWeight: 400,
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    color: colors.textPrimary,
                     margin: 0,
-                    marginTop: spacing['2'],
-                    lineHeight: typography.lineHeight.normal,
-                    letterSpacing: typography.letterSpacing.normal,
+                    textWrap: 'balance' as React.CSSProperties['textWrap'],
                   }}
                 >
-                  {subtitle}
-                </p>
+                  {title}
+                </h1>
+                {subtitle && (
+                  <p
+                    style={{
+                      // Subtitle reads as the eyebrow's prose cousin —
+                      // ink-3 in Inter, a quiet kicker for context.
+                      fontFamily: typography.fontFamily,
+                      fontSize: '14px',
+                      fontWeight: 400,
+                      lineHeight: 1.5,
+                      letterSpacing: '-0.005em',
+                      color: colors.textTertiary,
+                      margin: 0,
+                      marginTop: spacing['2'],
+                    }}
+                  >
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+              {actions && (
+                <div
+                  data-pagecontainer-actions={isMobile ? 'mobile' : ''}
+                  style={{
+                    display: 'flex',
+                    gap: spacing.md,
+                    alignItems: 'center',
+                    // Mobile: never wrap, scroll the row horizontally so
+                    // buttons keep their natural width (the [data-pca]>*
+                    // rule in tokens.css enforces flex-shrink:0). Desktop:
+                    // wrap normally if a page has too many actions.
+                    flexWrap: isMobile ? 'nowrap' : 'wrap',
+                    flexShrink: 0,
+                    overflowX: isMobile ? 'auto' : 'visible',
+                    overflowY: 'visible',
+                    paddingBottom: isMobile ? spacing['1'] : 0,
+                    WebkitOverflowScrolling: 'touch',
+                  }}
+                >
+                  {actions}
+                </div>
               )}
             </div>
-            {actions && (
-              <div
-                style={{
-                  display: 'flex',
-                  gap: spacing.md,
-                  alignItems: 'center',
-                  flexWrap: isMobile ? 'wrap' : 'nowrap',
-                  flexShrink: 0,
-                  // On mobile, let the row scroll horizontally if it
-                  // overflows so action labels stay legible instead of
-                  // squashing the title.
-                  overflowX: isMobile ? 'auto' : 'visible',
-                  overflowY: 'visible',
-                  paddingBottom: isMobile ? spacing['1'] : 0,
-                  WebkitOverflowScrolling: 'touch',
-                }}
-              >
-                {actions}
-              </div>
-            )}
-          </div>
+            {/* Hairline — the only divider the manifesto allows.
+                Sits between the page header and its content,
+                never as a box. */}
+            <hr
+              aria-hidden="true"
+              style={{
+                border: 0,
+                borderTop: '1px solid var(--hairline)',
+                margin: `0 0 ${spacing.xl} 0`,
+              }}
+            />
+          </>
         )}
         {children}
       </div>
@@ -127,9 +165,10 @@ interface CardProps {
   onClick?: () => void;
   'aria-label'?: string;
   role?: string;
+  style?: React.CSSProperties;
 }
 
-export const Card: React.FC<CardProps> = React.memo(({ children, padding = spacing['5'], onClick, 'aria-label': ariaLabel, role }) => (
+export const Card: React.FC<CardProps> = React.memo(({ children, padding = spacing['5'], onClick, 'aria-label': ariaLabel, role, style: extraStyle }) => (
   <div
     onClick={onClick}
     role={role || (onClick ? 'button' : undefined)}
@@ -149,6 +188,7 @@ export const Card: React.FC<CardProps> = React.memo(({ children, padding = spaci
       cursor: onClick ? 'pointer' : 'default',
       transition: motionTokens.cardLift,
       transform: 'translateY(0)',
+      ...extraStyle,
     }}
     onMouseEnter={(e) => {
       if (onClick) {
@@ -446,9 +486,15 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
         }}
       >
         {displayValue}
+        {/* Render `%` inline at the value's font size. A small-text `%`
+            baseline-aligned next to a 4xl digit reads as a superscript glyph
+            floating above the number — fine for "ft" or "lbs", but for a
+            percentage it looks like a font fallback bug. Inline-large `%`
+            reads as a unified KPI ("0%") instead. */}
+        {unit === '%' && <span style={{ marginLeft: '2px' }}>%</span>}
       </p>
-      {unit && (
-        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, fontWeight: typography.fontWeight.medium }}>
+      {unit && unit !== '%' && (
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, fontWeight: typography.fontWeight.medium, lineHeight: typography.lineHeight.none }}>
           {unit}
         </p>
       )}
@@ -470,7 +516,10 @@ export const MetricBox: React.FC<MetricBoxProps> = React.memo(({
           {trendPercent >= 0 ? '+' : ''}{trendPercent.toFixed(1)}%
         </p>
       </div>
-    ) : change !== undefined && changeLabel ? (
+    ) : change !== undefined && changeLabel && (typeof value === 'number' ? value !== 0 : true) ? (
+      // Hide the delta line when the headline value is exactly zero —
+      // "+1% operational" next to "0 active equipment" is incoherent and
+      // shows up across audit captures (Equipment, Workforce, Crews).
       <p
         style={{
           fontSize: typography.fontSize.sm,
@@ -1466,6 +1515,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
+  // While the palette is open, mark the body so docked side panels (the
+  // AI Copilot rail in particular) can dim + ignore input via CSS. Without
+  // this the dim layer covers the page but not the panel, which sits in
+  // its own stacking context — visually the palette and the rail end up
+  // competing.
+  useEffect(() => {
+    if (open) {
+      document.body.setAttribute('data-palette-open', 'true');
+      return () => document.body.removeAttribute('data-palette-open');
+    }
+  }, [open]);
+
   // Build flat list of all visible items
   const recentIds = getRecent();
   const nlMatch = query ? parseNaturalLanguage(query) : null;
@@ -1820,6 +1881,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   // primitive without losing visual polish.
   <div
     role="status"
+    // Reserve room at the bottom so the Iris sparkle FAB (bottom-right
+    // on mobile) doesn't sit directly on the empty-state icon. Pages
+    // wrapped by PageContainer get this clearance from the container,
+    // but EmptyState is also embedded inside Cards / panels that don't
+    // contribute their own padding, so we pad here.
     style={{
       display: 'flex',
       flexDirection: 'column',
@@ -1827,7 +1893,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       justifyContent: 'center',
       maxWidth: '440px',
       margin: '0 auto',
-      padding: '64px 24px',
+      padding: '64px 24px 96px',
       gap: '12px',
       textAlign: 'center',
     }}

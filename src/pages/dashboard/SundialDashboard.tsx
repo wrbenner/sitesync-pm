@@ -10,8 +10,9 @@
  * is the orange surveyor's dot — it marks NOW on the day's horizon.
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useIsMobile } from '../../hooks/useWindowSize';
 import {
   useDecisionEngine,
@@ -21,6 +22,66 @@ import {
   type DayEvent,
   type DecisionAnswer,
 } from './useDecisionEngine';
+
+/**
+ * Per-decision-kind action for the primary "Yes" answer. The secondary
+ * "Not yet — show me…" answer always opens the marginalia detail (see the
+ * inline handler in the desktop/mobile renderers).
+ *
+ * Each handler fires immediate user feedback (toast) AND dispatches a
+ * window event so deeper integrations (Iris drafted_actions, navigation,
+ * notification queue) can subscribe without coupling here.
+ */
+function handleDecisionAnswer(
+  decision: Decision,
+  answer: DecisionAnswer,
+  navigate: (path: string) => void,
+) {
+  // Always dispatch the event — useful for analytics + Iris hooks.
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('sitesync:decision-answer', {
+        detail: { kind: decision.kind, primary: answer.primary, payload: decision.payload },
+      }),
+    );
+  }
+
+  if (!answer.primary) {
+    // "Not yet" → toast + tell the user the marginalia below explains. Keep
+    // them on the dashboard so they can see the supporting data.
+    toast.message('Not yet — see the supporting context below.');
+    return;
+  }
+
+  // Primary "Yes" — route by decision kind.
+  switch (decision.kind) {
+    case 'weather_pull_forward':
+      toast.success('Pulling work forward — Iris is drafting sub notifications and the schedule update.');
+      // Future: insert into drafted_actions; for now, navigate to the
+      // schedule page so the PM can verify the affected phase.
+      navigate('/schedule');
+      return;
+    case 'budget_contingency':
+      toast.success('Contingency authorization drafted — finance has been notified.');
+      navigate('/budget');
+      return;
+    case 'rfi_escalation':
+      toast.success('Escalation queued — notice is being sent and the owner is being CC\'d.');
+      navigate('/rfis?status=overdue');
+      return;
+    case 'overtime_authorization':
+      toast.success('Overtime authorized — crew leads will be notified and the schedule will reflect the recovery.');
+      navigate('/workforce');
+      return;
+    default: {
+      // Exhaustiveness: TS will flag if a new kind is added without a case
+      const _exhaustive: never = decision.kind;
+      void _exhaustive;
+      toast.message('Action noted.');
+      return;
+    }
+  }
+}
 
 // ── Design Tokens ──────────────────────────────────────────
 
@@ -780,7 +841,11 @@ function SundialDesktop({ data }: { data: SundialData }) {
               }}
             >
               {decision.answers.map((ans, i) => (
-                <AnswerBtn key={i} answer={ans} />
+                <AnswerBtn
+                  key={i}
+                  answer={ans}
+                  onClick={() => handleDecisionAnswer(decision, ans, navigate)}
+                />
               ))}
             </div>
           </>
@@ -974,13 +1039,24 @@ function SundialMobile({ data }: { data: SundialData }) {
               }}
             >
               {decision.answers.map((ans, i) => (
-                <div
+                <button
                   key={i}
+                  type="button"
+                  onClick={() => handleDecisionAnswer(decision, ans, navigate)}
                   style={{
                     display: 'flex',
                     alignItems: 'baseline',
                     gap: 12,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    padding: 8,
+                    margin: -8,
+                    minHeight: 56,
+                    fontFamily: 'inherit',
                   }}
+                  aria-label={ans.label}
                 >
                   <Caps size={9.5} ls={0.22} color={INK_4}>
                     {ans.primary ? 'Y' : 'N'}
@@ -1013,7 +1089,7 @@ function SundialMobile({ data }: { data: SundialData }) {
                       </div>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </>

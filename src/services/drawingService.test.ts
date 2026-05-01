@@ -64,8 +64,8 @@ describe('drawingService.loadDrawings', () => {
 });
 
 describe('drawingService.createDrawing', () => {
-  it('creates drawing in draft status with uploaded_by', async () => {
-    const created = { id: 'd-new', status: 'draft', uploaded_by: 'user-1' };
+  it('creates drawing in for_review status with uploaded_by', async () => {
+    const created = { id: 'd-new', status: 'for_review', uploaded_by: 'user-1' };
     const chain = {
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
@@ -79,7 +79,7 @@ describe('drawingService.createDrawing', () => {
     });
     expect(result.error).toBeNull();
     const insertArg = chain.insert.mock.calls[0][0];
-    expect(insertArg.status).toBe('draft');
+    expect(insertArg.status).toBe('for_review');
     expect(insertArg.uploaded_by).toBe('user-1');
   });
 

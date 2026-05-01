@@ -20,6 +20,10 @@ export interface DrawingItem {
   tile_levels?: number;
   /** Tile format (jpeg, png) */
   tile_format?: string;
+  /** Persisted real-inches-per-pixel calibration. Wins over scale_text. */
+  scale_ratio?: number | null;
+  /** Persisted human-readable scale (e.g. "1/4\" = 1'-0\""). */
+  scale_text?: string | null;
 }
 
 export function formatRevDate(dateStr: string | null): string {

@@ -15,17 +15,21 @@ vi.mock('../lib/supabase', () => ({
 import { userService } from './userService'
 
 function makeChain() {
+  // maybeSingle shares mockSingle so a single mockResolvedValue covers both —
+  // userService.loadProfile uses .maybeSingle() (not .single()) so without
+  // this the awaited call resolves to undefined and destructures crash.
   const chain: Record<string, ReturnType<typeof vi.fn>> = {
     select: vi.fn(),
     eq: vi.fn(),
+    in: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     order: vi.fn(),
     single: mockSingle,
-    maybeSingle: vi.fn(),
+    maybeSingle: mockSingle,
   }
-  for (const key of ['select', 'eq', 'insert', 'update', 'delete', 'order']) {
+  for (const key of ['select', 'eq', 'in', 'insert', 'update', 'delete', 'order']) {
     chain[key].mockReturnValue(chain)
   }
   return chain

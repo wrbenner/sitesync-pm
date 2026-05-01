@@ -53,6 +53,20 @@ export default defineConfig({
       },
     },
     {
+      // Wave-1 walk — captures the new homepage + demo-critical pages
+      // for the investor-readiness review. Uses the saved storage state
+      // directly; does NOT depend on polish-setup so it can run without
+      // POLISH_USER/POLISH_PASS env vars when a recent session already
+      // exists at playwright/.auth/user.json.
+      name: 'wave1-walk',
+      testMatch: /wave1-walk\.spec\.ts$/,
+      use: {
+        ...baseConfig.use,
+        baseURL: baseConfig.use?.baseURL,
+        storageState: STORAGE_STATE,
+      },
+    },
+    {
       // Page-by-page e2e walks. Each page-N-name.spec.ts drives a real
       // user flow with assertions and captures every state along the
       // way. NOT dependent on storageState — we want to hit cold pages.

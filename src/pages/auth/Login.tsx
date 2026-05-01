@@ -31,6 +31,9 @@ const SS_FG3   = '#767170'
 const SS_ORANGE = '#F47820'
 
 const FONT = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+// Serif stack for the brand-surface welcome — Login is one of the only
+// pages allowed to lead with Garamond per DESIGN-RESET.
+const SERIF_FONT = '"EB Garamond", Garamond, "Cormorant Garamond", "Times New Roman", serif'
 
 // ── Greeting Logic ──────────────────────────────────────
 
@@ -265,20 +268,27 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
 
 const Greeting: React.FC<{ size: number }> = ({ size }) => {
   const g = useGreetingState()
+  // Brand surface — serif italic welcome, sans-serif "Good morning, Name."
+  // for returning users so the personal greeting still reads modern.
+  const isPlain = g.kind === 'plain'
   const sty: React.CSSProperties = {
-    font: `500 ${size}px/1 ${FONT}`,
-    letterSpacing: size >= 36 ? '-0.035em' : '-0.030em',
+    fontFamily: isPlain ? SERIF_FONT : FONT,
+    fontSize: size,
+    fontWeight: isPlain ? 500 : 500,
+    fontStyle: isPlain ? 'italic' : 'normal',
+    lineHeight: 1,
+    letterSpacing: isPlain ? '-0.01em' : size >= 36 ? '-0.035em' : '-0.030em',
     color: SS_FG1,
     margin: 0,
     marginBottom: size === 36 ? 40 : 36,
     textAlign: 'center',
     whiteSpace: 'nowrap',
   }
-  if (g.kind === 'plain') return <h1 style={sty}>{g.text}</h1>
+  if (isPlain) return <h1 style={sty}>{g.text}</h1>
   return (
     <h1 style={sty}>
       {g.prefix},{' '}
-      <span style={{ fontStyle: 'italic', fontWeight: 400 }}>{g.name}</span>.
+      <span style={{ fontFamily: SERIF_FONT, fontStyle: 'italic', fontWeight: 400 }}>{g.name}</span>.
     </h1>
   )
 }
@@ -398,7 +408,7 @@ export const Login: React.FC = () => {
   // (`/sitesync-pm/` in dev, `/` on Vercel). We can't append a hash
   // route here because supabase overwrites the URL fragment with auth
   // tokens; instead we rely on detectSessionInUrl + ProtectedRoute to
-  // get the user from "/" to "/dashboard" once the session lands.
+  // get the user to the Day command stream once the session lands.
   // returnTo (if present) is stashed in sessionStorage so the global
   // SIGNED_IN handler can navigate after the auth state settles.
   const buildRedirectUrl = useCallback(() => {

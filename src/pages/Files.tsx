@@ -14,6 +14,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { useProjectId } from '../hooks/useProjectId';
 import { useFiles } from '../hooks/queries';
 import { useCreateFile, useDeleteFile } from '../hooks/mutations';
+import { useConfirm } from '../components/ConfirmDialog';
 import { supabase, fromTable } from '../lib/supabase';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
@@ -279,8 +280,15 @@ const FilesPage: React.FC = () => {
       variant: 'secondary' as const,
       onClick: async (ids: string[]) => {
         const links = ids.map((id) => `${window.location.origin}/files/${id}`).join('\n');
-        await navigator.clipboard.writeText(links).catch(() => {});
-        addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        // Silent catch was lying to the user — the success toast fired
+        // even when the write failed (Safari without focus, missing
+        // permission, etc). Branch on the actual outcome.
+        try {
+          await navigator.clipboard.writeText(links);
+          addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        } catch {
+          addToast('error', 'Could not access clipboard. Tap a link to copy manually.');
+        }
       },
     },
   ], [files, rawFiles, addToast, hasPermission, deleteFile, projectId, refetch]);
@@ -371,8 +379,15 @@ const FilesPage: React.FC = () => {
     } catch { addToast('error', `Failed to upload ${fileName}`); setUploadAnnouncement('Upload failed. Please try again.'); }
   };
 
+  const { confirm: confirmDeleteFile, dialog: deleteFileDialog } = useConfirm();
+
   const handleDeleteFile = useCallback(async (file: FileItem) => {
-    if (!window.confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteFile({
+      title: 'Delete file?',
+      description: `"${file.name}" will be permanently removed. Linkages from RFIs, photos, or punch items will become orphaned.`,
+      destructiveLabel: 'Delete file',
+    });
+    if (!ok) return;
     try {
       await deleteFile.mutateAsync({ id: file.id, projectId: projectId! });
       addToast('success', `Deleted ${file.name}`);
@@ -924,6 +939,7 @@ const FilesPage: React.FC = () => {
         title="Move to Folder"
       />
       </main>
+      {deleteFileDialog}
     </PageContainer>
   );
 };

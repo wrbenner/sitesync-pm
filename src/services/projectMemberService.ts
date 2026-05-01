@@ -620,8 +620,11 @@ export const projectMemberService = {
         .eq('id', projectId)
         .single()
 
-      const { data: { user } } = await supabase.auth.getUser()
-      const inviterEmail = user?.email
+      // auth.getUser() can return undefined in tests with partial auth mocks
+      // and can also fail in real code if the session has expired. Treat both
+      // as "no inviter known" rather than crashing the whole invite flow.
+      const authResult = await supabase.auth.getUser().catch(() => null)
+      const inviterEmail = authResult?.data?.user?.email
       // We need the invitee's email. Try profile.email if the column
       // exists, otherwise we have to pass userId and let the edge
       // function look it up via service role.

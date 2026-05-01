@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-04-29T19:37:36.590Z",
+  "scanned_files": 681,
+  "findings": [
+    {
+      "file": "src/pages/payment-applications/LienWaiverPanel.tsx",
+      "line": 261,
+      "column": 27,
+      "reason": "button_no_onclick",
+      "snippet": "<button style={{ display: 'inline-flex', a",
+      "element": "button"
+    }
+  ],
+  "by_reason": {
+    "noop_arrow": 0,
+    "undefined_handler": 0,
+    "null_handler": 0,
+    "console_only": 0,
+    "button_no_onclick": 1,
+    "destructured_unused": 0
+  }
+}

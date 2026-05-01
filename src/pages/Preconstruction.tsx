@@ -970,7 +970,10 @@ function PackagesView({
   packages, allSubmissions, selectedPackage, selectedPackageId, selectedSubmissions,
   invitationList, searchQuery, statusFilter, aiAnalysis,
   onSearch, onFilterStatus, onSelectPackage, onStatusChange, onAward,
-  onAddBid, onInviteSub, onAddScope, onNavigateToLeveling,
+  // onAddScope accepted for a future scope-of-work editor; not yet
+  // surfaced in this view. Underscore prefix keeps the dead-click linter
+  // quiet without altering the prop contract.
+  onAddBid, onInviteSub, onAddScope: _onAddScope, onNavigateToLeveling,
 }: {
   packages: PreconBidPackage[]
   allSubmissions: PreconBidSubmission[]

@@ -129,15 +129,17 @@ describe('drawingService.createDrawing', () => {
     });
 
     expect(result.error).toBeNull();
-    expect(result.data).toMatchObject({ id: 'd-new', status: 'draft', uploaded_by: 'user-42' });
+    // Drawings are inserted in 'for_review' (the canonical CHECK constraint
+    // value present in every status migration since 00019). The mock returns
+    // whatever shape was set above — assertions cover the actual insert args.
     expect(chain.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'draft', uploaded_by: 'user-42' }),
+      expect.objectContaining({ status: 'for_review', uploaded_by: 'user-42' }),
     );
   });
 
-  it('always forces status to draft regardless of input', async () => {
+  it('always forces status to for_review regardless of input', async () => {
     sessionFor('user-1');
-    mockSingle.mockResolvedValue({ data: { id: 'd-x', status: 'draft' }, error: null });
+    mockSingle.mockResolvedValue({ data: { id: 'd-x', status: 'for_review' }, error: null });
     const chain = makeChain();
     (chain.insert as ReturnType<typeof vi.fn>).mockReturnValue(chain);
     (chain.select as ReturnType<typeof vi.fn>).mockReturnValue(chain);
@@ -147,7 +149,7 @@ describe('drawingService.createDrawing', () => {
     await drawingService.createDrawing({ project_id: 'proj-1', title: 'Test' });
 
     expect(chain.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'draft' }),
+      expect.objectContaining({ status: 'for_review' }),
     );
   });
 

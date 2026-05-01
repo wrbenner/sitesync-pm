@@ -121,8 +121,12 @@ export const FileGrid: React.FC<FileGridProps> = ({
       variant: 'secondary' as const,
       onClick: async (ids: string[]) => {
         const links = ids.map((id) => `${window.location.origin}/files/${id}`).join('\n');
-        await navigator.clipboard.writeText(links).catch(() => {});
-        addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        try {
+          await navigator.clipboard.writeText(links);
+          addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        } catch {
+          addToast('error', 'Could not access clipboard. Tap a link to copy manually.');
+        }
       },
     },
   ], [files, addToast]);

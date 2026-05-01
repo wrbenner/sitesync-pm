@@ -204,7 +204,7 @@ export const Signup: React.FC = () => {
 
   function fieldFocus(e: React.FocusEvent<HTMLInputElement>, hasError: boolean) {
     e.currentTarget.style.borderColor = hasError ? colors.statusCritical : colors.borderFocus
-    if (!hasError) e.currentTarget.style.boxShadow = '0 0 0 2px #F47820'
+    if (!hasError) e.currentTarget.style.boxShadow = '0 0 0 3px rgba(244,120,32,0.15)'
   }
   function fieldBlurStyle(e: React.FocusEvent<HTMLInputElement>, hasError: boolean) {
     e.currentTarget.style.borderColor = hasError ? colors.statusCritical : colors.borderDefault
@@ -243,25 +243,30 @@ export const Signup: React.FC = () => {
           </div>
           <h1
             style={{
-              fontSize: typography.fontSize.heading,
-              fontWeight: typography.fontWeight.semibold,
+              // Brand surface — serif italic welcome per DESIGN-RESET.
+              fontFamily: '"EB Garamond", Garamond, "Cormorant Garamond", "Times New Roman", serif',
+              fontStyle: 'italic',
+              fontSize: 36,
+              fontWeight: 500,
+              lineHeight: 1.1,
               color: colors.textPrimary,
               margin: 0,
-              letterSpacing: typography.letterSpacing.tight,
+              letterSpacing: '-0.01em',
             }}
           >
-            SiteSync PM
+            Welcome.
           </h1>
           <p
             style={{
               fontSize: typography.fontSize.body,
               color: colors.textTertiary,
               margin: 0,
-              marginTop: spacing['2'],
+              marginTop: spacing['3'],
               letterSpacing: typography.letterSpacing.normal,
+              fontFamily: typography.fontFamily,
             }}
           >
-            Create your account to get started
+            Create your account to get started.
           </p>
         </div>
 

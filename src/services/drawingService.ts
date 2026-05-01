@@ -65,28 +65,80 @@ export const drawingService = {
   async createDrawing(input: CreateDrawingInput): Promise<Result<Drawing>> {
     const userId = await getCurrentUserId();
 
+    // Sanitise discipline: the DB constraint (construction_discipline domain)
+    // only accepts a fixed set of values. Values outside the set (e.g.
+    // food_service, laundry, vertical_transportation) must be mapped to
+    // null so the insert succeeds — AI classification fills the real value
+    // later anyway.
+    const ALLOWED_DISCIPLINES = new Set([
+      'architectural','structural','mechanical','electrical','plumbing',
+      'civil','fire_protection','landscape','interior','interior_design',
+      'mep','unclassified','cover','demolition','survey','geotechnical',
+      'hazmat','telecommunications',
+    ]);
+    const safeDiscipline = input.discipline && ALLOWED_DISCIPLINES.has(input.discipline)
+      ? input.discipline
+      : null;
+
+    // Build the row to insert. Only include pipeline columns when they have
+    // a value — this avoids 400 errors if older migration hasn't run.
+    const row: Record<string, unknown> = {
+      project_id: input.project_id,
+      title: input.title,
+      // 'for_review' is in every version of the status CHECK constraint
+      // (original 00019 + the wider 20260428100000 migration).
+      status: 'for_review',
+      file_url: input.file_url ?? null,
+      discipline: safeDiscipline,
+      sheet_number: input.sheet_number ?? null,
+      revision: input.revision ?? null,
+      uploaded_by: userId,
+    };
+
+    // Pipeline fields — columns added in migration 20260420000005.
+    // Only add them when the caller provides a value.
+    if (input.thumbnail_url != null) row.thumbnail_url = input.thumbnail_url;
+    if (input.total_pages != null) row.total_pages = input.total_pages;
+    if (input.source_filename != null) row.source_filename = input.source_filename;
+    if (input.file_size_bytes != null) row.file_size_bytes = input.file_size_bytes;
+    if (input.processing_status != null) row.processing_status = input.processing_status;
+
     const { data, error } = await supabase
       .from('drawings')
-      .insert({
-        project_id: input.project_id,
-        title: input.title,
-        status: 'draft' as DrawingStatus,
-        file_url: input.file_url ?? null,
-        discipline: input.discipline ?? null,
-        sheet_number: input.sheet_number ?? null,
-        revision: input.revision ?? null,
-        uploaded_by: userId,
-        // Pipeline fields — columns added in migration 20260420000005
-        ...(input.thumbnail_url != null && { thumbnail_url: input.thumbnail_url }),
-        ...(input.total_pages != null && { total_pages: input.total_pages }),
-        ...(input.source_filename != null && { source_filename: input.source_filename }),
-        ...(input.file_size_bytes != null && { file_size_bytes: input.file_size_bytes }),
-        ...(input.processing_status != null && { processing_status: input.processing_status }),
-      })
+      .insert(row)
       .select()
       .single();
 
-    if (error) return fail(dbError(error.message, { project_id: input.project_id }));
+    if (error) {
+      console.error('[drawingService.createDrawing] insert failed:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        row,
+      });
+      return fail(dbError(error.message, { project_id: input.project_id }));
+    }
+
+    // Cross-feature workflow: if this drawing was uploaded for a sheet number
+    // that already exists in the project, treat it as a revision and flag
+    // open RFIs that reference that sheet. Fire-and-forget — failures are
+    // logged inside the chain, never surfaced to the upload UX.
+    const inserted = data as { id?: string; sheet_number?: string | null } | null;
+    if (inserted?.id && inserted.sheet_number) {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runDrawingRevisedChain }) => runDrawingRevisedChain(inserted.id!))
+        .then((result) => {
+          if (result.error) console.warn('[drawing_revised chain]', result.error);
+          else if (result.affectedRfiIds && result.affectedRfiIds.length > 0) {
+            console.info(
+              `[drawing_revised chain] flagged ${result.affectedRfiIds.length} affected RFI(s)`,
+            );
+          }
+        })
+        .catch((err) => console.warn('[drawing_revised chain] dispatch failed:', err));
+    }
+
     return ok(data as Drawing);
   },
 

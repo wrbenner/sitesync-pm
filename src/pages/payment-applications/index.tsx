@@ -431,6 +431,13 @@ const PaymentApplicationsPage: React.FC = () => {
           })}
         </div>
         <div aria-hidden style={{
+          position: 'absolute', top: 0, left: 0, bottom: 0, width: 28,
+          background: `linear-gradient(to right, ${colors.surfaceInset}, transparent)`,
+          borderTopLeftRadius: borderRadius.lg,
+          borderBottomLeftRadius: borderRadius.lg,
+          pointerEvents: 'none',
+        }} />
+        <div aria-hidden style={{
           position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
           background: `linear-gradient(to left, ${colors.surfaceInset}, transparent)`,
           borderTopRightRadius: borderRadius.lg,

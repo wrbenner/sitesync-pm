@@ -229,10 +229,20 @@ export function useFieldCapture(): UseFieldCapture {
     setStarting(true);
     setCameraError(null);
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
+      // Race getUserMedia against a 6s timeout. In some headless / locked-down
+      // contexts the prompt never resolves, leaving the modal stuck on
+      // "Starting camera…" indefinitely. A bounded timeout converts that
+      // into a recoverable inline error.
+      const cameraPromise = navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       });
+      const s = await Promise.race([
+        cameraPromise,
+        new Promise<MediaStream>((_, reject) =>
+          setTimeout(() => reject(Object.assign(new Error('Camera did not respond. Tap "Try again" or use Upload to pick a photo from your library.'), { name: 'TimeoutError' })), 6000),
+        ),
+      ]);
       streamRef.current = s;
       setStream(s);
       if (videoRef.current) {
@@ -255,6 +265,8 @@ export function useFieldCapture(): UseFieldCapture {
         friendly = 'The requested camera resolution is not available. Try again — we will pick a fallback resolution.';
       } else if (name === 'SecurityError') {
         friendly = 'The camera can only run on a secure connection (HTTPS). Open SiteSync from its secure URL.';
+      } else if (name === 'TimeoutError') {
+        friendly = err instanceof Error ? err.message : 'Camera did not respond. Try again or use Upload.';
       } else {
         friendly = err instanceof Error ? err.message : 'Camera unavailable';
       }

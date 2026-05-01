@@ -729,7 +729,12 @@ const HUDCompliancePage: React.FC = () => {
                       <td style={tableCellStyle}><span style={badgeStyle(u.tenantStatus)}>{u.tenantStatus}</span></td>
                       <td style={tableCellStyle}>{fmtDate(u.certDate)}</td>
                       <td style={tableCellStyle}>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}>
+                        <button
+                          disabled
+                          aria-label="Edit unit — coming soon"
+                          title="HUD compliance editor not yet wired"
+                          style={{ background: 'none', border: 'none', cursor: 'not-allowed', color: colors.textTertiary, padding: 4, opacity: 0.5 }}
+                        >
                           <Edit2 size={14} />
                         </button>
                       </td>
@@ -860,7 +865,13 @@ const HUDCompliancePage: React.FC = () => {
             <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Certified Payroll (WH-347)
             </div>
-            <button style={btnPrimary}><Download size={16} /> Generate WH-347</button>
+            <button
+              disabled
+              title="WH-347 generator not yet wired"
+              style={{ ...btnPrimary, cursor: 'not-allowed', opacity: 0.5 }}
+            >
+              <Download size={16} /> Generate WH-347
+            </button>
           </div>
           {payrollEntries.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
@@ -1176,7 +1187,13 @@ const HUDCompliancePage: React.FC = () => {
                 <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                   Photo Documentation
                 </div>
-                <button style={btnSecondary}><Camera size={16} /> Upload Photos</button>
+                <button
+                  disabled
+                  title="HUD photo documentation upload not yet wired"
+                  style={{ ...btnSecondary, cursor: 'not-allowed', opacity: 0.5 }}
+                >
+                  <Camera size={16} /> Upload Photos
+                </button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.md }}>
                 {['Facade - Before', 'Facade - During', 'Interior - Before', 'Interior - During',
@@ -1488,8 +1505,20 @@ const HUDCompliancePage: React.FC = () => {
             </p>
           </div>
           <div style={{ display: 'flex', gap: spacing.sm }}>
-            <button style={btnSecondary}><Download size={16} /> Export Report</button>
-            <button style={btnPrimary}><FileText size={16} /> Compliance Summary</button>
+            <button
+              disabled
+              title="HUD compliance export not yet wired"
+              style={{ ...btnSecondary, cursor: 'not-allowed', opacity: 0.5 }}
+            >
+              <Download size={16} /> Export Report
+            </button>
+            <button
+              disabled
+              title="HUD compliance summary not yet wired"
+              style={{ ...btnPrimary, cursor: 'not-allowed', opacity: 0.5 }}
+            >
+              <FileText size={16} /> Compliance Summary
+            </button>
           </div>
         </div>
 

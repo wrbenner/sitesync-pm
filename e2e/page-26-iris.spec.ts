@@ -30,10 +30,24 @@ for (const vp of VIEWPORTS) {
 
       const prompt = page.getByRole('button', { name: /budget analysis/i }).first()
       if (await prompt.count() > 0) {
+        // Clicking the suggested prompt only populates the input — the
+        // captures previously stopped here and 02/03 looked identical.
+        // Submit the message so streaming actually begins, then wait for
+        // the assistant message to appear before each shot.
         await prompt.click().catch(() => undefined)
-        await settle(page, 1500)
+        await page.keyboard.press('Enter').catch(() => undefined)
+        await page
+          .waitForSelector('[data-message-role="assistant"], [role="article"][data-streaming="true"]', { timeout: 6_000 })
+          .catch(() => undefined)
+        await settle(page, 600)
         await shot(page, vp.name, 2, 'streaming')
-        await settle(page, 3500)
+        await page
+          .waitForFunction(
+            () => !document.querySelector('[data-streaming="true"]'),
+            { timeout: 12_000, polling: 300 },
+          )
+          .catch(() => undefined)
+        await settle(page, 600)
         await shot(page, vp.name, 3, 'response-complete')
       }
 

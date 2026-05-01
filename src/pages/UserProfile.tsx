@@ -356,9 +356,16 @@ export default function UserProfile() {
             style={{
               width: 96, height: 96,
               borderRadius: borderRadius.full,
-              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
+              // For unset profiles use a soft parchment chip rather than
+              // a saturated orange disc — the prior treatment read as a
+              // bright unstyled placeholder rather than a person.
+              background: profile?.avatar_url
+                ? `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`
+                : colors.surfaceInset,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 8px 32px rgba(244,120,32,0.25)`,
+              boxShadow: profile?.avatar_url
+                ? `0 8px 32px rgba(244,120,32,0.25)`
+                : `inset 0 0 0 1px ${colors.borderSubtle}`,
             }}
           >
             {profile?.avatar_url ? (
@@ -376,8 +383,9 @@ export default function UserProfile() {
               />
             ) : (
               <span style={{
-                fontSize: 36, fontWeight: typography.fontWeight.bold,
-                color: colors.white, letterSpacing: '-0.02em',
+                fontSize: 36, fontWeight: typography.fontWeight.semibold,
+                color: colors.textSecondary, letterSpacing: '-0.02em',
+                fontFamily: typography.fontFamilySerif,
               }}>
                 {displayInitials}
               </span>

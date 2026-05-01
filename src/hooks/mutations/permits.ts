@@ -46,10 +46,23 @@ export function useUpdatePermit() {
       if (error) throw error
       return { data: data as unknown as PermitRow, projectId: params.projectId }
     },
-    onSuccess: (result) => {
+    onSuccess: (result, params) => {
       qc.invalidateQueries({ queryKey: ['permits', result.projectId] })
       toast.success('Permit updated')
       posthog.capture('permit_updated', { project_id: result.projectId })
+
+      // Cross-feature: when a permit transitions to approved/issued, post
+      // a schedule-unlock notice to activity_feed. Fire-and-forget.
+      const newStatus = (params.updates.status as string | undefined) ?? null
+      if (newStatus && ['approved', 'issued'].includes(newStatus)) {
+        void import('../../lib/crossFeatureWorkflows')
+          .then(({ runPermitApprovedChain }) => runPermitApprovedChain(params.id))
+          .then((r) => {
+            if (r.error) console.warn('[permit_approved chain]', r.error)
+            else if (r.created) console.info('[permit_approved chain] created', r.created)
+          })
+          .catch((err) => console.warn('[permit_approved chain] dispatch failed:', err))
+      }
     },
     onError: (err: Error) => {
       toast.error(err.message || 'Failed to update permit')

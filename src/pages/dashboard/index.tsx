@@ -39,10 +39,15 @@ import { DashboardProjectHealth } from './DashboardProjectHealth';
 import { DashboardMyTasks } from './DashboardMyTasks';
 import { DashboardPortfolio } from './DashboardPortfolio';
 import { DashboardCarbon } from './DashboardCarbon';
-import { DashboardSiteMapMini } from './DashboardSiteMapMini';
 import { DashboardCompliance } from './DashboardCompliance';
 import { SundialDashboard } from './SundialDashboard';
 
+// DashboardSiteMapMini eagerly imports leaflet + leaflet.css (~200KB) — keep
+// it lazy so it doesn't bloat the dashboard's initial JS chunk for every
+// user. The map widget loads after the rest of the dashboard renders.
+const DashboardSiteMapMini = lazy(() =>
+  import('./DashboardSiteMapMini').then((m) => ({ default: m.DashboardSiteMapMini })),
+);
 const QuickRFIButton = lazy(() => import('../../components/field/QuickRFIButton'));
 
 // ── Helpers ────────────────────────────────────────────
@@ -135,6 +140,29 @@ const DashboardPage: React.FC = () => {
     lastAutoSetRef.current = fallbackId;
     setActiveProject(fallbackId);
   }, [projectId, allProjects, setActiveProject]);
+
+  // Cross-feature sweeps: when the dashboard mounts for a project, run any
+  // registered project-level sweeps. Each is idempotent so it's safe to
+  // fire on every mount. Eventually these move to a scheduled cron — for
+  // now, dashboard-mount is the cheapest surface to run them.
+  const lastSweptProjectRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectId) return;
+    if (lastSweptProjectRef.current === projectId) return;
+    lastSweptProjectRef.current = projectId;
+    void import('../../lib/crossFeatureWorkflows').then(
+      async ({ runRfiOverdueSweep, runMeetingActionItemTaskSweep }) => {
+        const [rfiResults, actionResults] = await Promise.all([
+          runRfiOverdueSweep(projectId),
+          runMeetingActionItemTaskSweep(projectId),
+        ]);
+        const rfiCreated = rfiResults.filter((r) => r.created).length;
+        const actionCreated = actionResults.filter((r) => r.created).length;
+        if (rfiCreated > 0) console.info(`[rfi_overdue_sweep] created ${rfiCreated} follow-up task(s)`);
+        if (actionCreated > 0) console.info(`[meeting_action_item_sweep] created ${actionCreated} task(s)`);
+      },
+    );
+  }, [projectId]);
 
   if (projectsLoading) return <DashboardSkeleton />;
   if (!allProjects || allProjects.length === 0) return <WelcomeOnboarding onProjectCreated={() => {}} />;
@@ -568,7 +596,9 @@ const DashboardInner: React.FC = () => {
               <DashboardMyTasks />
               <DashboardCompliance projectId={projectId} />
               <DashboardCarbon projectId={projectId} />
-              <DashboardSiteMapMini projectId={projectId} projectLat={projectLat} projectLon={projectLon} />
+              <Suspense fallback={<div style={{ minHeight: 220 }} />}>
+                <DashboardSiteMapMini projectId={projectId} projectLat={projectLat} projectLon={projectLon} />
+              </Suspense>
             </div>
           </ErrorBoundary>
           <ErrorBoundary message="">

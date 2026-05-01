@@ -149,7 +149,14 @@ async function syncCOAmountFromLineItems(changeOrderId: string): Promise<void> {
 
   if (error || !items) return
 
-  const total = items.reduce((sum, row) => sum + ((row.amount as number) ?? 0), 0)
+  // Sum line items in integer cents to avoid float drift across many rows
+  // (matches the convention in src/services/reportService.ts and
+  // src/services/pdf/paymentAppPdf.ts). DB stores dollars; convert at write.
+  const totalCents = items.reduce<number>(
+    (acc, row) => acc + Math.round(((row.amount as number) ?? 0) * 100),
+    0,
+  )
+  const total = totalCents / 100
 
   await supabase
     .from('change_orders')

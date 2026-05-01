@@ -44,4 +44,5 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ open, onClose, onSubm
   />
 )
 
+export { CreateTaskModal }
 export default CreateTaskModal

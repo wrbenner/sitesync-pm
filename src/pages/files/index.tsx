@@ -8,6 +8,7 @@ import { colors, spacing, typography } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useFiles } from '../../hooks/queries';
 import { useCreateFile, useDeleteFile } from '../../hooks/mutations';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { supabase } from '../../lib/supabase';
 import { type FileItem, formatBytes } from './fileTypes';
 import { FileGrid } from './FileGrid';
@@ -275,8 +276,15 @@ const FilesPage: React.FC = () => {
     }
   };
 
+  const { confirm: confirmDeleteFile, dialog: deleteFileDialog } = useConfirm();
+
   const handleDeleteFile = useCallback(async (file: FileItem) => {
-    if (!window.confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteFile({
+      title: 'Delete file?',
+      description: `"${file.name}" will be permanently removed. Linkages from RFIs, photos, or punch items become orphaned.`,
+      destructiveLabel: 'Delete file',
+    });
+    if (!ok) return;
     if (!projectId) {
       addToast('error', 'No project selected');
       return;
@@ -412,6 +420,7 @@ const FilesPage: React.FC = () => {
       {activeTab === 'transmittals' && <TransmittalsPanel />}
       {activeTab === 'specs' && <SpecificationsPanel />}
       {activeTab === 'wiki' && <WikiPanel />}
+      {deleteFileDialog}
     </PageContainer>
   );
 };

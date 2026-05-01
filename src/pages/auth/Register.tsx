@@ -152,7 +152,7 @@ export function Register() {
     }
     const result = await createCompany(companyName);
     if (result.error) setError(result.error);
-    else navigate('/dashboard');
+    else navigate('/');
   };
 
   const pwStrength = getPasswordStrength(password);

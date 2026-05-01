@@ -111,8 +111,26 @@ export const taskService = {
     taskId: string,
     updates: Record<string, unknown>,
   ): Promise<Result> {
-     
+
     const { status: _status, ...safeUpdates } = updates;
+
+    // Capture the pre-update end_date so the schedule-slip chain can compute
+    // a meaningful baseline diff after the write completes. Cheap — single
+    // row by primary key.
+    let baselineEndDate: string | null = null;
+    let projectId: string | null = null;
+    if ('end_date' in safeUpdates) {
+      // Generated Database types lag behind live schema; localized any cast.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      const { data: prior } = await sb
+        .from('tasks')
+        .select('end_date, project_id')
+        .eq('id', taskId)
+        .maybeSingle();
+      baselineEndDate = (prior?.end_date as string | null) ?? null;
+      projectId = (prior?.project_id as string | null) ?? null;
+    }
 
     const { error } = await supabase
       .from('tasks')
@@ -120,6 +138,31 @@ export const taskService = {
       .eq('id', taskId);
 
     if (error) return fail(dbError(error.message, { taskId }));
+
+    // Cross-feature: if end_date changed and the slip is material, draft a
+    // change order. Fire-and-forget — never blocks the task update.
+    const newEndDate = safeUpdates.end_date as string | null | undefined;
+    if (newEndDate && baselineEndDate && projectId && newEndDate !== baselineEndDate) {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runScheduleSlipChain }) =>
+          runScheduleSlipChain({
+            taskId,
+            projectId: projectId!,
+            baselineEndDate,
+            newEndDate,
+            estimatedHoursDelta: typeof safeUpdates.estimated_hours === 'number'
+              ? safeUpdates.estimated_hours as number
+              : undefined,
+          }),
+        )
+        .then((result) => {
+          if (result.error) console.warn('[schedule_slip chain]', result.error);
+          else if (result.created) console.info('[schedule_slip chain] created', result.created);
+          else if (result.skipped) console.debug('[schedule_slip chain] skipped:', result.skipped.reason);
+        })
+        .catch((err) => console.warn('[schedule_slip chain] dispatch failed:', err));
+    }
+
     return { data: null, error: null };
   },
 };

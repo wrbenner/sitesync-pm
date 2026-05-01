@@ -18,6 +18,7 @@ import {
 } from '../hooks/queries/enterprise-capabilities'
 import { useTimesheets, useTimesheetHoursByActivity } from '../hooks/queries/timesheets'
 import { useCreateTimesheet, useDeleteTimesheet } from '../hooks/mutations/timesheets'
+import { useConfirm } from '../components/ConfirmDialog'
 
 function startOfWeek(d: Date): Date {
   const copy = new Date(d)
@@ -94,9 +95,16 @@ const TimeTracking: React.FC = () => {
       toast.error(err instanceof Error ? err.message : 'Failed to log hours')
     }
   }
+  const { confirm: confirmRemoveTimesheet, dialog: removeTimesheetDialog } = useConfirm()
+
   const removeTimesheet = async (row: { id: string; worker_name?: string; work_date: string; hours: number }) => {
     if (!projectId) return
-    if (!window.confirm(`Delete ${row.hours}h for ${row.worker_name ?? 'this worker'} on ${row.work_date}?`)) return
+    const ok = await confirmRemoveTimesheet({
+      title: 'Delete timesheet entry?',
+      description: `${row.hours}h for ${row.worker_name ?? 'this worker'} on ${row.work_date} — will reflect on certified payroll if filed.`,
+      destructiveLabel: 'Delete entry',
+    })
+    if (!ok) return
     try {
       await deleteTimesheet.mutateAsync({ id: row.id, project_id: projectId })
       toast.success('Entry removed')
@@ -1161,6 +1169,7 @@ const TimeTracking: React.FC = () => {
           }}>Create Ticket</Btn>
         </div>
       </Modal>
+      {removeTimesheetDialog}
     </PageContainer>
   )
 }

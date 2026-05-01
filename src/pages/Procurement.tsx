@@ -12,6 +12,7 @@ import { useCreateDelivery, useDeleteDelivery, useCreateMaterialItem } from '../
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 
 type TabKey = 'orders' | 'deliveries' | 'inventory' | 'matching' | 'requisitions'
 
@@ -490,9 +491,16 @@ export const Procurement: React.FC = () => {
     }
   }
 
+  const { confirm: confirmDeleteProcurement, dialog: deleteProcurementDialog } = useConfirm()
+
   const handleDeletePO = async (po: Record<string, unknown>) => {
     if (!projectId) return
-    if (!window.confirm(`Delete PO #${po.po_number || ''}? This cannot be undone.`)) return
+    const ok = await confirmDeleteProcurement({
+      title: 'Delete purchase order?',
+      description: `PO #${po.po_number || ''} — committed-cost rollups will adjust on the next budget recalculation.`,
+      destructiveLabel: 'Delete PO',
+    })
+    if (!ok) return
     try {
       await deletePO.mutateAsync({ id: po.id as string, projectId })
       toast.success('Purchase order deleted')
@@ -534,7 +542,12 @@ export const Procurement: React.FC = () => {
 
   const handleDeleteDelivery = async (d: Record<string, unknown>) => {
     if (!projectId) return
-    if (!window.confirm('Delete this delivery? This cannot be undone.')) return
+    const ok = await confirmDeleteProcurement({
+      title: 'Delete delivery?',
+      description: `${d.vendor ?? 'This delivery'} on ${d.expected_date ?? 'unscheduled'} will be removed from the receiving log.`,
+      destructiveLabel: 'Delete delivery',
+    })
+    if (!ok) return
     try {
       await deleteDelivery.mutateAsync({ id: d.id as string, projectId })
       toast.success('Delivery deleted')
@@ -1313,6 +1326,7 @@ export const Procurement: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteProcurementDialog}
     </PageContainer>
   )
 }

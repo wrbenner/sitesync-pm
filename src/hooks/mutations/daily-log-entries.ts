@@ -24,9 +24,34 @@ export function useCreateDailyLogEntry() {
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: unknown; projectId: string }) => {
       invalidateEntity('daily_log', result.projectId)
       posthog.capture('daily_log_entry_created', { project_id: result.projectId })
+
+      // Cross-feature workflows: dispatch by entry type. Each chain is
+      // fire-and-forget — failures never block the user's primary action.
+      const entry = result.data as { id?: string; type?: string } | null
+      if (entry?.id) {
+        if (entry.type === 'incident') {
+          // → create a tracked safety incident
+          void import('../../lib/crossFeatureWorkflows')
+            .then(({ runDailyLogIncidentChain }) => runDailyLogIncidentChain(entry.id!))
+            .then((r) => {
+              if (r.error) console.warn('[daily_log_incident chain]', r.error)
+              else if (r.created) console.info('[daily_log_incident chain] created', r.created)
+            })
+            .catch((err) => console.warn('[daily_log_incident chain] dispatch failed:', err))
+        } else if (entry.type === 'delay') {
+          // → post a schedule-shift suggestion to activity_feed
+          void import('../../lib/crossFeatureWorkflows')
+            .then(({ runDailyLogDelayChain }) => runDailyLogDelayChain(entry.id!))
+            .then((r) => {
+              if (r.error) console.warn('[daily_log_delay chain]', r.error)
+              else if (r.created) console.info('[daily_log_delay chain] created', r.created)
+            })
+            .catch((err) => console.warn('[daily_log_delay chain] dispatch failed:', err))
+        }
+      }
     },
     onError: createOnError('create_daily_log_entry'),
   })

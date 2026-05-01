@@ -1,0 +1,12 @@
+{
+  "projectId": "e2000001-0000-4000-8000-000000000003",
+  "name": "E2E Enterprise — 30-Story Tower",
+  "address": "300 Test Pkwy, Austin, TX",
+  "size": "enterprise",
+  "memberCount": 47,
+  "rfiCount": 240,
+  "submittalCount": 180,
+  "punchCount": 4200,
+  "expectedFastLoadMs": 3000,
+  "notes": "Used by perf-sensitive scenarios — 4,200 punch items mirrors the Mortenson-scale failure case."
+}

@@ -12,6 +12,7 @@ import { useDeleteMeeting, useAddAttendee, useRemoveAttendee } from '../hooks/mu
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { useConfirm } from '../components/ConfirmDialog';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -323,6 +324,7 @@ const MeetingDetailView: React.FC<{
 }> = ({ meetingId, meeting, onClose }) => {
   const queryClient = useQueryClient();
   const { data: agendaItems = [], isPending: agendaLoading } = useMeetingAgendaItems(meetingId);
+  const { confirm: confirmDeleteAgenda, dialog: deleteAgendaDialog } = useConfirm();
   const { data: participants = [], isPending: participantsLoading } = useMeetingParticipants(meetingId);
   const { data: attendees = [], isPending: attendeesLoading } = useMeetingAttendees(meetingId);
   const createAgendaItem = useCreateAgendaItem();
@@ -680,8 +682,13 @@ const MeetingDetailView: React.FC<{
                     <td style={{ ...detailTdStyle, borderBottom: rowBorder, color: colors.textTertiary, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.notes ?? '-'}</td>
                     <td style={{ ...detailTdStyle, borderBottom: rowBorder }}>
                       <button
-                        onClick={() => {
-                          if (!window.confirm(`Delete agenda item "${item.title}"?`)) return;
+                        onClick={async () => {
+                          const ok = await confirmDeleteAgenda({
+                            title: 'Delete agenda item?',
+                            description: `"${item.title}" — meeting minutes export will reflect the updated agenda.`,
+                            destructiveLabel: 'Delete agenda item',
+                          });
+                          if (!ok) return;
                           deleteAgendaItem.mutate({ id: item.id, meetingId });
                         }}
                         style={{
@@ -1001,6 +1008,7 @@ const MeetingDetailView: React.FC<{
           </div>
         </Modal>
       )}
+      {deleteAgendaDialog}
     </div>
   );
 };
@@ -1265,9 +1273,16 @@ export const Meetings: React.FC = () => {
     });
   };
 
+  const { confirm: confirmDeleteMeeting, dialog: deleteMeetingDialog } = useConfirm();
+
   const handleDeleteMeeting = async (meeting: MeetingListItem) => {
     if (!projectId) return;
-    if (!window.confirm(`Delete "${meeting.title}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteMeeting({
+      title: 'Delete meeting?',
+      description: `"${meeting.title}" — meeting minutes, agenda, attendance, and action items will be removed. Action items in flight on other entities are preserved.`,
+      destructiveLabel: 'Delete meeting',
+    });
+    if (!ok) return;
     try {
       await deleteMeeting.mutateAsync({ id: String(meeting.id), projectId });
       await refetch();
@@ -1670,10 +1685,15 @@ export const Meetings: React.FC = () => {
                             key={item.id}
                             style={{
                               transition: transitions.quick,
-                              background: isOverdue ? `${colors.statusCritical ?? colors.statusPending}06` : undefined,
+                              // 3px red rail across action items — same
+                              // visual grammar as RFIs / Submittals /
+                              // Punch / COs so the Conversation reads
+                              // as one consistent ball-in-court signal.
+                              background: isOverdue ? `${colors.statusCritical ?? colors.statusPending}08` : undefined,
+                              boxShadow: isOverdue ? `inset 3px 0 0 0 ${colors.statusCritical ?? colors.statusPending}` : undefined,
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = colors.surfaceHover; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isOverdue ? `${colors.statusCritical ?? colors.statusPending}06` : ''; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isOverdue ? `${colors.statusCritical ?? colors.statusPending}08` : ''; }}
                           >
                             <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, maxWidth: 320 }}>
                               <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
@@ -1875,6 +1895,7 @@ export const Meetings: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteMeetingDialog}
     </PageContainer>
   );
 };

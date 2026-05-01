@@ -111,13 +111,28 @@ async function initAuth() {
         // fragment with auth tokens), so it parks the destination in
         // sessionStorage. Pop it here, exactly once, on SIGNED_IN only.
         if (_event === 'SIGNED_IN') {
+          let didReturnNavigate = false
           try {
             const returnTo = sessionStorage.getItem('ss:returnTo')
             if (returnTo) {
               sessionStorage.removeItem('ss:returnTo')
-              if (returnTo.startsWith('/')) navigateFn?.(returnTo)
+              if (returnTo.startsWith('/')) {
+                navigateFn?.(returnTo)
+                didReturnNavigate = true
+              }
             }
           } catch { /* sessionStorage unavailable */ }
+          // Fallback: if SIGNED_IN fires while we're still on /login (password
+          // sign-in with no returnTo stash), bounce to the Day command stream
+          // so the user isn't stranded on the login screen. Magic-link / OAuth
+          // flows already redirect away naturally; this only catches the
+          // password path that previously left users on /login indefinitely.
+          if (!didReturnNavigate && typeof window !== 'undefined') {
+            // HashRouter: route lives in window.location.hash (e.g. "#/login").
+            // Cover both hash and path forms in case the router setup changes.
+            const onLogin = window.location.hash.startsWith('#/login') || window.location.pathname.endsWith('/login')
+            if (onLogin) navigateFn?.('/')
+          }
         }
       }
       // Invalidate React Query so any queries that ran before the JWT was

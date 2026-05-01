@@ -14,6 +14,22 @@ export const colors = {
   orangePressed: 'var(--color-primary-pressed)',
   orangeSubtle: 'var(--color-primary-subtle)',
   orangeLight: 'var(--color-primary-light)',
+  orangeHalo: 'var(--color-orangeHalo)',
+
+  // Manifesto palette (The Nine)
+  parchment: 'var(--color-parchment)',
+  parchment2: 'var(--color-parchment-2)',
+  parchment3: 'var(--color-parchment-3)',
+  ink: 'var(--color-ink)',
+  ink2: 'var(--color-ink-2)',
+  ink3: 'var(--color-ink-3)',
+  ink4: 'var(--color-ink-4)',
+  ink5: 'var(--color-ink-5)',
+  rust: 'var(--color-rust)',
+  moss: 'var(--color-moss)',
+  hairline: 'var(--hairline)',
+  hairline2: 'var(--hairline-2)',
+  hairline3: 'var(--hairline-3)',
 
   // Brand palette (raw values — used for charts, gradients, illustrations)
   brand50: '#FEF5ED',
@@ -292,7 +308,37 @@ export const spacing = {
 
 export const typography = {
   fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontFamilySerif: '"EB Garamond", Garamond, "Times New Roman", serif',
   fontFamilyMono: '"JetBrains Mono", "Fira Code", monospace',
+
+  // Manifesto type scale — eyebrow caps, kickers, prose
+  eyebrow: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase' as const,
+  },
+  kicker: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase' as const,
+  },
+  prose: {
+    fontFamily: '"EB Garamond", Garamond, "Times New Roman", serif',
+    fontSize: '17px',
+    lineHeight: 1.6,
+    letterSpacing: '-0.005em',
+  },
+  serifHeading: {
+    fontFamily: '"EB Garamond", Garamond, "Times New Roman", serif',
+    fontWeight: 400,
+    letterSpacing: '-0.022em',
+    lineHeight: 1.12,
+  },
+
   fontSize: {
     caption: '11px',
     label: '12px',
@@ -346,8 +392,11 @@ export const shadows = {
   none: 'none',
   xs: 'none',
   sm: '0 1px 2px rgba(0, 0, 0, 0.03)',
-  card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.015)',
-  cardHover: '0 3px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.02)',
+  // Warm-ink shadows mirror --shadow-card / --shadow-card-hover in
+  // tokens.css; both must move together. The 1px ring is the hairline
+  // equivalent for cards — cards are raised surfaces, not boxes.
+  card: '0 1px 2px rgba(26, 22, 19, 0.04), 0 0 0 1px rgba(26, 22, 19, 0.06)',
+  cardHover: '0 2px 8px rgba(26, 22, 19, 0.05), 0 0 0 1px rgba(26, 22, 19, 0.10)',
   dropdown: '0 4px 16px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.03)',
   panel: '0 16px 48px rgba(0, 0, 0, 0.12)',
   pressed: 'inset 0 1px 2px rgba(0, 0, 0, 0.1)',

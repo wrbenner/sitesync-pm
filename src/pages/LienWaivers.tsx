@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions, touchT
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useLienWaivers, useCreateLienWaiver, useDeleteLienWaiver } from '../hooks/queries/lien-waivers';
+import { useConfirm } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
 import {
   useCreateSignatureRequest,
@@ -122,10 +123,17 @@ export function LienWaivers() {
     }
   };
 
+  const { confirm: confirmDeleteWaiver, dialog: deleteWaiverDialog } = useConfirm();
+
   const handleDelete = async (w: any) => {
     if (!projectId) return;
     const label = getContractorName(w) || 'this waiver';
-    if (!window.confirm(`Delete waiver for "${label}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteWaiver({
+      title: 'Delete lien waiver?',
+      description: `Waiver for "${label}" will be removed. If already submitted with a Pay App, the related Pay App audit will flag this missing waiver.`,
+      destructiveLabel: 'Delete waiver',
+    });
+    if (!ok) return;
     try {
       await deleteWaiver.mutateAsync({ id: w.id, projectId });
     } catch {
@@ -609,6 +617,7 @@ export function LienWaivers() {
           </div>
         </div>
       </Modal>
+      {deleteWaiverDialog}
     </PageContainer>
   );
 }

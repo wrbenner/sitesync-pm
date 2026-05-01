@@ -19,10 +19,10 @@ export interface LocalFile {
 export interface LocalDrawing {
   id: string;
   project_id: string;
-  set_number: string;
+  sheet_number: string;
   title: string;
   discipline: string;
-  current_revision: string;
+  revision: string;
   created_at: string;
   updated_at: string;
   sheets?: LocalDrawingSheet[];
@@ -171,13 +171,25 @@ export const useFileStore = create<FileState>()((set, get) => ({
 
   uploadDrawingSet: async (projectId, userId, setNumber, title, discipline, files) => {
     // Create drawing record
+    // Sanitise discipline against DB constraint (construction_discipline domain)
+    const ALLOWED_DISCIPLINES = new Set([
+      'architectural','structural','mechanical','electrical','plumbing',
+      'civil','fire_protection','landscape','interior','interior_design',
+      'mep','unclassified','cover','demolition','survey','geotechnical',
+      'hazmat','telecommunications',
+    ]);
+    const safeDiscipline = discipline && ALLOWED_DISCIPLINES.has(discipline)
+      ? discipline
+      : null;
+
     const { data: dwgData, error: dwgError } = await fromTable('drawings')
       .insert({
         project_id: projectId,
         sheet_number: setNumber,
         title,
-        discipline,
-        current_revision: 'A',
+        discipline: safeDiscipline,
+        revision: 'A',
+        status: 'for_review',
       })
       .select()
       .single();

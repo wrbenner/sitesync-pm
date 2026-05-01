@@ -9,6 +9,7 @@ import { usePermits } from '../hooks/queries/permits'
 import { useCreatePermit, useUpdatePermit, useDeletePermit } from '../hooks/mutations/permits'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { EntityFormModal, type FieldConfig } from '../components/forms/EntityFormModal'
 import { permitSchema } from '../components/forms/schemas'
 
@@ -175,6 +176,7 @@ const permitColumns = [
 // ── Main Component ───────────────────────────────────────────
 
 export const Permits: React.FC = () => {
+  const { confirm: confirmDeletePermit, dialog: deletePermitDialog } = useConfirm()
   const [activeTab, setActiveTab] = useState<TabKey>('permits')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPermit, setEditingPermit] = useState<Record<string, unknown> | null>(null)
@@ -257,7 +259,12 @@ export const Permits: React.FC = () => {
   const handleDelete = async (permit: Record<string, unknown>) => {
     if (!projectId) return
     const label = (permit.permit_number as string) || (permit.type as string) || 'this permit'
-    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
+    const ok = await confirmDeletePermit({
+      title: 'Delete permit?',
+      description: `"${label}" — inspections logged against this permit are preserved as orphaned records for compliance audit.`,
+      destructiveLabel: 'Delete permit',
+    })
+    if (!ok) return
     try {
       await deletePermit.mutateAsync({ id: String(permit.id), projectId })
     } catch {
@@ -509,6 +516,7 @@ export const Permits: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deletePermitDialog}
     </PageContainer>
   )
 }

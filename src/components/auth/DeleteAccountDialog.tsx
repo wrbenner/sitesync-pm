@@ -229,9 +229,21 @@ export const DeleteAccountDialog: React.FC<DeleteAccountDialogProps> = ({ open, 
                 // (the safer reach), destructive on bottom (full-width,
                 // intentional press required).
                 flexDirection: 'column-reverse',
-                // Desktop overrides via @media — but inline styles can't
-                // do media queries. We use flexDirection 'row' on a wider
-                // container via the maxWidth check.
+                // Sticky footer so the Delete CTA stays visible when warning
+                // copy + confirmation field push the dialog past iPhone
+                // height — without this the user only saw "Cancel" and the
+                // primary button was clipped below the fold.
+                position: 'sticky',
+                bottom: -spacing['6'],
+                marginLeft: -spacing['6'],
+                marginRight: -spacing['6'],
+                marginBottom: -spacing['6'],
+                paddingLeft: spacing['6'],
+                paddingRight: spacing['6'],
+                paddingTop: spacing['4'],
+                paddingBottom: `calc(${spacing['6']} + env(safe-area-inset-bottom, 0px))`,
+                backgroundColor: colors.white,
+                borderTop: `1px solid ${colors.borderSubtle}`,
               }}
             >
               <button

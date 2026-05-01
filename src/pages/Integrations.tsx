@@ -8,6 +8,7 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { FormModal, FormBody, FormFooter, FormField, FormInput } from '../components/forms/FormPrimitives'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useOrganization } from '../hooks/useOrganization'
 import {
   useIntegrationConnections,
@@ -199,9 +200,16 @@ export const Integrations: React.FC = () => {
     await disconnect.mutateAsync({ id: conn.id, organizationId: orgId })
   }
 
+  const { confirm: confirmRevokeIntegration, dialog: revokeIntegrationDialog } = useConfirm()
+
   const handleRevoke = async (conn: IntegrationConnection) => {
     if (!orgId) return
-    if (!window.confirm(`Revoke ${PROVIDER_REGISTRY[conn.provider].name}? This marks the connection revoked.`)) return
+    const ok = await confirmRevokeIntegration({
+      title: `Revoke ${PROVIDER_REGISTRY[conn.provider].name}?`,
+      description: 'Sync jobs running against this integration will stop. Past sync history is preserved for audit.',
+      destructiveLabel: 'Revoke connection',
+    })
+    if (!ok) return
     await revoke.mutateAsync({ id: conn.id, organizationId: orgId })
   }
 
@@ -456,6 +464,7 @@ export const Integrations: React.FC = () => {
           targetProjectName={activeProject?.name}
         />
       )}
+      {revokeIntegrationDialog}
     </PageContainer>
   )
 }

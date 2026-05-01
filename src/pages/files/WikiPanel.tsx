@@ -6,6 +6,7 @@ import { useProjectId } from '../../hooks/useProjectId'
 import { useWikiPages, useCreateWikiPage, useUpdateWikiPage, useDeleteWikiPage, type WikiPage } from '../../hooks/queries/enterprise-capabilities'
 import { useAuth } from '../../hooks/useAuth'
 import { toast } from 'sonner'
+import { useConfirm } from '../../components/ConfirmDialog'
 
 export const WikiPanel: React.FC = () => {
   const projectId = useProjectId()
@@ -55,9 +56,16 @@ export const WikiPanel: React.FC = () => {
     }
   }
 
+  const { confirm: confirmDeleteWiki, dialog: deleteWikiDialog } = useConfirm()
+
   const handleDelete = async (page: WikiPage) => {
     if (!projectId) return
-    if (!window.confirm(`Delete "${page.title}"?`)) return
+    const ok = await confirmDeleteWiki({
+      title: 'Delete wiki page?',
+      description: `"${page.title}" — page content and history will be removed. Cross-references from other entities will become orphaned.`,
+      destructiveLabel: 'Delete page',
+    })
+    if (!ok) return
     try {
       await deleteMut.mutateAsync({ id: page.id, project_id: projectId })
       toast.success('Page deleted')
@@ -171,6 +179,7 @@ export const WikiPanel: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteWikiDialog}
     </div>
   )
 }

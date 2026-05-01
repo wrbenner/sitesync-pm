@@ -167,6 +167,20 @@ export const punchItemService = {
       .eq('id', punchItemId);
 
     if (error) return { data: null, error: error.message };
+
+    // Cross-feature: when a punch is verified (terminal state), check
+    // whether it was the last in its area. If so, post a closeout-coverage
+    // advance to activity_feed. Fire-and-forget.
+    if (newStatus === 'verified') {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runPunchVerifiedChain }) => runPunchVerifiedChain(punchItemId))
+        .then((result) => {
+          if (result.error) console.warn('[punch_verified chain]', result.error);
+          else if (result.created) console.info('[punch_verified chain] created', result.created);
+        })
+        .catch((err) => console.warn('[punch_verified chain] dispatch failed:', err));
+    }
+
     return { data: null, error: null };
   },
 

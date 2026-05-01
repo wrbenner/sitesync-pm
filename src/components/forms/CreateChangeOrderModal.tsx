@@ -276,4 +276,5 @@ const CreateChangeOrderModal: React.FC<CreateChangeOrderModalProps> = ({ open, o
   )
 }
 
+export { CreateChangeOrderModal }
 export default CreateChangeOrderModal

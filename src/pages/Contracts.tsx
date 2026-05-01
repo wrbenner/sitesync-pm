@@ -14,6 +14,7 @@ import { useChangeOrders } from '../hooks/useSupabase'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sovService, type SovItem, type CreateSovItemInput, type UpdateSovItemInput } from '../services/sovService'
 import {
@@ -182,8 +183,15 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
     }
   }
 
+  const { confirm: confirmDeleteSovItem, dialog: deleteSovItemDialog } = useConfirm()
+
   const handleDeleteItem = async (itemId: string) => {
-    if (!window.confirm('Delete this line item?')) return
+    const ok = await confirmDeleteSovItem({
+      title: 'Delete SOV line item?',
+      description: 'Schedule of values totals adjust on the next pay-app reconciliation. Linked retainage entries are preserved.',
+      destructiveLabel: 'Delete line',
+    })
+    if (!ok) return
     try {
       await deleteItem.mutateAsync(itemId)
       toast.success('Line item deleted')
@@ -477,6 +485,7 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
           </table>
         </div>
       )}
+      {deleteSovItemDialog}
     </Card>
   )
 }
@@ -991,8 +1000,15 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
     }
   }
 
+  const { confirm: confirmDeleteCert, dialog: deleteCertDialog } = useConfirm()
+
   const handleDelete = async (cert: InsuranceCertificate) => {
-    if (!window.confirm(`Delete ${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'certificate'} for ${cert.company}?`)) return
+    const ok = await confirmDeleteCert({
+      title: 'Delete insurance certificate?',
+      description: `${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'Certificate'} for ${cert.company} — pay-app audit will flag this sub as non-compliant if work continues.`,
+      destructiveLabel: 'Delete certificate',
+    })
+    if (!ok) return
     try {
       await deleteCert.mutateAsync({ id: cert.id, projectId })
       toast.success('Certificate deleted')
@@ -1123,6 +1139,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
           </div>
         </div>
       </Modal>
+      {deleteCertDialog}
     </Card>
   )
 }
@@ -1945,9 +1962,18 @@ export const Contracts: React.FC = () => {
     return typedContracts.find((c) => c.id === selectedContractId) ?? null
   }, [selectedContractId, typedContracts])
 
+  const { confirm: confirmDeleteContract, dialog: deleteContractDialog } = useConfirm()
+  const { confirm: confirmTerminateContract, dialog: terminateContractDialog } = useConfirm()
+
   const handleDeleteContract = async (contract: Contract) => {
     if (!projectId) return
-    if (!window.confirm(`Delete "${contract.title}"? This cannot be undone.`)) return
+    const ok = await confirmDeleteContract({
+      title: 'Delete contract?',
+      description: `"${contract.title}" — pay applications, lien waivers, and insurance certificates referencing this contract will become orphaned. Consider terminating instead of deleting.`,
+      destructiveLabel: 'Delete contract',
+      typeToConfirm: 'DELETE',
+    })
+    if (!ok) return
     try {
       await deleteContract.mutateAsync({ id: contract.id, projectId })
       toast.success('Contract deleted')
@@ -1961,9 +1987,12 @@ export const Contracts: React.FC = () => {
     if (!projectId) return
     // Confirmation for destructive status changes (#9)
     if (status === 'terminated') {
-      const confirmed = window.confirm(
-        `Are you sure you want to terminate "${contract.title}"? This is a destructive action and may have legal implications.`
-      )
+      const confirmed = await confirmTerminateContract({
+        title: 'Terminate contract?',
+        description: `Terminating "${contract.title}" is a destructive contractual action. May have legal implications and triggers downstream notifications. Document the termination reason in the contract notes after.`,
+        destructiveLabel: 'Terminate contract',
+        typeToConfirm: 'TERMINATE',
+      })
       if (!confirmed) return
     }
     try {
@@ -2460,6 +2489,8 @@ export const Contracts: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteContractDialog}
+      {terminateContractDialog}
     </PageContainer>
   )
 }

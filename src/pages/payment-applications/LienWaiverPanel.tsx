@@ -243,6 +243,8 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                     )}
                     <Suspense fallback={
                       <button
+                        disabled
+                        aria-label="PDF generator loading"
                         style={{
                           padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
                           borderRadius: borderRadius.base, backgroundColor: 'transparent',
@@ -256,7 +258,7 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                     }>
                       <PDFDownloadLink document={<LienWaiverPDF data={pdfData} />} fileName={pdfFileName}>
                         {({ loading }: { loading: boolean }) => (
-                          <button
+                          <span
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
                               padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.primaryOrange}`,
@@ -267,7 +269,7 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                             }}
                           >
                             <Download size={11} /> {loading ? 'Building...' : 'PDF'}
-                          </button>
+                          </span>
                         )}
                       </PDFDownloadLink>
                     </Suspense>

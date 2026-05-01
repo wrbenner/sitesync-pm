@@ -11,6 +11,7 @@ import {
   type Vendor,
 } from '../hooks/queries/vendors'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 
 const STATUS_COLORS: Record<Vendor['status'], { c: string; bg: string }> = {
   active: { c: colors.statusActive, bg: colors.statusActiveSubtle },
@@ -153,9 +154,16 @@ export const Vendors: React.FC = () => {
   const updateVendor = useUpdateVendor()
   const deleteVendor = useDeleteVendor()
 
+  const { confirm: confirmDeleteVendor, dialog: deleteVendorDialog } = useConfirm()
+
   const handleDelete = async (vendor: Vendor, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!window.confirm(`Delete "${vendor.company_name}"? This cannot be undone.`)) return
+    const ok = await confirmDeleteVendor({
+      title: 'Delete vendor?',
+      description: `"${vendor.company_name}" — historical contracts and POs referencing this vendor will be preserved as orphaned records.`,
+      destructiveLabel: 'Delete vendor',
+    })
+    if (!ok) return
     try {
       await deleteVendor.mutateAsync({ id: vendor.id })
       toast.success('Vendor deleted')
@@ -939,6 +947,7 @@ export const Vendors: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteVendorDialog}
     </PageContainer>
   )
 }

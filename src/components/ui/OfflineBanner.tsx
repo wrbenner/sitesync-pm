@@ -94,6 +94,44 @@ export const OfflineBanner: React.FC = () => {
   // Don't show banner when online, idle, with nothing pending and no just-synced flash
   if (isOnline && !isSyncing && !isCaching && !hasPending && !hasConflicts && !justSynced) return null;
 
+  // Cache priming once at least one table has landed: collapse the full
+  // banner into a compact pill anchored top-right. The full multi-line
+  // "Loading project — submittals (3/16)… · Never synced" bar across the
+  // top of every page during the first 30s read as ominous in audit
+  // captures. The pill keeps users informed without dominating the page.
+  const cacheCompletedCount = cacheProgress?.completed ?? 0;
+  const cacheTotalCount = cacheProgress?.total ?? 0;
+  if (isCaching && !hasConflicts && !hasPending && cacheCompletedCount > 0 && cacheTotalCount > 0) {
+    const pct = Math.round((cacheCompletedCount / cacheTotalCount) * 100);
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: 'fixed',
+          top: spacing['2'],
+          right: spacing['3'],
+          zIndex: 40,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          padding: `${spacing['1']} ${spacing['3']}`,
+          backgroundColor: colors.surfaceRaised,
+          color: colors.textSecondary,
+          border: `1px solid ${colors.borderSubtle}`,
+          borderRadius: borderRadius.full,
+          boxShadow: shadows.sm,
+          fontSize: typography.fontSize.caption,
+          fontWeight: typography.fontWeight.medium,
+          fontFamily: typography.fontFamily,
+        }}
+      >
+        <Cloud size={12} style={{ animation: 'spin 1s linear infinite', color: colors.statusInfo }} />
+        <span>Syncing project · {pct}%</span>
+      </div>
+    );
+  }
+
   // Determine banner state
   let config: { bg: string; border: string; icon: React.ReactNode; text: string; iconColor: string };
 

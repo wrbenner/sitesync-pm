@@ -61,6 +61,7 @@ import {
 } from '../../lib/annotationGeometry';
 import { useDrawingMarkups } from '../../hooks/queries/document-management';
 import { useCreateDrawingMarkup, useDeleteDrawingMarkup } from '../../hooks/mutations/documents';
+import { drawingService } from '../../services/drawingService';
 import { MeasurementOverlay, type MeasurementResult } from './MeasurementOverlay';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import { useDrawingPresence, type DrawingPresenceUser } from '../../hooks/useDrawingPresence';
@@ -1138,7 +1139,31 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   const undoStack = useRef<AnnotationOverlayItem[][]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const activeColor = '#E05252'; // Default red for construction markups
-  const [calibrationScale, setCalibrationScale] = useState<number | null>(null);
+  // Seed from the persisted drawing.scale_ratio so a previously-calibrated
+  // sheet shows real measurements on first open instead of falling through
+  // to "px" output. Local state can still be updated by an in-session
+  // Calibrate action; that path also writes back to the row (see below).
+  const [calibrationScale, setCalibrationScale] = useState<number | null>(
+    () => {
+      const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
+      return typeof persisted === 'number' && persisted > 0 ? persisted : null;
+    },
+  );
+  // When the user navigates between sheets in the same viewer instance, sync
+  // the local calibration to the new sheet's persisted ratio.
+  useEffect(() => {
+    const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
+    setCalibrationScale(typeof persisted === 'number' && persisted > 0 ? persisted : null);
+  }, [drawing.id]);
+  const persistCalibration = useCallback(
+    (ratio: number) => {
+      setCalibrationScale(ratio);
+      void drawingService.updateDrawing(drawing.id, {
+        scale_ratio: ratio,
+      } as unknown as Partial<typeof drawing>);
+    },
+    [drawing.id],
+  );
   const isMeasureTool = activeTool === 'measure' || activeTool === 'area' || activeTool === 'count' || activeTool === 'calibrate' || activeTool === 'path';
 
   // Viewport tracking for annotation overlay
@@ -2161,7 +2186,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           viewportBounds={viewportBounds}
           scaleRatioText={scaleRatioText}
           calibrationScale={calibrationScale}
-          onCalibrate={setCalibrationScale}
+          onCalibrate={persistCalibration}
           onMeasurementAdd={handleMeasurementAdd}
           cursor={toolCursor(activeTool)}
           snapPoints={snapPoints}

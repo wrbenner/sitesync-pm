@@ -220,6 +220,15 @@ function ensureSelectedRowStyles() {
     [cmdk-item][data-selected="true"] {
       background: ${colors.surfaceFlat} !important;
     }
+    [cmdk-group-heading] {
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.06em !important;
+      text-transform: uppercase !important;
+      color: ${colors.textTertiary} !important;
+      padding: ${spacing.md} ${spacing.lg} ${spacing.xs} !important;
+      margin: 0 !important;
+    }
   `
   document.head.appendChild(style)
 }
@@ -281,12 +290,17 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <Search size={20} color={colors.textTertiary} style={{ flexShrink: 0 }} />
             <Command.Input
               ref={inputRef}
-              placeholder="Search or jump to…"
+              placeholder="Search for anything — RFIs, sheets, people, pages…"
               value={query}
               onValueChange={setQuery}
               style={inputStyle}
               aria-label="Search nav and recent items"
             />
+            {!query && (
+              <span style={escBadgeStyle} aria-hidden>
+                ⌘K
+              </span>
+            )}
             <span style={escBadgeStyle}>ESC</span>
           </div>
 
@@ -322,35 +336,36 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               })}
             </Command.Group>
 
-            {showRecents && recentResults.length > 0 && (
-              <Command.Group heading="Recent items">
-                {recentResults.map((r) => (
-                  <Command.Item
-                    key={`${r.kind}-${r.id}`}
-                    value={`${r.subtitle} ${r.title}`}
-                    onSelect={() => goTo(r.route)}
-                    style={itemStyle}
-                  >
-                    <span
-                      style={{
-                        fontSize: typography.fontSize.caption,
-                        fontWeight: typography.fontWeight.medium,
-                        color: colors.textSecondary,
-                        backgroundColor: colors.surfaceInset,
-                        padding: '2px 8px',
-                        borderRadius: borderRadius.full,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {r.subtitle}
-                    </span>
-                    <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {r.title}
-                    </span>
-                  </Command.Item>
-                ))}
-              </Command.Group>
-            )}
+            {showRecents && (() => {
+              const rfiResults = recentResults.filter((r) => r.kind === 'rfi')
+              const submittalResults = recentResults.filter((r) => r.kind === 'submittal')
+              const punchResults = recentResults.filter((r) => r.kind === 'punch')
+              const renderItem = (r: RecentResult) => (
+                <Command.Item
+                  key={`${r.kind}-${r.id}`}
+                  value={`${r.subtitle} ${r.title}`}
+                  onSelect={() => goTo(r.route)}
+                  style={itemStyle}
+                >
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.title}
+                  </span>
+                </Command.Item>
+              )
+              return (
+                <>
+                  {rfiResults.length > 0 && (
+                    <Command.Group heading="Recent RFIs">{rfiResults.map(renderItem)}</Command.Group>
+                  )}
+                  {submittalResults.length > 0 && (
+                    <Command.Group heading="Recent Submittals">{submittalResults.map(renderItem)}</Command.Group>
+                  )}
+                  {punchResults.length > 0 && (
+                    <Command.Group heading="Recent Punch">{punchResults.map(renderItem)}</Command.Group>
+                  )}
+                </>
+              )
+            })()}
           </Command.List>
         </Command>
       </div>

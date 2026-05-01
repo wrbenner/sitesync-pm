@@ -351,10 +351,26 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   const disciplineRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
-  // Escape to clear/blur search. Page-level "/" focus is owned by the parent
-  // (so it works even when this toolbar isn't mounted in a "with search" mode).
+  // "/" or ⌘K to focus search. The parent page can also drive focus via
+  // the forwarded ref; both paths work. Escape clears the field.
   useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null): boolean => {
+      const node = el as HTMLElement | null;
+      if (!node) return false;
+      const tag = node.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || node.isContentEditable;
+    };
     const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        localSearchRef.current?.focus();
+        return;
+      }
+      if (e.key === '/' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        localSearchRef.current?.focus();
+        return;
+      }
       if (e.key === 'Escape' && document.activeElement === localSearchRef.current) {
         localSearchRef.current?.blur();
         if (filters.search) onFiltersChange({ ...filters, search: '' });

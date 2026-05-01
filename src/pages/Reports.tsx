@@ -16,6 +16,7 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 
 import { OwnerUpdateGenerator } from '../components/reports/OwnerUpdateGenerator'
+import { OwnerLinkButton } from '../components/reports/OwnerLinkButton'
 import type {
   OwnerUpdateRisk,
   OwnerUpdateDecision,
@@ -350,7 +351,10 @@ export const Reports: React.FC = () => {
         }}
       >
         {/* Demo finale — Iris Owner Update */}
-        <OwnerUpdateGenerator context={ownerUpdateContext} />
+        <OwnerUpdateGenerator
+          context={ownerUpdateContext}
+          secondaryAction={projectId ? <OwnerLinkButton projectId={projectId} /> : null}
+        />
 
         {/* Recent runs (dense table) */}
         {view === 'recent' && (

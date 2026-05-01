@@ -3,6 +3,8 @@
 // Narrative generation calls the AI edge function; everything else is pure data assembly.
 
 import { supabase } from '../lib/supabase'
+import { dollarsToCents, fromCents, addCents } from '../types/money'
+import type { Cents } from '../types/money'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -142,10 +144,19 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
   // 'complete' or 'in_progress' (the older convention) silently returned 0
   // for both, which made Reports show 0 / 247 Remaining while Schedule
   // showed 219/247 from the same data.
-  const completedPhases = phases.filter((p) => p.status === 'completed')
-  const inProgressPhases = phases.filter((p) => p.status === 'active')
+  //
+  // The "completed" predicate must match the Schedule page's predicate
+  // (src/stores/scheduleStore.ts:61) — `percent_complete >= 100 || status === 'completed'`.
+  // Using only status === 'completed' caused a second drift where Schedule
+  // showed 219/247 milestonesHit but Reports counted 243 phases as "behind"
+  // (a 100%-complete phase whose status still said 'active' was double-counted).
+  const isPhaseComplete = (p: { status?: string | null; percent_complete?: number | null }): boolean => {
+    return p.status === 'completed' || (p.percent_complete ?? 0) >= 100
+  }
+  const completedPhases = phases.filter((p) => isPhaseComplete(p as never))
+  const inProgressPhases = phases.filter((p) => p.status === 'active' && !isPhaseComplete(p as never))
   const behindPhases = phases.filter((p) => {
-    if (p.status === 'completed') return false
+    if (isPhaseComplete(p as never)) return false
     const end = p.end_date ? new Date(p.end_date as string) : null
     return end && end < now
   })
@@ -181,13 +192,31 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
   }
 
   // ── Budget Summary ─────────────────────────────────────
-  const originalContract = budget.reduce((s, b) => s + ((b.original_amount as number) ?? 0), 0)
-  const approvedChanges = changeOrders
+  // Sum money values as integer cents to avoid floating-point drift across
+  // many line items. The DB stores dollars (numeric), so multiply by 100
+  // on read and divide by 100 at the boundary. This matches the convention
+  // used in src/services/pdf/paymentAppPdf.ts and src/lib/projectAnalytics.ts.
+  const ZERO = 0 as Cents
+  const sumCentsBy = <T extends Record<string, unknown>>(
+    rows: readonly T[],
+    field: keyof T,
+  ): Cents =>
+    rows.reduce<Cents>((acc, r) => addCents(acc, dollarsToCents((r[field] as number) ?? 0)), ZERO)
+
+  const originalContractCents = sumCentsBy(budget, 'original_amount')
+  const approvedChangesCents = changeOrders
     .filter((c) => c.status === 'approved')
-    .reduce((s, c) => s + ((c.amount as number) ?? 0), 0)
-  const currentContract = originalContract + approvedChanges
-  const committed = budget.reduce((s, b) => s + ((b.committed_amount as number) ?? 0), 0)
-  const spent = budget.reduce((s, b) => s + ((b.actual_amount as number) ?? 0), 0)
+    .reduce<Cents>((acc, c) => addCents(acc, dollarsToCents((c.amount as number) ?? 0)), ZERO)
+  const currentContractCents = addCents(originalContractCents, approvedChangesCents)
+  const committedCents = sumCentsBy(budget, 'committed_amount')
+  const spentCents = sumCentsBy(budget, 'actual_amount')
+
+  const originalContract = fromCents(originalContractCents) / 100
+  const approvedChanges = fromCents(approvedChangesCents) / 100
+  const currentContract = fromCents(currentContractCents) / 100
+  const committed = fromCents(committedCents) / 100
+  const spent = fromCents(spentCents) / 100
+
   const forecast = currentContract > 0 && spent > 0
     ? currentContract * (1 + (spent / committed - 1) * 0.5 || 0)
     : currentContract

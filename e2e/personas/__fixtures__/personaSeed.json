@@ -1,0 +1,49 @@
+{
+  "$schema": "deterministic seed used by seedPersonaProject.ts; aligned with supabase/seed/avery-oaks.sql",
+  "project": {
+    "id": "00000000-0000-4000-a000-personas000001",
+    "code": "AVERY-AUDIT",
+    "name": "Avery Oaks (audit)",
+    "address": "1234 Avery Oaks Pkwy, Atlanta, GA 30309",
+    "owner_org": "Cardinal Holdings (audit)",
+    "gc_org": "SiteSync Build (audit)",
+    "start_date": "2026-01-15",
+    "substantial_completion_target": "2026-12-15"
+  },
+  "roles": {
+    "super": { "email": "super@audit.local", "first_name": "Sam", "last_name": "Super" },
+    "pm": { "email": "pm@audit.local", "first_name": "Pat", "last_name": "PM" },
+    "compliance": { "email": "compliance@audit.local", "first_name": "Cam", "last_name": "Compliance" },
+    "owner": { "email": "owner@audit.local", "first_name": "Olivia", "last_name": "Owner" },
+    "it_admin": { "email": "it@audit.local", "first_name": "Ivy", "last_name": "IT" }
+  },
+  "rfis": [
+    { "number": "RFI-001", "subject": "Slab Reinforcement Spacing — Grid C5", "status": "open", "due": "2026-04-30" },
+    { "number": "RFI-002", "subject": "MEP Penetration Conflict — L2 East", "status": "open", "due": "2026-04-30" },
+    { "number": "RFI-003", "subject": "Window Sill Detail — Type W3", "status": "open", "due": "2026-05-02" }
+  ],
+  "submittals": [
+    { "number": "SUB-014", "title": "Concrete Mix Design 4000psi", "status": "pending_approval" },
+    { "number": "SUB-021", "title": "Window Hardware Schedule", "status": "pending_approval" }
+  ],
+  "change_orders": [
+    { "number": "CO-007", "title": "Owner-directed canopy upgrade", "status": "pending_review", "amount": 28450.00 }
+  ],
+  "pay_app": {
+    "number": "PA-04",
+    "period_end": "2026-04-30",
+    "stored_materials": 45000.00,
+    "completed_to_date": 1850000.00,
+    "retainage_pct": 0.05
+  },
+  "punch_list_items": 47,
+  "wh347": {
+    "week_ending": "2026-04-26",
+    "crew_count": 12,
+    "expected_classifications": ["Carpenter", "Laborer", "Operating Engineer", "Electrician"]
+  },
+  "coi": {
+    "expiring_within_30_days": 2,
+    "expired_today": 0
+  }
+}

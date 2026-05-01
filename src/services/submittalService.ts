@@ -144,6 +144,27 @@ export const submittalService = {
       .eq('id', submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId, newStatus }));
+
+    // Cross-feature workflows: a rejected submittal drafts an RFI; an
+    // approved submittal posts a procurement suggestion. Fire-and-forget.
+    if (newStatus === 'rejected') {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runSubmittalRejectedChain }) => runSubmittalRejectedChain(submittalId))
+        .then((result) => {
+          if (result.error) console.warn('[submittal_rejected chain]', result.error);
+          else if (result.created) console.info('[submittal_rejected chain] created', result.created);
+        })
+        .catch((err) => console.warn('[submittal_rejected chain] dispatch failed:', err));
+    } else if (newStatus === 'approved') {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runSubmittalApprovedChain }) => runSubmittalApprovedChain(submittalId))
+        .then((result) => {
+          if (result.error) console.warn('[submittal_approved chain]', result.error);
+          else if (result.created) console.info('[submittal_approved chain] created', result.created);
+        })
+        .catch((err) => console.warn('[submittal_approved chain] dispatch failed:', err));
+    }
+
     return { data: null, error: null };
   },
 

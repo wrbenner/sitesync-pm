@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Upload, ScanSearch, FolderOpen, MessageSquare, Ruler } from 'lucide-react';
@@ -275,7 +275,16 @@ const DrawingsPage: React.FC = () => {
   //    parameterless, so we surface deep-links via search params.
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkedId = searchParams.get('id');
+  // Set true by the close button. The deep-link auto-open effect skips one
+  // run after a user-initiated close so the panel can't immediately re-open
+  // while the URL update is still in flight (react-router v7 may commit
+  // the navigate in a transition, separate from the state batch).
+  const userJustClosedRef = useRef(false);
   React.useEffect(() => {
+    if (userJustClosedRef.current) {
+      userJustClosedRef.current = false;
+      return;
+    }
     if (!deepLinkedId || !drawings) return;
     if (selectedDrawing?.id === deepLinkedId) return;
     const target = drawings.find((d) => String(d.id) === deepLinkedId);
@@ -1698,7 +1707,20 @@ const DrawingsPage: React.FC = () => {
           drawing={selectedDrawing}
           revisionHistory={revisionHistory}
           viewingRevisionNum={viewingRevisionNum}
-          onClose={() => setSelectedDrawing(null)}
+          onClose={() => {
+            // Two effects fight over selectedDrawing: a deep-link reader
+            // (URL → state) and a URL syncer (state → URL). On user close
+            // we set a ref so the deep-link reader skips one run while
+            // the URL clears, otherwise the panel re-opens mid-frame and
+            // looks like it's "glitching".
+            userJustClosedRef.current = true;
+            setSelectedDrawing(null);
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.delete('id');
+              return next;
+            }, { replace: true });
+          }}
           onOpenViewer={() => setViewerDrawing(selectedDrawing)}
           onUploadRevision={() => {
             const nextRev = revisionHistory && revisionHistory.length > 0
@@ -1762,7 +1784,11 @@ const DrawingsPage: React.FC = () => {
           onNavigate={(d) => setViewerDrawing(d)}
           onCreateRFI={handleCreateRFIFromAnnotation}
           projectId={projectId ?? undefined}
-          scaleRatioText={processing.byDrawing(String(viewerDrawing.id))?.scale_text ?? null}
+          scaleRatioText={
+            processing.byDrawing(String(viewerDrawing.id))?.scale_text
+            ?? viewerDrawing.scale_text
+            ?? null
+          }
         />
       )}
 

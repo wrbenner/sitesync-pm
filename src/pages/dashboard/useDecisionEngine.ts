@@ -39,7 +39,22 @@ export interface DecisionAnswer {
   hint: string;
 }
 
+/**
+ * Discriminator for which decision this is so the dashboard can route the
+ * answer click to the correct downstream action. Without this the answer
+ * buttons render but don't do anything — that was the bug.
+ */
+export type DecisionKind =
+  | 'weather_pull_forward'
+  | 'budget_contingency'
+  | 'rfi_escalation'
+  | 'overtime_authorization';
+
 export interface Decision {
+  /** Routing key for `onAnswer(decision, answer)` in the dashboard. */
+  kind: DecisionKind;
+  /** Free-form payload the answer handler can use (entity ids, dates, etc). */
+  payload?: Record<string, unknown>;
   eyebrow: string;      // "ONE DECISION TODAY" or "2 DECISIONS TODAY"
   question: string;     // The question text (plain parts)
   questionItalics: Array<{ text: string; italic: boolean }>; // Parsed question with italic segments
@@ -171,6 +186,8 @@ function generateWeatherDecision(
         { text: pullToDay, italic: true },
       ],
       subLine: `Rain forecast climbed to ${day.precip_probability}% for ${rainDayName}. Today is dry, the crew is here, and the work is ready.`,
+      kind: 'weather_pull_forward',
+      payload: { phase_id: affectedPhase.id, rain_day: rainDayName, precip_probability: day.precip_probability },
       answers: [
         {
           primary: true,
@@ -232,6 +249,8 @@ function generateBudgetDecision(
       { text: ' before end of week', italic: false },
     ],
     subLine: `Budget is at ${pct}% with ${overStr}. Continuing without approval risks a stop-work.`,
+    kind: 'budget_contingency',
+    payload: { percent_spent: pct, over_amount: overAmount },
     answers: [
       {
         primary: true,
@@ -280,6 +299,8 @@ function generateRFIDecision(
       { text: ' RFIs to the architect', italic: false },
     ],
     subLine: `${rfisOverdue} RFIs past due date are blocking field work. The architect has not responded in 7+ days.`,
+    kind: 'rfi_escalation',
+    payload: { rfis_overdue: rfisOverdue, rfis_open: rfisOpen },
     answers: [
       {
         primary: true,
@@ -333,6 +354,8 @@ function generateScheduleDecision(
       { text: phaseName, italic: true },
     ],
     subLine: `The schedule slipped ${daysBehind} days on the critical path. Weekend overtime would recover 2–3 days.`,
+    kind: 'overtime_authorization',
+    payload: { days_behind: daysBehind, phase_name: phaseName },
     answers: [
       {
         primary: true,

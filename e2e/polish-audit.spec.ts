@@ -106,6 +106,18 @@ async function settle(page: Page) {
   await page
     .waitForLoadState('networkidle', { timeout: 8_000 })
     .catch(() => undefined)
+  // Wait for skeleton placeholders to clear before the screenshot. Pages
+  // like Budget / Crews / Files / Punch / RFIs / Submittals render
+  // [data-skeleton] divs while data is in flight; without this wait the
+  // capture often lands mid-prime and shows a flat skeleton block.
+  // Bounded so a genuinely-stuck skeleton still gets captured (and
+  // surfaces in the punch list) rather than hanging the whole spec.
+  await page
+    .waitForFunction(
+      () => document.querySelectorAll('[data-skeleton="true"]').length === 0,
+      { timeout: 6_000, polling: 200 },
+    )
+    .catch(() => undefined)
   await page.waitForTimeout(250)
 }
 

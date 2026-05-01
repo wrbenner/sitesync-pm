@@ -136,6 +136,19 @@ export const PERMISSION_MATRIX: Record<Permission, ProjectRole[]> = {
 export const MODULE_PERMISSIONS: Record<string, Permission> = {
   dashboard: 'dashboard.view',
   'project-health': 'dashboard.view',
+  // The Nine — every authenticated user with dashboard access can reach
+  // the question-shaped destinations. Sub-permissions still gate writes
+  // inside each page (e.g. creating an RFI from /conversation needs rfis.create).
+  day: 'dashboard.view',
+  field: 'dashboard.view',
+  conversation: 'rfis.view',
+  plan: 'schedule.view',
+  ledger: 'budget.view',
+  crew: 'crews.view',
+  set: 'drawings.view',
+  file: 'files.view',
+  site: 'dashboard.view',
+  ai: 'ai.use',
   copilot: 'ai.use',
   'ai-agents': 'ai.use',
   'time-machine': 'dashboard.view',
