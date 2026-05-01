@@ -38,6 +38,15 @@ engine-logs/*.log
 # Playwright test output
 playwright-report/
 test-results/
+.playwright-mcp/
+
+# Ad-hoc debugging screenshots at repo root (never source)
+/conversation-*.png
+/login-*.png
+/login-current.png
+
+# One-off marketing/manifesto HTML drops (track in docs/ if needed)
+/SiteSync_The_Nine_Manifesto*.html
 
 # Coverage reports
 coverage/
@@ -82,6 +91,7 @@ audit/generated/
 *\ 2.html
 *\ 2.css
 *\ 2.sql
+*\ 2.lock
 polish-review/
 
 # Playwright auth-setup state — contains live session tokens, never commit.
