@@ -9,6 +9,7 @@ import { duration, easingArray } from '../../styles/animations';
 import { useAuth } from '../../hooks/useAuth';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useProject } from '../../hooks/queries';
+import { useProfileNames, displayName } from '../../hooks/queries/profiles';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useEntityStore } from '../../stores/entityStore';
 import type { RFI } from '../../types/database';
@@ -233,6 +234,10 @@ export const MorningBriefing: React.FC = () => {
   // Watch items
   const todayStr = useMemo(() => new Date(mountTime).toISOString().split('T')[0], [mountTime]);
 
+  // Resolve ball_in_court UUIDs to names so the briefing reads
+  // "3d with Sarah Garcia" instead of "3d with a0000001-…".
+  const { data: bicProfileMap } = useProfileNames(rfis.map((r) => r.ball_in_court ?? null))
+
   const watchItems = useMemo<WatchItem[]>(() => {
     const items: WatchItem[] = [];
 
@@ -271,7 +276,7 @@ export const MorningBriefing: React.FC = () => {
           id: `rfi-bic-${rfi.id}`,
           severity: 'red',
           icon: '\uD83D\uDD34',
-          text: `RFI #${rfi.number} \u2014 ${rfi.title} \u2014 ${daysSince}d with ${rfi.ball_in_court || 'reviewer'}`,
+          text: `RFI #${rfi.number} \u2014 ${rfi.title} \u2014 ${daysSince}d with ${displayName(bicProfileMap, rfi.ball_in_court, 'reviewer')}`,
         });
       }
     }
@@ -288,7 +293,7 @@ export const MorningBriefing: React.FC = () => {
     }
 
     return items.slice(0, 5);
-  }, [rfis, rfiLoading, phases, mountTime, todayStr]);
+  }, [rfis, rfiLoading, phases, mountTime, todayStr, bicProfileMap]);
 
   // Pulse metrics
   const scheduleLabel = useMemo(() => {

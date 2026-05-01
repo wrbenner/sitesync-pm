@@ -626,6 +626,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     aria-label="Owner update draft"
+                    data-demo-step="owner-update-stream"
                     style={{
                       flex: 1,
                       minHeight: 280,

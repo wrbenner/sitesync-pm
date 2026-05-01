@@ -35,6 +35,7 @@ import RFICreateWizard from '../components/rfis/RFICreateWizard';
 import { RFIKPIs } from './rfis/RFIKPIs';
 
 import { useRFIs, useRFI, useProject } from '../hooks/queries';
+import { useProfileNames, displayName, type ProfileMap } from '../hooks/queries/profiles';
 import { useIrisDrafts } from '../hooks/useIrisDrafts';
 import {
   useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse,
@@ -163,11 +164,18 @@ const StatusPill: React.FC<{ status: string | null | undefined; dueDate: string 
 
 // ── Ball-in-Court cell ──────────────────────────────────────────────────────
 
-const BicCell: React.FC<{ assigned: string | null | undefined }> = React.memo(({ assigned }) => {
+// `assigned` is typically a uuid FK to auth.users; the resolved display name
+// comes from the profileMap keyed by that uuid. We render the name (with
+// initials as the avatar fallback) — never the raw uuid.
+const BicCell: React.FC<{
+  assigned: string | null | undefined;
+  profileMap?: ProfileMap;
+}> = React.memo(({ assigned, profileMap }) => {
   if (!assigned) {
     return <span style={{ fontSize: 12, color: INK_3 }}>—</span>;
   }
-  const initials = assigned
+  const resolved = displayName(profileMap, assigned, assigned);
+  const initials = resolved
     .split(/\s+/).filter(Boolean).slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? '').join('');
   return (
@@ -185,7 +193,7 @@ const BicCell: React.FC<{ assigned: string | null | undefined }> = React.memo(({
         fontSize: 13, color: INK_2,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
-        {assigned}
+        {resolved}
       </span>
     </div>
   );
@@ -287,6 +295,19 @@ const RFIsPage: React.FC = () => {
     submitDate: typeof r.created_at === 'string' ? r.created_at.slice(0, 10) : '',
     dueDate: r.due_date || '',
   })), [rfisRaw]);
+
+  // Resolve every user-id surfaced on the page to a display name. Without
+  // this, BicCell renders the raw `assigned_to` uuid instead of the name.
+  const allUserIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const r of rfisRaw) {
+      if (r.assigned_to) ids.push(r.assigned_to as string);
+      if (r.ball_in_court) ids.push(r.ball_in_court as string);
+      if (r.created_by) ids.push(r.created_by as string);
+    }
+    return ids;
+  }, [rfisRaw]);
+  const { data: profileMap } = useProfileNames(allUserIds);
 
   // Pending Iris draft index keyed by RFI id (action_type === 'rfi.draft').
   const draftRfiIds = useMemo(() => {
@@ -598,7 +619,7 @@ const RFIsPage: React.FC = () => {
     colHelper.accessor('assigned_to', {
       header: 'Ball-in-Court',
       size: 180,
-      cell: (info) => <BicCell assigned={info.getValue() as string | null} />,
+      cell: (info) => <BicCell assigned={info.getValue() as string | null} profileMap={profileMap} />,
     }),
     colHelper.accessor('status', {
       header: 'Status',
@@ -699,7 +720,7 @@ const RFIsPage: React.FC = () => {
         );
       },
     }),
-  ] as ColumnDef<RFIRow, unknown>[]), [selectedIds, filteredRfis, draftRfiIds, navigate]);
+  ] as ColumnDef<RFIRow, unknown>[]), [selectedIds, filteredRfis, draftRfiIds, navigate, profileMap]);
 
   // ── Early returns ────────────────────────────────────────────────────────
   if (!projectId) return <ProjectGate />;
@@ -1130,7 +1151,7 @@ const RFIsPage: React.FC = () => {
                   toast.success('Updated');
                 }}
                 displayContent={selectedRfi.ball_in_court ? (
-                  <BicCell assigned={selectedRfi.ball_in_court as string} />
+                  <BicCell assigned={selectedRfi.ball_in_court as string} profileMap={profileMap} />
                 ) : undefined}
               />
               <EditableDetailField

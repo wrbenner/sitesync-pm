@@ -823,7 +823,7 @@ export async function runSubmittalApprovedChain(
 ): Promise<WorkflowResult> {
   try {
     const { data: submittal } = await from('submittals')
-      .select('id, project_id, title, spec_section, subcontractor, lead_time_weeks, approved_date')
+      .select('id, project_id, title, spec_section, subcontractor, lead_time_weeks, approved_date, required_onsite_date')
       .eq('id', submittalId)
       .maybeSingle();
     if (!submittal) return { workflow: 'submittal_approved', error: 'submittal not found' };
@@ -841,10 +841,21 @@ export async function runSubmittalApprovedChain(
       };
     }
 
+    // Lead-time math.
+    //   • If we know when the material is needed onsite, buyout_by_date is
+    //     onsite − lead_time_weeks (the canonical construction-PM formula).
+    //   • Otherwise project forward from approval: delivery would land
+    //     today + lead_time_weeks, and the buyout window is "now."
     const leadWeeks = submittal.lead_time_weeks as number | null;
+    const onsite = submittal.required_onsite_date as string | null;
+    const leadMs = leadWeeks != null ? leadWeeks * 7 * 86_400_000 : 0;
     const buyoutByDate =
-      leadWeeks != null
-        ? new Date(Date.now() - leadWeeks * 7 * 86_400_000).toISOString().slice(0, 10)
+      leadWeeks != null && onsite
+        ? new Date(new Date(onsite).getTime() - leadMs).toISOString().slice(0, 10)
+        : null;
+    const deliveryEta =
+      leadWeeks != null && !onsite
+        ? new Date(Date.now() + leadMs).toISOString().slice(0, 10)
         : null;
 
     const body =
@@ -852,7 +863,9 @@ export async function runSubmittalApprovedChain(
       (submittal.subcontractor ? ` (vendor: ${submittal.subcontractor})` : '') +
       `. Issue procurement order to lock pricing and delivery window.` +
       (leadWeeks != null
-        ? ` Lead time ${leadWeeks} weeks — buyout by ${buyoutByDate ?? 'TBD'} to hold the schedule.`
+        ? buyoutByDate
+          ? ` Lead time ${leadWeeks} weeks — buyout by ${buyoutByDate} to hold the schedule.`
+          : ` Lead time ${leadWeeks} weeks — release PO now; expected delivery ~${deliveryEta}.`
         : '');
 
     const { data: inserted, error: insertErr } = await from('activity_feed')
@@ -867,6 +880,7 @@ export async function runSubmittalApprovedChain(
           subcontractor: submittal.subcontractor,
           lead_time_weeks: leadWeeks,
           buyout_by_date: buyoutByDate,
+          delivery_eta: deliveryEta,
         },
       } as Record<string, unknown>)
       .select('id')

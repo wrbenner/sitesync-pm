@@ -30,11 +30,15 @@ describe('IrisInsightsLane', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders the Iris eyebrow and the detected-risks subtitle', () => {
+  it('renders the Iris eyebrow and the deterministic moat-statement subtitle', () => {
+    // The lane was relabeled from "Detected risks" to "Deterministic /
+    // no AI · sourced · real-time" to match the demo moat statement —
+    // these insights are pure functions, not LLM output.
     render(<IrisInsightsLane insights={[makeInsight()]} />)
     expect(screen.getByRole('region', { name: /iris insights/i })).toBeTruthy()
     expect(screen.getByText(/iris/i)).toBeTruthy()
-    expect(screen.getByText(/detected risks/i)).toBeTruthy()
+    expect(screen.getByText(/deterministic/i)).toBeTruthy()
+    expect(screen.getByText(/no AI/i)).toBeTruthy()
   })
 
   it('renders a card for each insight up to the limit', () => {

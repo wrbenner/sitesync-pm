@@ -3,13 +3,19 @@ import { Card, PriorityTag } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { ChevronRight, ChevronDown, AlertTriangle, Package } from 'lucide-react';
 import { CSI_DIVISIONS } from '../../machines/submittalMachine';
+import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles';
 import {
   isOverdue,
   formatCSICode,
   SubmittalStatusTag,
   MiniApprovalChain,
-  BallInCourtBadge,
 } from './types';
+
+// `assigned_to` is a uuid; `current_reviewer` is text but legacy rows may
+// hold a uuid copy. The same shape-detector used in SubmittalsTable keeps
+// us from rendering raw ids as group labels.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s);
 
 // ── Types ───────────────────────────────────────────────
 
@@ -143,15 +149,20 @@ function groupBySubcontractor(submittals: Array<Record<string, unknown>>): Submi
     }));
 }
 
-function groupByReviewer(submittals: Array<Record<string, unknown>>): SubmittalGroup[] {
+function groupByReviewer(
+  submittals: Array<Record<string, unknown>>,
+  profileMap: ProfileMap | undefined,
+): SubmittalGroup[] {
   const map = new Map<string, Array<Record<string, unknown>>>();
 
   for (const s of submittals) {
-    const reviewer =
-      (s.current_reviewer as string) ||
-      (s.assigned_to as string) ||
-      '';
-    const key = reviewer || 'Unassigned';
+    const reviewer = s.current_reviewer as string | null | undefined;
+    const assigned = s.assigned_to as string | null | undefined;
+    let key: string;
+    if (reviewer && !isUuid(reviewer)) key = reviewer;
+    else if (isUuid(reviewer)) key = displayName(profileMap, reviewer, 'Unassigned');
+    else if (isUuid(assigned)) key = displayName(profileMap, assigned, 'Unassigned');
+    else key = (assigned as string) || 'Unassigned';
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(s);
   }
@@ -316,10 +327,10 @@ const SubmittalRow: React.FC<{
         {!dueDate && <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>}
       </div>
 
-      {/* Ball in Court */}
-      <BallInCourtBadge value={submittal.ball_in_court as string | null} />
-
-      {/* Approval chain */}
+      {/* Approval chain — current reviewer + remaining steps. Submittals
+          have no `ball_in_court` column; the workflow ball-of-yarn lives on
+          `current_reviewer` + `approval_chain`, which the chain widget
+          surfaces directly. */}
       <MiniApprovalChain status={submittal.status as string} approvalChain={submittal.approval_chain} />
     </div>
   );
@@ -488,12 +499,27 @@ export const GroupedSubmittalsView: React.FC<GroupedSubmittalsViewProps> = ({
 }) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
+  // Resolve every uuid that might surface as a reviewer key so the group
+  // label reads as a name, not a raw id.
+  const reviewerUserIds = useMemo(() => {
+    if (groupBy !== 'reviewer') return [];
+    const ids: string[] = [];
+    for (const s of filteredSubmittals) {
+      const reviewer = s.current_reviewer as string | null | undefined;
+      const assigned = s.assigned_to as string | null | undefined;
+      if (isUuid(reviewer)) ids.push(reviewer);
+      if (isUuid(assigned)) ids.push(assigned);
+    }
+    return ids;
+  }, [filteredSubmittals, groupBy]);
+  const profileMap = useProfileNames(reviewerUserIds).data;
+
   const groups = useMemo(() => {
     if (groupBy === 'spec_section') return groupBySpecSection(filteredSubmittals);
     if (groupBy === 'subcontractor') return groupBySubcontractor(filteredSubmittals);
-    if (groupBy === 'reviewer') return groupByReviewer(filteredSubmittals);
+    if (groupBy === 'reviewer') return groupByReviewer(filteredSubmittals, profileMap);
     return [];
-  }, [filteredSubmittals, groupBy]);
+  }, [filteredSubmittals, groupBy, profileMap]);
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups((prev) => {

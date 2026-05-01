@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { IrisEnhancement, StreamItem } from '../../types/stream'
+import { displayName } from '../../hooks/queries/profiles'
 
 // Public re-exports so callers that need the draft service can pull it from
 // a single import path without reaching into sibling modules.
@@ -27,6 +28,15 @@ function daysPastDue(item: StreamItem, now: Date = new Date()): number {
   return Math.floor(diffMs / MS_PER_DAY)
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Resolve a UUID to a synthetic-seed friendly name when possible. */
+function friendlyAssignee(value: string | null | undefined): string {
+  if (!value) return 'responsible party'
+  if (!UUID_RE.test(value)) return value
+  return displayName(undefined, value, 'responsible party')
+}
+
 function getEnhancement(item: StreamItem): IrisEnhancement | undefined {
   // Overdue RFI (≥ 2 days) → follow-up email
   if (item.type === 'rfi' && item.overdue && daysPastDue(item) >= 2) {
@@ -34,7 +44,7 @@ function getEnhancement(item: StreamItem): IrisEnhancement | undefined {
       draftAvailable: true,
       draftType: 'follow_up_email',
       confidence: 0.85,
-      summary: `Draft follow-up to ${item.assignedTo || 'responsible party'}`,
+      summary: `Draft follow-up to ${friendlyAssignee(item.assignedTo)}`,
     }
   }
 

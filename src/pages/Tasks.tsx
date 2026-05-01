@@ -26,6 +26,7 @@ import { useProjectId } from '../hooks/useProjectId'
 import { usePermissions } from '../hooks/usePermissions'
 import { useTasks } from '../hooks/queries/tasks'
 import { useCreateTask, useUpdateTask, useDeleteTask } from '../hooks/mutations/tasks'
+import { useProfileNames, displayName } from '../hooks/queries/profiles'
 import { useConfirm } from '../components/ConfirmDialog'
 import type { Task } from '../types/database'
 
@@ -241,6 +242,11 @@ const TasksPage: React.FC = () => {
       toast.error(err instanceof Error ? err.message : 'Failed to create task')
     }
   }, [projectId, draftTitle, draftAssignee, draftDue, createTask])
+
+  // Resolve assignee UUIDs to names so the table never renders a raw UUID.
+  // Filter / sort / group still operate on the raw id (internal); only the
+  // visible cell text is swapped for the resolved name.
+  const { data: profileMap } = useProfileNames(tasks.map((t) => (t.assigned_to as string | null) ?? null))
 
   // ── Filter + search ─────────────────────────────────────────────────────
 
@@ -693,6 +699,7 @@ const TasksPage: React.FC = () => {
                         <React.Fragment key={t.id}>
                           <TaskRow
                             task={t}
+                            assigneeName={displayName(profileMap, (t.assigned_to as string | null) ?? null, '')}
                             status={status}
                             priority={priority}
                             focused={focused}
@@ -940,6 +947,8 @@ const GroupHeaderRow: React.FC<{ label: string; count: number; closed: boolean; 
 
 interface TaskRowProps {
   task: Task
+  /** Resolved assignee display name. Empty string when unresolvable. */
+  assigneeName: string
   status: Status
   priority: Priority
   focused: boolean
@@ -960,6 +969,7 @@ interface TaskRowProps {
 
 const TaskRow: React.FC<TaskRowProps> = ({
   task,
+  assigneeName,
   status,
   priority,
   focused,
@@ -1117,8 +1127,8 @@ const TaskRow: React.FC<TaskRowProps> = ({
 
       {/* Assignee */}
       <td style={cell({ padding: '6px 12px' })}>
-        <span style={{ color: task.assigned_to ? C.ink2 : C.ink4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-          {(task.assigned_to as string | null) ?? '—'}
+        <span style={{ color: assigneeName ? C.ink2 : C.ink4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+          {assigneeName || '—'}
         </span>
       </td>
 

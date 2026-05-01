@@ -340,6 +340,12 @@ const DayPage: React.FC = () => {
 
   return (
     <ErrorBoundary>
+      {/* Latency-budget probe: a 0×0 marker outside layout flow.
+          A wrapping `<div style={{display:'contents'}}>` was previously used
+          here but caused the cockpit to render blank in browser fullscreen
+          mode — fullscreen pseudo-class breaks `display:contents` passthrough
+          on Chrome/Safari. An absolutely-positioned hidden span is safe. */}
+      <span data-demo-step="cockpit-cold-load" aria-hidden style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} />
       <Cockpit
         header={
           <>

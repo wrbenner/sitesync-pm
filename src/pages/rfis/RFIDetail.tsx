@@ -799,7 +799,7 @@ export function RFIDetail() {
               fontSize: '12px', color: colors.primaryOrange, fontWeight: 600,
             }}>
               <Flag size={11} />
-              Ball in court: {rfi.ball_in_court}
+              Ball in court: {displayName(profileMap, rfi.ball_in_court)}
             </div>
           )}
         </div>

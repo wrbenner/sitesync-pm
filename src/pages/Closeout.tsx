@@ -14,6 +14,22 @@ import { PermissionGate } from '../components/auth/PermissionGate'
 import { ProjectGate } from '../components/ProjectGate'
 import { useCloseoutData, type CloseoutItemRow } from '../hooks/queries/closeout'
 import { usePunchItems } from '../hooks/queries/punch-items'
+import { useProfileNames, displayName } from '../hooks/queries/profiles'
+
+// punch_items.assigned_to is sometimes a UUID (linked auth user) and sometimes
+// a free-text trade name. Resolve only when it looks like a UUID; pass other
+// strings through unchanged so a label like "Atlantic Concrete Co." still
+// renders as itself.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+function resolveAssignee(
+  value: string | null | undefined,
+  profileMap: ReturnType<typeof useProfileNames>['data'],
+  fallback = '—',
+): string {
+  if (!value) return fallback
+  if (UUID_RE.test(value)) return displayName(profileMap, value, fallback)
+  return value
+}
 import { useWarranties, type WarrantyWithStatus } from '../hooks/queries/warranties'
 import {
   useCreateWarranty, useUpdateWarranty, useDeleteWarranty,
@@ -222,6 +238,9 @@ export default Closeout
 // ══════════════════════════════════════════════════════════
 
 const PunchTab: React.FC<{ unresolved: PunchItem[] }> = ({ unresolved }) => {
+  // Resolve assigned_to (UUID OR free-text trade) for every visible row.
+  const { data: punchProfileMap } = useProfileNames(unresolved.map((p) => p.assigned_to ?? null))
+
   if (unresolved.length === 0) {
     return (
       <Card padding={spacing['5']}>
@@ -264,7 +283,7 @@ const PunchTab: React.FC<{ unresolved: PunchItem[] }> = ({ unresolved }) => {
                     textTransform: 'capitalize',
                   }}>{(p.status ?? 'open').replace(/_/g, ' ')}</span>
                 </td>
-                <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{p.assigned_to ?? '—'}</td>
+                <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{resolveAssignee(p.assigned_to, punchProfileMap)}</td>
                 <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{formatDate(p.due_date)}</td>
               </tr>
             ))}
@@ -778,6 +797,8 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
   const toggleComplete = useToggleCloseoutItemComplete()
   const deleteItem = useDeleteCloseoutItem()
   const { confirm: confirmTraining, dialog: trainingConfirmDialog } = useConfirm()
+  // Resolve assigned_to (UUID OR free-text) for every visible item.
+  const { data: trainingProfileMap } = useProfileNames(items.map((it) => (it.assigned_to as string | null) ?? null))
 
   const [form, setForm] = useState({ description: '', trade: '', assigned_to: '', due_date: '', notes: '' })
 
@@ -867,7 +888,7 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
                     textDecoration: isDone ? 'line-through' : 'none',
                   }}>{item.description}</p>
                   <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                    {item.trade}{item.assigned_to ? ` · ${item.assigned_to}` : ''}{item.due_date ? ` · Due ${formatDate(item.due_date)}` : ''}
+                    {item.trade}{item.assigned_to ? ` · ${resolveAssignee(item.assigned_to as string, trainingProfileMap, '')}` : ''}{item.due_date ? ` · Due ${formatDate(item.due_date)}` : ''}
                   </p>
                 </div>
                 {item.completed_date && (

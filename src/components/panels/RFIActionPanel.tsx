@@ -13,6 +13,7 @@ import { SlideOverPanel, PanelSection, PanelField, StatusBadge } from '../SlideO
 import type { SlideOverAction } from '../SlideOverPanel';
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis';
 import { useProjectId } from '../../hooks/useProjectId';
+import { useProfileNames, displayName } from '../../hooks/queries/profiles';
 import { colors, typography, transitions } from '../../styles/theme';
 
 // ── Types ─────────────────────────────────────────────────
@@ -55,6 +56,14 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
   const status = rfi.status ?? 'open';
   const title = rfi.subject ?? rfi.title ?? 'RFI';
   const question = rfi.question ?? rfi.description ?? '';
+
+  // Resolve user UUIDs (assigned_to / ball_in_court / created_by) to names so
+  // the panel never renders a raw "a0000001-..." string. Falsy resolution
+  // (no live profile + no synthetic-overlay match) returns '' and the field
+  // is hidden so the panel never renders a raw UUID.
+  const { data: profileMap } = useProfileNames([rfi.assigned_to, rfi.ball_in_court, rfi.created_by]);
+  const assignedName = displayName(profileMap, rfi.assigned_to, '');
+  const ballInCourtName = displayName(profileMap, rfi.ball_in_court, '');
 
   // ── Actions ────────────────────────────────────────────
   const handleRespond = useCallback(async () => {
@@ -158,11 +167,11 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
       {/* ── Key Details ─────────────────────────── */}
       <PanelSection label="Details">
         <PanelField label="Status" value={<StatusBadge status={status} />} />
-        {rfi.assigned_to && !isUUID(rfi.assigned_to) && (
-          <PanelField label="Assigned to" value={rfi.assigned_to} />
+        {assignedName && (
+          <PanelField label="Assigned to" value={assignedName} />
         )}
-        {rfi.ball_in_court && !isUUID(rfi.ball_in_court) && (
-          <PanelField label="Ball in court" value={rfi.ball_in_court} />
+        {ballInCourtName && (
+          <PanelField label="Ball in court" value={ballInCourtName} />
         )}
         {rfi.due_date && (
           <PanelField
@@ -241,11 +250,6 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
 };
 
 // ── Helpers ─────────────────────────────────────────────────
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isUUID(s: string | undefined): boolean {
-  return !!s && UUID_RE.test(s);
-}
 
 function isOverdue(dueDate: string, status: string): boolean {
   if (status === 'closed' || status === 'answered') return false;

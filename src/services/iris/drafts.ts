@@ -9,13 +9,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { generateText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+import { createAnthropic } from '@ai-sdk/anthropic'
 
 import type { StreamItem } from '../../types/stream'
 import { DRAFT_TEMPLATES } from './templates'
 import type { IrisDraft, ProjectContextSnapshot } from './types'
 
 const MODEL_ID = 'claude-sonnet-4.6'
+
+// In the browser there is no `process.env`, so the default `anthropic` export
+// throws "Environment variables are not supported in this environment" the
+// moment a user clicks Draft. Construct the provider explicitly with the Vite
+// env var so the key is wired the same way every other client-side secret
+// (Supabase, OpenWeather) is wired in this app.
+const anthropic = createAnthropic({
+  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
+})
 
 export interface GenerateDraftOptions {
   // Allow tests / future callers to swap in a fake without changing call sites.

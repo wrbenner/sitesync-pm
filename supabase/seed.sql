@@ -209,6 +209,16 @@ VALUES (
   'active'
 );
 
+-- Iris "Ground in the world" jurisdiction tag. Skipped silently if the
+-- column does not exist on this database (migration may not be applied
+-- yet on older targets).
+IF EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_name = 'projects' AND column_name = 'jurisdiction'
+) THEN
+  UPDATE projects SET jurisdiction = 'Dallas, TX' WHERE id = project_id;
+END IF;
+
 -- =========================================================================
 -- 2. PROJECT MEMBERS (8)
 -- =========================================================================
@@ -317,6 +327,20 @@ INSERT INTO rfis (id, project_id, title, description, priority, status, created_
    'The mechanical plans show the generator exhaust terminating at the east wall, but this conflicts with the fresh air intake louver location. Minimum 15 foot separation required per code. Requesting revised louver placement.',
    'high', 'open', user_robert, user_karen, user_karen,
    'M501, A201', '2026-04-06', NULL, '2026-03-27 10:30:00');
+
+-- Iris "Ground in the world" code citations. Same idempotent column-existence
+-- guard pattern as the projects.jurisdiction update above.
+IF EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_name = 'rfis' AND column_name = 'applicable_codes'
+) THEN
+  -- rfi_05: Fire rated shaft wall assembly at elevator lobby
+  UPDATE rfis SET applicable_codes = ARRAY['IBC 706.2', 'NFPA 285']
+   WHERE id = rfi_05;
+  -- rfi_11: Sprinkler head layout in Level 10 open office area (NFPA 13 grounded)
+  UPDATE rfis SET applicable_codes = ARRAY['NFPA 13 § 8.6', 'IBC 903.3.1.1']
+   WHERE id = rfi_11;
+END IF;
 
 -- =========================================================================
 -- 4. RFI RESPONSES (5)

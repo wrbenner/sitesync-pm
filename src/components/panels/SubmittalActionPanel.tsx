@@ -13,6 +13,7 @@ import { SlideOverPanel, PanelSection, PanelField, StatusBadge } from '../SlideO
 import type { SlideOverAction } from '../SlideOverPanel';
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals';
 import { useProjectId } from '../../hooks/useProjectId';
+import { useProfileNames, displayName } from '../../hooks/queries/profiles';
 import { colors, typography, transitions } from '../../styles/theme';
 
 // ── Types ─────────────────────────────────────────────────
@@ -56,6 +57,12 @@ export const SubmittalActionPanel: React.FC<SubmittalActionPanelProps> = ({ open
 
   const status = submittal.status ?? 'pending';
   const title = submittal.title ?? submittal.description ?? 'Submittal';
+
+  // Resolve assigned_to UUID to a name so the panel never renders a raw
+  // UUID. Falsy resolution (no live profile + no synthetic-overlay match)
+  // returns '' and the field is hidden.
+  const { data: profileMap } = useProfileNames([submittal.assigned_to]);
+  const assignedName = displayName(profileMap, submittal.assigned_to, '');
 
   // ── Status Change Handler ──────────────────────────────
   const handleStatusChange = useCallback(async (newStatus: string) => {
@@ -161,8 +168,8 @@ export const SubmittalActionPanel: React.FC<SubmittalActionPanelProps> = ({ open
         {submittal.spec_section && <PanelField label="Spec section" value={submittal.spec_section} />}
         {submittal.type && <PanelField label="Type" value={submittal.type} />}
         {submittal.subcontractor && <PanelField label="Subcontractor" value={submittal.subcontractor} />}
-        {submittal.assigned_to && !isUUID(submittal.assigned_to) && (
-          <PanelField label="Assigned to" value={submittal.assigned_to} />
+        {assignedName && (
+          <PanelField label="Assigned to" value={assignedName} />
         )}
         {submittal.responsible_contractor && (
           <PanelField label="Responsible contractor" value={submittal.responsible_contractor} />
@@ -241,11 +248,6 @@ export const SubmittalActionPanel: React.FC<SubmittalActionPanelProps> = ({ open
 };
 
 // ── Helpers ─────────────────────────────────────────────────
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isUUID(s: string | undefined): boolean {
-  return !!s && UUID_RE.test(s);
-}
 
 function isOverdue(dueDate: string, status: string): boolean {
   if (status === 'approved' || status === 'closed') return false;

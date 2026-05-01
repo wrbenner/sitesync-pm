@@ -9,11 +9,17 @@ import {
   isOverdue,
   formatCSICode,
   calcBusinessDaysRemaining,
-  BallInCourtBadge,
   SubmittalStatusTag,
 } from './types';
 import { useIrisDraftStore } from '../../stores/irisDraftStore';
+import { useProfileNames, displayName } from '../../hooks/queries/profiles';
 import type { ScheduleActivity } from '../../hooks/useScheduleActivities';
+
+// `assigned_to` is a uuid FK to auth.users; `current_reviewer` is text and
+// can either be a free-form name or (legacy) a uuid copy. Detect the uuid
+// shape so we can route through displayName instead of rendering raw ids.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s);
 
 const subColHelper = createColumnHelper<Record<string, unknown>>();
 
@@ -119,6 +125,20 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
 }) => {
   const { addToast } = useToast();
 
+  // Collect any uuid that might appear in the Reviewer column so we can
+  // resolve all of them in one round-trip and render names instead of ids.
+  const reviewerUserIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const sub of allSubmittals) {
+      const reviewer = sub.current_reviewer as string | null | undefined;
+      const assigned = sub.assigned_to as string | null | undefined;
+      if (isUuid(reviewer)) ids.push(reviewer);
+      if (isUuid(assigned)) ids.push(assigned);
+    }
+    return ids;
+  }, [allSubmittals]);
+  const profileMap = useProfileNames(reviewerUserIds).data;
+
   const subColumns = useMemo(() => [
     // ── Spec § ──
     subColHelper.accessor((row: Record<string, unknown>) =>
@@ -174,8 +194,19 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       },
     }),
     // ── Reviewer ──
-    subColHelper.accessor((row: Record<string, unknown>) =>
-      (row.current_reviewer as string | null) ?? (row.assigned_to as string | null),
+    // Prefer current_reviewer when it's a real name; if it's a uuid (legacy
+    // rows) or absent, fall through to assigned_to via the profile map.
+    // Both `current_reviewer` (text) and `assigned_to` (uuid) might be
+    // identifiers — resolve them through useProfileNames so we never render
+    // a raw uuid.
+    subColHelper.accessor((row: Record<string, unknown>) => {
+      const reviewer = row.current_reviewer as string | null | undefined;
+      const assigned = row.assigned_to as string | null | undefined;
+      if (reviewer && !isUuid(reviewer)) return reviewer;
+      if (isUuid(reviewer)) return displayName(profileMap, reviewer, '');
+      if (isUuid(assigned)) return displayName(profileMap, assigned, '');
+      return assigned ?? null;
+    },
     {
       id: 'reviewer',
       header: 'Reviewer',
@@ -191,12 +222,10 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
         );
       },
     }),
-    // ── Ball-in-Court ──
-    subColHelper.accessor('ball_in_court', {
-      header: 'Ball-in-Court',
-      size: 130,
-      cell: (info) => <BallInCourtBadge value={info.getValue() as string | null} />,
-    }),
+    // (Submittals have no `ball_in_court` column — workflow ball-of-yarn lives
+    // on `current_reviewer` + `approval_chain`. The Reviewer column above
+    // surfaces the actual person; a separate Ball-in-Court column would
+    // always render empty.)
     // ── Submitted ──
     subColHelper.accessor((row: Record<string, unknown>) =>
       (row.submitted_date as string | null) ?? (row.created_at as string | null),
@@ -299,7 +328,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       size: 110,
       cell: (info) => <IrisCell submittalId={info.getValue() as string} projectId={projectId} />,
     }),
-  ], [projectId]);
+  ], [projectId, profileMap]);
 
   const checkboxColumn = useMemo(() => subColHelper.display({
     id: 'select',

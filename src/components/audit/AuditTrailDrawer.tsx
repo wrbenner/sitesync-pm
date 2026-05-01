@@ -30,6 +30,17 @@ export const AuditTrailDrawer: React.FC<AuditTrailDrawerProps> = ({
 }) => {
   return (
     <Drawer open={open} onClose={onClose} title="Audit trail" width="560px">
+      {/* Latency-budget probe: 0×0 sentinel, outside layout flow.
+          Replaces a previous `<div style={{display:'contents'}}>` wrapper
+          that rendered blank in browser fullscreen on Chrome/Safari — the
+          :fullscreen pseudo-class breaks display:contents passthrough.
+          The span only mounts when the drawer is open, preserving the
+          Playwright "audit-drawer-open" detection semantics. */}
+      <span
+        data-demo-step="audit-drawer-open"
+        aria-hidden
+        style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}
+      />
       <EntityAuditViewer
         entityType={entityType}
         entityId={entityId}

@@ -480,8 +480,8 @@ const SheetCard: React.FC<{
       tabIndex={0}
       aria-label={`${drawing.setNumber} ${drawing.title}`}
       data-drawing-id={drawing.id}
-      onClick={() => onSelect(drawing)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(drawing); } }}
+      onClick={() => onView(drawing)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(drawing); } }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

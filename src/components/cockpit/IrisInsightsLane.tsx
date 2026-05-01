@@ -70,6 +70,7 @@ export const IrisInsightsLane: React.FC<IrisInsightsLaneProps> = ({
         }}
       >
         <span
+          title="Iris insights are pure-function detectors over project data. No LLM. No hallucination. Each insight links to its source records."
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -80,6 +81,7 @@ export const IrisInsightsLane: React.FC<IrisInsightsLaneProps> = ({
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: IRIS_INDIGO,
+            cursor: 'help',
           }}
         >
           <Sparkles size={14} strokeWidth={2.25} />
@@ -89,12 +91,23 @@ export const IrisInsightsLane: React.FC<IrisInsightsLaneProps> = ({
           style={{
             fontFamily: typography.fontFamily,
             fontSize: 11,
-            color: colors.textTertiary,
-            letterSpacing: '0.04em',
+            color: colors.textSecondary,
+            letterSpacing: '0.06em',
             textTransform: 'uppercase',
+            fontWeight: 600,
           }}
         >
-          Detected risks
+          Deterministic
+        </span>
+        <span
+          style={{
+            fontFamily: typography.fontFamily,
+            fontSize: 10,
+            color: colors.textTertiary,
+            letterSpacing: '0.02em',
+          }}
+        >
+          no AI · sourced · real-time
         </span>
       </div>
 

@@ -50,6 +50,7 @@ import { DrawingSetPanel, type DrawingSetItem, type SetType } from '../../compon
 import { ScaleAuditPanel } from '../../components/drawings/ScaleAuditPanel';
 import { TransmittalModal, type TransmittalData } from '../../components/drawings/TransmittalModal';
 import { DiscrepancyDetailModal } from '../../components/drawings/DiscrepancyDetailModal';
+import { IrisConflictScanButton } from '../../components/drawings/IrisConflictScanButton';
 import { useProjectDrawingPairs } from '../../hooks/useDrawingIntelligence';
 import type { DrawingDiscrepancy, DrawingPair } from '../../types/ai';
 
@@ -1553,6 +1554,11 @@ const DrawingsPage: React.FC = () => {
           <Btn variant="ghost" size="md" icon={<Ruler size={16} />} onClick={() => setShowScaleAuditPanel(true)}>
             Scale Audit
           </Btn>
+
+          {/* Iris AI conflict scan — calls ai-conflict-detection edge fn over
+              schedule + RFIs + submittals + drawings. */}
+          <IrisConflictScanButton projectId={projectId} />
+
           <PermissionGate permission="drawings.upload">
             <Btn
               variant="ghost" size="md"

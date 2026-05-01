@@ -23,6 +23,7 @@ import { ScheduleTimeline } from './ScheduleTimeline';
 import { ScheduleList } from './ScheduleList';
 import { ScheduleStatusChip } from './ScheduleStatusChip';
 import { isBehind, daysBehind } from './ScheduleHelpers';
+import { IrisScheduleRiskBanner } from '../../components/schedule/IrisScheduleRiskBanner';
 
 type ViewKey = 'timeline' | 'list' | 'critical';
 
@@ -148,6 +149,7 @@ function IrisNote({ phase, onClose }: IrisNoteProps) {
 
 const SchedulePage: React.FC = () => {
   const { activeProject } = useProjectContext();
+  const projectId = activeProject?.id;
   const queryClient = useQueryClient();
   const { setPageContext } = useCopilotStore();
   const { phases, loading, error, loadSchedule, updatePhase } = useScheduleStore();
@@ -425,6 +427,11 @@ const SchedulePage: React.FC = () => {
             Failed to load schedule: {error}
           </div>
         )}
+
+        {/* Iris AI schedule-risk banner — calls the ai-schedule-risk edge
+            function (Anthropic Claude over schedule + weather + crew + RFIs).
+            Manual trigger so the demo can run it on stage. */}
+        <IrisScheduleRiskBanner projectId={projectId ?? undefined} />
 
         {loading && phases.length === 0 ? (
           <div

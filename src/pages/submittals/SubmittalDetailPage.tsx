@@ -46,6 +46,7 @@ import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../compone
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submittals'
+import { useProfileNames, displayName } from '../../hooks/queries/profiles'
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'
 import { useProjectId } from '../../hooks/useProjectId'
 import {
@@ -246,6 +247,7 @@ const ActionButtons: React.FC<{
             whileTap={{ scale: 0.97 }}
             onClick={() => onAction(action)}
             disabled={loading !== null}
+            data-demo-step={action.toLowerCase().includes('approve') ? 'submittal-approve' : undefined}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: isPrimary ? '8px 20px' : '8px 14px',
@@ -275,7 +277,8 @@ const ActionButtons: React.FC<{
 const ReviewBubble: React.FC<{
   reviewer: any
   index: number
-}> = ({ reviewer, index }) => {
+  reviewerName?: string | null
+}> = ({ reviewer, index, reviewerName }) => {
   const stampConfig = reviewer.stamp ? getStampConfig(reviewer.stamp as SubmittalStamp) : null
 
   return (
@@ -285,14 +288,14 @@ const ReviewBubble: React.FC<{
       transition={{ delay: index * 0.04, type: 'spring', stiffness: 400, damping: 30 }}
       style={{ display: 'flex', gap: spacing.sm, alignItems: 'flex-start' }}
     >
-      <Avatar initials={getInitials(reviewer.approver_id || reviewer.role || 'R')} size={32} />
+      <Avatar initials={getInitials(reviewerName || reviewer.role || 'R')} size={32} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, marginBottom: 4 }}>
           <span style={{
             fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
             color: colors.textPrimary,
           }}>
-            {reviewer.role ? reviewer.role.charAt(0).toUpperCase() + reviewer.role.slice(1) : 'Reviewer'}
+            {reviewerName || (reviewer.role ? reviewer.role.charAt(0).toUpperCase() + reviewer.role.slice(1) : 'Reviewer')}
           </span>
           {stampConfig && (
             <span style={{
@@ -328,7 +331,7 @@ const ReviewBubble: React.FC<{
 
 // ─── Info Card ───────────────────────────────────────────
 
-const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
+const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: SubmittalState; assignedName?: string | null }> = ({ submittal, currentStatus, assignedName }) => {
   const [showMore, setShowMore] = useState(false)
   const specDiv = getCSIDivisionName(submittal.spec_section)
   const dueUrgent = submittal.due_date && isOverdue(submittal.due_date) && currentStatus !== 'approved' && currentStatus !== 'closed'
@@ -343,7 +346,7 @@ const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: Submit
 
   // Secondary info: collapsed by default
   const secondaryItems: Array<{ icon: React.ReactNode; label: string; value: string | null; urgent?: boolean }> = [
-    { icon: <User size={13} />, label: 'Assigned', value: submittal.assigned_to },
+    { icon: <User size={13} />, label: 'Assigned', value: assignedName ?? null },
     { icon: <Calendar size={13} />, label: 'Submit By', value: formatDate(submittal.submit_by_date), urgent: leadTimeUrgency.urgent },
     { icon: <RotateCcw size={13} />, label: 'Revision', value: submittal.revision_number != null && submittal.revision_number > 0 ? `Rev ${submittal.revision_number}` : null },
     { icon: <Clock size={13} />, label: 'Days in Review', value: submittal.days_in_review ? `${submittal.days_in_review} days` : null },
@@ -620,6 +623,23 @@ export function SubmittalDetailPage() {
   const { data: reviewers = [] } = useSubmittalReviewers(submittalId)
   const updateSubmittal = useUpdateSubmittal()
   const [transitioning, setTransitioning] = useState<string | null>(null)
+
+  // Collect every user uuid that surfaces in this view so we can resolve
+  // names in one round-trip and never render a raw id (the "Assigned" stat,
+  // each reviewer's avatar initials, etc.).
+  const profileUserIds = useMemo(() => {
+    const ids: string[] = []
+    const sub = submittal as { assigned_to?: string | null; created_by?: string | null } | null
+    if (sub?.assigned_to) ids.push(sub.assigned_to)
+    if (sub?.created_by) ids.push(sub.created_by)
+    for (const r of reviewers) {
+      if ((r as { approver_id?: string | null }).approver_id) {
+        ids.push((r as { approver_id: string }).approver_id)
+      }
+    }
+    return ids
+  }, [submittal, reviewers])
+  const profileMap = useProfileNames(profileUserIds).data
 
   // Normalize legacy DB statuses (pending, under_review) to machine states so
   // that the XState-driven workflow, stepper, and action buttons all render.
@@ -925,7 +945,7 @@ export function SubmittalDetailPage() {
           transition={{ duration: 0.3, delay: 0.15 }}
           style={{ marginBottom: spacing.lg }}
         >
-          <InfoCard submittal={sub} currentStatus={currentStatus} />
+          <InfoCard submittal={sub} currentStatus={currentStatus} assignedName={displayName(profileMap, (sub as Record<string, string | null>).assigned_to, '')} />
         </motion.div>
 
         {/* ── Reviews ────────────────────────────────── */}
@@ -944,7 +964,7 @@ export function SubmittalDetailPage() {
                 padding: `${spacing.md} 0`,
               }}>
                 {reviewers.map((r: any, i: number) => (
-                  <ReviewBubble key={r.id || i} reviewer={r} index={i} />
+                  <ReviewBubble key={r.id || i} reviewer={r} index={i} reviewerName={displayName(profileMap, (r as { approver_id?: string | null }).approver_id, '')} />
                 ))}
               </div>
             ) : (
@@ -954,7 +974,7 @@ export function SubmittalDetailPage() {
               }}>
                 <Eye size={24} style={{ color: colors.textTertiary, margin: '0 auto 8px', opacity: 0.5 }} />
                 <div style={{ fontSize: typography.fontSize.body, color: colors.textTertiary }}>
-                  Awaiting review{sub.assigned_to ? ` from ${sub.assigned_to}` : ''}
+                  Awaiting review{sub.assigned_to ? ` from ${displayName(profileMap, (sub as Record<string, string | null>).assigned_to, '')}` : ''}
                 </div>
               </div>
             )}

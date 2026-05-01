@@ -185,15 +185,6 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
   },
   {
-    route: '/site',
-    pageFile: 'src/pages/site/index.tsx',
-    title: 'The Site',
-    entity: null,
-    expected: {},
-    permissionModule: 'site',
-    status: 'production',
-  },
-  {
     route: '/iris/inbox',
     pageFile: 'src/pages/iris/IrisInboxPage.tsx',
     title: 'Iris Inbox',
@@ -203,16 +194,7 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
   },
 
-  // ── Portfolio / dashboard ────────────────────────────────
-  {
-    route: '/portfolio',
-    pageFile: 'src/pages/Portfolio.tsx',
-    title: 'Portfolio',
-    entity: 'project',
-    expected: { has_list: true, has_search: true, has_filters: true },
-    permissionModule: 'portfolio',
-    status: 'production',
-  },
+  // ── Dashboard ────────────────────────────────────────────
   {
     route: '/',
     pageFile: 'src/pages/dashboard/index.tsx',
@@ -462,25 +444,6 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
     knownIssues: ['Create uses inline supabase.insert instead of a mutation hook'],
   },
-  {
-    route: '/financials',
-    pageFile: 'src/pages/Financials.tsx',
-    title: 'Financials',
-    entity: null,
-    expected: { has_list: true, has_export: true },
-    permissionModule: 'financials',
-    status: 'beta',
-  },
-  {
-    route: '/cost-management',
-    pageFile: 'src/pages/CostManagement.tsx',
-    title: 'Cost Management',
-    entity: 'cost-code',
-    expected: { has_list: true, has_create: true },
-    permissionModule: 'cost-management',
-    status: 'beta',
-  },
-
   // ── Drawings / Files / Field ─────────────────────────────
   {
     route: '/drawings',
@@ -731,15 +694,6 @@ export const PAGE_REGISTRY: PageContract[] = [
 
   // ── AI / Intelligence / Activity ─────────────────────────
   {
-    route: '/copilot',
-    pageFile: 'src/pages/AICopilot.tsx',
-    title: 'AI Copilot',
-    entity: null,
-    expected: {},
-    permissionModule: 'copilot',
-    status: 'beta',
-  },
-  {
     route: '/ai-agents',
     pageFile: 'src/pages/AIAgents.tsx',
     title: 'AI Agents',
@@ -811,15 +765,6 @@ export const PAGE_REGISTRY: PageContract[] = [
     entity: null,
     expected: {},
     permissionModule: 'site-map',
-    status: 'beta',
-  },
-  {
-    route: '/carbon',
-    pageFile: 'src/pages/CarbonDashboard.tsx',
-    title: 'Carbon Dashboard',
-    entity: null,
-    expected: {},
-    permissionModule: 'carbon',
     status: 'beta',
   },
   {

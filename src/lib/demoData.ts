@@ -33,6 +33,7 @@ export const DEMO_PROJECT = {
   number_of_floors: 5,
   description:
     'Five-story mixed-use development. Ground floor retail (8 tenants, 14,200 sf), four floors of multifamily housing (84 units), structured parking below grade. Type V-A construction over Type IA podium. LEED Silver target.',
+  jurisdiction: 'Dallas, TX',
   is_demo: true,
 } as const
 
@@ -96,9 +97,9 @@ export const DEMO_RFIS = [
   { id: 'demo-rfi-012', number: 12, title: 'Concrete mix design — exterior balcony slabs',     status: 'closed',      priority: 'low',    discipline: 'structural',    due_date: '2026-04-21', closed_date: '2026-04-20' },
   { id: 'demo-rfi-013', number: 13, title: 'Window head height — units 305-308',               status: 'in_review',   priority: 'medium', discipline: 'architectural', due_date: '2026-04-29' },
   { id: 'demo-rfi-014', number: 14, title: 'Curtain wall anchor at slab edge — typical',       status: 'in_review',   priority: 'high',   discipline: 'structural',    due_date: '2026-05-02' },
-  { id: 'demo-rfi-015', number: 15, title: 'Fire-rated assembly at electrical room — code',    status: 'in_review',   priority: 'high',   discipline: 'architectural', due_date: '2026-05-04' },
+  { id: 'demo-rfi-015', number: 15, title: 'Fire-rated assembly at electrical room — code',    status: 'in_review',   priority: 'high',   discipline: 'architectural', due_date: '2026-05-04', applicable_codes: ['IBC 706.2', 'NFPA 285'] },
   { id: 'demo-rfi-016', number: 16, title: 'Plumbing vent termination — roof penetrations',    status: 'in_review',   priority: 'medium', discipline: 'plumbing',      due_date: '2026-05-06' },
-  { id: 'demo-rfi-017', number: 17, title: 'ADA clearance at retail entry 2 vestibule',        status: 'in_review',   priority: 'high',   discipline: 'architectural', due_date: '2026-05-08' },
+  { id: 'demo-rfi-017', number: 17, title: 'ADA clearance at retail entry 2 vestibule',        status: 'in_review',   priority: 'high',   discipline: 'architectural', due_date: '2026-05-08', applicable_codes: ['ADA 404.2.4', 'ICC A117.1 § 404'] },
   { id: 'demo-rfi-018', number: 18, title: 'Mechanical roof unit weight — structural review',  status: 'in_review',   priority: 'high',   discipline: 'structural',    due_date: '2026-05-10' },
   { id: 'demo-rfi-019', number: 19, title: 'Ceiling height conflict with HVAC return — corridor', status: 'in_review',priority: 'medium', discipline: 'mechanical',    due_date: '2026-05-11' },
   { id: 'demo-rfi-020', number: 20, title: 'Shower drain alignment — units 206 ADA',           status: 'in_review',   priority: 'medium', discipline: 'plumbing',      due_date: '2026-05-12' },
@@ -123,10 +124,10 @@ export const DEMO_SUBMITTALS = [
   { id: 'demo-sub-004', spec_section: '06 17 00', title: 'I-joist product data + connection details',   type: 'product_data',  status: 'approved',          submitted_date: '2026-03-10', approved_date: '2026-03-18' },
   { id: 'demo-sub-005', spec_section: '08 41 13', title: 'Aluminum storefront — retail facade',         type: 'shop_drawing',  status: 'approved_as_noted', submitted_date: '2026-04-05', approved_date: '2026-04-14' },
   { id: 'demo-sub-006', spec_section: '07 21 16', title: 'Wall insulation — R-21 batt',                 type: 'product_data',  status: 'approved',          submitted_date: '2026-04-10', approved_date: '2026-04-17' },
-  { id: 'demo-sub-007', spec_section: '23 31 13', title: 'Sheet metal ductwork shop drawings — L2-L3',  type: 'shop_drawing',  status: 'in_review',         submitted_date: '2026-04-22' },
-  { id: 'demo-sub-008', spec_section: '26 27 26', title: 'Wiring devices — receptacles, switches',      type: 'product_data',  status: 'in_review',         submitted_date: '2026-04-23' },
-  { id: 'demo-sub-009', spec_section: '08 14 00', title: 'Wood doors — interior unit doors',            type: 'product_data',  status: 'in_review',         submitted_date: '2026-04-24' },
-  { id: 'demo-sub-010', spec_section: '09 21 16', title: 'Gypsum drywall — Type X assemblies',          type: 'product_data',  status: 'in_review',         submitted_date: '2026-04-25' },
+  { id: 'demo-sub-007', spec_section: '23 31 13', title: 'Sheet metal ductwork shop drawings — L2-L3',  type: 'shop_drawing',  status: 'in_review',         submitted_date: '2026-04-22', lead_time_weeks: 8,  subcontractor: 'Northstar Mechanical' },
+  { id: 'demo-sub-008', spec_section: '26 27 26', title: 'Wiring devices — receptacles, switches',      type: 'product_data',  status: 'in_review',         submitted_date: '2026-04-23', lead_time_weeks: 4,  subcontractor: 'Vanguard Electric' },
+  { id: 'demo-sub-009', spec_section: '08 14 00', title: 'Wood doors — interior unit doors',            type: 'product_data',  status: 'in_review',         submitted_date: '2026-04-24', lead_time_weeks: 6,  subcontractor: 'Caldwell Doors' },
+  { id: 'demo-sub-010', spec_section: '09 21 16', title: 'Gypsum drywall — Type X assemblies',          type: 'product_data',  status: 'in_review',         submitted_date: '2026-04-25', lead_time_weeks: 3,  subcontractor: 'Ironwood Drywall' },
   { id: 'demo-sub-011', spec_section: '07 53 23', title: 'TPO roof system + warranty',                  type: 'product_data',  status: 'draft',             submitted_date: null },
   { id: 'demo-sub-012', spec_section: '32 31 13', title: 'Site fencing — chain link permanent',         type: 'product_data',  status: 'draft',             submitted_date: null },
 ] as const

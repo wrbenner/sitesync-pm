@@ -49,6 +49,7 @@ export const HashChainBadge: React.FC<HashChainBadgeProps> = ({
   if (result.ok) {
     return (
       <span
+        data-demo-step="audit-chain-verify"
         title={`Hash chain verified across ${result.total} audit entries.`}
         style={{
           display: 'inline-flex',

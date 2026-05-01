@@ -88,7 +88,9 @@ const CrewPage = lazyWithRetry(() => import('./pages/crew/index'));
 const SetPage = lazyWithRetry(() => import('./pages/set/index'));
 const FilePage = lazyWithRetry(() => import('./pages/file/index'));
 // Core 10
-const Dashboard = lazyWithRetry(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })));
+// /dashboard redirects to /day (Wave 1 homepage redesign), so the legacy
+// Dashboard component no longer needs to be lazy-imported. The page file is
+// retained (smoke tests still reference it) but is unrouted.
 const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
 const Schedule = lazyWithRetry(() => import('./pages/schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
@@ -161,7 +163,6 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
       import('./pages/field/index');
       import('./pages/plan/index');
       import('./pages/ledger/index');
-      import('./pages/dashboard');
       import('./pages/RFIs');
       import('./pages/daily-log');
     };
@@ -287,7 +288,7 @@ function ChunkLoadFallback() {
             textDecoration: 'none',
           }}
         >
-          Go to Dashboard
+          Go home
         </a>
       </div>
     </div>
@@ -384,7 +385,8 @@ function AppRoutes() {
 
             {/* ── Core 10 ── */}
             <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/dashboard" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
+            {/* /dashboard merges into the Command stream — Wave 1 redirect */}
+            <Route path="/dashboard" element={<Navigate to="/day" replace />} />
             <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
             <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
             <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
@@ -565,7 +567,7 @@ function AppContent() {
     { key: 's', meta: true, description: 'Save current form', action: () => {} },
     { key: 'e', meta: true, description: 'Export', action: () => setExportOpen(true) },
     // Page navigation: Cmd+1 through Cmd+9
-    { key: '1', meta: true, description: 'Dashboard', action: () => handleNavigate('dashboard') },
+    { key: '1', meta: true, description: 'Command (The Day)', action: () => handleNavigate('day') },
     { key: '2', meta: true, description: 'Tasks', action: () => handleNavigate('tasks') },
     { key: '3', meta: true, description: 'Schedule', action: () => handleNavigate('schedule') },
     { key: '4', meta: true, description: 'Budget', action: () => handleNavigate('budget') },
@@ -582,7 +584,7 @@ function AppContent() {
   useKeyboardShortcuts([
     { keys: ['meta+/'], action: () => setShortcutsOpen((p) => !p) },
     { keys: ['meta+k'], action: () => setCommandPaletteOpen(prev => !prev) },
-    { keys: ['g', 'd'], sequential: true, action: () => navigate('/dashboard') },
+    { keys: ['g', 'd'], sequential: true, action: () => navigate('/day') },
     { keys: ['g', 'r'], sequential: true, action: () => navigate('/rfis') },
     { keys: ['g', 'b'], sequential: true, action: () => navigate('/budget') },
     { keys: ['g', 's'], sequential: true, action: () => navigate('/schedule') },
@@ -815,7 +817,7 @@ function ErrorFallback() {
             textDecoration: 'none',
           }}
         >
-          Go to Dashboard
+          Go home
         </a>
       </div>
     </div>

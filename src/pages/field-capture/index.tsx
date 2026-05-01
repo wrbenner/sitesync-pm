@@ -31,10 +31,53 @@ import { useProjectId } from '../../hooks/useProjectId';
 import { useFieldCaptures, useDailyLogs } from '../../hooks/queries';
 import { useCreateFieldCapture } from '../../hooks/mutations';
 import { useFieldCapture } from '../../hooks/useFieldCapture';
+import { useSignedUrl } from '../../hooks/useSignedUrl';
 
 import { supabase } from '../../lib/supabase';
 import { typography } from '../../styles/theme';
 import type { FieldCapture as FieldCaptureRow } from '../../types/database';
+
+// ── SafeImage — defensive image source resolver ──────────────────────────────
+// `field_captures.file_url` may contain either:
+//   • an absolute URL (http(s), data:, blob:) → use as-is
+//   • a Supabase Storage path (e.g. "project/abc/photo.jpg") → sign it
+// This component handles both, falling back to a Camera glyph while
+// loading or on error. Without this, paths render as broken images.
+
+const ABS_URL_RE = /^(https?:|data:|blob:)/i;
+
+const SafeImage: React.FC<{
+  value: string | null | undefined;
+  alt: string;
+  style?: React.CSSProperties;
+  loading?: 'lazy' | 'eager';
+  iconSize?: number;
+}> = ({ value, alt, style, loading, iconSize = 20 }) => {
+  const isAbs = !!value && ABS_URL_RE.test(value);
+  const signed = useSignedUrl(isAbs ? null : (value ?? null));
+  const src = isAbs ? value : signed;
+  const [errored, setErrored] = useState(false);
+  if (!value || errored || !src) {
+    return (
+      <div style={{
+        ...style,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: '#F5F4F1', color: '#8C857E',
+      }}>
+        <Camera size={iconSize} />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading={loading}
+      style={style}
+      onError={() => setErrored(true)}
+    />
+  );
+};
 
 // ── Constants — DESIGN-RESET enterprise palette ──────────────────────────────
 
@@ -563,14 +606,12 @@ const DetailPanel: React.FC<{
             backgroundColor: '#000', borderRadius: 8, overflow: 'hidden',
             marginBottom: 16,
           }}>
-            {photo.file_url ? (
-              <img src={photo.file_url} alt={photo.content ?? 'Photo'}
-                style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain', display: 'block' }} />
-            ) : (
-              <div style={{ aspectRatio: '4 / 3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK_3 }}>
-                <Camera size={32} />
-              </div>
-            )}
+            <SafeImage
+              value={photo.file_url}
+              alt={photo.content ?? 'Photo'}
+              iconSize={32}
+              style={{ width: '100%', maxHeight: '60vh', aspectRatio: photo.file_url ? undefined : '4 / 3', objectFit: 'contain', display: 'block' }}
+            />
           </div>
 
           {/* EXIF / metadata */}
@@ -722,19 +763,13 @@ const Thumb = React.memo<ThumbProps>(({ photo, focused, onClick, onFocus, refCb 
         outlineOffset: -1,
       }}
     >
-      {photo.file_url ? (
-        <img src={photo.file_url} alt={photo.content ?? ''}
-          loading="lazy"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-      ) : (
-        <div style={{
-          width: '100%', height: '100%',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: INK_3,
-        }}>
-          <Camera size={20} />
-        </div>
-      )}
+      <SafeImage
+        value={photo.file_url}
+        alt={photo.content ?? ''}
+        loading="lazy"
+        iconSize={20}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
 
       {/* AI category pill (top-left) */}
       <span style={{

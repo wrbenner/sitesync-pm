@@ -159,6 +159,7 @@ export const IrisDraftDrawer: React.FC<IrisDraftDrawerProps> = ({
             role="dialog"
             aria-modal="true"
             aria-label="Iris drafted reply"
+            data-demo-step="iris-draft-stream"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}

@@ -96,6 +96,9 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
         square_footage: DEMO_BUNDLE.project.square_footage,
         number_of_floors: DEMO_BUNDLE.project.number_of_floors,
         description: DEMO_BUNDLE.project.description,
+        // Optional jurisdiction field. Only set when present on the seed row so
+        // we don't overwrite real data on tables where the column may differ.
+        ...('jurisdiction' in DEMO_BUNDLE.project ? { jurisdiction: (DEMO_BUNDLE.project as { jurisdiction: string }).jurisdiction } : {}),
         is_demo: true,
       } as Record<string, unknown>,
       { onConflict: 'id' },
@@ -135,6 +138,9 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       discipline: r.discipline,
       due_date: r.due_date,
       closed_date: 'closed_date' in r ? (r as { closed_date: string }).closed_date : null,
+      // Optional code-grounding field. Only set when present on the seed row so
+      // we don't overwrite real data on tables where the column may differ.
+      ...('applicable_codes' in r ? { applicable_codes: (r as { applicable_codes: readonly string[] }).applicable_codes } : {}),
     })),
   )
   const rfiRes = await supabase.from('rfis').upsert(rfiRows, { onConflict: 'id' })
@@ -152,6 +158,10 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       status: s.status,
       submitted_date: s.submitted_date,
       approved_date: 'approved_date' in s ? (s as { approved_date: string }).approved_date : null,
+      // Optional procurement fields. Only set when present on the seed row so
+      // we don't overwrite real data on tables where the columns may differ.
+      ...('lead_time_weeks' in s ? { lead_time_weeks: (s as { lead_time_weeks: number }).lead_time_weeks } : {}),
+      ...('subcontractor' in s ? { subcontractor: (s as { subcontractor: string }).subcontractor } : {}),
     })),
   )
   const subRes = await supabase.from('submittals').upsert(subRows, { onConflict: 'id' })

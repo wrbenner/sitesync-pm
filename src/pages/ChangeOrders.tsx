@@ -29,6 +29,7 @@ import { PermissionGate } from '../components/auth/PermissionGate'
 import { PeriodClosedBanner } from '../components/ui/PeriodClosedBanner'
 import CreateChangeOrderModal from '../components/forms/CreateChangeOrderModal'
 import { useChangeOrders, useProject } from '../hooks/queries'
+import { useProfileNames, displayName } from '../hooks/queries/profiles'
 import {
   useApproveChangeOrder,
   useRejectChangeOrder,
@@ -304,6 +305,20 @@ const ChangeOrdersPage: React.FC = () => {
   useRealtimeInvalidation(projectId)
 
   const { data: cos, isLoading, isError, refetch } = useChangeOrders(projectId)
+
+  // Resolve user UUIDs (requested_by / created_by) to display names so the
+  // table and detail panel never render a raw UUID. Resolves both fields
+  // for every CO in one batched query.
+  const coUserIds = useMemo(
+    () => (cos ?? []).flatMap((co) => [
+      (co as { requested_by?: string | null }).requested_by ?? null,
+      (co as { created_by?: string | null }).created_by ?? null,
+    ]),
+    [cos],
+  )
+  const { data: coProfileMap } = useProfileNames(coUserIds)
+  const originatorName = (co: { requested_by?: string | null; created_by?: string | null }): string =>
+    displayName(coProfileMap, co.requested_by ?? co.created_by ?? null, '—')
   const { data: project } = useProject(projectId)
   const { data: activePeriod } = useActivePeriod(projectId)
 
@@ -728,7 +743,7 @@ const CORow: React.FC<{
       <Td>{reasonLabel(co)}</Td>
       <Td>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-          {co.requested_by ?? co.created_by ?? '—'}
+          {originatorName(co as { requested_by?: string | null; created_by?: string | null })}
         </span>
       </Td>
       <Td align="right" mono>
@@ -924,7 +939,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
         <Section label="Summary">
           <Grid2>
             <KV k="Reason" v={reasonLabel(co)} />
-            <KV k="Originator" v={co.requested_by ?? co.created_by ?? '—'} />
+            <KV k="Originator" v={originatorName(co as { requested_by?: string | null; created_by?: string | null })} />
             <KV k="Submitted" v={fmt$(submittedAmount)} mono />
             <KV k="Approved" v={fmt$((co.approved_cost as number | null) ?? ((co as unknown as { approved_amount?: number | null }).approved_amount as number | null))} mono />
             <KV

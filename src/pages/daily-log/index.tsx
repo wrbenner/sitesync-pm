@@ -33,6 +33,7 @@ import CreateDailyLogModal from '../../components/forms/CreateDailyLogModal';
 import { FieldCaptureModal } from '../../components/field-capture/FieldCaptureModal';
 import { AutoDailyLog } from '../../components/dailylog/AutoDailyLog';
 import { AutoDraftPanel } from '../../components/dailylog/AutoDraftPanel';
+import { IrisDailySummaryButton } from '../../components/dailylog/IrisDailySummaryButton';
 import { assembleDailyLogDraft } from '../../lib/dailyLogDrafting';
 import type { DayContext, DraftedDailyLog } from '../../types/dailyLogDraft';
 import { dailyLogService } from '../../services/dailyLogService';
@@ -1051,6 +1052,13 @@ const DailyLogPage: React.FC = () => {
               />
             </Suspense>
           )}
+
+          {/* Iris AI summary — calls the ai-daily-summary edge function over
+              today's photos, crew hours, weather, and field notes. */}
+          <IrisDailySummaryButton
+            projectId={projectId}
+            date={selectedDate}
+          />
 
           <PermissionGate permission="daily_log.create">
             <button

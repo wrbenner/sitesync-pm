@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from 'react'
-import { Clock, ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
+import { Clock, ChevronDown, ChevronRight, Sparkles, Link2, User } from 'lucide-react'
 import { useEntityHistory } from '../../hooks/useAuditTrail'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import type { AuditLogEntry } from '../../api/endpoints/auditTrail'
@@ -161,6 +161,11 @@ const HistoryEntryRow: React.FC<{ entry: AuditLogEntry }> = ({ entry }) => {
   const entityTitle = (meta as { entity_title?: string; title?: string }).entity_title
     ?? (meta as { title?: string }).title
     ?? null
+  // Truncated hash for the deposition-grade story: "every change is
+  // timestamped, attributed, and hash-linked." We show the first 10 hex
+  // chars — enough for visual continuity, short enough to fit one line.
+  const hashShort = entry.entry_hash ? entry.entry_hash.slice(0, 10) : null
+  const actorLabel = fromIris ? 'Iris' : (entry.user_name ?? entry.user_email ?? 'User')
 
   return (
     <li style={{ position: 'relative', paddingLeft: 32 }}>
@@ -232,6 +237,42 @@ const HistoryEntryRow: React.FC<{ entry: AuditLogEntry }> = ({ entry }) => {
             {entityTitle}
           </div>
         )}
+        {/* Hash & Actor row — the deposition-grade detail. Always rendered so
+            the moat-claim ("every change attributed and hash-linked") is
+            visible at a glance, not buried behind expansion. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing['2'],
+            marginTop: 4,
+            fontSize: 11,
+            color: colors.textTertiary,
+            fontFamily: typography.fontFamilyMono,
+          }}
+        >
+          <span
+            title={fromIris ? 'System actor — Iris drafted, user approved.' : 'Human actor — signed-in user.'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '0 6px',
+              borderRadius: borderRadius.full,
+              backgroundColor: fromIris ? colors.orangeSubtle : colors.surfaceInset,
+              color: fromIris ? colors.orangeText : colors.textSecondary,
+              fontWeight: typography.fontWeight.semibold,
+            }}
+          >
+            {fromIris ? <Sparkles size={9} /> : <User size={9} />}
+            {actorLabel}
+          </span>
+          <span
+            title={entry.entry_hash ? `Entry hash · ${entry.entry_hash}` : 'No hash recorded for this entry'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}
+          >
+            <Link2 size={9} />
+            {hashShort ? `0x${hashShort}` : 'unhashed'}
+          </span>
+        </div>
       </button>
       {hasDiff && (
         <pre

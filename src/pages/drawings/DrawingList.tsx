@@ -312,8 +312,8 @@ export const DrawingList: React.FC<DrawingListProps> = ({
               role="listitem"
               tabIndex={0}
               aria-label={`${drawing.setNumber} ${drawing.title}`}
-              onClick={() => onSelectDrawing(drawing)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDrawing(drawing); } }}
+              onClick={() => onViewDrawing(drawing)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewDrawing(drawing); } }}
               style={{
                 display: 'grid', gridTemplateColumns: GRID_TEMPLATE,
                 padding: '10px 16px',

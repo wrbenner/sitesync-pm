@@ -518,6 +518,93 @@ export function getRouteInfo(task: AITaskType): ProviderSpec {
   return TASK_ROUTING[task]
 }
 
+// ── Parallel orchestration ───────────────────────────────────────────────────
+
+export interface ParallelAIResult {
+  /** The task this slot was driving — preserved from input order. */
+  task: AITaskType
+  /** Populated when the call resolved before the timeout. */
+  response: AIResponse | null
+  /** Populated when the call timed out, threw, or both providers failed. */
+  error: { kind: 'timeout' | 'rejected'; message: string } | null
+  /** Wall-clock observed by the orchestrator, including any router-level
+   *  fallback. Always set so the caller can put a number in the audit row
+   *  even when the call failed. */
+  latency_ms: number
+}
+
+interface RouteAIParallelOpts {
+  tasks: AIRequest[]
+  /** Per-task wall-clock budget. The slowest provider gates the response;
+   *  this cap keeps a single hung provider from holding up the rest. */
+  timeoutMs: number
+  config?: Partial<AIRouterConfig>
+}
+
+/**
+ * Fire N AI tasks concurrently with a per-task timeout. Returns one
+ * `ParallelAIResult` per input, in the same order.
+ *
+ * Why this exists: edge functions like iris-ground need to run several
+ * task-typed AI calls in parallel and tolerate partial failure (one provider
+ * down should not strand the others). `routeAI` itself is single-task and
+ * doesn't expose an AbortSignal; we wrap it with `Promise.race` against a
+ * timer instead of plumbing signals through every provider call. The
+ * underlying fetch may keep running on the network — that's fine, the
+ * orchestrator's contract is "this slot is settled by `timeoutMs`."
+ */
+export async function routeAIParallel(
+  opts: RouteAIParallelOpts,
+): Promise<ParallelAIResult[]> {
+  const { tasks, timeoutMs, config } = opts
+
+  const TIMEOUT_SENTINEL: unique symbol = Symbol('routeAIParallel.timeout') as never
+  type TimeoutMarker = { __sentinel: typeof TIMEOUT_SENTINEL }
+
+  return Promise.all(
+    tasks.map(async (req): Promise<ParallelAIResult> => {
+      const start = Date.now()
+      let timer: number | undefined
+      const timeoutPromise = new Promise<TimeoutMarker>((resolve) => {
+        timer = setTimeout(
+          () => resolve({ __sentinel: TIMEOUT_SENTINEL }),
+          timeoutMs,
+        ) as unknown as number
+      })
+
+      try {
+        const settled = await Promise.race([routeAI(req, config), timeoutPromise])
+        if ((settled as TimeoutMarker).__sentinel === TIMEOUT_SENTINEL) {
+          return {
+            task: req.task,
+            response: null,
+            error: { kind: 'timeout', message: `timed out after ${timeoutMs}ms` },
+            latency_ms: Date.now() - start,
+          }
+        }
+        return {
+          task: req.task,
+          response: settled as AIResponse,
+          error: null,
+          latency_ms: Date.now() - start,
+        }
+      } catch (err) {
+        return {
+          task: req.task,
+          response: null,
+          error: {
+            kind: 'rejected',
+            message: err instanceof Error ? err.message : String(err),
+          },
+          latency_ms: Date.now() - start,
+        }
+      } finally {
+        if (timer !== undefined) clearTimeout(timer)
+      }
+    }),
+  )
+}
+
 /**
  * Check which providers have API keys configured.
  */
