@@ -525,8 +525,10 @@ export const ProjectBrain: React.FC = () => {
 
   useEffect(() => {
     if (open && projectId) {
-      refreshStats();
-      refreshDocuments();
+      // async fns — setState calls happen after awaits, so no synchronous cascade
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void refreshStats();
+      void refreshDocuments();
     }
   }, [open, projectId, refreshStats, refreshDocuments]);
 

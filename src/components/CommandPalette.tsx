@@ -134,6 +134,27 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     return () => window.removeEventListener('sitesync:navigate', handler)
   }, [navigate])
 
+  // Render-time state adjustments — React Compiler-approved pattern (useState for prev-value):
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen)
+  const [prevQuery, setPrevQuery] = useState(query)
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen)
+    if (isOpen) {
+      setQuery('')
+      setActiveIndex(0)
+    }
+  }
+  if (prevQuery !== query) {
+    setPrevQuery(query)
+    setActiveIndex(0)
+  }
+
+  // DOM-only side effect: focus input on open (no setState — safe in useEffect)
+  useEffect(() => {
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 10)
+  }, [isOpen])
+
   // Filter items by query
   const filtered = query.trim()
     ? ITEMS.filter(item =>
@@ -152,20 +173,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
 
   // Flat list of visible items for keyboard navigation
   const flatItems = groups.flatMap(g => g.items)
-
-  // Reset on open/close
-  useEffect(() => {
-    if (isOpen) {
-      setQuery('')
-      setActiveIndex(0)
-      setTimeout(() => inputRef.current?.focus(), 10)
-    }
-  }, [isOpen])
-
-  // Reset active index when results change
-  useEffect(() => {
-    setActiveIndex(0)
-  }, [query])
 
   // Scroll active item into view
   useEffect(() => {

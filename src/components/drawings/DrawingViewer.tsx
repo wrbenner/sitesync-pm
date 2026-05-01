@@ -183,7 +183,8 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   const announceStatus = useUiStore((s) => s.announceStatus);
 
   // ── Liveblocks hooks (no-op when not configured) ──────────────────────────
-  // LIVEBLOCKS_CONFIGURED is a build-time constant — hook call order is stable
+  // LIVEBLOCKS_CONFIGURED is a module-level constant (import.meta.env, never changes at
+  // runtime), so hook call order is identical on every render — safe exception to rules-of-hooks.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const _updatePresence = LIVEBLOCKS_CONFIGURED ? useUpdateMyPresence() : null;
   // eslint-disable-next-line react-hooks/rules-of-hooks
