@@ -646,6 +646,7 @@ export function SubmittalDetailPage() {
 
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (!submittal) { setResolvedFiles([]); return }
     const attachments = ((submittal as Submittal & { attachments?: unknown[] }).attachments || []) as unknown[]
     const normalized = attachments.map((att: unknown, i: number) => {

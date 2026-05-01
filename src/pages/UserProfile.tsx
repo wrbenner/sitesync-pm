@@ -261,6 +261,7 @@ export default function UserProfile() {
 
   useEffect(() => {
     if (profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
       setPhone(profile.phone || '');

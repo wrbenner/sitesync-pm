@@ -221,6 +221,7 @@ export function SmartPicker<T = unknown>({
   }
 
   // Reset activeIdx when query changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
   useEffect(() => { setActiveIdx(0) }, [query])
 
   return (

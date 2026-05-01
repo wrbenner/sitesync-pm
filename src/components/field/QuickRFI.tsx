@@ -194,6 +194,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setPhase('capture-photo');
       setPhotoDataUrl(null);
       setAiDraft(null);

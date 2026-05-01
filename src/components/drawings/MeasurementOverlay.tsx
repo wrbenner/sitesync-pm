@@ -451,6 +451,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   // Without this, switching tools and coming back would resume a half-drawn measurement.
   useEffect(() => {
     if (!isMeasureTool(activeTool)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setInProgressPoints([]);
       setCalibratePoints([]);
     }

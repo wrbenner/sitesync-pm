@@ -68,10 +68,9 @@ export function useMfa(): MfaState {
 
   // We refresh on mount. The setState-in-effect rule flags this even
   // though it's the canonical "fetch on mount" pattern; refactoring to
-  // TanStack Query is queued as a Phase 2 cleanup. Disabling here with
-  // a clear pointer to that work item.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // TanStack Query is queued as a Phase 2 cleanup.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh is async; setState after network response, not synchronously
     void refresh()
   }, [refresh])
 

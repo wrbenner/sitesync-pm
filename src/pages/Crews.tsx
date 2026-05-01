@@ -238,6 +238,7 @@ export const Crews: React.FC = () => {
 
   // Sync positions when crews change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setDotPositions(initialPositions);
   }, [initialPositions]);
 

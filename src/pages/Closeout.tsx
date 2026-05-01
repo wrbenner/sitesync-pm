@@ -434,6 +434,7 @@ const WarrantyFormModal: React.FC<{
   React.useEffect(() => {
     if (!open) return
     if (initial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- form pre-populated from prop on open; no external system
       setForm({
         item: initial.item ?? '',
         manufacturer: initial.manufacturer ?? '',
@@ -655,6 +656,7 @@ const OMUploadModal: React.FC<{
 
   React.useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- form reset on modal close; derived from open prop
       setSubcontractor(''); setDescription(''); setTrade(''); setFile(null)
     }
   }, [open])
@@ -991,6 +993,7 @@ const SignatureModal: React.FC<{
 
   React.useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- canvas + form reset on modal close; derived from open prop
       setName(''); setTitle('')
       drawing.current = false
       const c = canvasRef.current

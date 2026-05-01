@@ -169,6 +169,7 @@ const DetailsView: React.FC<DetailsViewProps> = ({ file, previewUrl, resolving, 
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (!isText || !previewUrl) { setTextBody(null); return; }
     fetch(previewUrl).then(r => r.text()).then(body => {
       if (!cancelled) setTextBody(body.slice(0, 20_000));

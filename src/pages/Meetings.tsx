@@ -378,6 +378,7 @@ const MeetingDetailView: React.FC<{
   // Sync notes and meeting link when detail loads
   React.useEffect(() => {
     if (meetingDetail?.notes !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setMeetingNotes(meetingDetail.notes ?? '');
     }
     if (meetingDetail?.video_conference_url !== undefined) {

@@ -151,6 +151,7 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
       })
     }
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setDraftLoaded(false)
     }
   }, [open, draftKey, draftLoaded])

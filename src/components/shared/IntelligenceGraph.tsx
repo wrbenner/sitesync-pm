@@ -388,6 +388,7 @@ export function IntelligenceGraph({
 
     // Reset forces
     for (const n of nodes) {
+      // eslint-disable-next-line react-hooks/immutability -- immune-ok: force-directed physics simulation; mutable node state is intentional
       n.fx = 0
       n.fy = 0
     }
@@ -421,6 +422,7 @@ export function IntelligenceGraph({
       const force = SPRING_STRENGTH * displacement
       const fx = (dx / dist) * force
       const fy = (dy / dist) * force
+      // eslint-disable-next-line react-hooks/immutability -- immune-ok: spring force accumulation in physics simulation
       e.source.fx += fx
       e.source.fy += fy
       e.target.fx -= fx
@@ -852,6 +854,7 @@ export function IntelligenceGraph({
         background: '#0F1629',
         borderRadius: borderRadius.lg,
         overflow: 'hidden',
+        // eslint-disable-next-line react-hooks/refs -- dragRef.current.isPanning read for cursor style; always current at paint time
         cursor: hoveredNode ? 'grab' : dragRef.current.isPanning ? 'grabbing' : 'default',
       }}
     >

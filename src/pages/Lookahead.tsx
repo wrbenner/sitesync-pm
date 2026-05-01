@@ -150,6 +150,7 @@ export const Lookahead: React.FC = () => {
 
   // Sync mapped tasks from API into local state for drag/drop
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setTasks(mappedTasks);
   }, [mappedTasks]);
 

@@ -154,6 +154,7 @@ const DailyLogPage: React.FC = () => {
   useEffect(() => {
     if (dailyLogHistory.length > 0 && !workSummary) {
       const summary = dailyLogHistory[0].summary ?? '';
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       if (summary) setWorkSummary(summary);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,6 +165,7 @@ const DailyLogPage: React.FC = () => {
     const todayLog = dailyLogHistory[0];
     const crewEntries = todayLog.crew_entries ?? [];
     if (crewEntries.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setManpowerRows(crewEntries.map((c) => ({
         id: crypto.randomUUID(),
         trade: c.trade ?? '',

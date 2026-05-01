@@ -727,6 +727,7 @@ export const MobileScheduleView: React.FC<Props> = ({ phases, risks }) => {
           // Cast via React.CSSProperties — `zoom` is valid CSS but not in the
           // default TS React.CSSProperties shape; the cast keeps tsc happy.
           ...( { zoom } as React.CSSProperties ),
+          // eslint-disable-next-line react-hooks/refs -- ref read during render; null-guarded or stable at paint time
           transition: pinchRef.current.active ? 'none' : 'zoom 120ms ease-out',
         }}
       >

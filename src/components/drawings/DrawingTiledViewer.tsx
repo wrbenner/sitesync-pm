@@ -24,6 +24,7 @@ import React, {
   useRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
 } from 'react';
 import OpenSeadragon from 'openseadragon';
@@ -160,7 +161,7 @@ const OsdLoupe: React.FC<{
   // without it, high-frequency mousemove events cause needless redraws and jank.
   const rafRef = useRef<number | null>(null);
   const lastPosRef = useRef({ x: screenX, y: screenY });
-  lastPosRef.current = { x: screenX, y: screenY };
+  useLayoutEffect(() => { lastPosRef.current = { x: screenX, y: screenY }; }, [screenX, screenY]);
 
   useEffect(() => {
     const paint = () => {
@@ -212,10 +213,14 @@ const OsdLoupe: React.FC<{
   }, [screenX, screenY, viewerRef, containerRef]);
 
   // Position via transform (GPU-accelerated) — no CSS transition so the loupe sticks to the cursor.
+  // containerRef.current is read here to compute loupe position; null-guarded with window fallback.
   const OFFSET = 64;
+  // eslint-disable-next-line react-hooks/refs -- DOM size needed for cursor-relative position; null-guarded
   const containerEl = containerRef.current;
+  // eslint-disable-next-line react-hooks/refs -- containerEl is containerRef.current alias
   const maxRight = (containerEl?.clientWidth ?? window.innerWidth) - SIZE - 16;
   const leftPos = screenX + OFFSET + SIZE > maxRight ? Math.max(16, screenX - OFFSET - SIZE) : screenX + OFFSET;
+  // eslint-disable-next-line react-hooks/refs -- containerEl is containerRef.current alias
   const topPos = Math.max(16, Math.min((containerEl?.clientHeight ?? window.innerHeight) - SIZE - 16, screenY - SIZE / 2));
 
   return (
@@ -1383,6 +1388,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
   // Selection is only meaningful in the select tool — any other tool clears it.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- state derived from activeTool; no external system involved
     if (activeTool !== 'select') setSelectedId(null);
   }, [activeTool]);
 
@@ -1403,6 +1409,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // ── First-use tool hints: flash a coach mark once per tool per browser session ──
   const [hintTool, setHintTool] = useState<MarkupTool | null>(null);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage read + state derived from activeTool; no external system sync needed
     if (activeTool === 'select') { setHintTool(null); return; }
     try {
       const key = 'sitesync.tiledViewer.hinted';
@@ -1428,6 +1435,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     if (localAnnotations.length === 0) return;
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
+      // eslint-disable-next-line react-hooks/immutability -- handleSave is defined later in the module but initialized before this timeout fires
       handleSave();
     }, 1500);
     return () => {
@@ -2214,6 +2222,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               activeTool={activeTool}
               onToolChange={(t) => { setExtendedTool(null); setActiveTool(t); }}
               onUndo={handleUndo}
+              // eslint-disable-next-line react-hooks/refs -- reading undoStack.current to compute canUndo; always current at event time
               canUndo={undoStack.current.length > 0 || localAnnotations.length > 0}
               canSave={localAnnotations.length > 0}
               unsavedCount={localAnnotations.length}

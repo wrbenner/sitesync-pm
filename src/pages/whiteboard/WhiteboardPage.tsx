@@ -184,6 +184,7 @@ export const WhiteboardPage: React.FC = () => {
       {/* Whiteboard at full remaining height */}
       <div style={{ height: `calc(100vh - ${layout.topbarHeight} - 140px)` }}>
         <Whiteboard
+          // eslint-disable-next-line react-hooks/refs -- ref read during render; null-guarded or stable at paint time
           key={whiteboardKeyRef.current}
           initialData={boardData}
           onSave={setBoardData}

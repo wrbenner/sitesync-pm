@@ -364,6 +364,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   // Auto-fill "from" when user detected
   useEffect(() => {
     if (currentUserContact && !fromContact) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setFromContact(currentUserContact)
     }
   }, [currentUserContact, fromContact])
@@ -373,6 +374,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setTimeout(() => questionRef.current?.focus(), 120)
     } else {
       // Reset all state
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setQuestion(''); setDetails(''); setAssignee(null); setManualAssignee(''); setFromContact(null)
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())

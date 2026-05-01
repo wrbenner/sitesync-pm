@@ -170,6 +170,7 @@ const RFIsPage: React.FC = () => {
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() for UI time-window filter; acceptable impurity in memoized computation
     const weekAgo = Date.now() - 7 * 86400000;
     return rfis.filter((r) => r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo).length;
   }, [rfis]);
@@ -259,6 +260,7 @@ const RFIsPage: React.FC = () => {
 
   // Reset response state when detail panel switches to a different RFI
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state reset on RFI change; no external system involved
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
@@ -399,6 +401,7 @@ const RFIsPage: React.FC = () => {
         if (rfi.status === 'closed') {
           days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
         } else {
+          // eslint-disable-next-line react-hooks/purity -- Date.now() for age-in-days display; acceptable in cell renderer
           days = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.textTertiary;
@@ -910,6 +913,7 @@ const RFIsPage: React.FC = () => {
           onMoveItem={handleKanbanMove}
           renderCard={(rfi) => {
             const cardOverdue = isOverdue(rfi.dueDate) && rfi.status !== 'closed';
+            // eslint-disable-next-line react-hooks/purity -- Date.now() for kanban card age display; acceptable
             const daysOpen = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
             return (
               <div
@@ -1128,6 +1132,7 @@ const RFIsPage: React.FC = () => {
               </h3>
               {/* Days open indicator */}
               {(() => {
+                // eslint-disable-next-line react-hooks/purity -- Date.now() for days-open display in detail panel; acceptable
                 const daysOpen = Math.floor((Date.now() - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
                 const overdue = isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed';
                 return (

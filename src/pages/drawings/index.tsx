@@ -315,6 +315,7 @@ const DrawingsPage: React.FC = () => {
     if (!deepLinkedId || !drawings) return;
     if (selectedDrawing?.id === deepLinkedId) return;
     const target = drawings.find((d) => String(d.id) === deepLinkedId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (target) setSelectedDrawing(target);
   }, [deepLinkedId, drawings, selectedDrawing?.id]);
 
@@ -440,6 +441,7 @@ const DrawingsPage: React.FC = () => {
 
   // Reset revision view when selecting a different drawing
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setViewingRevisionNum(null);
     setViewRevPdfUrl(null);
   }, [selectedDrawing?.id]);

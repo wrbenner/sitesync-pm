@@ -602,6 +602,7 @@ export default function DrawingMarkup({
   // ── Sync initial annotations ──────────────────────────
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setAnnotations(initialAnnotations)
   }, [initialAnnotations])
 

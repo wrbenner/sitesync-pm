@@ -193,6 +193,7 @@ const Wiki: React.FC = () => {
   React.useEffect(() => {
     if (!selected) return
     if (editContent === selected.content && editTitle === selected.title) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setAutoSaveStatus('saved')
       return
     }
@@ -203,6 +204,7 @@ const Wiki: React.FC = () => {
 
   React.useEffect(() => {
     if (selected) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setEditContent(selected.content)
       setEditTitle(selected.title)
     }

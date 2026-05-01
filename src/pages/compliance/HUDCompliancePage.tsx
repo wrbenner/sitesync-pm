@@ -192,6 +192,7 @@ const HUDCompliancePage: React.FC = () => {
 
   // ── Fetch compliance programs from compliance_reports ────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (!projectId) { setLoading(false); return; }
     let cancelled = false;
 

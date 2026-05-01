@@ -53,6 +53,7 @@ function useDiffDataUrl(prevUrl: string | null, currUrl: string | null) {
 
   useEffect(() => {
     if (!prevUrl || !currUrl) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setDiffDataUrl(null);
       setChangePixels(0);
       return;

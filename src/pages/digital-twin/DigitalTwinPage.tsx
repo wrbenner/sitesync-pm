@@ -574,6 +574,7 @@ const DigitalTwinPage: React.FC = () => {
     if (initializedScrubberRef.current) return;
     if (twinPhases.length === 0) return;
     const todayOffset = Math.max(0, Math.min(totalDays, daysBetween(scheduleStart, new Date())));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setTimelineDay(todayOffset);
     initializedScrubberRef.current = true;
   }, [twinPhases.length, scheduleStart, totalDays]);

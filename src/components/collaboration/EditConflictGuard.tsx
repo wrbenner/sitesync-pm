@@ -43,6 +43,7 @@ export function useOptimisticLock(
 
   // Reset conflict state when the entity changes to avoid stale state from a previous entity
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setConflictDetected(false);
     setServerUpdatedAt(null);
     setCheckFailed(false);

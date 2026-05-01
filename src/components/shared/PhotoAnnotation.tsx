@@ -726,8 +726,10 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
+            /* eslint-disable react-hooks/refs -- history refs read during render; re-render is triggered by canvas state changes that keep these in sync */
             disabled={historyIndexRef.current <= 0}
             style={btnStyle(false, historyIndexRef.current <= 0)}
+            /* eslint-enable react-hooks/refs */
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -736,8 +738,10 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
+            /* eslint-disable react-hooks/refs -- same as above */
             disabled={historyIndexRef.current >= historyRef.current.length - 1}
             style={btnStyle(false, historyIndexRef.current >= historyRef.current.length - 1)}
+            /* eslint-enable react-hooks/refs */
             onClick={redo}
           >
             <Redo2 size={18} />

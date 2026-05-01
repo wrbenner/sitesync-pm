@@ -286,6 +286,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const toolbarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // eslint-disable-next-line react-hooks/purity -- Date.now() / new Date() for UI display; acceptable impurity
   const lastMouseMoveRef = useRef<number>(Date.now());
 
   const currentFile = files[currentFileIndex] || null;

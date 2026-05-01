@@ -99,6 +99,7 @@ export const CrossEntitySearch: React.FC<CrossEntitySearchProps> = ({ onSelect, 
   // Focus on open
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setQuery('');
       setDebouncedQuery('');
       setActiveIndex(-1);

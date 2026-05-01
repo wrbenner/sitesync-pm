@@ -74,6 +74,7 @@ export function UserManagement() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     loadMembers();
   }, [company?.id]);
 

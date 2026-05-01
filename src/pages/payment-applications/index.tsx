@@ -295,6 +295,7 @@ const PaymentApplicationsPage: React.FC = () => {
   useEffect(() => {
     const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
     if (retainageArr.length > 0 && retainageItems.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setRetainageItems(retainageArr.map((r) => ({
         id: (r.id as string) || crypto.randomUUID(),
         description: (r.description as string) || 'SOV Item',

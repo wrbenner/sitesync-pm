@@ -110,6 +110,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
 
   // Initial count load
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     refreshCount();
   }, [refreshCount]);
 

@@ -58,6 +58,7 @@ export const ScheduleCommandPalette: React.FC<ScheduleCommandPaletteProps> = ({
   // Reset on open
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setQuery('');
       setSelectedIdx(0);
       // Focus input after render
@@ -110,6 +111,7 @@ export const ScheduleCommandPalette: React.FC<ScheduleCommandPaletteProps> = ({
 
   // Clamp selection
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setSelectedIdx(prev => Math.min(prev, Math.max(0, items.length - 1)));
   }, [items.length]);
 

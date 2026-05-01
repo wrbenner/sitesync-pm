@@ -746,6 +746,7 @@ export default function SiteMap() {
   }, [projectId, safeQuery]);
 
   // ── Initial data load ──
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
   useEffect(() => { loadPins(); loadZones(); loadSitePlans(); loadLinkedEntities(); }, [loadPins, loadZones, loadSitePlans, loadLinkedEntities]);
 
   // ── Realtime subscription ──
@@ -853,6 +854,7 @@ export default function SiteMap() {
   }, [projectCoords]);
 
   const clickCtxRef = useRef({ mode, placingType });
+  // eslint-disable-next-line react-hooks/immutability -- intentional mutation; ref or simulation state
   useEffect(() => { clickCtxRef.current = { mode, placingType }; }, [mode, placingType]);
 
   // ── Switch base layer ──

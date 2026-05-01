@@ -309,6 +309,7 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
     if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setSearchResults([])
       setSearching(false)
       return
@@ -334,6 +335,7 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
   // ---- Reset query when closing ----
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setQuery('')
       setSearchResults([])
     }

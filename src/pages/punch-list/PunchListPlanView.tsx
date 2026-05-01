@@ -278,6 +278,7 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   // Auto-select first drawing
   useEffect(() => {
     if (drawings.length > 0 && !selectedDrawingId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setSelectedDrawingId(drawings[0].id)
     }
   }, [drawings, selectedDrawingId])

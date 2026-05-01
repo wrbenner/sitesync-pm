@@ -555,6 +555,7 @@ const editableInputStyle: React.CSSProperties = {
 
 const EditableText: React.FC<{ value: string; onSave: (v: string) => void; placeholder?: string }> = ({ value, onSave, placeholder }) => {
   const [v, setV] = useState(value)
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local edit state with incoming prop value
   React.useEffect(() => setV(value), [value])
   return (
     <input
@@ -569,6 +570,7 @@ const EditableText: React.FC<{ value: string; onSave: (v: string) => void; place
 
 const EditableNumber: React.FC<{ value: number; onSave: (v: number) => void }> = ({ value, onSave }) => {
   const [v, setV] = useState(String(value))
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- sync local edit state with incoming prop value
   React.useEffect(() => setV(String(value)), [value])
   return (
     <input
@@ -690,6 +692,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, ve
   // Default to first package once loaded
   React.useEffect(() => {
     if (!selectedPackageId && packages.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- default selection derived from packages; one-time initialization
       setSelectedPackageId((packages[0].id as string) ?? '')
     }
   }, [packages, selectedPackageId])
