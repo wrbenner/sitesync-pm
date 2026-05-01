@@ -64,8 +64,8 @@ export const ScheduleCoordination: React.FC<ScheduleCoordinationProps> = ({
   aiEdgeLoading,
   runAiEdgeAnalysis,
   openCopilotWithRisk,
-  recoveryExpanded,
-  setRecoveryExpanded,
+  recoveryExpanded: _recoveryExpanded,
+  setRecoveryExpanded: _setRecoveryExpanded,
 }) => {
   const hc = healthColors(overallHealthStatus.status);
   const totalImpact = risks.reduce((s, r) => s + (r.impactDays ?? 0), 0);
