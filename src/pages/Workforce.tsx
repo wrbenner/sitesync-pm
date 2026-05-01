@@ -320,16 +320,16 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const activeToday = members?.filter(m => m.status === 'active').length || 0
+  const totalRegularHrs = timeEntries?.reduce((s, e) => s + ((e as Record<string, unknown>).regular_hours as number || 0), 0) || 0
+  const totalOTHrs = timeEntries?.reduce((s, e) => s + ((e as Record<string, unknown>).overtime_hours as number || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  members?.forEach(m => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +340,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as Record<string, unknown>
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +363,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as Record<string, unknown>
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
@@ -372,7 +372,7 @@ export const Workforce: React.FC = () => {
               size="sm"
               onClick={() => {
                 if (!projectId || !user?.id) return
-                approveEntry.mutate({ id: row.id, project_id: projectId, approved_by: user.id }, {
+                approveEntry.mutate({ id: row.id as string, project_id: projectId, approved_by: user.id }, {
                   onSuccess: () => toast.success('Time entry approved'),
                   onError: (e) => toast.error(e instanceof Error ? e.message : 'Failed to approve'),
                 })

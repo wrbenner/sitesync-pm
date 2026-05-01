@@ -29,7 +29,7 @@ const DEFAULT_LABEL = 'Drag & drop files here'
 const DEFAULT_HELPER = 'or click to browse'
 
 function fileId(f: File): string {
-  return `${f.name}-${f.size}-${f.lastModified}-${Math.random().toString(36).slice(2, 7)}`
+  return `${f.name}-${f.size}-${f.lastModified}-${crypto.randomUUID().replace(/-/g, '').slice(0, 5)}`
 }
 
 function isImage(f: File): boolean {

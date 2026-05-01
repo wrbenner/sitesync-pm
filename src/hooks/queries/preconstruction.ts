@@ -96,7 +96,7 @@ export function useCreateEstimate() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['estimates', (vars as any).project_id] })
+      qc.invalidateQueries({ queryKey: ['estimates', vars['project_id']] })
     },
   })
 }
@@ -123,7 +123,7 @@ export function useCreateEstimateLineItem() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['estimate_line_items', (vars as any).estimate_id] })
+      qc.invalidateQueries({ queryKey: ['estimate_line_items', vars['estimate_id']] })
     },
   })
 }
