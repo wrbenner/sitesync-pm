@@ -8,8 +8,11 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
 import { useWorkforceMembers, useTimeEntries, useCreateWorkforceMember, useDeleteWorkforceMember, useCreateTimeEntry, useApproveTimeEntry } from '../hooks/queries'
+import type { Database } from '../types/database'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+
+type WorkforceMember = Database['public']['Tables']['workforce_members']['Row']
 
 type TabKey = 'roster' | 'time' | 'forecast' | 'credentials' | 'productivity' | 'dispatch'
 
@@ -1054,7 +1057,7 @@ const AddWorkerModal: React.FC<AddWorkerModalProps> = ({ projectId, onClose, onC
 
 interface LogTimeModalProps {
   projectId: string
-  members: any[]
+  members: WorkforceMember[]
   onClose: () => void
   onCreate: ReturnType<typeof useCreateTimeEntry>
 }
@@ -1104,7 +1107,7 @@ const LogTimeModal: React.FC<LogTimeModalProps> = ({ projectId, members, onClose
         <label style={labelStyle}>Worker *</label>
         <select style={inputStyle} value={form.workforce_member_id} onChange={set('workforce_member_id')}>
           <option value="">Select worker...</option>
-          {members.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
 
         <label style={labelStyle}>Date *</label>

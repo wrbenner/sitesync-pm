@@ -23,6 +23,7 @@ import {
 } from '../../services/siteIntelligenceService';
 
 import 'leaflet/dist/leaflet.css';
+import type { Map as LeafletMap, LayerGroup } from 'leaflet';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -792,8 +793,8 @@ const SiteIntelligencePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markersLayerRef = useRef<LayerGroup | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 

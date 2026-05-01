@@ -4,6 +4,7 @@ import {
   Users, ShieldAlert, FileQuestion, ClipboardCheck, Truck, Search,
   AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────────
@@ -77,7 +78,7 @@ function rfiActionLabel(action: string): { label: string; color: string } {
   }
 }
 
-function inspectionResultStyle(result: string): { label: string; color: string; bg: string; Icon: React.FC<any> } {
+function inspectionResultStyle(result: string): { label: string; color: string; bg: string; Icon: LucideIcon } {
   switch (result) {
     case 'pass': return { label: 'Pass', color: '#16A34A', bg: '#F0FDF4', Icon: CheckCircle2 };
     case 'fail': return { label: 'Fail', color: '#DC2626', bg: '#FEF2F2', Icon: XCircle };

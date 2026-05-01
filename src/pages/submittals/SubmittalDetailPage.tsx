@@ -49,6 +49,7 @@ import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submitt
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'
 import { useProjectId } from '../../hooks/useProjectId'
 import type { Submittal } from '../../types/database'
+import type { SubmittalReviewer } from '../../types/submittal'
 import {
   getSubmittalStatusConfig, getValidSubmittalTransitions, getNextSubmittalStatus,
   getStampConfig, getLeadTimeUrgency, CSI_DIVISIONS,
@@ -107,7 +108,7 @@ interface ApprovalNode {
   status: 'complete' | 'active' | 'waiting' | 'rejected'
 }
 
-const ApprovalPipeline: React.FC<{ status: SubmittalState; reviewers: any[] }> = ({ status, reviewers }) => {
+const ApprovalPipeline: React.FC<{ status: SubmittalState; reviewers: SubmittalReviewer[] }> = ({ status, reviewers }) => {
   const nodes: ApprovalNode[] = useMemo(() => {
     const getNodeStatus = (threshold: SubmittalState[]): ApprovalNode['status'] => {
       if (status === 'rejected' || status === 'resubmit') {
@@ -273,7 +274,7 @@ const ActionButtons: React.FC<{
 // ─── Review Comment Bubble ────────────────────────────────
 
 const ReviewBubble: React.FC<{
-  reviewer: any
+  reviewer: SubmittalReviewer
   index: number
 }> = ({ reviewer, index }) => {
   const stampConfig = reviewer.stamp ? getStampConfig(reviewer.stamp as SubmittalStamp) : null
@@ -328,7 +329,7 @@ const ReviewBubble: React.FC<{
 
 // ─── Info Card ───────────────────────────────────────────
 
-const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
+const InfoCard: React.FC<{ submittal: Submittal; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
   const [showMore, setShowMore] = useState(false)
   const specDiv = getCSIDivisionName(submittal.spec_section)
   const dueUrgent = submittal.due_date && isOverdue(submittal.due_date) && currentStatus !== 'approved' && currentStatus !== 'closed'
@@ -526,7 +527,7 @@ const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: Submit
 
 // ─── Related Intelligence ─────────────────────────────────
 
-const RelatedIntelligence: React.FC<{ submittal: Record<string, any> }> = ({ submittal }) => {
+const RelatedIntelligence: React.FC<{ submittal: Submittal }> = ({ submittal }) => {
   const specDiv = getCSIDivisionName(submittal.spec_section)
 
   const relatedItems: Array<{ type: string; label: string; link: string; color: string }> = []
@@ -635,8 +636,6 @@ export function SubmittalDetailPage() {
   })()
   const statusConfig = getSubmittalStatusConfig(currentStatus)
   const transitions = getValidSubmittalTransitions(currentStatus)
-
-  const sub = (submittal as Record<string, any>) || {}
 
   // ── Construct files for DocumentViewer ──────────────────
   // Uses signed URLs since project-files is a private bucket. We normalize
@@ -796,6 +795,7 @@ export function SubmittalDetailPage() {
     )
   }
 
+  const sub = submittal
   const subNumber = sub.number ? `SUB-${String(sub.number).padStart(3, '0')}` : 'SUB'
 
   return (
@@ -927,7 +927,7 @@ export function SubmittalDetailPage() {
                 display: 'flex', flexDirection: 'column', gap: spacing.md,
                 padding: `${spacing.md} 0`,
               }}>
-                {reviewers.map((r: any, i: number) => (
+                {reviewers.map((r, i) => (
                   <ReviewBubble key={r.id || i} reviewer={r} index={i} />
                 ))}
               </div>

@@ -120,7 +120,7 @@ export function LienWaivers() {
     }
   };
 
-  const handleDelete = async (w: any) => {
+  const handleDelete = async (w: LienWaiverRow) => {
     if (!projectId) return;
     const label = getContractorName(w) || 'this waiver';
     if (!window.confirm(`Delete waiver for "${label}"? This cannot be undone.`)) return;
@@ -131,7 +131,7 @@ export function LienWaivers() {
     }
   };
 
-  const handleSendForSignature = async (w: any) => {
+  const handleSendForSignature = async (w: LienWaiverRow) => {
     if (!projectId) return;
     const vendor = getContractorName(w) || 'Unknown Vendor';
     setSendingSignatureId(w.id);

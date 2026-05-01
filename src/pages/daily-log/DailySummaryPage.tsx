@@ -103,7 +103,7 @@ const DailySummaryPage: React.FC = () => {
     // Daily log entries
     let dailyLogEntries: AIDailySummaryProps['dailyLogEntries'] | undefined;
     if (entriesRaw && Array.isArray(entriesRaw) && entriesRaw.length > 0) {
-      dailyLogEntries = entriesRaw.map((e: any) => ({
+      dailyLogEntries = entriesRaw.map((e) => ({
         category: e.category ?? e.entry_type ?? 'General',
         description: e.description ?? e.notes ?? e.content ?? '',
         author: e.author ?? e.created_by ?? 'Field Staff',
