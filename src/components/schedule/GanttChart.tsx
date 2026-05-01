@@ -550,7 +550,7 @@ function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase
 }
 
 // ── Today marker ────────────────────────────────────────
-function TodayMarker({ chartStart, pxPerDay, totalHeight }: { chartStart: Date; pxPerDay: number; totalHeight: number }) {
+function TodayMarker({ chartStart, pxPerDay, _totalHeight }: { chartStart: Date; pxPerDay: number; _totalHeight: number }) {
   const today = startOfDay(new Date());
   const offset = (today.getTime() - chartStart.getTime()) / DAY_MS;
   const left = offset * pxPerDay;
@@ -1065,7 +1065,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onAddActivity,
   onPhaseClick,
   onPhaseUpdate,
-  baselinePhases,
+  _baselinePhases,
   showBaseline: showBaselineProp,
   zoomLevel: zoomLevelProp,
   whatIfMode = false,
@@ -1339,7 +1339,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             ))}
 
             {/* Weekend shading (day zoom only) */}
-            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h, i) => {
+            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h, _i) => {
               const idx = cellHeaders.indexOf(h);
               return (
                 <div key={`we-${h.key}`} style={{

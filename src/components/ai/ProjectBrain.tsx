@@ -2,8 +2,8 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   Brain, X, Send, FileText, Loader2, Sparkles, Database, ChevronRight,
   MessageSquare, Scale, FolderOpen, History, Plus, Trash2, AlertTriangle,
-  CheckCircle, Shield, Clock, ArrowRight, Search, Upload, Eye,
-  ChevronDown, BarChart3, Zap, BookOpen, HardHat, FileCheck,
+  CheckCircle, Shield, Clock, ArrowRight, Search, Eye,
+  BarChart3, Zap, BookOpen, HardHat, FileCheck,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';

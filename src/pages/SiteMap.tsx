@@ -137,7 +137,7 @@ const PIN_CONFIG: Record<PinType, { label: string; color: string; icon: React.El
 
 const PIN_TYPES: PinType[] = ['equipment', 'crew', 'delivery', 'safety_zone', 'photo', 'custom'];
 
-const ZONE_TYPES = [
+const _ZONE_TYPES = [
   { value: 'work_area', label: 'Work Area', color: '#3B82F6' },
   { value: 'safety_zone', label: 'Safety Zone', color: '#EF4444' },
   { value: 'staging_area', label: 'Staging Area', color: '#8B5CF6' },
