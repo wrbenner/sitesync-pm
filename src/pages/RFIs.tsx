@@ -130,7 +130,7 @@ const RFIsPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
-  const rfisRaw = rfisResult?.data ?? [];
+  const rfisRaw = useMemo(() => rfisResult?.data ?? [], [rfisResult?.data]);
   const { data: project } = useProject(projectId);
   useRealtimeInvalidation(projectId);
 
@@ -493,7 +493,7 @@ const RFIsPage: React.FC = () => {
 
   const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
 
-  const allRfis = rfis || [];
+  const allRfis = rfis;
 
   // Tab counts for the sliding tab bar
   const tabCounts = useMemo(() => ({

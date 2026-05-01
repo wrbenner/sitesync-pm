@@ -223,13 +223,13 @@ export const Preconstruction: React.FC = () => {
 
   // ── Derived Data ──────────────────────────────────────
 
-  const packageList = packages ?? []
-  const allSubmissions = allSubs ?? []
-  const subList = subcontractors ?? []
-  const invitationList = invitations ?? []
-  const scopeItemList = scopeItems ?? []
-  const scopeResponseList = scopeResponses ?? []
-  const selectedSubmissions = selectedSubs ?? []
+  const packageList = useMemo(() => packages ?? [], [packages])
+  const allSubmissions = useMemo(() => allSubs ?? [], [allSubs])
+  const subList = useMemo(() => subcontractors ?? [], [subcontractors])
+  const invitationList = useMemo(() => invitations ?? [], [invitations])
+  const scopeItemList = useMemo(() => scopeItems ?? [], [scopeItems])
+  const scopeResponseList = useMemo(() => scopeResponses ?? [], [scopeResponses])
+  const selectedSubmissions = useMemo(() => selectedSubs ?? [], [selectedSubs])
 
   const selectedPackage = useMemo(
     () => packageList.find((p) => p.id === selectedPackageId) || null,

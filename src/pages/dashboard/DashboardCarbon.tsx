@@ -131,7 +131,7 @@ function buildSparkline(entries: CarbonEntry[], width: number, height: number, n
 
 export const DashboardCarbon: React.FC<Props> = ({ projectId }) => {
   const { data, isLoading } = useCarbonData(projectId);
-  const entries = data?.entries ?? [];
+  const entries = useMemo(() => data?.entries ?? [], [data?.entries]);
   const [now] = useState(() => Date.now());
 
   const total = useMemo(() => entries.reduce((s, e) => s + (e.carbon_kg ?? 0), 0), [entries]);

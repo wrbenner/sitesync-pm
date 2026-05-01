@@ -813,8 +813,8 @@ const BudgetPage: React.FC = () => {
   }, [divFocusedIndex]);
 
   // Hooks must be called before any early return
-  const divisions = costData?.divisions ?? [];
-  const changeOrders = costData?.changeOrders ?? [];
+  const divisions = useMemo(() => costData?.divisions ?? [], [costData?.divisions]);
+  const changeOrders = useMemo(() => costData?.changeOrders ?? [], [costData?.changeOrders]);
   const allChangeOrders = changeOrders;
 
   const divisionFinancials = useMemo(

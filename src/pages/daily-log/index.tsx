@@ -69,7 +69,7 @@ const DailyLogPage: React.FC = () => {
   const approveDailyLog = useApproveDailyLog();
   const rejectDailyLog = useRejectDailyLog();
 
-  const dailyLogHistory: ExtendedDailyLog[] = (dailyLogData?.data ?? []) as ExtendedDailyLog[];
+  const dailyLogHistory = useMemo(() => (dailyLogData?.data ?? []) as ExtendedDailyLog[], [dailyLogData?.data]);
   const todayStr = new Date().toISOString().split('T')[0];
   const hasTodayLog = dailyLogHistory.some((l) => l.log_date?.split('T')[0] === todayStr);
 

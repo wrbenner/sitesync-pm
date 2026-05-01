@@ -87,7 +87,7 @@ const SubmittalsPage: React.FC = () => {
     exportSubmittalLogXlsx(projectName, rows);
   }, [project?.name, submittalsResult?.data]);
   const { data: reviewersData = [] } = useSubmittalReviewers(selectedId ?? undefined);
-  const submittalsRaw = submittalsResult?.data ?? [];
+  const submittalsRaw = useMemo(() => submittalsResult?.data ?? [], [submittalsResult?.data]);
 
   // Map API data to component shape
   const submittals = useMemo(() => submittalsRaw.map((s: Record<string, unknown>) => ({
@@ -97,7 +97,7 @@ const SubmittalsPage: React.FC = () => {
     dueDate: (s.due_date as string) || '',
   })), [submittalsRaw]);
 
-  const allSubmittals = submittals || [];
+  const allSubmittals = submittals;
   const pageAlerts = getPredictiveAlertsForPage('submittals');
   const openCount = useMemo(() => allSubmittals.filter((s) => s.status !== 'approved').length, [allSubmittals]);
   const totalCount = allSubmittals.length;
