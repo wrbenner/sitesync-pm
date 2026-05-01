@@ -445,7 +445,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   }, [snapPoints]);
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [inProgressPoints, setInProgressPoints] = useState<NormalizedPoint[]>([]);
-  const [countIndex, setCountIndex] = useState(1);
+  const [_countIndex, setCountIndex] = useState(1);
   const [calibratePoints, setCalibratePoints] = useState<NormalizedPoint[]>([]);
 
   // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
@@ -610,7 +610,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         setInProgressPoints(newPts);
       }
     },
-    [activeTool, inProgressPoints, calibratePoints, imageSize, countIndex, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, calibrationScale, scaleParsed, onMeasurementAdd, snapTo, externalMeasurements, measurements],
+    [activeTool, inProgressPoints, calibratePoints, imageSize, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, onMeasurementAdd, snapTo, externalMeasurements, measurements],
   );
 
   // Detect snap range on cursor move so the parent can pulse the loupe.

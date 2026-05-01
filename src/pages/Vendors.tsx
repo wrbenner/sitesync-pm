@@ -319,7 +319,7 @@ export const Vendors: React.FC = () => {
     // When a diversity_certifications table or certification_type column
     // is added, this will derive real VendorDiversity records.
     return []
-  }, [vendors])
+  }, [])
 
   const handleCreate = async () => {
     if (!form.company_name) {
