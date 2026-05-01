@@ -33,7 +33,7 @@ export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 
 /**
  * Typed table accessor that accepts tables added by migration but not yet in generated types.
- * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
+ * Prefer this helper over raw `supabase.from()` to keep table access type-safe.
  */
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
