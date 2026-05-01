@@ -43,7 +43,7 @@ export function useCreateWorkforceMember() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['workforce_members', (vars as any).project_id] })
+      qc.invalidateQueries({ queryKey: ['workforce_members', (vars as Record<string, unknown>).project_id] })
     },
   })
 }
@@ -70,7 +70,7 @@ export function useCreateTimeEntry() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['time_entries', (vars as any).project_id] })
+      qc.invalidateQueries({ queryKey: ['time_entries', (vars as Record<string, unknown>).project_id] })
     },
   })
 }
