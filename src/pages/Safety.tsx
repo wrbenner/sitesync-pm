@@ -729,7 +729,7 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data
 
   // Checklist hooks
-  const { data: checklists, isLoading: loadingChecklists, refetch: _refetchChecklists } = useInspectionChecklists(projectId)
+  const { data: checklists, isLoading: loadingChecklists } = useInspectionChecklists(projectId)
   const { data: checklistTemplatesData } = useChecklistTemplates(projectId)
 
   const createIncident = useCreateIncident()
@@ -789,16 +789,7 @@ export const Safety: React.FC = () => {
   const trirRaw = totalHoursWorked > 0 ? (recordableCount * 200000) / totalHoursWorked : null
   const trir = trirRaw !== null ? trirRaw.toFixed(2) : null
 
-  // DART rate: (cases with days away + restricted duty) × 200,000 / hours worked
-  const dartCases = displayIncidents.filter((i) => {
-    const daysAway = i.days_away_from_work as number | null
-    const daysRestricted = i.days_restricted_duty as number | null
-    return (daysAway != null && daysAway > 0) || (daysRestricted != null && daysRestricted > 0)
-  }).length
-  const dartRaw = totalHoursWorked > 0 ? (dartCases * 200000) / totalHoursWorked : null
-  const dart = dartRaw !== null ? dartRaw.toFixed(2) : null
 
-  const _nearMissCount = displayIncidents.filter((i) => i.severity === 'near_miss' || i.type === 'near_miss').length
 
   const openCorrectiveActions = (correctiveActions as Array<Record<string, unknown>> | undefined)?.filter(
     (ca) => ca.status !== 'closed' && ca.status !== 'verified'
@@ -820,11 +811,6 @@ export const Safety: React.FC = () => {
   weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 7)
-  const _inspectionsThisWeek = inspections?.filter((insp: unknown) => {
-    if (!insp.date) return false
-    const d = new Date(insp.date)
-    return d >= weekStart && d < weekEnd
-  }).length ?? 0
 
   // ── MetricBox color overrides ──────────────────────────────
 
@@ -848,13 +834,6 @@ export const Safety: React.FC = () => {
 
   const certColor: 'success' | 'warning' | 'danger' | undefined =
     expiringCerts === 0 ? 'success' : 'warning'
-
-  const dartValue = dart !== null ? parseFloat(dart) : null
-  const _dartColor: 'success' | 'warning' | 'danger' | undefined =
-    dartValue === null ? undefined
-    : dartValue <= 1.5 ? 'success'
-    : dartValue <= 2.5 ? 'warning'
-    : 'danger'
 
   // ── Incident form state ────────────────────────────────────
 

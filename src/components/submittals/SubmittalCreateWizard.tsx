@@ -15,7 +15,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload, FileText, X, Plus,
-  Send, Image, File, Sparkles
+  Send, Image, File, Sparkles,
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
@@ -147,7 +147,7 @@ const PersonPicker: React.FC<{
   onChange: (c: DirectoryContact | null) => void
   placeholder?: string
   filterTrade?: boolean
-}> = ({ label, projectId, value, onChange, placeholder = 'Select...', _filterTrade }) => {
+}> = ({ label, projectId, value, onChange, placeholder = 'Select...', filterTrade: _filterTrade }) => {
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)

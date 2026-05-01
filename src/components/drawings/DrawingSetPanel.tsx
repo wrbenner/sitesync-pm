@@ -278,10 +278,10 @@ const S = {
 export const DrawingSetPanel: React.FC<DrawingSetPanelProps> = ({
   sets,
   availableDrawings,
-  _projectId,
+  projectId: _projectId,
   onClose,
   onCreateSet,
-  _onUpdateSet,
+  onUpdateSet: _onUpdateSet,
   onIssueSet,
   onOpenDrawing,
 }) => {

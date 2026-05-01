@@ -388,7 +388,7 @@ export function ProjectSettings() {
     );
   }
 
-  const _selectedType = PROJECT_TYPES.find((t) => t.value === projectType);
+
 
   return (
     <div style={{

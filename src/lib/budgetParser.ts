@@ -554,52 +554,6 @@ const CSI_DIVISION_NAMES: Record<string, string> = {
   '33': 'Utilities',
 };
 
-function _detectSectionContext(
-  sheet: XLSX.Sheet,
-  rowIndex: number,
-  headerRow: number,
-  columns: DetectedColumn[],
-): SectionContext | null {
-  // Scan backward from this row to find the nearest section total or section header
-  const descCol = columns.find(c => c.role === 'description');
-  const _codeCol = columns.find(c => c.role === 'code');
-
-  // Scan forward to find the next "TOTAL" row — that tells us our section
-  // Use the description column specifically to avoid false matches from numeric cells
-  for (let r = rowIndex + 1; r < rowIndex + 60; r++) {
-    // Check the description column first
-    const dc = descCol ? sheet[XLSX.utils.encode_cell({ r, c: descCol.index })] : null;
-    const descText = String(dc?.v ?? '').trim();
-
-    // Also check all cells for merged/shifted layouts
-    let scanText = descText;
-    if (!descText) {
-      for (let c = 0; c <= 6; c++) { // only check first few columns
-        const cell = sheet[XLSX.utils.encode_cell({ r, c })];
-        if (cell) {
-          const v = String(cell.v ?? '').trim();
-          if (v.toUpperCase().includes('TOTAL')) {
-            scanText = v;
-            break;
-          }
-        }
-      }
-    }
-
-    // Look for "SOMETHING TOTAL" pattern
-    const totalMatch = scanText.match(/^(.+?)\s+TOTAL/i);
-    if (totalMatch) {
-      const sectionName = totalMatch[1].trim().toLowerCase();
-      for (const [key, csi] of Object.entries(SECTION_TO_CSI)) {
-        if (sectionName.includes(key) || key.includes(sectionName)) {
-          return { name: totalMatch[1].trim(), csiCode: csi };
-        }
-      }
-    }
-  }
-
-  return null;
-}
 
 function mapDescriptionToCSI(description: string): { code: string; name: string } | null {
   const lower = description.toLowerCase();

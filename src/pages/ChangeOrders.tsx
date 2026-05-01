@@ -122,7 +122,7 @@ const ApprovalStepIcon: React.FC<{ status: ApprovalStep['status'] }> = ({ status
 };
 
 // ── Approval Chain Component ─────────────────────
-const ApprovalChain: React.FC<{ steps: ApprovalStep[]; coId: string; onAdvance?: () => void; onReturn?: () => void }> = ({ steps, _coId, onAdvance, onReturn }) => {
+const ApprovalChain: React.FC<{ steps: ApprovalStep[]; coId: string; onAdvance?: () => void; onReturn?: () => void }> = ({ steps, coId: _coId, onAdvance, onReturn }) => {
   const currentStep = steps.find(s => s.status === 'current');
   return (
     <div style={{ padding: `${spacing['3']} 0` }}>
@@ -359,26 +359,6 @@ const PipelineArrow: React.FC = () => (
   </div>
 );
 
-// ── KPI Card ─────────────────────
-const _KpiCard: React.FC<{ label: string; value: string | number; sub?: string; icon: React.ReactNode; color: string; bgColor: string }> = ({ label, value, sub, icon, color, bgColor }) => (
-  <div style={{
-    flex: '1 1 160px',
-    padding: `${spacing['4']} ${spacing['5']}`,
-    backgroundColor: bgColor,
-    border: `1px solid ${colors.borderLight}`,
-    borderRadius: borderRadius.lg,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing['2'],
-  }}>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-      <span style={{ color, opacity: 0.7 }}>{icon}</span>
-    </div>
-    <div style={{ fontSize: '1.5rem', fontFamily: typography.fontFamilyMono, fontWeight: typography.fontWeight.bold, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>{value}</div>
-    {sub && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{sub}</span>}
-  </div>
-);
 
 const ChangeOrdersPage: React.FC = () => {
   const projectId = useProjectId();

@@ -550,7 +550,7 @@ function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase
 }
 
 // ── Today marker ────────────────────────────────────────
-function TodayMarker({ chartStart, pxPerDay, _totalHeight }: { chartStart: Date; pxPerDay: number; _totalHeight: number }) {
+function TodayMarker({ chartStart, pxPerDay, totalHeight: _totalHeight }: { chartStart: Date; pxPerDay: number; totalHeight: number }) {
   const today = startOfDay(new Date());
   const offset = (today.getTime() - chartStart.getTime()) / DAY_MS;
   const left = offset * pxPerDay;
@@ -1065,7 +1065,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onAddActivity,
   onPhaseClick,
   onPhaseUpdate,
-  _baselinePhases,
+  baselinePhases: _baselinePhases,
   showBaseline: showBaselineProp,
   zoomLevel: zoomLevelProp,
   whatIfMode = false,

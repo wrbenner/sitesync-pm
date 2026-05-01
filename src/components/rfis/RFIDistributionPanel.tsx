@@ -123,7 +123,7 @@ const RecipientRow: React.FC<{
 // ─── Main Component ───────────────────────────────────────
 
 const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
-  rfiId, projectId, _rfiTitle, _rfiNumber, recipients: initialRecipients = [], onDistribute,
+  rfiId, projectId, rfiTitle: _rfiTitle, rfiNumber: _rfiNumber, recipients: initialRecipients = [], onDistribute,
 }) => {
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [recipients, setRecipients] = useState<DistributionRecipient[]>(initialRecipients)

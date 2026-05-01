@@ -32,8 +32,6 @@ import type { PunchItem } from './types'
 
 // ─── Helpers ──────────────────────────────────────────────
 
-const _getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
 const relativeTime = (dateStr: string) => {
   const diff = Date.now() - new Date(dateStr).getTime()

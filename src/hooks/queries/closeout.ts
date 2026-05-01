@@ -198,7 +198,7 @@ export function useGenerateCloseoutList() {
 export function useTransitionCloseoutStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status, _projectId }: { id: string; status: CloseoutItemStatus; _projectId: string }) => {
+    mutationFn: async ({ id, status, projectId: _projectId }: { id: string; status: CloseoutItemStatus; projectId: string }) => {
       const updates: Record<string, unknown> = {
         status,
         updated_at: new Date().toISOString(),
@@ -228,11 +228,11 @@ export function useUpdateCloseoutItem() {
   return useMutation({
     mutationFn: async ({
       id,
-      _projectId,
+      projectId: _projectId,
       updates,
     }: {
       id: string
-      _projectId: string
+      projectId: string
       updates: Partial<Pick<CloseoutItemRow, 'description' | 'trade' | 'assigned_to' | 'due_date' | 'notes' | 'document_url' | 'category'>>
     }) => {
       const { data, error } = await supabase
@@ -275,12 +275,12 @@ export function useUploadCloseoutDoc() {
       projectId,
       closeoutItemId,
       file,
-      _userId,
+      userId: _userId,
     }: {
       projectId: string
       closeoutItemId: string
       file: File
-      _userId?: string
+      userId?: string
     }) => {
       // Upload to Supabase storage
       const { url, path, error: uploadError } = await uploadCloseoutDocument(

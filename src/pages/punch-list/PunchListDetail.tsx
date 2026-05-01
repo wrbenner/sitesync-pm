@@ -165,7 +165,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
   setRejectNote,
   showRejectNote,
   setShowRejectNote,
-  _isMobile,
+  isMobile: _isMobile,
   comments,
   updatePunchItem,
   deletePunchItem,
