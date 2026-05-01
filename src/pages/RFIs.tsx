@@ -4,14 +4,14 @@ import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, EmptyState } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
+import { PageContainer, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, EmptyState } from '../components/Primitives';
+import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { RFIKPIs } from './rfis/RFIKPIs';
 import { RFITabBar, type RFIStatusFilter } from './rfis/RFITabBar';
 import { useRFIs, useRFI, useProject } from '../hooks/queries';
 import { exportRFILogXlsx } from '../lib/exportXlsx';
 import { ExportButton } from '../components/shared/ExportButton';
-import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, TrendingUp, CircleDot, Timer, CheckCircle2, AlertCircle, ArrowUpRight, ChevronRight, DollarSign } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FilterX, Plus, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, AlertCircle, ChevronRight, DollarSign } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -170,6 +170,7 @@ const RFIsPage: React.FC = () => {
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() for UI time-window filter; acceptable impurity in memoized computation
     const weekAgo = Date.now() - 7 * 86400000;
     return rfis.filter((r) => r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo).length;
   }, [rfis]);
@@ -189,7 +190,7 @@ const RFIsPage: React.FC = () => {
   const [showAIDraftModal, setShowAIDraftModal] = useState(false);
   const [aiDraftInput, setAiDraftInput] = useState('');
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
-  const [aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
+  const [_aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
   const [aiPrefillKey, setAiPrefillKey] = useState(0);
 
   // Response text state (shared between manual entry and AI suggestion)
@@ -197,7 +198,7 @@ const RFIsPage: React.FC = () => {
   const [responseSubmitting, setResponseSubmitting] = useState(false);
 
   // AI Suggest Response state (detail panel)
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [_aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [aiSuggestionError, setAiSuggestionError] = useState(false);
 
@@ -259,6 +260,7 @@ const RFIsPage: React.FC = () => {
 
   // Reset response state when detail panel switches to a different RFI
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state reset on RFI change; no external system involved
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
@@ -399,6 +401,7 @@ const RFIsPage: React.FC = () => {
         if (rfi.status === 'closed') {
           days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
         } else {
+          // eslint-disable-next-line react-hooks/purity -- Date.now() for age-in-days display; acceptable in cell renderer
           days = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.textTertiary;
@@ -910,6 +913,7 @@ const RFIsPage: React.FC = () => {
           onMoveItem={handleKanbanMove}
           renderCard={(rfi) => {
             const cardOverdue = isOverdue(rfi.dueDate) && rfi.status !== 'closed';
+            // eslint-disable-next-line react-hooks/purity -- Date.now() for kanban card age display; acceptable
             const daysOpen = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
             return (
               <div
@@ -1128,6 +1132,7 @@ const RFIsPage: React.FC = () => {
               </h3>
               {/* Days open indicator */}
               {(() => {
+                // eslint-disable-next-line react-hooks/purity -- Date.now() for days-open display in detail panel; acceptable
                 const daysOpen = Math.floor((Date.now() - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
                 const overdue = isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed';
                 return (

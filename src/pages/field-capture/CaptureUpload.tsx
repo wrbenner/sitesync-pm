@@ -70,7 +70,7 @@ export const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, i
         <div style={{ position: 'relative' }}>
           <img loading="lazy"
             src={dataUrl}
-            alt="Captured photo preview"
+            alt="Captured preview"
             style={{
               width: '100%',
               maxHeight: '220px',

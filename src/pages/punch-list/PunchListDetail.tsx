@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { Btn, DetailPanel, Avatar, PriorityTag } from '../../components/Primitives';
+import { Btn, DetailPanel, Avatar } from '../../components/Primitives';
 import {
   Camera, CheckCircle, MessageSquare, RefreshCw, XCircle,
-  MapPin, Wrench, Calendar, User, Clock, ChevronRight,
+  MapPin, Wrench, Calendar, User, Clock,
   Play, Eye, Shield, AlertTriangle, Send,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 import { EditableDetailField } from '../../components/forms/EditableField';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
@@ -15,14 +15,10 @@ import { RelatedItems } from '../../components/Primitives';
 import { toast } from 'sonner';
 import type { PunchItem, Comment } from './types';
 import {
-  statusLabel,
-  STATUS_COLORS,
   formatDate,
   getDueDateColor,
-  getDaysRemaining,
   getBallInCourt,
 } from './types';
-import { StatusDot } from './PunchListTable';
 
 // ── Verification Pipeline ───────────────────────────────
 const PIPELINE = [
@@ -169,7 +165,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
   setRejectNote,
   showRejectNote,
   setShowRejectNote,
-  isMobile,
+  isMobile: _isMobile,
   comments,
   updatePunchItem,
   deletePunchItem,

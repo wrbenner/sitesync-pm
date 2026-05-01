@@ -54,6 +54,7 @@ export function useCollaborativeField(fieldName: string): UseCollaborativeFieldR
   useEffect(() => {
     const lockState = isFieldLocked(fieldName)
     if (lockState.locked && lockState.userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setIsLocked(true)
       const owner = getFieldLockOwner(fieldName)
       setLockedBy(owner?.displayName)

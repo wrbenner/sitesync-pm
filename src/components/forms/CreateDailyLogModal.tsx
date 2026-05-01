@@ -547,6 +547,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     const mq = window.matchMedia('(max-width: 767px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync initial media query state; not an external system subscription
     setIsMobile(mq.matches)
     return () => mq.removeEventListener('change', handler)
   }, [])
@@ -556,6 +557,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
   useEffect(() => {
     if (!open || isSubmittedView) return
     if (!projectLat || !projectLon) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronous loading state set before async fetch; standard loading pattern
     setWeatherLoading(true)
     setAutoFilledFields(new Set())
     setEditedAfterAutoFill(new Set())
@@ -586,6 +588,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
   useEffect(() => {
     if (!open || isSubmittedView) return
     if (projectLat && projectLon) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading state before async fetch; standard pattern
     setWeatherLoading(true)
     setAutoFilledFields(new Set())
     setEditedAfterAutoFill(new Set())

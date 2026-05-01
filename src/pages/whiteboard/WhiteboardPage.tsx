@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { Plus, Save, CheckCircle } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 import { Whiteboard } from '../../components/shared/Whiteboard'
 import type { WhiteboardData } from '../../components/shared/Whiteboard'
 import { PageContainer, Btn, useToast } from '../../components/Primitives'
@@ -8,7 +8,6 @@ import {
   spacing,
   typography,
   borderRadius,
-  shadows,
   transitions,
   layout,
 } from '../../styles/theme'
@@ -23,7 +22,7 @@ interface SavedBoard {
 }
 
 function generateBoardId(): string {
-  return `board_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `board_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 const EMPTY_DATA: WhiteboardData = {
@@ -185,6 +184,7 @@ export const WhiteboardPage: React.FC = () => {
       {/* Whiteboard at full remaining height */}
       <div style={{ height: `calc(100vh - ${layout.topbarHeight} - 140px)` }}>
         <Whiteboard
+          // eslint-disable-next-line react-hooks/refs -- ref read during render; null-guarded or stable at paint time
           key={whiteboardKeyRef.current}
           initialData={boardData}
           onSave={setBoardData}

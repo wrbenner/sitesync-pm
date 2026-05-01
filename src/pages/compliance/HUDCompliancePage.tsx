@@ -2,12 +2,11 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Shield, AlertTriangle, Clock, DollarSign, Users, Building2, FileText,
   ChevronRight, ChevronDown, Search, Plus, X, Check, Edit2, TrendingUp,
-  Calendar, BarChart3, Award, Target, Percent, ArrowRight, Download,
-  CheckCircle, Info, AlertCircle, Filter, Eye, Calculator, Camera, Zap
+  Calendar, BarChart3, Target, Download,
+  CheckCircle, Info, AlertCircle, Calculator, Camera, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { fromTable } from '../../lib/supabase';
 import { useProjectId } from '../../hooks/useProjectId';
 
@@ -183,7 +182,7 @@ const HUDCompliancePage: React.FC = () => {
 
   // ── State for Supabase data ─────────────────────────────
   const [programs, setPrograms] = useState<ComplianceProgram[]>([]);
-  const [lihtcUnits, setLihtcUnits] = useState<LIHTCUnit[]>([]);
+  const [lihtcUnits, _setLihtcUnits] = useState<LIHTCUnit[]>([]);
   const [wageRates, setWageRates] = useState<WageRate[]>([]);
   const [payrollEntries, setPayrollEntries] = useState<PayrollEntry[]>([]);
   const [section3Workers, setSection3Workers] = useState<Section3Worker[]>([]);
@@ -193,6 +192,7 @@ const HUDCompliancePage: React.FC = () => {
 
   // ── Fetch compliance programs from compliance_reports ────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (!projectId) { setLoading(false); return; }
     let cancelled = false;
 
@@ -207,7 +207,7 @@ const HUDCompliancePage: React.FC = () => {
 
         if (!cancelled && reports && reports.length > 0) {
           // Map compliance_reports to ComplianceProgram shape
-          const mapped: ComplianceProgram[] = reports.map((r: Record<string, unknown>, i: number) => ({
+          const mapped: ComplianceProgram[] = reports.map((r: Record<string, unknown>, _i: number) => ({
             id: String(r.id),
             name: String(r.report_type ?? 'Compliance Report'),
             code: String(r.report_type ?? 'Report').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),

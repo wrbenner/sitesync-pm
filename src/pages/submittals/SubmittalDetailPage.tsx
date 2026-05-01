@@ -43,11 +43,13 @@ import {
   ExternalLink, Eye, Stamp, Send, Forward,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submittals'
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'
 import { useProjectId } from '../../hooks/useProjectId'
+import type { Submittal } from '../../types/database'
+import type { SubmittalReviewer } from '../../types/submittal'
 import {
   getSubmittalStatusConfig, getValidSubmittalTransitions, getNextSubmittalStatus,
   getStampConfig, getLeadTimeUrgency, CSI_DIVISIONS,
@@ -106,7 +108,7 @@ interface ApprovalNode {
   status: 'complete' | 'active' | 'waiting' | 'rejected'
 }
 
-const ApprovalPipeline: React.FC<{ status: SubmittalState; reviewers: any[] }> = ({ status, reviewers }) => {
+const ApprovalPipeline: React.FC<{ status: SubmittalState; reviewers: SubmittalReviewer[] }> = ({ status, reviewers }) => {
   const nodes: ApprovalNode[] = useMemo(() => {
     const getNodeStatus = (threshold: SubmittalState[]): ApprovalNode['status'] => {
       if (status === 'rejected' || status === 'resubmit') {
@@ -272,7 +274,7 @@ const ActionButtons: React.FC<{
 // ─── Review Comment Bubble ────────────────────────────────
 
 const ReviewBubble: React.FC<{
-  reviewer: any
+  reviewer: SubmittalReviewer
   index: number
 }> = ({ reviewer, index }) => {
   const stampConfig = reviewer.stamp ? getStampConfig(reviewer.stamp as SubmittalStamp) : null
@@ -327,7 +329,7 @@ const ReviewBubble: React.FC<{
 
 // ─── Info Card ───────────────────────────────────────────
 
-const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
+const InfoCard: React.FC<{ submittal: Submittal; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
   const [showMore, setShowMore] = useState(false)
   const specDiv = getCSIDivisionName(submittal.spec_section)
   const dueUrgent = submittal.due_date && isOverdue(submittal.due_date) && currentStatus !== 'approved' && currentStatus !== 'closed'
@@ -525,7 +527,7 @@ const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: Submit
 
 // ─── Related Intelligence ─────────────────────────────────
 
-const RelatedIntelligence: React.FC<{ submittal: Record<string, any> }> = ({ submittal }) => {
+const RelatedIntelligence: React.FC<{ submittal: Submittal }> = ({ submittal }) => {
   const specDiv = getCSIDivisionName(submittal.spec_section)
 
   const relatedItems: Array<{ type: string; label: string; link: string; color: string }> = []
@@ -613,7 +615,7 @@ export function SubmittalDetailPage() {
   const navigate = useNavigate()
   const projectId = useProjectId()
   const { addToast } = useToast()
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
 
   const { data: submittal, isLoading, error } = useSubmittal(submittalId)
   const { data: reviewers = [] } = useSubmittalReviewers(submittalId)
@@ -622,7 +624,7 @@ export function SubmittalDetailPage() {
 
   // Normalize legacy DB statuses (pending, under_review) to machine states so
   // that the XState-driven workflow, stepper, and action buttons all render.
-  const rawStatus = ((submittal as any)?.status as string) || 'draft'
+  const rawStatus = submittal?.status ?? 'draft'
   const currentStatus: SubmittalState = (() => {
     switch (rawStatus) {
       case 'pending': return 'draft'
@@ -635,8 +637,6 @@ export function SubmittalDetailPage() {
   const statusConfig = getSubmittalStatusConfig(currentStatus)
   const transitions = getValidSubmittalTransitions(currentStatus)
 
-  const sub = (submittal as Record<string, any>) || {}
-
   // ── Construct files for DocumentViewer ──────────────────
   // Uses signed URLs since project-files is a private bucket. We normalize
   // attachments (string | {path,url,name}) into {name, path} and resolve the
@@ -645,8 +645,9 @@ export function SubmittalDetailPage() {
 
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (!submittal) { setResolvedFiles([]); return }
-    const attachments = ((submittal as any).attachments || []) as unknown[]
+    const attachments = ((submittal as Submittal & { attachments?: unknown[] }).attachments || []) as unknown[]
     const normalized = attachments.map((att: unknown, i: number) => {
       if (typeof att === 'string') {
         return { name: att.split('/').pop() || `Document ${i + 1}`, path: att, url: '' }
@@ -686,7 +687,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Cannot upload: missing project context')
       return
     }
-    const storagePath = `submittals/${projectId}/${(submittal as any).id}/${Date.now()}_${file.name}`
+    const storagePath = `submittals/${projectId}/${submittal.id}/${Date.now()}_${file.name}`
     const { error: uploadErr } = await supabase.storage
       .from(SUBMITTAL_BUCKET)
       .upload(storagePath, file, { contentType: file.type, upsert: false })
@@ -694,7 +695,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Failed to upload: ' + uploadErr.message)
       return
     }
-    const currentAttachments = ((submittal as any).attachments || []) as unknown[]
+    const currentAttachments = ((submittal as Submittal & { attachments?: unknown[] }).attachments || []) as unknown[]
     const newAttachment = {
       path: storagePath,
       name: file.name,
@@ -704,7 +705,7 @@ export function SubmittalDetailPage() {
     }
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: submittal.id,
         projectId,
         updates: { attachments: [...currentAttachments, newAttachment] },
       })
@@ -730,7 +731,7 @@ export function SubmittalDetailPage() {
     setTransitioning(action)
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: submittal.id,
         projectId,
         updates: { status: toDbStatus(nextStatus) },
       })
@@ -786,7 +787,7 @@ export function SubmittalDetailPage() {
             Submittal not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: typography.fontSize.body }}>
-            {(error as any)?.message || 'This submittal may have been deleted or you don\'t have access.'}
+            {(error instanceof Error ? error.message : null) || 'This submittal may have been deleted or you don\'t have access.'}
           </p>
           <Btn onClick={() => navigate('/submittals')}>Back to Submittals</Btn>
         </div>
@@ -794,6 +795,7 @@ export function SubmittalDetailPage() {
     )
   }
 
+  const sub = submittal
   const subNumber = sub.number ? `SUB-${String(sub.number).padStart(3, '0')}` : 'SUB'
 
   return (
@@ -925,7 +927,7 @@ export function SubmittalDetailPage() {
                 display: 'flex', flexDirection: 'column', gap: spacing.md,
                 padding: `${spacing.md} 0`,
               }}>
-                {reviewers.map((r: any, i: number) => (
+                {reviewers.map((r, i) => (
                   <ReviewBubble key={r.id || i} reviewer={r} index={i} />
                 ))}
               </div>

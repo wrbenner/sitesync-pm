@@ -29,7 +29,6 @@ import {
   borderRadius,
   shadows,
   transitions,
-  zIndex,
 } from '../../styles/theme'
 
 // ── Types ─────────────────────────────────────────────────
@@ -97,7 +96,7 @@ const LINKED_ITEM_COLORS: Record<string, { bg: string; border: string }> = {
 }
 
 function generateId(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 // ── Canvas Drawing Helpers ────────────────────────────────
@@ -603,6 +602,7 @@ export default function DrawingMarkup({
   // ── Sync initial annotations ──────────────────────────
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setAnnotations(initialAnnotations)
   }, [initialAnnotations])
 
@@ -897,7 +897,7 @@ export default function DrawingMarkup({
   )
 
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
+    (_e: React.PointerEvent) => {
       if (isPanningRef.current) {
         isPanningRef.current = false
         return

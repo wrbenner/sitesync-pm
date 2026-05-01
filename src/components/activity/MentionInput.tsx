@@ -155,6 +155,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
               <button
                 key={person.userId}
                 role="option"
+                aria-selected={false}
                 onClick={() => handleMention(person)}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -182,6 +183,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
       }}>
         <input
           ref={inputRef}
+          role="combobox"
           value={value}
           onChange={handleChange}
           onKeyDown={(e) => {

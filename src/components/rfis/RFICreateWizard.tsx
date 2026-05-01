@@ -14,9 +14,9 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Send, Camera, Paperclip, ChevronDown, Search, Loader2,
-  Clock, AlertCircle, Calendar, Hash, BookOpen, FileText
+  Clock, AlertCircle, Calendar, BookOpen, FileText
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { colors, zIndex } from '../../styles/theme'
 import { Avatar } from '../Primitives'
 import { useRealtimeDirectoryContacts } from '../../hooks/queries/realtime'
 import { useProjectId } from '../../hooks/useProjectId'
@@ -355,7 +355,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const [files, setFiles] = useState<File[]>([])
   const [priority, setPriority] = useState('medium')
   const [dueDate, setDueDate] = useState(defaultDueDate())
-  const [showMore, setShowMore] = useState(false)
+  const [_showMore, setShowMore] = useState(false)
 
   const [sending, setSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -364,6 +364,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   // Auto-fill "from" when user detected
   useEffect(() => {
     if (currentUserContact && !fromContact) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setFromContact(currentUserContact)
     }
   }, [currentUserContact, fromContact])
@@ -373,6 +374,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setTimeout(() => questionRef.current?.focus(), 120)
     } else {
       // Reset all state
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setQuestion(''); setDetails(''); setAssignee(null); setManualAssignee(''); setFromContact(null)
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())

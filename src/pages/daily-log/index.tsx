@@ -9,7 +9,6 @@ import { colors, spacing, typography, borderRadius, transitions, tradeColors } f
 import { toast } from 'sonner';
 import { CalendarNav } from '../../components/dailylog/CalendarNav';
 import { AutoDailyLog } from '../../components/dailylog/AutoDailyLog';
-import { DailyLogCapture } from '../../components/dailylog/DailyLogCapture';
 import { QuickEntry } from '../../components/dailylog/QuickEntry';
 import type { QuickEntryData } from '../../components/dailylog/QuickEntry';
 import type { CrewHoursEntry as CrewHoursEntryType } from '../../components/dailylog/CrewHoursSummary';
@@ -81,7 +80,7 @@ const DailyLogPage: React.FC = () => {
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [activeView, setActiveView] = useState<'auto' | 'calendar' | 'log'>('auto');
-  const [showCaptureBar, setShowCaptureBar] = useState(true);
+  const [_showCaptureBar, _setShowCaptureBar] = useState(true);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherIsAuto, setWeatherIsAuto] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -155,6 +154,7 @@ const DailyLogPage: React.FC = () => {
   useEffect(() => {
     if (dailyLogHistory.length > 0 && !workSummary) {
       const summary = dailyLogHistory[0].summary ?? '';
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       if (summary) setWorkSummary(summary);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,6 +165,7 @@ const DailyLogPage: React.FC = () => {
     const todayLog = dailyLogHistory[0];
     const crewEntries = todayLog.crew_entries ?? [];
     if (crewEntries.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setManpowerRows(crewEntries.map((c) => ({
         id: crypto.randomUUID(),
         trade: c.trade ?? '',

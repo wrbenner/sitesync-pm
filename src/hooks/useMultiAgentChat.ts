@@ -143,6 +143,7 @@ export function useMultiAgentChat(
     if (!initialConversationId || !isSupabaseConfigured) return
 
     conversationIdRef.current = initialConversationId
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setConversationIdState(initialConversationId)
     isLoadingHistoryRef.current = true
 

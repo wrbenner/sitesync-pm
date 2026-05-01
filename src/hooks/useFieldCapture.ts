@@ -179,6 +179,7 @@ export function useFieldCapture(): UseFieldCapture {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     refreshPendingCount();
   }, [refreshPendingCount]);
 
@@ -198,6 +199,7 @@ export function useFieldCapture(): UseFieldCapture {
   // first location fix is already in flight before the user frames a photo.
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setGpsError('Geolocation not supported on this device');
       return;
     }

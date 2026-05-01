@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { AlertTriangle, Calendar, Plus, Printer, RefreshCw, Share2, X } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, EmptyState, useToast } from '../components/Primitives';
-import { PermissionGate } from '../components/auth/PermissionGate';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { LookaheadBoard } from '../components/schedule/LookaheadBoard';
@@ -151,6 +150,7 @@ export const Lookahead: React.FC = () => {
 
   // Sync mapped tasks from API into local state for drag/drop
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setTasks(mappedTasks);
   }, [mappedTasks]);
 

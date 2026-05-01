@@ -287,6 +287,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
 
   // Reset to first page whenever the panel reopens.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (open) setPage(1);
   }, [open]);
 

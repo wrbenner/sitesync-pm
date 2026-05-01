@@ -50,54 +50,56 @@ export function uploadResumable({
 }: ResumableUploadOptions): { promise: Promise<ResumableUploadResult>; abort: () => void } {
   let tusUpload: tus.Upload | null = null
 
-  const promise = new Promise<ResumableUploadResult>(async (resolve, reject) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) {
-        resolve({ storagePath: '', error: 'Not authenticated — please sign in again.' })
-        return
-      }
+  const promise = new Promise<ResumableUploadResult>((resolve) => {
+    ;(async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const accessToken = sessionData.session?.access_token
+        if (!accessToken) {
+          resolve({ storagePath: '', error: 'Not authenticated — please sign in again.' })
+          return
+        }
 
-      tusUpload = new tus.Upload(file, {
-        endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
-        retryDelays: [0, 1000, 3000, 5000, 10000],
-        chunkSize: CHUNK_SIZE,
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-          apikey: SUPABASE_ANON_KEY,
-          'x-upsert': 'true',
-        },
-        uploadDataDuringCreation: true,
-        removeFingerprintOnSuccess: true,
-        metadata: {
-          bucketName: bucket,
-          objectName: path,
-          contentType: file.type || 'application/octet-stream',
-          cacheControl: '3600',
-        },
-        onError(error) {
-          console.error('[TUS] Upload error:', error)
-          resolve({ storagePath: '', error: error.message || 'Upload failed' })
-        },
-        onProgress(bytesUploaded, bytesTotal) {
-          const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0
-          onProgress?.(pct)
-        },
-        onSuccess() {
-          resolve({ storagePath: path, error: null })
-        },
-      })
+        tusUpload = new tus.Upload(file, {
+          endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          chunkSize: CHUNK_SIZE,
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+            apikey: SUPABASE_ANON_KEY,
+            'x-upsert': 'true',
+          },
+          uploadDataDuringCreation: true,
+          removeFingerprintOnSuccess: true,
+          metadata: {
+            bucketName: bucket,
+            objectName: path,
+            contentType: file.type || 'application/octet-stream',
+            cacheControl: '3600',
+          },
+          onError(error) {
+            console.error('[TUS] Upload error:', error)
+            resolve({ storagePath: '', error: error.message || 'Upload failed' })
+          },
+          onProgress(bytesUploaded, bytesTotal) {
+            const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0
+            onProgress?.(pct)
+          },
+          onSuccess() {
+            resolve({ storagePath: path, error: null })
+          },
+        })
 
-      // Try to resume a previous partial upload for this file
-      const previousUploads = await tusUpload.findPreviousUploads()
-      if (previousUploads.length > 0) {
-        tusUpload.resumeFromPreviousUpload(previousUploads[0])
+        // Try to resume a previous partial upload for this file
+        const previousUploads = await tusUpload.findPreviousUploads()
+        if (previousUploads.length > 0) {
+          tusUpload.resumeFromPreviousUpload(previousUploads[0])
+        }
+        tusUpload.start()
+      } catch (err) {
+        resolve({ storagePath: '', error: (err as Error).message || 'Upload setup failed' })
       }
-      tusUpload.start()
-    } catch (err) {
-      resolve({ storagePath: '', error: (err as Error).message || 'Upload setup failed' })
-    }
+    })()
   })
 
   return {

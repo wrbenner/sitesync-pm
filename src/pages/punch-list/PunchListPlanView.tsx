@@ -1,11 +1,9 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
   Map, Layers, ZoomIn, ZoomOut, Maximize2, RotateCcw,
-  AlertTriangle, ChevronRight, CheckCircle2, Eye, Play,
-  Camera, MapPin, Clock, Plus, X, Search, Filter,
-  ChevronDown, ChevronLeft, Crosshair,
+  MapPin, ChevronLeft, Crosshair,
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { colors, typography } from '../../styles/theme'
 import { useDrawings } from '../../hooks/queries/drawings'
 import { useProjectId } from '../../hooks/useProjectId'
 import { PageState } from '../../components/shared/PageState'
@@ -46,13 +44,6 @@ const DISCIPLINE_COLORS: Record<string, string> = {
   plumbing: '#10B981',
   civil: '#6B7280',
   mep: '#F97316',
-}
-
-const PRIORITY_RING: Record<string, string> = {
-  critical: colors.statusCritical,
-  high: '#EF4444',
-  medium: colors.statusPending,
-  low: colors.statusActive,
 }
 
 // ── Pin Component ─────────────────────────────────────────
@@ -260,7 +251,7 @@ const PlanViewEmptyState: React.FC = () => (
 export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   items,
   onSelectItem,
-  onCreateAtLocation,
+  onCreateAtLocation: _onCreateAtLocation,
 }) => {
   const projectId = useProjectId()
   const {
@@ -273,13 +264,13 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   const drawings = (drawingsResult?.data ?? []) as Drawing[]
 
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
-  const [hoveredPinId, setHoveredPinId] = useState<number | null>(null)
+  const [hoveredPinId, _setHoveredPinId] = useState<number | null>(null)
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [showSidebar, setShowSidebar] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, _setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('active') // 'all' | 'active' | 'verified'
   const viewportRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -287,6 +278,7 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   // Auto-select first drawing
   useEffect(() => {
     if (drawings.length > 0 && !selectedDrawingId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setSelectedDrawingId(drawings[0].id)
     }
   }, [drawings, selectedDrawingId])
@@ -317,7 +309,7 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
 
     // Distribute items spatially using a deterministic hash
     // This creates a natural-looking distribution across the plan
-    return filteredItems.map((item, idx) => {
+    return filteredItems.map((item) => {
       // Use item ID for deterministic placement
       const hash1 = ((item.id * 2654435761) >>> 0) / 4294967296
       const hash2 = ((item.id * 340573321) >>> 0) / 4294967296

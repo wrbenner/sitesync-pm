@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   User, Mail, Phone, Building2, Briefcase, Shield, Camera,
   Bell, BellOff, ChevronRight, LogOut, Check, Pencil,
-  Moon, Sun, Lock, KeyRound, Palette,
+  Moon, Sun, KeyRound, Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores';
@@ -169,46 +169,50 @@ const SettingsRow: React.FC<{
   onClick?: () => void;
   trailing?: React.ReactNode;
   last?: boolean;
-}> = ({ label, description, icon, onClick, trailing, last }) => (
-  <button
-    onClick={onClick}
-    style={{
-      display: 'flex', alignItems: 'center', gap: spacing['3'],
-      padding: `${spacing['3']} 0`, width: '100%',
-      border: 'none', background: 'none', cursor: onClick ? 'pointer' : 'default',
-      textAlign: 'left', borderBottom: last ? 'none' : `1px solid ${colors.borderSubtle}`,
-      fontFamily: typography.fontFamily,
-    }}
-  >
-    <div style={{
-      width: 36, height: 36,
-      borderRadius: borderRadius.lg,
-      backgroundColor: colors.surfaceInset,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: colors.textTertiary, flexShrink: 0,
-    }}>
-      {icon}
-    </div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <p style={{
-        fontSize: typography.fontSize.base,
-        fontWeight: typography.fontWeight.medium,
-        color: colors.textPrimary, margin: 0,
+}> = ({ label, description, icon, onClick, trailing, last }) => {
+  const sharedStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: spacing['3'],
+    padding: `${spacing['3']} 0`, width: '100%',
+    border: 'none', background: 'none', cursor: onClick ? 'pointer' : 'default',
+    textAlign: 'left', borderBottom: last ? 'none' : `1px solid ${colors.borderSubtle}`,
+    fontFamily: typography.fontFamily,
+  }
+  const inner = (
+    <>
+      <div style={{
+        width: 36, height: 36,
+        borderRadius: borderRadius.lg,
+        backgroundColor: colors.surfaceInset,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: colors.textTertiary, flexShrink: 0,
       }}>
-        {label}
-      </p>
-      {description && (
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontSize: typography.fontSize.xs, color: colors.textTertiary,
-          margin: 0, marginTop: 2,
+          fontSize: typography.fontSize.base,
+          fontWeight: typography.fontWeight.medium,
+          color: colors.textPrimary, margin: 0,
         }}>
-          {description}
+          {label}
         </p>
-      )}
-    </div>
-    {trailing ?? (onClick ? <ChevronRight size={16} color={colors.textTertiary} /> : null)}
-  </button>
-);
+        {description && (
+          <p style={{
+            fontSize: typography.fontSize.xs, color: colors.textTertiary,
+            margin: 0, marginTop: 2,
+          }}>
+            {description}
+          </p>
+        )}
+      </div>
+      {trailing ?? (onClick ? <ChevronRight size={16} color={colors.textTertiary} /> : null)}
+    </>
+  )
+  // Use <div> when trailing contains interactive children (e.g. Toggle) to avoid button-in-button.
+  return onClick
+    ? <button onClick={onClick} style={sharedStyle}>{inner}</button>
+    : <div style={sharedStyle}>{inner}</div>
+};
 
 /* ─────────────────────── Toggle Component ─────────────────────── */
 
@@ -251,12 +255,13 @@ export default function UserProfile() {
 
   // Edit states
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
 
   useEffect(() => {
     if (profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
       setPhone(profile.phone || '');

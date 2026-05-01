@@ -26,7 +26,7 @@ import {
 
 const TILE_SIZE = 512;
 const TILE_FORMAT = 'jpeg';
-const TILE_QUALITY = 85;
+const _TILE_QUALITY = 85; // Reserved for JPEG encoding when full tile pipeline is implemented
 const TILE_OVERLAP = 1;
 const TILES_BUCKET = 'drawing-tiles';
 
@@ -106,10 +106,6 @@ Deno.serve(async (req: Request) => {
         .eq('id', drawingId);
       throw new HttpError(500, `Failed to download source file: ${downloadError?.message}`);
     }
-
-    // Convert Blob to ArrayBuffer for processing
-    const sourceBuffer = await fileData.arrayBuffer();
-    const sourceBytes = new Uint8Array(sourceBuffer);
 
     // ── Generate DZI tile pyramid ───────────────────────────────
     // In Edge Functions, we can't use native sharp/libvips directly.

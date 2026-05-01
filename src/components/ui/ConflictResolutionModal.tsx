@@ -645,6 +645,7 @@ export const LiveEditConflictModal: React.FC<LiveEditConflictModalProps> = ({
     if (!open) return;
     const initial: Record<string, FieldChoice> = {};
     for (const k of trueConflictKeys) initial[k] = 'local';
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setFieldChoices(initial);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);

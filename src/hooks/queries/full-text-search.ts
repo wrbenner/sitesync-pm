@@ -40,14 +40,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...data.map((d) => ({
               id: d.id,
               type: 'document' as const,
               title: d.name,
               description: d.description,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
@@ -61,14 +61,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...data.map((d) => ({
               id: d.id,
               type: 'file' as const,
               title: d.name,
               description: d.description,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
@@ -82,14 +82,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...data.map((d) => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title,
               description: d.discipline,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
@@ -103,14 +103,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...data.map((d) => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title,
               description: null,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }

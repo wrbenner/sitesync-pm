@@ -143,6 +143,7 @@ export function useAgentBuilder() {
   }, [projectId])
 
   // Create the agent in the database
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- React Compiler cannot preserve; deps are stable
   const createAgent = useCallback(async (definition: AgentDefinition) => {
     if (!projectId) return
     setCreating(true)

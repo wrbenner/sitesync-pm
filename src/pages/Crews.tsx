@@ -15,6 +15,7 @@ import { useDeleteCrew } from '../hooks/mutations';
 import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
 import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
 import { useTimesheets } from '../hooks/queries/timesheets';
+import type { Crew } from '../types/entities';
 
 interface AddCrewModalProps { onClose: () => void; projectId: string; onCreated: () => void }
 const AddCrewModal: React.FC<AddCrewModalProps> = ({ onClose, projectId, onCreated }) => {
@@ -169,7 +170,7 @@ export const Crews: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'map' | 'cards' | 'performance'>('cards');
   const [hoveredCrew, setHoveredCrew] = useState<string | null>(null);
   const [showAddCrew, setShowAddCrew] = useState(false);
-  const [editingCrew, setEditingCrew] = useState<any | null>(null);
+  const [editingCrew, setEditingCrew] = useState<Crew | null>(null);
   const [editCrewForm, setEditCrewForm] = useState({ name: '', trade: '', size: '', lead_name: '', status: 'active' });
 
   const updateCrewMutation = useMutation({
@@ -186,7 +187,7 @@ export const Crews: React.FC = () => {
     onError: (err: Error) => { toast.error(err.message || 'Failed to update crew'); },
   });
 
-  const openEditCrew = (crew: any) => {
+  const openEditCrew = (crew: Crew) => {
     setEditCrewForm({
       name: crew.name ?? '',
       trade: crew.trade ?? '',
@@ -238,6 +239,7 @@ export const Crews: React.FC = () => {
 
   // Sync positions when crews change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setDotPositions(initialPositions);
   }, [initialPositions]);
 

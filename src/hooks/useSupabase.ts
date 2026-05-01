@@ -13,7 +13,7 @@ type DailyLog = Tables['daily_logs']['Row']
 type PunchItem = Tables['punch_items']['Row']
 type SchedulePhase = Tables['schedule_phases']['Row']
 type BudgetItem = Tables['budget_items']['Row']
-type Crew = Tables['crews']['Row']
+type _Crew = Tables['crews']['Row']
 type Notification = Tables['notifications']['Row']
 type ActivityFeed = Tables['activity_feed']['Row']
 type AIConversation = Tables['ai_conversations']['Row']
@@ -454,6 +454,7 @@ export function useAICopilot(projectId: string) {
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     loadConversations()
   }, [loadConversations])
 

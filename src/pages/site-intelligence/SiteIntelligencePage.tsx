@@ -20,10 +20,10 @@ import {
   type SiteIntelligenceData,
   type GeocodingResult,
   type NearbyAmenity,
-  type WeatherForecastDay,
 } from '../../services/siteIntelligenceService';
 
 import 'leaflet/dist/leaflet.css';
+import type { Map as LeafletMap, LayerGroup } from 'leaflet';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -793,8 +793,8 @@ const SiteIntelligencePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markersLayerRef = useRef<LayerGroup | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -868,7 +868,7 @@ const SiteIntelligencePage: React.FC = () => {
       if (cancelled) return;
 
       // Fix default marker icon issue
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
         iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',

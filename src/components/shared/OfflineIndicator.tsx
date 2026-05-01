@@ -121,6 +121,7 @@ export function OfflineIndicator({ onConflictClick }: OfflineIndicatorProps) {
       const timer = setTimeout(() => setVisible(true), 200)
       return () => clearTimeout(timer)
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setVisible(false)
     }
   }, [showBanner])

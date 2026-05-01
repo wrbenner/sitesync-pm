@@ -8,8 +8,11 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
 import { useWorkforceMembers, useTimeEntries, useCreateWorkforceMember, useDeleteWorkforceMember, useCreateTimeEntry, useApproveTimeEntry } from '../hooks/queries'
+import type { Database } from '../types/database'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+
+type WorkforceMember = Database['public']['Tables']['workforce_members']['Row']
 
 type TabKey = 'roster' | 'time' | 'forecast' | 'credentials' | 'productivity' | 'dispatch'
 
@@ -83,7 +86,7 @@ const credentialDemoData: WorkerCredential[] = [
 ]
 
 // ── Headcount Forecast Demo Data ────────────────────────
-const forecastMonths = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
+const _forecastMonths = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
 const forecastMonthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 interface ForecastTrade { trade: string; planned: number[]; actual: number[]; needed: number[]; phase: string[] }
 const forecastDemoData: ForecastTrade[] = [
@@ -320,16 +323,16 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const activeToday = members?.filter((m) => m.status === 'active').length || 0
+  const totalRegularHrs = timeEntries?.reduce((s, e) => s + (Number(e.regular_hours) || 0), 0) || 0
+  const totalOTHrs = timeEntries?.reduce((s, e) => s + (Number(e.overtime_hours) || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  members?.forEach((m) => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +343,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as { id: string }
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +366,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as { id: string; approved?: boolean | null }
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
@@ -600,7 +603,7 @@ export const Workforce: React.FC = () => {
         const totalPlanned = forecastDemoData.reduce((s, t) => s + t.planned[currentMonthIdx], 0)
         const totalActual = forecastDemoData.reduce((s, t) => s + t.actual[currentMonthIdx], 0)
         const totalGap = totalPlanned - totalActual
-        const maxHeadcount = Math.max(...forecastDemoData.flatMap(t => [...t.planned, ...t.actual, ...t.needed]))
+        const _maxHeadcount = Math.max(...forecastDemoData.flatMap(t => [...t.planned, ...t.actual, ...t.needed]))
         return (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
@@ -1054,7 +1057,7 @@ const AddWorkerModal: React.FC<AddWorkerModalProps> = ({ projectId, onClose, onC
 
 interface LogTimeModalProps {
   projectId: string
-  members: any[]
+  members: WorkforceMember[]
   onClose: () => void
   onCreate: ReturnType<typeof useCreateTimeEntry>
 }
@@ -1104,7 +1107,7 @@ const LogTimeModal: React.FC<LogTimeModalProps> = ({ projectId, members, onClose
         <label style={labelStyle}>Worker *</label>
         <select style={inputStyle} value={form.workforce_member_id} onChange={set('workforce_member_id')}>
           <option value="">Select worker...</option>
-          {members.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
 
         <label style={labelStyle}>Date *</label>

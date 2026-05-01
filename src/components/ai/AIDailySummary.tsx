@@ -3,9 +3,9 @@ import {
   Sparkles, Sun, CloudRain, Cloud, CloudSnow, Wind, Thermometer,
   Users, ShieldAlert, FileQuestion, ClipboardCheck, Truck, Search,
   AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight,
-  Printer, Calendar,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import type { LucideIcon } from 'lucide-react';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -33,14 +33,18 @@ function formatDate(iso: string): string {
   }
 }
 
-function weatherIcon(condition: string) {
-  const c = condition.toLowerCase();
-  if (c.includes('rain') || c.includes('storm')) return CloudRain;
-  if (c.includes('snow') || c.includes('sleet')) return CloudSnow;
-  if (c.includes('wind')) return Wind;
-  if (c.includes('cloud') || c.includes('overcast')) return Cloud;
-  return Sun;
-}
+const WeatherIconDisplay: React.FC<{ condition?: string | null; size: number; style?: React.CSSProperties }> = ({
+  condition,
+  size,
+  style,
+}) => {
+  const c = condition?.toLowerCase() ?? '';
+  if (c.includes('rain') || c.includes('storm')) return <CloudRain size={size} style={style} />;
+  if (c.includes('snow') || c.includes('sleet')) return <CloudSnow size={size} style={style} />;
+  if (c.includes('wind')) return <Wind size={size} style={style} />;
+  if (c.includes('cloud') || c.includes('overcast')) return <Cloud size={size} style={style} />;
+  return <Sun size={size} style={style} />;
+};
 
 function isRainy(condition: string): boolean {
   const c = condition.toLowerCase();
@@ -74,7 +78,7 @@ function rfiActionLabel(action: string): { label: string; color: string } {
   }
 }
 
-function inspectionResultStyle(result: string): { label: string; color: string; bg: string; Icon: React.FC<any> } {
+function inspectionResultStyle(result: string): { label: string; color: string; bg: string; Icon: LucideIcon } {
   switch (result) {
     case 'pass': return { label: 'Pass', color: '#16A34A', bg: '#F0FDF4', Icon: CheckCircle2 };
     case 'fail': return { label: 'Fail', color: '#DC2626', bg: '#FEF2F2', Icon: XCircle };
@@ -221,7 +225,6 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = (props) => {
     [dailyLogEntries],
   );
 
-  const WeatherIcon = weather ? weatherIcon(weather.condition) : Sun;
 
   const hasWorkActivity = dailyLogEntries && dailyLogEntries.length > 0;
   const hasSafety = safetyIncidents && safetyIncidents.length > 0;
@@ -292,7 +295,7 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = (props) => {
             background: '#F9FAFB',
             borderBottom: '1px solid #F3F4F6',
           }}>
-            <WeatherIcon size={20} style={{ color: '#6B7280', flexShrink: 0 }} />
+            <WeatherIconDisplay condition={weather.condition} size={20} style={{ color: '#6B7280', flexShrink: 0 }} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['4'], fontSize: typography.fontSize.sm, color: '#374151' }}>
               <span style={{ fontWeight: typography.fontWeight.medium }}>{weather.condition}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>

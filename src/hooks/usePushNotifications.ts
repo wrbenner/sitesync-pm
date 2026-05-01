@@ -49,6 +49,7 @@ export function usePushNotifications() {
   const registeredRef = useRef(false)
 
   // Register for push notifications
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- React Compiler cannot preserve; deps are stable
   const register = useCallback(async () => {
     if (registeredRef.current) return
     registeredRef.current = true

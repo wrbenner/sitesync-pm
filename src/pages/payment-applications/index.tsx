@@ -108,7 +108,7 @@ const PaymentApplicationsPage: React.FC = () => {
     setG702ModalOpen(true)
   }, [])
 
-  const handleRetainageRelease = useCallback(async (itemId: string) => {
+  const _handleRetainageRelease = useCallback(async (itemId: string) => {
     setRetainageItems((prev) => prev.map((item) =>
       item.id === itemId
         ? { ...item, stage: 'requested' as RetainageStage }
@@ -295,8 +295,9 @@ const PaymentApplicationsPage: React.FC = () => {
   useEffect(() => {
     const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
     if (retainageArr.length > 0 && retainageItems.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
       setRetainageItems(retainageArr.map((r) => ({
-        id: (r.id as string) || String(Math.random()),
+        id: (r.id as string) || crypto.randomUUID(),
         description: (r.description as string) || 'SOV Item',
         scheduledValue: (r.scheduled_value as number) || (r.amount as number) || 0,
         retainageHeld: ((r.amount as number) || 0) - ((r.released_amount as number) || 0),

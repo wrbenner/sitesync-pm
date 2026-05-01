@@ -169,10 +169,35 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return { miles: Math.round(miles * 100) / 100, feet: Math.round(miles * 5280) };
 }
 
-function driveTimeEstimate(miles: number): string {
+function _driveTimeEstimate(miles: number): string {
   if (miles < 0.3) return `${Math.round(miles * 5280 / 260)} min walk`;
   const minutes = Math.max(1, Math.round(miles * 2.5)); // ~24mph avg city speed
   return `${minutes} min`;
+}
+
+// ── External API response shapes ──────────────────────────────
+
+interface NominatimResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+  address: GeocodingResult['address'];
+  boundingbox?: [string, string, string, string];
+}
+
+interface OWMForecastItem {
+  dt_txt: string;
+  main: { temp: number; humidity: number };
+  wind: { speed: number; gust?: number };
+  pop?: number;
+  rain?: { '3h'?: number };
+  snow?: { '3h'?: number };
+  weather: Array<{ main: string; description: string; icon: string }>;
+}
+
+interface EPAFeature {
+  attributes: Record<string, string | number | null>;
+  geometry: { x: number; y: number } | null;
 }
 
 // ── 1. Geocoding (Nominatim) ──────────────────────────────────
@@ -192,7 +217,7 @@ export async function geocodeAddress(query: string): Promise<GeocodingResult[]> 
     );
     if (!response.ok) throw new Error(`Geocoding failed: ${response.status}`);
     const data = await response.json();
-    return data.map((r: any) => ({
+    return (data as NominatimResult[]).map((r) => ({
       lat: parseFloat(r.lat),
       lng: parseFloat(r.lon),
       display_name: r.display_name,
@@ -430,7 +455,7 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
     };
 
     // Aggregate 3-hour forecast into daily summaries
-    const dailyMap = new Map<string, any[]>();
+    const dailyMap = new Map<string, OWMForecastItem[]>();
     for (const item of forecastData.list || []) {
       const date = item.dt_txt.split(' ')[0];
       if (!dailyMap.has(date)) dailyMap.set(date, []);
@@ -440,12 +465,12 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
     const forecast: WeatherForecastDay[] = [];
     for (const [date, items] of dailyMap) {
       if (forecast.length >= 5) break;
-      const temps = items.map((i: any) => i.main.temp);
-      const winds = items.map((i: any) => i.wind.speed);
-      const gusts = items.map((i: any) => i.wind.gust || i.wind.speed);
-      const pops = items.map((i: any) => (i.pop || 0) * 100);
-      const rains = items.map((i: any) => i.rain?.['3h'] || 0);
-      const snows = items.map((i: any) => i.snow?.['3h'] || 0);
+      const temps = items.map((i) => i.main.temp);
+      const winds = items.map((i) => i.wind.speed);
+      const gusts = items.map((i) => i.wind.gust ?? i.wind.speed);
+      const pops = items.map((i) => (i.pop ?? 0) * 100);
+      const rains = items.map((i) => i.rain?.['3h'] ?? 0);
+      const snows = items.map((i) => i.snow?.['3h'] ?? 0);
       // Pick the most common weather condition
       const condCounts = new Map<string, number>();
       for (const i of items) {
@@ -468,7 +493,7 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherData | nul
         icon: midItem.weather[0]?.icon || '01d',
         wind_speed: Math.round(Math.max(...winds)),
         wind_gust: Math.round(Math.max(...gusts)),
-        humidity: Math.round(items.reduce((s: number, i: any) => s + i.main.humidity, 0) / items.length),
+        humidity: Math.round(items.reduce((s: number, i) => s + i.main.humidity, 0) / items.length),
         precipitation_probability: Math.round(Math.max(...pops)),
         rain_mm: Math.round(rains.reduce((s: number, v: number) => s + v, 0) * 10) / 10,
         snow_mm: Math.round(snows.reduce((s: number, v: number) => s + v, 0) * 10) / 10,
@@ -657,7 +682,7 @@ async function fetchEPAData(lat: number, lng: number): Promise<EPAFacility[]> {
       return await fetchEPASuperfund(lat, lng);
     }
 
-    return data.features.slice(0, 10).map((f: any) => {
+    return data.features.slice(0, 10).map((f: EPAFeature) => {
       const a = f.attributes;
       const geom = f.geometry;
       const dist = geom ? haversineDistance(lat, lng, geom.y, geom.x) : { miles: 0, feet: 0 };
@@ -702,7 +727,7 @@ async function fetchEPASuperfund(lat: number, lng: number): Promise<EPAFacility[
     if (!response.ok) return [];
     const data = await response.json();
     if (!data.features) return [];
-    return data.features.slice(0, 10).map((f: any) => {
+    return data.features.slice(0, 10).map((f: EPAFeature) => {
       const a = f.attributes;
       const geom = f.geometry;
       const dist = geom ? haversineDistance(lat, lng, geom.y, geom.x) : { miles: 0, feet: 0 };
@@ -724,7 +749,7 @@ async function fetchEPASuperfund(lat: number, lng: number): Promise<EPAFacility[
 
 // ── 8. Sun Exposure Calculation ───────────────────────────────
 
-function calculateSunData(lat: number, lng: number): SunData {
+function calculateSunData(lat: number, _lng: number): SunData {
   const now = new Date();
   const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
 

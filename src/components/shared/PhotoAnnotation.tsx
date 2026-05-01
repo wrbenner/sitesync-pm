@@ -81,18 +81,16 @@ const CUSTOM_PROPS = ['_annotationType', '_annotationColor', '_annotationId'] as
 // ── Helpers ──────────────────────────────────────────────
 
 function uid(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 function getMeta(obj: FabricObject, key: string): unknown {
-  return (obj as any)[key]
+  return (obj as unknown as Record<string, unknown>)[key]
 }
 
 function setMeta(obj: FabricObject, key: string, value: unknown) {
-  ;(obj as any)[key] = value
+  ;(obj as unknown as Record<string, unknown>)[key] = value
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function getAnnotationType(obj: FabricObject): AnnotationData['type'] {
   const custom = getMeta(obj, '_annotationType') as AnnotationData['type'] | undefined
@@ -728,8 +726,10 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
+            /* eslint-disable react-hooks/refs -- history refs read during render; re-render is triggered by canvas state changes that keep these in sync */
             disabled={historyIndexRef.current <= 0}
             style={btnStyle(false, historyIndexRef.current <= 0)}
+            /* eslint-enable react-hooks/refs */
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -738,8 +738,10 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
+            /* eslint-disable react-hooks/refs -- same as above */
             disabled={historyIndexRef.current >= historyRef.current.length - 1}
             style={btnStyle(false, historyIndexRef.current >= historyRef.current.length - 1)}
+            /* eslint-enable react-hooks/refs */
             onClick={redo}
           >
             <Redo2 size={18} />

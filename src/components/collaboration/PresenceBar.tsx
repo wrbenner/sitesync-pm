@@ -399,6 +399,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
   })();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     setViewerCountText(`${users.length} ${users.length === 1 ? 'person' : 'people'} viewing this page`);
   }, [users.length]);
 
@@ -421,6 +422,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
       if (!curr.has(id)) messages.push(`${name} stopped viewing this page`);
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived state or loading state; no external system sync
     if (messages.length > 0) setAnnouncement(messages.join('. '));
 
     prevUsersRef.current = curr;

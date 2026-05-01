@@ -16,20 +16,18 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
+  AlertTriangle, MessageSquare, FileText,
+  Image, ChevronDown, User, Eye, EyeOff,
+  Paperclip, Flag, Timer, Zap
 } from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import {
@@ -38,6 +36,7 @@ import {
   type RFIState
 } from '../../machines/rfiMachine'
 import type { RFI, RFIResponse } from '../../types/database'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -72,14 +71,6 @@ const relativeTime = (d: string | null) => {
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
   return formatShortDate(d)
-}
-
-// ─── Types ────────────────────────────────────────────────
-
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
 }
 
 // ─── Watchers Hook ────────────────────────────────────────
@@ -279,15 +270,6 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
-          <span style={{
-            fontSize: '10px', color: colors.textTertiary,
-            padding: '1px 6px', borderRadius: '10px',
-            backgroundColor: colors.surfaceInset,
-          }}>
-            {(response as any).company}
-          </span>
-        )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
           {relativeTime(response.created_at)}
         </span>
@@ -584,7 +566,7 @@ export function RFIDetail() {
 
   useEffect(() => {
     if (lastViewedKey) {
-      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch {}
+      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch { /* localStorage unavailable */ }
     }
   }, [lastViewedKey])
 
@@ -775,6 +757,25 @@ export function RFIDetail() {
           )}
         </div>
 
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        <div style={{
+          marginBottom: '20px',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          backgroundColor: colors.surfaceRaised,
+          border: `1px solid ${colors.borderSubtle}`,
+        }}>
+          <WorkflowTimeline
+            states={['draft', 'open', 'under_review', 'answered', 'closed']}
+            currentState={currentStatus}
+            completedStates={(() => {
+              const order = ['draft', 'open', 'under_review', 'answered', 'closed']
+              const idx = order.indexOf(currentStatus)
+              return idx > 0 ? order.slice(0, idx) : []
+            })()}
+          />
+        </div>
+
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
@@ -801,15 +802,6 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
-                  <span style={{
-                    marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
-                    padding: '1px 6px', borderRadius: '10px',
-                    backgroundColor: colors.surfaceInset,
-                  }}>
-                    {(rfi as any).from_company}
-                  </span>
-                )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
                   {formatDateTime(rfi.created_at)}
                 </div>
@@ -826,7 +818,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || rfi.title}
             </div>
 
             {/* Metadata pills */}

@@ -11,13 +11,12 @@ import {
   Pin, PinOff, Box,
   HelpCircle,
   Repeat2, Grid3X3, ChevronDown, Plus, Sparkles,
-  History, Star, Settings, Bell, ArrowRight,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
-import { duration, easing } from '../styles/animations';
+import { colors, spacing, typography, borderRadius, layout, zIndex } from '../styles/theme';
 import { usePermissions } from '../hooks/usePermissions';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';
 import { AgentStatusBadge } from './ai/agentStream';
@@ -508,12 +507,20 @@ const AllToolsPanel: React.FC<AllToolsPanelProps> = ({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // Render-time state reset when panel opens (React docs pattern — useState for prev-value tracking)
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (open) {
       setSearch('');
       setActiveCategory(null);
-      setTimeout(() => inputRef.current?.focus(), 100);
     }
+  }
+
+  // DOM-only side effect: focus input on open
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
   // Filter items by search
@@ -690,7 +697,6 @@ const AllToolsPanel: React.FC<AllToolsPanelProps> = ({
                     </div>
                     {visibleItems.map((item) => {
                       const fullItem = ITEM_MAP.get(item.id);
-                      const Icon = item.icon;
                       const isItemActive = activeView === item.id;
                       const isItemPinned = pinnedIds.has(item.id);
 
@@ -872,9 +878,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     () => readJSON<string[]>(RECENTS_KEY, [])
   );
 
-  // Track navigation for recents
+  // Track navigation for recents — accumulating history is inherently stateful;
+  // this is a correct use of setState in an effect (no infinite loop, bounded to navigation changes).
   useEffect(() => {
     if (!activeView || activeView === 'dashboard') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRecentIds((prev) => {
       const filtered = prev.filter((id) => id !== activeView);
       const next = [activeView, ...filtered].slice(0, 5);

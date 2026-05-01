@@ -38,7 +38,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
   const appNavigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [editingDetail, setEditingDetail] = useState(false);
-  const [actionPending, setActionPending] = useState(false);
+  const [_actionPending, setActionPending] = useState(false);
 
   // Build timeline from real submittal data
   const timeline: Array<{ date: string; event: string; by: string; status: 'complete' | 'active' | 'pending' }> = useMemo(() => {

@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react'
 import {
-  Clock, AlertTriangle, Camera, MapPin, ChevronRight,
-  Play, Eye, CheckCircle2, User
+  Clock, AlertTriangle, Camera, MapPin,
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { colors, typography } from '../../styles/theme'
 import { KanbanBoard } from '../../components/shared/KanbanBoard'
 import type { KanbanColumn } from '../../components/shared/KanbanBoard'
 import type { PunchItem } from './types'
@@ -22,12 +21,6 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: colors.statusActive,
 }
 
-const COLUMN_ICONS: Record<string, typeof Play> = {
-  open: AlertTriangle,
-  in_progress: Play,
-  sub_complete: Eye,
-  verified: CheckCircle2,
-}
 
 export const PunchListKanban: React.FC<PunchListKanbanProps> = ({ items, onSelectItem, onMoveItem }) => {
   const columns: KanbanColumn<PunchItem>[] = useMemo(() => [
