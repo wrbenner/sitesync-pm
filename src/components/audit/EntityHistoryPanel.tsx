@@ -61,8 +61,7 @@ export const EntityHistoryPanel: React.FC<EntityHistoryPanelProps> = ({
   entityId,
   title = 'Activity',
 }) => {
-  const { data, isLoading } = useEntityHistory(entityType, entityId)
-  const entries: AuditLogEntry[] = data?.entries ?? []
+  const { entries, isPending: isLoading } = useEntityHistory(entityType, entityId)
 
   if (isLoading) {
     return (

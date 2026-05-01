@@ -17,6 +17,10 @@ export interface AuditLogEntry {
   changed_fields: string[] | null
   metadata: Record<string, unknown>
   created_at: string
+  /** SHA-256 of the prior chain entry (null for the first row of a chain). */
+  previous_hash?: string | null
+  /** SHA-256 of this row's canonical payload — the cryptographic seal. */
+  entry_hash?: string | null
 }
 
 export interface AuditLogFilters {

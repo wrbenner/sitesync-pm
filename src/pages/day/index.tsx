@@ -25,6 +25,9 @@ import { colors, typography, spacing } from '../../styles/theme'
 import { Cockpit } from '../../components/cockpit/Cockpit'
 import { CockpitMetrics } from '../../components/cockpit/CockpitMetrics'
 import { IrisLane } from '../../components/cockpit/IrisLane'
+import { IrisInsightsLane } from '../../components/cockpit/IrisInsightsLane'
+import { useIrisInsights } from '../../hooks/useIrisInsights'
+import type { IrisInsight } from '../../services/iris/insights'
 import { NeedsYouTable } from '../../components/cockpit/NeedsYouTable'
 import { NeedsYouMobileList } from '../../components/cockpit/NeedsYouMobileList'
 import { ProjectNow } from '../../components/cockpit/ProjectNow'
@@ -298,6 +301,15 @@ const DayPage: React.FC = () => {
     [navigate],
   )
 
+  const { insights } = useIrisInsights(projectId)
+  const handleInsightClick = useCallback(
+    (insight: IrisInsight) => {
+      const url = insight.sourceTrail[0]?.url
+      if (url) navigate(url)
+    },
+    [navigate],
+  )
+
   // While projects load, render the cockpit chrome with skeleton rows
   // instead of ProjectGate's tiny pulsing dot — the user should see the
   // dashboard SHAPE on first paint, not what looks like a blank page.
@@ -343,6 +355,7 @@ const DayPage: React.FC = () => {
         irisLane={
           <ErrorBoundary fallback={null}>
             <IrisLane items={stream.items} onChip={handleIrisClick} resolveName={resolveName} />
+            <IrisInsightsLane insights={insights} onSelect={handleInsightClick} />
           </ErrorBoundary>
         }
         needsYou={

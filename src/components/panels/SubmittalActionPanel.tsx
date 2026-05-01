@@ -231,7 +231,7 @@ export const SubmittalActionPanel: React.FC<SubmittalActionPanelProps> = ({ open
               transition: transitions.quick,
               boxSizing: 'border-box',
             }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = '#F47820'; }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryOrange; }}
             onBlur={(e) => { e.currentTarget.style.borderColor = colors.hairline2; }}
           />
         </PanelSection>

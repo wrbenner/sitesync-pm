@@ -34,6 +34,7 @@ import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queri
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
+import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
 import { SpecExcerptPanel } from '../../components/specifications/SpecExcerptPanel'
 import { RfiSlaPanel } from '../../components/conversation/RfiSlaPanel'
 import { IrisSuggests } from '../../components/iris/IrisSuggests'
@@ -763,6 +764,11 @@ export function RFIDetail() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AuditTrailButton
+                entityType="rfi"
+                entityId={rfi.id}
+                projectId={rfi.project_id}
+              />
               <WatchButton rfiId={rfi.id} watchers={watchers} userId={user?.id} />
               <StatusControl
                 currentStatus={currentStatus}

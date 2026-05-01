@@ -141,7 +141,7 @@ export const QuickCreateFAB: React.FC<QuickCreateFABProps> = ({
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colors.parchment2; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = colors.parchment; }}
               >
-                <span style={{ display: 'flex', color: '#F47820' }}>{opt.icon}</span>
+                <span style={{ display: 'flex', color: colors.primaryOrange }}>{opt.icon}</span>
                 {opt.label}
               </motion.button>
             ))}
@@ -159,8 +159,8 @@ export const QuickCreateFAB: React.FC<QuickCreateFABProps> = ({
           height: 56,
           borderRadius: '50%',
           border: 'none',
-          backgroundColor: '#F47820',
-          color: '#fff',
+          backgroundColor: colors.primaryOrange,
+          color: colors.white,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

@@ -32,6 +32,10 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import CreateDailyLogModal from '../../components/forms/CreateDailyLogModal';
 import { FieldCaptureModal } from '../../components/field-capture/FieldCaptureModal';
 import { AutoDailyLog } from '../../components/dailylog/AutoDailyLog';
+import { AutoDraftPanel } from '../../components/dailylog/AutoDraftPanel';
+import { assembleDailyLogDraft } from '../../lib/dailyLogDrafting';
+import type { DayContext, DraftedDailyLog } from '../../types/dailyLogDraft';
+import { dailyLogService } from '../../services/dailyLogService';
 
 import { useCopilotStore } from '../../stores/copilotStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -433,6 +437,14 @@ const DailyLogPage: React.FC = () => {
   const [showIrisDraftSheet, setShowIrisDraftSheet] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
+  // Auto-draft state — owns the lifecycle of the AutoDraftPanel for the
+  // "Draft today's log from photos & field notes" CTA. The panel itself
+  // is read-only data + Approve/Reject; state lives here so the page can
+  // dismiss it after Approve writes back to the daily log.
+  const [autoDraft, setAutoDraft] = useState<DraftedDailyLog | null>(null);
+  const [autoDraftBusy, setAutoDraftBusy] = useState(false);
+  const [autoDraftError, setAutoDraftError] = useState<string | null>(null);
+
   // ── Data derivation ───────────────────────────────────────────────────────
   const allLogs: ExtendedDailyLog[] = useMemo(
     () => (dailyLogData?.data ?? []) as ExtendedDailyLog[],
@@ -651,6 +663,132 @@ const DailyLogPage: React.FC = () => {
       await deleteEntry.mutateAsync({ id, dailyLogId: todayLog.id, projectId });
     } catch { /* mutation toasts */ }
   }, [todayLog?.id, projectId, deleteEntry]);
+
+  // ── Auto-draft from photos & field notes ─────────────────────────────────
+  // Builds a DayContext from already-loaded entries, photos, weather, and
+  // any RFIs that moved today. Calls dailyLogService.compileLog to confirm
+  // the log id resolves, then assembles the structured DraftedDailyLog and
+  // hands it to the AutoDraftPanel for inline review.
+  //
+  // Approve writes back to ai_summary (the existing free-text storage on
+  // daily_logs); we don't auto-submit — the super still owns that gesture.
+  const handleAutoDraft = useCallback(async () => {
+    if (!projectId) { addToast('error', 'No project selected'); return; }
+    setAutoDraftBusy(true);
+    setAutoDraftError(null);
+    try {
+      const logId = await ensureLogId();
+      if (!logId) {
+        setAutoDraftError('Could not create or load today’s log.');
+        return;
+      }
+      // Touch compileLog so any errors loading entries surface up front
+      // (also primes the service-layer cache for the export PDF).
+      await dailyLogService.compileLog(logId);
+
+      // Assemble the section-builder context from React-state we already
+      // hydrated. Crews + visitors come from the entries query; photo
+      // captions come from the photo entries; voice notes & free-text
+      // observations land in `captures`.
+      const ctx: DayContext = {
+        project_id: projectId,
+        date: selectedDate,
+        timezone: 'project_local',
+        weather: weather
+          ? {
+              condition: weather.conditions,
+              high_temp_f: typeof weather.temp_high === 'number' ? weather.temp_high : undefined,
+              low_temp_f: typeof weather.temp_low === 'number' ? weather.temp_low : undefined,
+              wind_mph: parseFloat(String(weather.wind_speed)) || undefined,
+              precipitation_in: parseFloat(String(weather.precipitation)) || undefined,
+              weather_source: 'observed',
+            }
+          : null,
+        crews: crewRows.map((c) => ({
+          trade: c.trade ?? 'Unspecified',
+          sub_company: c.company ?? undefined,
+          count: c.headcount ?? 0,
+          hours: c.hours ?? undefined,
+          source: 'crew_check_in' as const,
+        })),
+        photos: photos.map((p) => ({
+          id: p.id,
+          caption: p.caption ?? '',
+        })),
+        captures: fieldEntries.map((e) => ({
+          id: e.id,
+          text: e.description ?? '',
+          kind: (e.type === 'voice' ? 'voice' : 'text') as 'voice' | 'text' | 'observation',
+        })),
+        rfis_today: [],
+        meeting_action_items: [],
+        schedule_events: [],
+        inspections: visitorRows
+          .filter((v) => !!v.inspector_name || !!v.inspection_result)
+          .map((v) => ({
+            id: v.id,
+            inspector: v.inspector_name ?? undefined,
+            type: v.description ?? 'Inspection',
+            result: (v.inspection_result === 'pass' || v.inspection_result === 'fail' || v.inspection_result === 'pending'
+              ? v.inspection_result
+              : undefined) as 'pass' | 'fail' | 'pending' | undefined,
+            notes: v.description ?? undefined,
+          })),
+        deliveries: deliveryRows.map((d) => ({
+          id: d.id,
+          item: d.description ?? 'Delivery',
+          quantity: d.quantity ?? undefined,
+          sub: d.company ?? undefined,
+        })),
+      };
+      const draft = assembleDailyLogDraft(ctx, { generated_by: 'sitesync-auto-draft' });
+      setAutoDraft(draft);
+    } catch (err) {
+      setAutoDraftError(err instanceof Error ? err.message : 'Could not draft the log.');
+    } finally {
+      setAutoDraftBusy(false);
+    }
+  }, [projectId, selectedDate, weather, crewRows, photos, fieldEntries, visitorRows, deliveryRows, ensureLogId, addToast]);
+
+  const handleAutoDraftApprove = useCallback(async (draft: DraftedDailyLog) => {
+    if (!todayLog?.id) { setAutoDraft(null); return; }
+    try {
+      // Persist the assembled narrative as the AI summary. The super can
+      // still edit any zone in place after Approve; this only seeds the
+      // free-text channel that PDF export reads.
+      const lines: string[] = [];
+      lines.push(`Weather: ${draft.weather_summary}`);
+      if (draft.manpower.length > 0) {
+        lines.push(`Manpower: ${draft.manpower_total} workers across ${draft.manpower.length} trades.`);
+      }
+      if (draft.work_performed.length > 0) {
+        lines.push('Work performed:');
+        for (const b of draft.work_performed) lines.push(`  • ${b.text}`);
+      }
+      if (draft.issues.length > 0) {
+        lines.push('Issues:');
+        for (const b of draft.issues) lines.push(`  • ${b.text}`);
+      }
+      if (draft.visitors.length > 0) {
+        lines.push('Visitors / inspections:');
+        for (const b of draft.visitors) lines.push(`  • ${b.text}`);
+      }
+      const result = await dailyLogService.updateSummary(todayLog.id, lines.join('\n'));
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      addToast('success', 'Draft saved to today’s log');
+      setAutoDraft(null);
+      await refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save draft');
+    }
+  }, [todayLog?.id, refetch, addToast]);
+
+  const handleAutoDraftReject = useCallback(() => {
+    setAutoDraft(null);
+  }, []);
 
   // ── Submit / approve / reject ─────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
@@ -990,6 +1128,81 @@ const DailyLogPage: React.FC = () => {
 
       {/* Body ─────────────────────────────────────────────────────────────── */}
       <main style={{ padding: 24, maxWidth: 'none' }}>
+        {/* Auto-draft CTA — collapses to a slim card; expands inline once
+            the user generates the draft. The panel itself owns the
+            Approve/Reject footer; we just provide the trigger + plumbing. */}
+        {!isLocked && (
+          <PermissionGate permission="daily_log.create">
+            <section
+              aria-label="AI draft today's log"
+              style={{
+                marginBottom: 16,
+                padding: autoDraft ? 0 : '14px 16px',
+                backgroundColor: autoDraft ? 'transparent' : SURFACE,
+                border: autoDraft ? 'none' : `1px solid ${BORDER}`,
+                borderRadius: 8,
+              }}
+            >
+              {!autoDraft && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    backgroundColor: STATUS.irisSubtle,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Sparkles size={16} color={STATUS.iris} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: INK, lineHeight: 1.3 }}>
+                      Draft today’s log from photos &amp; field notes
+                    </div>
+                    <div style={{ fontSize: 12, color: INK_3, marginTop: 2 }}>
+                      Iris assembles weather, manpower, work performed, issues, and visitors from what the field already captured. Review before saving.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAutoDraft}
+                    disabled={autoDraftBusy}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '8px 14px', minHeight: 32,
+                      border: 'none', borderRadius: 6,
+                      backgroundColor: autoDraftBusy ? `${STATUS.iris}88` : STATUS.iris,
+                      color: '#FFFFFF',
+                      cursor: autoDraftBusy ? 'wait' : 'pointer',
+                      fontSize: 13, fontWeight: 600,
+                      fontFamily: typography.fontFamily,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Sparkles size={13} />
+                    {autoDraftBusy ? 'Drafting…' : 'Draft today’s log'}
+                  </button>
+                </div>
+              )}
+
+              {autoDraftError && !autoDraft && (
+                <div role="alert" style={{
+                  marginTop: 10, padding: '8px 12px', borderRadius: 6,
+                  backgroundColor: `${STATUS.critical}10`,
+                  color: STATUS.critical, fontSize: 12, fontWeight: 500,
+                }}>
+                  {autoDraftError}
+                </div>
+              )}
+
+              {autoDraft && (
+                <AutoDraftPanel
+                  draft={autoDraft}
+                  onApprove={handleAutoDraftApprove}
+                  onReject={handleAutoDraftReject}
+                />
+              )}
+            </section>
+          </PermissionGate>
+        )}
+
         {logStatus === 'rejected' && todayLog?.rejection_comments && (
           <div role="alert" style={{
             padding: '10px 14px', marginBottom: 16,

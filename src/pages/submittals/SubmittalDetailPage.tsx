@@ -54,6 +54,7 @@ import {
   type SubmittalState, type SubmittalStamp,
 } from '../../machines/submittalMachine'
 import { DocumentViewer } from '../../components/submittals/DocumentViewer'
+import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
 import { supabase } from '../../lib/supabase'
 
 const SUBMITTAL_BUCKET = 'project-files'
@@ -871,12 +872,21 @@ export function SubmittalDetailPage() {
             )}
           </div>
 
-          {/* Right side: action buttons */}
-          <ActionButtons
-            transitions={transitions}
-            onAction={handleTransition}
-            loading={transitioning}
-          />
+          {/* Right side: audit trail + action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            {projectId && submittalRow && (
+              <AuditTrailButton
+                entityType="submittal"
+                entityId={submittalRow.id}
+                projectId={projectId}
+              />
+            )}
+            <ActionButtons
+              transitions={transitions}
+              onAction={handleTransition}
+              loading={transitioning}
+            />
+          </div>
         </motion.div>
 
         {/* ── Document Viewer (Hero) ──────────────────── */}

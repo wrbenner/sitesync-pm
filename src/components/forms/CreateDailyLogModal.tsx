@@ -33,7 +33,7 @@ const ToggleSwitch: React.FC<{ id: string; checked: boolean; onChange: (v: boole
     style={{
       width: 40, height: 22,
       borderRadius: 11,
-      backgroundColor: checked ? '#F47820' : '#D1D5DB',
+      backgroundColor: checked ? colors.primaryOrange : colors.borderDefault,
       border: 'none',
       cursor: 'pointer',
       position: 'relative',

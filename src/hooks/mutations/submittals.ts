@@ -97,6 +97,23 @@ export function useUpdateSubmittal() {
       const cleanUpdates = sanitizeSubmittalData(updates as Record<string, unknown>)
       const { error } = await from('submittals').update(cleanUpdates).eq('id', id).eq('project_id', projectId)
       if (error) throw error
+
+      // Cross-feature trigger: a rejected submittal drafts a follow-up RFI to
+      // the architect. Fire-and-forget — the chain is idempotent (skips when
+      // an RFI for this submittal already exists) and fail-soft so it can
+      // never break the user's primary mutation.
+      // Mirrors the same dispatch in submittalService.transitionStatus —
+      // some call sites (form Save, bulk edits) flow through this hook
+      // instead of the service.
+      if (typeof updates.status === 'string' && updates.status === 'rejected') {
+        void import('../../lib/crossFeatureWorkflows')
+          .then(({ runSubmittalRejectedChain }) => runSubmittalRejectedChain(id))
+          .then((result) => {
+            if (result.error) console.warn('[submittal_rejected chain]', result.error)
+            else if (result.created) console.info('[submittal_rejected chain] created', result.created)
+          })
+          .catch((err) => console.warn('[submittal_rejected chain] dispatch failed:', err))
+      }
       return { projectId, id }
     },
     invalidateKeys: (_, r) => [['submittals', 'detail', r.id]],

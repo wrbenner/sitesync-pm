@@ -281,7 +281,7 @@ const ActionButton: React.FC<{ action: SlideOverAction }> = ({ action }) => {
 
     switch (action.variant) {
       case 'primary':
-        return { ...base, backgroundColor: '#F47820', color: '#fff' };
+        return { ...base, backgroundColor: colors.primaryOrange, color: colors.white };
       case 'danger':
         return { ...base, backgroundColor: 'rgba(220, 38, 38, 0.1)', color: '#DC2626' };
       case 'ghost':

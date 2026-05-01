@@ -46,11 +46,13 @@ export const IrisDraftDrawer: React.FC<IrisDraftDrawerProps> = ({
 
   const generate = useIrisDraftStore((s) => s.generateDraft)
   const reject = useIrisDraftStore((s) => s.rejectDraft)
-  const approve = useIrisDraftStore((s) => s.approveDraft)
+  const clear = useIrisDraftStore((s) => s.clearDraft)
   const editStore = useIrisDraftStore((s) => s.editDraft)
-  // Subscribe per-id so the drawer updates when its draft lands.
-  const draft = useIrisDraftStore((s) => (item ? s.drafts.get(item.id) : undefined))
-  const isLoading = useIrisDraftStore((s) => (item ? s.loading.has(item.id) : false))
+  // Subscribe per project-scoped key so the drawer updates when its draft
+  // lands and so the *same* itemId in a different project doesn't share state.
+  const scopedKey = item ? `${projectId ?? '_'}:${item.id}` : null
+  const draft = useIrisDraftStore((s) => (scopedKey ? s.drafts.get(scopedKey) : undefined))
+  const isLoading = useIrisDraftStore((s) => (scopedKey ? s.loading.has(scopedKey) : false))
 
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -112,21 +114,25 @@ export const IrisDraftDrawer: React.FC<IrisDraftDrawerProps> = ({
 
   function commitEdit() {
     if (!item || !draft) return
-    editStore(item.id, editValue)
+    editStore(item.id, editValue, projectId)
     setEditing(false)
   }
 
   function handleSend() {
     if (!item || !draft) return
     const finalText = draft.editedContent ?? draft.content
-    approve(item.id)
+    // Clear instead of approve: keeping an "approved" draft pinned in the
+    // store makes the row look perpetually "sent" and prevents the user
+    // from drafting a fresh reply on the same item later. Send is the
+    // terminal action — the side-effect is owned by the destination page.
+    clear(item.id, projectId)
     onSend?.(item, finalText)
     onClose()
   }
 
   function handleDismiss() {
     if (!item) return
-    reject(item.id)
+    reject(item.id, projectId)
     onClose()
   }
 

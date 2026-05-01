@@ -77,8 +77,8 @@ function pickRiskTone(days: number | null, status: string | undefined): { color:
 
 const IRIS_INDIGO = '#4F46E5';
 
-const IrisCell: React.FC<{ submittalId: string }> = ({ submittalId }) => {
-  const draft = useIrisDraftStore((s) => s.getDraft(`submittal-${submittalId}`));
+const IrisCell: React.FC<{ submittalId: string; projectId: string | undefined }> = ({ submittalId, projectId }) => {
+  const draft = useIrisDraftStore((s) => s.getDraft(`submittal-${submittalId}`, projectId));
   if (!draft) {
     return <span style={{ fontSize: 11, color: TONE_INK3, opacity: 0.5 }}>—</span>;
   }
@@ -297,9 +297,9 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       id: 'iris',
       header: 'Iris',
       size: 110,
-      cell: (info) => <IrisCell submittalId={info.getValue() as string} />,
+      cell: (info) => <IrisCell submittalId={info.getValue() as string} projectId={projectId} />,
     }),
-  ], []);
+  ], [projectId]);
 
   const checkboxColumn = useMemo(() => subColHelper.display({
     id: 'select',

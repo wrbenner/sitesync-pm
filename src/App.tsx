@@ -101,6 +101,8 @@ const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => (
 const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetailPage'));
 const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
+const Tasks = lazyWithRetry(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
+const Commitments = lazyWithRetry(() => import('./pages/Commitments').then((m) => ({ default: m.Commitments })));
 const Safety = lazy(() => import('./pages/safety/index').then((m) => ({ default: m.Safety })));
 const FieldCapture = lazy(() => import('./pages/field-capture/index').then((m) => ({ default: m.FieldCapturePage })));
 // People & Labor
@@ -443,8 +445,11 @@ function AppRoutes() {
             <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
 
+            {/* Catch-all PM/super inbox + commitment register. */}
+            <Route path="/tasks" element={<PageSuspense><ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute></PageSuspense>} />
+            <Route path="/commitments" element={<PageSuspense><ProtectedRoute moduleId="commitments" moduleName="Commitments"><Commitments /></ProtectedRoute></PageSuspense>} />
+
             {/* ── Redirects: merged pages ── */}
-            <Route path="/tasks" element={<Navigate to="/dashboard" replace />} />
             <Route path="/lookahead" element={<Navigate to="/schedule" replace />} />
             <Route path="/field-capture" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute></PageSuspense>} />
             <Route path="/financials" element={<Navigate to="/budget" replace />} />

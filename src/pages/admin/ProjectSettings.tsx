@@ -12,6 +12,7 @@ import { PermissionGate } from '../../components/auth/PermissionGate';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { supabase, fromTable } from '../../lib/supabase';
 import { resetDemoProject } from '../../services/demoSeed';
+import { DemoSeedButton } from '../../components/admin/DemoSeedButton';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 
 /* ─────────────────────── Constants ─────────────────────── */
@@ -922,6 +923,14 @@ export function ProjectSettings() {
           orgId={(activeProject as { organization_id?: string }).organization_id ?? ''}
         />
       )}
+
+      {/* Local seeder — admin/owner/PM only. Hydrates the active project
+          with realistic RFIs / submittals / punch / schedule / budget /
+          photos / commitments so a freshly-created project is demo-ready
+          in one click. Hidden for non-admin users by the component itself. */}
+      <div style={{ marginTop: spacing['6'] }}>
+        <DemoSeedButton />
+      </div>
 
       {/* Unsaved changes indicator */}
       <AnimatePresence>

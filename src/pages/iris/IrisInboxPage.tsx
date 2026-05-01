@@ -21,9 +21,13 @@ import {
   useApproveDraftedAction,
   useRejectDraftedAction,
 } from '../../hooks/queries/draftedActions'
+import { useIrisInsights } from '../../hooks/useIrisInsights'
+import { useProjectId } from '../../hooks/useProjectId'
+import { IrisInsightsCard } from '../../components/cockpit/IrisInsightsCard'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
 import type { DraftedAction, DraftedActionType } from '../../types/draftedActions'
+import type { IrisInsight, IrisInsightKind } from '../../services/iris/insights'
 
 type TabKey = 'drafts' | 'suggestions' | 'history'
 
@@ -47,10 +51,36 @@ const GROUP_ORDER: DraftedActionType[] = [
   'schedule.resequence',
 ]
 
+// ── Suggestions tab — kind filter chips ───────────────────────────────
+
+const KIND_LABELS: Record<IrisInsightKind, string> = {
+  cascade: 'Cascade',
+  aging: 'Aging',
+  variance: 'Variance',
+  staffing: 'Staffing',
+  weather: 'Weather',
+}
+
+const KIND_ORDER: IrisInsightKind[] = [
+  'cascade',
+  'aging',
+  'variance',
+  'staffing',
+  'weather',
+]
+
+type KindFilter = 'all' | IrisInsightKind
+
 // ── Page ──────────────────────────────────────────────────────────────
 
 const IrisInboxPage: React.FC = () => {
   const [tab, setTab] = useState<TabKey>('drafts')
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all')
+  const projectId = useProjectId()
+  const {
+    insights,
+    isLoading: insightsLoading,
+  } = useIrisInsights(projectId)
 
   // Drafts tab feeds — pending only
   const { data: pendingDrafts = [], isLoading: pendingLoading } = useDraftedActionsForProject({
@@ -84,6 +114,26 @@ const IrisInboxPage: React.FC = () => {
       return (bT ?? '').localeCompare(aT ?? '')
     })
   }, [historyDrafts])
+
+  // Filter + group insights for the Suggestions tab.
+  // The hook already returns severity-then-impact-sorted output; preserve that
+  // order within each group so the most urgent risks surface first.
+  const filteredInsights = useMemo<IrisInsight[]>(() => {
+    if (kindFilter === 'all') return insights
+    return insights.filter((i) => i.kind === kindFilter)
+  }, [insights, kindFilter])
+
+  const insightCountsByKind = useMemo(() => {
+    const counts: Record<IrisInsightKind, number> = {
+      cascade: 0,
+      aging: 0,
+      variance: 0,
+      staffing: 0,
+      weather: 0,
+    }
+    for (const i of insights) counts[i.kind] += 1
+    return counts
+  }, [insights])
 
   const draftsCount = pendingDrafts.length
 
@@ -170,16 +220,60 @@ const IrisInboxPage: React.FC = () => {
         </div>
       )}
 
-      {/* Suggestions tab — non-blocking AI suggestions live on entity pages
-           today (IrisSuggests). The inbox tab is a placeholder for the future
-           project-wide suggestion feed; route is preserved either way. */}
+      {/* Suggestions tab — Iris Phase 4 risk insights. Consumes useIrisInsights
+           and renders one card per detected risk, filterable by kind. */}
       {tab === 'suggestions' && (
         <div id="iris-inbox-suggestions" role="tabpanel">
-          <EmptyState
-            icon={<Inbox size={28} />}
-            title="Suggestions render here"
-            description="Iris suggestions live on each entity's detail page today. A consolidated feed will appear here when the project-wide suggestion service ships."
-          />
+          {insights.length > 0 && (
+            <div
+              role="toolbar"
+              aria-label="Filter risks by category"
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: spacing['2'],
+                marginBottom: spacing['4'],
+              }}
+            >
+              <FilterChip
+                label="All"
+                count={insights.length}
+                active={kindFilter === 'all'}
+                onClick={() => setKindFilter('all')}
+              />
+              {KIND_ORDER.filter((k) => insightCountsByKind[k] > 0).map((kind) => (
+                <FilterChip
+                  key={kind}
+                  label={KIND_LABELS[kind]}
+                  count={insightCountsByKind[kind]}
+                  active={kindFilter === kind}
+                  onClick={() => setKindFilter(kind)}
+                />
+              ))}
+            </div>
+          )}
+
+          {insightsLoading ? (
+            <SkeletonStack />
+          ) : filteredInsights.length === 0 ? (
+            <EmptyState
+              icon={<Sparkles size={28} />}
+              title="No risks detected — Iris is watching."
+              description="Iris monitors RFIs, submittals, schedule, budget, staffing, and weather. Risks appear here as they emerge."
+            />
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: spacing['3'],
+              }}
+            >
+              {filteredInsights.map((insight) => (
+                <IrisInsightsCard key={insight.id} insight={insight} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -269,6 +363,52 @@ const TabButton: React.FC<{
     )}
   </button>
 )
+
+// ── Filter chip atom (Suggestions tab) ────────────────────────────────
+
+const FilterChip: React.FC<{
+  label: string
+  count: number
+  active: boolean
+  onClick: () => void
+}> = ({ label, count, active, onClick }) => {
+  const IRIS_INDIGO = '#4F46E5'
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: spacing['2'],
+        padding: `${spacing['1']} ${spacing['3']}`,
+        backgroundColor: active ? 'rgba(79, 70, 229, 0.10)' : colors.surfaceRaised,
+        color: active ? IRIS_INDIGO : colors.textSecondary,
+        border: `1px solid ${active ? 'rgba(79, 70, 229, 0.30)' : colors.borderSubtle}`,
+        borderRadius: borderRadius.full,
+        fontSize: typography.fontSize.sm,
+        fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
+        fontFamily: typography.fontFamily,
+        cursor: 'pointer',
+        lineHeight: 1.2,
+      }}
+    >
+      {label}
+      <span
+        style={{
+          fontVariantNumeric: 'tabular-nums',
+          fontSize: typography.fontSize.caption,
+          color: active ? IRIS_INDIGO : colors.textTertiary,
+          fontWeight: typography.fontWeight.semibold,
+        }}
+      >
+        {count}
+      </span>
+    </button>
+  )
+}
 
 // ── Skeleton stack ────────────────────────────────────────────────────
 

@@ -205,7 +205,7 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
                 transition: transitions.quick,
                 boxSizing: 'border-box',
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = '#F47820'; }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryOrange; }}
               onBlur={(e) => { e.currentTarget.style.borderColor = colors.hairline2; }}
             />
             <button
@@ -221,8 +221,8 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
                 padding: '6px 14px',
                 border: 'none',
                 borderRadius: '8px',
-                backgroundColor: responseText.trim() ? '#F47820' : colors.parchment3,
-                color: responseText.trim() ? '#fff' : colors.ink4,
+                backgroundColor: responseText.trim() ? colors.primaryOrange : colors.parchment3,
+                color: responseText.trim() ? colors.white : colors.ink4,
                 fontFamily: typography.fontFamily,
                 fontSize: '12px',
                 fontWeight: 600,

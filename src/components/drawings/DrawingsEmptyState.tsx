@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
-import { spacing } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 
 interface DrawingsEmptyStateProps {
   onUpload: () => void;
@@ -18,12 +18,14 @@ export const DrawingsEmptyState: React.FC<DrawingsEmptyStateProps> = ({ onUpload
       textAlign: 'center',
     }}
   >
-    <FileText size={48} color="#9CA3AF" style={{ marginBottom: spacing['4'] }} />
+    <FileText size={48} color={colors.ink4} style={{ marginBottom: spacing['4'] }} />
     <h3
       style={{
-        fontSize: 18,
-        fontWeight: 600,
-        color: '#111827',
+        fontFamily: typography.fontFamilySerif,
+        fontSize: 22,
+        fontWeight: 400,
+        letterSpacing: '-0.02em',
+        color: colors.textPrimary,
         margin: 0,
         marginBottom: spacing['2'],
       }}
@@ -32,8 +34,9 @@ export const DrawingsEmptyState: React.FC<DrawingsEmptyStateProps> = ({ onUpload
     </h3>
     <p
       style={{
+        fontFamily: typography.fontFamily,
         fontSize: 14,
-        color: '#6B7280',
+        color: colors.textSecondary,
         margin: 0,
         marginBottom: spacing['5'],
         maxWidth: 400,
@@ -45,13 +48,14 @@ export const DrawingsEmptyState: React.FC<DrawingsEmptyStateProps> = ({ onUpload
     <button
       onClick={onUpload}
       style={{
-        background: '#F47820',
-        color: '#FFFFFF',
+        background: colors.primaryOrange,
+        color: colors.white,
         borderRadius: 8,
         height: 40,
         paddingLeft: 20,
         paddingRight: 20,
         border: 'none',
+        fontFamily: typography.fontFamily,
         fontWeight: 600,
         fontSize: 14,
         cursor: 'pointer',

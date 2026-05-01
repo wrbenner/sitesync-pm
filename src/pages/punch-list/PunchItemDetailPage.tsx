@@ -29,6 +29,7 @@ import { useProjectId } from '../../hooks/useProjectId'
 import { toast } from 'sonner'
 import { PhotoAnnotation } from '../../components/shared/PhotoAnnotation'
 import type { AnnotationData } from '../../components/shared/PhotoAnnotation'
+import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
 import { STATUS_COLORS, getDueDateColor, formatDate } from './types'
 import type { PunchItem } from './types'
 
@@ -709,6 +710,15 @@ const PunchItemDetailPage: React.FC = () => {
             }}>
               <AlertTriangle size={9} /> Critical
             </span>
+          )}
+          {projectId && (
+            <div style={{ marginLeft: 'auto' }}>
+              <AuditTrailButton
+                entityType="punch_item"
+                entityId={String(item.id)}
+                projectId={projectId}
+              />
+            </div>
           )}
         </div>
         <h1 style={{

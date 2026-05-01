@@ -7,6 +7,8 @@ import {
   Trash2,
   Loader2,
   X,
+  ShieldCheck,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -21,6 +23,204 @@ const IRIS_INDIGO_HOVER = '#4338CA'
 const IRIS_INDIGO_TINT = '#EEF2FF'
 
 const TRIGGER_ITEM_ID = 'iris-owner-update-trigger'
+
+type ConfidenceTier = 'high' | 'medium' | 'low'
+
+function tierFor(score: number | null): ConfidenceTier | null {
+  if (score == null) return null
+  if (score >= 0.75) return 'high'
+  if (score >= 0.4) return 'medium'
+  return 'low'
+}
+
+const TIER_TONE: Record<ConfidenceTier, { fg: string; bg: string; ring: string; label: string }> = {
+  high: {
+    fg: colors.statusActive,
+    bg: colors.statusActiveSubtle,
+    ring: colors.statusActive,
+    label: 'High confidence',
+  },
+  medium: {
+    fg: colors.statusInfo,
+    bg: colors.statusInfoSubtle,
+    ring: colors.statusInfo,
+    label: 'Medium confidence',
+  },
+  low: {
+    fg: colors.statusCritical,
+    bg: colors.statusCriticalSubtle,
+    ring: colors.statusCritical,
+    label: 'Low confidence — review carefully',
+  },
+}
+
+// ── Deterministic local fallback ─────────────────────────────────────────────
+// When the streaming Claude call fails or times out, we still need a usable
+// 7-section narrative for the demo. Mirror the daily-log auto-draft pattern:
+// assemble locally from the same ProjectContextSnapshot the LLM would have
+// received. Never throws, always returns something a PM can paste.
+
+function pluralizeDays(n: number): string {
+  return n === 1 ? '1 day' : `${n} days`
+}
+
+function fmtMoney(n: number): string {
+  return `$${Math.round(n).toLocaleString('en-US')}`
+}
+
+function buildDeterministicOwnerUpdate(ctx: ProjectContextSnapshot): {
+  body: string
+  sources: string[]
+} {
+  const period = ctx.reportingPeriodDays ?? 7
+  const projectLabel = ctx.projectName ?? 'this project'
+  const sources: string[] = []
+  const sentences: string[] = []
+
+  // Section 1 — opener
+  sentences.push(
+    `This is a status update on ${projectLabel} covering the last ${pluralizeDays(period)}.`,
+  )
+
+  // Section 2 — Schedule
+  if (ctx.scheduleStatus) {
+    const behind = ctx.scheduleStatus.behindActivities ?? []
+    const hit = ctx.scheduleStatus.milestonesHit ?? []
+    const missed = ctx.scheduleStatus.milestonesMissed ?? []
+    const parts: string[] = []
+    if (behind.length > 0) {
+      const named = behind.slice(0, 3).map((a) => `"${a.name}" (${pluralizeDays(a.daysBehind)})`).join(', ')
+      parts.push(`${behind.length} activit${behind.length === 1 ? 'y is' : 'ies are'} behind: ${named}`)
+      for (const a of behind) sources.push(a.sourceLabel)
+    }
+    if (hit.length > 0) {
+      parts.push(`Milestones hit: ${hit.map((m) => `${m.name} (${m.dateLabel})`).join(', ')}`)
+      for (const m of hit) sources.push(m.sourceLabel)
+    }
+    if (missed.length > 0) {
+      parts.push(`Milestones missed: ${missed.map((m) => m.name).join(', ')}`)
+      for (const m of missed) sources.push(m.sourceLabel)
+    }
+    sentences.push(parts.length > 0 ? `Schedule. ${parts.join('. ')}.` : 'Schedule. No material change.')
+  } else {
+    sentences.push('Schedule. No material change.')
+  }
+
+  // Section 3 — Budget
+  if (ctx.budgetStatus) {
+    const { percentCommitted, approvedTotal, changeOrderExposure, sourceLabel } = ctx.budgetStatus
+    const parts: string[] = [`${percentCommitted.toFixed(1)}% of budget committed`]
+    if (typeof approvedTotal === 'number' && approvedTotal > 0) {
+      parts.push(`approved total ${fmtMoney(approvedTotal)}`)
+    }
+    if (typeof changeOrderExposure === 'number' && changeOrderExposure !== 0) {
+      parts.push(`change-order exposure ${fmtMoney(changeOrderExposure)}`)
+    }
+    sentences.push(`Budget. ${parts.join(', ')}.`)
+    sources.push(sourceLabel)
+  } else {
+    sentences.push('Budget. No material change.')
+  }
+
+  // Section 4 — Top risks
+  const risks = (ctx.topRisks ?? []).slice(0, 3)
+  if (risks.length > 0) {
+    const lines = risks.map((r) => `${r.title} — ${r.summary}`).join('; ')
+    sentences.push(`Key risks. ${lines}.`)
+    for (const r of risks) sources.push(r.sourceLabel)
+  } else {
+    sentences.push('Key risks. None flagged this period.')
+  }
+
+  // Section 5 — Decisions needed
+  const decisions = (ctx.decisionsNeeded ?? []).slice(0, 5)
+  if (decisions.length > 0) {
+    const lines = decisions.map((d) => `${d.title} — ${d.summary}`).join('; ')
+    sentences.push(`Decisions needed from owner. ${lines}.`)
+    for (const d of decisions) sources.push(d.sourceLabel)
+  } else {
+    sentences.push('Decisions needed from owner. None at this time.')
+  }
+
+  // Section 6 — Progress highlights
+  const progress = (ctx.progressHighlights ?? []).slice(0, 5)
+  if (progress.length > 0) {
+    sentences.push(`Progress. ${progress.map((p) => p.summary).join('. ')}.`)
+    for (const p of progress) sources.push(p.sourceLabel)
+  } else {
+    sentences.push('Progress. No notable highlights logged this period.')
+  }
+
+  // Section 7 — Lookahead
+  const lookahead = (ctx.lookahead14Days ?? []).slice(0, 6)
+  if (lookahead.length > 0) {
+    sentences.push(
+      `Lookahead. ${lookahead.map((l) => `${l.activity} (${l.dateLabel})`).join('; ')}.`,
+    )
+    for (const l of lookahead) sources.push(l.sourceLabel)
+  } else {
+    sentences.push('Lookahead. Standard schedule continues over the next 14 days.')
+  }
+
+  // Sign-off
+  sentences.push(ctx.userName ?? 'Project team')
+
+  const unique = Array.from(new Set(sources.filter(Boolean)))
+  return {
+    body: sentences.join('\n\n'),
+    sources: unique.length > 0 ? unique : ['Project status snapshot'],
+  }
+}
+
+/**
+ * Pre-warm the Anthropic prompt cache so the demo's "Generate Update" hits a
+ * warm cache. Fire-and-forget — never throws, never awaits, never affects
+ * page render. Called from the Reports page on mount.
+ *
+ * Implementation: kick off a 1-token call that shares the role preamble with
+ * the real owner-update prompt, then drop the result. The Anthropic 5-minute
+ * cache TTL means a single call early in the session is enough.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function prewarmIris(): void {
+  if (typeof window === 'undefined') return
+  // Build a minimal trigger that uses the same template path. We catch all
+  // failures silently — pre-warm is best-effort.
+  const triggerItem: StreamItem = {
+    id: 'iris-prewarm',
+    type: 'task',
+    cardType: 'draft',
+    title: 'Owner Update',
+    reason: 'pre-warm',
+    urgency: 'medium',
+    dueDate: null,
+    assignedTo: null,
+    waitingOnYou: false,
+    overdue: false,
+    createdAt: new Date().toISOString(),
+    sourceData: null,
+    sourceTrail: [],
+    actions: [],
+    irisEnhancement: {
+      draftAvailable: true,
+      draftType: 'owner_update',
+      confidence: 0.5,
+      summary: 'pre-warm',
+    },
+  }
+  const minimalCtx: ProjectContextSnapshot = {
+    projectId: null,
+    projectName: null,
+    userName: null,
+    reportingPeriodDays: 7,
+  }
+  // Race against a short timeout so we don't keep network sockets open.
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 4000))
+  Promise.race([
+    generateIrisDraft(triggerItem, minimalCtx).then(() => undefined).catch(() => undefined),
+    timeout,
+  ]).catch(() => undefined)
+}
 
 /**
  * Build the synthetic stream item that drives the Iris draft request.
@@ -93,7 +293,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
   const [body, setBody] = useState('')
   const [sources, setSources] = useState<string[]>([])
   const [confidence, setConfidence] = useState<number | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [usedFallback, setUsedFallback] = useState(false)
   const [sending, setSending] = useState(false)
 
   const periodDays = context.reportingPeriodDays ?? 7
@@ -102,7 +302,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
     setBody('')
     setSources([])
     setConfidence(null)
-    setError(null)
+    setUsedFallback(false)
     setLoading(false)
     setSending(false)
   }, [])
@@ -110,15 +310,21 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
   const handleGenerate = useCallback(async () => {
     setOpen(true)
     setLoading(true)
-    setError(null)
+    setUsedFallback(false)
     try {
       const draft = await generateIrisDraft(buildTriggerItem(periodDays), context)
       setBody(draft.content)
       setSources(draft.sources)
       setConfidence(draft.confidence ?? 0.5)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Iris could not draft this update.'
-      setError(msg)
+      // Deterministic fallback — never let the demo path fail. We log the
+      // upstream error to console for diagnostics but show a usable draft.
+      console.warn('[OwnerUpdate] Iris generation failed; using deterministic fallback.', err)
+      const fallback = buildDeterministicOwnerUpdate(context)
+      setBody(fallback.body)
+      setSources(fallback.sources)
+      setConfidence(0.4)
+      setUsedFallback(true)
     } finally {
       setLoading(false)
     }
@@ -161,12 +367,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
     reset()
   }, [reset])
 
-  const confidenceLabel = useMemo(() => {
-    if (confidence == null) return ''
-    if (confidence >= 0.75) return 'high'
-    if (confidence >= 0.4) return 'medium'
-    return 'low'
-  }, [confidence])
+  const tier = useMemo(() => tierFor(confidence), [confidence])
 
   // ── Trigger card ─────────────────────────────────────────────────────────
   return (
@@ -303,7 +504,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                   marginBottom: spacing['3'],
                 }}
               >
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <Dialog.Title
                     style={{
                       margin: 0,
@@ -315,24 +516,65 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                   >
                     Owner Update — Preview
                   </Dialog.Title>
-                  <div
-                    role="status"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      marginTop: spacing['1'],
-                      padding: '2px 8px',
-                      borderRadius: 999,
-                      backgroundColor: IRIS_INDIGO_TINT,
-                      color: IRIS_INDIGO,
-                      fontSize: typography.fontSize.caption,
-                      fontWeight: typography.fontWeight.semibold,
-                      letterSpacing: 0.2,
-                    }}
-                  >
-                    <Sparkles size={11} strokeWidth={2.5} />
-                    Iris drafted this — review before sending
+                  <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], flexWrap: 'wrap' }}>
+                    <div
+                      role="status"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        backgroundColor: IRIS_INDIGO_TINT,
+                        color: IRIS_INDIGO,
+                        fontSize: typography.fontSize.caption,
+                        fontWeight: typography.fontWeight.semibold,
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      <Sparkles size={11} strokeWidth={2.5} />
+                      Iris drafted this — review before sending
+                    </div>
+                    {tier && !loading && (
+                      <span
+                        title={TIER_TONE[tier].label}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          backgroundColor: TIER_TONE[tier].bg,
+                          color: TIER_TONE[tier].fg,
+                          fontSize: typography.fontSize.caption,
+                          fontWeight: typography.fontWeight.semibold,
+                          letterSpacing: 0.2,
+                        }}
+                      >
+                        <ShieldCheck size={11} strokeWidth={2.5} />
+                        {TIER_TONE[tier].label}
+                      </span>
+                    )}
+                    {usedFallback && !loading && (
+                      <span
+                        title="Iris streaming was unavailable — assembled deterministically from project data."
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          backgroundColor: colors.statusPendingSubtle,
+                          color: colors.statusPending,
+                          fontSize: typography.fontSize.caption,
+                          fontWeight: typography.fontWeight.semibold,
+                          letterSpacing: 0.2,
+                        }}
+                      >
+                        <AlertTriangle size={11} strokeWidth={2.5} />
+                        Assembled offline
+                      </span>
+                    )}
                   </div>
                 </div>
                 <Dialog.Close asChild>
@@ -379,29 +621,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                   </div>
                 )}
 
-                {!loading && error && (
-                  <div
-                    role="alert"
-                    style={{
-                      flex: 1,
-                      minHeight: 200,
-                      borderRadius: borderRadius.md,
-                      border: `1px solid ${colors.statusCritical}40`,
-                      backgroundColor: `${colors.statusCritical}08`,
-                      padding: spacing['4'],
-                      color: colors.statusCritical,
-                      fontSize: typography.fontSize.sm,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: spacing['2'],
-                    }}
-                  >
-                    <strong>Iris couldn't draft this update.</strong>
-                    <span style={{ color: colors.textSecondary }}>{error}</span>
-                  </div>
-                )}
-
-                {!loading && !error && (
+                {!loading && (
                   <textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
@@ -428,7 +648,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
               </div>
 
               {/* Source pill row */}
-              {!loading && !error && sources.length > 0 && (
+              {!loading && sources.length > 0 && (
                 <div
                   style={{
                     display: 'flex',
@@ -451,7 +671,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                       paddingTop: 4,
                     }}
                   >
-                    Sources
+                    Sources · {sources.length}
                   </span>
                   {sources.map((s, i) => (
                     <span
@@ -480,7 +700,7 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
               )}
 
               {/* Confidence + footer actions */}
-              {!loading && !error && (
+              {!loading && (
                 <div
                   style={{
                     display: 'flex',
@@ -498,7 +718,9 @@ export const OwnerUpdateGenerator: React.FC<OwnerUpdateGeneratorProps> = ({
                       color: colors.textTertiary,
                     }}
                   >
-                    Iris confidence: {confidenceLabel || '—'} — review before sending.
+                    {usedFallback
+                      ? 'Streaming was unavailable. Draft assembled from project data — review before sending.'
+                      : 'AI prepares, you approve. Edit freely before sending.'}
                   </span>
                   <div style={{ display: 'flex', gap: spacing['2'] }}>
                     <button

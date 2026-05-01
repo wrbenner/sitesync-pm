@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSearchParams } from 'react-router-dom'
 
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -394,6 +395,62 @@ const TasksPage: React.FC = () => {
     node?.scrollIntoView({ block: 'nearest' })
   }, [focusedTask])
 
+  // ── Deep-link via ?focus=:id ────────────────────────────────────────────
+  // External callers (search results, dashboard tiles, Iris drafts) can link
+  // straight to a task. We move the keyboard focus to the matching row,
+  // scroll it into view, and apply a 2s highlight ring that fades. The
+  // param is read once per (taskId × tasks-loaded) so reloading the page
+  // re-flashes; manual j/k navigation afterwards isn't disturbed.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const focusParam = searchParams.get('focus')
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!focusParam) return
+    if (tasks.length === 0) return // wait for data
+    // If the task exists but isn't in visibleRows, the active filter is
+    // hiding it. Reset to 'all' so the row materializes; the next render
+    // pass picks up the focus + scroll.
+    const inAll = tasks.some((t) => t.id === focusParam)
+    if (!inAll) return // unknown id (wrong project, deleted)
+    const inVisible = visibleRows.findIndex((t) => t.id === focusParam)
+    if (inVisible < 0) {
+      // Filter is hiding the target — reset filters so the row materializes,
+      // then this effect re-runs on the next visibleRows change. The cascading
+      // render here is intentional and bounded (one extra paint), not a loop.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFilter('all')
+      setSearch('')
+      // Also expand any closed group containing the task so it's reachable.
+      setClosedGroups(new Set())
+      return
+    }
+    setFocusIndex(inVisible)
+    setHighlightId(focusParam)
+    // Scroll deferred to next frame so the row is mounted.
+    requestAnimationFrame(() => {
+      const node = tableRef.current?.querySelector<HTMLElement>(`[data-task-row-id="${focusParam}"]`)
+      node?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    })
+    // Drop the highlight after 2s; clear the URL param so a refocus elsewhere
+    // (e.g. user clicks another row) doesn't keep re-flashing.
+    const t = window.setTimeout(() => {
+      setHighlightId(null)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('focus')
+          return next
+        },
+        { replace: true },
+      )
+    }, 2000)
+    return () => window.clearTimeout(t)
+    // visibleRows ref-equality changes whenever the task list refetches; we
+    // intentionally DON'T re-run on every list change — only when the focus
+    // target changes or the underlying task ids do.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusParam, tasks.length, visibleRows.length])
+
   // ── Mutations ───────────────────────────────────────────────────────────
 
   const cycleStatus = useCallback(async (task: Task) => {
@@ -630,6 +687,7 @@ const TasksPage: React.FC = () => {
                       const priority = (t.priority as Priority) ?? 'medium'
                       const expandedRow = expanded.has(t.id)
                       const focused = focusedTask?.id === t.id
+                      const highlighted = highlightId === t.id
                       const isEditingTitle = editingTitleId === t.id
                       return (
                         <React.Fragment key={t.id}>
@@ -638,6 +696,7 @@ const TasksPage: React.FC = () => {
                             status={status}
                             priority={priority}
                             focused={focused}
+                            highlighted={highlighted}
                             expanded={expandedRow}
                             isEditingTitle={isEditingTitle}
                             titleDraft={titleDraft}
@@ -884,6 +943,7 @@ interface TaskRowProps {
   status: Status
   priority: Priority
   focused: boolean
+  highlighted?: boolean
   expanded: boolean
   isEditingTitle: boolean
   titleDraft: string
@@ -903,6 +963,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
   status,
   priority,
   focused,
+  highlighted,
   expanded,
   isEditingTitle,
   titleDraft,
@@ -931,8 +992,14 @@ const TaskRow: React.FC<TaskRowProps> = ({
       style={{
         backgroundColor: focused ? C.surfaceSelected : 'transparent',
         cursor: 'pointer',
-        outline: focused ? `1px solid ${C.brandOrange}` : 'none',
+        outline: highlighted
+          ? `2px solid ${C.brandOrange}`
+          : focused ? `1px solid ${C.brandOrange}` : 'none',
         outlineOffset: -1,
+        // Fades the highlight ring from solid to none over the lifecycle of
+        // the 2s window the page-level effect applies the highlight class.
+        transition: 'outline-color 1.6s ease-out',
+        boxShadow: highlighted ? `0 0 0 4px ${C.surfaceSelected}` : 'none',
       }}
     >
       {/* Checkbox column — toggle done */}

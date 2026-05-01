@@ -1,8 +1,10 @@
-import React, { useCallback, useMemo, useState, lazy, Suspense } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   FileText, Play, Calendar, Download, BarChart3, DollarSign, HardHat,
   ClipboardList, Shield, Users, Wrench, CalendarDays, Sparkles, Loader2, Plus,
+  TrendingUp, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -15,8 +17,9 @@ import { useProjectContext } from '../stores/projectContextStore'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 
-import { OwnerUpdateGenerator } from '../components/reports/OwnerUpdateGenerator'
+import { OwnerUpdateGenerator, prewarmIris } from '../components/reports/OwnerUpdateGenerator'
 import { OwnerLinkButton } from '../components/reports/OwnerLinkButton'
+import { ReportCard, ReportCardRow } from '../components/reports/ReportCard'
 import type {
   OwnerUpdateRisk,
   OwnerUpdateDecision,
@@ -73,6 +76,13 @@ function formatTimeAgo(dateStr: string | null): string {
   return `${days}d ago`
 }
 
+function fmtMoney(n: number): string {
+  if (!Number.isFinite(n)) return '—'
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (Math.abs(n) >= 1_000) return `$${Math.round(n / 1_000)}K`
+  return `$${Math.round(n).toLocaleString('en-US')}`
+}
+
 type ViewId = 'recent' | 'templates'
 
 const VIEW_TABS: Array<{ id: ViewId; label: string }> = [
@@ -80,18 +90,214 @@ const VIEW_TABS: Array<{ id: ViewId; label: string }> = [
   { id: 'templates', label: 'Templates' },
 ]
 
+// ── Schedule Health ─────────────────────────────────────────────────────────
+
+interface SchedulePhaseLite {
+  id: string
+  name: string
+  status: string | null
+  is_critical_path: boolean | null
+  is_critical: boolean | null
+  end_date: string | null
+  percent_complete: number | null
+  float_days: number | null
+}
+
+interface ScheduleHealth {
+  totalCritical: number
+  onTrack: number
+  slipRisk: SchedulePhaseLite[]
+  loading: boolean
+}
+
+function useScheduleHealth(projectId: string | undefined): ScheduleHealth {
+  const query = useQuery<SchedulePhaseLite[]>({
+    queryKey: ['reports-schedule-health', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('schedule_phases')
+        .select('id, name, status, is_critical_path, is_critical, end_date, percent_complete, float_days')
+        .eq('project_id', projectId!)
+        .is('deleted_at', null)
+      if (error) {
+        // Graceful degradation — table might be missing or RLS-blocked.
+        console.warn('[Reports] schedule_phases unreadable:', error.message)
+        return []
+      }
+      return (data ?? []) as SchedulePhaseLite[]
+    },
+  })
+
+  const data = query.data ?? []
+  const critical = data.filter((p) => p.is_critical_path || p.is_critical)
+  const onTrack = critical.filter((p) => {
+    if (p.status === 'completed' || p.status === 'in_progress') return true
+    const float = p.float_days ?? 0
+    return float >= 0
+  }).length
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const slipRisk = critical
+    .filter((p) => {
+      if (p.status === 'completed') return false
+      const end = p.end_date ? new Date(p.end_date) : null
+      const past = end ? end.getTime() < today.getTime() : false
+      const incomplete = (p.percent_complete ?? 0) < 100
+      const negFloat = (p.float_days ?? 0) < 0
+      return (past && incomplete) || negFloat
+    })
+    .slice(0, 5)
+
+  return {
+    totalCritical: critical.length,
+    onTrack,
+    slipRisk,
+    loading: query.isLoading,
+  }
+}
+
+// ── Budget Burn ─────────────────────────────────────────────────────────────
+
+interface BudgetItemLite {
+  id: string
+  division: string
+  description: string | null
+  csi_division: string | null
+  cost_code: string | null
+  original_amount: number | null
+  committed_amount: number | null
+  actual_amount: number | null
+}
+
+interface BudgetBurn {
+  totalOriginal: number
+  totalCommitted: number
+  percentCommitted: number
+  /** Top 3 line items by committed amount. */
+  topItems: BudgetItemLite[]
+  loading: boolean
+}
+
+function useBudgetBurn(projectId: string | undefined): BudgetBurn {
+  const query = useQuery<BudgetItemLite[]>({
+    queryKey: ['reports-budget-burn', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('budget_items')
+        .select('id, division, description, csi_division, cost_code, original_amount, committed_amount, actual_amount')
+        .eq('project_id', projectId!)
+      if (error) {
+        console.warn('[Reports] budget_items unreadable:', error.message)
+        return []
+      }
+      return (data ?? []) as BudgetItemLite[]
+    },
+  })
+
+  const data = query.data ?? []
+  const totalOriginal = data.reduce((s, i) => s + (i.original_amount ?? 0), 0)
+  const totalCommitted = data.reduce((s, i) => s + (i.committed_amount ?? 0), 0)
+  const percentCommitted = totalOriginal > 0 ? (totalCommitted / totalOriginal) * 100 : 0
+  const topItems = [...data]
+    .filter((i) => (i.committed_amount ?? 0) > 0)
+    .sort((a, b) => (b.committed_amount ?? 0) - (a.committed_amount ?? 0))
+    .slice(0, 3)
+
+  return {
+    totalOriginal,
+    totalCommitted,
+    percentCommitted,
+    topItems,
+    loading: query.isLoading,
+  }
+}
+
+// ── Safety Pulse ────────────────────────────────────────────────────────────
+
+interface IncidentLite {
+  id: string
+  date: string
+  severity: string | null
+  type: string | null
+  description: string
+  osha_recordable: boolean | null
+}
+
+interface SafetyPulse {
+  thisWeek: number
+  nearMissesThisWeek: number
+  recordablesThisWeek: number
+  daysSinceLast: number | null
+  recent: IncidentLite[]
+  loading: boolean
+}
+
+interface SafetyPulseFetched {
+  raw: IncidentLite[]
+  fetchedAtMs: number
+}
+
+function useSafetyPulse(projectId: string | undefined): SafetyPulse {
+  const query = useQuery<SafetyPulseFetched>({
+    queryKey: ['reports-safety-pulse', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('id, date, severity, type, description, osha_recordable')
+        .eq('project_id', projectId!)
+        .order('date', { ascending: false })
+        .limit(30)
+      if (error) {
+        console.warn('[Reports] incidents unreadable:', error.message)
+        return { raw: [], fetchedAtMs: Date.now() }
+      }
+      return { raw: (data ?? []) as IncidentLite[], fetchedAtMs: Date.now() }
+    },
+  })
+
+  return useMemo<SafetyPulse>(() => {
+    const data = query.data?.raw ?? []
+    const now = query.data?.fetchedAtMs ?? 0
+    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000
+    const thisWeek = now > 0
+      ? data.filter((i) => new Date(i.date).getTime() >= sevenDaysAgo)
+      : []
+    const nearMissesThisWeek = thisWeek.filter(
+      (i) => (i.severity ?? '').toLowerCase().includes('near') || (i.type ?? '').toLowerCase().includes('near'),
+    ).length
+    const recordablesThisWeek = thisWeek.filter((i) => i.osha_recordable === true).length
+    const last = data[0]
+    const daysSinceLast = last && now > 0
+      ? Math.floor((now - new Date(last.date).getTime()) / (24 * 60 * 60 * 1000))
+      : null
+
+    return {
+      thisWeek: thisWeek.length,
+      nearMissesThisWeek,
+      recordablesThisWeek,
+      daysSinceLast,
+      recent: thisWeek.slice(0, 3),
+      loading: query.isLoading,
+    }
+  }, [query.data, query.isLoading])
+}
+
 // ── Owner-update context assembler ──────────────────────────────────────────
 //
 // Pulls the most readily-available signals for the Iris owner-update template.
-// Sections we don't have wiring for (schedule status, budget status, lookahead,
-// progress) are intentionally left undefined — the template renders
-// "No material change" rather than inventing.
+// Sections we don't have wiring for (lookahead, progress) are intentionally
+// left undefined — the template renders "No material change" rather than
+// inventing.
 
-function useOwnerUpdateContext(): ProjectContextSnapshot {
+function useOwnerUpdateContext(
+  schedule: ScheduleHealth,
+  budget: BudgetBurn,
+): ProjectContextSnapshot {
   const { activeProject } = useProjectContext()
   const { user } = useAuth()
-  // Action stream feeds risks + decisions from one place. PM lens — that's
-  // who's filing the owner update.
   const stream = useActionStream('pm')
 
   return useMemo<ProjectContextSnapshot>(() => {
@@ -117,18 +323,37 @@ function useOwnerUpdateContext(): ProjectContextSnapshot {
         sourceLabel: `Decision: ${i.type} ${i.id}`,
       }))
 
+    const scheduleStatus = schedule.slipRisk.length > 0
+      ? {
+          behindActivities: schedule.slipRisk.map((p) => ({
+            name: p.name,
+            daysBehind: Math.max(1, Math.abs(p.float_days ?? 1)),
+            sourceLabel: `Schedule activity: ${p.name}`,
+          })),
+          milestonesHit: [],
+          milestonesMissed: [],
+        }
+      : undefined
+
+    const budgetStatus = budget.totalOriginal > 0
+      ? {
+          percentCommitted: budget.percentCommitted,
+          approvedTotal: budget.totalOriginal,
+          sourceLabel: 'Budget items — committed vs original',
+        }
+      : undefined
+
     return {
       projectId: activeProject?.id ?? null,
       projectName: activeProject?.name ?? null,
       userName,
       reportingPeriodDays: 7,
-      // Schedule / budget / progress / lookahead intentionally absent —
-      // the template fills them with "No material change" until a future
-      // pass wires real schedule/budget signals.
+      scheduleStatus,
+      budgetStatus,
       topRisks: topRisks.length > 0 ? topRisks : undefined,
       decisionsNeeded: decisionsNeeded.length > 0 ? decisionsNeeded : undefined,
     }
-  }, [activeProject, user, stream.items])
+  }, [activeProject, user, stream.items, schedule, budget])
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
@@ -138,7 +363,11 @@ export const Reports: React.FC = () => {
   const navigate = useNavigate()
   const { data: customReports } = useCustomReports(projectId)
   const { data: recentRuns, isLoading: runsLoading } = useReportRuns(projectId)
-  const ownerUpdateContext = useOwnerUpdateContext()
+
+  const schedule = useScheduleHealth(projectId)
+  const budget = useBudgetBurn(projectId)
+  const safety = useSafetyPulse(projectId)
+  const ownerUpdateContext = useOwnerUpdateContext(schedule, budget)
 
   const [view, setView] = useState<ViewId>('recent')
   const [exportOpen, setExportOpen] = useState(false)
@@ -146,6 +375,12 @@ export const Reports: React.FC = () => {
   const [downloadingRunId, setDownloadingRunId] = useState<string | null>(null)
 
   const totalReports = REPORT_TYPES.length + (customReports?.length ?? 0)
+
+  // Risk mitigation: pre-warm Anthropic prompt cache once on mount so the
+  // demo's "Generate update" hits a warm cache. Fire-and-forget — never blocks.
+  useEffect(() => {
+    prewarmIris()
+  }, [])
 
   const handleRunReport = (type: ReportType) => {
     if (type === 'owner_report') {
@@ -204,8 +439,6 @@ export const Reports: React.FC = () => {
           y -= 22
         }
         const pdfBytes = await pdfDoc.save()
-        // pdf-lib returns Uint8Array<ArrayBufferLike>; Blob wants a plain
-        // ArrayBuffer slice, which we get via .buffer + slice over byteOffset/length.
         const blob = new Blob(
           [pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer],
           { type: 'application/pdf' },
@@ -278,7 +511,6 @@ export const Reports: React.FC = () => {
           {totalReports} templates
         </span>
 
-        {/* View toggle */}
         <div
           role="tablist"
           aria-label="Reports view"
@@ -350,11 +582,25 @@ export const Reports: React.FC = () => {
           padding: spacing['6'],
         }}
       >
-        {/* Demo finale — Iris Owner Update */}
+        {/* Hero — Iris owner update */}
         <OwnerUpdateGenerator
           context={ownerUpdateContext}
           secondaryAction={projectId ? <OwnerLinkButton projectId={projectId} /> : null}
         />
+
+        {/* Three secondary deterministic cards — cockpit instrument matrix */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: spacing['3'],
+            marginBottom: spacing['5'],
+          }}
+        >
+          <ScheduleHealthCard health={schedule} />
+          <BudgetBurnCard burn={budget} />
+          <SafetyPulseCard pulse={safety} />
+        </div>
 
         {/* Recent runs (dense table) */}
         {view === 'recent' && (
@@ -410,6 +656,170 @@ export const Reports: React.FC = () => {
         )}
       </Suspense>
     </div>
+  )
+}
+
+// ── Secondary cards ─────────────────────────────────────────────────────────
+
+const ScheduleHealthCard: React.FC<{ health: ScheduleHealth }> = ({ health }) => {
+  const pct = health.totalCritical > 0
+    ? Math.round((health.onTrack / health.totalCritical) * 100)
+    : 100
+  const slipCount = health.slipRisk.length
+  const empty = !health.loading && health.totalCritical === 0
+  return (
+    <ReportCard
+      title="Schedule Health"
+      subtitle="Critical path"
+      metric={health.totalCritical > 0 ? `${pct}%` : '—'}
+      delta={
+        health.totalCritical > 0
+          ? {
+              label: slipCount > 0 ? `${slipCount} at risk` : 'Clean',
+              tone: slipCount > 0 ? 'negative' : 'positive',
+            }
+          : undefined
+      }
+      loading={health.loading}
+      empty={empty}
+      emptyMessage="No critical-path activities defined."
+    >
+      {health.totalCritical > 0 && (
+        <>
+          <ReportCardRow
+            label="On track"
+            value={`${health.onTrack}/${health.totalCritical}`}
+            tone="positive"
+          />
+          <ReportCardRow
+            label="Slip risk"
+            value={String(slipCount)}
+            tone={slipCount > 0 ? 'negative' : 'neutral'}
+          />
+          {health.slipRisk.slice(0, 3).map((p) => (
+            <ReportCardRow
+              key={p.id}
+              label={
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <AlertTriangle size={11} color={colors.statusCritical} />
+                  {p.name}
+                </span>
+              }
+              value={
+                typeof p.float_days === 'number'
+                  ? `${p.float_days >= 0 ? '+' : ''}${p.float_days}d`
+                  : '—'
+              }
+              hint={p.percent_complete != null ? `${Math.round(p.percent_complete)}%` : undefined}
+              tone="negative"
+            />
+          ))}
+        </>
+      )}
+    </ReportCard>
+  )
+}
+
+const BudgetBurnCard: React.FC<{ burn: BudgetBurn }> = ({ burn }) => {
+  const empty = !burn.loading && burn.totalOriginal === 0
+  return (
+    <ReportCard
+      title="Budget Burn"
+      subtitle="Committed vs approved"
+      metric={burn.totalOriginal > 0 ? `${burn.percentCommitted.toFixed(1)}%` : '—'}
+      delta={
+        burn.totalOriginal > 0
+          ? {
+              label: fmtMoney(burn.totalCommitted),
+              tone: burn.percentCommitted > 100 ? 'negative' : 'neutral',
+            }
+          : undefined
+      }
+      loading={burn.loading}
+      empty={empty}
+      emptyMessage="No budget items configured."
+    >
+      {burn.totalOriginal > 0 && (
+        <>
+          <ReportCardRow
+            label="Approved total"
+            value={fmtMoney(burn.totalOriginal)}
+          />
+          <ReportCardRow
+            label="Committed"
+            value={fmtMoney(burn.totalCommitted)}
+            tone={burn.percentCommitted > 100 ? 'negative' : 'positive'}
+          />
+          {burn.topItems.map((item) => {
+            const label = item.cost_code
+              ? `${item.cost_code} · ${item.description ?? item.division}`
+              : item.description ?? item.division
+            return (
+              <ReportCardRow
+                key={item.id}
+                label={
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <TrendingUp size={11} color={colors.textTertiary} />
+                    {label}
+                  </span>
+                }
+                value={fmtMoney(item.committed_amount ?? 0)}
+              />
+            )
+          })}
+        </>
+      )}
+    </ReportCard>
+  )
+}
+
+const SafetyPulseCard: React.FC<{ pulse: SafetyPulse }> = ({ pulse }) => {
+  const empty = !pulse.loading && pulse.daysSinceLast === null && pulse.thisWeek === 0
+  const sinceLast = pulse.daysSinceLast == null
+    ? '—'
+    : pulse.daysSinceLast === 0
+      ? 'Today'
+      : `${pulse.daysSinceLast}d`
+  const tone: 'positive' | 'negative' | 'neutral' =
+    pulse.recordablesThisWeek > 0
+      ? 'negative'
+      : pulse.thisWeek === 0
+        ? 'positive'
+        : 'neutral'
+  return (
+    <ReportCard
+      title="Safety Pulse"
+      subtitle="Last 7 days"
+      metric={String(pulse.thisWeek)}
+      delta={{
+        label: sinceLast === '—' ? 'No incidents on record' : `${sinceLast} since last`,
+        tone,
+      }}
+      loading={pulse.loading}
+      empty={empty}
+      emptyMessage="No incidents on record."
+    >
+      <ReportCardRow
+        label="Incidents this week"
+        value={String(pulse.thisWeek)}
+        tone={pulse.thisWeek > 0 ? 'negative' : 'positive'}
+      />
+      <ReportCardRow
+        label="Near-misses"
+        value={String(pulse.nearMissesThisWeek)}
+        tone={pulse.nearMissesThisWeek > 0 ? 'negative' : 'neutral'}
+      />
+      <ReportCardRow
+        label="OSHA recordable"
+        value={String(pulse.recordablesThisWeek)}
+        tone={pulse.recordablesThisWeek > 0 ? 'negative' : 'neutral'}
+      />
+      <ReportCardRow
+        label="Days since last"
+        value={sinceLast}
+        tone={tone}
+      />
+    </ReportCard>
   )
 }
 

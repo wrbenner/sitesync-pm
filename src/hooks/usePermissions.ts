@@ -154,6 +154,7 @@ export const MODULE_PERMISSIONS: Record<string, Permission> = {
   'time-machine': 'dashboard.view',
   lookahead: 'schedule.view',
   tasks: 'tasks.view',
+  commitments: 'tasks.view',
   schedule: 'schedule.view',
   budget: 'budget.view',
   'pay-apps': 'budget.view',
