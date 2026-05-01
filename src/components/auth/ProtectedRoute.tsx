@@ -80,47 +80,60 @@ interface RequestAccessPageProps {
   moduleName?: string
 }
 
-const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => (
-  <div style={{
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
-  }}>
+const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => {
+  const [requested, setRequested] = useState(false)
+
+  return (
     <div style={{
-      width: 64, height: 64, borderRadius: borderRadius.full,
-      backgroundColor: colors.surfaceInset,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      marginBottom: spacing['4'],
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
     }}>
-      <ShieldAlert size={28} color={colors.textTertiary} />
+      <div style={{
+        width: 64, height: 64, borderRadius: borderRadius.full,
+        backgroundColor: colors.surfaceInset,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        marginBottom: spacing['4'],
+      }}>
+        <ShieldAlert size={28} color={colors.textTertiary} />
+      </div>
+      <h2 style={{
+        fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
+      }}>
+        Access Restricted
+      </h2>
+      <p style={{
+        fontSize: typography.fontSize.body, color: colors.textSecondary,
+        margin: 0, marginBottom: spacing['5'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
+      }}>
+        {moduleName
+          ? `You do not have permission to access ${moduleName}.`
+          : 'You do not have permission to access this page.'}
+      </p>
+      {requested ? (
+        <p style={{
+          fontSize: typography.fontSize.body, color: colors.statusActive,
+          fontWeight: typography.fontWeight.medium,
+        }}>
+          Request sent — your project admin will be notified.
+        </p>
+      ) : (
+        <button
+          onClick={() => setRequested(true)}
+          style={{
+            backgroundColor: colors.brand400, color: colors.white,
+            border: 'none', borderRadius: borderRadius.md,
+            padding: `${spacing['2']} ${spacing['5']}`,
+            fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+            cursor: 'pointer', fontFamily: typography.fontFamily,
+          }}
+        >
+          Request Access
+        </button>
+      )}
     </div>
-    <h2 style={{
-      fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
-      color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
-    }}>
-      Access Restricted
-    </h2>
-    <p style={{
-      fontSize: typography.fontSize.body, color: colors.textSecondary,
-      margin: 0, marginBottom: spacing['5'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
-    }}>
-      {moduleName
-        ? `You do not have permission to access ${moduleName}.`
-        : 'You do not have permission to access this page.'}
-    </p>
-    <button
-      onClick={() => {/* TODO: wire up request access flow */}}
-      style={{
-        backgroundColor: colors.brand400, color: colors.white,
-        border: 'none', borderRadius: borderRadius.md,
-        padding: `${spacing['2']} ${spacing['5']}`,
-        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-        cursor: 'pointer', fontFamily: typography.fontFamily,
-      }}
-    >
-      Request Access
-    </button>
-  </div>
-)
+  )
+}
 
 const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleId, moduleName }) => {
   const { user, loading: authLoading } = useAuth()

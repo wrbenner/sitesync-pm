@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Printer, Calendar, Sparkles } from 'lucide-r
 import { PageContainer, Btn } from '../../components/Primitives';
 import { AIDailySummary } from '../../components/ai/AIDailySummary';
 import type { AIDailySummaryProps } from '../../components/ai/AIDailySummary';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
 
@@ -46,8 +46,8 @@ const DailySummaryPage: React.FC = () => {
   // Find the log for the selected date
   const dailyLog = useMemo(() => {
     if (!dailyLogData?.data) return null;
-    return dailyLogData.data.find((log: any) => {
-      const logDate = (log as any).log_date ?? (log as any).date ?? '';
+    return dailyLogData.data.find((log) => {
+      const logDate = (log as Record<string, unknown>).log_date ?? (log as Record<string, unknown>).date ?? '';
       return logDate === selectedDate;
     }) ?? null;
   }, [dailyLogData, selectedDate]);
@@ -78,8 +78,9 @@ const DailySummaryPage: React.FC = () => {
       const byTrade: Record<string, number> = {};
       if (log?.manpower && Array.isArray(log.manpower)) {
         for (const m of log.manpower) {
-          const trade = (m as any).trade ?? (m as any).category ?? 'General';
-          byTrade[trade] = (byTrade[trade] ?? 0) + Number((m as any).count ?? (m as any).workers ?? 1);
+          const mm = m as Record<string, unknown>;
+          const trade = (mm.trade ?? mm.category ?? 'General') as string;
+          byTrade[trade] = (byTrade[trade] ?? 0) + Number(mm.count ?? mm.workers ?? 1);
         }
       }
       if (Object.keys(byTrade).length === 0) {
@@ -152,7 +153,7 @@ const DailySummaryPage: React.FC = () => {
         marginBottom: spacing['6'],
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <Sparkles size={20} style={{ color: '#6366F1' }} />
+          <Sparkles size={20} style={{ color: colors.indigo }} />
           <h1 style={{
             margin: 0,
             fontSize: typography.fontSize.subtitle,

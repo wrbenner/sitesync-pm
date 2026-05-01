@@ -56,9 +56,11 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
               justifyContent: 'space-between',
               alignItems: 'flex-start',
               marginBottom: spacing['2xl'],
+              flexWrap: 'wrap',
+              rowGap: spacing['3'],
             }}
           >
-            <div>
+            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
               <h1
                 style={{
                   fontSize: typography.fontSize.heading,
@@ -86,7 +88,7 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
                 </p>
               )}
             </div>
-            {actions && <div style={{ display: 'flex', gap: spacing.md, alignItems: 'center' }}>{actions}</div>}
+            {actions && <div style={{ display: 'flex', gap: spacing.md, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>{actions}</div>}
           </div>
         )}
         {children}

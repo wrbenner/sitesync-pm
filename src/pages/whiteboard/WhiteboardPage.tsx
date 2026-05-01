@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { Plus, Save, CheckCircle } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 import { Whiteboard } from '../../components/shared/Whiteboard'
 import type { WhiteboardData } from '../../components/shared/Whiteboard'
 import { PageContainer, Btn, useToast } from '../../components/Primitives'
@@ -8,7 +8,6 @@ import {
   spacing,
   typography,
   borderRadius,
-  shadows,
   transitions,
   layout,
 } from '../../styles/theme'
@@ -23,7 +22,7 @@ interface SavedBoard {
 }
 
 function generateBoardId(): string {
-  return `board_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `board_${crypto.randomUUID().replace(/-/g, '').slice(0, 9)}`
 }
 
 const EMPTY_DATA: WhiteboardData = {

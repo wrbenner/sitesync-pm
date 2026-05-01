@@ -16,20 +16,18 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
+  AlertTriangle, MessageSquare, FileText,
+  Image, ChevronDown, User, Eye, EyeOff,
+  Paperclip, Flag, Timer, Zap,
 } from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import {
@@ -38,6 +36,17 @@ import {
   type RFIState
 } from '../../machines/rfiMachine'
 import type { RFI, RFIResponse } from '../../types/database'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
+
+// Linear happy-path states shown in the timeline (void is a terminal exception, omitted).
+const RFI_TIMELINE_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+const RFI_TIMELINE_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  open: 'Open',
+  under_review: 'In Review',
+  answered: 'Answered',
+  closed: 'Closed',
+}
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -72,14 +81,6 @@ const relativeTime = (d: string | null) => {
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
   return formatShortDate(d)
-}
-
-// ─── Types ────────────────────────────────────────────────
-
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
 }
 
 // ─── Watchers Hook ────────────────────────────────────────
@@ -279,13 +280,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {(response as Record<string, unknown>).company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {(response as Record<string, unknown>).company as string}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -584,12 +585,12 @@ export function RFIDetail() {
 
   useEffect(() => {
     if (lastViewedKey) {
-      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch {}
+      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch { /* localStorage unavailable in restricted environments */ }
     }
   }, [lastViewedKey])
 
   const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
-  const responses = rfi?.responses ?? []
+  const responses = useMemo(() => rfi?.responses ?? [], [rfi?.responses])
 
   const userIdsToResolve = useMemo(
     () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.created_by)],
@@ -603,6 +604,11 @@ export function RFIDetail() {
   const statusConfig = getRFIStatusConfig(currentStatus)
   const transitions = getValidTransitions(currentStatus, 'admin')
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
+
+  const completedRFIStates = RFI_TIMELINE_STATES.slice(
+    0,
+    Math.max(0, RFI_TIMELINE_STATES.indexOf(currentStatus))
+  )
 
   const newResponseCount = useMemo(() => {
     if (!lastViewed || responses.length === 0) return 0
@@ -775,6 +781,23 @@ export function RFIDetail() {
           )}
         </div>
 
+        {/* ── Workflow Timeline ─────────────────────────── */}
+        <div style={{
+          marginBottom: '20px',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          backgroundColor: colors.surfaceRaised,
+          border: `1px solid ${colors.borderSubtle}`,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        }}>
+          <WorkflowTimeline
+            states={RFI_TIMELINE_STATES}
+            currentState={currentStatus}
+            completedStates={completedRFIStates}
+            labels={RFI_TIMELINE_LABELS}
+          />
+        </div>
+
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
@@ -801,13 +824,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {(rfi as Record<string, unknown>).from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {(rfi as Record<string, unknown>).from_company as string}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -826,7 +849,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || ((rfi as Record<string, unknown>).question as string | undefined) || rfi.title}
             </div>
 
             {/* Metadata pills */}

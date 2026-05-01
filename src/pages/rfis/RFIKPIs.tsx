@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { CircleDot, AlertCircle, Timer, TrendingUp, TrendingDown, Minus, DollarSign } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
+import { colors, borderRadius } from '../../styles/theme'
 
 // ── Animated number (rAF ease-out cubic over 400ms) ──────────
 const AnimatedValue: React.FC<{ value: number; formatter: (n: number) => string }> = ({ value, formatter }) => {
@@ -67,7 +67,7 @@ const TrendBadge: React.FC<{ value: number; invert?: boolean }> = ({ value, inve
   )
   const isPositive = invert ? value < 0 : value > 0
   const Icon = value > 0 ? TrendingUp : TrendingDown
-  const col = isPositive ? '#16A34A' : '#DC2626'
+  const col = isPositive ? colors.statusActive : colors.statusCritical
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 600, color: col }}>
       <Icon size={10} /> {Math.abs(value).toFixed(1)}%
@@ -82,10 +82,10 @@ const ResolutionRing: React.FC<{ pct: number; size?: number; stroke?: number }> 
   const r = (size - stroke) / 2
   const circ = 2 * Math.PI * r
   const offset = circ - (Math.min(pct, 100) / 100) * circ
-  const ringColor = pct >= 80 ? '#16A34A' : pct >= 50 ? '#D97706' : '#DC2626'
+  const ringColor = pct >= 80 ? colors.statusActive : pct >= 50 ? colors.statusPending : colors.statusCritical
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F3F4F6" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.statusNeutralSubtle} strokeWidth={stroke} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={ringColor} strokeWidth={stroke}
@@ -259,7 +259,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       formatter: fmtInt,
       icon: <AlertCircle size={18} color={overdueCount > 0 ? colors.statusCritical : colors.textTertiary} />,
       sparkData: overdueSparkData,
-      sparkColor: overdueCount > 0 ? '#DC2626' : '#9CA3AF',
+      sparkColor: overdueCount > 0 ? colors.statusCritical : colors.statusNeutral,
       trend: 0,
       subtitle: overdueCount > 0 ? 'Requires immediate attention' : 'All on track',
       alert: overdueCount > 0,
@@ -270,7 +270,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       formatter: fmtDays,
       icon: <Timer size={18} color={colors.statusPending} />,
       sparkData: [avgDaysToClose + 3, avgDaysToClose + 1, avgDaysToClose + 2, avgDaysToClose - 1, avgDaysToClose],
-      sparkColor: '#D97706',
+      sparkColor: colors.statusPending,
       trend: closedThisWeek > 0 ? -5.2 : 0,
       trendInvert: true,
       subtitle: closedThisWeek > 0 ? `${closedThisWeek} closed this week` : 'No closures this week',
@@ -282,7 +282,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       formatter: fmtInt,
       icon: <CircleDot size={18} color={colors.statusActive} />,
       sparkData: [Math.max(closedThisWeek - 3, 0), Math.max(closedThisWeek - 1, 0), closedThisWeek, closedThisWeek, closedThisWeek],
-      sparkColor: '#16A34A',
+      sparkColor: colors.statusActive,
       trend: closedThisWeek > 0 ? 8.4 : 0,
       subtitle: closedThisWeek > 0 ? 'Resolution velocity' : 'No closures yet',
     },
@@ -292,7 +292,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       formatter: fmtCurrency,
       icon: <DollarSign size={18} color={totalCostImpact > 0 ? colors.statusCritical : colors.statusActive} />,
       sparkData: costSparkData,
-      sparkColor: totalCostImpact > 0 ? '#DC2626' : '#16A34A',
+      sparkColor: totalCostImpact > 0 ? colors.statusCritical : colors.statusActive,
       trend: totalCostImpact > 50000 ? 12.3 : totalCostImpact > 0 ? 3.1 : 0,
       trendInvert: true,
       subtitle: totalCostImpact > 0 ? 'Potential exposure' : 'No cost impact',

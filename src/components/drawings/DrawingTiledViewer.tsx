@@ -37,8 +37,6 @@ import {
   Layers,
   Pencil,
   RotateCw,
-  Grid3X3,
-  Wifi,
   WifiOff,
   CloudOff,
   MessageSquarePlus,
@@ -46,18 +44,14 @@ import {
 import CreateRFIModal from '../forms/CreateRFIModal';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useUiStore } from '../../stores';
 import { MarkupToolbar, type MarkupTool } from './MarkupToolbar';
 import { STAMP_CONFIGS, type StampType } from './tools/StampTool';
 import type { NormalizedGeometry, AnnotationLayer, AnnotationVisibility } from '../../lib/annotationGeometry';
 import {
-  toNormalized,
-  fromNormalized,
   denormalizeStrokeWidth,
   generateCloudPath,
   type GeometryType,
   type NormalizedPoint,
-  type PageDimensions,
 } from '../../lib/annotationGeometry';
 import { useDrawingMarkups } from '../../hooks/queries/document-management';
 import { useCreateDrawingMarkup, useDeleteDrawingMarkup } from '../../hooks/mutations/documents';
@@ -324,12 +318,7 @@ const InlineTextPrompt: React.FC<{
 };
 
 // ── ID generator ───────────────────────────────────────────────────────────
-const genId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `anno_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-};
+const genId = (): string => crypto.randomUUID();
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -379,9 +368,6 @@ interface AnnotationOverlayItem {
 
 const VIEWER_ID = 'osd-tiled-viewer';
 const NAVIGATOR_ID = 'osd-navigator';
-const EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
-
-const TOOLBAR_HEIGHT = 52;
 const HEADER_HEIGHT = 48;
 
 // ── Styles ─────────────────────────────────────────────────────────────────
@@ -1217,8 +1203,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
     const viewer = new OpenSeadragon.Viewer({
       id: VIEWER_ID,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tileSources: osdTileSource as any,
+      tileSources: osdTileSource as any, // type-safe-ok: OpenSeadragon tileSources has incomplete @types; string|object union accepted at runtime
       prefixUrl: '', // We use custom controls
       showNavigationControl: false,
       showNavigator: true,

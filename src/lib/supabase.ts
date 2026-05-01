@@ -4,19 +4,33 @@ import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/enums'
 
 // Supabase config: env vars are injected at build time by Vite.
-// Required — no source-level fallbacks. If either is missing the client
-// creation below will throw, which is what we want: a silently-running
-// build pointed at the wrong project is worse than a hard failure.
+// In production and staging, both vars must be present — a silently-running
+// build pointed at the wrong project is worse than a hard crash.
+// Exception: VITE_DEV_BYPASS=true with no Supabase vars → local dev without
+// a Supabase instance. App boots with a placeholder client; all queries will
+// fail gracefully (React Query error states), but auth is bypassed so pages render.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-if (!supabaseUrl || !supabaseAnonKey) {
+
+const isDevBypassMode =
+  import.meta.env.DEV === true &&
+  import.meta.env.VITE_DEV_BYPASS === 'true' &&
+  !supabaseUrl &&
+  !supabaseAnonKey
+
+if (!isDevBypassMode && (!supabaseUrl || !supabaseAnonKey)) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
     'Configure them in your deployment environment (Vercel project settings, .env.local, etc.).',
   )
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+const _clientUrl = isDevBypassMode ? 'http://localhost:54321' : supabaseUrl
+const _clientKey = isDevBypassMode
+  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRldi1ieXBhc3MiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxOTAwMDAwMDAwfQ.placeholder'
+  : supabaseAnonKey
+
+export const supabase = createClient<Database>(_clientUrl, _clientKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -29,11 +43,11 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
+export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey && !isDevBypassMode
 
 /**
  * Typed table accessor that accepts tables added by migration but not yet in generated types.
- * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
+ * Prefer this over raw unsafe casts when accessing tables outside the generated schema.
  */
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])

@@ -108,7 +108,7 @@ const PaymentApplicationsPage: React.FC = () => {
     setG702ModalOpen(true)
   }, [])
 
-  const handleRetainageRelease = useCallback(async (itemId: string) => {
+  const _handleRetainageRelease = useCallback(async (itemId: string) => {
     setRetainageItems((prev) => prev.map((item) =>
       item.id === itemId
         ? { ...item, stage: 'requested' as RetainageStage }
@@ -219,9 +219,9 @@ const PaymentApplicationsPage: React.FC = () => {
     [retainageEntries],
   )
 
-  const apps = (payApps ?? []) as Array<Record<string, unknown>>
-  const contractList = (contracts ?? []) as Array<Record<string, unknown>>
-  const waivers = (lienWaivers ?? []) as LienWaiverRow[]
+  const apps = useMemo(() => (payApps ?? []) as Array<Record<string, unknown>>, [payApps])
+  const contractList = useMemo(() => (contracts ?? []) as Array<Record<string, unknown>>, [contracts])
+  const waivers = useMemo(() => (lienWaivers ?? []) as LienWaiverRow[], [lienWaivers])
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
   const isLoading = loadingApps || loadingContracts || loadingRetainage
@@ -296,7 +296,7 @@ const PaymentApplicationsPage: React.FC = () => {
     const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
     if (retainageArr.length > 0 && retainageItems.length === 0) {
       setRetainageItems(retainageArr.map((r) => ({
-        id: (r.id as string) || String(Math.random()),
+        id: (r.id as string) || crypto.randomUUID(),
         description: (r.description as string) || 'SOV Item',
         scheduledValue: (r.scheduled_value as number) || (r.amount as number) || 0,
         retainageHeld: ((r.amount as number) || 0) - ((r.released_amount as number) || 0),

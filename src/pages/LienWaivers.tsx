@@ -52,8 +52,8 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  // API endpoint maps columns to different names from the DB schema
+  const waivers = (rawWaivers ?? []) as Array<Record<string, unknown>>;
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
@@ -78,12 +78,12 @@ export function LienWaivers() {
     setFormNotes('');
   };
 
-  // Use the actual DB column names. The API endpoint maps them so we need to handle both naming conventions.
-  const getWaiverState = (w: any): string => w.waiver_type ?? w.waiver_state ?? w.type ?? '';
-  const getContractorName = (w: any): string => w.contractor_name ?? w.subcontractor_id ?? '';
-  const getThroughDate = (w: any): string | null => w.through_date ?? w.payment_period ?? null;
-  const getSignedAt = (w: any): string | null => w.signed_at ?? w.received_at ?? null;
-  const getStatus = (w: any): string => w.status ?? 'pending';
+  // Handle both DB column names and legacy API field names.
+  const getWaiverState = (w: Record<string, unknown>): string => String(w.waiver_type ?? w.waiver_state ?? w.type ?? '');
+  const getContractorName = (w: Record<string, unknown>): string => String(w.contractor_name ?? w.subcontractor_id ?? '');
+  const getThroughDate = (w: Record<string, unknown>): string | null => (w.through_date ?? w.payment_period ?? null) as string | null;
+  const getSignedAt = (w: Record<string, unknown>): string | null => (w.signed_at ?? w.received_at ?? null) as string | null;
+  const getStatus = (w: Record<string, unknown>): string => String(w.status ?? 'pending');
 
   const filtered = waivers.filter((w) => {
     const ws = getWaiverState(w);
@@ -121,18 +121,18 @@ export function LienWaivers() {
     }
   };
 
-  const handleDelete = async (w: any) => {
+  const handleDelete = async (w: Record<string, unknown>) => {
     if (!projectId) return;
     const label = getContractorName(w) || 'this waiver';
     if (!window.confirm(`Delete waiver for "${label}"? This cannot be undone.`)) return;
     try {
-      await deleteWaiver.mutateAsync({ id: w.id, projectId });
+      await deleteWaiver.mutateAsync({ id: w.id as string, projectId });
     } catch {
       // toast handled by hook
     }
   };
 
-  const handleSendForSignature = async (w: any) => {
+  const handleSendForSignature = async (w: Record<string, unknown>) => {
     if (!projectId) return;
     const vendor = getContractorName(w) || 'Unknown Vendor';
     setSendingSignatureId(w.id);

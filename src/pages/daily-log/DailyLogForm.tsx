@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, Truck, UserPlus, FileEdit, Plus, Trash2, ClipboardList, Search, Wrench, Package, HardHat } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, UserPlus, FileEdit, Plus, Trash2, ClipboardList, Search, Wrench, Package, HardHat } from 'lucide-react';
 import { Card, Btn, SectionHeader, useToast, Modal, InputField } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme';
 import { useCreateDailyLogEntry, useDeleteDailyLogEntry } from '../../hooks/mutations';
@@ -246,7 +246,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
     { value: 'visitor', label: 'Visitor', color: colors.statusInfo },
     { value: 'equipment', label: 'Equipment', color: colors.statusPending },
     { value: 'material_received', label: 'Material Received', color: colors.primaryOrange },
-    { value: 'note', label: 'Safety / General Note', color: '#8B5CF6' },
+    { value: 'note', label: 'Safety / General Note', color: colors.indigo },
   ];
 
   const typedLogEntries = logEntries as Array<{

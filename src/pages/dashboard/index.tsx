@@ -5,7 +5,6 @@ import {
   AlertCircle, DollarSign, HelpCircle, Calendar, ChevronRight,
   Shield, ClipboardList, CloudSun,
   Sparkles, Scale, FileText, Send, Clock,
-  ArrowUpRight,
 } from 'lucide-react';
 import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
@@ -114,6 +113,15 @@ const DashboardPage: React.FC = () => {
   const setActiveProject = useProjectContext((s) => s.setActiveProject);
   const { data: allProjects, isPending: projectsLoading } = useProjects();
 
+  // Bail out of the loading skeleton after 3 s so the page never spins
+  // indefinitely when Supabase is unreachable (dev bypass, offline, cold start).
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  useEffect(() => {
+    if (!projectsLoading) return;
+    const t = setTimeout(() => setLoadingTimedOut(true), 3000);
+    return () => clearTimeout(t);
+  }, [projectsLoading]);
+
   // Ensure a valid project is selected — but guard against infinite loops.
   // allProjects is a new array reference on every react-query refetch, so we
   // track the last ID we set via ref to avoid re-triggering setActiveProject
@@ -134,7 +142,7 @@ const DashboardPage: React.FC = () => {
     setActiveProject(fallbackId);
   }, [projectId, allProjects, setActiveProject]);
 
-  if (projectsLoading) return <DashboardSkeleton />;
+  if (projectsLoading && !loadingTimedOut) return <DashboardSkeleton />;
   if (!allProjects || allProjects.length === 0) return <WelcomeOnboarding onProjectCreated={() => {}} />;
   return <DashboardInner />;
 };

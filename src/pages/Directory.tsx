@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Users, Phone, Mail, Building, Plus, ShieldCheck, FileText, Upload, MessageSquare, Clock, AlertTriangle } from 'lucide-react';
 import { PageContainer, Card, MetricBox, Avatar, Tag, Btn } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
@@ -237,7 +237,7 @@ function isPrequalExpired(lastUpdated: string): boolean {
 // TODO: Wire to Supabase tables: 'prequalifications', 'communication_logs'
 // These tables need to be created. For now, using local state with empty defaults.
 
-const DEFAULT_PREQUAL: PrequalInfo = {
+const _DEFAULT_PREQUAL: PrequalInfo = {
   status: 'not_started',
   bondingCapacity: '',
   insuranceLimits: '',
@@ -247,9 +247,6 @@ const DEFAULT_PREQUAL: PrequalInfo = {
   lastUpdated: '',
 };
 
-function getDefaultPrequal(): PrequalInfo {
-  return { ...DEFAULT_PREQUAL };
-}
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -612,6 +609,13 @@ const TH: React.FC<{ children: React.ReactNode; width?: string }> = ({ children,
 export const Directory: React.FC = () => {
   const projectId = useProjectId();
   const qc = useQueryClient();
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const isMobile = windowWidth < 768;
   const { data: contactsResult } = useDirectoryContacts(projectId);
   const { data: companiesData } = useCompanies(projectId);
   useRealtimeInvalidation(projectId);
@@ -796,7 +800,7 @@ export const Directory: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
 
         {/* Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: spacing['4'] }}>
           <MetricBox label="Total Contacts" value={totalContacts} />
           <MetricBox label="Active Companies" value={activeCompanies} />
           <MetricBox

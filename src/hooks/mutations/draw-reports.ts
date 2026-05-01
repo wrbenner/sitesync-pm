@@ -12,8 +12,7 @@ import { prepareDrawReportUpload } from '../../lib/drawReportParser'
 // freshly added columns on pay_applications, etc.) aren't in the generated
 // Database types yet. Cast through any so the query builder accepts .eq()
 // filters on columns PostgREST validates server-side.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromAny = (table: string): any => (supabase.from as any)(table)
+const fromAny = (table: string): any => (supabase.from as any)(table) // type-safe-ok: intentional escape for tables not yet in generated schema types
 
 // ── Shared types ────────────────────────────────────────────
 

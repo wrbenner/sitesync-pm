@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
-import { colors, spacing, typography, borderRadius, shadows, transitions, layout } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
 import { ExportButton } from '../../components/shared/ExportButton';
@@ -11,11 +11,9 @@ import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../.
 import { useProjectId } from '../../hooks/useProjectId';
 import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { PredictiveAlertBanner } from '../../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
-import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal';
 import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard';
 import { toast } from 'sonner';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
@@ -50,10 +48,9 @@ const SubmittalsPage: React.FC = () => {
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
   const deleteSubmittal = useDeleteSubmittal();
-  const queryClient = useQueryClient();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
   const { data: project } = useProject(projectId);
-  const { data: aiInsights } = useAIInsights(projectId, 'submittals');
+  useAIInsights(projectId, 'submittals');
   const specFileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time subscription for all project tables (submittals + adjacent entities).
@@ -90,7 +87,7 @@ const SubmittalsPage: React.FC = () => {
     exportSubmittalLogXlsx(projectName, rows);
   }, [project?.name, submittalsResult?.data]);
   const { data: reviewersData = [] } = useSubmittalReviewers(selectedId ?? undefined);
-  const submittalsRaw = submittalsResult?.data ?? [];
+  const submittalsRaw = useMemo(() => submittalsResult?.data ?? [], [submittalsResult?.data]);
 
   // Map API data to component shape
   const submittals = useMemo(() => submittalsRaw.map((s: Record<string, unknown>) => ({
@@ -100,7 +97,7 @@ const SubmittalsPage: React.FC = () => {
     dueDate: (s.due_date as string) || '',
   })), [submittalsRaw]);
 
-  const allSubmittals = submittals || [];
+  const allSubmittals = submittals;
   const pageAlerts = getPredictiveAlertsForPage('submittals');
   const openCount = useMemo(() => allSubmittals.filter((s) => s.status !== 'approved').length, [allSubmittals]);
   const totalCount = allSubmittals.length;

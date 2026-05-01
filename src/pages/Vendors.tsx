@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Users, Plus, Search, Star, Sparkles, AlertTriangle, Shield, ShieldAlert, ClipboardCheck, Award, Mail, Send, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Users, Plus, Search, Star, Sparkles, AlertTriangle, Shield, ShieldAlert, ClipboardCheck, Award, Mail, Send, CheckCircle, Clock } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -319,7 +319,7 @@ export const Vendors: React.FC = () => {
     // When a diversity_certifications table or certification_type column
     // is added, this will derive real VendorDiversity records.
     return []
-  }, [vendors])
+  }, [])
 
   const handleCreate = async () => {
     if (!form.company_name) {

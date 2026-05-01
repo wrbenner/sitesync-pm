@@ -51,7 +51,7 @@ export const IFCViewer: React.FC<IFCViewerProps> = ({ result, onParse, modelId, 
       onParse?.(data as IFCParseResult)
     } catch (e) {
       toast.error('Failed to parse IFC file')
-      console.error(e)
+      if (import.meta.env.DEV) console.error(e)
     } finally {
       setParsing(false)
     }

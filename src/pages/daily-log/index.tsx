@@ -9,7 +9,6 @@ import { colors, spacing, typography, borderRadius, transitions, tradeColors } f
 import { toast } from 'sonner';
 import { CalendarNav } from '../../components/dailylog/CalendarNav';
 import { AutoDailyLog } from '../../components/dailylog/AutoDailyLog';
-import { DailyLogCapture } from '../../components/dailylog/DailyLogCapture';
 import { QuickEntry } from '../../components/dailylog/QuickEntry';
 import type { QuickEntryData } from '../../components/dailylog/QuickEntry';
 import type { CrewHoursEntry as CrewHoursEntryType } from '../../components/dailylog/CrewHoursSummary';
@@ -70,7 +69,7 @@ const DailyLogPage: React.FC = () => {
   const approveDailyLog = useApproveDailyLog();
   const rejectDailyLog = useRejectDailyLog();
 
-  const dailyLogHistory: ExtendedDailyLog[] = (dailyLogData?.data ?? []) as ExtendedDailyLog[];
+  const dailyLogHistory = useMemo(() => (dailyLogData?.data ?? []) as ExtendedDailyLog[], [dailyLogData?.data]);
   const todayStr = new Date().toISOString().split('T')[0];
   const hasTodayLog = dailyLogHistory.some((l) => l.log_date?.split('T')[0] === todayStr);
 
@@ -81,7 +80,7 @@ const DailyLogPage: React.FC = () => {
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
   const [activeView, setActiveView] = useState<'auto' | 'calendar' | 'log'>('auto');
-  const [showCaptureBar, setShowCaptureBar] = useState(true);
+  const [_showCaptureBar, _setShowCaptureBar] = useState(true);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherIsAuto, setWeatherIsAuto] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -622,7 +621,7 @@ const DailyLogPage: React.FC = () => {
           {!error && (
             <Card padding={spacing['10']}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: spacing['4'] }}>
-                <Calendar size={48} color="#9CA3AF" />
+                <Calendar size={48} color={colors.statusNeutral} />
                 <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>No daily logs yet</p>
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, margin: 0, maxWidth: '440px' }}>
                   The daily log is your project official record. Start documenting site conditions today.
