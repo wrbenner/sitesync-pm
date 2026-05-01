@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useProjectContext } from '../../stores/projectContextStore';
 import { useAuthStore } from '../../stores/authStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { supabase, fromTable } from '../../lib/supabase';
 import { resetDemoProject } from '../../services/demoSeed';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
@@ -160,14 +161,20 @@ const SectionCard: React.FC<{
 const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
   const [resetting, setResetting] = useState(false)
 
+  const { confirm: confirmResetDemo, dialog: resetDemoDialog } = useConfirm()
+
   const handleReset = async () => {
     if (!orgId) {
       toast.error('Organization context unavailable; cannot reset demo.')
       return
     }
-    if (!window.confirm(
-      'Reset all demo data back to its starting state? Any changes made to RFIs, submittals, change orders, etc. on this demo project will be overwritten.',
-    )) return
+    const ok = await confirmResetDemo({
+      title: 'Reset demo data?',
+      description: 'All changes to RFIs, submittals, change orders, daily logs, and other entities on this demo project will be overwritten with the starting seed.',
+      destructiveLabel: 'Reset demo',
+      typeToConfirm: 'RESET',
+    })
+    if (!ok) return
 
     setResetting(true)
     try {
@@ -188,6 +195,7 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
   }
 
   return (
+    <>
     <section
       style={{
         marginTop: spacing['6'],
@@ -246,6 +254,8 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
         </div>
       </div>
     </section>
+    {resetDemoDialog}
+    </>
   )
 }
 
