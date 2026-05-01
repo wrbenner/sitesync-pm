@@ -549,7 +549,7 @@ const DigitalTwinPage: React.FC = () => {
 
   // Derive timeline bounds from the real schedule. Fall back to a 180d window
   // starting today when the project has no phases yet.
-  const { scheduleStart, scheduleEnd, totalDays } = useMemo(() => {
+  const { scheduleStart, scheduleEnd: _scheduleEnd, totalDays } = useMemo(() => {
     if (twinPhases.length === 0) {
       const start = new Date();
       start.setHours(0, 0, 0, 0);

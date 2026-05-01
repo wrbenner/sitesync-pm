@@ -148,7 +148,7 @@ const ArchDimensionLine: React.FC<{
   label: string;
   sublabel?: string;
   offset?: number;
-}> = ({ p1, p2, label, sublabel, offset = 16 }) => {
+}> = ({ p1, p2, label, sublabel: _sublabel, offset = 16 }) => {
   const perp = perpUnit(p1, p2);
   const angle = lineAngle(p1, p2);
   const angleDeg = (angle * 180) / Math.PI;

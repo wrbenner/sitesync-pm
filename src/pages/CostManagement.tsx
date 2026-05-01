@@ -247,7 +247,7 @@ const CostManagement: React.FC = () => {
         const budgetProgress = budget > 0 ? Math.min(actuals / budget, 1) : 0
         const performanceFactor = budgetProgress > 0 ? Math.min(budgetProgress / Math.max(budgetProgress, 0.01), 1.5) : 1.0
         // EAC = actuals + (budget - actuals) * performance factor
-        const eac = actuals + (budget - actuals) * (actuals > 0 ? (actuals / Math.max(c.committed_amount || actuals, 1)) : 1)
+        const _eac = actuals + (budget - actuals) * (actuals > 0 ? (actuals / Math.max(c.committed_amount || actuals, 1)) : 1)
         // Simplified: if committed > actual, we're likely to spend more
         const adjustedEac = c.committed_amount > actuals
           ? actuals + (c.committed_amount - actuals) + ((budget - c.committed_amount) * (actuals > 0 ? actuals / c.committed_amount : 1))

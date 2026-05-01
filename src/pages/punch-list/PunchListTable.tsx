@@ -512,7 +512,7 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {searchedList.map((item) => {
-            const statusColor = STATUS_COLORS[item.verification_status] ?? STATUS_COLORS.open;
+            const _statusColor = STATUS_COLORS[item.verification_status] ?? STATUS_COLORS.open;
             const days = item.dueDate ? getDaysRemaining(item.dueDate) : null;
             const isOverdue = days !== null && days <= 0 && item.verification_status !== 'verified';
 
