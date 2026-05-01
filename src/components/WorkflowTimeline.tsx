@@ -159,7 +159,10 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               borderRadius: 10,
               padding: '0 8px',
             }}
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
             onClick={() => isClickable && onTransition!(state)}
+            onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTransition!(state) } } : undefined}
             aria-label={`Step ${index + 1}: ${label} — ${kind}`}
           >
             <StepCircle kind={kind} index={index} />
@@ -183,7 +186,10 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
             minWidth: 56, minHeight: 56,
             borderRadius: 10, padding: '8px 4px',
           }}
+          role={isClickable ? 'button' : undefined}
+          tabIndex={isClickable ? 0 : undefined}
           onClick={() => isClickable && onTransition!(state)}
+          onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTransition!(state) } } : undefined}
           aria-label={`Step ${index + 1}: ${label} — ${kind}`}
         >
           <StepCircle kind={kind} index={index} />
