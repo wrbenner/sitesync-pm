@@ -106,7 +106,7 @@ const TOOL_ITEMS: Array<{ tool: ToolType; icon: React.ReactNode; label: string }
 // ── Helpers ───────────────────────────────────────────────
 
 function generateId(): string {
-  return `wb_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `wb_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 function snapToGrid(val: number, enabled: boolean): number {
