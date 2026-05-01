@@ -19,7 +19,7 @@ import { SyncBanner, ErrorState, useOnlineStatus } from './CaptureSync';
 const FieldCaptureInner: React.FC = () => {
   const projectId = useProjectId();
   const { data: capturesData, isLoading, isError, error, refetch } = useFieldCaptures(projectId);
-  const captures = capturesData ?? [];
+  const captures = useMemo(() => capturesData ?? [], [capturesData]);
   const { pendingCount } = useSyncStatus();
   const createFieldCapture = useCreateFieldCapture();
   const { addToast } = useToast();

@@ -61,7 +61,7 @@ export const Closeout: React.FC = () => {
   }, [])
   const isMobile = windowWidth < 768
 
-  const items = closeoutData?.items ?? []
+  const items = useMemo(() => closeoutData?.items ?? [], [closeoutData?.items])
   const totalItems = items.length
   const approvedItems = items.filter(i => i.status === 'approved').length
   const pctComplete = totalItems > 0 ? Math.round((approvedItems / totalItems) * 100) : 0

@@ -219,9 +219,9 @@ const PaymentApplicationsPage: React.FC = () => {
     [retainageEntries],
   )
 
-  const apps = (payApps ?? []) as Array<Record<string, unknown>>
-  const contractList = (contracts ?? []) as Array<Record<string, unknown>>
-  const waivers = (lienWaivers ?? []) as LienWaiverRow[]
+  const apps = useMemo(() => (payApps ?? []) as Array<Record<string, unknown>>, [payApps])
+  const contractList = useMemo(() => (contracts ?? []) as Array<Record<string, unknown>>, [contracts])
+  const waivers = useMemo(() => (lienWaivers ?? []) as LienWaiverRow[], [lienWaivers])
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
   const isLoading = loadingApps || loadingContracts || loadingRetainage

@@ -544,7 +544,7 @@ const PunchItemDetailPage: React.FC = () => {
   const projectId = useProjectId()
   const updatePunchItem = useUpdatePunchItem()
   const { data: punchListResult, isLoading } = usePunchItems(projectId)
-  const punchListRaw = punchListResult?.data ?? []
+  const punchListRaw = useMemo(() => punchListResult?.data ?? [], [punchListResult?.data])
 
   const item: PunchItem | null = useMemo(() => {
     const raw = punchListRaw.find((p: Record<string, unknown>) =>

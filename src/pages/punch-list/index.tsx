@@ -116,7 +116,7 @@ const PunchListPage: React.FC = () => {
 
   // Fetch punch list items from API
   const { data: punchListResult, isLoading: queryLoading, error: punchError, refetch, fetchStatus } = usePunchItems(projectId);
-  const punchListRaw = punchListResult?.data ?? [];
+  const punchListRaw = useMemo(() => punchListResult?.data ?? [], [punchListResult?.data]);
   const { data: project } = useProject(projectId);
   useRealtimeInvalidation(projectId);
   const loading = queryLoading && fetchStatus === 'fetching';

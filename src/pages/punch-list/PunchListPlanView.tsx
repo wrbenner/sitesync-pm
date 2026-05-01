@@ -268,7 +268,7 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
     error: drawingsError,
     refetch: refetchDrawings,
   } = useDrawings(projectId)
-  const drawings = (drawingsResult?.data ?? []) as Drawing[]
+  const drawings = useMemo(() => (drawingsResult?.data ?? []) as Drawing[], [drawingsResult?.data])
 
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
   const [hoveredPinId, _setHoveredPinId] = useState<number | null>(null)
