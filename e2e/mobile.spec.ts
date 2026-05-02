@@ -1,7 +1,9 @@
 import { test, expect, devices } from '@playwright/test'
 
 test.describe('Mobile Experience', () => {
-  test.use({ ...devices['iPhone 14'] })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { defaultBrowserType: _dbt, ...iPhone14 } = devices['iPhone 14']
+  test.use(iPhone14)
 
   test('shows mobile layout with bottom tabs', async ({ page }) => {
     await page.goto('#/dashboard')

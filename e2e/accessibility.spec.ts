@@ -5,10 +5,11 @@ test.describe('Accessibility', () => {
     await page.goto('#/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // Check for route announcer
+    // Check for route announcer (use first() to avoid strict-mode violation when
+    // multiple live regions exist alongside the route announcer)
     const announcer = page.locator('[role="status"][aria-live="polite"]')
     if (await announcer.count() > 0) {
-      await expect(announcer).toHaveAttribute('aria-atomic', 'true')
+      await expect(announcer.first()).toHaveAttribute('aria-atomic', 'true')
     }
 
     // Navigate to another page
@@ -16,7 +17,7 @@ test.describe('Accessibility', () => {
     await page.waitForLoadState('networkidle')
 
     if (await announcer.count() > 0) {
-      const text = await announcer.textContent()
+      const text = await announcer.first().textContent()
       expect(text).toContain('Tasks')
     }
   })
