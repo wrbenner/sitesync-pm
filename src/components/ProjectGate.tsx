@@ -14,6 +14,7 @@ import { HardHat, Plus, MapPin, Calendar, Building2, ArrowRight, Search } from '
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useProjects } from '../hooks/queries';
 import { useProjectContext } from '../stores/projectContextStore';
+import type { Project } from '../types/entities';
 import { CreateProjectModal } from './forms/CreateProjectModal';
 
 /* ── Helpers ────────────────────────────────────────────── */
@@ -233,7 +234,7 @@ export const ProjectGate: React.FC = () => {
                   useProjectContext.setState((s) => ({
                     projects: s.projects.some((p) => p.id === project.id)
                       ? s.projects
-                      : [...s.projects, project as any],
+                      : [...s.projects, project as unknown as Project],
                   }));
                   setActiveProject(project.id);
                 }}

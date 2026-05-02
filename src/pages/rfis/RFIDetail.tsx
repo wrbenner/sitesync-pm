@@ -37,6 +37,7 @@ import {
   getDueDateUrgency, getDaysOpen,
   type RFIState
 } from '../../machines/rfiMachine'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import type { RFI, RFIResponse } from '../../types/database'
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -245,7 +246,7 @@ const StatusControl: React.FC<{
 // ─── Response Bubble ──────────────────────────────────────
 
 const ResponseBubble: React.FC<{
-  response: RFIResponse
+  response: RFIResponse & { company?: string }
   index: number
   isNew?: boolean
   profileMap?: ProfileMap
@@ -279,13 +280,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {response.company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {response.company}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -588,7 +589,7 @@ export function RFIDetail() {
     }
   }, [lastViewedKey])
 
-  const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
+  const rfi = rfiData as (RFI & { responses?: RFIResponse[]; from_company?: string; question?: string }) | undefined
   const responses = rfi?.responses ?? []
 
   const userIdsToResolve = useMemo(
@@ -602,6 +603,12 @@ export function RFIDetail() {
   const currentStatus = (rfi?.status as RFIState) || 'draft'
   const statusConfig = getRFIStatusConfig(currentStatus)
   const transitions = getValidTransitions(currentStatus, 'admin')
+
+  const RFI_WORKFLOW_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+  const currentWorkflowIndex = RFI_WORKFLOW_STATES.indexOf(currentStatus)
+  const completedWorkflowStates = currentStatus === 'void'
+    ? []
+    : RFI_WORKFLOW_STATES.slice(0, currentWorkflowIndex)
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
   const newResponseCount = useMemo(() => {
@@ -775,6 +782,17 @@ export function RFIDetail() {
           )}
         </div>
 
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{ marginBottom: '20px' }}>
+            <WorkflowTimeline
+              states={RFI_WORKFLOW_STATES}
+              currentState={currentStatus}
+              completedStates={completedWorkflowStates}
+            />
+          </div>
+        )}
+
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
@@ -801,13 +819,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {rfi.from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {rfi.from_company}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -826,7 +844,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || rfi.question || rfi.title}
             </div>
 
             {/* Metadata pills */}
