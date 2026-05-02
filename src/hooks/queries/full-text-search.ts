@@ -5,6 +5,8 @@ import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
 
+type SearchRow = { id: string; name: string; description: string | null; project_id: string; created_at: string }
+
 // ── Full-Text Search ────────────────────────────────────────
 
 export interface SearchResult {
@@ -40,7 +42,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
               title: d.name,
@@ -61,7 +63,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
               title: d.name,
@@ -82,7 +84,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title,
@@ -103,7 +105,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title,
