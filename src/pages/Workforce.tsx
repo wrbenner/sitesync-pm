@@ -340,7 +340,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as { id: string }
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +363,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as { id: string; approved?: boolean }
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
