@@ -7,6 +7,9 @@ const from = (table: AnyTableName) => supabase.from(table as keyof Database['pub
 
 // ── Full-Text Search ────────────────────────────────────────
 
+type NamedRow = { id: string; name: string; description: string | null; project_id: string; created_at: string }
+type TitledRow = { id: string; title: string; project_id: string; created_at: string; discipline?: string | null }
+
 export interface SearchResult {
   id: string
   type: 'document' | 'file' | 'drawing' | 'wiki'
@@ -40,7 +43,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as NamedRow[]).map(d => ({
               id: d.id,
               type: 'document' as const,
               title: d.name,
@@ -61,7 +64,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as NamedRow[]).map(d => ({
               id: d.id,
               type: 'file' as const,
               title: d.name,
@@ -82,11 +85,11 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as TitledRow[]).map(d => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title,
-              description: d.discipline,
+              description: d.discipline ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -103,7 +106,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as TitledRow[]).map(d => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title,
