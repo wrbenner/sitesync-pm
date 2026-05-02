@@ -72,7 +72,7 @@ function parseSuggestedPrompts(text: string): string[] {
       continue
     }
     if (inFollowUp) {
-      const cleaned = line.replace(/^[\d.\-*•]+\s*/, '').replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^"/, '').replace(/"$/, '').trim()
+      const cleaned = line.replace(/^[\d.*•-]+\s*/, '').replace(/^\*\*/, '').replace(/\*\*$/, '').replace(/^"/, '').replace(/"$/, '').trim()
       if (cleaned.length > 10 && cleaned.length < 120) {
         prompts.push(cleaned)
       }

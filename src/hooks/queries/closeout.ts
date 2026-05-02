@@ -198,7 +198,7 @@ export function useGenerateCloseoutList() {
 export function useTransitionCloseoutStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status, projectId }: { id: string; status: CloseoutItemStatus; projectId: string }) => {
+    mutationFn: async ({ id, status, projectId: _projectId }: { id: string; status: CloseoutItemStatus; projectId: string }) => {
       const updates: Record<string, unknown> = {
         status,
         updated_at: new Date().toISOString(),
@@ -228,7 +228,7 @@ export function useUpdateCloseoutItem() {
   return useMutation({
     mutationFn: async ({
       id,
-      projectId,
+      projectId: _projectId,
       updates,
     }: {
       id: string
@@ -275,7 +275,7 @@ export function useUploadCloseoutDoc() {
       projectId,
       closeoutItemId,
       file,
-      userId,
+      userId: _userId,
     }: {
       projectId: string
       closeoutItemId: string

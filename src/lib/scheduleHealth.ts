@@ -83,7 +83,7 @@ function daysBetween(a: string | null, b: string | null): number {
 }
 
 function uid(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 }
 
 // ── Main Analysis Function ──────────────────────────────────────────────────

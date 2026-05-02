@@ -11,13 +11,12 @@ import {
   Pin, PinOff, Box,
   HelpCircle,
   Repeat2, Grid3X3, ChevronDown, Plus, Sparkles,
-  History, Star, Settings, Bell, ArrowRight,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, transitions, layout, zIndex } from '../styles/theme';
-import { duration, easing } from '../styles/animations';
+import { colors, spacing, typography, borderRadius, layout, zIndex } from '../styles/theme';
 import { usePermissions } from '../hooks/usePermissions';
 import { SidebarPresenceDot } from './collaboration/PresenceBar';
 import { AgentStatusBadge } from './ai/agentStream';

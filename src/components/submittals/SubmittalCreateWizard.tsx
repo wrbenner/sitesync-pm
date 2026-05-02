@@ -14,8 +14,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Upload, FileText, X, Plus, ChevronDown, Calendar, Clock,
-  Send, Paperclip, Image, File, Sparkles, ArrowRight, Check
+  Upload, FileText, X, Plus,
+  Send, Image, File, Sparkles
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
@@ -147,7 +147,7 @@ const PersonPicker: React.FC<{
   onChange: (c: DirectoryContact | null) => void
   placeholder?: string
   filterTrade?: boolean
-}> = ({ label, projectId, value, onChange, placeholder = 'Select...', filterTrade }) => {
+}> = ({ label, projectId, value, onChange, placeholder = 'Select...', filterTrade: _filterTrade }) => {
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -524,7 +524,7 @@ const SubmittalCreateWizard: React.FC<SubmittalCreateWizardProps> = ({
 
   const handleAddFiles = useCallback((newFiles: File[]) => {
     const mapped: SubmittalFile[] = newFiles.map(f => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: crypto.randomUUID(),
       file: f, name: f.name, size: f.size, type: f.type,
     }))
     setFiles(prev => [...prev, ...mapped])

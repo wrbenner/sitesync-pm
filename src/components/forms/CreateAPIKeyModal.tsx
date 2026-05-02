@@ -15,7 +15,7 @@ const CreateAPIKeySchema = z.object({
     .min(1, 'Name is required')
     .min(3, 'Name must be at least 3 characters')
     .max(50, 'Name must be 50 characters or less')
-    .regex(/^[a-zA-Z0-9_\-\s]+$/, 'Name can only contain letters, numbers, hyphens, and underscores'),
+    .regex(/^[a-zA-Z0-9_\s-]+$/, 'Name can only contain letters, numbers, hyphens, and underscores'),
   scopes: z.array(z.string())
     .min(1, 'Select at least one scope'),
   expirationDays: z.coerce.number()

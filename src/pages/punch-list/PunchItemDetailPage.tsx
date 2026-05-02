@@ -18,11 +18,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Camera, MapPin, Wrench, Clock, Calendar,
   CheckCircle2, XCircle, Play, Eye, AlertTriangle,
-  User, MessageSquare, Shield, Send, Pencil, ChevronLeft,
-  Maximize2,
+  User, Shield, Send, Pencil, ChevronLeft,
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
-import { Avatar } from '../../components/Primitives'
+import { colors, typography, shadows } from '../../styles/theme'
 import { usePunchItems } from '../../hooks/queries'
 import { useUpdatePunchItem } from '../../hooks/mutations'
 import { useProjectId } from '../../hooks/useProjectId'
@@ -33,9 +31,6 @@ import { STATUS_COLORS, getDueDateColor, formatDate } from './types'
 import type { PunchItem } from './types'
 
 // ─── Helpers ──────────────────────────────────────────────
-
-const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
 const relativeTime = (dateStr: string) => {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -150,10 +145,9 @@ const PhotoHero: React.FC<{
   afterUrl: string | null
   onAnnotate?: (imageUrl: string) => void
 }> = ({ beforeUrl, afterUrl, onAnnotate }) => {
-  const [showAfter, setShowAfter] = useState(false)
-  const [sliderPos, setSliderPos] = useState(50) // For before/after slider
+  const [showAfter] = useState(false)
+  const [sliderPos, setSliderPos] = useState(50)
   const [isSliding, setIsSliding] = useState(false)
-  const [fullscreen, setFullscreen] = useState(false)
 
   const hasBeforeAfter = beforeUrl && afterUrl
 

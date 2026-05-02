@@ -13,7 +13,7 @@ import { prepareDrawReportUpload } from '../../lib/drawReportParser'
 // Database types yet. Cast through any so the query builder accepts .eq()
 // filters on columns PostgREST validates server-side.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromAny = (table: string): any => (supabase.from as any)(table)
+const fromAny = (table: string) => supabase.from(table as Parameters<typeof supabase.from>[0])
 
 // ── Shared types ────────────────────────────────────────────
 
