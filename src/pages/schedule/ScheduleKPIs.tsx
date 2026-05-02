@@ -92,10 +92,10 @@ function MiniSparkline({ value, color, max = 100 }: { value: number; color: stri
   const points = React.useMemo(() => {
     const baseline = Math.max(0, value - 15);
     const pts = [
-      baseline + Math.random() * 8,
-      baseline + 4 + Math.random() * 6,
-      baseline + 2 + Math.random() * 10,
-      baseline + 6 + Math.random() * 8,
+      baseline,
+      baseline + (value - baseline) * 0.25,
+      baseline + (value - baseline) * 0.5,
+      baseline + (value - baseline) * 0.75,
       value,
     ].map(v => Math.min(max, Math.max(0, v)));
     return pts;
