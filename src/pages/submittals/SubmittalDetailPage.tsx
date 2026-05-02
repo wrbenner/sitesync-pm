@@ -786,7 +786,7 @@ export function SubmittalDetailPage() {
             Submittal not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: typography.fontSize.body }}>
-            {(error as any)?.message || 'This submittal may have been deleted or you don\'t have access.'}
+            {(error as Error)?.message || 'This submittal may have been deleted or you don\'t have access.'}
           </p>
           <Btn onClick={() => navigate('/submittals')}>Back to Submittals</Btn>
         </div>
