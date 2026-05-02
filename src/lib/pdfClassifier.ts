@@ -25,7 +25,7 @@ function normalizeFilename(name: string): string {
   return name
     .toLowerCase()
     .replace(/\.[^.]+$/, '')
-    .replace(/[_\-/\\.]+/g, ' ')
+    .replace(/[-_/\\.]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -120,7 +120,7 @@ const STORIES_RE = /\b(\d{1,2})\s*(?:-?\s*)?(?:stor(?:y|ies)|floors?|levels?)\b/
 // Occupancy classification (IBC Group) — handle "Occupancy: R-2",
 // "Occupancy Group R-2", "Occupancy Classification: B", etc.
 const OCCUPANCY_RE =
-  /\boccupanc(?:y|ies)\s*[:\-–]?\s*(?:group|class(?:ification)?)?\s*[:\-–]?\s*([A-Z](?:[-\s]?\d)?)\b/i;
+  /\boccupanc(?:y|ies)\s*[-:–]?\s*(?:group|class(?:ification)?)?\s*[-:–]?\s*([A-Z](?:[-\s]?\d)?)\b/i;
 
 // Construction type (Type I/II/III/IV/V with optional A/B)
 const CONSTRUCTION_RE = /\btype\s+(I{1,3}V?|IV|V)(?:[-\s]?([AB]))?\b/i;
@@ -182,7 +182,7 @@ export function parseCoverMetadata(text: string): CoverMetadata {
     for (const { key, label } of CONSULTANT_LABELS) {
       if (result.consultants[key]) continue;
 
-      const inline = line.match(new RegExp(`(?:^|\\s)${label.source}\\s*[:\\-]\\s*(.{3,80})$`, 'i'));
+      const inline = line.match(new RegExp(`(?:^|\\s)${label.source}\\s*[-:]\\s*(.{3,80})$`, 'i'));
       if (inline && inline[1]) {
         result.consultants[key] = inline[1].trim();
         continue;
@@ -200,7 +200,7 @@ export function parseCoverMetadata(text: string): CoverMetadata {
           // that happen to contain a discipline word ("Ferro Structural").
           const isPureLabel = CONSULTANT_LABELS.some((c) => {
             if (!c.label.test(next)) return false;
-            const remainder = next.replace(c.label, '').replace(/[:\-\s]/g, '');
+            const remainder = next.replace(c.label, '').replace(/[-:\s]/g, '');
             return remainder.length < 5;
           });
           if (isPureLabel) continue;
