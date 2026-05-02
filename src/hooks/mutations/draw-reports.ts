@@ -7,13 +7,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { uploadFile } from '../../lib/storage'
 import { prepareDrawReportUpload } from '../../lib/drawReportParser'
+import type { Database } from '../../types/database'
 
-// Untyped escape hatch: some tables we write to (pay_application_line_items,
-// freshly added columns on pay_applications, etc.) aren't in the generated
-// Database types yet. Cast through any so the query builder accepts .eq()
-// filters on columns PostgREST validates server-side.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromAny = (table: string): any => (supabase.from as any)(table)
+// Escape hatch for tables whose columns aren't fully represented in generated
+// types yet. Uses double-cast to bypass TS overload resolution while keeping
+// the query builder's standard methods (.select, .insert, .eq, etc.) intact.
+type KnownTable = keyof Database['public']['Tables']
+const fromAny = (table: string) => supabase.from(table as unknown as KnownTable)
 
 // ── Shared types ────────────────────────────────────────────
 

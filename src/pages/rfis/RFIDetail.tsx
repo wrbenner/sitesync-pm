@@ -37,6 +37,7 @@ import {
   getDueDateUrgency, getDaysOpen,
   type RFIState
 } from '../../machines/rfiMachine'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import type { RFI, RFIResponse } from '../../types/database'
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -602,6 +603,12 @@ export function RFIDetail() {
   const currentStatus = (rfi?.status as RFIState) || 'draft'
   const statusConfig = getRFIStatusConfig(currentStatus)
   const transitions = getValidTransitions(currentStatus, 'admin')
+
+  const RFI_WORKFLOW_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+  const currentWorkflowIndex = RFI_WORKFLOW_STATES.indexOf(currentStatus)
+  const completedWorkflowStates = currentStatus === 'void'
+    ? []
+    : RFI_WORKFLOW_STATES.slice(0, currentWorkflowIndex)
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
   const newResponseCount = useMemo(() => {
@@ -774,6 +781,17 @@ export function RFIDetail() {
             </div>
           )}
         </div>
+
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{ marginBottom: '20px' }}>
+            <WorkflowTimeline
+              states={RFI_WORKFLOW_STATES}
+              currentState={currentStatus}
+              completedStates={completedWorkflowStates}
+            />
+          </div>
+        )}
 
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
