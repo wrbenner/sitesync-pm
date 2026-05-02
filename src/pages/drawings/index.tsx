@@ -79,7 +79,7 @@ function extractRevisionFromFilename(name: string): string | null {
 function cleanFilenameTitle(name: string): string {
   let s = name
     .replace(/\.[^.]+$/, '')                                    // strip extension
-    .replace(/^\d{2,4}[.\-_]\d{1,2}[.\-_]\d{1,2}[_\-\s]*/, ''); // leading date
+    .replace(/^\d{2,4}[._-]\d{1,2}[._-]\d{1,2}[_\s-]*/, ''); // leading date
   s = s.replace(/_+/g, ' ');                                     // only underscores → spaces; keep hyphens
   s = s
     .replace(/\brev(?:ision)?\s?\d{1,3}(?:\.\d{1,2})?\b/ig, '')
@@ -115,7 +115,7 @@ function inferDisciplineFromFilename(name: string): string | null {
   const normalized = name
     .toLowerCase()
     .replace(/\.[^.]+$/, '')
-    .replace(/[_\-/\\.]+/g, ' ')
+    .replace(/[-_/\\.]+/g, ' ')
     .replace(/\s+/g, ' ');
 
   // Ordering matters: more specific patterns first so "cover sheet" doesn't
