@@ -16,20 +16,18 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
+  AlertTriangle, MessageSquare, FileText,
+  Image, User, Eye, EyeOff,
+  Paperclip, Flag, Timer, Zap,
 } from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
@@ -76,12 +74,6 @@ const relativeTime = (d: string | null) => {
 }
 
 // ─── Types ────────────────────────────────────────────────
-
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
-}
 
 // ─── Watchers Hook ────────────────────────────────────────
 

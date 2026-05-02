@@ -11,7 +11,7 @@ import {
   Pin, PinOff, Box,
   HelpCircle,
   Repeat2, Grid3X3, ChevronDown, Plus, Sparkles,
-  History, Star, Settings, Bell, ArrowRight,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useUiStore, useAuthStore } from '../stores';

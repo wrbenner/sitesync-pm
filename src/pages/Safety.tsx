@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, Sparkles, ListChecks, ChevronDown, ChevronRight, Trash2, Check, X, Minus, Hash, Type, Gauge, CheckSquare } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, ListChecks, ChevronDown, ChevronRight, Trash2, Check, X, Minus, Hash, Type, Gauge, CheckSquare } from 'lucide-react'
 import { PageContainer, Card, Btn, MetricBox, Modal } from '../components/Primitives'
 import { SafetyPhotoAnalyzer } from '../components/safety/SafetyPhotoAnalyzer'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -729,7 +729,7 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data
 
   // Checklist hooks
-  const { data: checklists, isLoading: loadingChecklists, refetch: refetchChecklists } = useInspectionChecklists(projectId)
+  const { data: checklists, isLoading: loadingChecklists } = useInspectionChecklists(projectId)
   const { data: checklistTemplatesData } = useChecklistTemplates(projectId)
 
   const createIncident = useCreateIncident()
@@ -798,8 +798,6 @@ export const Safety: React.FC = () => {
   const dartRaw = totalHoursWorked > 0 ? (dartCases * 200000) / totalHoursWorked : null
   const dart = dartRaw !== null ? dartRaw.toFixed(2) : null
 
-  const nearMissCount = displayIncidents.filter((i) => i.severity === 'near_miss' || i.type === 'near_miss').length
-
   const openCorrectiveActions = (correctiveActions as Array<Record<string, unknown>> | undefined)?.filter(
     (ca) => ca.status !== 'closed' && ca.status !== 'verified'
   ).length ?? 0
@@ -814,17 +812,6 @@ export const Safety: React.FC = () => {
 
   const passCount = inspections?.filter((i: unknown) => i.status === 'passed').length ?? 0
   const failCount = inspections?.filter((i: unknown) => i.status === 'failed').length ?? 0
-
-  const weekStart = new Date(now)
-  weekStart.setHours(0, 0, 0, 0)
-  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 7)
-  const inspectionsThisWeek = inspections?.filter((insp: unknown) => {
-    if (!insp.date) return false
-    const d = new Date(insp.date)
-    return d >= weekStart && d < weekEnd
-  }).length ?? 0
 
   // ── MetricBox color overrides ──────────────────────────────
 
@@ -849,12 +836,6 @@ export const Safety: React.FC = () => {
   const certColor: 'success' | 'warning' | 'danger' | undefined =
     expiringCerts === 0 ? 'success' : 'warning'
 
-  const dartValue = dart !== null ? parseFloat(dart) : null
-  const dartColor: 'success' | 'warning' | 'danger' | undefined =
-    dartValue === null ? undefined
-    : dartValue <= 1.5 ? 'success'
-    : dartValue <= 2.5 ? 'warning'
-    : 'danger'
 
   // ── Incident form state ────────────────────────────────────
 

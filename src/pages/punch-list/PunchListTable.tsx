@@ -3,7 +3,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { VirtualDataTable } from '../../components/shared/VirtualDataTable';
 import { Card, PriorityTag } from '../../components/Primitives';
 import { Search, Camera, MapPin, ChevronRight, X } from 'lucide-react';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 import { InlineEditCell } from '../../components/forms/EditableField';
 import { toast } from 'sonner';
 import type { PunchItem } from './types';
@@ -512,7 +512,6 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {searchedList.map((item) => {
-            const statusColor = STATUS_COLORS[item.verification_status] ?? STATUS_COLORS.open;
             const days = item.dueDate ? getDaysRemaining(item.dueDate) : null;
             const isOverdue = days !== null && days <= 0 && item.verification_status !== 'verified';
 

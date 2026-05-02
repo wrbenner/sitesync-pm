@@ -4,7 +4,7 @@ import {
   Tag as TagIcon, CheckSquare, ChevronDown, Layers,
 } from 'lucide-react';
 import { Btn } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { DISCIPLINE_COLORS, DISCIPLINE_LABELS, STATUS_CONFIG, type DrawingStatus } from './constants';
 
 // ─── Types ──────────────────────────────────────────────────────────────────

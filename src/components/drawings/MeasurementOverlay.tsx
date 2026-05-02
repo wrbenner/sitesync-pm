@@ -68,7 +68,6 @@ const WITNESS_GAP = 6;
 const TICK_SIZE = 5;
 /** Frosted label pill padding */
 const PILL_PAD_X = 10;
-const PILL_PAD_Y = 5;
 
 // Architectural orange — warm, confident, reads on any background
 const DIM_COLOR = '#F47820';
@@ -229,19 +228,6 @@ const ArchDimensionLine: React.FC<{
         >
           {label}
         </text>
-        {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
-        {false && sublabel && (
-          <text
-            x={0} y={14}
-            textAnchor="middle"
-            fill="rgba(255,255,255,0.45)"
-            fontSize={10}
-            fontWeight={500}
-            fontFamily="'SF Mono', 'Menlo', 'Consolas', monospace"
-          >
-            {sublabel}
-          </text>
-        )}
       </g>
     </g>
   );

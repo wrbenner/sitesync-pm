@@ -10,6 +10,15 @@ import type { LienWaiverRow, LienWaiverStatus } from '../../types/api'
 import { fmtCurrency, LIEN_WAIVER_STATUS_CONFIG } from './types'
 import { G702Preview } from './G702Preview'
 import { SOVEditorPanel } from './SOVEditor'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
+
+const PAY_APP_FLOW = ['draft', 'submitted', 'approved', 'paid'] as const
+const PAY_APP_FLOW_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  submitted: 'Submitted',
+  approved: 'Approved',
+  paid: 'Paid',
+}
 
 interface PayAppDetailProps {
   app: Record<string, unknown>
@@ -52,6 +61,8 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
   }
 
   const appStatus = app.status as string
+  const payAppFlowIndex = PAY_APP_FLOW.indexOf(appStatus as typeof PAY_APP_FLOW[number])
+  const completedPayAppStates = payAppFlowIndex > 0 ? [...PAY_APP_FLOW.slice(0, payAppFlowIndex)] : []
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
@@ -80,6 +91,18 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
           </PermissionGate>
         )}
       </div>
+
+      {/* ── Pay App Workflow Timeline ──────────────────────── */}
+      {appStatus !== 'void' && PAY_APP_FLOW.includes(appStatus as typeof PAY_APP_FLOW[number]) && (
+        <div style={{ marginBottom: spacing['2'] }}>
+          <WorkflowTimeline
+            states={[...PAY_APP_FLOW]}
+            labels={PAY_APP_FLOW_LABELS}
+            currentState={appStatus}
+            completedStates={completedPayAppStates}
+          />
+        </div>
+      )}
 
       {showMissingWarning && (
         <div style={{
