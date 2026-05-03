@@ -1,4 +1,5 @@
 import { supabase } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { transformSupabaseError, PermissionError } from '../errors'
 import type { ProjectMember, ProjectRole } from '../../types/tenant'
 import { ROLE_HIERARCHY } from '../../types/tenant'
@@ -28,15 +29,15 @@ function deriveInitials(name: string): string {
 }
 
 export async function getProjectMembersForMention(projectId: string): Promise<MemberForMention[]> {
-  const { data, error } = await supabase
-    .from('project_members')
+  const { data, error } = await fromTable('project_members')
     .select('user_id, role, company')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('role', { ascending: true })
 
   if (error) throw transformSupabaseError(error)
 
-  return (data ?? []).map((row) => {
+  type Row = { user_id: string; role: string; company: string | null }
+  return ((data ?? []) as unknown as Row[]).map((row) => {
     const displayName = row.company || formatRole(row.role)
     return {
       userId: row.user_id,
@@ -54,7 +55,7 @@ function rowToMember(row: ProjectMemberRow): ProjectMember {
     user_id: row.user_id,
     role: row.role as ProjectRole,
     permissions: (row.permissions ?? {}) as Record<string, boolean>,
-    created_at: row.created_at ?? undefined,
+    created_at: row.accepted_at ?? row.invited_at ?? undefined,
   }
 }
 
@@ -69,14 +70,13 @@ export function assertCanAssignRole(callerRole: ProjectRole, targetRole: Project
 
 // Fetch all members of a project with their roles and permissions
 export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
-  const { data, error } = await supabase
-    .from('project_members')
+  const { data, error } = await fromTable('project_members')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: true })
 
   if (error) throw transformSupabaseError(error)
-  return (data ?? []).map(rowToMember)
+  return ((data ?? []) as unknown as ProjectMemberRow[]).map(rowToMember)
 }
 
 // Add a user to a project with a given role
@@ -89,14 +89,13 @@ export async function addProjectMember(
   const callerRole = await getMyProjectRole(projectId)
   assertCanAssignRole(callerRole ?? 'viewer', role)
 
-  const { data, error } = await supabase
-    .from('project_members')
-    .insert({ project_id: projectId, user_id: userId, role, permissions })
+  const { data, error } = await fromTable('project_members')
+    .insert({ project_id: projectId, user_id: userId, role, permissions } as never)
     .select()
     .single()
 
   if (error) throw transformSupabaseError(error)
-  return rowToMember(data)
+  return rowToMember(data as unknown as ProjectMemberRow)
 }
 
 // Update a project member's role or permissions
@@ -104,54 +103,51 @@ export async function updateProjectMember(
   memberId: string,
   updates: { role?: ProjectRole; permissions?: Record<string, boolean> },
 ): Promise<ProjectMember> {
-  const { data: memberRow, error: fetchError } = await supabase
-    .from('project_members')
+  const { data: memberRow, error: fetchError } = await fromTable('project_members')
     .select('project_id, role')
-    .eq('id', memberId)
+    .eq('id' as never, memberId)
     .single()
 
   if (fetchError || !memberRow) throw transformSupabaseError(fetchError ?? { message: 'Member not found' })
 
+  const memberRowTyped = memberRow as unknown as { project_id: string; role: string }
   if (updates.role !== undefined) {
-    const callerRole = await getMyProjectRole(memberRow.project_id)
+    const callerRole = await getMyProjectRole(memberRowTyped.project_id)
     const effective = callerRole ?? 'viewer'
     // Caller must outrank the target's current role (prevents demoting higher-ranked members)
-    assertCanAssignRole(effective, memberRow.role as ProjectRole)
+    assertCanAssignRole(effective, memberRowTyped.role as ProjectRole)
     // Caller must also outrank the new role being assigned
     assertCanAssignRole(effective, updates.role)
   }
 
-  const { data, error } = await supabase
-    .from('project_members')
-    .update(updates)
-    .eq('id', memberId)
+  const { data, error } = await fromTable('project_members')
+    .update(updates as never)
+    .eq('id' as never, memberId)
     .select()
     .single()
 
   if (error) throw transformSupabaseError(error)
-  return rowToMember(data)
+  return rowToMember(data as unknown as ProjectMemberRow)
 }
 
 // Remove a user from a project (requires project_manager level or above)
 export async function removeProjectMember(memberId: string): Promise<void> {
-  const { data: memberRow, error: fetchError } = await supabase
-    .from('project_members')
+  const { data: memberRow, error: fetchError } = await fromTable('project_members')
     .select('project_id')
-    .eq('id', memberId)
+    .eq('id' as never, memberId)
     .single()
 
   if (fetchError || !memberRow) throw transformSupabaseError(fetchError ?? { message: 'Member not found' })
 
-  const callerRole = await getMyProjectRole(memberRow.project_id)
+  const callerRole = await getMyProjectRole((memberRow as unknown as { project_id: string }).project_id)
   const effective = callerRole ?? 'viewer'
   if (ROLE_HIERARCHY[effective] < ROLE_HIERARCHY['project_manager']) {
     throw new PermissionError('Only project managers and above can remove project members')
   }
 
-  const { error } = await supabase
-    .from('project_members')
+  const { error } = await fromTable('project_members')
     .delete()
-    .eq('id', memberId)
+    .eq('id' as never, memberId)
 
   if (error) throw transformSupabaseError(error)
 }
@@ -165,13 +161,12 @@ export async function getMyProjectRole(projectId: string): Promise<ProjectRole |
 
 // Get a specific user's role on a project (used for server-side privilege checks)
 export async function getCallerProjectRole(projectId: string, userId: string): Promise<ProjectRole | null> {
-  const { data, error } = await supabase
-    .from('project_members')
+  const { data, error } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .maybeSingle()
 
   if (error || !data) return null
-  return data.role as ProjectRole
+  return (data as unknown as { role: string }).role as ProjectRole
 }
