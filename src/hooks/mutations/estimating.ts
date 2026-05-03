@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
+
+const from = (table: string) => fromTable(table as never)
 import { toast } from 'sonner'
 import type {
   EstimatingItem,
@@ -27,13 +29,12 @@ export function useCreateEstimatingItem() {
   const qc = useQueryClient()
   return useMutation<EstimatingItem, Error, CreateEstimatingItemInput>({
     mutationFn: async (input) => {
-      const { data, error } = await supabase
-        .from('estimating_items')
-        .insert(input)
+      const { data, error } = await from('estimating_items')
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error
-      return data as EstimatingItem
+      return data as unknown as EstimatingItem
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['estimating_items', vars.project_id] })
@@ -55,14 +56,13 @@ export function useUpdateEstimatingItem() {
       // total_cost is generated; never patch it directly
       const cleanPatch = { ...patch }
       delete (cleanPatch as Record<string, unknown>).total_cost
-      const { data, error } = await supabase
-        .from('estimating_items')
-        .update(cleanPatch)
-        .eq('id', id)
+      const { data, error } = await from('estimating_items')
+        .update(cleanPatch as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
-      return data as EstimatingItem
+      return data as unknown as EstimatingItem
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['estimating_items', vars.projectId] })
@@ -77,10 +77,9 @@ export function useDeleteEstimatingItem() {
   const qc = useQueryClient()
   return useMutation<void, Error, { id: string; projectId: string }>({
     mutationFn: async ({ id }) => {
-      const { error } = await supabase
-        .from('estimating_items')
+      const { error } = await from('estimating_items')
         .delete()
-        .eq('id', id)
+        .eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
@@ -110,13 +109,12 @@ export function useUpsertEstimateRollup() {
         ...input,
         as_of: input.as_of ?? new Date().toISOString().slice(0, 10),
       }
-      const { data, error } = await supabase
-        .from('estimate_rollups')
-        .upsert(payload, { onConflict: 'project_id,division,as_of' })
+      const { data, error } = await from('estimate_rollups')
+        .upsert(payload as never, { onConflict: 'project_id,division,as_of' })
         .select()
         .single()
       if (error) throw error
-      return data as EstimateRollup
+      return data as unknown as EstimateRollup
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['estimate_rollups', vars.project_id] })
@@ -131,7 +129,7 @@ export function useDeleteEstimateRollup() {
   const qc = useQueryClient()
   return useMutation<void, Error, { id: string; projectId: string }>({
     mutationFn: async ({ id }) => {
-      const { error } = await supabase.from('estimate_rollups').delete().eq('id', id)
+      const { error } = await from('estimate_rollups').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
@@ -163,13 +161,12 @@ export function useCreateBidSubmission() {
         status: input.status ?? 'submitted',
         submitted_at: input.submitted_at ?? new Date().toISOString(),
       }
-      const { data, error } = await supabase
-        .from('bid_submissions')
-        .insert(payload)
+      const { data, error } = await from('bid_submissions')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
-      return data as BidSubmission
+      return data as unknown as BidSubmission
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['bid_submissions', vars.bid_package_id] })
@@ -189,14 +186,13 @@ export function useUpdateBidSubmission() {
     { id: string; bid_package_id: string; patch: Partial<BidSubmission> }
   >({
     mutationFn: async ({ id, patch }) => {
-      const { data, error } = await supabase
-        .from('bid_submissions')
-        .update(patch)
-        .eq('id', id)
+      const { data, error } = await from('bid_submissions')
+        .update(patch as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
-      return data as BidSubmission
+      return data as unknown as BidSubmission
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['bid_submissions', vars.bid_package_id] })
@@ -221,21 +217,19 @@ export function useAwardBidSubmission() {
   >({
     mutationFn: async ({ id, bid_package_id }) => {
       const now = new Date().toISOString()
-      const { data: awarded, error: awardErr } = await supabase
-        .from('bid_submissions')
-        .update({ status: 'awarded', awarded_at: now })
-        .eq('id', id)
+      const { data: awarded, error: awardErr } = await from('bid_submissions')
+        .update({ status: 'awarded', awarded_at: now } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (awardErr) throw awardErr
-      const { error: declineErr } = await supabase
-        .from('bid_submissions')
-        .update({ status: 'declined' })
-        .eq('bid_package_id', bid_package_id)
-        .neq('id', id)
-        .not('status', 'eq', 'awarded')
+      const { error: declineErr } = await from('bid_submissions')
+        .update({ status: 'declined' } as never)
+        .eq('bid_package_id' as never, bid_package_id)
+        .neq('id' as never, id)
+        .not('status' as never, 'eq', 'awarded')
       if (declineErr) throw declineErr
-      return awarded as BidSubmission
+      return awarded as unknown as BidSubmission
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['bid_submissions', vars.bid_package_id] })
@@ -251,7 +245,7 @@ export function useDeleteBidSubmission() {
   const qc = useQueryClient()
   return useMutation<void, Error, { id: string; bid_package_id: string }>({
     mutationFn: async ({ id }) => {
-      const { error } = await supabase.from('bid_submissions').delete().eq('id', id)
+      const { error } = await from('bid_submissions').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
