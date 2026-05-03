@@ -1,7 +1,6 @@
 import { test, expect, devices } from '@playwright/test'
 
 test.describe('Mobile Experience', () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { defaultBrowserType: _dbt, ...iPhone14 } = devices['iPhone 14']
   test.use(iPhone14)
 

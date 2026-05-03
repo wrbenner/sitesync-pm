@@ -14,6 +14,9 @@ import { Toaster, toast } from 'sonner';
 import './lib/i18n';
 import { Sidebar } from './components/Sidebar';
 import { MobileLayout } from './components/layout/MobileLayout';
+// NotificationCenter is already statically bundled by MobileLayout — no lazy() here to avoid the
+// rolldown INEFFECTIVE_DYNAMIC_IMPORT warning (dynamic import can't split what's already static).
+import { NotificationCenter } from './components/notifications/NotificationCenter';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { MfaRequiredBanner } from './components/auth/MfaRequiredBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
@@ -65,7 +68,6 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 const AIContextPanel = lazy(() => import('./components/ai/AIContextPanel').then((m) => ({ default: m.AIContextPanel })));
 const FloatingAIButton = lazy(() => import('./components/ai/FloatingAIButton').then((m) => ({ default: m.FloatingAIButton })));
 const CopilotPanel = lazy(() => import('./components/ai/CopilotPanel').then((m) => ({ default: m.CopilotPanel })));
-const NotificationCenter = lazy(() => import('./components/notifications/NotificationCenter').then((m) => ({ default: m.NotificationCenter })));
 const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').then((m) => ({ default: m.ShortcutOverlay })));
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
@@ -591,7 +593,7 @@ function AppContent() {
         </main>
 
         <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
-        {notificationsOpen && <Suspense fallback={null}><NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} /></Suspense>}
+        {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
         {shortcutsOpen && <Suspense fallback={null}><ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} /></Suspense>}
         {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
         {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}
