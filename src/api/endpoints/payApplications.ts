@@ -1,4 +1,5 @@
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../errors'
+import { fromTable, selectScoped } from '../../lib/db/queries'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { PayApplication, CreatePayAppPayload, LienWaiverRow } from '../../types/api'
 import { autoGenerateLienWaivers } from './lienWaivers'
@@ -106,10 +107,7 @@ export function computeCurrentPaymentDue(params: {
  */
 export const getPayApplications = async (projectId: string): Promise<PayApplication[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
+  const { data, error } = await selectScoped('pay_applications', projectId, '*')
     .order('application_number', { ascending: false })
   if (error) {
     if (
@@ -121,7 +119,7 @@ export const getPayApplications = async (projectId: string): Promise<PayApplicat
     }
     throw transformSupabaseError(error)
   }
-  return (data || []) as PayApplication[]
+  return (data || []) as unknown as PayApplication[]
 }
 
 /**
@@ -134,10 +132,9 @@ export const getPayApplicationsWithMeta = async (
 ): Promise<{ payApps: PayApplication[]; hasScheduleOfValues: boolean }> => {
   const [payApps, sovResult] = await Promise.all([
     getPayApplications(projectId),
-    supabase
-      .from('budget_items')
+    fromTable('budget_items')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId),
+      .eq('project_id' as never, projectId),
   ])
   const hasScheduleOfValues = (sovResult.count ?? 0) > 0
   return { payApps, hasScheduleOfValues }
@@ -154,10 +151,9 @@ export const getPayApplicationsWithContext = async (
 ): Promise<{ payApps: PayApplication[]; hasScheduleOfValues: boolean; isLoading: false }> => {
   const [payApps, sovResult] = await Promise.all([
     getPayApplications(projectId),
-    supabase
-      .from('budget_items')
+    fromTable('budget_items')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId),
+      .eq('project_id' as never, projectId),
   ])
   const hasScheduleOfValues = (sovResult.count ?? 0) > 0
   return { payApps, hasScheduleOfValues, isLoading: false }
@@ -168,14 +164,11 @@ export const getPayApplicationById = async (
   id: string,
 ): Promise<PayApplication> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('id', id)
+  const { data, error } = await selectScoped('pay_applications', projectId, '*')
+    .eq('id' as never, id)
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as PayApplication
+  return data as unknown as PayApplication
 }
 
 export const createPayApplication = async (
@@ -189,13 +182,12 @@ export const createPayApplication = async (
   if (dbPayload.contract_sum_to_date == null) {
     dbPayload.contract_sum_to_date = ocs + nco
   }
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .insert({ ...dbPayload, project_id: projectId, status: 'draft' })
+  const { data, error } = await fromTable('pay_applications')
+    .insert({ ...dbPayload, project_id: projectId, status: 'draft' } as never)
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as PayApplication
+  return data as unknown as PayApplication
 }
 
 export interface UpsertPayAppPayload {
@@ -237,23 +229,21 @@ export const upsertPayApplication = async (
     dbPayload.contract_sum_to_date = ocs + nco
   }
   if (id) {
-    const { data, error } = await supabase
-      .from('pay_applications')
-      .update({ ...dbPayload, updated_at: new Date().toISOString() })
-      .eq('project_id', projectId)
-      .eq('id', id)
+    const { data, error } = await fromTable('pay_applications')
+      .update({ ...dbPayload, updated_at: new Date().toISOString() } as never)
+      .eq('project_id' as never, projectId)
+      .eq('id' as never, id)
       .select()
       .single()
     if (error) throw transformSupabaseError(error)
-    return data as PayApplication
+    return data as unknown as PayApplication
   }
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .insert({ ...dbPayload, project_id: projectId, status: 'draft' })
+  const { data, error } = await fromTable('pay_applications')
+    .insert({ ...dbPayload, project_id: projectId, status: 'draft' } as never)
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as PayApplication
+  return data as unknown as PayApplication
 }
 
 export const submitPayApplication = async (
@@ -266,14 +256,11 @@ export const submitPayApplication = async (
   if (transition.error) {
     throw new Error(transition.error.message)
   }
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('id', id)
+  const { data, error } = await selectScoped('pay_applications', projectId, '*')
+    .eq('id' as never, id)
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as PayApplication
+  return data as unknown as PayApplication
 }
 
 // Approves a pay application and auto-generates one conditional_progress lien waiver
@@ -290,15 +277,12 @@ export const approvePayApplication = async (
   if (transition.error) {
     throw new Error(transition.error.message)
   }
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('id', payAppId)
+  const { data, error } = await selectScoped('pay_applications', projectId, '*')
+    .eq('id' as never, payAppId)
     .single()
   if (error) throw transformSupabaseError(error)
   const waivers = await autoGenerateLienWaivers(projectId, payAppId)
-  return { payApp: data as PayApplication, waivers }
+  return { payApp: data as unknown as PayApplication, waivers }
 }
 
 /**
@@ -315,18 +299,14 @@ export const markPayApplicationAsPaid = async (
     throw new Error(transition.error.message)
   }
   // Record paid timestamp
-  await supabase
-    .from('pay_applications')
-    .update({ paid_at: new Date().toISOString() })
-    .eq('id', payAppId)
-  const { data, error } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('id', payAppId)
+  await fromTable('pay_applications')
+    .update({ paid_at: new Date().toISOString() } as never)
+    .eq('id' as never, payAppId)
+  const { data, error } = await selectScoped('pay_applications', projectId, '*')
+    .eq('id' as never, payAppId)
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as PayApplication
+  return data as unknown as PayApplication
 }
 
 /**
@@ -355,22 +335,15 @@ export const validateLienWaiverCompleteness = async (params: {
   await assertProjectAccess(projectId)
 
   const [waiversResult, invoicesResult, purchaseOrdersResult] = await Promise.all([
-    supabase
-      .from('lien_waivers')
+    fromTable('lien_waivers')
       .select('vendor_id, waiver_type')
-      .eq('pay_application_id', payAppId),
-    supabase
-      .from('subcontractor_invoices')
-      .select('vendor_id, vendor_name, amount')
-      .eq('project_id', projectId)
-      .eq('pay_application_id', payAppId)
-      .gt('amount', 0),
-    supabase
-      .from('purchase_orders')
-      .select('vendor_id, vendor_name, period_amount')
-      .eq('project_id', projectId)
-      .eq('pay_application_id', payAppId)
-      .gt('period_amount', 0),
+      .eq('pay_application_id' as never, payAppId),
+    selectScoped('subcontractor_invoices', projectId, 'vendor_id, vendor_name, amount')
+      .eq('pay_application_id' as never, payAppId)
+      .gt('amount' as never, 0),
+    selectScoped('purchase_orders', projectId, 'vendor_id, vendor_name, period_amount')
+      .eq('pay_application_id' as never, payAppId)
+      .gt('period_amount' as never, 0),
   ])
 
   if (waiversResult.error) throw transformSupabaseError(waiversResult.error)
@@ -378,22 +351,25 @@ export const validateLienWaiverCompleteness = async (params: {
   // Merge vendors from both invoices and purchase orders, deduplicating by vendor_id.
   const vendorMap = new Map<string, string>()
 
-  for (const row of invoicesResult.data ?? []) {
+  type VendorRow = { vendor_id: string | null; vendor_name: string | null }
+  for (const row of (invoicesResult.data ?? []) as unknown as VendorRow[]) {
     if (row.vendor_id && !vendorMap.has(row.vendor_id)) {
       vendorMap.set(row.vendor_id, row.vendor_name ?? row.vendor_id)
     }
   }
-  for (const row of purchaseOrdersResult.data ?? []) {
+  for (const row of (purchaseOrdersResult.data ?? []) as unknown as VendorRow[]) {
     if (row.vendor_id && !vendorMap.has(row.vendor_id)) {
       vendorMap.set(row.vendor_id, row.vendor_name ?? row.vendor_id)
     }
   }
 
   // Build a set of vendor_ids that already have a conditional_progress waiver.
+  type WaiverShortRow = { vendor_id: string | null; waiver_type: string | null }
   const coveredVendorIds = new Set<string>(
-    (waiversResult.data ?? [])
+    ((waiversResult.data ?? []) as unknown as WaiverShortRow[])
       .filter((w) => w.waiver_type === 'conditional_progress')
-      .map((w) => w.vendor_id as string),
+      .map((w) => (w.vendor_id ?? '') as string)
+      .filter((id) => id.length > 0),
   )
 
   const missingWaivers: Array<{
@@ -430,23 +406,24 @@ export const validateLienWaiversForSubmission = async (
   missingWaivers: Array<{ vendor_name: string; waiver_type: LienWaiverType }>
 }> => {
   const [waiversResult, lineItemsResult] = await Promise.all([
-    supabase
-      .from('lien_waivers')
+    fromTable('lien_waivers')
       .select('vendor_id, vendor_name, waiver_type')
-      .eq('pay_application_id', payApplicationId),
-    supabase
-      .from('pay_application_line_items')
+      .eq('pay_application_id' as never, payApplicationId),
+    fromTable('pay_application_line_items')
       .select('vendor_id, vendor_name, amount_this_period')
-      .eq('pay_application_id', payApplicationId)
-      .gt('amount_this_period', 0),
+      .eq('pay_application_id' as never, payApplicationId)
+      .gt('amount_this_period' as never, 0),
   ])
 
   if (waiversResult.error) throw transformSupabaseError(waiversResult.error)
   if (lineItemsResult.error) throw transformSupabaseError(lineItemsResult.error)
 
+  type LineItemRow = { vendor_id: string | null; vendor_name: string | null; amount_this_period: number | null }
+  type WaiverWithNameRow = { vendor_id: string | null; vendor_name: string | null; waiver_type: string | null }
+
   // Collect every subcontractor with a billed line item this period, deduplicated by vendor_id.
   const vendorMap = new Map<string, string>()
-  for (const row of lineItemsResult.data ?? []) {
+  for (const row of (lineItemsResult.data ?? []) as unknown as LineItemRow[]) {
     if (row.vendor_id && !vendorMap.has(row.vendor_id)) {
       vendorMap.set(row.vendor_id, row.vendor_name ?? row.vendor_id)
     }
@@ -454,9 +431,10 @@ export const validateLienWaiversForSubmission = async (
 
   // Build a set of vendor_ids that already have a conditional_progress waiver.
   const coveredVendorIds = new Set<string>(
-    (waiversResult.data ?? [])
+    ((waiversResult.data ?? []) as unknown as WaiverWithNameRow[])
       .filter((w) => w.waiver_type === 'conditional_progress')
-      .map((w) => w.vendor_id as string),
+      .map((w) => (w.vendor_id ?? '') as string)
+      .filter((id) => id.length > 0),
   )
 
   const missingWaivers: Array<{ vendor_name: string; waiver_type: LienWaiverType }> = []
