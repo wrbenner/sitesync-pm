@@ -5,6 +5,7 @@
 import {  useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { useProjectId } from './useProjectId'
 import { useOfflineMutation } from './useOfflineMutation'
 import { usePermissions, PermissionError } from './usePermissions'
@@ -74,17 +75,16 @@ export function useHeadcount() {
       const todayStart = new Date()
       todayStart.setHours(0, 0, 0, 0)
 
-      const { data, error } = await supabase
-        .from('site_check_ins')
+      const { data, error } = await fromTable('site_check_ins')
         .select('*, workforce_members(name, company, trade)')
-        .eq('project_id', projectId)
-        .gte('check_in_at', todayStart.toISOString())
+        .eq('project_id' as never, projectId)
+        .gte('check_in_at' as never, todayStart.toISOString())
         .order('check_in_at', { ascending: false })
 
       if (error) throw error
-      const records = data ?? []
+      const records = (data ?? []) as unknown as Array<Record<string, unknown>>
 
-      const checkIns: CheckInRecord[] = records.map((r: Record<string, unknown>) => {
+      const checkIns: CheckInRecord[] = records.map((r) => {
         const member = r.workforce_members as Record<string, unknown> | null
         const checkIn = r.check_in_at as string
         const checkOut = r.check_out_at as string | undefined
@@ -188,8 +188,7 @@ export function useCheckInMutation() {
       }
 
       const checkInAt = new Date().toISOString()
-      const { data, error } = await supabase
-        .from('site_check_ins')
+      const { data, error } = await fromTable('site_check_ins')
         .insert({
           project_id: projectId,
           worker_id: params.workerId || null,
@@ -197,14 +196,15 @@ export function useCheckInMutation() {
           gps_lat: params.gpsLat || null,
           gps_lng: params.gpsLng || null,
           method: params.method,
-        })
+        } as never)
         .select()
         .single()
 
       if (error) throw error
 
       // Audit trail: construction headcount is a legal/OSHA record
-      const entityId = (data?.id as string | undefined) ?? params.workerId ?? 'unknown'
+      const insertedRow = data as unknown as { id?: string } | null
+      const entityId = insertedRow?.id ?? params.workerId ?? 'unknown'
       logAuditEntry({
         projectId,
         entityType: 'site_check_in',
@@ -255,10 +255,9 @@ export function useCheckOutMutation() {
       }
 
       const checkOutAt = new Date().toISOString()
-      const { data, error } = await supabase
-        .from('site_check_ins')
-        .update({ check_out_at: checkOutAt })
-        .eq('id', checkInId)
+      const { data, error } = await fromTable('site_check_ins')
+        .update({ check_out_at: checkOutAt } as never)
+        .eq('id' as never, checkInId)
         .select()
         .single()
 
@@ -356,19 +355,19 @@ export function useWorkerLookup() {
   return useCallback(
     async (idOrName: string): Promise<WorkerIdentity | null> => {
       if (!projectId || !isSupabaseConfigured) return null
-      const { data } = await supabase
-        .from('directory_contacts')
+      const { data } = await fromTable('directory_contacts')
         .select('id, name, company, trade')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .or(`id.eq.${idOrName},name.ilike.%${idOrName}%`)
         .limit(1)
         .maybeSingle()
       if (!data) return null
+      const row = data as unknown as { id?: string; name?: string; company?: string; trade?: string }
       return {
-        workerId: data.id as string,
-        workerName: (data.name as string) ?? 'Unknown',
-        company: (data.company as string) ?? '',
-        trade: (data.trade as string) ?? '',
+        workerId: row.id as string,
+        workerName: row.name ?? 'Unknown',
+        company: row.company ?? '',
+        trade: row.trade ?? '',
       }
     },
     [projectId],
@@ -395,50 +394,51 @@ export function useDailyLogCrewUpsert() {
 
       // Find or create today's log
       let logId: string
-      const { data: existingLog } = await supabase
-        .from('daily_logs')
+      const { data: existingLog } = await fromTable('daily_logs')
         .select('id')
-        .eq('project_id', projectId)
-        .eq('log_date', today)
+        .eq('project_id' as never, projectId)
+        .eq('log_date' as never, today)
         .maybeSingle()
-      if (existingLog) {
-        logId = existingLog.id as string
+      const existing = existingLog as unknown as { id?: string } | null
+      if (existing?.id) {
+        logId = existing.id
       } else {
-        const { data: created, error } = await supabase
-          .from('daily_logs')
-          .insert({ project_id: projectId, log_date: today })
+        const { data: created, error } = await fromTable('daily_logs')
+          .insert({ project_id: projectId, log_date: today } as never)
           .select('id')
           .single()
         if (error) throw error
-        logId = created.id as string
+        logId = (created as unknown as { id: string }).id
       }
 
       // Upsert crew entry for this trade+company bucket
-      const { data: entry } = await supabase
-        .from('daily_log_entries')
+      const { data: entry } = await fromTable('daily_log_entries')
         .select('id, headcount, hours, time_in')
-        .eq('daily_log_id', logId)
-        .eq('type', 'crew')
-        .eq('trade', params.trade)
-        .eq('company', params.company)
+        .eq('daily_log_id' as never, logId)
+        .eq('type' as never, 'crew')
+        .eq('trade' as never, params.trade)
+        .eq('company' as never, params.company)
         .maybeSingle()
 
-      if (entry) {
+      type EntryRow = { id: string; headcount: number | null; hours: number | null; time_in: string | null }
+      const entryRow = entry as unknown as EntryRow | null
+
+      if (entryRow) {
         const patch: Record<string, unknown> = {
-          headcount: Math.max(0, ((entry.headcount as number) ?? 0) + params.headcountDelta),
+          headcount: Math.max(0, (entryRow.headcount ?? 0) + params.headcountDelta),
         }
         if (params.timeIn) {
-          const prev = entry.time_in as string | null
+          const prev = entryRow.time_in
           if (!prev || params.timeIn < prev) patch.time_in = params.timeIn
         }
         if (params.timeOut) patch.time_out = params.timeOut
         if (params.hoursDelta != null) {
           patch.hours =
-            Math.round((((entry.hours as number) ?? 0) + params.hoursDelta) * 10) / 10
+            Math.round(((entryRow.hours ?? 0) + params.hoursDelta) * 10) / 10
         }
-        await supabase.from('daily_log_entries').update(patch).eq('id', entry.id as string)
+        await fromTable('daily_log_entries').update(patch as never).eq('id' as never, entryRow.id)
       } else if (params.headcountDelta > 0) {
-        await supabase.from('daily_log_entries').insert({
+        await fromTable('daily_log_entries').insert({
           daily_log_id: logId,
           type: 'crew',
           trade: params.trade || 'General',
@@ -446,7 +446,7 @@ export function useDailyLogCrewUpsert() {
           headcount: 1,
           time_in: params.timeIn ?? new Date().toISOString(),
           hours: 0,
-        })
+        } as never)
       }
       return null
     },
@@ -498,19 +498,19 @@ export function useCheckIn() {
         throw new PermissionError('You do not have permission to record check-ins', 'crews.manage')
       }
       const checkedInAt = new Date().toISOString()
-      const { data, error } = await supabase
-        .from('crew_checkins')
+      const { data, error } = await fromTable('crew_checkins')
         .insert({
           user_id: variables.userId,
           project_id: variables.projectId,
           location_id: variables.locationId,
           checked_in_at: checkedInAt,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
 
-      const entityId = (data?.id as string | undefined) ?? variables.userId
+      const inserted = data as unknown as { id?: string } | null
+      const entityId = inserted?.id ?? variables.userId
       logAuditEntry({
         projectId: variables.projectId,
         entityType: 'crew_checkin',
@@ -566,12 +566,12 @@ export function useSyncOfflineCheckIns() {
       const synced: string[] = []
       for (const item of queue) {
         try {
-          await supabase.from('site_check_ins').insert({
+          await fromTable('site_check_ins').insert({
             project_id: item.projectId,
             worker_id: item.workerId ?? null,
             check_in_at: item.checkInAt,
             method: item.method,
-          })
+          } as never)
           synced.push(item.tempId)
         } catch { /* leave in queue for retry */ }
       }
