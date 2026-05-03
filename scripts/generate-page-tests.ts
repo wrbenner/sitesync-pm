@@ -31,7 +31,7 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function toPageImportPath(pageFile: string): string {
+function _toPageImportPath(pageFile: string): string {
   // pageFile is 'src/pages/RFIs.tsx' → '../../../pages/RFIs'
   const relFromTest = path.relative('src/test/pages/smoke', pageFile)
   return relFromTest.replace(/\\/g, '/').replace(/\.tsx?$/, '')

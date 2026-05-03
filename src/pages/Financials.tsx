@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Check, X, BookOpen, BarChart3, Calculator, ClipboardList, Download, AlertTriangle, CheckCircle2, Clock, Lock } from 'lucide-react'
+import { DollarSign, Receipt, FileText, TrendingUp, Wallet, Check, X, BookOpen, BarChart3, Calculator, ClipboardList, Download, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Skeleton, EmptyState } from '../components/Primitives'
 import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'

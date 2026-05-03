@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { VirtualDataTable } from '../../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { Card, Btn, PriorityTag, useToast } from '../../components/Primitives';
+import { Btn, PriorityTag, useToast } from '../../components/Primitives';
 import { colors, spacing, typography } from '../../styles/theme';
 import { UserCheck, Tag as TagIcon, Download } from 'lucide-react';
 import { AIAnnotationIndicator } from '../../components/ai/AIAnnotation';
