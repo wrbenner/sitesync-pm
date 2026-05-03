@@ -436,6 +436,34 @@ const CollapsibleSection: React.FC<{
   );
 };
 
+// ── Status badge — defined outside SiteMap to avoid re-creating on every render ──
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const statusColors: Record<string, { bg: string; text: string }> = {
+    open: { bg: '#FEF3C7', text: '#92400E' },
+    in_progress: { bg: '#DBEAFE', text: '#1E40AF' },
+    investigating: { bg: '#DBEAFE', text: '#1E40AF' },
+    resolved: { bg: '#D1FAE5', text: '#065F46' },
+    verified: { bg: '#D1FAE5', text: '#065F46' },
+    closed: { bg: '#F3F4F6', text: '#374151' },
+    passed: { bg: '#D1FAE5', text: '#065F46' },
+    failed: { bg: '#FEE2E2', text: '#991B1B' },
+    scheduled: { bg: '#EDE9FE', text: '#5B21B6' },
+    in_transit: { bg: '#DBEAFE', text: '#1E40AF' },
+    delivered: { bg: '#D1FAE5', text: '#065F46' },
+  };
+  const c = statusColors[status] || statusColors.open;
+  return (
+    <span style={{
+      padding: '2px 8px', borderRadius: borderRadius.full,
+      fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold,
+      backgroundColor: c.bg, color: c.text,
+      textTransform: 'capitalize',
+    }}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  );
+};
+
 // ── Main SiteMap Page ─────────────────────────────────────────────
 
 export default function SiteMap() {
@@ -1066,34 +1094,6 @@ export default function SiteMap() {
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev);
   }, []);
-
-  // ── Status badge helper ──
-  const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    const statusColors: Record<string, { bg: string; text: string }> = {
-      open: { bg: '#FEF3C7', text: '#92400E' },
-      in_progress: { bg: '#DBEAFE', text: '#1E40AF' },
-      investigating: { bg: '#DBEAFE', text: '#1E40AF' },
-      resolved: { bg: '#D1FAE5', text: '#065F46' },
-      verified: { bg: '#D1FAE5', text: '#065F46' },
-      closed: { bg: '#F3F4F6', text: '#374151' },
-      passed: { bg: '#D1FAE5', text: '#065F46' },
-      failed: { bg: '#FEE2E2', text: '#991B1B' },
-      scheduled: { bg: '#EDE9FE', text: '#5B21B6' },
-      in_transit: { bg: '#DBEAFE', text: '#1E40AF' },
-      delivered: { bg: '#D1FAE5', text: '#065F46' },
-    };
-    const c = statusColors[status] || statusColors.open;
-    return (
-      <span style={{
-        padding: '2px 8px', borderRadius: borderRadius.full,
-        fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold,
-        backgroundColor: c.bg, color: c.text,
-        textTransform: 'capitalize',
-      }}>
-        {status.replace(/_/g, ' ')}
-      </span>
-    );
-  };
 
   // ── Render ──
   const containerStyle: React.CSSProperties = isFullscreen ? {

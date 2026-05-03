@@ -1420,22 +1420,6 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     }
   }, [activeTool]);
 
-  // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
-  // Using a ref-held timer avoids recreating the timeout identity every render.
-  // We intentionally don't include `handleSave` in deps to avoid re-debouncing on every render
-  // (React-Query's mutate identity is stable enough for this purpose).
-  useEffect(() => {
-    if (localAnnotations.length === 0) return;
-    if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = window.setTimeout(() => {
-      handleSave();
-    }, 1500);
-    return () => {
-      if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localAnnotations]);
-
   // ── Interactive drawing event handlers ─────────────────────────────────
   const handleOverlayMouseDown = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
@@ -1730,6 +1714,20 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       setIsSaving(false);
     }
   }, [projectId, drawing.id, localAnnotations, createMarkup, isOnline, enqueueOffline, broadcastMarkup]);
+
+  // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
+  // Placed after handleSave so the Compiler can see declaration precedes use.
+  useEffect(() => {
+    if (localAnnotations.length === 0) return;
+    if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      handleSave();
+    }, 1500);
+    return () => {
+      if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localAnnotations]);
 
   // Combine DB annotations + local unsaved annotations
   const allAnnotations = useMemo(
