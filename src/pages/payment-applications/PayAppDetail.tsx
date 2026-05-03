@@ -439,34 +439,38 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
                     </span>
                     <div style={{ display: 'flex', gap: spacing['2'] }}>
                       {waiver.status === 'pending' && (
-                        <button
-                          onClick={() => onMarkReceived(waiver.id)}
-                          disabled={busy}
-                          style={{
-                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
-                            borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                            color: colors.textSecondary, fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {busy ? 'Saving...' : 'Mark Received'}
-                        </button>
+                        <PermissionGate permission="financials.edit">
+                          <button
+                            onClick={() => onMarkReceived(waiver.id)}
+                            disabled={busy}
+                            style={{
+                              padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                              borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                              color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                              fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                              cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {busy ? 'Saving...' : 'Mark Received'}
+                          </button>
+                        </PermissionGate>
                       )}
                       {waiver.status === 'received' && (
-                        <button
-                          onClick={() => onMarkExecuted(waiver.id)}
-                          disabled={busy}
-                          style={{
-                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
-                            borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
-                            color: colors.statusInfo, fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {busy ? 'Saving...' : 'Mark Executed'}
-                        </button>
+                        <PermissionGate permission="financials.edit">
+                          <button
+                            onClick={() => onMarkExecuted(waiver.id)}
+                            disabled={busy}
+                            style={{
+                              padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                              borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                              color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                              fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                              cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {busy ? 'Saving...' : 'Mark Executed'}
+                          </button>
+                        </PermissionGate>
                       )}
                     </div>
                   </div>

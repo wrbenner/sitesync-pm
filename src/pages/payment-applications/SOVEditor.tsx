@@ -858,13 +858,15 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                           {fmtCurrency(calc.netPayment)}
                         </span>
                         <div style={tdStyle(36, 'center')}>
-                          <button
-                            onClick={() => removeRow(row.key)}
-                            aria-label="Remove row"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
-                          >
-                            <X size={12} />
-                          </button>
+                          <PermissionGate permission="financials.edit">
+                            <button
+                              onClick={() => removeRow(row.key)}
+                              aria-label="Remove row"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
+                            >
+                              <X size={12} />
+                            </button>
+                          </PermissionGate>
                         </div>
                       </div>
                       {row.error && (
@@ -887,19 +889,21 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
             </div>
 
             <div style={{ padding: `${spacing['2']} ${spacing['4']}`, borderTop: `1px solid ${colors.borderSubtle}` }}>
-              <button
-                onClick={addRow}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
-                  padding: `${spacing['1.5']} ${spacing['3']}`,
-                  border: `1px dashed ${colors.borderDefault}`,
-                  borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                  color: colors.textSecondary, fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily, cursor: 'pointer',
-                }}
-              >
-                <Plus size={13} /> Add Line Item
-              </button>
+              <PermissionGate permission="financials.edit">
+                <button
+                  onClick={addRow}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+                    padding: `${spacing['1.5']} ${spacing['3']}`,
+                    border: `1px dashed ${colors.borderDefault}`,
+                    borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                    color: colors.textSecondary, fontSize: typography.fontSize.sm,
+                    fontFamily: typography.fontFamily, cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={13} /> Add Line Item
+                </button>
+              </PermissionGate>
             </div>
           </Card>
 

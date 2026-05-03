@@ -131,6 +131,7 @@ export const G702Preview = memo<G702PreviewProps>(({
         <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: 'auto' }}>
           Application #{appNum} · Period to {periodTo}
         </span>
+        <PermissionGate permission="export.data">
         <button
           onClick={handleExportG702G703}
           disabled={isPdfExporting || (app.status as string) === 'draft'}
@@ -183,6 +184,7 @@ export const G702Preview = memo<G702PreviewProps>(({
             </>
           )}
         </button>
+        </PermissionGate>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>

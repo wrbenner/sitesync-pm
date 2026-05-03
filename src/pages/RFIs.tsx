@@ -1503,21 +1503,23 @@ const RFIsPage: React.FC = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleAIDraft}
-                  disabled={!aiDraftInput.trim() || aiDraftLoading}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 18px', border: 'none', borderRadius: 6,
-                    backgroundColor: aiDraftInput.trim() && !aiDraftLoading ? STATUS.iris : SURFACE_INSET,
-                    color: aiDraftInput.trim() && !aiDraftLoading ? '#FFFFFF' : INK_3,
-                    cursor: aiDraftInput.trim() && !aiDraftLoading ? 'pointer' : 'not-allowed',
-                    fontSize: 13, fontWeight: 600, fontFamily: typography.fontFamily,
-                  }}
-                >
-                  <Wand2 size={13} />
-                  Generate
-                </button>
+                <PermissionGate permission="ai.use">
+                  <button
+                    onClick={handleAIDraft}
+                    disabled={!aiDraftInput.trim() || aiDraftLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 18px', border: 'none', borderRadius: 6,
+                      backgroundColor: aiDraftInput.trim() && !aiDraftLoading ? STATUS.iris : SURFACE_INSET,
+                      color: aiDraftInput.trim() && !aiDraftLoading ? '#FFFFFF' : INK_3,
+                      cursor: aiDraftInput.trim() && !aiDraftLoading ? 'pointer' : 'not-allowed',
+                      fontSize: 13, fontWeight: 600, fontFamily: typography.fontFamily,
+                    }}
+                  >
+                    <Wand2 size={13} />
+                    Generate
+                  </button>
+                </PermissionGate>
               </div>
             </motion.div>
           </motion.div>

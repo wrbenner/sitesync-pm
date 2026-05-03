@@ -836,32 +836,36 @@ const PaymentApplicationsPage: React.FC = () => {
                           ) : (
                             <>
                               {item.stage !== 'requested' && (
-                                <button
-                                  onClick={() => handleRetainageStageAdvance(item.id)}
-                                  style={{
-                                    padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
-                                    borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
-                                    color: colors.statusInfo, fontSize: typography.fontSize.caption,
-                                    fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                                    cursor: 'pointer', whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  Advance
-                                </button>
+                                <PermissionGate permission="financials.edit">
+                                  <button
+                                    onClick={() => handleRetainageStageAdvance(item.id)}
+                                    style={{
+                                      padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                                      borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                                      color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                                      fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Advance
+                                  </button>
+                                </PermissionGate>
                               )}
                               {item.stage === 'requested' && (
-                                <button
-                                  onClick={() => handleRetainageStageAdvance(item.id)}
-                                  style={{
-                                    padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
-                                    borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                                    color: colors.textSecondary, fontSize: typography.fontSize.caption,
-                                    fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                                    cursor: 'pointer', whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  Mark Punch Done
-                                </button>
+                                <PermissionGate permission="financials.edit">
+                                  <button
+                                    onClick={() => handleRetainageStageAdvance(item.id)}
+                                    style={{
+                                      padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                                      borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                                      color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                                      fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Mark Punch Done
+                                  </button>
+                                </PermissionGate>
                               )}
                             </>
                           )}

@@ -3,6 +3,7 @@ import {
   AlertTriangle, Scale, Plus, Download,
 } from 'lucide-react'
 import { Card, SectionHeader, MetricBox, EmptyState } from '../../components/Primitives'
+import { PermissionGate } from '../../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import type { LienWaiverRow, LienWaiverStatus } from '../../types/api'
 import { LienWaiverPDF, lienWaiverDataFromRow } from '../../components/export/LienWaiverPDF'
@@ -105,24 +106,26 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                     </option>
                   ))}
                 </select>
-                <button
-                  onClick={() => selectedPayAppId && onGenerateAll(selectedPayAppId)}
-                  disabled={!selectedPayAppId || isGenerating}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                    padding: `${spacing['1.5']} ${spacing['3']}`,
-                    border: `1px solid ${colors.primaryOrange}`, borderRadius: borderRadius.base,
-                    backgroundColor: selectedPayAppId ? colors.orangeSubtle : colors.surfaceInset,
-                    color: selectedPayAppId ? colors.orangeText : colors.textTertiary,
-                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                    fontWeight: typography.fontWeight.medium,
-                    cursor: selectedPayAppId && !isGenerating ? 'pointer' : 'not-allowed',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <Plus size={13} />
-                  {isGenerating ? 'Generating...' : 'Generate All'}
-                </button>
+                <PermissionGate permission="financials.edit">
+                  <button
+                    onClick={() => selectedPayAppId && onGenerateAll(selectedPayAppId)}
+                    disabled={!selectedPayAppId || isGenerating}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                      padding: `${spacing['1.5']} ${spacing['3']}`,
+                      border: `1px solid ${colors.primaryOrange}`, borderRadius: borderRadius.base,
+                      backgroundColor: selectedPayAppId ? colors.orangeSubtle : colors.surfaceInset,
+                      color: selectedPayAppId ? colors.orangeText : colors.textTertiary,
+                      fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                      fontWeight: typography.fontWeight.medium,
+                      cursor: selectedPayAppId && !isGenerating ? 'pointer' : 'not-allowed',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Plus size={13} />
+                    {isGenerating ? 'Generating...' : 'Generate All'}
+                  </button>
+                </PermissionGate>
               </>
             )}
           </div>
@@ -212,34 +215,38 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                   </span>
                   <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
                     {waiver.status === 'pending' && (
-                      <button
-                        onClick={() => onMarkReceived(waiver.id)}
-                        disabled={busy}
-                        style={{
-                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
-                          borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                          color: colors.textSecondary, fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                          cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {busy ? 'Saving...' : 'Mark Received'}
-                      </button>
+                      <PermissionGate permission="financials.edit">
+                        <button
+                          onClick={() => onMarkReceived(waiver.id)}
+                          disabled={busy}
+                          style={{
+                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                            borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                            color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy ? 'Saving...' : 'Mark Received'}
+                        </button>
+                      </PermissionGate>
                     )}
                     {waiver.status === 'received' && (
-                      <button
-                        onClick={() => onMarkExecuted(waiver.id)}
-                        disabled={busy}
-                        style={{
-                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
-                          borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
-                          color: colors.statusInfo, fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                          cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {busy ? 'Saving...' : 'Mark Executed'}
-                      </button>
+                      <PermissionGate permission="financials.edit">
+                        <button
+                          onClick={() => onMarkExecuted(waiver.id)}
+                          disabled={busy}
+                          style={{
+                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                            borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                            color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy ? 'Saving...' : 'Mark Executed'}
+                        </button>
+                      </PermissionGate>
                     )}
                     <Suspense fallback={
                       <button

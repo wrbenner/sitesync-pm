@@ -28,6 +28,7 @@ import { useUpdatePunchItem } from '../../hooks/mutations'
 import { useProjectId } from '../../hooks/useProjectId'
 import { toast } from 'sonner'
 import { PhotoAnnotation } from '../../components/shared/PhotoAnnotation'
+import { PermissionGate } from '../../components/auth/PermissionGate'
 import type { AnnotationData } from '../../components/shared/PhotoAnnotation'
 import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
 import { STATUS_COLORS, getDueDateColor, formatDate } from './types'
@@ -264,21 +265,23 @@ const PhotoHero: React.FC<{
           </div>
         </div>
         {onAnnotate && (
-          <button
-            onClick={() => onAnnotate(showAfter ? afterUrl : beforeUrl)}
-            style={{
-              position: 'absolute', top: 12, right: 12,
-              display: 'flex', alignItems: 'center', gap: 4,
-              padding: '5px 12px', borderRadius: 100,
-              border: 'none', cursor: 'pointer',
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
-              color: 'white', fontSize: 11, fontWeight: 600,
-              transition: 'background-color 0.15s',
-            }}
-          >
-            <Pencil size={11} /> Annotate
-          </button>
+          <PermissionGate permission="punch_list.edit">
+            <button
+              onClick={() => onAnnotate(showAfter ? afterUrl : beforeUrl)}
+              style={{
+                position: 'absolute', top: 12, right: 12,
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '5px 12px', borderRadius: 100,
+                border: 'none', cursor: 'pointer',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(8px)',
+                color: 'white', fontSize: 11, fontWeight: 600,
+                transition: 'background-color 0.15s',
+              }}
+            >
+              <Pencil size={11} /> Annotate
+            </button>
+          </PermissionGate>
         )}
       </div>
     )
@@ -299,20 +302,22 @@ const PhotoHero: React.FC<{
         }} />
       </div>
       {onAnnotate && (
-        <button
-          onClick={() => onAnnotate(beforeUrl)}
-          style={{
-            position: 'absolute', top: 12, right: 12,
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '5px 12px', borderRadius: 100,
-            border: 'none', cursor: 'pointer',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(8px)',
-            color: 'white', fontSize: 11, fontWeight: 600,
-          }}
-        >
-          <Pencil size={11} /> Annotate
-        </button>
+        <PermissionGate permission="punch_list.edit">
+          <button
+            onClick={() => onAnnotate(beforeUrl)}
+            style={{
+              position: 'absolute', top: 12, right: 12,
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '5px 12px', borderRadius: 100,
+              border: 'none', cursor: 'pointer',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(8px)',
+              color: 'white', fontSize: 11, fontWeight: 600,
+            }}
+          >
+            <Pencil size={11} /> Annotate
+          </button>
+        </PermissionGate>
       )}
     </div>
   )
@@ -372,43 +377,47 @@ const ActionButtons: React.FC<{
           const Icon = a.icon
           if (a.key === 'reject') {
             return (
-              <button key={a.key}
-                onClick={() => setShowReject(!showReject)}
-                disabled={loading}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '10px 20px', borderRadius: 12,
-                  border: `1.5px solid ${a.color}30`,
-                  backgroundColor: `${a.color}10`,
-                  cursor: 'pointer',
-                  fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-                  color: a.color,
-                  opacity: loading ? 0.6 : 1,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <Icon size={14} /> {a.label}
-              </button>
+              <PermissionGate key={a.key} permission="punch_list.edit">
+                <button
+                  onClick={() => setShowReject(!showReject)}
+                  disabled={loading}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '10px 20px', borderRadius: 12,
+                    border: `1.5px solid ${a.color}30`,
+                    backgroundColor: `${a.color}10`,
+                    cursor: 'pointer',
+                    fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                    color: a.color,
+                    opacity: loading ? 0.6 : 1,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <Icon size={14} /> {a.label}
+                </button>
+              </PermissionGate>
             )
           }
           return (
-            <button key={a.key}
-              onClick={() => onAction(a.key)}
-              disabled={loading}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '12px 24px', borderRadius: 12,
-                border: 'none',
-                backgroundColor: a.color,
-                color: 'white', cursor: 'pointer',
-                fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
-                opacity: loading ? 0.6 : 1,
-                transition: 'all 0.15s',
-                boxShadow: `0 2px 12px ${a.color}40`,
-              }}
-            >
-              <Icon size={16} /> {a.label}
-            </button>
+            <PermissionGate key={a.key} permission={a.key === 'verify' ? 'punch_list.verify' : 'punch_list.edit'}>
+              <button
+                onClick={() => onAction(a.key)}
+                disabled={loading}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '12px 24px', borderRadius: 12,
+                  border: 'none',
+                  backgroundColor: a.color,
+                  color: 'white', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
+                  opacity: loading ? 0.6 : 1,
+                  transition: 'all 0.15s',
+                  boxShadow: `0 2px 12px ${a.color}40`,
+                }}
+              >
+                <Icon size={16} /> {a.label}
+              </button>
+            </PermissionGate>
           )
         })}
       </div>
@@ -438,25 +447,27 @@ const ActionButtons: React.FC<{
                 boxSizing: 'border-box',
               }}
             />
-            <button
-              onClick={() => {
-                onAction('reject', { rejection_reason: rejectReason })
-                setRejectReason('')
-                setShowReject(false)
-              }}
-              disabled={loading || !rejectReason.trim()}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '10px 20px', borderRadius: 12,
-                border: 'none',
-                backgroundColor: rejectReason.trim() ? colors.statusCritical : colors.surfaceDisabled,
-                color: rejectReason.trim() ? 'white' : colors.textDisabled,
-                fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
-                cursor: rejectReason.trim() ? 'pointer' : 'not-allowed',
-              }}
-            >
-              <Send size={12} /> Reject & Return to Sub
-            </button>
+            <PermissionGate permission="punch_list.edit">
+              <button
+                onClick={() => {
+                  onAction('reject', { rejection_reason: rejectReason })
+                  setRejectReason('')
+                  setShowReject(false)
+                }}
+                disabled={loading || !rejectReason.trim()}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '10px 20px', borderRadius: 12,
+                  border: 'none',
+                  backgroundColor: rejectReason.trim() ? colors.statusCritical : colors.surfaceDisabled,
+                  color: rejectReason.trim() ? 'white' : colors.textDisabled,
+                  fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                  cursor: rejectReason.trim() ? 'pointer' : 'not-allowed',
+                }}
+              >
+                <Send size={12} /> Reject & Return to Sub
+              </button>
+            </PermissionGate>
           </motion.div>
         )}
       </AnimatePresence>

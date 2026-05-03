@@ -658,9 +658,11 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
                           </div>
                         </div>
                         {!isLocked && (
-                          <button onClick={() => handleDeleteEntry(entry.id)} title="Delete entry" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: borderRadius.md, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, flexShrink: 0 }}>
-                            <Trash2 size={14} />
-                          </button>
+                          <PermissionGate permission="daily_log.edit">
+                            <button onClick={() => handleDeleteEntry(entry.id)} title="Delete entry" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: borderRadius.md, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, flexShrink: 0 }}>
+                              <Trash2 size={14} />
+                            </button>
+                          </PermissionGate>
                         )}
                       </div>
                     ))}
@@ -696,7 +698,9 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
             </div>
             <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end', marginTop: spacing['2'] }}>
               <Btn variant="secondary" onClick={() => setShowAddEntryModal(false)}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleAddEntry} loading={createEntry.isPending}>Add Entry</Btn>
+              <PermissionGate permission="daily_log.edit">
+                <Btn variant="primary" onClick={handleAddEntry} loading={createEntry.isPending}>Add Entry</Btn>
+              </PermissionGate>
             </div>
           </div>
         </Modal>
@@ -834,6 +838,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
               <span style={{ fontSize: '11px', fontWeight: typography.fontWeight.semibold, color: colors.statusReview, backgroundColor: colors.statusReviewSubtle, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, letterSpacing: '0.2px' }}>AI Generated</span>
             )}
             {!isLocked && (
+              <PermissionGate permission="ai.use">
               <button
                 onClick={onAiSummary}
                 disabled={aiSummaryLoading || (manpowerRows.length === 0 && logEntries.length === 0)}
@@ -852,6 +857,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
                 <Sparkles size={13} color={colors.primaryOrange} />
                 AI Summary
               </button>
+              </PermissionGate>
             )}
           </div>
         } />
