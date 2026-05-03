@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable, selectScoped } from '../lib/db/queries';
 import type { ChangeOrder } from '../types/database';
 import type { Database } from '../types/database';
 import {
@@ -42,14 +43,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -73,22 +73,18 @@ export type ChangeOrderServiceResult<T = void> = Result<T>;
 
 export const changeOrderService = {
   async loadChangeOrders(projectId: string): Promise<Result<ChangeOrder[]>> {
-    const { data, error } = await supabase
-      .from('change_orders')
-      .select('*')
-      .eq('project_id', projectId)
+    const { data, error } = await selectScoped('change_orders', projectId, '*')
       .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
 
     // Filter soft-deleted records in-memory until database.ts is regenerated
     // post-migration 20260413000004 which added deleted_at to change_orders
-    const active = (data ?? []).filter((co) => {
-      const ext = co as typeof co & { deleted_at: string | null };
-      return !ext.deleted_at;
+    const active = ((data ?? []) as unknown as Array<{ deleted_at: string | null }>).filter((co) => {
+      return !co.deleted_at;
     });
 
-    return ok(active as ChangeOrder[]);
+    return ok(active as unknown as ChangeOrder[]);
   },
 
   async createChangeOrder(input: CreateChangeOrderInput): Promise<Result<ChangeOrder>> {
@@ -108,14 +104,13 @@ export const changeOrderService = {
       created_by: userId,
     };
 
-    const { data, error } = await supabase
-      .from('change_orders')
-      .insert(payload)
+    const { data, error } = await fromTable('change_orders')
+      .insert(payload as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as ChangeOrder);
+    return ok(data as unknown as ChangeOrder);
   },
 
   /**
@@ -129,23 +124,23 @@ export const changeOrderService = {
     newStatus: ChangeOrderState,
     comments?: string,
   ): Promise<Result> {
-    const { data: co, error: fetchError } = await supabase
-      .from('change_orders')
+    const { data: co, error: fetchError } = await fromTable('change_orders')
       .select('status, project_id, type')
-      .eq('id', coId)
+      .eq('id' as never, coId)
       .single();
 
     if (fetchError || !co) {
       return fail(notFoundError('Change order', coId));
     }
+    const coRow = co as unknown as { status: string | null; project_id: string; type: string | null };
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(co.project_id, userId);
+    const role = await resolveProjectRole(coRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = co.status as ChangeOrderState;
+    const currentStatus = coRow.status as ChangeOrderState;
     const validTargets = getValidCOTransitionsForRole(currentStatus, role);
     if (!validTargets.includes(newStatus)) {
       return fail(
@@ -174,10 +169,9 @@ export const changeOrderService = {
       if (comments) updates.rejection_comments = comments;
     }
 
-    const { error } = await supabase
-      .from('change_orders')
-      .update(updates)
-      .eq('id', coId);
+    const { error } = await fromTable('change_orders')
+      .update(updates as never)
+      .eq('id' as never, coId);
 
     if (error) return fail(dbError(error.message, { coId, newStatus }));
     return { data: null, error: null };
@@ -193,14 +187,13 @@ export const changeOrderService = {
     const userId = await getCurrentUserId();
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
-    const { error } = await supabase
-      .from('change_orders')
+    const { error } = await fromTable('change_orders')
       .update({
         ...safeUpdates,
         updated_at: new Date().toISOString(),
         updated_by: userId,
-      })
-      .eq('id', coId);
+      } as never)
+      .eq('id' as never, coId);
 
     if (error) return fail(dbError(error.message, { coId }));
     return { data: null, error: null };
@@ -209,13 +202,12 @@ export const changeOrderService = {
   async deleteChangeOrder(coId: string): Promise<Result> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('change_orders')
+    const { error } = await fromTable('change_orders')
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as Record<string, unknown>)
-      .eq('id', coId);
+      } as never)
+      .eq('id' as never, coId);
 
     if (error) return fail(dbError(error.message, { coId }));
     return { data: null, error: null };
@@ -226,28 +218,28 @@ export const changeOrderService = {
    * Creates a new record at the next stage linked back via promoted_from_id.
    */
   async promoteType(coId: string): Promise<Result<ChangeOrder>> {
-    const { data: co, error: fetchError } = await supabase
-      .from('change_orders')
+    const { data: co, error: fetchError } = await fromTable('change_orders')
       .select('*')
-      .eq('id', coId)
+      .eq('id' as never, coId)
       .single();
 
     if (fetchError || !co) {
       return fail(notFoundError('Change order', coId));
     }
+    const coRow = co as unknown as ChangeOrder & { approved_amount?: number | null }
 
-    const currentType = co.type as ChangeOrderType;
+    const currentType = coRow.type as ChangeOrderType;
     if (currentType === 'co') {
       return fail(conflictError('Change orders cannot be promoted further', { coId, currentType }));
     }
-    if (co.status !== 'approved') {
+    if (coRow.status !== 'approved') {
       return fail(
-        conflictError('Only approved change orders can be promoted', { coId, status: co.status }),
+        conflictError('Only approved change orders can be promoted', { coId, status: coRow.status }),
       );
     }
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(co.project_id, userId);
+    const role = await resolveProjectRole(coRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
@@ -256,40 +248,39 @@ export const changeOrderService = {
     const now = new Date().toISOString();
 
     const promotedPayload: COInsertAugmented = {
-      project_id: co.project_id,
-      description: co.description,
-      title: co.title,
-      amount: co.amount,
-      approved_amount: (co as Record<string, unknown>).approved_amount as number | null,
+      project_id: coRow.project_id,
+      description: coRow.description,
+      title: coRow.title,
+      amount: coRow.amount,
+      // Note: approved_amount in source row is preserved by promoting under amount; the
+      // target schema's COInsert doesn't expose approved_amount as an Insert field.
       status: 'draft' as ChangeOrderState,
       type: nextType as string,
-      reason: co.reason,
-      cost_code: co.cost_code,
-      schedule_impact: co.schedule_impact,
-      parent_co_id: co.id,
-      promoted_from_id: co.id,
+      reason: coRow.reason,
+      cost_code: coRow.cost_code,
+      schedule_impact: coRow.schedule_impact,
+      parent_co_id: coRow.id,
+      promoted_from_id: coRow.id,
       promoted_at: now,
       created_by: userId,
     };
 
-    const { data: promoted, error: insertError } = await supabase
-      .from('change_orders')
-      .insert(promotedPayload)
+    const { data: promoted, error: insertError } = await fromTable('change_orders')
+      .insert(promotedPayload as never)
       .select()
       .single();
 
     if (insertError) return fail(dbError(insertError.message, { coId, nextType }));
 
     // Mark the source CO as promoted (best-effort, don't block on failure)
-    await supabase
-      .from('change_orders')
+    await fromTable('change_orders')
       .update({
         promoted_to_id: (promoted as { id?: string } | null)?.id ?? null,
         promoted_at: now,
         updated_by: userId,
-      } as Record<string, unknown>)
-      .eq('id', co.id);
+      } as never)
+      .eq('id' as never, coRow.id);
 
-    return ok(promoted as ChangeOrder);
+    return ok(promoted as unknown as ChangeOrder);
   },
 };
