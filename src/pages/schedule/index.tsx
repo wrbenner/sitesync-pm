@@ -13,7 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useScheduleStore } from '../../stores/scheduleStore';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useCopilotStore } from '../../stores/copilotStore';
 import AddPhaseModal from '../../components/forms/AddPhaseModal';
 import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
@@ -148,7 +148,7 @@ function IrisNote({ phase, onClose }: IrisNoteProps) {
 // ── Page ────────────────────────────────────────────────────────
 
 const SchedulePage: React.FC = () => {
-  const { activeProject } = useProjectContext();
+  const { activeProject } = useProjectStore();
   const projectId = activeProject?.id;
   const queryClient = useQueryClient();
   const { setPageContext } = useCopilotStore();

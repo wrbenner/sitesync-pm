@@ -4,8 +4,8 @@ import { useProjectId } from '../../hooks/useProjectId'
 
 const mockActiveProjectId = vi.fn<[], string | null>()
 
-vi.mock('../../stores/projectContextStore', () => ({
-  useProjectContext: (selector: (s: { activeProjectId: string | null }) => unknown) =>
+vi.mock('../../stores/projectStore', () => ({
+  useProjectStore: (selector: (s: { activeProjectId: string | null }) => unknown) =>
     selector({ activeProjectId: mockActiveProjectId() }),
 }))
 

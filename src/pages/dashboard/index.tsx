@@ -25,7 +25,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useIsMobile } from '../../hooks/useWindowSize';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import type { AIInsight } from '../../types/ai';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { supabase } from '../../lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -118,7 +118,7 @@ function DashboardSkeleton() {
 
 const DashboardPage: React.FC = () => {
   const projectId = useProjectId();
-  const setActiveProject = useProjectContext((s) => s.setActiveProject);
+  const setActiveProject = useProjectStore((s) => s.setActiveProject);
   const { data: allProjects, isPending: projectsLoading } = useProjects();
 
   // Ensure a valid project is selected — but guard against infinite loops.

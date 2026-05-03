@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, CheckCircle, Search, Loader2 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, zIndex } from '../../styles/theme';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrganization } from '../../hooks/useOrganization';
 import { useQueryClient } from '@tanstack/react-query';
@@ -161,7 +161,7 @@ export const CreateProjectModal: React.FC<Props> = ({ open, onClose }) => {
   // ── Hooks ───────────────────────────────────────────────
   const { user }       = useAuth();
   const { currentOrg } = useOrganization();
-  const createProject  = useProjectContext((s) => s.createProject);
+  const createProject  = useProjectStore((s) => s.createProject);
   const queryClient    = useQueryClient();
   const nameRef        = useRef<HTMLInputElement>(null);
 

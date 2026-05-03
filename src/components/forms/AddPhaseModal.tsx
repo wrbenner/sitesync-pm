@@ -3,7 +3,7 @@ import { X, Calendar, Link2, AlertTriangle, Users, Clock } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 import { supabase } from '../../lib/supabase';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 
 /* ── Types ────────────────────────────────────────────────── */
 
@@ -93,7 +93,7 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
   const [existingPhases, setExistingPhases] = useState<ExistingPhase[]>([]);
   const [crews, setCrews] = useState<CrewOption[]>([]);
 
-  const { activeProject } = useProjectContext();
+  const { activeProject } = useProjectStore();
 
   useEffect(() => {
     if (!open || !activeProject?.id) return;

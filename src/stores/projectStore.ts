@@ -1,163 +1,140 @@
+/**
+ * projectStore — active project context, project list, and members.
+ *
+ * Renamed from projectContextStore on Day 7 (2026-05-01) as part of the
+ * 33 → 5 store consolidation (STORE_CONSOLIDATION_PLAN_2026-05-01.md).
+ *
+ * The old projectStore.ts (dead, 0 consumers) is scheduled for deletion via
+ * scripts/delete-dead-stores.sh.
+ */
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { projectService } from '../services/projectService';
-import type { CreateProjectInput, ProjectMemberWithProfile } from '../services/projectService';
+import type { ProjectMemberWithProfile } from '../services/projectService';
 import type { Project } from '../types/entities';
-import type { ProjectRole } from '../types/tenant';
-import type { ServiceError } from '../services/errors';
-
-export interface ProjectData {
-  id?: string;
-  organizationId?: string;
-  name: string;
-  address: string;
-  type: string;
-  totalValue: number;
-  status: string;
-  completionPercentage: number;
-  daysRemaining: number;
-  startDate: string;
-  scheduledEndDate: string;
-  actualEndDate: string | null;
-  owner: string;
-  architect: string;
-  contractor: string;
-  description: string;
-}
-
-export interface Metrics {
-  progress: number;
-  budgetSpent: number;
-  budgetTotal: number;
-  crewsActive: number;
-  workersOnSite: number;
-  rfiOpen: number;
-  rfiOverdue: number;
-  punchListOpen: number;
-  aiHealthScore: number | null;
-  daysBeforeSchedule: number;
-  milestonesHit: number;
-  milestoneTotal: number;
-  aiConfidenceLevel: number | null;
-}
+import type { ProjectMember } from '../types/entities';
 
 interface ProjectState {
-  activeProject: ProjectData | null;
-  projectList: ProjectData[];
   projects: Project[];
+  activeProjectId: string | null;
+  activeProject: Project | null;
   members: ProjectMemberWithProfile[];
-  metrics: Metrics | null;
   loading: boolean;
   error: string | null;
-  errorDetails: ServiceError | null;
 
-  // Legacy setters (backward-compat)
-  setActiveProject: (project: ProjectData | null) => void;
-  setProjectList: (projects: ProjectData[]) => void;
-  setMetrics: (metrics: Metrics | null) => void;
-
-  // Service-delegating async actions
-  loadProjects: (organizationId: string) => Promise<void>;
-  createProject: (input: CreateProjectInput) => Promise<{ error: string | null; project: Project | null }>;
-  updateProject: (projectId: string, updates: Partial<Project>) => Promise<{ error: string | null }>;
-  deleteProject: (projectId: string) => Promise<{ error: string | null }>;
+  loadProjects: (companyId: string) => Promise<void>;
+  setActiveProject: (projectId: string) => void;
   loadMembers: (projectId: string) => Promise<void>;
-  addMember: (projectId: string, userId: string, role: ProjectRole) => Promise<{ error: string | null }>;
-  updateMemberRole: (memberId: string, role: ProjectRole) => Promise<{ error: string | null }>;
+  createProject: (project: {
+    name: string;
+    company_id: string;
+    address?: string;
+    project_type?: string;
+    total_value?: number;
+    description?: string;
+    start_date?: string;
+    scheduled_end_date?: string;
+    created_by: string;
+  }) => Promise<{ error: string | null; project: Project | null }>;
+  updateProject: (projectId: string, updates: Partial<Project>) => Promise<{ error: string | null }>;
+  addMember: (projectId: string, userId: string, role: ProjectMember['role']) => Promise<{ error: string | null }>;
   removeMember: (memberId: string) => Promise<{ error: string | null }>;
-  clearError: () => void;
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
-  activeProject: null,
-  projectList: [],
-  projects: [],
-  members: [],
-  metrics: null,
-  loading: false,
-  error: null,
-  errorDetails: null,
+export const useProjectStore = create<ProjectState>()(
+  persist(
+    (set, get) => ({
+      projects: [],
+      activeProjectId: null,
+      activeProject: null,
+      members: [],
+      loading: false,
+      error: null,
 
-  // ── Legacy setters ─────────────────────────────────────────────────────────
-  setActiveProject: (project) => set({ activeProject: project }),
-  setProjectList: (projects) => set({ projectList: projects }),
-  setMetrics: (metrics) => set({ metrics }),
+      loadProjects: async (companyId) => {
+        set({ loading: true, error: null });
+        const { data, error } = await projectService.loadProjects(companyId);
+        if (error) {
+          set({ error: error.userMessage, loading: false });
+          return;
+        }
+        const projects = data ?? [];
+        const { activeProjectId } = get();
+        const active = projects.find((p) => p.id === activeProjectId) ?? projects[0] ?? null;
+        set({ projects, activeProject: active, activeProjectId: active?.id ?? null, loading: false });
+      },
 
-  // ── Service-delegating actions ─────────────────────────────────────────────
+      setActiveProject: (projectId) => {
+        const { projects } = get();
+        const project = projects.find((p) => p.id === projectId) ?? null;
+        set({ activeProjectId: projectId, activeProject: project });
+        if (projectId) {
+          get().loadMembers(projectId).catch(() => {
+            // Swallow — members list is non-critical; never crash the UI
+          });
+        }
+      },
 
-  loadProjects: async (organizationId) => {
-    set({ loading: true, error: null, errorDetails: null });
-    const { data, error } = await projectService.loadProjects(organizationId);
-    if (error) {
-      set({ error: error.userMessage, errorDetails: error, loading: false });
-    } else {
-      set({ projects: data ?? [], loading: false });
+      loadMembers: async (projectId) => {
+        try {
+          const { data, error } = await projectService.loadMembers(projectId);
+          if (!error && data) {
+            set({ members: data });
+          }
+        } catch {
+          // Never propagate — callers rely on this being safe
+        }
+      },
+
+      createProject: async (project) => {
+        const { data, error } = await projectService.createProject(project);
+        if (error) return { error: error.userMessage, project: null };
+        if (data) {
+          set((s) => ({
+            projects: [data, ...s.projects],
+            activeProject: data,
+            activeProjectId: data.id,
+          }));
+        }
+        return { error: null, project: data };
+      },
+
+      updateProject: async (projectId, updates) => {
+        const { error } = await projectService.updateProject(projectId, updates);
+        if (!error) {
+          set((s) => ({
+            projects: s.projects.map((p) => (p.id === projectId ? { ...p, ...updates } : p)),
+            activeProject:
+              s.activeProject?.id === projectId
+                ? { ...s.activeProject, ...updates }
+                : s.activeProject,
+          }));
+        }
+        return { error: error?.userMessage ?? null };
+      },
+
+      addMember: async (projectId, userId, role) => {
+        const { error } = await projectService.addMember(projectId, userId, role);
+        if (!error) {
+          await get().loadMembers(projectId);
+        }
+        return { error: error?.userMessage ?? null };
+      },
+
+      removeMember: async (memberId) => {
+        const { error } = await projectService.removeMember(memberId);
+        if (!error) {
+          const { activeProjectId } = get();
+          if (activeProjectId) {
+            await get().loadMembers(activeProjectId);
+          }
+        }
+        return { error: error?.userMessage ?? null };
+      },
+    }),
+    {
+      name: 'sitesync-project-context',
+      partialize: (state) => ({ activeProjectId: state.activeProjectId }),
     }
-  },
-
-  createProject: async (input) => {
-    const { data, error } = await projectService.createProject(input);
-    if (error) return { error: error.userMessage, project: null };
-    if (data) {
-      set((s) => ({ projects: [data, ...s.projects] }));
-    }
-    return { error: null, project: data };
-  },
-
-  updateProject: async (projectId, updates) => {
-    const { error } = await projectService.updateProject(projectId, updates);
-    if (error) return { error: error.userMessage };
-    set((s) => ({
-      projects: s.projects.map((p) =>
-        p.id === projectId ? { ...p, ...updates } : p,
-      ),
-    }));
-    return { error: null };
-  },
-
-  deleteProject: async (projectId) => {
-    const { error } = await projectService.deleteProject(projectId);
-    if (error) return { error: error.userMessage };
-    set((s) => ({
-      projects: s.projects.filter((p) => p.id !== projectId),
-      activeProject: get().activeProject?.id === projectId ? null : get().activeProject,
-    }));
-    return { error: null };
-  },
-
-  loadMembers: async (projectId) => {
-    set({ loading: true, error: null });
-    const { data, error } = await projectService.loadMembers(projectId);
-    if (error) {
-      set({ error: error.userMessage, loading: false });
-    } else {
-      set({ members: data ?? [], loading: false });
-    }
-  },
-
-  addMember: async (projectId, userId, role) => {
-    const { error } = await projectService.addMember(projectId, userId, role);
-    if (error) return { error: error.userMessage };
-    await get().loadMembers(projectId);
-    return { error: null };
-  },
-
-  updateMemberRole: async (memberId, role) => {
-    const { error } = await projectService.updateMemberRole(memberId, role);
-    if (error) return { error: error.userMessage };
-    set((s) => ({
-      members: s.members.map((m) =>
-        m.id === memberId ? { ...m, role } : m,
-      ),
-    }));
-    return { error: null };
-  },
-
-  removeMember: async (memberId) => {
-    const { error } = await projectService.removeMember(memberId);
-    if (error) return { error: error.userMessage };
-    set((s) => ({ members: s.members.filter((m) => m.id !== memberId) }));
-    return { error: null };
-  },
-
-  clearError: () => set({ error: null, errorDetails: null }),
-}));
+  )
+);

@@ -13,7 +13,7 @@ import React, { useState } from 'react';
 import { HardHat, Plus, MapPin, Calendar, Building2, ArrowRight, Search } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useProjects } from '../hooks/queries';
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectStore } from '../stores/projectStore';
 import { CreateProjectModal } from './forms/CreateProjectModal';
 
 /* ── Helpers ────────────────────────────────────────────── */
@@ -51,7 +51,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export const ProjectGate: React.FC = () => {
   const { data: projects, isLoading } = useProjects();
-  const setActiveProject = useProjectContext((s) => s.setActiveProject);
+  const setActiveProject = useProjectStore((s) => s.setActiveProject);
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -232,7 +232,7 @@ export const ProjectGate: React.FC = () => {
                 key={project.id}
                 onClick={() => {
                   // Sync into store first, then set active
-                  useProjectContext.setState((s) => ({
+                  useProjectStore.setState((s) => ({
                     projects: s.projects.some((p) => p.id === project.id)
                       ? s.projects
                       : [...s.projects, project as unknown as typeof s.projects[number]],

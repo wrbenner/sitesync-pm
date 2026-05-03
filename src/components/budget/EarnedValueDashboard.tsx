@@ -5,7 +5,7 @@ import { computeEarnedValue } from '../../lib/financialEngine';
 import { useBudgetData } from '../../hooks/useBudgetData';
 import { Skeleton } from '../Primitives';
 import { supabase } from '../../lib/supabase';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 
 interface EVMetric {
   label: string;
@@ -34,7 +34,7 @@ const METRIC_GRID = 'repeat(3, 1fr)';
 
 export const EarnedValueDashboard: React.FC = () => {
   const { budgetItems, changeOrders, invoices, scheduleActivities, loading, refetch } = useBudgetData();
-  const { activeProjectId } = useProjectContext();
+  const { activeProjectId } = useProjectStore();
 
   useEffect(() => {
     if (!activeProjectId) return;

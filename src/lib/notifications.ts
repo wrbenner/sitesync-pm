@@ -7,7 +7,7 @@
 // Slack outage must not block an in-app notification.
 
 import { supabase, fromTable } from './supabase'
-import { useNotificationStore } from '../stores/notificationStore'
+import { useUiStore } from '../stores/uiStore'
 
 export type NotificationEvent =
   | 'new_discrepancy'
@@ -125,7 +125,7 @@ export async function dispatchNotification(payload: DispatchPayload): Promise<vo
   // In-app toast — synchronous, no network round-trip.
   if (channels.in_app) {
     try {
-      useNotificationStore.getState().addNotification({
+      useUiStore.getState().addNotification({
         type: payload.toastType ?? typeFromSeverity(payload.severity),
         title: payload.title,
         message: payload.message,

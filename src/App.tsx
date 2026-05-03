@@ -61,6 +61,7 @@ const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: 
 // Public, unauthenticated trust center page used by procurement reviewers.
 const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { FLAGS } from './lib/featureFlags';
 const MagicLinkSubRoute = lazy(() => import('./components/MagicLinkSubRoute'));
 const MagicLinkOwnerRoute = lazy(() => import('./components/MagicLinkOwnerRoute'));
 
@@ -394,7 +395,7 @@ function AppRoutes() {
             <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/submittals/spec-parser" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/spec-parser" element={FLAGS.specParser ? <PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense> : <Navigate to="/submittals" replace />} />
             <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />
             <Route path="/punch-list/:itemId" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch Item Detail"><PunchItemDetailPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/drawings" element={<PageSuspense><ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute></PageSuspense>} />
@@ -422,27 +423,27 @@ function AppRoutes() {
             {/* ── Documents & Closeout ── */}
             <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
-            <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/reports/owner" element={FLAGS.ownerReport ? <PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense> : <Navigate to="/reports" replace />} />
             <Route path="/closeout" element={<PageSuspense><ProtectedRoute moduleId="closeout" moduleName="Closeout"><Closeout /></ProtectedRoute></PageSuspense>} />
-            <Route path="/bim" element={<PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/bim" element={FLAGS.bimViewer ? <PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense> : <Navigate to="/dashboard" replace />} />
 
             {/* ── Intelligence ── */}
             <Route path="/ai" element={<PageSuspense><ProtectedRoute moduleId="ai" moduleName="AI Assistant"><AIAssistant /></ProtectedRoute></PageSuspense>} />
-            <Route path="/iris/inbox" element={<PageSuspense><ProtectedRoute moduleId="ai" moduleName="Iris Inbox"><IrisInbox /></ProtectedRoute></PageSuspense>} />
+            <Route path="/iris/inbox" element={FLAGS.irisInbox ? <PageSuspense><ProtectedRoute moduleId="ai" moduleName="Iris Inbox"><IrisInbox /></ProtectedRoute></PageSuspense> : <Navigate to="/ai" replace />} />
 
             {/* ── Utility & Admin ── */}
             <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
             <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
-            <Route path="/settings/workflows" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/settings/workflows" element={FLAGS.approvalWorkflows ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense> : <Navigate to="/settings" replace />} />
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
-            <Route path="/admin/bulk-invite" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/admin/bulk-invite" element={FLAGS.bulkInvite ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense> : <Navigate to="/settings/team" replace />} />
             <Route path="/admin/cost-code-library" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Cost Code Library"><CostCodeLibraryPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/admin/project-templates" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Project Templates"><ProjectTemplatesPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/admin/procore-import" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Procore Import"><ProcoreImportPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/admin/compliance" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Compliance"><ComplianceCockpit /></ProtectedRoute></PageSuspense>} />
-            <Route path="/walkthrough" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Walk-Through"><WalkthroughPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/admin/project-templates" element={FLAGS.projectTemplates ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Project Templates"><ProjectTemplatesPage /></ProtectedRoute></PageSuspense> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/procore-import" element={FLAGS.procoreImport ? <PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Procore Import"><ProcoreImportPage /></ProtectedRoute></PageSuspense> : <Navigate to="/integrations" replace />} />
+            <Route path="/admin/compliance" element={FLAGS.complianceCockpit ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Compliance"><ComplianceCockpit /></ProtectedRoute></PageSuspense> : <Navigate to="/dashboard" replace />} />
+            <Route path="/walkthrough" element={FLAGS.walkthrough ? <PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Walk-Through"><WalkthroughPage /></ProtectedRoute></PageSuspense> : <Navigate to="/field-capture" replace />} />
             <Route path="/share/owner-payapp/:token" element={<PageSuspense><OwnerPayAppPreviewPage /></PageSuspense>} />
             <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />

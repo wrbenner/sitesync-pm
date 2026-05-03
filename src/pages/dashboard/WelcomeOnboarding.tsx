@@ -11,7 +11,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { logAuditEntry } from '../../lib/auditLogger';
 import { ensureOrganizationMembership } from '../../lib/ensureOrganizationMembership';
 import { staggerContainer, staggerItem, staggerTransition } from './types';
@@ -90,9 +90,9 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
 
     // Set as active project and refresh queries
     if (newProject) {
-      useProjectContext.getState().setActiveProject(newProject.id);
+      useProjectStore.getState().setActiveProject(newProject.id);
       // Update store projects list directly
-      useProjectContext.setState((s) => ({
+      useProjectStore.setState((s) => ({
         projects: [newProject, ...s.projects],
         activeProject: newProject,
         activeProjectId: newProject.id,

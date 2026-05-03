@@ -139,7 +139,7 @@ export interface FieldCaptureState {
   cameraError: string | null;
   starting: boolean;
   uploading: boolean;
-  pendingCount: number;
+  pendingCaptures: number;
   isOnline: boolean;
 }
 
@@ -165,14 +165,14 @@ export function useFieldCapture(): UseFieldCapture {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCaptures, setPendingCaptures] = useState(0);
   const [isOnline, setIsOnline] = useState<boolean>(getIsOnline());
 
   // Maintain an up-to-date pending-count badge.
   const refreshPendingCount = useCallback(async () => {
     try {
       const n = await countCaptures();
-      setPendingCount(n);
+      setPendingCaptures(n);
     } catch {
       // IDB unavailable — leave at last known value.
     }
@@ -368,7 +368,7 @@ export function useFieldCapture(): UseFieldCapture {
       }
     }
     const remaining = await countCaptures();
-    setPendingCount(remaining);
+    setPendingCaptures(remaining);
     return { synced, remaining };
   }, []);
 
@@ -379,7 +379,7 @@ export function useFieldCapture(): UseFieldCapture {
     cameraError,
     starting,
     uploading,
-    pendingCount,
+    pendingCaptures,
     isOnline,
     videoRef,
     startCamera,

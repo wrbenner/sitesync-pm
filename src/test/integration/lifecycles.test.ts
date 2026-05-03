@@ -90,8 +90,8 @@ vi.mock('../../api/client', () => {
   }
 })
 
-vi.mock('../../stores/organizationStore', () => ({
-  useOrganizationStore: { getState: mockOrgGetState },
+vi.mock('../../stores/authStore', () => ({
+  useAuthStore: { getState: mockOrgGetState },
 }))
 
 describe('RFI Lifecycle Integration', () => {
@@ -438,7 +438,7 @@ describe('Cross-Org Document Access Control', () => {
   beforeEach(() => {
     mockMaybySingle.mockReset()
     mockGetUser.mockResolvedValue({ data: { user: { id: 'test-user-id' } }, error: null })
-    mockOrgGetState.mockReturnValue({ currentOrg: { id: ORG_A_ID } })
+    mockOrgGetState.mockReturnValue({ organization: { id: ORG_A_ID } })
     clearTtlCache()
   })
 
@@ -491,7 +491,7 @@ describe('Cross-Org Document Access Control', () => {
       // `assertProjectAccess` defers to RLS rather than rejecting outright,
       // so legitimate users on first load aren't punished by a transient
       // client-state race. RLS still enforces org isolation at the DB layer.
-      mockOrgGetState.mockReturnValue({ currentOrg: null })
+      mockOrgGetState.mockReturnValue({ organization: null })
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
         .mockResolvedValue({ data: null, error: null })
@@ -564,7 +564,7 @@ const PROJ_UUID = '00000000-0000-4000-8000-000000000001'
 describe('RFI DB Persistence Lifecycle', () => {
   beforeEach(() => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
-    mockOrgGetState.mockReturnValue({ currentOrg: { id: '00000000-0000-4000-9000-000000000001' } })
+    mockOrgGetState.mockReturnValue({ organization: { id: '00000000-0000-4000-9000-000000000001' } })
   })
 
   it('createRfi returns a mapped RFI with rfiNumber formatted as RFI-001', async () => {

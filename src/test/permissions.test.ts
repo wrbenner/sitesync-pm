@@ -14,9 +14,9 @@ vi.mock('../lib/supabase', () => {
   }
 })
 
-vi.mock('../stores/organizationStore', () => ({
-  useOrganizationStore: {
-    getState: vi.fn(() => ({ currentOrg: { id: '00000000-0000-4000-9000-000000000001' } })),
+vi.mock('../stores/authStore', () => ({
+  useAuthStore: {
+    getState: vi.fn(() => ({ organization: { id: '00000000-0000-4000-9000-000000000001' } })),
   },
 }))
 import {

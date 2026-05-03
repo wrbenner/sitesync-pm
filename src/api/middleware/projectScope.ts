@@ -1,7 +1,7 @@
 import { ApiError, AuthError, ValidationError } from '../errors'
 import { supabase, fromTable } from '../../lib/supabase'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
-import { useOrganizationStore } from '../../stores/organizationStore'
+import { useAuthStore } from '../../stores/authStore'
 import type { Database } from '../../types/database'
 
 type TableName = keyof Database['public']['Tables']
@@ -115,8 +115,8 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     //   2. The project's organization_id to match the active org.
     // RLS is still the source of truth at the DB layer, but the client-side
     // gate prevents accidentally fanning out queries that would all return [].
-    const store = useOrganizationStore.getState()
-    let activeOrg = store.currentOrg
+    const store = useAuthStore.getState()
+    let activeOrg = store.organization
 
     // Try to hydrate currentOrg if it isn't set yet — this happens on first
     // load before the OrganizationProvider has resolved. Failure to hydrate
@@ -179,7 +179,7 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
             .find((o): o is { id: string; name: string; slug: string } => !!o && o.id === orgId)
           if (match) {
             store.setCurrentOrg(match as unknown as Parameters<typeof store.setCurrentOrg>[0])
-            activeOrg = useOrganizationStore.getState().currentOrg
+            activeOrg = useAuthStore.getState().organization
           }
         }
       } catch {

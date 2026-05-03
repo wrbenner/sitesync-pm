@@ -6,7 +6,7 @@ import {
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { useAgentOrchestrator } from '../../stores/agentOrchestrator'
-import { useProjectContext } from '../../stores/projectContextStore'
+import { useProjectStore } from '../../stores/projectStore'
 import { useMultiAgentChat } from '../../hooks/useMultiAgentChat'
 import { supabase } from '../../lib/supabase'
 import { AgentMessage, AgentTypingIndicator, AGENT_COLORS } from './AgentMessage'
@@ -133,7 +133,7 @@ PanelMessageRenderer.displayName = 'PanelMessageRenderer'
 
 export const CopilotPanel: React.FC = () => {
   const { isOpen, closeCopilot, currentPageContext } = useCopilotStore()
-  const { activeProjectId } = useProjectContext()
+  const { activeProjectId } = useProjectStore()
   const { addCoordinatorMessage } = useAgentOrchestrator()
 
   const {

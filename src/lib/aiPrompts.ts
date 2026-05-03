@@ -8,13 +8,13 @@ import { getDailyLogs } from '../api/endpoints/field'
 import { getSubmittals } from '../api/endpoints/submittals'
 import { getActivityFeed } from '../api/endpoints/activity'
 import { usePresenceStore } from '../stores/presenceStore'
-import { useNotificationStore } from '../stores/notificationStore'
+import { useUiStore } from '../stores/uiStore'
 
 const IDLE_THRESHOLD_MS = 48 * 60 * 60 * 1000
 
 export async function buildCollaborationContext(projectId: string): Promise<CollaborationContext> {
   const presenceState = usePresenceStore.getState()
-  const notifState = useNotificationStore.getState()
+  const notifState = useUiStore.getState()
 
   const onlineUsers = presenceState.onlineUsers.map(u => ({
     id: u.userId || '',

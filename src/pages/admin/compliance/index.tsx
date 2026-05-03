@@ -16,7 +16,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { PageContainer } from '../../../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
 import { useProjectId } from '../../../hooks/useProjectId'
-import { useProjectContext } from '../../../stores/projectContextStore'
+import { useProjectStore } from '../../../stores/projectStore'
 import { CoiGapsPanel } from './CoiGapsPanel'
 import { Wh347Panel } from './Wh347Panel'
 import { Osha300Panel } from './Osha300Panel'
@@ -42,7 +42,7 @@ function formatHHMM(d: Date): string {
 const ComplianceCockpit: React.FC = () => {
   const qc = useQueryClient()
   const projectId = useProjectId()
-  const activeProjectName = useProjectContext((s) => s.activeProject?.name ?? null)
+  const activeProjectName = useProjectStore((s) => s.activeProject?.name ?? null)
   const [tab, setTab] = useState<TabKey>('coi')
   const [lastRefresh, setLastRefresh] = useState<Date>(() => new Date())
 

@@ -30,7 +30,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
     cameraError,
     starting,
     uploading,
-    pendingCount,
+    pendingCaptures,
     isOnline,
     startCamera,
     stopCamera,
@@ -83,7 +83,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
         dailyLogId,
       });
       if (result.queued) {
-        toast.info(`Saved offline — will sync when connected (${pendingCount + 1} queued)`);
+        toast.info(`Saved offline — will sync when connected (${pendingCaptures + 1} queued)`);
       } else {
         toast.success('Photo captured and attached to today\'s log');
       }
@@ -168,13 +168,13 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                     </span>
                   </>
                 )}
-                {pendingCount > 0 && (
+                {pendingCaptures > 0 && (
                   <span style={{
                     backgroundColor: colors.statusPending, color: colors.white,
                     padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
                     fontSize: 10, fontWeight: typography.fontWeight.bold,
                   }}>
-                    {pendingCount} queued
+                    {pendingCaptures} queued
                   </span>
                 )}
               </div>

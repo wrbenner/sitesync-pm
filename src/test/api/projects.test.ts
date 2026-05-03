@@ -26,8 +26,8 @@ vi.mock('../../lib/supabase', () => ({
   },
 }))
 
-vi.mock('../../stores/organizationStore', () => ({
-  useOrganizationStore: { getState: mockOrgGetState },
+vi.mock('../../stores/authStore', () => ({
+  useAuthStore: { getState: mockOrgGetState },
 }))
 
 function makeMetrics(overrides: Partial<ProjectMetrics> = {}): ProjectMetrics {
@@ -208,7 +208,7 @@ describe('assertProjectAccess', () => {
   beforeEach(() => {
     mockMaybySingle.mockReset()
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
-    mockOrgGetState.mockReturnValue({ currentOrg: { id: ORG_A_ID } })
+    mockOrgGetState.mockReturnValue({ organization: { id: ORG_A_ID } })
     clearTtlCache()
   })
 
@@ -235,7 +235,7 @@ describe('assertProjectAccess', () => {
     // org isolation at the database layer for every downstream query.
     // The previous "throws 403" behavior was incorrectly punishing
     // legitimate users on first load before OrganizationProvider resolved.
-    mockOrgGetState.mockReturnValue({ currentOrg: null })
+    mockOrgGetState.mockReturnValue({ organization: null })
     mockMaybySingle
       // 1st call: membership lookup → found
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })

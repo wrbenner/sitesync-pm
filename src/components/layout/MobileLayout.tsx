@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { useHaptics } from '../../hooks/useMobileCapture';
-import { useNotificationStore } from '../../stores';
+import { useUiStore } from '../../stores';
 import { NotificationList } from '../notifications/NotificationCenter';
 
 // ── Tab Configuration ────────────────────────────────────
@@ -59,7 +59,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { impact } = useHaptics();
-  const { unreadCount, markAllRead } = useNotificationStore();
+  const { unreadCount, markAllRead } = useUiStore();
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);

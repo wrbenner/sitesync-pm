@@ -1,8 +1,26 @@
 import { create } from 'zustand';
 import { syncManager, type ConnectionStatus, type SyncState } from '../lib/syncManager';
 
-// Compatibility shim: this store now wraps the SyncManager singleton.
-// Components that imported from here continue to work.
+/**
+ * @deprecated as of Day 10/11 (2026-05-01).
+ *
+ * This Zustand store is a thin compatibility shim that wraps `syncManager`.
+ * Production code should use `useOfflineStatus()` from `hooks/useOfflineStatus`,
+ * which subscribes to the same `syncManager` via `useSyncExternalStore`.
+ *
+ * Currently retained only because `src/test/integration/offline-capture-flow.test.ts`
+ * uses this store's API (`addToQueue`, `setStatus`, `clearQueue`). When that
+ * integration test is rewritten to drive `syncManager` directly, this whole
+ * file can be deleted.
+ *
+ * DO NOT add new consumers. If you find yourself wanting `useOfflineStore`,
+ * use `useOfflineStatus` instead.
+ *
+ * Field-name disambiguation (Day 10/11):
+ *   - `useOfflineStore.pendingCount`   → action mutation queue
+ *   - `useFieldCapture.pendingCaptures` → photo blob queue
+ *   - `useOfflineSync.pendingCount`     → drawing annotation queue
+ */
 
 export type SyncStatus = 'online' | 'offline' | 'syncing';
 

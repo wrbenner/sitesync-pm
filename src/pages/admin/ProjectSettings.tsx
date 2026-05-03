@@ -6,7 +6,7 @@ import {
   UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -261,7 +261,7 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
 }
 
 export function ProjectSettings() {
-  const { activeProject, updateProject, members, loadMembers } = useProjectContext();
+  const { activeProject, updateProject, members, loadMembers } = useProjectStore();
   const { company, profile } = useAuthStore();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');

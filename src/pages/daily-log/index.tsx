@@ -902,7 +902,7 @@ const DailyLogPage: React.FC = () => {
   // Drain queued field-capture photos when we regain connectivity.
   useEffect(() => {
     const handleOnline = async () => {
-      if (fieldCapture.pendingCount === 0) return;
+      if (fieldCapture.pendingCaptures === 0) return;
       const { synced, remaining } = await fieldCapture.flushQueue();
       if (synced > 0) {
         toast.success(`Synced ${synced} queued photo${synced === 1 ? '' : 's'}${remaining > 0 ? ` (${remaining} pending)` : ''}`);
@@ -910,7 +910,7 @@ const DailyLogPage: React.FC = () => {
       }
     };
     window.addEventListener('online', handleOnline);
-    if (navigator.onLine && fieldCapture.pendingCount > 0) handleOnline();
+    if (navigator.onLine && fieldCapture.pendingCaptures > 0) handleOnline();
     return () => window.removeEventListener('online', handleOnline);
   }, [fieldCapture, refetch]);
 
@@ -1067,7 +1067,7 @@ const DailyLogPage: React.FC = () => {
               style={secondaryHeaderBtnStyle}
             >
               <Camera size={13} />
-              Field capture{fieldCapture.pendingCount > 0 ? ` (${fieldCapture.pendingCount})` : ''}
+              Field capture{fieldCapture.pendingCaptures > 0 ? ` (${fieldCapture.pendingCaptures})` : ''}
             </button>
             <button
               type="button"
@@ -1298,9 +1298,11 @@ const DailyLogPage: React.FC = () => {
           subtitle={crewRows.length === 0 ? 'No crew on site' : `${manpowerTotal.headcount} workers · ${fmtNum(manpowerTotal.hours)} hours`}
           badge={<Users size={14} color={INK_3} />}
           actions={!isLocked && (
-            <button type="button" onClick={addCrewRow} style={ghostBtnStyle}>
-              <Plus size={12} /> Add crew
-            </button>
+            <PermissionGate permission="daily_log.edit">
+              <button type="button" onClick={addCrewRow} style={ghostBtnStyle}>
+                <Plus size={12} /> Add crew
+              </button>
+            </PermissionGate>
           )}
         >
           {crewRows.length === 0 ? (
@@ -1336,7 +1338,15 @@ const DailyLogPage: React.FC = () => {
                         onCommit={(next) => updateEntry(r.id, { hours: Number(next) || 0 })} />
                     </td>
                     <td style={tdStyleAction}>
-                      {!isLocked && <RowDeleteButton onClick={() => removeEntry(r.id)} />}
+                      {!isLocked && (
+
+                        <PermissionGate permission="daily_log.edit">
+
+                          <RowDeleteButton onClick={() => removeEntry(r.id)} />
+
+                        </PermissionGate>
+
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1357,9 +1367,11 @@ const DailyLogPage: React.FC = () => {
           subtitle={equipmentRows.length === 0 ? 'No equipment on site' : `${equipmentRows.length} item${equipmentRows.length === 1 ? '' : 's'}`}
           badge={<Truck size={14} color={INK_3} />}
           actions={!isLocked && (
-            <button type="button" onClick={addEquipmentRow} style={ghostBtnStyle}>
-              <Plus size={12} /> Add equipment
-            </button>
+            <PermissionGate permission="daily_log.edit">
+              <button type="button" onClick={addEquipmentRow} style={ghostBtnStyle}>
+                <Plus size={12} /> Add equipment
+              </button>
+            </PermissionGate>
           )}
         >
           {equipmentRows.length === 0 ? (
@@ -1390,7 +1402,15 @@ const DailyLogPage: React.FC = () => {
                         onCommit={(next) => updateEntry(r.id, { company: next })} />
                     </td>
                     <td style={tdStyleAction}>
-                      {!isLocked && <RowDeleteButton onClick={() => removeEntry(r.id)} />}
+                      {!isLocked && (
+
+                        <PermissionGate permission="daily_log.edit">
+
+                          <RowDeleteButton onClick={() => removeEntry(r.id)} />
+
+                        </PermissionGate>
+
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1405,9 +1425,11 @@ const DailyLogPage: React.FC = () => {
           subtitle={fieldEntries.length === 0 ? 'No work logged yet' : `${fieldEntries.length} entr${fieldEntries.length === 1 ? 'y' : 'ies'}`}
           badge={<FileText size={14} color={INK_3} />}
           actions={!isLocked && (
-            <button type="button" onClick={addFieldEntry} style={ghostBtnStyle}>
-              <Plus size={12} /> Add entry
-            </button>
+            <PermissionGate permission="daily_log.edit">
+              <button type="button" onClick={addFieldEntry} style={ghostBtnStyle}>
+                <Plus size={12} /> Add entry
+              </button>
+            </PermissionGate>
           )}
         >
           {fieldEntries.length === 0 ? (
@@ -1450,7 +1472,15 @@ const DailyLogPage: React.FC = () => {
                         />
                       </td>
                       <td style={tdStyleAction}>
-                        {!isLocked && <RowDeleteButton onClick={() => removeEntry(r.id)} />}
+                        {!isLocked && (
+
+                          <PermissionGate permission="daily_log.edit">
+
+                            <RowDeleteButton onClick={() => removeEntry(r.id)} />
+
+                          </PermissionGate>
+
+                        )}
                       </td>
                     </tr>
                   );
@@ -1466,9 +1496,11 @@ const DailyLogPage: React.FC = () => {
           subtitle={photos.length === 0 ? 'No photos yet' : `${photos.length} photo${photos.length === 1 ? '' : 's'}`}
           badge={<Camera size={14} color={INK_3} />}
           actions={!isLocked && (
-            <button type="button" onClick={handlePhotoCapture} style={ghostBtnStyle}>
-              <Camera size={12} /> Capture
-            </button>
+            <PermissionGate permission="field_capture.create">
+              <button type="button" onClick={handlePhotoCapture} style={ghostBtnStyle}>
+                <Camera size={12} /> Capture
+              </button>
+            </PermissionGate>
           )}
         >
           {photos.length === 0 ? (
@@ -1489,9 +1521,11 @@ const DailyLogPage: React.FC = () => {
             title="Visitors"
             subtitle={visitorRows.length === 0 ? 'None' : `${visitorRows.length} on site`}
             actions={!isLocked && (
-              <button type="button" onClick={addVisitorRow} style={ghostBtnStyle}>
-                <Plus size={12} /> Add visitor
-              </button>
+              <PermissionGate permission="daily_log.edit">
+                <button type="button" onClick={addVisitorRow} style={ghostBtnStyle}>
+                  <Plus size={12} /> Add visitor
+                </button>
+              </PermissionGate>
             )}
           >
             {visitorRows.length === 0 ? (
@@ -1532,7 +1566,15 @@ const DailyLogPage: React.FC = () => {
                           onCommit={(next) => updateEntry(r.id, { time_out: next })} />
                       </td>
                       <td style={tdStyleAction}>
-                        {!isLocked && <RowDeleteButton onClick={() => removeEntry(r.id)} />}
+                        {!isLocked && (
+
+                          <PermissionGate permission="daily_log.edit">
+
+                            <RowDeleteButton onClick={() => removeEntry(r.id)} />
+
+                          </PermissionGate>
+
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1545,9 +1587,11 @@ const DailyLogPage: React.FC = () => {
             title="Deliveries"
             subtitle={deliveryRows.length === 0 ? 'None' : `${deliveryRows.length} delivery${deliveryRows.length === 1 ? '' : 'ies'}`}
             actions={!isLocked && (
-              <button type="button" onClick={addDeliveryRow} style={ghostBtnStyle}>
-                <Plus size={12} /> Add delivery
-              </button>
+              <PermissionGate permission="daily_log.edit">
+                <button type="button" onClick={addDeliveryRow} style={ghostBtnStyle}>
+                  <Plus size={12} /> Add delivery
+                </button>
+              </PermissionGate>
             )}
           >
             {deliveryRows.length === 0 ? (
@@ -1578,7 +1622,15 @@ const DailyLogPage: React.FC = () => {
                           onCommit={(next) => updateEntry(r.id, { po_number: next })} />
                       </td>
                       <td style={tdStyleAction}>
-                        {!isLocked && <RowDeleteButton onClick={() => removeEntry(r.id)} />}
+                        {!isLocked && (
+
+                          <PermissionGate permission="daily_log.edit">
+
+                            <RowDeleteButton onClick={() => removeEntry(r.id)} />
+
+                          </PermissionGate>
+
+                        )}
                       </td>
                     </tr>
                   ))}

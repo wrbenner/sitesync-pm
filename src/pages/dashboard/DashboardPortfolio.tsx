@@ -4,7 +4,7 @@ import { Building2, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useProjects } from '../../hooks/queries';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import type { Project } from '../../types/database';
 
 // ────────────────────────────────────────────────────────────────
@@ -82,8 +82,8 @@ const HEALTH_STYLE: Record<HealthColor, { dot: string; label: string }> = {
 export const DashboardPortfolio: React.FC = () => {
   const { data: projects } = useProjects();
   const { data: metricsMap = {} } = usePortfolioHealth(projects);
-  const activeProjectId = useProjectContext((s) => s.activeProjectId);
-  const setActiveProject = useProjectContext((s) => s.setActiveProject);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const setActiveProject = useProjectStore((s) => s.setActiveProject);
 
   const rows = useMemo<ProjectHealthRow[]>(() => {
     return (projects ?? []).map((p) => {

@@ -41,7 +41,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 
 import { useUiStore, useAuthStore } from '../stores'
 import { useProjects } from '../hooks/queries'
-import { useProjectContext } from '../stores/projectContextStore'
+import { useProjectStore } from '../stores/projectStore'
 import { usePermissions } from '../hooks/usePermissions'
 import { CreateProjectModal } from './forms/CreateProjectModal'
 import { MobileTabBar } from './MobileTabBar'
@@ -111,8 +111,8 @@ function writeStoredCollapsed(v: boolean) {
 const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   const navigate = useNavigate()
   const { data: projects } = useProjects()
-  const activeProjectId = useProjectContext((s) => s.activeProjectId)
-  const setActiveProject = useProjectContext((s) => s.setActiveProject)
+  const activeProjectId = useProjectStore((s) => s.activeProjectId)
+  const setActiveProject = useProjectStore((s) => s.setActiveProject)
   const [open, setOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [filter, setFilter] = useState('')

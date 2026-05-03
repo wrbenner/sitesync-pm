@@ -13,7 +13,7 @@ import { useProjectId } from '../hooks/useProjectId'
 import { useCustomReports, useReportRuns } from '../hooks/queries'
 import { REPORT_TYPES, type ReportType } from '../hooks/useReportData'
 import { useActionStream } from '../hooks/useActionStream'
-import { useProjectContext } from '../stores/projectContextStore'
+import { useProjectStore } from '../stores/projectStore'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 
@@ -296,7 +296,7 @@ function useOwnerUpdateContext(
   schedule: ScheduleHealth,
   budget: BudgetBurn,
 ): ProjectContextSnapshot {
-  const { activeProject } = useProjectContext()
+  const { activeProject } = useProjectStore()
   const { user } = useAuth()
   const stream = useActionStream('pm')
 

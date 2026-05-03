@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Plug, Check, X, RefreshCw, Clock, AlertTriangle, Zap, Shield, History, Lock, Download } from 'lucide-react'
 import { ProcoreImportModal } from '../components/integrations/ProcoreImportModal'
 import { useProjectId } from '../hooks/useProjectId'
-import { useProjectContext } from '../stores/projectContextStore'
+import { useProjectStore } from '../stores/projectStore'
 import { PageContainer, Card, Btn, Skeleton, MetricBox } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { FormModal, FormBody, FormFooter, FormField, FormInput } from '../components/forms/FormPrimitives'
@@ -165,7 +165,7 @@ export const Integrations: React.FC = () => {
   const [detailConnection, setDetailConnection] = useState<IntegrationConnection | null>(null)
   const [procoreImportOpen, setProcoreImportOpen] = useState(false)
   const projectId = useProjectId()
-  const { activeProject } = useProjectContext()
+  const { activeProject } = useProjectStore()
 
   const connectedCount = (connectionsQuery.data ?? []).filter((c) => c.status === 'connected').length
   const pendingCount = (connectionsQuery.data ?? []).filter((c) => c.status === 'pending_auth').length

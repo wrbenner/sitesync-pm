@@ -21,7 +21,7 @@ const indigo = {
   600: '#4F46E5', 700: '#4338CA',
 } as const;
 
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectStore } from '../stores/projectStore';
 import { useIsMobile } from '../hooks/useWindowSize';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -279,7 +279,7 @@ function TypingIndicator() {
 // ── Main Component ────────────────────────────────────────
 
 export default function AIAssistant() {
-  const { activeProject: currentProject } = useProjectContext();
+  const { activeProject: currentProject } = useProjectStore();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);

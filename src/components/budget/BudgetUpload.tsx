@@ -3,7 +3,7 @@ import { Upload, X, FileSpreadsheet, CheckCircle, Sparkles, AlertCircle, Chevron
 import * as XLSX from 'xlsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import {
   detectBudgetSheets,
   parseBudgetWorkbook,
@@ -25,7 +25,7 @@ type ImportStep = 'upload' | 'select_sheet' | 'preview' | 'importing' | 'done';
 
 export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
   const queryClient = useQueryClient();
-  const { activeProject } = useProjectContext();
+  const { activeProject } = useProjectStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // State

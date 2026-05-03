@@ -16,8 +16,9 @@ import { PermissionGate } from '../components/auth/PermissionGate';
 import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { supabase } from '../lib/supabase';
-import { useCrewStore } from '../stores/crewStore';
-import { useProjectContext } from '../stores/projectContextStore';
+import { useEntityStore, useEntityActions } from '../stores/entityStore';
+import type { Crew } from '../types/database';
+import { useProjectStore } from '../stores/projectStore';
 import { useDeleteCrew } from '../hooks/mutations';
 import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
 import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
@@ -216,8 +217,10 @@ function CrewStatusChip({ status }: { status: string | null }) {
 // ── Page ───────────────────────────────────────────────────────
 
 export const Crews: React.FC = () => {
-  const { crews, loading, error: crewError, loadCrews } = useCrewStore();
-  const { activeProject } = useProjectContext();
+  // ─── Migrated from crewStore to entityStore on Day 9 ───────────────────
+  const { items: crews, loading, error: crewError } = useEntityStore<Crew>('crews');
+  const { loadItems: loadCrews } = useEntityActions<Crew>('crews');
+  const { activeProject } = useProjectStore();
   const projectId = activeProject?.id;
   const deleteCrew = useDeleteCrew();
   const { confirm: confirmDeleteCrew, dialog: deleteCrewDialog } = useConfirm();

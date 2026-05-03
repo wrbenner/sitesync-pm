@@ -18,7 +18,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
 import { supabase } from '../lib/supabase';
-import { useEquipmentStore } from '../stores/equipmentStore';
+import { useEntityStore, useEntityActions } from '../stores/entityStore';
 import type { Equipment } from '../services/equipmentService';
 import { useEquipmentMaintenance } from '../hooks/queries/equipment';
 import { useMeterReadingsByProject } from '../hooks/queries/meter-readings';
@@ -99,12 +99,9 @@ function formatShortDate(iso: string | null): string {
 
 export const EquipmentPage: React.FC = () => {
   const projectId = useProjectId();
-  const {
-    equipment,
-    loading,
-    error,
-    loadEquipment,
-  } = useEquipmentStore();
+  // ─── Migrated from equipmentStore to entityStore on Day 9 ─────────────
+  const { items: equipment, loading, error } = useEntityStore<Equipment>('equipment');
+  const { loadItems: loadEquipment } = useEntityActions<Equipment>('equipment');
 
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
