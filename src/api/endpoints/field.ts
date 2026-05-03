@@ -1,7 +1,8 @@
 import { supabase, transformSupabaseError, supabaseMutation } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { DailyLogRow, DailyLogEntryRow, FieldCaptureRow, PunchItemRow, DailyLogPayload, PaginationParams, PaginatedResult } from '../../types/api'
-import type { Json, Database } from '../../types/database'
+import type { Json } from '../../types/database'
 
 // Sub-entry shapes produced from daily_log_entries rows
 
@@ -42,7 +43,7 @@ export interface IncidentDetail {
 // Type-safe JSON array parser — returns empty array for malformed input instead of throwing
 export function parseJsonArray<T>(raw: Json, guard: (v: unknown) => v is T): T[] {
   if (!Array.isArray(raw)) return []
-  return raw.filter(guard)
+  return (raw as unknown[]).filter(guard) as T[]
 }
 
 export function isCrewEntry(v: unknown): v is CrewEntry {
@@ -201,14 +202,14 @@ export interface PunchListItem {
 export const createDailyLog = async (projectId: string, payload: DailyLogPayload): Promise<DailyLogRow> => {
   const { ...dbPayload } = payload
   return supabaseMutation<DailyLogRow>(client =>
-    client.from('daily_logs').insert({ ...dbPayload, project_id: projectId } as Database['public']['Tables']['daily_logs']['Insert']).select().single()
+    client.from('daily_logs').insert({ ...dbPayload, project_id: projectId } as never).select().single()
   )
 }
 
 export const updateDailyLog = async (id: string, payload: Partial<DailyLogPayload>): Promise<DailyLogRow> => {
   const { ...dbPayload } = payload
   return supabaseMutation<DailyLogRow>(client =>
-    client.from('daily_logs').update(dbPayload as Database['public']['Tables']['daily_logs']['Update']).eq('id', id).select().single()
+    client.from('daily_logs').update(dbPayload as never).eq('id' as never, id).select().single()
   )
 }
 
@@ -216,7 +217,6 @@ export const submitDailyLog = async (
   projectId: string,
   id: string,
   signatureUrl?: string,
-  userId?: string
 ): Promise<DailyLogRow> => {
   validateProjectId(projectId)
   const updates: Record<string, unknown> = {
@@ -226,9 +226,9 @@ export const submitDailyLog = async (
   if (signatureUrl) updates.superintendent_signature_url = signatureUrl
   return supabaseMutation<DailyLogRow>(client =>
     client.from('daily_logs')
-      .update(updates as Database['public']['Tables']['daily_logs']['Update'])
-      .eq('id', id)
-      .eq('project_id', projectId)
+      .update(updates as never)
+      .eq('id' as never, id)
+      .eq('project_id' as never, projectId)
       .select()
       .single()
   )
@@ -236,7 +236,7 @@ export const submitDailyLog = async (
 
 export const amendDailyLog = async (
   projectId: string,
-  originalId: string,
+  _originalId: string,
   payload: import('../../types/api').DailyLogPayload
 ): Promise<DailyLogRow> => {
   validateProjectId(projectId)
@@ -251,7 +251,7 @@ export const amendDailyLog = async (
         approved_by: null,
         superintendent_signature_url: null,
         manager_signature_url: null,
-      } as Database['public']['Tables']['daily_logs']['Insert'])
+      } as never)
       .select()
       .single()
   )
@@ -265,15 +265,14 @@ export const getDailyLogs = async (
   const { page = 1, pageSize = 50 } = pagination ?? {}
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const { data, error, count } = await supabase
-    .from('daily_logs')
+  const { data, error, count } = await fromTable('daily_logs')
     .select('*, daily_log_entries(*)', { count: 'exact' })
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('log_date', { ascending: false })
     .range(from, to)
   if (error) throw transformSupabaseError(error)
 
-  const rows = (data || []).map((l: DailyLogRow & { daily_log_entries?: DailyLogEntryRow[] }): DailyLogEntry => {
+  const rows = ((data || []) as unknown as Array<DailyLogRow & { daily_log_entries?: DailyLogEntryRow[] }>).map((l): DailyLogEntry => {
     const entries: DailyLogEntryRow[] = l.daily_log_entries ?? []
 
     const crew_entries: CrewEntry[] = entries
@@ -352,6 +351,8 @@ export const getDailyLogs = async (
       workers_onsite: l.workers_onsite,
       is_submitted: l.status === 'submitted' || l.status === 'approved',
       submitted_at: (l.status === 'submitted' || l.status === 'approved') ? l.updated_at : null,
+      submitted_by: (l as Record<string, unknown>).submitted_by as string | null ?? null,
+      amended_from_id: (l as Record<string, unknown>).amended_from_id as string | null ?? null,
       // version not stored in DB; default to 1
       version: 1,
       // Computed fields
@@ -369,7 +370,8 @@ export const getDailyLogs = async (
       toolbox_talk_topic: toolboxEntry?.description ?? '',
     }
   })
-  return { data: rows, total: count ?? 0, page, pageSize }
+  const total = count ?? 0
+  return { data: rows, total, page, pageSize, hasMore: from + rows.length < total, isEmpty: total === 0 }
 }
 
 export async function getDailyLogsCursor(
@@ -380,10 +382,9 @@ export async function getDailyLogsCursor(
   await assertProjectAccess(projectId)
   const pageSize = params.pageSize || 50
 
-  let query = supabase
-    .from('daily_logs')
+  let query = fromTable('daily_logs')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('log_date', { ascending: false })
     .order('id', { ascending: false })
     .limit(pageSize + 1)
@@ -391,13 +392,13 @@ export async function getDailyLogsCursor(
   if (params.cursor) {
     const decoded = atob(params.cursor)
     const [decodedDate] = decoded.split('|')
-    query = query.lt('log_date', decodedDate)
+    query = query.lt('log_date' as never, decodedDate)
   }
 
   const { data, error } = await query
   if (error) throw transformSupabaseError(error)
 
-  const rows = data || []
+  const rows = (data || []) as unknown as DailyLogRow[]
   const hasMore = rows.length > pageSize
   const sliced = hasMore ? rows.slice(0, pageSize) : rows
   const last = sliced[sliced.length - 1]
@@ -405,7 +406,7 @@ export async function getDailyLogsCursor(
     ? btoa(`${last.log_date}|${last.id}`)
     : undefined
 
-  return { data: sliced as DailyLogRow[], hasMore, nextCursor }
+  return { data: sliced, hasMore, nextCursor }
 }
 
 export async function getPunchItemsCursor(
@@ -416,10 +417,9 @@ export async function getPunchItemsCursor(
   await assertProjectAccess(projectId)
   const pageSize = params.pageSize || 50
 
-  let query = supabase
-    .from('punch_items')
+  let query = fromTable('punch_items')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(pageSize + 1)
@@ -427,13 +427,13 @@ export async function getPunchItemsCursor(
   if (params.cursor) {
     const decoded = atob(params.cursor)
     const [decodedCreatedAt] = decoded.split('|')
-    query = query.lt('created_at', decodedCreatedAt)
+    query = query.lt('created_at' as never, decodedCreatedAt)
   }
 
   const { data, error } = await query
   if (error) throw transformSupabaseError(error)
 
-  const rows = data || []
+  const rows = (data || []) as unknown as PunchItemRow[]
   const hasMore = rows.length > pageSize
   const sliced = hasMore ? rows.slice(0, pageSize) : rows
   const last = sliced[sliced.length - 1]
@@ -441,18 +441,17 @@ export async function getPunchItemsCursor(
     ? btoa(`${last.created_at}|${last.id}`)
     : undefined
 
-  return { data: sliced as PunchItemRow[], hasMore, nextCursor }
+  return { data: sliced, hasMore, nextCursor }
 }
 
 export const getFieldCaptures = async (projectId: string): Promise<FieldCapture[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('field_captures')
+  const { data, error } = await fromTable('field_captures')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: false })
   if (error) throw transformSupabaseError(error)
-  return (data || []).map((c: FieldCaptureRow): FieldCapture => ({
+  return ((data || []) as unknown as FieldCaptureRow[]).map((c): FieldCapture => ({
     id: c.id,
     project_id: c.project_id,
     ai_category: c.ai_category,
@@ -475,14 +474,13 @@ export const getPunchList = async (
   const { page = 1, pageSize = 50 } = pagination ?? {}
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
-  const { data, error, count } = await supabase
-    .from('punch_items')
+  const { data, error, count } = await fromTable('punch_items')
     .select('*', { count: 'exact' })
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('number', { ascending: false })
     .range(from, to)
   if (error) throw transformSupabaseError(error)
-  const rows = (data || []).map((p: PunchItemRow): PunchListItem => ({
+  const rows = ((data || []) as unknown as PunchItemRow[]).map((p): PunchListItem => ({
     id: p.id,
     project_id: p.project_id,
     number: p.number,
@@ -514,7 +512,8 @@ export const getPunchList = async (
     hasPhoto: Array.isArray(p.photos) && p.photos.length > 0,
     dueDate: p.due_date ?? '',
   }))
-  return { data: rows, total: count ?? 0, page, pageSize }
+  const total = count ?? 0
+  return { data: rows, total, page, pageSize, hasMore: from + rows.length < total, isEmpty: total === 0 }
 }
 
 export function applyDailyLogRealtimeChange(
