@@ -247,7 +247,7 @@ const DEFAULT_PREQUAL: PrequalInfo = {
   lastUpdated: '',
 };
 
-function getDefaultPrequal(): PrequalInfo {
+function _getDefaultPrequal(): PrequalInfo {
   return { ...DEFAULT_PREQUAL };
 }
 
@@ -638,6 +638,7 @@ export const Directory: React.FC = () => {
     }));
   }, [companiesData]);
 
+  const [nowMs] = useState(Date.now);
   const { data: prequalRows } = usePrequalifications(projectId);
   const { data: lastContactMap } = useLastContactMap(projectId);
   const createCommLog = useCreateCommunicationLog();
@@ -714,15 +715,14 @@ export const Directory: React.FC = () => {
       result = result.filter(c => c.trade === tradeFilter);
     }
     if (commFilter === 'stale' && lastContactMap) {
-      const now = Date.now();
       result = result.filter(c => {
         const last = lastContactMap.get(c.id);
         if (!last) return true; // never contacted
-        return now - new Date(last).getTime() > staleThresholdMs;
+        return nowMs - new Date(last).getTime() > staleThresholdMs;
       });
     }
     return result;
-  }, [searchQuery, CONTACTS, tradeFilter, commFilter, lastContactMap, staleThresholdMs]);
+  }, [searchQuery, CONTACTS, tradeFilter, commFilter, lastContactMap, staleThresholdMs, nowMs]);
 
   const filteredCompanies = useMemo(() => {
     let result = companies;
@@ -745,7 +745,7 @@ export const Directory: React.FC = () => {
   const formatLastContact = (contactId: string): string => {
     const iso = lastContactMap?.get(contactId);
     if (!iso) return '—';
-    const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+    const days = Math.floor((nowMs - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return 'Today';
     if (days === 1) return '1d ago';
     if (days < 30) return `${days}d ago`;

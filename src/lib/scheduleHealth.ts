@@ -83,7 +83,7 @@ function daysBetween(a: string | null, b: string | null): number {
 }
 
 function uid(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomUUID().slice(0, 10);
 }
 
 // ── Main Analysis Function ──────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
   for (const p of phases) {
     const preds = predecessorMap.get(p.id) ?? [];
     const succs = successorMap.get(p.id) ?? [];
-    const isMilestone = p.isMilestone || p.is_milestone || p.startDate === p.endDate;
+    const _isMilestone = p.isMilestone || p.is_milestone || p.startDate === p.endDate;
 
     // Open start: no predecessors and not the project start
     if (preds.length === 0 && p.startDate !== earliestStart) {
@@ -247,7 +247,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
 
   if (durations.length > 3) {
     const sorted = [...durations].sort((a, b) => a.days - b.days);
-    const median = sorted[Math.floor(sorted.length / 2)].days;
+    const _median = sorted[Math.floor(sorted.length / 2)].days;
     const anomalies: string[] = [];
 
     for (const d of durations) {

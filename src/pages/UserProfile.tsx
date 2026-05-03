@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   User, Mail, Phone, Building2, Briefcase, Shield, Camera,
   Bell, BellOff, ChevronRight, LogOut, Check, Pencil,
-  Moon, Sun, Lock, KeyRound, Palette,
+  Moon, Sun, KeyRound, Palette,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores';
@@ -169,52 +169,69 @@ const SettingsRow: React.FC<{
   onClick?: () => void;
   trailing?: React.ReactNode;
   last?: boolean;
-}> = ({ label, description, icon, onClick, trailing, last }) => (
-  <button
-    onClick={onClick}
-    style={{
-      display: 'flex', alignItems: 'center', gap: spacing['3'],
-      padding: `${spacing['3']} 0`, width: '100%',
-      border: 'none', background: 'none', cursor: onClick ? 'pointer' : 'default',
-      textAlign: 'left', borderBottom: last ? 'none' : `1px solid ${colors.borderSubtle}`,
-      fontFamily: typography.fontFamily,
-    }}
-  >
-    <div style={{
-      width: 36, height: 36,
-      borderRadius: borderRadius.lg,
-      backgroundColor: colors.surfaceInset,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: colors.textTertiary, flexShrink: 0,
-    }}>
-      {icon}
-    </div>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <p style={{
-        fontSize: typography.fontSize.base,
-        fontWeight: typography.fontWeight.medium,
-        color: colors.textPrimary, margin: 0,
+}> = ({ label, description, icon, onClick, trailing, last }) => {
+  // Use <div> when trailing contains interactive content (e.g. Toggle <button>) to
+  // avoid invalid <button> > <button> HTML nesting. Rows without trailing and with
+  // an onClick stay as <button> for proper keyboard/a11y semantics.
+  const Tag = trailing ? 'div' : 'button';
+  return (
+    <Tag
+      onClick={trailing ? undefined : onClick}
+      role={!trailing && onClick ? undefined : trailing ? undefined : undefined}
+      onKeyDown={
+        !trailing && onClick
+          ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }
+          : undefined
+      }
+      tabIndex={!trailing && onClick ? 0 : undefined}
+      style={{
+        display: 'flex', alignItems: 'center', gap: spacing['3'],
+        padding: `${spacing['3']} 0`, width: '100%',
+        border: 'none', background: 'none', cursor: onClick && !trailing ? 'pointer' : 'default',
+        textAlign: 'left', borderBottom: last ? 'none' : `1px solid ${colors.borderSubtle}`,
+        fontFamily: typography.fontFamily,
+      }}
+    >
+      <div style={{
+        width: 36, height: 36,
+        borderRadius: borderRadius.lg,
+        backgroundColor: colors.surfaceInset,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: colors.textTertiary, flexShrink: 0,
       }}>
-        {label}
-      </p>
-      {description && (
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          fontSize: typography.fontSize.xs, color: colors.textTertiary,
-          margin: 0, marginTop: 2,
+          fontSize: typography.fontSize.base,
+          fontWeight: typography.fontWeight.medium,
+          color: colors.textPrimary, margin: 0,
         }}>
-          {description}
+          {label}
         </p>
-      )}
-    </div>
-    {trailing ?? (onClick ? <ChevronRight size={16} color={colors.textTertiary} /> : null)}
-  </button>
-);
+        {description && (
+          <p style={{
+            fontSize: typography.fontSize.xs, color: colors.textTertiary,
+            margin: 0, marginTop: 2,
+          }}>
+            {description}
+          </p>
+        )}
+      </div>
+      {trailing ?? (onClick ? <ChevronRight size={16} color={colors.textTertiary} /> : null)}
+    </Tag>
+  );
+};
 
 /* ─────────────────────── Toggle Component ─────────────────────── */
 
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({ checked, onChange }) => (
-  <button
-    onClick={() => onChange(!checked)}
+  <div
+    role="switch"
+    aria-checked={checked}
+    tabIndex={0}
+    onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
+    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!checked); } }}
     style={{
       width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
       backgroundColor: checked ? colors.primaryOrange : colors.surfaceInset,
@@ -232,7 +249,7 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = (
         boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
       }}
     />
-  </button>
+  </div>
 );
 
 /* ─────────────────────── Main Component ─────────────────────── */
@@ -251,7 +268,7 @@ export default function UserProfile() {
 
   // Edit states
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
 

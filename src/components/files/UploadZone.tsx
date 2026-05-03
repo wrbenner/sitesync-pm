@@ -113,7 +113,7 @@ export async function extractDrawingFilesFromZip(
         console.warn('[zip] Skipped sample:', skipped.slice(0, 10));
       }
     } else {
-      console.info(`[zip] "${zipFile.name}" — extracted ${files.length} files (skipped ${skipped.length}).`);
+      if (import.meta.env.DEV) console.info(`[zip] "${zipFile.name}" — extracted ${files.length} files (skipped ${skipped.length}).`);
     }
   }
 

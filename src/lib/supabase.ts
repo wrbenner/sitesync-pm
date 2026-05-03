@@ -4,36 +4,46 @@ import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/enums'
 
 // Supabase config: env vars are injected at build time by Vite.
-// Required — no source-level fallbacks. If either is missing the client
-// creation below will throw, which is what we want: a silently-running
-// build pointed at the wrong project is worse than a hard failure.
+// Required in production — if either is missing in a real build the client creation
+// will throw, which is what we want: a silently-running build pointed at the wrong
+// project is worse than a hard failure.
+// Exception: when VITE_DEV_BYPASS=true is set (dev-only, no Supabase vars), we create
+// a placeholder client so pages can render under auth bypass (e2e / local dev without
+// a Supabase project). isDevBypassActive() in lib/devBypass.ts explicitly requires that
+// no Supabase vars are present, so we must not throw in that case.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
-if (!supabaseUrl || !supabaseAnonKey) {
+const isDevBypass = import.meta.env.DEV === true && import.meta.env.VITE_DEV_BYPASS === 'true'
+
+if (!isDevBypass && (!supabaseUrl || !supabaseAnonKey)) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
     'Configure them in your deployment environment (Vercel project settings, .env.local, etc.).',
   )
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    // Disable gotrue-js's navigator-lock serialization. It's designed to coordinate auth
-    // refresh across multiple tabs, but in practice it causes 5s timeouts + "Lock stolen"
-    // errors when a page fires many concurrent data fetches (each one wants to read the
-    // session, each acquires the same lock). Pass-through is safe for single-tab usage.
-    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
+export const supabase = createClient<Database>(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      // Disable gotrue-js's navigator-lock serialization. It's designed to coordinate auth
+      // refresh across multiple tabs, but in practice it causes 5s timeouts + "Lock stolen"
+      // errors when a page fires many concurrent data fetches (each one wants to read the
+      // session, each acquires the same lock). Pass-through is safe for single-tab usage.
+      lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
+    },
   },
-})
+)
 
 export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 
 /**
  * Typed table accessor that accepts tables added by migration but not yet in generated types.
- * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
+ * Use this instead of direct unsafe table name casts for safe, typed table access.
  */
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])

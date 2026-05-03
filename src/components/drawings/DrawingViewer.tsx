@@ -108,9 +108,18 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
     } : undefined,
   };
 
+  const noopFn = () => {};
+
   // Skip Liveblocks wrapper if not configured — viewer works fine without collaboration
   if (!LIVEBLOCKS_CONFIGURED) {
-    return <DrawingViewerInner {...innerProps} />;
+    return (
+      <DrawingViewerInner
+        {...innerProps}
+        updateMyPresence={noopFn}
+        broadcastEvent={noopFn}
+        others={[]}
+      />
+    );
   }
 
   return (
@@ -125,16 +134,62 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
         color: presenceUser.color,
       }}
     >
-      <DrawingViewerInner {...innerProps} />
+      <LiveblocksHooksLayer {...innerProps} />
     </RoomProvider>
   );
 };
 
-// ── Inner component: uses Liveblocks hooks ───────────────────────────────────
+// ── Liveblocks adapter types ─────────────────────────────────────────────────
+
+type UpdatePresenceFn = (patch: Record<string, unknown>) => void;
+type BroadcastFn = (event: Record<string, unknown>) => void;
+type OtherUser = { presence: { cursor: { x: number; y: number } | null; name?: string; initials?: string; color?: string }; connectionId: number };
+
+// ── MarkupEventBridge: calls useEventListener inside RoomProvider context ─────
+// Rendered only when Liveblocks is configured. Receives a stable callback ref
+// so it can forward remote markup events into the parent's state setter.
+interface MarkupEventBridgeProps {
+  onMarkupAdd: (markup: MarkupItem) => void;
+  onMarkupDelete: (id: number) => void;
+}
+const MarkupEventBridge: React.FC<MarkupEventBridgeProps> = ({ onMarkupAdd, onMarkupDelete }) => {
+  useEventListener(({ event }) => {
+    if (event.type === 'MARKUP_ADD') {
+      onMarkupAdd(event.markup as MarkupItem);
+    } else if (event.type === 'MARKUP_DELETE') {
+      onMarkupDelete(event.id as number);
+    }
+  });
+  return null;
+};
+
+// ── LiveblocksHooksLayer: calls presence/broadcast hooks inside RoomProvider ──
+// Renders DrawingViewerInner with the resolved liveblocks values as props.
+type InnerPropsWithoutLive = Omit<DrawingViewerInnerProps, 'updateMyPresence' | 'broadcastEvent' | 'others' | 'liveblocksEnabled'>;
+const LiveblocksHooksLayer: React.FC<InnerPropsWithoutLive> = (props) => {
+  const updateMyPresence = useUpdateMyPresence() as unknown as UpdatePresenceFn;
+  const broadcastEvent = useBroadcastEvent() as unknown as BroadcastFn;
+  const others = useOthers() as unknown as OtherUser[];
+  return (
+    <DrawingViewerInner
+      {...props}
+      updateMyPresence={updateMyPresence}
+      broadcastEvent={broadcastEvent}
+      others={others}
+      liveblocksEnabled
+    />
+  );
+};
+
+// ── Inner component: receives Liveblocks values as props ─────────────────────
 
 interface DrawingViewerInnerProps extends DrawingViewerProps {
   presenceUser: { name: string; initials: string; color: string };
   createAnnotationMutate?: (shapeData: Record<string, unknown>) => void;
+  updateMyPresence: UpdatePresenceFn;
+  broadcastEvent: BroadcastFn;
+  others: OtherUser[];
+  liveblocksEnabled?: boolean;
 }
 
 const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
@@ -146,6 +201,9 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   annotations,
   isEditable = false,
   createAnnotationMutate,
+  updateMyPresence,
+  broadcastEvent,
+  others,
 }) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [zoom, setZoom] = useState(1);
@@ -182,34 +240,13 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   const announceStatus = useUiStore((s) => s.announceStatus);
 
-  // ── Liveblocks hooks (no-op when not configured) ──────────────────────────
-  const _updatePresence = LIVEBLOCKS_CONFIGURED ? useUpdateMyPresence() : null;
-  const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
-  const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
-  const updateMyPresence = _updatePresence ?? (() => {});
-  const broadcastEvent = _broadcastEvent ?? (() => {});
+  // updateMyPresence, broadcastEvent, others come from props (injected by
+  // LiveblocksHooksLayer when configured, or no-ops when not configured).
 
-  // Update presence name/color once on mount
+  // Sync presence name/color on mount
   useEffect(() => {
-    if (LIVEBLOCKS_CONFIGURED) {
-      updateMyPresence({ name: presenceUser.name, initials: presenceUser.initials, color: presenceUser.color });
-    }
+    updateMyPresence({ name: presenceUser.name, initials: presenceUser.initials, color: presenceUser.color });
   }, [presenceUser.name, presenceUser.initials, presenceUser.color, updateMyPresence]);
-
-  // Receive remote markup events and apply to local state
-  if (LIVEBLOCKS_CONFIGURED) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEventListener(({ event }) => {
-      if (event.type === 'MARKUP_ADD') {
-        setMarkups((prev) => {
-          if (prev.some((m) => m.id === event.markup.id)) return prev;
-          return [...prev, event.markup as MarkupItem];
-        });
-      } else if (event.type === 'MARKUP_DELETE') {
-        setMarkups((prev) => prev.filter((m) => m.id !== event.id));
-      }
-    });
-  }
 
   // ── Fabric.js annotation canvas ──────────────────────────────────────────
 
@@ -731,6 +768,12 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: '100vw', height: '100%', backgroundColor: vizColors.dark, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {liveblocksEnabled && (
+        <MarkupEventBridge
+          onMarkupAdd={(markup) => setMarkups((prev) => prev.some((m) => m.id === markup.id) ? prev : [...prev, markup])}
+          onMarkupDelete={(id) => setMarkups((prev) => prev.filter((m) => m.id !== id))}
+        />
+      )}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0 ${spacing['5']}`, height: 48, backgroundColor: 'rgba(10,10,10,0.97)', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>

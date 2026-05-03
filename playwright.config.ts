@@ -11,6 +11,7 @@ export default defineConfig({
     baseURL: 'http://localhost:5173/sitesync-pm/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    ignoreHTTPSErrors: true,
   },
   projects: [
     {

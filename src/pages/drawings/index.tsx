@@ -803,9 +803,7 @@ const DrawingsPage: React.FC = () => {
     const uploadAsSpec = async (file: File, idx: number) => {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
       setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" (${sizeMB} MB)...`);
-      const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-        ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const storageKey = crypto.randomUUID();
       const path = `${projectId}/specifications/${storageKey}-${file.name}`;
       let fileUrl = path;
       try {
@@ -920,21 +918,21 @@ const DrawingsPage: React.FC = () => {
           : filenameBasedLabel;
 
         if (titleBlock.sheetNumber || titleBlock.title) {
-          console.info(`[text-layer-validator] page ${page.pageNumber}:`, {
-            parserSheet: titleBlock.sheetNumber,
-            parserTitle: titleBlock.title,
-            strategy: titleBlock.titleStrategy,
-            confidence: titleBlock.confidence,
-            regionScoped: titleBlock.regionScoped,
-            note: 'text-layer is validator-only for non-cover pages; AI output wins',
-          });
+          if (import.meta.env.DEV) {
+            console.info(`[text-layer-validator] page ${page.pageNumber}:`, {
+              parserSheet: titleBlock.sheetNumber,
+              parserTitle: titleBlock.title,
+              strategy: titleBlock.titleStrategy,
+              confidence: titleBlock.confidence,
+              regionScoped: titleBlock.regionScoped,
+              note: 'text-layer is validator-only for non-cover pages; AI output wins',
+            });
+          }
         }
 
         // Unique storage key per page — UUID avoids Date.now() collisions
         // across concurrent uploads from different users/tabs.
-        const pageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-          ? globalThis.crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const pageKey = crypto.randomUUID();
         const pageImagePath = `${projectId}/drawings/pages/${pageKey}-p${page.pageNumber}.png`;
         const thumbPath = `${projectId}/drawings/thumbs/${pageKey}-p${page.pageNumber}-thumb.png`;
         let pageImageStoragePath: string | null = null;
@@ -1044,9 +1042,7 @@ const DrawingsPage: React.FC = () => {
               page.pageWidth,
               page.pageHeight,
             );
-            const cropKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-              ? globalThis.crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+            const cropKey = crypto.randomUUID();
             const cropPath = `${projectId}/drawings/crops/${cropKey}-strip-p${page.pageNumber}.png`;
             const cropFile = new window.File([cropBlob], `strip-${cropKey}.png`, { type: 'image/png' });
             const cropUploadResult = await smartUpload('project-files', cropPath, cropFile, () => {});
@@ -1056,7 +1052,7 @@ const DrawingsPage: React.FC = () => {
                 .createSignedUrl(cropUploadResult.storagePath || cropPath, 3600);
               if (cropUrlData?.signedUrl) {
                 classifyUrl = cropUrlData.signedUrl;
-                console.info(`[ai-primary] page ${page.pageNumber} — right-strip crop queued for Gemini (${Math.round(cropBlob.size / 1024)}KB)`);
+                if (import.meta.env.DEV) console.info(`[ai-primary] page ${page.pageNumber} — right-strip crop queued for Gemini (${Math.round(cropBlob.size / 1024)}KB)`);
               }
             }
           } catch (err) {
@@ -1103,9 +1099,7 @@ const DrawingsPage: React.FC = () => {
       setUploadProgressText(`[${idx + 1}/${total}] Uploading "${file.name}" (${sizeMB} MB)...`);
       const sheetMatch = titleNoExt.match(/^([A-Z]{1,3}-?\d+)/i);
       const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
-      const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-        ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const storageKey = crypto.randomUUID();
       const storagePath = `${projectId}/drawings/${storageKey}-${file.name}`;
       let fileUrl = storagePath;
       let publicUrl: string | null = null;
@@ -1171,10 +1165,10 @@ const DrawingsPage: React.FC = () => {
             const text = await extractPdfTextFromPages(file, 5);
             if (text.trim()) {
               const metadata = parseCoverMetadata(text);
-              console.info('[cover] metadata detected for', file.name, metadata);
+              if (import.meta.env.DEV) console.info('[cover] metadata detected for', file.name, metadata);
               coverFindings.push({ fileName: file.name, metadata });
             } else {
-              console.info('[cover] no embedded text in', file.name, '— likely a scanned/image PDF. OCR would be needed.');
+              if (import.meta.env.DEV) console.info('[cover] no embedded text in', file.name, '— likely a scanned/image PDF. OCR would be needed.');
             }
           } catch (err) {
             console.warn('[cover] text extraction failed', err);
@@ -1194,7 +1188,7 @@ const DrawingsPage: React.FC = () => {
               if (firstPageText.trim() && looksLikeCoverText(firstPageText)) {
                 const metadata = parseCoverMetadata(firstPageText);
                 if (metadata.confidence > 0.2) {
-                  console.info('[drawing-title-page] metadata detected on', file.name, metadata);
+                  if (import.meta.env.DEV) console.info('[drawing-title-page] metadata detected on', file.name, metadata);
                   coverFindings.push({ fileName: file.name, metadata });
                 }
               }
@@ -1285,13 +1279,12 @@ const DrawingsPage: React.FC = () => {
     //
     // Safety contract: we ONLY set fields on the projects row that are
     // currently null/empty. We NEVER overwrite user-entered data. The full
-    // parse is logged to the console for the user to review.
     if (coverFindings.length > 0) {
       const merged: CoverMetadata = coverFindings
         .map((f) => f.metadata)
         .reduce((acc, m) => mergeCoverMetadata(acc, m));
 
-      console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
+      if (import.meta.env.DEV) console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
 
       // Fetch current project row to know which fields are already populated
       const { data: currentProject } = await supabase

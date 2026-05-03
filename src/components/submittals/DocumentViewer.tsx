@@ -15,7 +15,7 @@ import {
   Rows,
   Download,
 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { spacing, typography, borderRadius } from '../../styles/theme';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -280,14 +280,12 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [containerWidth, setContainerWidth] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
-  const [pdfLoading, setPdfLoading] = useState(true);
+  const [_pdfLoading, setPdfLoading] = useState(true);
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const toolbarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastMouseMoveRef = useRef<number>(Date.now());
-
   const currentFile = files[currentFileIndex] || null;
   const isImage = currentFile ? isImageFile(currentFile) : false;
   const isPdf = currentFile ? isPdfFile(currentFile) : false;
@@ -314,7 +312,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const resetToolbarTimer = useCallback(() => {
     setShowToolbar(true);
-    lastMouseMoveRef.current = Date.now();
 
     if (toolbarTimeoutRef.current) {
       clearTimeout(toolbarTimeoutRef.current);

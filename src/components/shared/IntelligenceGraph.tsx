@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { spacing, typography, borderRadius, zIndex } from '../../styles/theme'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -292,8 +292,8 @@ export function IntelligenceGraph({
 
       return {
         ...n,
-        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40,
-        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40,
+        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40, // immune-ok: force-directed physics jitter
+        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40, // immune-ok: force-directed physics jitter
         vx: existing?.vx ?? 0,
         vy: existing?.vy ?? 0,
         fx: 0,
@@ -329,7 +329,7 @@ export function IntelligenceGraph({
     }
   }, [])
 
-  const worldToScreen = useCallback((wx: number, wy: number) => {
+  const _worldToScreen = useCallback((wx: number, wy: number) => {
     const t = transformRef.current
     return {
       x: wx * t.scale + t.offsetX,
@@ -400,7 +400,7 @@ export function IntelligenceGraph({
         let dx = b.x - a.x
         let dy = b.y - a.y
         let dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 }
+        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 } // immune-ok: repulsion degenerate-case physics
         const force = REPULSION_STRENGTH / (dist * dist)
         const fx = (dx / dist) * force
         const fy = (dy / dist) * force

@@ -305,15 +305,15 @@ describe('Daily Log Lifecycle Integration', () => {
 })
 
 describe('Punch Item Lifecycle Integration', () => {
-  it('full lifecycle: open → work → resolve → verify', () => {
+  it('full lifecycle: open → work → sub_complete → verify', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
 
     expect(actor.getSnapshot().value).toBe('open')
     actor.send({ type: 'START_WORK' })
     expect(actor.getSnapshot().value).toBe('in_progress')
-    actor.send({ type: 'RESOLVE' })
-    expect(actor.getSnapshot().value).toBe('resolved')
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
+    expect(actor.getSnapshot().value).toBe('sub_complete')
     actor.send({ type: 'VERIFY' })
     expect(actor.getSnapshot().value).toBe('verified')
     // Verified is no longer final (can be rejected back to in_progress)
@@ -325,9 +325,9 @@ describe('Punch Item Lifecycle Integration', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
     actor.send({ type: 'START_WORK' })
-    actor.send({ type: 'RESOLVE' })
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
     actor.send({ type: 'VERIFY' })
-    actor.send({ type: 'REJECT_VERIFICATION' })
+    actor.send({ type: 'REJECT' })
     expect(actor.getSnapshot().value).toBe('in_progress')
     actor.stop()
   })
@@ -336,7 +336,7 @@ describe('Punch Item Lifecycle Integration', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
     actor.send({ type: 'START_WORK' })
-    actor.send({ type: 'RESOLVE' })
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
     actor.send({ type: 'REOPEN' })
     expect(actor.getSnapshot().value).toBe('open')
     actor.stop()

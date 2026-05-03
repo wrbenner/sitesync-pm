@@ -14,7 +14,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { colors, typography, borderRadius } from '../../styles/theme';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -68,7 +67,7 @@ const WITNESS_GAP = 6;
 const TICK_SIZE = 5;
 /** Frosted label pill padding */
 const PILL_PAD_X = 10;
-const PILL_PAD_Y = 5;
+const _PILL_PAD_Y = 5;
 
 // Architectural orange — warm, confident, reads on any background
 const DIM_COLOR = '#F47820';
@@ -80,7 +79,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${crypto.randomUUID().slice(0, 7)}`;
 
 function normalizedDistance(
   a: NormalizedPoint,
@@ -149,7 +148,7 @@ const ArchDimensionLine: React.FC<{
   label: string;
   sublabel?: string;
   offset?: number;
-}> = ({ p1, p2, label, sublabel, offset = 16 }) => {
+}> = ({ p1, p2, label, sublabel: _sublabel, offset = 16 }) => {
   const perp = perpUnit(p1, p2);
   const angle = lineAngle(p1, p2);
   const angleDeg = (angle * 180) / Math.PI;
@@ -229,19 +228,14 @@ const ArchDimensionLine: React.FC<{
         >
           {label}
         </text>
-        {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
-        {false && sublabel && (
-          <text
-            x={0} y={14}
-            textAnchor="middle"
-            fill="rgba(255,255,255,0.45)"
-            fontSize={10}
-            fontWeight={500}
-            fontFamily="'SF Mono', 'Menlo', 'Consolas', monospace"
-          >
+        {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future.
+        sublabel && (
+          <text x={0} y={14} textAnchor="middle" fill="rgba(255,255,255,0.45)"
+            fontSize={10} fontWeight={500}
+            fontFamily="'SF Mono', 'Menlo', 'Consolas', monospace">
             {sublabel}
           </text>
-        )}
+        ) */}
       </g>
     </g>
   );
