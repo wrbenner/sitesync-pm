@@ -1,5 +1,6 @@
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../errors'
 import { assertProjectAccess } from '../middleware/projectScope'
+import { fromTable, selectScoped, inIds } from '../../lib/db/queries'
 import { getCachedEntityLabel, setCachedEntityLabel } from '../../hooks/useProjectCache'
 import type { ActivityFeedItem } from '../../types/entities'
 import type { ActivityFeedRow, ActivityFeedRowWithProfile } from '../../types/api'
@@ -10,15 +11,17 @@ type ProfileLite = { id: string; full_name: string | null; avatar_url: string | 
 
 async function fetchProfilesForActivity(userIds: string[]): Promise<Map<string, ProfileLite>> {
   if (userIds.length === 0) return new Map()
-  const { data, error } = await supabase
-    .from('profiles')
+  const { data, error } = await fromTable('profiles')
     .select('id, full_name, avatar_url')
-    .in('id', userIds)
+    .in('id', inIds(userIds))
   if (error) {
     if (import.meta.env.DEV) console.warn('[ActivityFeed] profile lookup failed:', error.message)
     return new Map()
   }
-  return new Map((data ?? []).map((p) => [p.id, p as ProfileLite]))
+  return new Map((data ?? []).map((p) => {
+    const profile = p as ProfileLite
+    return [profile.id, profile]
+  }))
 }
 
 export const getActivityFeed = async (projectId: string): Promise<ActivityFeedItem[]> => {
@@ -29,14 +32,11 @@ export const getActivityFeed = async (projectId: string): Promise<ActivityFeedIt
   // that breaks downstream `.eq('project_id', ...)` narrowing. The two-query
   // path is also more resilient: a missing FK relationship in one environment
   // doesn't break the feed.
-  const { data: rowData, error: rowsError } = await supabase
-    .from('activity_feed')
-    .select('*')
-    .eq('project_id', projectId)
+  const { data: rowData, error: rowsError } = await selectScoped('activity_feed', projectId, '*')
     .order('created_at', { ascending: false })
     .limit(50)
   if (rowsError) throw transformSupabaseError(rowsError)
-  const rows = (rowData ?? []) as ActivityFeedRow[]
+  const rows = (rowData ?? []) as unknown as ActivityFeedRow[]
 
   // Resolve profiles in one batched query so each row gets actor name/avatar.
   const items = rows as ActivityFeedRowWithProfile[]
@@ -86,21 +86,29 @@ async function batchFetchEntityLabels(
   // exposes only .then(), not the full Promise interface.
   type LabelLoader = () => Promise<void>
 
-  async function loadLabels<R extends { id: string }>(
+  // Helper accepts the bare PostgrestBuilder thenable. We can't pin its
+  // exact generic shape (Supabase v2's strict generics make composing them
+  // through a function-pointer signature impossible without resolving the
+  // full conditional-type chain at the boundary), so we accept any awaitable
+  // and narrow the resolved object inside.
+  async function loadLabels(
     entityType: string,
-    fetchRows: () => Promise<{ data: R[] | null; error: { message: string } | null }>,
-    formatLabel: (row: R) => string,
+    fetchRows: () => PromiseLike<unknown>,
+    formatLabel: (row: Record<string, unknown>) => string,
   ): Promise<void> {
     try {
-      const { data, error } = await fetchRows()
+      const result = (await fetchRows()) as { data: Array<Record<string, unknown>> | null; error: { message: string } | null }
+      const { data, error } = result
       if (error) {
         if (import.meta.env.DEV) console.warn(`[ActivityFeed] ${entityType} label fetch failed:`, error.message)
         return
       }
       for (const row of data ?? []) {
+        const id = row.id
+        if (typeof id !== 'string') continue
         const label = formatLabel(row)
-        labelMap.set(row.id, label)
-        setCachedEntityLabel(`${projectId}:${entityType}:${row.id}`, label)
+        labelMap.set(id, label)
+        setCachedEntityLabel(`${projectId}:${entityType}:${id}`, label)
       }
     } catch (err) {
       if (import.meta.env.DEV) console.warn(`[ActivityFeed] ${entityType} label fetch failed:`, err instanceof Error ? err.message : String(err))
@@ -113,7 +121,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['rfi']
     loaders.push(() => loadLabels(
       'rfi',
-      () => supabase.from('rfis').select('id, number, title').eq('project_id', projectId).in('id', ids),
+      () => selectScoped('rfis', projectId, 'id, number, title').in('id', inIds(ids)),
       (row) => `RFI-${String(row.number).padStart(3, '0')} ${row.title}`,
     ))
   }
@@ -121,7 +129,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['submittal']
     loaders.push(() => loadLabels(
       'submittal',
-      () => supabase.from('submittals').select('id, number, title').eq('project_id', projectId).in('id', ids),
+      () => selectScoped('submittals', projectId, 'id, number, title').in('id', inIds(ids)),
       (row) => `SUB-${String(row.number).padStart(3, '0')} ${row.title}`,
     ))
   }
@@ -129,15 +137,15 @@ async function batchFetchEntityLabels(
     const ids = grouped['punch_list_item']
     loaders.push(() => loadLabels(
       'punch_list_item',
-      () => supabase.from('punch_items').select('id, title').eq('project_id', projectId).in('id', ids),
-      (row) => row.title,
+      () => selectScoped('punch_items', projectId, 'id, title').in('id', inIds(ids)),
+      (row) => String(row.title),
     ))
   }
   if (grouped['change_order']?.length) {
     const ids = grouped['change_order']
     loaders.push(() => loadLabels(
       'change_order',
-      () => supabase.from('change_orders').select('id, number, title').eq('project_id', projectId).in('id', ids),
+      () => selectScoped('change_orders', projectId, 'id, number, title').in('id', inIds(ids)),
       (row) => `CO-${row.number} ${row.title}`,
     ))
   }
@@ -145,15 +153,15 @@ async function batchFetchEntityLabels(
     const ids = grouped['punch_item']
     loaders.push(() => loadLabels(
       'punch_item',
-      () => supabase.from('punch_items').select('id, title, location').eq('project_id', projectId).in('id', ids),
-      (row) => row.location ? `${row.title} at ${row.location}` : row.title,
+      () => selectScoped('punch_items', projectId, 'id, title, location').in('id', inIds(ids)),
+      (row) => row.location ? `${row.title} at ${row.location}` : String(row.title),
     ))
   }
   if (grouped['daily_log']?.length) {
     const ids = grouped['daily_log']
     loaders.push(() => loadLabels(
       'daily_log',
-      () => supabase.from('daily_logs').select('id, log_date').eq('project_id', projectId).in('id', ids),
+      () => selectScoped('daily_logs', projectId, 'id, log_date').in('id', inIds(ids)),
       (row) => `Daily Log ${row.log_date}`,
     ))
   }
@@ -161,7 +169,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['drawing']
     loaders.push(() => loadLabels(
       'drawing',
-      () => supabase.from('drawings').select('id, sheet_number, title').eq('project_id', projectId).in('id', ids),
+      () => selectScoped('drawings', projectId, 'id, sheet_number, title').in('id', inIds(ids)),
       (row) => `${row.sheet_number} ${row.title}`,
     ))
   }
@@ -169,16 +177,16 @@ async function batchFetchEntityLabels(
     const ids = grouped['meeting']
     loaders.push(() => loadLabels(
       'meeting',
-      () => supabase.from('meetings').select('id, title, date').eq('project_id', projectId).in('id', ids),
-      (row) => row.date ? `${row.title} (${row.date})` : row.title,
+      () => selectScoped('meetings', projectId, 'id, title, date').in('id', inIds(ids)),
+      (row) => row.date ? `${row.title} (${row.date})` : String(row.title),
     ))
   }
   if (grouped['task']?.length) {
     const ids = grouped['task']
     loaders.push(() => loadLabels(
       'task',
-      () => supabase.from('tasks').select('id, title').eq('project_id', projectId).in('id', ids),
-      (row) => row.title,
+      () => selectScoped('tasks', projectId, 'id, title').in('id', inIds(ids)),
+      (row) => String(row.title),
     ))
   }
 
@@ -231,106 +239,68 @@ export async function enrichActivityItem(
   }
 }
 
+// Single-entity label dispatcher. Replaces 8 nearly-identical try/catch
+// blocks. Each registry entry maps entityType to (table, columns, format).
+type EntityLabelSpec = {
+  table: 'rfis' | 'submittals' | 'change_orders' | 'punch_items' | 'daily_logs' | 'drawings' | 'meetings' | 'tasks'
+  columns: string
+  format: (row: Record<string, unknown>) => string
+}
+
+const ENTITY_LABEL_REGISTRY: Record<string, EntityLabelSpec> = {
+  rfi: {
+    table: 'rfis',
+    columns: 'number, title',
+    format: (r) => `RFI-${String(r.number).padStart(3, '0')} ${r.title}`,
+  },
+  submittal: {
+    table: 'submittals',
+    columns: 'number, title',
+    format: (r) => `SUB-${String(r.number).padStart(3, '0')} ${r.title}`,
+  },
+  change_order: {
+    table: 'change_orders',
+    columns: 'number, title',
+    format: (r) => `CO-${String(r.number).padStart(3, '0')} ${r.title}`,
+  },
+  punch_item: {
+    table: 'punch_items',
+    columns: 'title',
+    format: (r) => String(r.title),
+  },
+  daily_log: {
+    table: 'daily_logs',
+    columns: 'log_date',
+    format: (r) => `Daily Log for ${r.log_date}`,
+  },
+  drawing: {
+    table: 'drawings',
+    columns: 'sheet_number, title',
+    format: (r) => `${r.sheet_number} ${r.title}`,
+  },
+  meeting: {
+    table: 'meetings',
+    columns: 'title',
+    format: (r) => String(r.title),
+  },
+  task: {
+    table: 'tasks',
+    columns: 'title',
+    format: (r) => String(r.title),
+  },
+}
+
 async function fetchEntityLabel(entityType: string, entityId: string, projectId: string): Promise<string> {
   if (!entityId) return ''
-  if (entityType === 'rfi') {
-    try {
-      const { data } = await supabase
-        .from('rfis')
-        .select('number, title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return `RFI-${String(data.number).padStart(3, '0')} ${data.title}`
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'submittal') {
-    try {
-      const { data } = await supabase
-        .from('submittals')
-        .select('number, title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return `SUB-${String(data.number).padStart(3, '0')} ${data.title}`
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'change_order') {
-    try {
-      const { data } = await supabase
-        .from('change_orders')
-        .select('number, title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return `CO-${String(data.number).padStart(3, '0')} ${data.title}`
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'punch_item') {
-    try {
-      const { data } = await supabase
-        .from('punch_items')
-        .select('title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return data.title
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'daily_log') {
-    try {
-      const { data } = await supabase
-        .from('daily_logs')
-        .select('log_date')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return `Daily Log for ${data.log_date}`
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'drawing') {
-    try {
-      const { data } = await supabase
-        .from('drawings')
-        .select('sheet_number, title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return `${data.sheet_number} ${data.title}`
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'meeting') {
-    try {
-      const { data } = await supabase
-        .from('meetings')
-        .select('title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return data.title
-    } catch {
-      return ''
-    }
-  } else if (entityType === 'task') {
-    try {
-      const { data } = await supabase
-        .from('tasks')
-        .select('title')
-        .eq('id', entityId)
-        .eq('project_id', projectId)
-        .single()
-      if (data) return data.title
-    } catch {
-      return ''
-    }
-  } else {
-    return entityId
+  const spec = ENTITY_LABEL_REGISTRY[entityType]
+  if (!spec) return entityId
+  try {
+    const { data } = await selectScoped(spec.table, projectId, spec.columns)
+      .eq('id' as never, entityId)
+      .single()
+    if (data) return spec.format(data as unknown as Record<string, unknown>)
+  } catch {
+    return ''
   }
   return ''
 }
@@ -340,13 +310,12 @@ export async function insertActivity(
   payload: { type: string; title: string; body?: string; metadata?: Record<string, unknown> },
 ): Promise<string> {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('activity_feed')
-    .insert({ project_id: projectId, ...payload })
+  const { data, error } = await fromTable('activity_feed')
+    .insert({ project_id: projectId, ...payload } as never)
     .select('id')
     .single()
   if (error) throw transformSupabaseError(error)
-  return data.id
+  return (data as { id: string }).id
 }
 
 export async function notifyMentionedUsers(
@@ -364,6 +333,6 @@ export async function notifyMentionedUsers(
     title: 'You were mentioned in a comment',
     read: false,
   }))
-  const { error } = await supabase.from('notifications').insert(rows)
+  const { error } = await fromTable('notifications').insert(rows as never)
   if (error) throw transformSupabaseError(error)
 }
