@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: string) => fromTable(table as never)
 
 // ── Interfaces ───────────────────────────────────────
 
@@ -87,7 +85,7 @@ export function useSignatureRequests(projectId: string | undefined) {
     queryFn: async (): Promise<SignatureRequest[]> => {
       const { data, error } = await from('signature_requests')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data as unknown as SignatureRequest[]
@@ -102,10 +100,10 @@ export function useSignatureRequest(requestId: string | undefined) {
     queryFn: async (): Promise<SignatureRequest & { signers: SignatureSigner[]; fields: SignatureField[] }> => {
       const { data, error } = await from('signature_requests')
         .select('*, signature_signers(*), signature_fields(*)')
-        .eq('id', requestId!)
+        .eq('id' as never, requestId!)
         .single()
       if (error) throw error
-      const raw = data as Record<string, unknown>
+      const raw = data as unknown as Record<string, unknown>
       const signers = (raw.signature_signers ?? []) as unknown as SignatureSigner[]
       const fields = (raw.signature_fields ?? []) as unknown as SignatureField[]
       const { signature_signers: _s, signature_fields: _f, ...request } = raw
@@ -121,7 +119,7 @@ export function useSignatureSigners(requestId: string | undefined) {
     queryFn: async (): Promise<SignatureSigner[]> => {
       const { data, error } = await from('signature_signers')
         .select('*')
-        .eq('request_id', requestId!)
+        .eq('request_id' as never, requestId!)
         .order('signing_order_index', { ascending: true })
       if (error) throw error
       return data as unknown as SignatureSigner[]
@@ -136,7 +134,7 @@ export function useSignatureFields(requestId: string | undefined) {
     queryFn: async (): Promise<SignatureField[]> => {
       const { data, error } = await from('signature_fields')
         .select('*')
-        .eq('request_id', requestId!)
+        .eq('request_id' as never, requestId!)
         .order('page_number', { ascending: true })
       if (error) throw error
       return data as unknown as SignatureField[]
@@ -151,7 +149,7 @@ export function useSignatureAuditTrail(requestId: string | undefined) {
     queryFn: async (): Promise<SignatureAuditEvent[]> => {
       const { data, error } = await from('signature_audit_trail')
         .select('*')
-        .eq('request_id', requestId!)
+        .eq('request_id' as never, requestId!)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data as unknown as SignatureAuditEvent[]
@@ -182,7 +180,7 @@ export function useCreateSignatureRequest() {
   return useMutation({
     mutationFn: async (input: CreateSignatureRequestInput) => {
       const { data, error } = await from('signature_requests')
-        .insert(input)
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error
@@ -209,8 +207,8 @@ export function useUpdateSignatureRequest() {
     mutationFn: async (input: UpdateSignatureRequestInput) => {
       const { id, ...updates } = input
       const { data, error } = await from('signature_requests')
-        .update(updates)
-        .eq('id', id)
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -238,7 +236,7 @@ export function useAddSigner() {
   return useMutation({
     mutationFn: async (input: AddSignerInput) => {
       const { data, error } = await from('signature_signers')
-        .insert(input)
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error
@@ -257,7 +255,7 @@ export function useRemoveSigner() {
     mutationFn: async (input: { id: string; request_id: string }) => {
       const { error } = await from('signature_signers')
         .delete()
-        .eq('id', input.id)
+        .eq('id' as never, input.id)
       if (error) throw error
     },
     onSuccess: (_data: unknown, variables: { id: string; request_id: string }) => {
@@ -287,7 +285,7 @@ export function useAddSignatureField() {
   return useMutation({
     mutationFn: async (input: AddSignatureFieldInput) => {
       const { data, error } = await from('signature_fields')
-        .insert(input)
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error
@@ -313,8 +311,8 @@ export function useUpdateSignatureField() {
     mutationFn: async (input: UpdateSignatureFieldInput) => {
       const { id, request_id: _rid, ...updates } = input
       const { data, error } = await from('signature_fields')
-        .update(updates)
-        .eq('id', id)
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -343,8 +341,8 @@ export function useCompleteSignerSigning() {
 
       // Update signer status to signed
       const { error: signerError } = await from('signature_signers')
-        .update({ status: 'signed', signed_at: now, ip_address: input.ip_address ?? null, user_agent: input.user_agent ?? null })
-        .eq('id', input.signer_id)
+        .update({ status: 'signed', signed_at: now, ip_address: input.ip_address ?? null, user_agent: input.user_agent ?? null } as never)
+        .eq('id' as never, input.signer_id)
       if (signerError) throw signerError
 
       // Log audit event
@@ -357,13 +355,13 @@ export function useCompleteSignerSigning() {
           ip_address: input.ip_address ?? null,
           user_agent: input.user_agent ?? null,
           document_hash: input.document_hash ?? null,
-        })
+        } as never)
       if (auditError) throw auditError
 
       // Check if all signers are done
       const { data: signers, error: fetchError } = await from('signature_signers')
         .select('status')
-        .eq('request_id', input.request_id)
+        .eq('request_id' as never, input.request_id)
       if (fetchError) throw fetchError
 
       const allSigned = (signers as unknown as Array<{ status: string }>).every(
@@ -372,8 +370,8 @@ export function useCompleteSignerSigning() {
 
       if (allSigned) {
         const { error: completeError } = await from('signature_requests')
-          .update({ status: 'completed', completed_at: now })
-          .eq('id', input.request_id)
+          .update({ status: 'completed', completed_at: now } as never)
+          .eq('id' as never, input.request_id)
         if (completeError) throw completeError
 
         await from('signature_audit_trail')
@@ -382,7 +380,7 @@ export function useCompleteSignerSigning() {
             signer_id: null,
             event_type: 'completed',
             event_description: 'All signers have completed signing',
-          })
+          } as never)
       }
 
       return { allSigned }
@@ -409,16 +407,16 @@ export function useSendForSignature() {
 
       // Update request status to sent
       const { data: request, error: reqError } = await from('signature_requests')
-        .update({ status: 'sent', sent_at: now })
-        .eq('id', input.request_id)
+        .update({ status: 'sent', sent_at: now } as never)
+        .eq('id' as never, input.request_id)
         .select()
         .single()
       if (reqError) throw reqError
 
       // Update all signers to sent
       const { error: signersError } = await from('signature_signers')
-        .update({ status: 'sent' })
-        .eq('request_id', input.request_id)
+        .update({ status: 'sent' } as never)
+        .eq('request_id' as never, input.request_id)
       if (signersError) throw signersError
 
       // Log audit event
@@ -428,7 +426,7 @@ export function useSendForSignature() {
           signer_id: null,
           event_type: 'sent',
           event_description: 'Document sent for signature',
-        })
+        } as never)
       if (auditError) throw auditError
 
       return request as unknown as SignatureRequest

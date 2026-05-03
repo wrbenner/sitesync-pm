@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
+
+const from = (table: string) => fromTable(table as never)
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -75,13 +77,12 @@ export function usePreconSubcontractors(organizationId: string | undefined) {
   return useQuery({
     queryKey: ['precon_subcontractors', organizationId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('precon_subcontractors')
+      const { data, error } = await from('precon_subcontractors')
         .select('*')
-        .eq('organization_id', organizationId!)
+        .eq('organization_id' as never, organizationId!)
         .order('company_name', { ascending: true })
       if (error) throw error
-      return (data || []) as PreconSubcontractor[]
+      return ((data || []) as unknown) as PreconSubcontractor[]
     },
     enabled: !!organizationId,
   })
@@ -91,9 +92,9 @@ export function useCreatePreconSubcontractor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<PreconSubcontractor> & { organization_id: string; company_name: string }) => {
-      const { data, error } = await supabase.from('precon_subcontractors').insert(payload).select().single()
+      const { data, error } = await from('precon_subcontractors').insert(payload as never).select().single()
       if (error) throw error
-      return data as PreconSubcontractor
+      return data as unknown as PreconSubcontractor
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['precon_subcontractors', vars.organization_id] })
@@ -105,9 +106,9 @@ export function useUpdatePreconSubcontractor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<PreconSubcontractor> }) => {
-      const { data, error } = await supabase.from('precon_subcontractors').update(patch).eq('id', id).select().single()
+      const { data, error } = await from('precon_subcontractors').update(patch as never).eq('id' as never, id).select().single()
       if (error) throw error
-      return data as PreconSubcontractor
+      return data as unknown as PreconSubcontractor
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['precon_subcontractors'] })
@@ -119,7 +120,7 @@ export function useDeletePreconSubcontractor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('precon_subcontractors').delete().eq('id', id)
+      const { error } = await from('precon_subcontractors').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -134,13 +135,12 @@ export function usePreconBidInvitations(bidPackageId: string | undefined) {
   return useQuery({
     queryKey: ['precon_bid_invitations', bidPackageId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('precon_bid_invitations')
+      const { data, error } = await from('precon_bid_invitations')
         .select('*')
-        .eq('bid_package_id', bidPackageId!)
+        .eq('bid_package_id' as never, bidPackageId!)
         .order('invited_at', { ascending: false })
       if (error) throw error
-      return (data || []) as PreconBidInvitation[]
+      return ((data || []) as unknown) as PreconBidInvitation[]
     },
     enabled: !!bidPackageId,
   })
@@ -150,20 +150,18 @@ export function useAllProjectInvitations(projectId: string | undefined) {
   return useQuery({
     queryKey: ['precon_bid_invitations_all', projectId],
     queryFn: async () => {
-      const { data: pkgs, error: pErr } = await supabase
-        .from('precon_bid_packages')
+      const { data: pkgs, error: pErr } = await from('precon_bid_packages')
         .select('id')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (pErr) throw pErr
-      const ids = (pkgs || []).map((p: { id: string }) => p.id)
+      const ids = ((pkgs || []) as unknown as Array<{ id: string }>).map((p) => p.id)
       if (ids.length === 0) return [] as PreconBidInvitation[]
-      const { data, error } = await supabase
-        .from('precon_bid_invitations')
+      const { data, error } = await from('precon_bid_invitations')
         .select('*')
-        .in('bid_package_id', ids)
+        .in('bid_package_id' as never, ids)
         .order('invited_at', { ascending: false })
       if (error) throw error
-      return (data || []) as PreconBidInvitation[]
+      return ((data || []) as unknown) as PreconBidInvitation[]
     },
     enabled: !!projectId,
   })
@@ -173,9 +171,9 @@ export function useCreatePreconBidInvitation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<PreconBidInvitation> & { bid_package_id: string; company_name: string }) => {
-      const { data, error } = await supabase.from('precon_bid_invitations').insert(payload).select().single()
+      const { data, error } = await from('precon_bid_invitations').insert(payload as never).select().single()
       if (error) throw error
-      return data as PreconBidInvitation
+      return data as unknown as PreconBidInvitation
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['precon_bid_invitations', vars.bid_package_id] })
@@ -188,9 +186,9 @@ export function useUpdatePreconBidInvitation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<PreconBidInvitation> }) => {
-      const { data, error } = await supabase.from('precon_bid_invitations').update(patch).eq('id', id).select().single()
+      const { data, error } = await from('precon_bid_invitations').update(patch as never).eq('id' as never, id).select().single()
       if (error) throw error
-      return data as PreconBidInvitation
+      return data as unknown as PreconBidInvitation
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['precon_bid_invitations'] })
@@ -203,7 +201,7 @@ export function useDeletePreconBidInvitation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('precon_bid_invitations').delete().eq('id', id)
+      const { error } = await from('precon_bid_invitations').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -219,13 +217,12 @@ export function usePreconScopeItems(bidPackageId: string | undefined) {
   return useQuery({
     queryKey: ['precon_scope_items', bidPackageId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('precon_scope_items')
+      const { data, error } = await from('precon_scope_items')
         .select('*')
-        .eq('bid_package_id', bidPackageId!)
+        .eq('bid_package_id' as never, bidPackageId!)
         .order('sort_order', { ascending: true })
       if (error) throw error
-      return (data || []) as PreconScopeItem[]
+      return ((data || []) as unknown) as PreconScopeItem[]
     },
     enabled: !!bidPackageId,
   })
@@ -235,9 +232,9 @@ export function useCreatePreconScopeItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<PreconScopeItem> & { bid_package_id: string; description: string }) => {
-      const { data, error } = await supabase.from('precon_scope_items').insert(payload).select().single()
+      const { data, error } = await from('precon_scope_items').insert(payload as never).select().single()
       if (error) throw error
-      return data as PreconScopeItem
+      return data as unknown as PreconScopeItem
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['precon_scope_items', vars.bid_package_id] })
@@ -249,9 +246,9 @@ export function useUpdatePreconScopeItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<PreconScopeItem> }) => {
-      const { data, error } = await supabase.from('precon_scope_items').update(patch).eq('id', id).select().single()
+      const { data, error } = await from('precon_scope_items').update(patch as never).eq('id' as never, id).select().single()
       if (error) throw error
-      return data as PreconScopeItem
+      return data as unknown as PreconScopeItem
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['precon_scope_items'] })
@@ -263,7 +260,7 @@ export function useDeletePreconScopeItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('precon_scope_items').delete().eq('id', id)
+      const { error } = await from('precon_scope_items').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -276,9 +273,9 @@ export function useBulkCreatePreconScopeItems() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (items: Array<Partial<PreconScopeItem> & { bid_package_id: string; description: string }>) => {
-      const { data, error } = await supabase.from('precon_scope_items').insert(items).select()
+      const { data, error } = await from('precon_scope_items').insert(items as never).select()
       if (error) throw error
-      return (data || []) as PreconScopeItem[]
+      return ((data || []) as unknown) as PreconScopeItem[]
     },
     onSuccess: (_d, vars) => {
       if (vars.length > 0) {
@@ -295,19 +292,17 @@ export function usePreconBidScopeResponses(bidPackageId: string | undefined) {
     queryKey: ['precon_bid_scope_responses', bidPackageId],
     queryFn: async () => {
       // Get all scope items for this package
-      const { data: items, error: iErr } = await supabase
-        .from('precon_scope_items')
+      const { data: items, error: iErr } = await from('precon_scope_items')
         .select('id')
-        .eq('bid_package_id', bidPackageId!)
+        .eq('bid_package_id' as never, bidPackageId!)
       if (iErr) throw iErr
-      const itemIds = (items || []).map((i: { id: string }) => i.id)
+      const itemIds = ((items || []) as unknown as Array<{ id: string }>).map((i) => i.id)
       if (itemIds.length === 0) return [] as PreconBidScopeResponse[]
-      const { data, error } = await supabase
-        .from('precon_bid_scope_responses')
+      const { data, error } = await from('precon_bid_scope_responses')
         .select('*')
-        .in('scope_item_id', itemIds)
+        .in('scope_item_id' as never, itemIds)
       if (error) throw error
-      return (data || []) as PreconBidScopeResponse[]
+      return ((data || []) as unknown) as PreconBidScopeResponse[]
     },
     enabled: !!bidPackageId,
   })
@@ -317,13 +312,12 @@ export function useUpsertPreconBidScopeResponse() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { scope_item_id: string; bid_submission_id: string; response: string; qualification_note?: string; cost_impact?: number }) => {
-      const { data, error } = await supabase
-        .from('precon_bid_scope_responses')
-        .upsert(payload, { onConflict: 'scope_item_id,bid_submission_id' })
+      const { data, error } = await from('precon_bid_scope_responses')
+        .upsert(payload as never, { onConflict: 'scope_item_id,bid_submission_id' })
         .select()
         .single()
       if (error) throw error
-      return data as PreconBidScopeResponse
+      return data as unknown as PreconBidScopeResponse
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['precon_bid_scope_responses'] })
@@ -337,7 +331,7 @@ export function useDeletePreconBidPackage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('precon_bid_packages').delete().eq('id', id)
+      const { error } = await from('precon_bid_packages').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -352,7 +346,7 @@ export function useUpdatePreconBidSubmission() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
-      const { data, error } = await supabase.from('precon_bid_submissions').update(patch).eq('id', id).select().single()
+      const { data, error } = await from('precon_bid_submissions').update(patch as never).eq('id' as never, id).select().single()
       if (error) throw error
       return data
     },
@@ -367,7 +361,7 @@ export function useDeletePreconBidSubmission() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('precon_bid_submissions').delete().eq('id', id)
+      const { error } = await from('precon_bid_submissions').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: () => {
