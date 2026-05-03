@@ -101,24 +101,13 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
     </h2>
     <p style={{
       fontSize: typography.fontSize.body, color: colors.textSecondary,
-      margin: 0, marginBottom: spacing['5'], maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
+      margin: 0, maxWidth: 400, lineHeight: typography.lineHeight.relaxed,
     }}>
       {moduleName
         ? `You do not have permission to access ${moduleName}.`
-        : 'You do not have permission to access this page.'}
+        : 'You do not have permission to access this page.'}{' '}
+      Contact your project administrator to request access.
     </p>
-    <button
-      onClick={() => {/* TODO: wire up request access flow */}}
-      style={{
-        backgroundColor: colors.brand400, color: colors.white,
-        border: 'none', borderRadius: borderRadius.md,
-        padding: `${spacing['2']} ${spacing['5']}`,
-        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-        cursor: 'pointer', fontFamily: typography.fontFamily,
-      }}
-    >
-      Request Access
-    </button>
   </div>
 )
 
