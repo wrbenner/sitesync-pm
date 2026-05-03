@@ -55,6 +55,24 @@ export const REPORT_TYPES: ReportConfig[] = [
 
 // ── Helpers ──────────────────────────────────────────────
 
+/**
+ * Normalize a query result into a flat array of rows. Each entity hook
+ * returns either a `PaginatedResult<T>` (object with .data: T[]) or an
+ * array of T directly depending on the call site. This helper accepts
+ * both shapes and always returns T[]. Used everywhere this file does
+ * `(query.data ?? []).filter(...)` so the union from React Query cache
+ * is narrowed at one boundary.
+ */
+function rowsFrom<T>(res: { data: T[] | { data: T[] } | null | undefined }): T[] {
+  const d = res.data
+  if (!d) return []
+  if (Array.isArray(d)) return d
+  if (typeof d === 'object' && d !== null && Array.isArray((d as { data?: T[] }).data)) {
+    return (d as { data: T[] }).data
+  }
+  return []
+}
+
 function fmtDate(d: string | null | undefined): string {
   if (!d) return ''
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -86,11 +104,11 @@ export function useExecutiveSummaryData() {
 
   if (loading || error || !project.data) return { data: null, loading, error }
 
-  const rfiList = rfis.data ?? []
-  const submittalList = submittals.data ?? []
-  const punchList = punchItems.data ?? []
-  const budget = budgetItems.data ?? []
-  const phases = schedulePhases.data ?? []
+  const rfiList = rowsFrom(rfis)
+  const submittalList = rowsFrom(submittals)
+  const punchList = rowsFrom(punchItems)
+  const budget = rowsFrom(budgetItems)
+  const phases = rowsFrom(schedulePhases)
 
   const budgetTotal = budget.reduce((s, b) => s + (b.original_amount ?? 0), 0)
   const budgetSpent = budget.reduce((s, b) => s + (b.actual_amount ?? 0), 0)
@@ -145,7 +163,7 @@ export function useRFILogData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      rfis: (rfis.data ?? []).map((r) => ({
+      rfis: rowsFrom(rfis).map((r) => ({
         number: fmtRFINumber(r.number, r.id),
         title: r.title ?? '',
         priority: r.priority ?? 'medium',
@@ -172,7 +190,7 @@ export function useSubmittalLogData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      submittals: (submittals.data ?? []).map((s) => ({
+      submittals: rowsFrom(submittals).map((s) => ({
         number: fmtSubmittalNumber(s.number, s.id),
         title: s.title ?? '',
         specSection: s.spec_section ?? '',
@@ -199,7 +217,7 @@ export function usePunchListData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      items: (punchItems.data ?? []).map((p) => ({
+      items: rowsFrom(punchItems).map((p) => ({
         number: String(p.number ?? p.id?.slice(0, 6)),
         area: p.area ?? p.location ?? '',
         description: p.title ?? p.description ?? '',
@@ -223,8 +241,8 @@ export function useBudgetReportData() {
   const loading = project.isLoading || budgetItems.isLoading || changeOrders.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const budget = budgetItems.data ?? []
-  const cos = changeOrders.data ?? []
+  const budget = rowsFrom(budgetItems)
+  const cos = rowsFrom(changeOrders)
 
   return {
     data: {
@@ -259,7 +277,7 @@ export function useDailyLogSummaryData() {
   const loading = project.isLoading || dailyLogs.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const logs = dailyLogs.data ?? []
+  const logs = rowsFrom(dailyLogs)
 
   return {
     data: {
@@ -294,12 +312,12 @@ export function useMonthlyProgressData() {
   const loading = project.isLoading || rfis.isLoading || submittals.isLoading || budgetItems.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const budget = budgetItems.data ?? []
-  const cos = changeOrders.data ?? []
-  const phases = schedulePhases.data ?? []
-  const rfiList = rfis.data ?? []
-  const subList = submittals.data ?? []
-  const logs = dailyLogs.data ?? []
+  const budget = rowsFrom(budgetItems)
+  const cos = rowsFrom(changeOrders)
+  const phases = rowsFrom(schedulePhases)
+  const rfiList = rowsFrom(rfis)
+  const subList = rowsFrom(submittals)
+  const logs = rowsFrom(dailyLogs)
 
   const originalContract = budget.reduce((s, b) => s + (b.original_amount ?? 0), 0)
   const coNet = cos.filter((c) => c.status === 'approved').reduce((s, c) => s + (c.amount ?? 0), 0)
@@ -367,9 +385,9 @@ export function useCostReportData() {
   const loading = project.isLoading || budgetItems.isLoading || changeOrders.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const budget = budgetItems.data ?? []
-  const cos = changeOrders.data ?? []
-  const phases = schedulePhases.data ?? []
+  const budget = rowsFrom(budgetItems)
+  const cos = rowsFrom(changeOrders)
+  const phases = rowsFrom(schedulePhases)
 
   const originalBudget = budget.reduce((s, b) => s + (b.original_amount ?? 0), 0)
   const approvedChanges = cos.filter((c) => c.status === 'approved').reduce((s, c) => s + (c.amount ?? 0), 0)
@@ -452,7 +470,7 @@ export function useScheduleReportData() {
   const loading = project.isLoading || phases.isLoading || tasks.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const phaseList = phases.data ?? []
+  const phaseList = rowsFrom(phases)
 
   const now = new Date()
   const threeWeeksOut = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)
@@ -566,9 +584,9 @@ export function useSubcontractorPerformanceData() {
   const loading = project.isLoading || rfis.isLoading || submittals.isLoading || punchItems.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const rfiList = rfis.data ?? []
-  const subList = submittals.data ?? []
-  const punchList = punchItems.data ?? []
+  const rfiList = rowsFrom(rfis)
+  const subList = rowsFrom(submittals)
+  const punchList = rowsFrom(punchItems)
 
   // Aggregate by subcontractor/assignee
   const subMap = new Map<string, {
