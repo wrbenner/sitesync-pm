@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { ProjectRole } from '../types/tenant';
 import { ROLE_HIERARCHY } from '../types/tenant';
 import type { Database } from '../types/database';
@@ -37,14 +38,13 @@ async function resolveProjectRole(
 ): Promise<ProjectRole | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return (data?.role as ProjectRole) ?? null;
+  return ((data as unknown as { role?: string } | null)?.role as ProjectRole) ?? null;
 }
 
 const MANAGER_LEVEL = ROLE_HIERARCHY['project_manager']; // 5
@@ -100,15 +100,14 @@ export const projectMemberService = {
     const role = await resolveProjectRole(projectId, userId);
     if (!role) return fail(permissionError('User is not a member of this project'));
 
-    const { data, error } = await supabase
-      .from('project_members')
+    const { data, error } = await fromTable('project_members')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('invited_at', { ascending: true });
 
     if (error) return fail(dbError(error.message, { projectId }));
 
-    const rows = (data ?? []) as ProjectMemberRow[];
+    const rows = (data ?? []) as unknown as ProjectMemberRow[];
     const members: ProjectMemberWithState[] = rows
       .map((row) => ({
         ...row,
@@ -147,18 +146,18 @@ export const projectMemberService = {
       );
     }
 
-    const { data: existing } = await supabase
-      .from('project_members')
+    const { data: existing } = await fromTable('project_members')
       .select('id, invited_at, accepted_at, permissions')
-      .eq('project_id', input.project_id)
-      .eq('user_id', input.user_id)
+      .eq('project_id' as never, input.project_id)
+      .eq('user_id' as never, input.user_id)
       .single();
+    const existingRow = existing as unknown as { id: string; invited_at: string | null; accepted_at: string | null; permissions: Record<string, unknown> | null } | null
 
-    if (existing) {
+    if (existingRow) {
       const existingState = getMemberLifecycleState({
-        invited_at: existing.invited_at,
-        accepted_at: existing.accepted_at,
-        permissions: existing.permissions as Record<string, unknown> | null,
+        invited_at: existingRow.invited_at,
+        accepted_at: existingRow.accepted_at,
+        permissions: existingRow.permissions,
       });
       if (existingState !== 'removed') {
         return fail(
@@ -178,8 +177,7 @@ export const projectMemberService = {
 
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
-      .from('project_members')
+    const { data, error } = await fromTable('project_members')
       .insert({
         project_id: input.project_id,
         user_id: input.user_id,
@@ -189,13 +187,13 @@ export const projectMemberService = {
         permissions: mergedPermissions,
         invited_at: now,
         accepted_at: null,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id, user_id: input.user_id }));
 
-    const row = data as ProjectMemberRow;
+    const row = data as unknown as ProjectMemberRow;
 
     await projectMemberService._triggerInvitationEmail(row.id, input.project_id, input.user_id);
 
@@ -228,18 +226,18 @@ export const projectMemberService = {
       );
     }
 
-    const { data: existing } = await supabase
-      .from('project_members')
+    const { data: existing } = await fromTable('project_members')
       .select('id, invited_at, accepted_at, permissions')
-      .eq('project_id', input.project_id)
-      .eq('user_id', input.user_id)
+      .eq('project_id' as never, input.project_id)
+      .eq('user_id' as never, input.user_id)
       .single();
+    const existingRow = existing as unknown as { id: string; invited_at: string | null; accepted_at: string | null; permissions: Record<string, unknown> | null } | null
 
-    if (existing) {
+    if (existingRow) {
       const existingState = getMemberLifecycleState({
-        invited_at: existing.invited_at,
-        accepted_at: existing.accepted_at,
-        permissions: existing.permissions as Record<string, unknown> | null,
+        invited_at: existingRow.invited_at,
+        accepted_at: existingRow.accepted_at,
+        permissions: existingRow.permissions,
       });
       if (existingState !== 'removed') {
         return fail(
@@ -258,8 +256,7 @@ export const projectMemberService = {
 
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
-      .from('project_members')
+    const { data, error } = await fromTable('project_members')
       .insert({
         project_id: input.project_id,
         user_id: input.user_id,
@@ -269,13 +266,13 @@ export const projectMemberService = {
         permissions: mergedPermissions,
         invited_at: now,
         accepted_at: now,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id, user_id: input.user_id }));
 
-    const row = data as ProjectMemberRow;
+    const row = data as unknown as ProjectMemberRow;
     return ok({ ...row, lifecycleState: 'active' as MemberLifecycleState });
   },
 
@@ -287,15 +284,14 @@ export const projectMemberService = {
     const userId = await getCurrentUserId();
     if (!userId) return fail(permissionError('Not authenticated'));
 
-    const { data: member, error: fetchError } = await supabase
-      .from('project_members')
+    const { data: member, error: fetchError } = await fromTable('project_members')
       .select('*')
-      .eq('id', memberId)
+      .eq('id' as never, memberId)
       .single();
 
     if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
 
-    const row = member as ProjectMemberRow;
+    const row = member as unknown as ProjectMemberRow;
 
     if (row.user_id !== userId) {
       return fail(permissionError('Only the invited user can accept their own invitation'));
@@ -318,10 +314,9 @@ export const projectMemberService = {
 
     const now = new Date().toISOString();
 
-    const { error } = await supabase
-      .from('project_members')
-      .update({ accepted_at: now })
-      .eq('id', memberId);
+    const { error } = await fromTable('project_members')
+      .update({ accepted_at: now } as never)
+      .eq('id' as never, memberId);
 
     if (error) return fail(dbError(error.message, { memberId }));
 
@@ -337,15 +332,14 @@ export const projectMemberService = {
     const userId = await getCurrentUserId();
     if (!userId) return fail(permissionError('Not authenticated'));
 
-    const { data: member, error: fetchError } = await supabase
-      .from('project_members')
+    const { data: member, error: fetchError } = await fromTable('project_members')
       .select('project_id, role, invited_at, accepted_at, permissions')
-      .eq('id', memberId)
+      .eq('id' as never, memberId)
       .single();
 
     if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
 
-    const row = member as Pick<ProjectMemberRow, 'project_id' | 'role' | 'invited_at' | 'accepted_at' | 'permissions'>;
+    const row = member as unknown as Pick<ProjectMemberRow, 'project_id' | 'role' | 'invited_at' | 'accepted_at' | 'permissions'>;
 
     const callerRole = await resolveProjectRole(row.project_id, userId);
     if (!callerRole) return fail(permissionError('User is not a member of this project'));
@@ -403,15 +397,14 @@ export const projectMemberService = {
     const userId = await getCurrentUserId();
     if (!userId) return fail(permissionError('Not authenticated'));
 
-    const { data: member, error: fetchError } = await supabase
-      .from('project_members')
+    const { data: member, error: fetchError } = await fromTable('project_members')
       .select('project_id, role, invited_at, accepted_at, permissions')
-      .eq('id', memberId)
+      .eq('id' as never, memberId)
       .single();
 
     if (fetchError || !member) return fail(notFoundError('ProjectMember', memberId));
 
-    const row = member as Pick<ProjectMemberRow, 'project_id' | 'role' | 'invited_at' | 'accepted_at' | 'permissions'>;
+    const row = member as unknown as Pick<ProjectMemberRow, 'project_id' | 'role' | 'invited_at' | 'accepted_at' | 'permissions'>;
 
     const callerRole = await resolveProjectRole(row.project_id, userId);
     if (!callerRole) return fail(permissionError('User is not a member of this project'));
