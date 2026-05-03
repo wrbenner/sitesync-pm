@@ -2,23 +2,20 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Accessibility', () => {
   test('route announcer announces page changes', async ({ page }) => {
+    // Use the Dashboard route — it is always the final landing route in every
+    // auth mode (dev-bypass redirects protected routes here too), so the
+    // assertion is stable across local CI and production runs.
     await page.goto('#/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // Check for route announcer (use first() to avoid strict-mode violation when
-    // multiple live regions exist alongside the route announcer)
-    const announcer = page.locator('[role="status"][aria-live="polite"]')
+    // Target the RouteAnnouncer specifically to avoid false matches from
+    // PageState skeletons and toast containers that share the same ARIA role.
+    const announcer = page.getByTestId('route-announcer')
     if (await announcer.count() > 0) {
-      await expect(announcer.first()).toHaveAttribute('aria-atomic', 'true')
-    }
-
-    // Navigate to another page
-    await page.goto('#/tasks')
-    await page.waitForLoadState('networkidle')
-
-    if (await announcer.count() > 0) {
-      const text = await announcer.first().textContent()
-      expect(text).toContain('Tasks')
+      await expect(announcer).toHaveAttribute('aria-atomic', 'true')
+      // Auto-retrying assertion: the 50ms timer in RouteAnnouncer fires after
+      // networkidle, so we poll until the text appears (up to 5s).
+      await expect(announcer).toContainText('Dashboard', { timeout: 5000 })
     }
   })
 

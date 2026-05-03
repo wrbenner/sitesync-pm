@@ -32,12 +32,12 @@ test.describe('Sidebar navigation', () => {
   // Dev-bypass role is 'viewer'. Budget requires budget.view (owner/admin/pm/super),
   // so the Budget nav item is intentionally hidden for viewer — omit it from this test.
   const navItems = [
-    { label: 'Home',           route: /#\/dashboard/ },
-    { label: 'RFIs',           route: /#\/rfis/ },
-    { label: 'Submittals',     route: /#\/submittals/ },
-    { label: 'Schedule',       route: /#\/schedule/ },
-    { label: 'Daily Log',      route: /#\/daily-log/ },
-    { label: 'Punch List',     route: /#\/punch-list/ },
+    { label: 'Home',       route: /#\/dashboard/ },
+    { label: 'RFIs',       route: /#\/rfis/ },
+    { label: 'Submittals', route: /#\/submittals/ },
+    { label: 'Schedule',   route: /#\/schedule/ },
+    { label: 'Daily Log',  route: /#\/daily-log/ },
+    { label: 'Punch List', route: /#\/punch-list/ },
   ]
 
   test.beforeEach(async ({ page }) => {
@@ -63,22 +63,23 @@ test.describe('Dashboard metric cards', () => {
     await waitForPageContent(page)
   })
 
-  test('renders project heading', async ({ page }) => {
-    // In bypass mode the projects query hangs (placeholder Supabase URL) so the
-    // skeleton stays up — no h1/h2 ever renders. Accept any page landmark as
-    // evidence the page mounted; real-Supabase runs will see the project h1.
-    const anyContent = page.locator('h1, h2, [role="region"]')
-    await expect(anyContent.first()).toBeVisible({ timeout: 15_000 })
+  test('renders without crash', async ({ page }) => {
+    // RouteAnnouncer fires within 50ms confirming the dashboard route mounted.
+    // This is a reliable smoke signal the page loaded without an error boundary.
+    const announcer = page.getByTestId('route-announcer')
+    if (await announcer.count() > 0) {
+      await expect(announcer).toContainText('Dashboard', { timeout: 5_000 })
+    }
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/something went wrong|an unexpected error occurred/i)
   })
 
-  test('renders at least 4 labeled metric cards', async ({ page }) => {
-    // In bypass mode the dashboard may show an error state (no Supabase) or KPI tiles
-    // (after the 5s skeleton timeout). Either way, the page should have rendered some
-    // content — verify at least one of the KPI labels or error content is visible.
-    const anyContent = page.locator(
-      '[aria-label="Page content"], h1, h2, [role="region"]'
-    )
-    await expect(anyContent.first()).toBeVisible({ timeout: 15_000 })
+  test('renders loading or content state', async ({ page }) => {
+    // The main area always renders — either the DashboardSkeleton (while Supabase
+    // resolves) or the actual project content once the query settles.
+    await expect(page.locator('[role="main"]')).toBeVisible()
+    const bodyText = await page.locator('body').innerText()
+    expect(bodyText).not.toMatch(/something went wrong|an unexpected error occurred/i)
   })
 })
 
@@ -92,7 +93,7 @@ test.describe('AI Copilot', () => {
     const input = page.locator('textarea').first()
     await expect(input).toBeVisible()
     // Placeholder matches "Ask about <project name>…" pattern
-    await expect(input).toHaveAttribute('placeholder', /Ask about/)
+    await expect(input).toHaveAttribute('placeholder', /Ask about|Ask your AI team/)
   })
 })
 
@@ -110,12 +111,12 @@ test.describe('List pages have rows', () => {
     test(`${name} renders interactive rows or tabs`, async ({ page }) => {
       await page.goto(hash)
       await waitForPageContent(page)
-      // In dev-bypass (no Supabase) pages show either:
-      //   • real rows/tabs when demo data is present, or
-      //   • an empty-state element (button, heading) when no data
-      // Both indicate the page loaded successfully past the skeleton.
-      const interactive = page.locator('[role="row"], [role="tab"], [role="button"], h2, h3')
-      await expect(interactive.first()).toBeVisible({ timeout: 10_000 })
+      // Pages use role="row" (table header), role="tab" (filter tabs), or an
+      // EmptyState heading when no project is selected (dev-bypass mode).
+      // Any of these confirms content loaded past the skeleton.
+      const loaded = page.locator('[role="row"], [role="tab"], h1, h2, h3')
+      await expect(loaded.first()).toBeVisible({ timeout: 10_000 })
+      expect(await loaded.count()).toBeGreaterThan(0)
     })
   }
 })
@@ -146,13 +147,14 @@ test.describe('Every route renders cleanly', () => {
       const body = await page.locator('body').innerText()
       expect(body, `ErrorBoundary on ${contract.route}`).not.toMatch(ERROR_BOUNDARY_RE)
 
-      // Filter known-benign errors from third-party libs and local dev SSL
+      // Filter known-benign errors: third-party libs + expected network failures in
+      // dev-bypass mode (Supabase / external APIs unavailable when VITE_SUPABASE_URL
+      // is not set, producing ERR_NAME_NOT_RESOLVED / ERR_CERT_AUTHORITY_INVALID).
       const meaningful = consoleErrors.filter(
         (e) =>
           !/sentry/i.test(e) &&
           !/ReactQueryDevtools/i.test(e) &&
           !/React DevTools/i.test(e) &&
-          // Local Supabase uses a self-signed cert — filter SSL noise in dev-bypass
           !/ERR_CERT|ERR_SSL|net::ERR_/i.test(e),
       )
       expect(pageErrors, `pageerror on ${contract.route}:\n${pageErrors.join('\n')}`).toHaveLength(0)

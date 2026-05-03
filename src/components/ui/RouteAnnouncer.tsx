@@ -50,11 +50,13 @@ export const RouteAnnouncer: React.FC = () => {
 
   useEffect(() => {
     const name = pageNames[location.pathname] || 'Page'
-    setTimeout(() => setAnnouncement(`Navigated to ${name}`), 0)
+    const timer = setTimeout(() => setAnnouncement(`Navigated to ${name}`), 50)
+    return () => clearTimeout(timer)
   }, [location.pathname])
 
   return (
     <div
+      data-testid="route-announcer"
       role="status"
       aria-live="polite"
       aria-atomic="true"

@@ -226,8 +226,12 @@ const SettingsRow: React.FC<{
 /* ─────────────────────── Toggle Component ─────────────────────── */
 
 const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({ checked, onChange }) => (
-  <button
-    onClick={() => onChange(!checked)}
+  <div
+    role="switch"
+    aria-checked={checked}
+    tabIndex={0}
+    onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
+    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!checked); } }}
     style={{
       width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
       backgroundColor: checked ? colors.primaryOrange : colors.surfaceInset,
@@ -245,7 +249,7 @@ const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = (
         boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
       }}
     />
-  </button>
+  </div>
 );
 
 /* ─────────────────────── Main Component ─────────────────────── */

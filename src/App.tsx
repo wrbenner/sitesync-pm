@@ -733,7 +733,7 @@ function App() {
             </HashRouter>
             <Toaster position="bottom-right" richColors closeButton />
           </ToastProvider>
-          {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+          {import.meta.env.DEV && !import.meta.env.VITE_DEV_BYPASS && <ReactQueryDevtools initialIsOpen={false} />}
         </OrganizationProvider>
       </QueryClientProvider>
     </Sentry.ErrorBoundary>
