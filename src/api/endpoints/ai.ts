@@ -1,5 +1,5 @@
 // @ts-strict-check
-import { supabase } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { validateProjectId } from '../middleware/projectScope'
 import { aiService } from '../../lib/aiService'
 import { captureException } from '../../lib/errorTracking'
@@ -47,15 +47,14 @@ export const getAiInsights = async (
 
   let cachedData: Array<Record<string, unknown>> = []
   try {
-    const { data, error } = await supabase
-      .from('ai_insights')
+    const { data, error } = await fromTable('ai_insights')
       .select('*')
-      .eq('project_id', projectId)
-      .eq('dismissed', false)
+      .eq('project_id' as never, projectId)
+      .eq('dismissed' as never, false)
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      cachedData = data as Array<Record<string, unknown>>
+      cachedData = data as unknown as Array<Record<string, unknown>>
     }
   } catch (err) {
     if (import.meta.env.DEV) console.error('[AI Endpoint] ai_insights cache lookup failed:', err instanceof Error ? err.message : err)
@@ -66,19 +65,19 @@ export const getAiInsights = async (
   }
 
   const cachedInsights = cachedData.map((row): AIInsight => ({
-    id: row.id,
-    type: row.type,
-    severity: row.severity,
-    title: row.title,
-    description: row.description,
-    affectedEntities: row.affected_entities || [],
-    suggestedAction: row.suggested_action,
-    confidence: row.confidence ?? 1,
+    id: row.id as string,
+    type: row.type as AIInsight['type'],
+    severity: row.severity as AIInsight['severity'],
+    title: row.title as string,
+    description: row.description as string,
+    affectedEntities: (row.affected_entities as AIInsight['affectedEntities']) || [],
+    suggestedAction: row.suggested_action as string | undefined,
+    confidence: (row.confidence as number | null) ?? 1,
     source: 'cached' as const,
-    createdAt: row.created_at,
-    generatedAt: row.created_at,
-    expiresAt: row.expires_at,
-    dismissed: row.dismissed,
+    createdAt: row.created_at as string,
+    generatedAt: row.created_at as string,
+    expiresAt: (row.expires_at as string | null) ?? undefined,
+    dismissed: row.dismissed as boolean,
   }))
 
   if (cachedInsights.length === 0 && budgetInsights.length === 0) {
@@ -92,15 +91,14 @@ export const getAiInsights = async (
     let atRiskPhases: Array<{ id: string; name: string | null; status: string | null }> = []
 
     try {
-      const { data } = await supabase
-        .from('rfis')
+      const { data } = await fromTable('rfis')
         .select('id, number, title, due_date, ball_in_court')
-        .eq('project_id', projectId)
-        .neq('status', 'closed')
-        .lt('due_date', now)
+        .eq('project_id' as never, projectId)
+        .neq('status' as never, 'closed')
+        .lt('due_date' as never, now)
         .order('due_date', { ascending: true })
         .limit(5)
-      overdueRfis = (data ?? []) as typeof overdueRfis
+      overdueRfis = (data ?? []) as unknown as typeof overdueRfis
     } catch (err) {
       if (import.meta.env.DEV) console.error('[AI Endpoint] overdueRfis query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -110,11 +108,10 @@ export const getAiInsights = async (
     }
 
     try {
-      const { count } = await supabase
-        .from('punch_items')
+      const { count } = await fromTable('punch_items')
         .select('id', { count: 'exact', head: true })
-        .eq('project_id', projectId)
-        .in('status', ['open', 'in_progress'])
+        .eq('project_id' as never, projectId)
+        .in('status' as never, ['open', 'in_progress'] as never[])
       openPunchCount = count ?? 0
     } catch (err) {
       if (import.meta.env.DEV) console.error('[AI Endpoint] openPunchCount query failed:', err instanceof Error ? err.message : err)
@@ -125,11 +122,10 @@ export const getAiInsights = async (
     }
 
     try {
-      const { data: budgetRows } = await supabase
-        .from('budget_line_items')
+      const { data: budgetRows } = await fromTable('budget_line_items')
         .select('id, description, csi_code, actual_cost, revised_budget')
-        .eq('project_id', projectId)
-      overBudgetItems = ((budgetRows ?? []) as Array<{ id: string; description: string | null; csi_code: string | null; actual_cost: number; revised_budget: number }>).filter(
+        .eq('project_id' as never, projectId)
+      overBudgetItems = ((budgetRows ?? []) as unknown as Array<{ id: string; description: string | null; csi_code: string | null; actual_cost: number; revised_budget: number }>).filter(
         (row) => (row.actual_cost ?? 0) > (row.revised_budget ?? 0) && (row.revised_budget ?? 0) > 0
       ).map(row => ({ id: row.id, description: row.description, division: row.csi_code, actual_cost: row.actual_cost, revised_budget: row.revised_budget }))
     } catch (err) {
@@ -141,13 +137,12 @@ export const getAiInsights = async (
     }
 
     try {
-      const { data } = await supabase
-        .from('submittals')
+      const { data } = await fromTable('submittals')
         .select('id, number, title')
-        .eq('project_id', projectId)
-        .eq('status', 'pending')
+        .eq('project_id' as never, projectId)
+        .eq('status' as never, 'pending')
         .limit(5)
-      pendingSubmittals = (data ?? []) as typeof pendingSubmittals
+      pendingSubmittals = (data ?? []) as unknown as typeof pendingSubmittals
     } catch (err) {
       if (import.meta.env.DEV) console.error('[AI Endpoint] pendingSubmittals query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -157,13 +152,12 @@ export const getAiInsights = async (
     }
 
     try {
-      const { data } = await supabase
-        .from('schedule_phases')
+      const { data } = await fromTable('schedule_phases')
         .select('id, name, status')
-        .eq('project_id', projectId)
-        .in('status', ['delayed', 'at_risk'])
+        .eq('project_id' as never, projectId)
+        .in('status' as never, ['delayed', 'at_risk'] as never[])
         .limit(3)
-      atRiskPhases = (data ?? []) as typeof atRiskPhases
+      atRiskPhases = (data ?? []) as unknown as typeof atRiskPhases
     } catch (err) {
       if (import.meta.env.DEV) console.error('[AI Endpoint] atRiskPhases query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -177,16 +171,15 @@ export const getAiInsights = async (
     let openRfisWithDates: Array<{ id: string; number: number | null; title: string | null; due_date: string | null; ball_in_court: string | null }> = []
     try {
       const sevenDaysOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-      const { data } = await supabase
-        .from('schedule_phases')
+      const { data } = await fromTable('schedule_phases')
         .select('id, name, start_date, status')
-        .eq('project_id', projectId)
-        .neq('status', 'complete')
-        .gte('start_date', now)
-        .lte('start_date', sevenDaysOut)
+        .eq('project_id' as never, projectId)
+        .neq('status' as never, 'complete')
+        .gte('start_date' as never, now)
+        .lte('start_date' as never, sevenDaysOut)
         .order('start_date', { ascending: true })
         .limit(10)
-      upcomingPhases = (data ?? []) as typeof upcomingPhases
+      upcomingPhases = (data ?? []) as unknown as typeof upcomingPhases
     } catch (err) {
       if (import.meta.env.DEV) console.error('[AI Endpoint] upcomingPhases query failed:', err instanceof Error ? err.message : err)
       captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -197,15 +190,14 @@ export const getAiInsights = async (
 
     if (upcomingPhases.length > 0) {
       try {
-        const { data } = await supabase
-          .from('rfis')
+        const { data } = await fromTable('rfis')
           .select('id, number, title, due_date, ball_in_court')
-          .eq('project_id', projectId)
-          .neq('status', 'closed')
-          .not('due_date', 'is', null)
+          .eq('project_id' as never, projectId)
+          .neq('status' as never, 'closed')
+          .not('due_date' as never, 'is', null)
           .order('due_date', { ascending: true })
           .limit(20)
-        openRfisWithDates = (data ?? []) as typeof openRfisWithDates
+        openRfisWithDates = (data ?? []) as unknown as typeof openRfisWithDates
       } catch (err) {
         if (import.meta.env.DEV) console.error('[AI Endpoint] openRfisWithDates query failed:', err instanceof Error ? err.message : err)
         captureException(err instanceof Error ? err : new Error(String(err)), {
@@ -384,7 +376,7 @@ export const getAiInsights = async (
         source: 'onboarding' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
+        expiresAt: undefined,
         dismissed: false,
       },
       {
@@ -400,7 +392,7 @@ export const getAiInsights = async (
         source: 'onboarding' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
+        expiresAt: undefined,
         dismissed: false,
       },
       {
@@ -416,7 +408,7 @@ export const getAiInsights = async (
         source: 'onboarding' as const,
         createdAt: now,
         generatedAt: now,
-        expiresAt: null,
+        expiresAt: undefined,
         dismissed: false,
       },
     ]
@@ -440,17 +432,16 @@ export const getAiInsightsMeta = async (
 ): Promise<{ live: boolean; lastUpdated: string }> => {
   validateProjectId(projectId)
   const live = aiService.isConfigured()
-  const { data } = await supabase
-    .from('ai_insights')
+  const { data } = await fromTable('ai_insights')
     .select('created_at')
-    .eq('project_id', projectId)
-    .eq('dismissed', false)
+    .eq('project_id' as never, projectId)
+    .eq('dismissed' as never, false)
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
   return {
     live,
-    lastUpdated: data?.created_at ?? new Date().toISOString(),
+    lastUpdated: ((data as unknown as { created_at?: string } | null)?.created_at) ?? new Date().toISOString(),
   }
 }
 
