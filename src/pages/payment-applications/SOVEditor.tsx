@@ -20,8 +20,15 @@ import { saveSOVProgress } from '../../api/endpoints/budget'
 import type { PayApplicationData } from '../../api/endpoints/budget'
 import { upsertPayApplication } from '../../api/endpoints/payApplications'
 import type { UpsertPayAppPayload } from '../../api/endpoints/payApplications'
-import { G702ApplicationPDF } from '../../components/export/G702ApplicationPDF'
-import { G703ContinuationPDF } from '../../components/export/G703ContinuationPDF'
+// Lazy-loaded so vendor-pdf-gen (~1.8MB; @react-pdf/renderer) stays out of
+// the SOVEditor chunk and only loads when the user opens the PDF preview /
+// download link. Day 27 — bundle attack.
+const G702ApplicationPDF = lazy(() =>
+  import('../../components/export/G702ApplicationPDF').then((m) => ({ default: m.G702ApplicationPDF })),
+)
+const G703ContinuationPDF = lazy(() =>
+  import('../../components/export/G703ContinuationPDF').then((m) => ({ default: m.G703ContinuationPDF })),
+)
 import {
   fmtCurrency,
   newBlankRow,

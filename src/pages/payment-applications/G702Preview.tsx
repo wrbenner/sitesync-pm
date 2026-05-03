@@ -5,8 +5,15 @@ import { Card, Btn } from '../../components/Primitives'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme'
 import type { G702Data, G703LineItem } from '../../machines/paymentMachine'
-import { G702ApplicationPDF } from '../../components/export/G702ApplicationPDF'
-import { G703ContinuationPDF } from '../../components/export/G703ContinuationPDF'
+// Lazy-loaded so vendor-pdf-gen (~1.8MB; @react-pdf/renderer) stays out of
+// the payment-applications page chunk and only loads when the user actually
+// renders the PDF preview / download link. Day 27 — bundle attack.
+const G702ApplicationPDF = lazy(() =>
+  import('../../components/export/G702ApplicationPDF').then((m) => ({ default: m.G702ApplicationPDF })),
+)
+const G703ContinuationPDF = lazy(() =>
+  import('../../components/export/G703ContinuationPDF').then((m) => ({ default: m.G703ContinuationPDF })),
+)
 import { generatePayAppPdfFromData, type PayAppPdfData } from '../../services/pdf/paymentAppPdf'
 import { fmtCurrency, fmtDate } from './types'
 import { useIsMobile } from '../../hooks/useWindowSize'

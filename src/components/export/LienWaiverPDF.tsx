@@ -39,61 +39,18 @@ const s = StyleSheet.create({
 
 // ── Types ───────────────────────────────────────────────
 
-export type WaiverType = 'conditional' | 'unconditional'
-export type WaiverState = 'california' | 'texas' | 'florida' | 'new_york' | 'generic'
-
-export interface LienWaiverData {
-  waiverType: WaiverType
-  waiverState: WaiverState
-  projectName: string
-  projectAddress: string
-  ownerName: string
-  contractorName: string
-  claimantName: string // The party signing the waiver (usually subcontractor)
-  throughDate: string
-  amount: number
-  checkDate?: string
-  checkNumber?: string
-  signedBy?: string
-  signedDate?: string
-}
-
-// Build LienWaiverData from a database LienWaiverRow plus project context.
-// Caller supplies the static project fields; the row fills in the sub-specific fields.
-export interface LienWaiverRowContext {
-  projectName: string
-  projectAddress: string
-  ownerName: string
-  contractorName: string
-  waiverState?: WaiverState
-}
-
-export function lienWaiverDataFromRow(
-  row: {
-    type: string
-    sub_name: string | null
-    amount: number | null
-    through_date: string | null
-    signed_by: string | null
-    signed_date: string | null
-  },
-  ctx: LienWaiverRowContext,
-): LienWaiverData {
-  const isConditional = row.type === 'conditional_progress' || row.type === 'conditional_final'
-  return {
-    waiverType: isConditional ? 'conditional' : 'unconditional',
-    waiverState: ctx.waiverState ?? 'generic',
-    projectName: ctx.projectName,
-    projectAddress: ctx.projectAddress,
-    ownerName: ctx.ownerName,
-    contractorName: ctx.contractorName,
-    claimantName: row.sub_name ?? '',
-    throughDate: row.through_date ?? '',
-    amount: row.amount ?? 0,
-    signedBy: row.signed_by ?? undefined,
-    signedDate: row.signed_date ?? undefined,
-  }
-}
+// Types + row adapter live in ./LienWaiverPDFData (no @react-pdf/renderer
+// dependency) so listing surfaces can format rows without pulling the
+// 1.8MB PDF vendor chunk. Re-exported here for backwards-compat with any
+// caller that still imports them from this file.
+export {
+  type WaiverType,
+  type WaiverState,
+  type LienWaiverData,
+  type LienWaiverRowContext,
+  lienWaiverDataFromRow,
+} from './LienWaiverPDFData'
+import type { LienWaiverData, WaiverState, WaiverType } from './LienWaiverPDFData'
 
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)

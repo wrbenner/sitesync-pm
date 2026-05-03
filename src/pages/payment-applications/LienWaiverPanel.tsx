@@ -6,8 +6,14 @@ import { Card, SectionHeader, MetricBox, EmptyState } from '../../components/Pri
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import type { LienWaiverRow, LienWaiverStatus } from '../../types/api'
-import { LienWaiverPDF, lienWaiverDataFromRow } from '../../components/export/LienWaiverPDF'
-import type { LienWaiverRowContext } from '../../components/export/LienWaiverPDF'
+// Day 27: data adapter + types now live in LienWaiverPDFData (a
+// react-pdf-free file) so the listing surface doesn't pull the 1.8MB
+// vendor chunk. The PDF component itself is lazy.
+import { lienWaiverDataFromRow } from '../../components/export/LienWaiverPDFData'
+import type { LienWaiverRowContext } from '../../components/export/LienWaiverPDFData'
+const LienWaiverPDF = lazy(() =>
+  import('../../components/export/LienWaiverPDF').then((m) => ({ default: m.LienWaiverPDF })),
+)
 import {
   fmtCurrency,
   fmtDate,
