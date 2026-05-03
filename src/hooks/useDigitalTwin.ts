@@ -6,6 +6,7 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { selectScoped } from '../lib/db/queries'
 import { useProjectId } from './useProjectId'
 import { useDigitalTwinStore } from '../stores/digitalTwinStore'
 import type {
@@ -31,13 +32,11 @@ export function useDigitalTwin() {
     queryKey: ['digital-twin-progress', projectId],
     queryFn: async (): Promise<ProgressElement[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, percent_complete, status, trade, location')
-        .eq('project_id', projectId)
-        .not('percent_complete', 'is', null)
+      const { data, error } = await selectScoped('tasks', projectId, 'id, title, percent_complete, status, trade, location')
+        .not('percent_complete' as never, 'is', null)
       if (error) throw error
-      return (data ?? []).map((task) => ({
+      type TaskRow = { id: string; title: string | null; percent_complete: number | null; status: string | null; trade: string | null; location: string | null }
+      return ((data ?? []) as unknown as TaskRow[]).map((task) => ({
         elementId: `task-${task.id}`,
         taskId: task.id,
         taskTitle: task.title ?? '',
@@ -68,13 +67,11 @@ export function useDigitalTwin() {
     queryKey: ['digital-twin-rfis', projectId],
     queryFn: async (): Promise<RFIPin[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('rfis')
-        .select('id, number, title, status, priority, location, assigned_to, due_date, created_at')
-        .eq('project_id', projectId)
-        .in('status', ['open', 'under_review'])
+      const { data, error } = await selectScoped('rfis', projectId, 'id, number, title, status, priority, location, assigned_to, due_date, created_at')
+        .in('status' as never, ['open', 'under_review'])
       if (error) throw error
-      return (data ?? []).map((rfi) => {
+      type RFIRow = { id: string; number: number | null; title: string | null; status: string | null; priority: string | null; location: string | null; assigned_to: string | null; due_date: string | null; created_at: string }
+      return ((data ?? []) as unknown as RFIRow[]).map((rfi): RFIPin => {
         const daysOpen = Math.floor(
           (Date.now() - new Date(rfi.created_at).getTime()) / (1000 * 60 * 60 * 24),
         )
@@ -85,7 +82,7 @@ export function useDigitalTwin() {
         const pos = locationTo3DPosition(rfi.location)
         return {
           id: rfi.id,
-          rfiNumber: rfi.number ?? `RFI-${rfi.id.substring(0, 4)}`,
+          rfiNumber: typeof rfi.number === 'number' ? String(rfi.number) : `RFI-${rfi.id.substring(0, 4)}`,
           subject: rfi.title ?? '',
           status: rfi.status as RFIPin['status'],
           priority: (rfi.priority as RFIPin['priority']) ?? 'medium',
@@ -110,15 +107,13 @@ export function useDigitalTwin() {
     queryKey: ['digital-twin-safety', projectId],
     queryFn: async (): Promise<{ incidents: SafetyIncident[]; zones: SafetyZone[] }> => {
       if (!projectId || !isSupabaseConfigured) return { incidents: [], zones: [] }
-      const { data, error } = await supabase
-        .from('incidents')
-        .select('id, description, severity, location, incident_date, incident_type, corrective_action, status')
-        .eq('project_id', projectId)
+      const { data, error } = await selectScoped('incidents', projectId, 'id, description, severity, location, incident_date, incident_type, corrective_action, status')
         .order('incident_date', { ascending: false })
         .limit(100)
       if (error) throw error
 
-      const incidents: SafetyIncident[] = (data ?? []).map((inc) => ({
+      type IncidentRow = { id: string; description: string | null; severity: string | null; location: string | null; incident_date: string | null; incident_type: string | null; corrective_action: string | null; status: string | null }
+      const incidents: SafetyIncident[] = ((data ?? []) as unknown as IncidentRow[]).map((inc) => ({
         id: inc.id,
         description: inc.description ?? '',
         severity: (inc.severity as SafetyIncident['severity']) ?? 'low',
@@ -148,13 +143,11 @@ export function useDigitalTwin() {
     queryKey: ['digital-twin-schedule', projectId],
     queryFn: async (): Promise<ScheduleElement[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('id, title, planned_start, planned_end, actual_start, actual_end, percent_complete, is_critical, status')
-        .eq('project_id', projectId)
+      const { data, error } = await selectScoped('tasks', projectId, 'id, title, planned_start, planned_end, actual_start, actual_end, percent_complete, is_critical, status')
       if (error) throw error
 
-      return (data ?? []).map((task) => {
+      type ScheduleTaskRow = { id: string; title: string | null; planned_start: string | null; planned_end: string | null; actual_start: string | null; actual_end: string | null; percent_complete: number | null; is_critical: boolean | null; status: string | null }
+      return ((data ?? []) as unknown as ScheduleTaskRow[]).map((task) => {
         const plannedEnd = task.planned_end ? new Date(task.planned_end) : null
         const actualEnd = task.actual_end ? new Date(task.actual_end) : null
         const now = new Date()
@@ -194,14 +187,12 @@ export function useDigitalTwin() {
     queryKey: ['digital-twin-crews', projectId],
     queryFn: async (): Promise<CrewLocation[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('crews')
-        .select('id, name, trade, headcount, foreman, status')
-        .eq('project_id', projectId)
-        .eq('status', 'active')
+      const { data, error } = await selectScoped('crews', projectId, 'id, name, trade, headcount, foreman, status')
+        .eq('status' as never, 'active')
       if (error) throw error
 
-      return (data ?? []).map((crew, i) => ({
+      type CrewRow = { id: string; name: string | null; trade: string | null; headcount: number | null; foreman: string | null; status: string | null }
+      return ((data ?? []) as unknown as CrewRow[]).map((crew, i) => ({
         id: crew.id,
         crewName: crew.name ?? `Crew ${i + 1}`,
         trade: crew.trade ?? 'General',
@@ -227,16 +218,14 @@ export function useDigitalTwin() {
     queryKey: ['digital-twin-photos', projectId],
     queryFn: async (): Promise<PhotoPin[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('field_captures')
-        .select('id, content, location, created_at, created_by, type')
-        .eq('project_id', projectId)
-        .eq('type', 'photo')
+      const { data, error } = await selectScoped('field_captures', projectId, 'id, content, location, created_at, created_by, type')
+        .eq('type' as never, 'photo')
         .order('created_at', { ascending: false })
         .limit(50)
       if (error) throw error
 
-      return (data ?? []).map((photo) => ({
+      type PhotoRow = { id: string; content: string | null; location: string | null; created_at: string | null; created_by: string | null; type: string | null }
+      return ((data ?? []) as unknown as PhotoRow[]).map((photo) => ({
         id: photo.id,
         photoUrl: photo.content ?? '',
         position: locationTo3DPosition(photo.location),
