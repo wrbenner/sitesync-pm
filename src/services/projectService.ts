@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import { ensureOrganizationMembership } from '../lib/ensureOrganizationMembership';
 import type { Project, ProjectMember } from '../types/entities';
 import type { ProjectRole } from '../types/tenant';
@@ -28,14 +29,13 @@ async function resolveProjectRole(
 ): Promise<ProjectRole | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .maybeSingle();
 
-  return (data?.role as ProjectRole) ?? null;
+  return ((data as unknown as { role?: string } | null)?.role as ProjectRole) ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -67,30 +67,28 @@ export const projectService = {
    * Load all non-deleted projects for an organization, newest first.
    */
   async loadProjects(organizationId: string): Promise<Result<Project[]>> {
-    const { data, error } = await supabase
-      .from('projects')
+    const { data, error } = await fromTable('projects')
       .select('*')
-      .eq('organization_id', organizationId)
-      .neq('status', 'archived')
+      .eq('organization_id' as never, organizationId)
+      .neq('status' as never, 'archived')
       .order('created_at', { ascending: false });
 
     if (error) return fail(dbError(error.message, { organizationId }));
-    return ok((data ?? []) as Project[]);
+    return ok((data ?? []) as unknown as Project[]);
   },
 
   /**
    * Fetch a single project by ID. Returns NotFoundError if archived or missing.
    */
   async getProject(projectId: string): Promise<Result<Project>> {
-    const { data, error } = await supabase
-      .from('projects')
+    const { data, error } = await fromTable('projects')
       .select('*')
-      .eq('id', projectId)
-      .neq('status', 'archived')
+      .eq('id' as never, projectId)
+      .neq('status' as never, 'archived')
       .single();
 
     if (error || !data) return fail(notFoundError('Project', projectId));
-    return ok(data as Project);
+    return ok(data as unknown as Project);
   },
 
   /**
@@ -112,8 +110,7 @@ export const projectService = {
       await ensureOrganizationMembership(userId);
     }
 
-    const { data, error } = await supabase
-      .from('projects')
+    const { data, error } = await fromTable('projects')
       .insert({
         name: input.name,
         organization_id: organizationId,
@@ -125,22 +122,22 @@ export const projectService = {
         start_date: input.start_date ?? null,
         target_completion: input.scheduled_end_date ?? null,
         owner_id: userId,
-      } as Parameters<ReturnType<typeof supabase.from<'projects'>>['insert']>[0])
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { organization_id: organizationId }));
 
-    const project = data as Project;
+    const project = data as unknown as Project;
 
     // Auto-add creator as project_manager
     if (userId) {
-      await supabase.from('project_members').insert({
+      await fromTable('project_members').insert({
         project_id: project.id,
         user_id: userId,
         role: 'project_manager' as ProjectRole,
         accepted_at: new Date().toISOString(),
-      });
+      } as never);
     }
 
     return ok(project);
@@ -150,13 +147,12 @@ export const projectService = {
    * Update project fields (non-status). Always records updated_at timestamp.
    */
   async updateProject(projectId: string, updates: Partial<Project>): Promise<Result> {
-    const { error } = await supabase
-      .from('projects')
+    const { error } = await fromTable('projects')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', projectId);
+      } as never)
+      .eq('id' as never, projectId);
 
     if (error) return fail(dbError(error.message, { projectId }));
     return { data: null, error: null };
@@ -178,10 +174,9 @@ export const projectService = {
       return fail(permissionError(`Role '${role}' cannot archive projects`));
     }
 
-    const { error } = await supabase
-      .from('projects')
-      .update({ status: 'archived', updated_at: new Date().toISOString() })
-      .eq('id', projectId);
+    const { error } = await fromTable('projects')
+      .update({ status: 'archived', updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, projectId);
 
     if (error) return fail(dbError(error.message, { projectId }));
     return { data: null, error: null };
@@ -205,24 +200,26 @@ export const projectService = {
     // them. So we run two queries and merge in JS instead of using
     // `select('*, profile:profiles(*)')` (which 400s with "could not find
     // a relationship"). Two round-trips, but they're both indexed lookups.
-    const { data: members, error: mErr } = await supabase
-      .from('project_members')
+    const { data: members, error: mErr } = await fromTable('project_members')
       .select('*')
-      .eq('project_id', projectId);
+      .eq('project_id' as never, projectId);
 
     if (mErr) return fail(dbError(mErr.message, { projectId }));
-    if (!members || members.length === 0) return ok([])
+    type MemberRow = { id: string; project_id: string; user_id: string; role: string; accepted_at: string | null; created_at: string | null; updated_at: string | null }
+    const memberRows = (members ?? []) as unknown as MemberRow[]
+    if (memberRows.length === 0) return ok([])
 
-    const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)))
-    const { data: profiles, error: pErr } = await supabase
-      .from('profiles')
+    const userIds = Array.from(new Set(memberRows.map((m) => m.user_id).filter(Boolean)))
+    const { data: profiles, error: pErr } = await fromTable('profiles')
       .select('*')
-      .in('user_id', userIds)
+      .in('user_id' as never, userIds as never[])
 
     if (pErr) return fail(dbError(pErr.message, { projectId }))
 
-    const profileByUserId = new Map((profiles ?? []).map((p) => [p.user_id, p]))
-    const merged = members.map((m) => ({
+    type ProfileRow = { user_id: string; [k: string]: unknown }
+    const profileRows = (profiles ?? []) as unknown as ProfileRow[]
+    const profileByUserId = new Map(profileRows.map((p) => [p.user_id, p]))
+    const merged = memberRows.map((m) => ({
       ...m,
       profile: profileByUserId.get(m.user_id) ?? null,
     }))
@@ -237,32 +234,30 @@ export const projectService = {
     const currentUserId = await getCurrentUserId();
     if (!currentUserId) return fail(permissionError('Not authenticated'));
 
-    const { error } = await supabase.from('project_members').insert({
+    const { error } = await fromTable('project_members').insert({
       project_id: projectId,
       user_id: userId,
       role,
       accepted_at: new Date().toISOString(),
-    });
+    } as never);
 
     if (error) return fail(dbError(error.message, { projectId, userId }));
     return { data: null, error: null };
   },
 
   async updateMemberRole(memberId: string, role: ProjectRole): Promise<Result> {
-    const { error } = await supabase
-      .from('project_members')
-      .update({ role, updated_at: new Date().toISOString() })
-      .eq('id', memberId);
+    const { error } = await fromTable('project_members')
+      .update({ role, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, memberId);
 
     if (error) return fail(dbError(error.message, { memberId }));
     return { data: null, error: null };
   },
 
   async removeMember(memberId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('project_members')
+    const { error } = await fromTable('project_members')
       .delete()
-      .eq('id', memberId);
+      .eq('id' as never, memberId);
 
     if (error) return fail(dbError(error.message, { memberId }));
     return { data: null, error: null };

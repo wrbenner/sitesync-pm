@@ -1,5 +1,6 @@
 import { ApiError, AuthError, ValidationError } from '../errors'
-import { supabase, fromTable } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
 import { useAuthStore } from '../../stores/authStore'
 import type { Database } from '../../types/database'
@@ -39,32 +40,29 @@ export async function assertProjectBelongsToActiveOrg(projectId: string, orgId: 
 
 async function observeProjectOrg(projectId: string): Promise<string | null> {
   // Path 1
-  const direct = await supabase
-    .from('projects')
+  const direct = await (fromTable('projects')
     .select('organization_id')
-    .eq('id', projectId)
-    .maybeSingle()
-    .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+    .eq('id' as never, projectId)
+    .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
+    .then(({ data }) => data?.organization_id ?? null)
     .catch(() => null)
   if (direct) return direct
   // Path 2 — drawings cross-ref
-  const viaDrawing = await supabase
-    .from('drawings')
+  const viaDrawing = await (fromTable('drawings')
     .select('organization_id')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .limit(1)
-    .maybeSingle()
-    .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+    .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
+    .then(({ data }) => data?.organization_id ?? null)
     .catch(() => null)
   if (viaDrawing) return viaDrawing
   // Path 3 — rfis cross-ref
-  const viaRfi = await supabase
-    .from('rfis')
+  const viaRfi = await (fromTable('rfis')
     .select('organization_id')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .limit(1)
-    .maybeSingle()
-    .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+    .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
+    .then(({ data }) => data?.organization_id ?? null)
     .catch(() => null)
   return viaRfi
 }
@@ -79,29 +77,27 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     // Deduplicated project membership check (TTL 1s to minimise stale-access window)
     const key = queryKey('project_members', { project_id: projectId, user_id: user.id })
     const memberData = await dedupTtl(key, 1000, () =>
-      supabase
-        .from('project_members')
+      (fromTable('project_members')
         .select('id')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
-        .maybeSingle()
+        .eq('project_id' as never, projectId)
+        .eq('user_id' as never, user.id)
+        .maybeSingle() as unknown as Promise<{ data: { id: string } | null }>)
         .then(({ data }) => data),
     )
     if (!memberData) {
       // Self-heal: if the user is the project owner but has no project_members row,
       // auto-create it. Covers projects created before the auto-add logic existed.
-      const { data: ownerRow } = await supabase
-        .from('projects')
+      const { data: ownerRow } = await fromTable('projects')
         .select('owner_id')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .maybeSingle()
-      if (ownerRow && (ownerRow as { owner_id: string | null }).owner_id === user.id) {
-        await supabase.from('project_members').insert({
+      if (ownerRow && (ownerRow as unknown as { owner_id: string | null }).owner_id === user.id) {
+        await fromTable('project_members').insert({
           project_id: projectId,
           user_id: user.id,
           role: 'project_manager',
           accepted_at: new Date().toISOString(),
-        })
+        } as never)
         // Continue — membership now exists.
       } else {
         throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
@@ -126,54 +122,46 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
         const orgKey = queryKey('projects_org_hydrate', { project_id: projectId, user_id: user.id })
         const orgId = await dedupTtl(orgKey, 2000, async (): Promise<string | null> => {
           // Path 1: direct projects SELECT.
-          const direct = await supabase
-            .from('projects')
+          const direct = await (fromTable('projects')
             .select('organization_id')
-            .eq('id', projectId)
-            .maybeSingle()
-            .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+            .eq('id' as never, projectId)
+            .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
+            .then(({ data }) => data?.organization_id ?? null)
             .catch(() => null)
           if (direct) return direct
           // Path 2: embedded join via the user's project_members row.
-          const viaMember = await supabase
-            .from('project_members')
+          const viaMember = await (fromTable('project_members')
             .select('project:projects(organization_id)')
-            .eq('project_id', projectId)
-            .eq('user_id', user.id)
-            .maybeSingle()
-            .then(({ data }) => {
-              const row = data as unknown as { project?: { organization_id?: string } | null } | null
-              return row?.project?.organization_id ?? null
-            })
+            .eq('project_id' as never, projectId)
+            .eq('user_id' as never, user.id)
+            .maybeSingle() as unknown as Promise<{ data: { project?: { organization_id?: string } | null } | null }>)
+            .then(({ data }) => data?.project?.organization_id ?? null)
             .catch(() => null)
           if (viaMember) return viaMember
           // Path 3: drawings cross-ref — works when a member can read sibling
           // rows but not the parent projects row (common RLS shape).
-          const viaDrawing = await supabase
-            .from('drawings')
+          const viaDrawing = await (fromTable('drawings')
             .select('organization_id')
-            .eq('project_id', projectId)
+            .eq('project_id' as never, projectId)
             .limit(1)
-            .maybeSingle()
-            .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+            .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
+            .then(({ data }) => data?.organization_id ?? null)
             .catch(() => null)
           if (viaDrawing) return viaDrawing
           // Path 4: rfis cross-ref — second sibling fallback.
-          const viaRfi = await supabase
-            .from('rfis')
+          const viaRfi = await (fromTable('rfis')
             .select('organization_id')
-            .eq('project_id', projectId)
+            .eq('project_id' as never, projectId)
             .limit(1)
-            .maybeSingle()
-            .then(({ data }) => (data as { organization_id?: string } | null)?.organization_id ?? null)
+            .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
+            .then(({ data }) => data?.organization_id ?? null)
             .catch(() => null)
           return viaRfi
         })
         if (orgId) {
-          const { data: memberships } = await supabase
-            .from('organization_members')
+          const { data: memberships } = await fromTable('organization_members')
             .select('organization_id, organizations:organization_id(id, name, slug)')
-            .eq('user_id', user.id)
+            .eq('user_id' as never, user.id)
           const match = (memberships as unknown as Array<{ organizations: { id: string; name: string; slug: string } | null }> | null)
             ?.map((m) => m.organizations)
             .find((o): o is { id: string; name: string; slug: string } => !!o && o.id === orgId)
@@ -216,24 +204,22 @@ export async function assertProjectAccessNoCache(projectId: string): Promise<voi
     throw new AuthError('Not authenticated')
   }
   try {
-    const { data: memberData } = await supabase
-      .from('project_members')
+    const { data: memberData } = await fromTable('project_members')
       .select('id, project:projects(organization_id)')
-      .eq('project_id', projectId)
-      .eq('user_id', user.id)
+      .eq('project_id' as never, projectId)
+      .eq('user_id' as never, user.id)
       .maybeSingle()
     if (!memberData) {
       throw new ApiError('You do not have access to this project', 403, 'FORBIDDEN')
     }
-    const orgId = (memberData as { id: string; project: { organization_id: string } | null }).project?.organization_id
+    const orgId = (memberData as unknown as { id: string; project: { organization_id: string } | null }).project?.organization_id
     if (!orgId) {
       throw new ApiError('Forbidden', 403, 'FORBIDDEN')
     }
-    const { data: orgMember } = await supabase
-      .from('organization_members')
+    const { data: orgMember } = await fromTable('organization_members')
       .select('id')
-      .eq('organization_id', orgId)
-      .eq('user_id', user.id)
+      .eq('organization_id' as never, orgId)
+      .eq('user_id' as never, user.id)
       .maybeSingle()
     if (!orgMember) {
       throw new ApiError('Forbidden', 403, 'FORBIDDEN')
@@ -253,11 +239,10 @@ export async function assertProjectBelongsToOrg(projectId: string, orgId: string
   if (authError || !user) {
     throw new AuthError('Not authenticated')
   }
-  const { data } = await supabase
-    .from('projects')
+  const { data } = await fromTable('projects')
     .select('id')
-    .eq('id', projectId)
-    .eq('organization_id', orgId)
+    .eq('id' as never, projectId)
+    .eq('organization_id' as never, orgId)
     .maybeSingle()
   if (!data) {
     throw new ApiError('Project does not belong to this organization', 403, 'FORBIDDEN')
@@ -275,5 +260,5 @@ export const ROLE_RANK: Record<string, number> = {
 
 export function createProjectScopedQuery(table: TableName, projectId: string) {
   validateProjectId(projectId)
-  return fromTable(table).select('*').eq('project_id', projectId)
+  return fromTable(table).select('*').eq('project_id' as never, projectId)
 }
