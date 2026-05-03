@@ -17,6 +17,41 @@ A React 19 + TypeScript + Supabase construction project management platform.
 - **Accessibility**: 635 ARIA annotations, keyboard nav, screen reader support.
 - **AI infrastructure**: Claude via edge functions, multi-agent hooks, copilot UI.
 
+## Canonical AI path (added 2026-05-01)
+
+Every browser-originated AI call now flows through ONE chokepoint:
+
+```
+src/lib/ai/callIris.ts
+   → POST supabase/functions/iris-call (SSE stream)
+       → authenticateRequest()                 (Bearer JWT → GoTrue)
+       → verifyProjectMembership()             (RLS-scoped if project_id given)
+       → checkRateLimit()                      (sliding window over audit_log)
+       → readIdempotencyCache()                (24h, hash-of-inputs key)
+       → routeAIStream()                       (Anthropic + OpenAI native SSE;
+                                                Perplexity + Gemini buffered)
+       → SSE deltas back to browser
+       → writeAuditEntry()                     (action='iris_call.generate' →
+                                                hash-chained into audit_log)
+       → writeIdempotencyCache()
+```
+
+Why this matters:
+1. **Zero LLM keys in the browser bundle.** `grep -r "@ai-sdk/anthropic" dist/`
+   returns nothing. Confirmed via build output.
+2. **Every AI call is in the deposition-grade hash chain.** `entity_type` +
+   `entity_id` link calls to RFI / Submittal / CO history; the existing
+   `EntityAuditViewer` surfaces them automatically.
+3. **Per-user rate limit + idempotency** are server-enforced. A retry double-
+   click hits cache, doesn't double-bill. A console-open user can't drain
+   the API key.
+4. **One pattern.** New AI features call `callIris(...)` from the browser.
+   No exceptions. No browser-direct Anthropic SDK ever again.
+
+Tables: `iris_call_idempotency`, plus `iris_call_count_recent(user, secs)`
+RPC over `audit_log`. Migration: `20260501000001_iris_call_infrastructure.sql`.
+Tests: `src/test/lib/callIris.test.ts` (SSE consumer + error paths).
+
 ## What Doesn't Work Yet
 
 - **AI is infrastructure, not UX.** The copilot chats without project context.
