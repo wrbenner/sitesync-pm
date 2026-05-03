@@ -26,6 +26,13 @@ import {
   type AuditPeriodContractor,
   type CheckId,
 } from './auditChecks'
+import {
+  type Cents,
+  addCents,
+  applyRateCents,
+  dollarsToCents,
+  fromCents,
+} from '../../types/money'
 
 interface PayAppDetailProps {
   app: Record<string, unknown>
@@ -101,15 +108,18 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
     }
 
     const lineItems: AuditLineItem[] = sovData.lineItems.map((row) => {
-      const previous_completed = (row.prev_pct_complete / 100) * row.scheduled_value
-      const this_period = (row.current_pct_complete / 100) * row.scheduled_value
+      // Internal cents math so pct × dollars doesn't drift; back to dollars
+      // at the boundary for auditChecks.ts which still operates on number.
+      const svC: Cents = dollarsToCents(row.scheduled_value)
+      const prevAmtC: Cents = applyRateCents(svC, row.prev_pct_complete / 100)
+      const thisAmtC: Cents = applyRateCents(svC, row.current_pct_complete / 100)
       return {
         id: row.id,
         item_number: row.item_number,
         description: row.description,
         scheduled_value: row.scheduled_value,
-        previous_completed,
-        this_period,
+        previous_completed: fromCents(prevAmtC) / 100,
+        this_period: fromCents(thisAmtC) / 100,
         materials_stored: row.stored_materials ?? 0,
         percent_complete: row.prev_pct_complete + row.current_pct_complete,
       }
@@ -148,7 +158,16 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
     // billed-this-period total against the contract's counterparty as the
     // single billing contractor; the audit lib then matches it against
     // waivers + COIs by name.
-    const totalThisPeriod = lineItems.reduce((s, li) => s + li.this_period + li.materials_stored, 0)
+    // Sum on integer cents to prevent N-line accumulation drift.
+    const totalThisPeriodC: Cents = lineItems.reduce<Cents>(
+      (acc, li) =>
+        addCents(
+          acc,
+          addCents(dollarsToCents(li.this_period), dollarsToCents(li.materials_stored)),
+        ),
+      0 as Cents,
+    )
+    const totalThisPeriod = fromCents(totalThisPeriodC) / 100
     const contractorsThisPeriod: AuditPeriodContractor[] =
       totalThisPeriod > 0 && sovData.contractorName
         ? [{

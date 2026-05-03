@@ -17,6 +17,13 @@ import {
   stateToWaiverState,
   type PayAppProject,
 } from './types'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
 
 const PDFDownloadLink = lazy(() =>
   import('@react-pdf/renderer').then((m) => ({ default: m.PDFDownloadLink })),
@@ -348,14 +355,47 @@ interface CashFlowPanelProps {
 
 export const CashFlowPanel = memo<CashFlowPanelProps>(({ payApps, retainage }) => {
   const metrics = useMemo(() => {
-    const totalBilled = payApps.reduce((s, a) => s + ((a.total_completed_and_stored as number) || 0), 0)
-    const totalPaid = payApps.filter((a) => a.status === 'paid').reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
-    const totalRetainage = retainage.reduce((s, r) => s + (((r.amount as number) || 0) - ((r.released_amount as number) || 0)), 0)
-    const outstanding = totalBilled - totalPaid - totalRetainage
+    // Sum on integer cents so the cash-flow rollup reconciles to the cent
+    // across N pay apps + N retainage rows. DB columns are still numeric;
+    // we convert at this boundary.
+    const totalBilledC: Cents = payApps.reduce<Cents>(
+      (s, a) => addCents(s, dollarsToCents((a.total_completed_and_stored as number) || 0)),
+      0 as Cents,
+    )
+    const totalPaidC: Cents = payApps
+      .filter((a) => a.status === 'paid')
+      .reduce<Cents>(
+        (s, a) => addCents(s, dollarsToCents((a.current_payment_due as number) || 0)),
+        0 as Cents,
+      )
+    const totalRetainageC: Cents = retainage.reduce<Cents>(
+      (s, r) =>
+        addCents(
+          s,
+          subtractCents(
+            dollarsToCents((r.amount as number) || 0),
+            dollarsToCents((r.released_amount as number) || 0),
+          ),
+        ),
+      0 as Cents,
+    )
+    const outstandingC: Cents = subtractCents(
+      subtractCents(totalBilledC, totalPaidC),
+      totalRetainageC,
+    )
     const pendingApps = payApps.filter((a) => a.status !== 'paid' && a.status !== 'void' && a.status !== 'draft')
-    const pendingAmount = pendingApps.reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
+    const pendingAmountC: Cents = pendingApps.reduce<Cents>(
+      (s, a) => addCents(s, dollarsToCents((a.current_payment_due as number) || 0)),
+      0 as Cents,
+    )
 
-    return { totalBilled, totalPaid, totalRetainage, outstanding, pendingAmount }
+    return {
+      totalBilled: fromCents(totalBilledC) / 100,
+      totalPaid: fromCents(totalPaidC) / 100,
+      totalRetainage: fromCents(totalRetainageC) / 100,
+      outstanding: fromCents(outstandingC) / 100,
+      pendingAmount: fromCents(pendingAmountC) / 100,
+    }
   }, [payApps, retainage])
 
   return (

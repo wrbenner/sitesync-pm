@@ -25,6 +25,23 @@ import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { PageInsightBanners } from '../../components/ai/PredictiveAlert'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { fmtCurrency, type TabKey, type PayAppProject } from './types'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
+
+// Local helper: sum a dollar field across rows on integer cents to prevent
+// float drift, return the result as dollars to keep the existing display API.
+function sumDollarsViaCents<T>(items: T[], pick: (item: T) => number): number {
+  const totalC: Cents = items.reduce<Cents>(
+    (acc, item) => addCents(acc, dollarsToCents(pick(item) || 0)),
+    0 as Cents,
+  )
+  return fromCents(totalC) / 100
+}
 import { PayAppList } from './PayAppList'
 import { PayAppDetail } from './PayAppDetail'
 import { LienWaiverPanel, CashFlowPanel } from './LienWaiverPanel'
@@ -387,10 +404,13 @@ const PaymentApplicationsPage: React.FC = () => {
 
   const kpis = useMemo(() => {
     const total = apps.length
-    const totalDue = apps.reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
-    const totalPaid = apps.filter((a) => a.status === 'paid').reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
+    const totalDue = sumDollarsViaCents(apps, (a) => (a.current_payment_due as number) || 0)
+    const totalPaid = sumDollarsViaCents(
+      apps.filter((a) => a.status === 'paid'),
+      (a) => (a.current_payment_due as number) || 0,
+    )
     const pending = apps.filter((a) => a.status !== 'paid' && a.status !== 'void' && a.status !== 'draft').length
-    const totalRetainage = apps.reduce((s, a) => s + ((a.retainage as number) || 0), 0)
+    const totalRetainage = sumDollarsViaCents(apps, (a) => (a.retainage as number) || 0)
     return { total, totalDue, totalPaid, pending, totalRetainage }
   }, [apps])
 
@@ -694,12 +714,20 @@ const PaymentApplicationsPage: React.FC = () => {
 
       {/* ── Retainage Release Workflow Tab (legacy ledger pipeline) ── */}
       {activeTab === 'retainage' && !isLoading && (() => {
-        const totalHeld = retainageItems.reduce((s, i) => s + i.retainageHeld, 0)
-        const totalReleased = retainageItems.reduce((s, i) => s + i.retainageReleased, 0)
-        const totalUnreleased = totalHeld - totalReleased
+        const totalHeld = sumDollarsViaCents(retainageItems, (i) => i.retainageHeld)
+        const totalReleased = sumDollarsViaCents(retainageItems, (i) => i.retainageReleased)
+        const totalUnreleased = fromCents(
+          subtractCents(dollarsToCents(totalHeld), dollarsToCents(totalReleased)),
+        ) / 100
         const releasedPct = totalHeld > 0 ? (totalReleased / totalHeld) * 100 : 0
-        const originalSubtotal = retainageItems.filter((i) => !i.isCO).reduce((s, i) => s + i.retainageHeld, 0)
-        const coSubtotal = retainageItems.filter((i) => i.isCO).reduce((s, i) => s + i.retainageHeld, 0)
+        const originalSubtotal = sumDollarsViaCents(
+          retainageItems.filter((i) => !i.isCO),
+          (i) => i.retainageHeld,
+        )
+        const coSubtotal = sumDollarsViaCents(
+          retainageItems.filter((i) => i.isCO),
+          (i) => i.retainageHeld,
+        )
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
@@ -1020,17 +1048,23 @@ const PaymentApplicationsPage: React.FC = () => {
                   })}
                   {/* Totals row */}
                   {(() => {
-                    const totals = g703Lines.reduce((acc, l) => ({
-                      scheduled: acc.scheduled + l.scheduled,
-                      prevComplete: acc.prevComplete + l.prevComplete,
-                      thisPeriod: acc.thisPeriod + l.thisPeriod,
-                      materialsStored: acc.materialsStored + l.materialsStored,
-                      totalCompleted: acc.totalCompleted + l.totalCompleted,
-                      balanceToFinish: acc.balanceToFinish + l.balanceToFinish,
-                      retainage: acc.retainage + l.retainage,
-                    }), { scheduled: 0, prevComplete: 0, thisPeriod: 0, materialsStored: 0, totalCompleted: 0, balanceToFinish: 0, retainage: 0 })
-                    const origTotal = g703Lines.filter((l) => !l.item.startsWith('CO#')).reduce((s, l) => s + l.scheduled, 0)
-                    const coTotal = g703Lines.filter((l) => l.item.startsWith('CO#')).reduce((s, l) => s + l.scheduled, 0)
+                    const totals = {
+                      scheduled: sumDollarsViaCents(g703Lines, (l) => l.scheduled),
+                      prevComplete: sumDollarsViaCents(g703Lines, (l) => l.prevComplete),
+                      thisPeriod: sumDollarsViaCents(g703Lines, (l) => l.thisPeriod),
+                      materialsStored: sumDollarsViaCents(g703Lines, (l) => l.materialsStored),
+                      totalCompleted: sumDollarsViaCents(g703Lines, (l) => l.totalCompleted),
+                      balanceToFinish: sumDollarsViaCents(g703Lines, (l) => l.balanceToFinish),
+                      retainage: sumDollarsViaCents(g703Lines, (l) => l.retainage),
+                    }
+                    const origTotal = sumDollarsViaCents(
+                      g703Lines.filter((l) => !l.item.startsWith('CO#')),
+                      (l) => l.scheduled,
+                    )
+                    const coTotal = sumDollarsViaCents(
+                      g703Lines.filter((l) => l.item.startsWith('CO#')),
+                      (l) => l.scheduled,
+                    )
                     return (
                       <>
                         <div style={{
