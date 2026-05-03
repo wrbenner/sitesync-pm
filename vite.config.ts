@@ -38,12 +38,18 @@ export default defineConfig(({ mode }) => {
     // module" errors.
     optimizeDeps: {
       include: ['pdfjs-dist', 'jszip'],
+      exclude: ['tus-js-client'],
     },
 
     build: {
       chunkSizeWarningLimit: 250,
       sourcemap: mode === 'production' ? 'hidden' : true,
       rollupOptions: {
+        // tus-js-client is a transitive dep (via @uppy/tus) but not directly
+        // installed in pnpm strict hoisting. Mark external so rolldown skips it;
+        // resumableUpload.ts catches the runtime import failure and falls back
+        // to standard Supabase upload.
+        external: ['tus-js-client'],
         output: {
           manualChunks(id: string) {
             if (!id.includes('node_modules')) return

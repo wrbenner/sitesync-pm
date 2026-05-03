@@ -6,15 +6,12 @@
  * single-request limit. TUS breaks the upload into 6 MB chunks,
  * supports automatic retry/resume, and reports byte-level progress.
  *
- * Uses `tus-js-client` (already installed) against the Supabase
- * Storage TUS endpoint at `/storage/v1/upload/resumable`.
+ * `tus-js-client` is loaded dynamically so the build succeeds even when
+ * the package is only a transitive dep. If TUS is unavailable at runtime
+ * smartUpload falls back to single-shot upload for all file sizes.
  */
-import * as tus from 'tus-js-client'
 import { supabase } from './supabase'
 
-// Env-only — no source-level fallbacks. If these are missing the
-// Supabase client in ./supabase.ts would have thrown already, so by
-// the time this module runs both are guaranteed to be strings.
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? ''
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 
@@ -22,25 +19,32 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 const CHUNK_SIZE = 6 * 1024 * 1024
 
 export interface ResumableUploadOptions {
-  /** Storage bucket name */
   bucket: string
-  /** Object path inside the bucket (e.g. `projectId/drawings/file.pdf`) */
   path: string
-  /** The file to upload */
   file: File
-  /** Progress callback — percent 0-100 */
   onProgress?: (percent: number) => void
 }
 
 export interface ResumableUploadResult {
-  /** The full storage path (bucket/path) */
   storagePath: string
   error: string | null
+}
+
+// Dynamically load tus-js-client so this module compiles even when the
+// package is only reachable as a transitive dep (pnpm strict hoisting).
+async function tryLoadTus() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await import('tus-js-client') as any
+  } catch {
+    return null
+  }
 }
 
 /**
  * Upload a file using the TUS resumable protocol.
  * Automatically resumes interrupted uploads.
+ * Falls back to standard upload if tus-js-client is unavailable.
  */
 export function uploadResumable({
   bucket,
@@ -48,18 +52,28 @@ export function uploadResumable({
   file,
   onProgress,
 }: ResumableUploadOptions): { promise: Promise<ResumableUploadResult>; abort: () => void } {
-  let tusUpload: tus.Upload | null = null
+  let abortFn: (() => void) | null = null
 
-  const promise = new Promise<ResumableUploadResult>(async (resolve, reject) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) {
-        resolve({ storagePath: '', error: 'Not authenticated — please sign in again.' })
-        return
-      }
+  const promise = (async (): Promise<ResumableUploadResult> => {
+    const tus = await tryLoadTus()
 
-      tusUpload = new tus.Upload(file, {
+    if (!tus) {
+      // tus-js-client not available — fall back to standard upload
+      onProgress?.(0)
+      const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+      onProgress?.(100)
+      if (error) return { storagePath: '', error: error.message }
+      return { storagePath: data?.path ?? path, error: null }
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+    if (!accessToken) {
+      return { storagePath: '', error: 'Not authenticated — please sign in again.' }
+    }
+
+    return new Promise<ResumableUploadResult>((resolve) => {
+      const tusUpload = new tus.Upload(file, {
         endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
         retryDelays: [0, 1000, 3000, 5000, 10000],
         chunkSize: CHUNK_SIZE,
@@ -76,11 +90,10 @@ export function uploadResumable({
           contentType: file.type || 'application/octet-stream',
           cacheControl: '3600',
         },
-        onError(error) {
-          console.error('[TUS] Upload error:', error)
+        onError(error: Error) {
           resolve({ storagePath: '', error: error.message || 'Upload failed' })
         },
-        onProgress(bytesUploaded, bytesTotal) {
+        onProgress(bytesUploaded: number, bytesTotal: number) {
           const pct = bytesTotal > 0 ? Math.round((bytesUploaded / bytesTotal) * 100) : 0
           onProgress?.(pct)
         },
@@ -89,26 +102,25 @@ export function uploadResumable({
         },
       })
 
-      // Try to resume a previous partial upload for this file
-      const previousUploads = await tusUpload.findPreviousUploads()
-      if (previousUploads.length > 0) {
-        tusUpload.resumeFromPreviousUpload(previousUploads[0])
-      }
-      tusUpload.start()
-    } catch (err) {
-      resolve({ storagePath: '', error: (err as Error).message || 'Upload setup failed' })
-    }
-  })
+      abortFn = () => tusUpload.abort()
+
+      tusUpload.findPreviousUploads().then((prev: unknown[]) => {
+        if (prev.length > 0) tusUpload.resumeFromPreviousUpload(prev[0])
+        tusUpload.start()
+      }).catch(() => {
+        tusUpload.start()
+      })
+    })
+  })()
 
   return {
     promise,
-    abort: () => tusUpload?.abort(),
+    abort: () => abortFn?.(),
   }
 }
 
 /**
- * Smart upload — uses TUS for large files, standard upload for small ones.
- * Threshold: 50 MB.
+ * Smart upload — uses TUS for large files (>50 MB), standard upload for small ones.
  */
 export const RESUMABLE_THRESHOLD = 50 * 1024 * 1024
 
@@ -123,7 +135,6 @@ export async function smartUpload(
     return promise
   }
 
-  // Standard single-shot upload for small files
   onProgress?.(0)
   const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
   onProgress?.(100)

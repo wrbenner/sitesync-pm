@@ -279,13 +279,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {(response as RFIResponse & { company?: string }).company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {(response as RFIResponse & { company?: string }).company}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -801,13 +801,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {(rfi as RFI & { from_company?: string }).from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {(rfi as RFI & { from_company?: string }).from_company}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -826,7 +826,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || (rfi as RFI & { question?: string }).question || rfi.title}
             </div>
 
             {/* Metadata pills */}

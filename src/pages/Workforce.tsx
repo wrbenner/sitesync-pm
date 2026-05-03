@@ -10,6 +10,10 @@ import { useAuth } from '../hooks/useAuth'
 import { useWorkforceMembers, useTimeEntries, useCreateWorkforceMember, useDeleteWorkforceMember, useCreateTimeEntry, useApproveTimeEntry } from '../hooks/queries'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import type { Database } from '../types/database'
+
+type WorkforceMember = Database['public']['Tables']['workforce_members']['Row']
+type TimeEntry = { id: string; date: string | null; worker_name: string; clock_in: string | null; clock_out: string | null; regular_hours: number | null; overtime_hours: number | null; cost_code: string | null; approved: boolean | null; project_id: string }
 
 type TabKey = 'roster' | 'time' | 'forecast' | 'credentials' | 'productivity' | 'dispatch'
 
@@ -173,7 +177,7 @@ const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, display
 
 // ── Column helpers ───────────────────────────────────────
 
-const rosterCol = createColumnHelper<unknown>()
+const rosterCol = createColumnHelper<WorkforceMember>()
 const rosterColumns = [
   rosterCol.accessor('name', {
     header: 'Name',
@@ -245,7 +249,7 @@ const rosterColumns = [
   }),
 ]
 
-const timeCol = createColumnHelper<unknown>()
+const timeCol = createColumnHelper<TimeEntry>()
 const timeColumns = [
   timeCol.accessor('date', {
     header: 'Date',
@@ -320,16 +324,16 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const activeToday = members?.filter((m) => m.status === 'active').length || 0
+  const totalRegularHrs = (timeEntries as TimeEntry[] | undefined)?.reduce((s, e) => s + (e.regular_hours || 0), 0) || 0
+  const totalOTHrs = (timeEntries as TimeEntry[] | undefined)?.reduce((s, e) => s + (e.overtime_hours || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  members?.forEach((m) => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +344,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +367,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
