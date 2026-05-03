@@ -378,9 +378,11 @@ export function usePermissions(): PermissionsResult {
 // ── Permission Error ─────────────────────────────────────
 
 export class PermissionError extends Error {
-  constructor(message: string, public permission?: string) {
+  permission?: string
+  constructor(message: string, permission?: string) {
     super(message)
     this.name = 'PermissionError'
+    this.permission = permission
   }
 }
 

@@ -50,13 +50,21 @@ const DEFAULT_BASE: Record<string, string> = {
 export class TokenBucket {
   private tokens: number;
   private last: number;
+  readonly rate: number;
+  readonly capacity: number;
+  private readonly nowFn: () => number;
+  private readonly sleepFn: (ms: number) => Promise<void>;
   constructor(
-    public readonly rate: number,
-    public readonly capacity: number = rate,
-    private readonly nowFn: () => number = Date.now,
-    private readonly sleepFn: (ms: number) => Promise<void> = (ms) =>
+    rate: number,
+    capacity: number = rate,
+    nowFn: () => number = Date.now,
+    sleepFn: (ms: number) => Promise<void> = (ms) =>
       new Promise((r) => setTimeout(r, ms)),
   ) {
+    this.rate = rate;
+    this.capacity = capacity;
+    this.nowFn = nowFn;
+    this.sleepFn = sleepFn;
     this.tokens = capacity;
     this.last = nowFn();
   }

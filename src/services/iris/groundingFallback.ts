@@ -188,9 +188,11 @@ export async function runGroundingWithFallback(
 }
 
 export class GroundingFailure extends Error {
-  constructor(public readonly reason: DegradedReason) {
+  readonly reason: DegradedReason
+  constructor(reason: DegradedReason) {
     super(`Iris grounding failed: ${reason}`)
     this.name = 'GroundingFailure'
+    this.reason = reason
   }
 }
 

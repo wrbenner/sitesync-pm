@@ -32,11 +32,30 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 
 /**
- * Typed table accessor that accepts tables added by migration but not yet in generated types.
- * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
+ * Typed table accessor — preserves the literal table name so `.eq()`, `.in()`,
+ * `.select()` calls narrow correctly to that table's row shape under
+ * @supabase/supabase-js v2 strict generics.
+ *
+ * Two overloads:
+ *   - Known table (in Database['public']['Tables']): returns the narrow,
+ *     table-specific PostgrestQueryBuilder. This is the typed path —
+ *     `fromTable('rfis').eq('project_id', ...)` typechecks because
+ *     'project_id' is keyof rfis.Row.
+ *   - Unknown table (string & Record<never, never>): escape hatch for
+ *     tables added by migration but not yet in generated types. Returns
+ *     the wide builder; callers will get loose types — fine as a
+ *     transition seam, not as a long-lived pattern.
+ *
+ * Use this everywhere instead of `supabase.from(...)`. The Day-26 audit
+ * verified no service does a raw `update({status:...})` outside the
+ * validator path; the same discipline applies here for the type gate.
  */
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+type TableName = keyof Database['public']['Tables']
+export function fromTable<T extends TableName>(table: T): ReturnType<typeof supabase.from<T>>
+export function fromTable(table: string & Record<never, never>): ReturnType<typeof supabase.from>
+export function fromTable(table: string) {
+  return supabase.from(table as TableName)
+}
 
 /**
  * Force a token refresh. Call this proactively before long-running operations

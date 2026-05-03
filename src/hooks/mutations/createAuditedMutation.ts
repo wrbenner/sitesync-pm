@@ -22,12 +22,14 @@ import { syncManager } from '../../lib/syncManager'
 // ── Types ────────────────────────────────────────────────
 
 export class ValidationError extends Error {
-  constructor(public readonly fieldErrors: Record<string, string[]>) {
+  readonly fieldErrors: Record<string, string[]>
+  constructor(fieldErrors: Record<string, string[]>) {
     const summary = Object.entries(fieldErrors)
       .map(([field, msgs]) => `${field}: ${msgs[0]}`)
       .join(', ')
     super(`Validation failed: ${summary}`)
     this.name = 'ValidationError'
+    this.fieldErrors = fieldErrors
   }
 }
 
