@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { Organization, Profile } from '../types/database';
 import type { OrgRole, ProjectRole } from '../types/tenant';
 import {
@@ -27,14 +28,13 @@ async function resolveOrgRole(
 ): Promise<OrgRole | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('organization_members')
+  const { data } = await fromTable('organization_members')
     .select('role')
-    .eq('organization_id', organizationId)
-    .eq('user_id', userId)
+    .eq('organization_id' as never, organizationId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return (data?.role as OrgRole) ?? null;
+  return ((data as unknown as { role?: string } | null)?.role as OrgRole) ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -61,12 +61,12 @@ export const userService = {
     firstName: string,
     lastName?: string,
   ): Promise<Result> {
-    const { error } = await supabase.from('profiles').insert({
+    const { error } = await fromTable('profiles').insert({
       user_id: userId,
       full_name: fullName,
       first_name: firstName,
       last_name: lastName ?? null,
-    } as Parameters<ReturnType<typeof supabase.from<'profiles'>>['insert']>[0]);
+    } as never);
 
     if (error) return fail(dbError(error.message, { userId }));
     return { data: null, error: null };
@@ -79,42 +79,39 @@ export const userService = {
     // we don't want every page that mounts the auth store to surface a
     // PostgREST error in that case. Treat missing row as a NotFound, not
     // a hard failure.
-    const { data, error } = await supabase
-      .from('profiles')
+    const { data, error } = await fromTable('profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id' as never, userId)
       .maybeSingle();
 
     if (error) return fail(dbError(error.message, { userId }));
     if (!data) return fail(notFoundError('Profile', userId));
-    return ok(data as Profile);
+    return ok(data as unknown as Profile);
   },
 
   /**
    * Update profile fields. Always records updated_at timestamp for provenance.
    */
   async updateProfile(userId: string, updates: UpdateProfileInput): Promise<Result> {
-    const { error } = await supabase
-      .from('profiles')
+    const { error } = await fromTable('profiles')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
-      } as Parameters<ReturnType<typeof supabase.from<'profiles'>>['update']>[0])
-      .eq('user_id', userId);
+      } as never)
+      .eq('user_id' as never, userId);
 
     if (error) return fail(dbError(error.message, { userId }));
     return { data: null, error: null };
   },
 
   async loadOrganization(organizationId: string): Promise<Result<Organization>> {
-    const { data, error } = await supabase
-      .from('organizations')
+    const { data, error } = await fromTable('organizations')
       .select('*')
-      .eq('id', organizationId)
+      .eq('id' as never, organizationId)
       .single();
 
     if (error) return fail(dbError(error.message, { organizationId }));
-    return ok(data as Organization);
+    return ok(data as unknown as Organization);
   },
 
   async createOrganization(
@@ -125,28 +122,24 @@ export const userService = {
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    const { data, error } = await supabase
-      .from('organizations')
-      .insert({ name, slug })
+    const { data, error } = await fromTable('organizations')
+      .insert({ name, slug } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { name }));
 
-    const organization = data as Organization;
+    const organization = data as unknown as Organization;
 
-    await supabase.from('organization_members').insert({
+    await fromTable('organization_members').insert({
       organization_id: organization.id,
       user_id: userId,
       role: 'owner',
-    });
+    } as never);
 
-    await supabase
-      .from('profiles')
-      .update({ organization_id: organization.id } as Parameters<
-        ReturnType<typeof supabase.from<'profiles'>>['update']
-      >[0])
-      .eq('user_id', userId);
+    await fromTable('profiles')
+      .update({ organization_id: organization.id } as never)
+      .eq('user_id' as never, userId);
 
     // Seed the "Maple Ridge" demo project so the new org never lands on
     // an empty dashboard. Best-effort — failures here log and continue
@@ -190,14 +183,13 @@ export const userService = {
     const uid = userId ?? (await getCurrentUserId());
     if (!uid) return fail(permissionError('Not authenticated'));
 
-    const { data } = await supabase
-      .from('project_members')
+    const { data } = await fromTable('project_members')
       .select('role')
-      .eq('project_id', projectId)
-      .eq('user_id', uid)
+      .eq('project_id' as never, projectId)
+      .eq('user_id' as never, uid)
       .single();
 
-    return ok((data?.role as ProjectRole) ?? null);
+    return ok(((data as unknown as { role?: string } | null)?.role as ProjectRole) ?? null);
   },
 
   /**
@@ -215,25 +207,25 @@ export const userService = {
     // Two-step join: PostgREST can't auto-embed `profiles` because both
     // tables reference auth.users(id), not each other. Same pattern as
     // projectService.loadMembers — see that function for the why.
-    const { data: members, error: mErr } = await supabase
-      .from('organization_members')
+    const { data: members, error: mErr } = await fromTable('organization_members')
       .select('*')
-      .eq('organization_id', organizationId)
+      .eq('organization_id' as never, organizationId)
       .order('created_at', { ascending: true });
 
     if (mErr) return fail(dbError(mErr.message, { organizationId }));
-    if (!members || members.length === 0) return ok([])
+    type OrgMemberRow = { id: string; organization_id: string; user_id: string; role: OrgRole; created_at: string | null }
+    const memberRows = (members ?? []) as unknown as OrgMemberRow[]
+    if (memberRows.length === 0) return ok([])
 
-    const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)))
-    const { data: profiles, error: pErr } = await supabase
-      .from('profiles')
+    const userIds = Array.from(new Set(memberRows.map((m) => m.user_id).filter(Boolean)))
+    const { data: profiles, error: pErr } = await fromTable('profiles')
       .select('*')
-      .in('user_id', userIds)
+      .in('user_id' as never, userIds as never[])
 
     if (pErr) return fail(dbError(pErr.message, { organizationId }))
 
-    const profileByUserId = new Map((profiles ?? []).map((p) => [p.user_id, p]))
-    const merged = members.map((m) => ({
+    const profileByUserId = new Map(((profiles ?? []) as unknown as Profile[]).map((p) => [p.user_id, p]))
+    const merged = memberRows.map((m) => ({
       ...m,
       profile: profileByUserId.get(m.user_id) ?? null,
     }))
@@ -244,13 +236,12 @@ export const userService = {
    * Fetch a profile by user ID. Returns NotFoundError if absent.
    */
   async getUserProfile(userId: string): Promise<Result<Profile>> {
-    const { data, error } = await supabase
-      .from('profiles')
+    const { data, error } = await fromTable('profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id' as never, userId)
       .single();
 
     if (error || !data) return fail(notFoundError('Profile', userId));
-    return ok(data as Profile);
+    return ok(data as unknown as Profile);
   },
 };
