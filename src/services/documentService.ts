@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable, selectScopedActive } from '../lib/db/queries';
 import type { DocumentStatus } from '../machines/documentMachine';
 import { getValidDocumentTransitions } from '../machines/documentMachine';
 import {
@@ -28,14 +29,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -100,15 +100,11 @@ export const documentService = {
    * Load all active (non-soft-deleted) documents for a project.
    */
   async loadDocuments(projectId: string): Promise<Result<DocumentRecord[]>> {
-    const { data, error } = await supabase
-      .from('files')
-      .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+    const { data, error } = await selectScopedActive('files', projectId, '*')
       .order('created_at', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as DocumentRecord[]);
+    return ok((data ?? []) as unknown as DocumentRecord[]);
   },
 
   /**
@@ -118,16 +114,12 @@ export const documentService = {
     projectId: string,
     status: DocumentStatus,
   ): Promise<Result<DocumentRecord[]>> {
-    const { data, error } = await supabase
-      .from('files')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('document_status', status)
-      .is('deleted_at', null)
+    const { data, error } = await selectScopedActive('files', projectId, '*')
+      .eq('document_status' as never, status)
       .order('created_at', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId, status }));
-    return ok((data ?? []) as DocumentRecord[]);
+    return ok((data ?? []) as unknown as DocumentRecord[]);
   },
 
   /**
@@ -137,8 +129,7 @@ export const documentService = {
   async createDocument(input: CreateDocumentInput): Promise<Result<DocumentRecord>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('files')
+    const { data, error } = await fromTable('files')
       .insert({
         project_id: input.project_id,
         name: input.name,
@@ -155,12 +146,12 @@ export const documentService = {
         uploaded_by: userId,
         created_by: userId,
         document_status: 'draft' as DocumentStatus,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as DocumentRecord);
+    return ok(data as unknown as DocumentRecord);
   },
 
   /**
@@ -176,21 +167,14 @@ export const documentService = {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
     const storagePath = `${input.project_id}/${input.folder ?? 'Documents'}/${Date.now()}_${file.name}`;
 
+    // Note: supabase.storage.upload no longer exposes onUploadProgress in
+    // @supabase/supabase-js v2. The progress callback contract is preserved
+    // at the UploadDocumentInput surface but progress UI is not driven by
+    // the SDK at this layer; callers can compose progress at a higher level.
+    void onProgress
     const { error: uploadError } = await supabase.storage
       .from('documents')
-      .upload(storagePath, file, {
-        onUploadProgress: onProgress
-          ? (evt) => {
-              if (evt.total) {
-                onProgress({
-                  loaded: evt.loaded,
-                  total: evt.total,
-                  percent: Math.round((evt.loaded / evt.total) * 100),
-                });
-              }
-            }
-          : undefined,
-      });
+      .upload(storagePath, file);
 
     if (uploadError) {
       return fail(dbError(`Storage upload failed: ${uploadError.message}`, {
@@ -203,8 +187,7 @@ export const documentService = {
       .from('documents')
       .getPublicUrl(storagePath);
 
-    const { data, error: dbErr } = await supabase
-      .from('files')
+    const { data, error: dbErr } = await fromTable('files')
       .insert({
         project_id: input.project_id,
         name: input.name || file.name,
@@ -221,7 +204,7 @@ export const documentService = {
         uploaded_by: userId,
         created_by: userId,
         document_status: 'draft' as DocumentStatus,
-      })
+      } as never)
       .select()
       .single();
 
@@ -233,7 +216,7 @@ export const documentService = {
       }));
     }
 
-    return ok(data as DocumentRecord);
+    return ok(data as unknown as DocumentRecord);
   },
 
   /**
@@ -246,11 +229,11 @@ export const documentService = {
     file: File,
     onProgress?: (progress: UploadProgress) => void,
   ): Promise<Result<DocumentRecord>> {
-    const { data: parent, error: fetchError } = await supabase
-      .from('files')
+    const { data: parentRaw, error: fetchError } = await fromTable('files')
       .select('project_id, name, folder, description, discipline, trade, tags, version, document_status')
-      .eq('id', parentDocumentId)
+      .eq('id' as never, parentDocumentId)
       .single();
+    const parent = parentRaw as unknown as { project_id: string; name: string; folder: string | null; description: string | null; discipline: string | null; trade: string | null; tags: Record<string, unknown> | null; version: number | null; document_status: DocumentStatus | null } | null
 
     if (fetchError || !parent) {
       return fail(notFoundError('Document', parentDocumentId));
@@ -259,21 +242,14 @@ export const documentService = {
     const userId = await getCurrentUserId();
     const storagePath = `${parent.project_id}/${parent.folder ?? 'Documents'}/${Date.now()}_v${(parent.version ?? 1) + 1}_${file.name}`;
 
+    // Note: supabase.storage.upload no longer exposes onUploadProgress in
+    // @supabase/supabase-js v2. The progress callback contract is preserved
+    // at the UploadDocumentInput surface but progress UI is not driven by
+    // the SDK at this layer; callers can compose progress at a higher level.
+    void onProgress
     const { error: uploadError } = await supabase.storage
       .from('documents')
-      .upload(storagePath, file, {
-        onUploadProgress: onProgress
-          ? (evt) => {
-              if (evt.total) {
-                onProgress({
-                  loaded: evt.loaded,
-                  total: evt.total,
-                  percent: Math.round((evt.loaded / evt.total) * 100),
-                });
-              }
-            }
-          : undefined,
-      });
+      .upload(storagePath, file);
 
     if (uploadError) {
       return fail(dbError(`Storage upload failed: ${uploadError.message}`, { parentDocumentId }));
@@ -283,8 +259,8 @@ export const documentService = {
       .from('documents')
       .getPublicUrl(storagePath);
 
-    const { data, error: dbErr } = await supabase
-      .from('files')
+    if (!parent) return fail(notFoundError('Document', parentDocumentId));
+    const { data, error: dbErr } = await fromTable('files')
       .insert({
         project_id: parent.project_id,
         name: parent.name,
@@ -301,7 +277,7 @@ export const documentService = {
         uploaded_by: userId,
         created_by: userId,
         document_status: 'draft' as DocumentStatus,
-      })
+      } as never)
       .select()
       .single();
 
@@ -310,33 +286,29 @@ export const documentService = {
       return fail(dbError(`DB record failed after version upload: ${dbErr.message}`, { parentDocumentId }));
     }
 
-    return ok(data as DocumentRecord);
+    return ok(data as unknown as DocumentRecord);
   },
 
   /**
    * Load the full version chain for a document (all versions with same root).
    */
   async loadVersionHistory(documentId: string): Promise<Result<DocumentRecord[]>> {
-    const { data: doc, error: fetchError } = await supabase
-      .from('files')
+    const { data: doc, error: fetchError } = await fromTable('files')
       .select('project_id, name')
-      .eq('id', documentId)
+      .eq('id' as never, documentId)
       .single();
 
     if (fetchError || !doc) {
       return fail(notFoundError('Document', documentId));
     }
+    const docRow = doc as unknown as { project_id: string; name: string }
 
-    const { data, error } = await supabase
-      .from('files')
-      .select('*')
-      .eq('project_id', doc.project_id)
-      .eq('name', doc.name)
-      .is('deleted_at', null)
+    const { data, error } = await selectScopedActive('files', docRow.project_id, '*')
+      .eq('name' as never, docRow.name)
       .order('version', { ascending: false });
 
     if (error) return fail(dbError(error.message, { documentId }));
-    return ok((data ?? []) as DocumentRecord[]);
+    return ok((data ?? []) as unknown as DocumentRecord[]);
   },
 
   /**
@@ -349,23 +321,23 @@ export const documentService = {
     documentId: string,
     newStatus: DocumentStatus,
   ): Promise<Result> {
-    const { data: doc, error: fetchError } = await supabase
-      .from('files')
+    const { data: doc, error: fetchError } = await fromTable('files')
       .select('document_status, created_by, uploaded_by, project_id')
-      .eq('id', documentId)
+      .eq('id' as never, documentId)
       .single();
 
     if (fetchError || !doc) {
       return fail(notFoundError('Document', documentId));
     }
+    const docRow = doc as unknown as { document_status: string | null; created_by: string | null; uploaded_by: string | null; project_id: string }
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(doc.project_id, userId);
+    const role = await resolveProjectRole(docRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = (doc.document_status ?? 'draft') as DocumentStatus;
+    const currentStatus = (docRow.document_status ?? 'draft') as DocumentStatus;
     const validTransitions = getValidDocumentTransitions(currentStatus, role);
 
     if (!validTransitions.includes(newStatus)) {
@@ -377,12 +349,11 @@ export const documentService = {
       );
     }
 
-    const { error } = await supabase
-      .from('files')
+    const { error } = await fromTable('files')
       .update({
         document_status: newStatus,
-      })
-      .eq('id', documentId);
+      } as never)
+      .eq('id' as never, documentId);
     void userId;
 
     if (error) return fail(dbError(error.message, { documentId, newStatus }));
@@ -400,10 +371,9 @@ export const documentService = {
     const { document_status: _s, created_by: _c, created_at: _ca, ...safeUpdates } =
       updates as Record<string, unknown>;
 
-    const { error } = await supabase
-      .from('files')
-      .update(safeUpdates)
-      .eq('id', documentId);
+    const { error } = await fromTable('files')
+      .update(safeUpdates as never)
+      .eq('id' as never, documentId);
 
     if (error) return fail(dbError(error.message, { documentId }));
     return { data: null, error: null };
@@ -415,13 +385,12 @@ export const documentService = {
   async deleteDocument(documentId: string): Promise<Result> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('files')
+    const { error } = await fromTable('files')
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as Record<string, unknown>)
-      .eq('id', documentId);
+      } as never)
+      .eq('id' as never, documentId);
 
     if (error) return fail(dbError(error.message, { documentId }));
     return { data: null, error: null };
