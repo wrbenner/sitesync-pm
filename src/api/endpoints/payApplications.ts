@@ -3,6 +3,14 @@ import { assertProjectAccess, validateProjectId } from '../middleware/projectSco
 import type { PayApplication, CreatePayAppPayload, LienWaiverRow } from '../../types/api'
 import { autoGenerateLienWaivers } from './lienWaivers'
 import { paymentService } from '../../services/paymentService'
+import {
+  type Cents,
+  addCents,
+  applyRateCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
 
 
 const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
@@ -57,19 +65,35 @@ export function computeCurrentPaymentDue(params: {
   if (retainageRate < 0 || retainageRate > 1) {
     throw new Error('Retainage rate must be between 0 and 1.')
   }
-  // All monetary inputs are in dollars. Each intermediate value is rounded to cents before
-  // further arithmetic to match AIA G702 requirements and avoid floating-point penny drift.
-  const previousWork = Math.round(scheduledValue * prevPctComplete * 100) / 100
-  const currentWork = Math.round(scheduledValue * currentPctComplete * 100) / 100
-  const workThisPeriod = Math.round((currentWork - previousWork) * 100) / 100
-  const totalCompletedAndStored = previousWork + workThisPeriod + storedMaterials
+  // Money discipline: convert dollar inputs to integer cents at the boundary,
+  // perform all arithmetic on Cents (per src/types/money.ts), convert back to
+  // dollars at the boundary so the public return shape stays unchanged.
+  const svC: Cents = dollarsToCents(scheduledValue)
+  const storedC: Cents = dollarsToCents(storedMaterials)
+  const prevCertC: Cents = dollarsToCents(previousCertificates)
+
+  const previousWorkC: Cents = applyRateCents(svC, prevPctComplete)
+  const currentWorkC: Cents = applyRateCents(svC, currentPctComplete)
+  const workThisPeriodC: Cents = subtractCents(currentWorkC, previousWorkC)
+  const totalCompletedAndStoredC: Cents = addCents(currentWorkC, storedC)
   // AIA G702 line numbers
-  const line5 = totalCompletedAndStored
-  const line5a = Math.round((line5 - storedMaterials) * retainageRate * 100) / 100
-  const line5b = Math.round(storedMaterials * storedMaterialRetainageRate * 100) / 100
-  const line6 = Math.round((line5 - line5a - line5b) * 100) / 100
-  const currentPaymentDue = Math.round((line6 - previousCertificates) * 100) / 100
-  return { workThisPeriod, totalCompletedAndStored, line5, line5a, line5b, line6, retainageAmount: line5a, retainageOnStored: line5b, currentPaymentDue }
+  const line5C: Cents = totalCompletedAndStoredC
+  const line5aC: Cents = applyRateCents(subtractCents(line5C, storedC), retainageRate)
+  const line5bC: Cents = applyRateCents(storedC, storedMaterialRetainageRate)
+  const line6C: Cents = subtractCents(subtractCents(line5C, line5aC), line5bC)
+  const currentPaymentDueC: Cents = subtractCents(line6C, prevCertC)
+
+  return {
+    workThisPeriod: fromCents(workThisPeriodC) / 100,
+    totalCompletedAndStored: fromCents(totalCompletedAndStoredC) / 100,
+    line5: fromCents(line5C) / 100,
+    line5a: fromCents(line5aC) / 100,
+    line5b: fromCents(line5bC) / 100,
+    line6: fromCents(line6C) / 100,
+    retainageAmount: fromCents(line5aC) / 100,
+    retainageOnStored: fromCents(line5bC) / 100,
+    currentPaymentDue: fromCents(currentPaymentDueC) / 100,
+  }
 }
 
 /**

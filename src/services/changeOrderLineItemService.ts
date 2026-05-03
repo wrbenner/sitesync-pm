@@ -1,4 +1,10 @@
 import { supabase } from '../lib/supabase'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+} from '../types/money'
 
 // ── Change Order Line Items Service ───────────────────────────────────────────
 // Breaks a CO into individual line items by cost code, each with an amount.
@@ -149,14 +155,14 @@ async function syncCOAmountFromLineItems(changeOrderId: string): Promise<void> {
 
   if (error || !items) return
 
-  // Sum line items in integer cents to avoid float drift across many rows
-  // (matches the convention in src/services/reportService.ts and
-  // src/services/pdf/paymentAppPdf.ts). DB stores dollars; convert at write.
-  const totalCents = items.reduce<number>(
-    (acc, row) => acc + Math.round(((row.amount as number) ?? 0) * 100),
-    0,
+  // Sum line items on integer cents via the canonical helpers from
+  // src/types/money.ts so this code uses the same primitives as the rest
+  // of the cents-discipline boundary. DB stores dollars; convert at write.
+  const totalC: Cents = items.reduce<Cents>(
+    (acc, row) => addCents(acc, dollarsToCents((row.amount as number) ?? 0)),
+    0 as Cents,
   )
-  const total = totalCents / 100
+  const total = fromCents(totalC) / 100
 
   await supabase
     .from('change_orders')

@@ -7,6 +7,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { uploadFile } from '../../lib/storage'
 import { prepareDrawReportUpload } from '../../lib/drawReportParser'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
 
 // Untyped escape hatch: some tables we write to (pay_application_line_items,
 // freshly added columns on pay_applications, etc.) aren't in the generated
@@ -273,19 +280,41 @@ export function useCommitDrawReport() {
       const contractId = await ensureContractId(projectId)
 
       // Compute top-level totals from line items so they're never missing.
+      // Sum on integer cents so per-line drift doesn't accumulate before the
+      // pay-app row is written; convert back to dollars at the boundary
+      // because the DB columns are still numeric (Phase 4 changes that).
       const totals = extraction.totals || {}
-      const computedCompleted = extraction.line_items.reduce(
-        (s, l) => s + l.previous_completed + l.this_period + l.materials_stored,
-        0,
+      const computedCompletedC: Cents = extraction.line_items.reduce<Cents>(
+        (acc, l) =>
+          addCents(
+            acc,
+            addCents(
+              addCents(dollarsToCents(l.previous_completed), dollarsToCents(l.this_period)),
+              dollarsToCents(l.materials_stored),
+            ),
+          ),
+        0 as Cents,
       )
-      const computedRetainage = extraction.line_items.reduce((s, l) => s + l.retainage, 0)
+      const computedCompleted = fromCents(computedCompletedC) / 100
+      const computedRetainageC: Cents = extraction.line_items.reduce<Cents>(
+        (acc, l) => addCents(acc, dollarsToCents(l.retainage)),
+        0 as Cents,
+      )
+      const computedRetainage = fromCents(computedRetainageC) / 100
       const totalCompleted = totals.total_completed_and_stored ?? computedCompleted
       const retainage = totals.retainage ?? computedRetainage
-      const earnedLessRetainage = totals.total_earned_less_retainage ?? (totalCompleted - retainage)
+      const earnedLessRetainage = totals.total_earned_less_retainage
+        ?? fromCents(subtractCents(dollarsToCents(totalCompleted), dollarsToCents(retainage))) / 100
       const lessPrev = totals.less_previous_certificates ?? 0
-      const currentDue = totals.current_payment_due ?? (earnedLessRetainage - lessPrev)
-      const contractSum = extraction.contract_sum ?? extraction.line_items.reduce((s, l) => s + l.scheduled_value, 0)
-      const balanceToFinish = totals.balance_to_finish ?? (contractSum - totalCompleted)
+      const currentDue = totals.current_payment_due
+        ?? fromCents(subtractCents(dollarsToCents(earnedLessRetainage), dollarsToCents(lessPrev))) / 100
+      const computedContractSumC: Cents = extraction.line_items.reduce<Cents>(
+        (acc, l) => addCents(acc, dollarsToCents(l.scheduled_value)),
+        0 as Cents,
+      )
+      const contractSum = extraction.contract_sum ?? fromCents(computedContractSumC) / 100
+      const balanceToFinish = totals.balance_to_finish
+        ?? fromCents(subtractCents(dollarsToCents(contractSum), dollarsToCents(totalCompleted))) / 100
 
       // 1. Upsert pay_applications row.
       //    Idempotent on (project_id, application_number) so re-uploading
@@ -370,13 +399,21 @@ export function useCommitDrawReport() {
       //      c. Fall back to raw cost_code matching for draws where Gemini
       //         didn't infer a CSI division or the GC's codes ARE CSI.
       let budgetRowsUpdated = 0
-      const byDivision = new Map<string, number>()
+      // Sum each division's actuals on integer cents so the per-division
+      // total reflects exact line-by-line addition rather than a chain of
+      // float additions that drift after ~50 rows.
+      const byDivisionC = new Map<string, Cents>()
       for (const li of extraction.line_items) {
         const division = (li.csi_division || '').padStart(2, '0')
         if (!division || division === '00') continue
-        const actual = li.previous_completed + li.this_period + li.materials_stored
-        byDivision.set(division, (byDivision.get(division) || 0) + actual)
+        const actualC: Cents = addCents(
+          addCents(dollarsToCents(li.previous_completed), dollarsToCents(li.this_period)),
+          dollarsToCents(li.materials_stored),
+        )
+        byDivisionC.set(division, addCents(byDivisionC.get(division) ?? (0 as Cents), actualC))
       }
+      const byDivision = new Map<string, number>()
+      for (const [div, c] of byDivisionC) byDivision.set(div, fromCents(c) / 100)
       for (const [division, totalActual] of byDivision) {
         // Safety: never write NaN or negative actuals to the budget.
         if (!Number.isFinite(totalActual) || totalActual < 0) continue

@@ -13,6 +13,12 @@
  */
 
 import * as XLSX from 'xlsx';
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+} from '../types/money';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -906,8 +912,14 @@ export function parseBudgetWorkbook(
     });
   }
 
-  // Compute verification totals
-  const computedTotal = rows.reduce((s, r) => s + r.budgetAmount, 0);
+  // Compute verification totals on integer cents so 200+ XLSX rows can't
+  // accumulate float drift before the comparison against the spreadsheet's
+  // own grand-total cell.
+  const computedTotalC: Cents = rows.reduce<Cents>(
+    (acc, r) => addCents(acc, dollarsToCents(r.budgetAmount)),
+    0 as Cents,
+  );
+  const computedTotal = fromCents(computedTotalC) / 100;
 
   if (grandTotal !== null && Math.abs(computedTotal - grandTotal) > 1) {
     const diff = computedTotal - grandTotal;

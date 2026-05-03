@@ -15,7 +15,7 @@
 // Day 18 expands this with 100K-case round-half-to-even verification on
 // the full pay-app calculator.
 
-import { describe, it, expect } from 'vitest'
+import { describe, it } from 'vitest'
 import fc from 'fast-check'
 import {
   addCents,

@@ -24,6 +24,23 @@ import {
   type DrawReportExtraction,
   type DrawReportLineItem,
 } from '../../hooks/mutations/draw-reports'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
+
+// Local helper: sum a dollar field across rows on integer cents to prevent
+// drift across N draw-report lines.
+function sumDollarsViaCents<T>(items: T[], pick: (item: T) => number): number {
+  const totalC: Cents = items.reduce<Cents>(
+    (acc, item) => addCents(acc, dollarsToCents(pick(item) || 0)),
+    0 as Cents,
+  )
+  return fromCents(totalC) / 100
+}
 
 interface DrawReportUploadProps {
   open: boolean
@@ -114,19 +131,26 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
     setError('')
     try {
       // Recompute reconciliation against the *edited* line items so the
-      // guard reflects user edits (not the original Gemini output).
-      const sumOfLines = editedLines.reduce((s, l) => s + l.scheduled_value, 0)
+      // guard reflects user edits (not the original Gemini output). Sum
+      // on integer cents so per-line drift can't compound across N rows.
+      const sumOfLinesC: Cents = editedLines.reduce<Cents>(
+        (acc, l) => addCents(acc, dollarsToCents(l.scheduled_value)),
+        0 as Cents,
+      )
+      const sumOfLines = fromCents(sumOfLinesC) / 100
       const statedContractSum = staged.extraction.reconciliation?.stated_contract_sum
         ?? staged.extraction.contract_sum
         ?? sumOfLines
-      const deviationDollars = sumOfLines - statedContractSum
+      const statedC: Cents = dollarsToCents(statedContractSum)
+      const deviationC: Cents = subtractCents(sumOfLinesC, statedC)
+      const deviationDollars = fromCents(deviationC) / 100
       const deviationPct = statedContractSum > 0
         ? Math.abs(deviationDollars) / statedContractSum * 100
         : 0
       const liveRecon = {
-        sum_of_lines: Math.round(sumOfLines * 100) / 100,
-        stated_contract_sum: Math.round(statedContractSum * 100) / 100,
-        deviation_dollars: Math.round(deviationDollars * 100) / 100,
+        sum_of_lines: sumOfLines,
+        stated_contract_sum: fromCents(statedC) / 100,
+        deviation_dollars: deviationDollars,
         deviation_pct: Math.round(deviationPct * 100) / 100,
         reconciled: deviationPct < 0.5,
         dropped_subtotal_count: staged.extraction.reconciliation?.dropped_subtotal_count ?? 0,
@@ -191,7 +215,7 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
     const out = new Set<number>()
     for (let i = 2; i < editedLines.length; i++) {
       for (let w = 2; w <= Math.min(8, i); w++) {
-        const sum = editedLines.slice(i - w, i).reduce((s, r) => s + r.scheduled_value, 0)
+        const sum = sumDollarsViaCents(editedLines.slice(i - w, i), (r) => r.scheduled_value)
         const target = editedLines[i].scheduled_value
         if (target === 0) continue
         if (Math.abs(sum - target) < Math.max(100, target * 0.005)) {
@@ -224,12 +248,16 @@ export function DrawReportUpload({ open, onClose, projectId, onSuccess }: DrawRe
   }, [])
 
   const totals = useMemo(() => {
-    const scheduled = editedLines.reduce((s, l) => s + l.scheduled_value, 0)
-    const prev = editedLines.reduce((s, l) => s + l.previous_completed, 0)
-    const thisPeriod = editedLines.reduce((s, l) => s + l.this_period, 0)
-    const materials = editedLines.reduce((s, l) => s + l.materials_stored, 0)
-    const retainage = editedLines.reduce((s, l) => s + l.retainage, 0)
-    const completed = prev + thisPeriod + materials
+    const scheduled = sumDollarsViaCents(editedLines, (l) => l.scheduled_value)
+    const prev = sumDollarsViaCents(editedLines, (l) => l.previous_completed)
+    const thisPeriod = sumDollarsViaCents(editedLines, (l) => l.this_period)
+    const materials = sumDollarsViaCents(editedLines, (l) => l.materials_stored)
+    const retainage = sumDollarsViaCents(editedLines, (l) => l.retainage)
+    const completedC: Cents = addCents(
+      addCents(dollarsToCents(prev), dollarsToCents(thisPeriod)),
+      dollarsToCents(materials),
+    )
+    const completed = fromCents(completedC) / 100
     return { scheduled, prev, thisPeriod, materials, completed, retainage }
   }, [editedLines])
 
