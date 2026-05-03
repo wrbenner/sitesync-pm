@@ -110,6 +110,7 @@ const SchedulePage: React.FC = () => {
   const { data: projectMetrics } = useProjectMetrics(activeProject?.id);
   const { createConversation, sendMessage, setActiveConversation, setPageContext } = useCopilotStore();
   const navigate = useNavigate();
+  const [nowMs] = useState(Date.now);
 
   const refetch = useCallback(() => {
     if (activeProject?.id) loadSchedule(activeProject.id);
@@ -398,7 +399,7 @@ const SchedulePage: React.FC = () => {
       if (p.status === 'delayed') return true;
       if (p.start_date && p.end_date) {
         const totalDuration = new Date(p.end_date).getTime() - new Date(p.start_date).getTime();
-        const elapsed = Date.now() - new Date(p.start_date).getTime();
+        const elapsed = nowMs - new Date(p.start_date).getTime();
         if (totalDuration > 0) {
           const expectedPct = Math.min(100, (elapsed / totalDuration) * 100);
           if ((p.percent_complete ?? p.progress ?? 0) < expectedPct * 0.8) return true;
@@ -410,7 +411,7 @@ const SchedulePage: React.FC = () => {
     if (pct > 20) return { status: 'red', label: `At Risk: ${behind.length} behind` };
     if (pct > 10) return { status: 'amber', label: `Monitoring: ${behind.length} behind` };
     return { status: 'green', label: 'On Track' };
-  }, [schedulePhases]);
+  }, [schedulePhases, nowMs]);
 
   const criticalPathAtRisk = useMemo(() => {
     return schedulePhases

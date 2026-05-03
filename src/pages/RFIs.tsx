@@ -133,6 +133,7 @@ const RFIsPage: React.FC = () => {
   const rfisRaw = rfisResult?.data ?? [];
   const { data: project } = useProject(projectId);
   useRealtimeInvalidation(projectId);
+  const [nowMs] = useState(Date.now);
 
   const handleExportXlsx = React.useCallback(() => {
     const projectName = project?.name ?? 'Project';
@@ -170,9 +171,9 @@ const RFIsPage: React.FC = () => {
     return Math.round(total / closed.length);
   }, [rfis]);
   const closedThisWeek = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86400000;
+    const weekAgo = nowMs - 7 * 86400000;
     return rfis.filter((r) => r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo).length;
-  }, [rfis]);
+  }, [rfis, nowMs]);
   const totalCostImpact = useMemo(() => rfis.reduce((sum, r) => sum + Number(r.cost_impact ?? 0), 0), [rfis]);
 
   const [selectedRfi, setSelectedRfi] = useState<RFIRow | null>(null);
@@ -399,7 +400,7 @@ const RFIsPage: React.FC = () => {
         if (rfi.status === 'closed') {
           days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
         } else {
-          days = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
+          days = Math.floor((nowMs - new Date(rfi.created_at as string).getTime()) / 86400000);
         }
         const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.textTertiary;
         return (
@@ -910,7 +911,7 @@ const RFIsPage: React.FC = () => {
           onMoveItem={handleKanbanMove}
           renderCard={(rfi) => {
             const cardOverdue = isOverdue(rfi.dueDate) && rfi.status !== 'closed';
-            const daysOpen = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
+            const daysOpen = Math.floor((nowMs - new Date(rfi.created_at as string).getTime()) / 86400000);
             return (
               <div
                 className="rfi-kanban-card"
@@ -1128,7 +1129,7 @@ const RFIsPage: React.FC = () => {
               </h3>
               {/* Days open indicator */}
               {(() => {
-                const daysOpen = Math.floor((Date.now() - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
+                const daysOpen = Math.floor((nowMs - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
                 const overdue = isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed';
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
