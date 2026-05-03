@@ -21,6 +21,7 @@ import { useIrisDraftStore } from '../../stores/irisDraftStore'
 import { useProject } from '../../hooks/queries'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useAuth } from '../../hooks/useAuth'
+import { useProfileNames, displayName as profileDisplayName } from '../../hooks/queries/profiles'
 import type { StreamItem } from '../../types/stream'
 import type { ProjectContextSnapshot } from '../../services/iris/types'
 
@@ -58,18 +59,56 @@ export const IrisDraftDrawer: React.FC<IrisDraftDrawerProps> = ({
   const [editValue, setEditValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  const ctx: ProjectContextSnapshot = useMemo(
-    () => ({
+  // Resolve assignedTo (likely a UUID) to a real profile name so the prompt
+  // template can put a human's name in the greeting instead of a UUID — and
+  // so the model never falls back to "[Recipient's Name]" placeholder text.
+  const recipientLookupId = useMemo(() => {
+    const raw = item?.assignedTo?.trim() ?? ''
+    if (!raw) return null
+    // Only run the profiles query for things that look like UUIDs. Free-text
+    // role labels ("GC", "Architect") are passed straight through to the prompt.
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw) ? raw : null
+  }, [item?.assignedTo])
+
+  const { data: profileMap } = useProfileNames(recipientLookupId ? [recipientLookupId] : [])
+
+  const ctx: ProjectContextSnapshot = useMemo(() => {
+    const userFullName =
+      (user as { user_metadata?: { full_name?: string } } | null)?.user_metadata?.full_name ??
+      (user as { email?: string } | null)?.email ??
+      null
+
+    // Recipient resolution priority:
+    //   1. Resolved profile name (UUID → "Walker Benner")
+    //   2. Free-text label that wasn't a UUID ("GC review")
+    //   3. null — template opens with "Hey —" rather than fabricating a name
+    let recipientName: string | null = null
+    if (recipientLookupId) {
+      const resolved = profileDisplayName(profileMap, recipientLookupId, '')
+      if (resolved && resolved !== 'Unknown') recipientName = resolved
+    } else if (item?.assignedTo) {
+      recipientName = item.assignedTo
+    }
+
+    // Sender first name for casual sign-off. Same firstNameOf helper logic
+    // (kept inline so this component doesn't depend on the templates module
+    // for a one-line splitter).
+    const userFirstName = userFullName
+      ? (() => {
+          const local = userFullName.split('@')[0]
+          const head = local.split(/[\s._-]+/)[0]
+          return head ? head.charAt(0).toUpperCase() + head.slice(1) : userFullName
+        })()
+      : null
+
+    return {
       projectId: projectId ?? null,
-      projectName:
-        (project as { name?: string } | undefined)?.name ?? null,
-      userName:
-        (user as { user_metadata?: { full_name?: string } } | null)?.user_metadata?.full_name ??
-        (user as { email?: string } | null)?.email ??
-        null,
-    }),
-    [projectId, project, user],
-  )
+      projectName: (project as { name?: string } | undefined)?.name ?? null,
+      userName: userFullName,
+      recipientName,
+      userFirstName,
+    }
+  }, [projectId, project, user, item?.assignedTo, recipientLookupId, profileMap])
 
   // Trigger generation when the drawer opens (and only if no draft exists yet).
   useEffect(() => {

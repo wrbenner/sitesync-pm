@@ -18,12 +18,40 @@ import type {
   SourceReference,
   StreamItem,
 } from '../../types/stream'
-import type { ProjectContextSnapshot } from './types'
+import {
+  DEFAULT_TONE,
+  draftTypeAcceptsTone,
+  getToneDescriptor,
+  type IrisDraftTone,
+  type ProjectContextSnapshot,
+} from './types'
 
+// Tone is an optional 3rd argument so existing call sites continue to compile
+// and tone-insensitive templates ignore it without ceremony.
 export interface IrisTemplate {
-  buildPrompt: (item: StreamItem, ctx: ProjectContextSnapshot) => string
+  buildPrompt: (item: StreamItem, ctx: ProjectContextSnapshot, tone?: IrisDraftTone) => string
   getSources: (item: StreamItem, ctx: ProjectContextSnapshot) => string[]
   confidence: number
+  /** Whether this template incorporates tone. UI uses this to gate the selector. */
+  acceptsTone: boolean
+}
+
+/**
+ * Build the tone-guidance block to inject into a prompt. Returns an empty
+ * string when the draft type is tone-insensitive — that way templates can
+ * always concat without worrying about double newlines. Includes a fenced
+ * marker so the model treats it as a directive rather than fact-source.
+ */
+function toneBlock(draftType: IrisDraftType, tone?: IrisDraftTone): string {
+  if (!draftTypeAcceptsTone(draftType)) return ''
+  const descriptor = getToneDescriptor(tone ?? DEFAULT_TONE)
+  return [
+    '',
+    'TONE — apply throughout the entire output:',
+    `- Tone: ${descriptor.label}.`,
+    `- ${descriptor.promptGuidance}`,
+    '',
+  ].join('\n')
 }
 
 const PROJECT_LINE = (ctx: ProjectContextSnapshot) =>
@@ -52,12 +80,40 @@ function pluralizeDays(n: number): string {
 
 // ── 1. Overdue follow-up email (RFI or Submittal) ───────────────────────────
 
+// Pulls a first name out of a free-text full-name field. Handles "Walker
+// Benner" → "Walker", "walker.benner@…" → "walker", and falls back to the
+// whole string if nothing splittable is found. Lowercased emails are
+// title-cased so the sign-off doesn't look like a mailto.
+function firstNameOf(s: string): string {
+  const trimmed = s.trim()
+  if (!trimmed) return s
+  // Strip an email's @-suffix if present.
+  const local = trimmed.split('@')[0]
+  // Split on space, period, underscore, hyphen.
+  const head = local.split(/[\s._-]+/)[0]
+  if (!head) return trimmed
+  return head.charAt(0).toUpperCase() + head.slice(1)
+}
+
 const followUpEmail: IrisTemplate = {
   confidence: 0.85,
-  buildPrompt: (item, ctx) => {
+  acceptsTone: true,
+  buildPrompt: (item, ctx, tone) => {
     const subject = item.title
     const due = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'the due date'
-    const recipient = item.assignedTo ?? 'the responsible party'
+    // Recipient name resolution: prefer the explicitly resolved profile name
+    // from the caller (IrisDraftDrawer should call useProfileNames). Fall back
+    // to assignedTo only if it doesn't look like a UUID — that way we never
+    // hand the model a "Recipient: 7f8d-…" string and watch it fabricate a
+    // "[Recipient's Name]" placeholder. If we have nothing real, drop the
+    // greeting line entirely and let the model open with "Hey —".
+    const isUuidLike = (s: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}/.test(s.toLowerCase())
+    const rawAssigned = item.assignedTo?.trim() ?? ''
+    const resolvedRecipient =
+      ctx.recipientName?.trim() ||
+      (rawAssigned && !isUuidLike(rawAssigned) ? rawAssigned : '')
+    const recipientFirst = resolvedRecipient ? firstNameOf(resolvedRecipient) : ''
     const reason = item.reason || (item.overdue ? 'overdue' : 'past due')
     const scheduleNote =
       typeof item.scheduleImpactDays === 'number' && item.scheduleImpactDays > 0
@@ -65,27 +121,30 @@ const followUpEmail: IrisTemplate = {
         : ''
     const itemNoun =
       item.type === 'submittal' ? 'submittal' : item.type === 'rfi' ? 'RFI' : 'item'
+    const senderFull = ctx.userName?.trim() ?? ''
+    const senderFirst = (ctx.userFirstName?.trim() || (senderFull ? firstNameOf(senderFull) : ''))
     return [
       ROLE_PREAMBLE,
       '',
       PROJECT_LINE(ctx),
-      FROM_LINE(ctx),
+      senderFull ? `Sender: ${senderFull}${senderFirst && senderFirst !== senderFull ? ` (first name: ${senderFirst})` : ''}` : 'Sender: (unknown — sign off "— Project team")',
       '',
-      `Task: Draft a polite, professional follow-up email about an overdue ${itemNoun}.`,
+      `Task: Draft a check-in email to nudge an overdue ${itemNoun}.`,
       '',
       'Facts you may use (do not invent more):',
-      `- Recipient: ${recipient}`,
-      `- ${itemNoun.toUpperCase()} subject/title: ${subject}`,
+      recipientFirst ? `- Recipient (first name to use in greeting): ${recipientFirst}` : '- Recipient: unknown (open with "Hey —" with no name)',
+      `- ${itemNoun.toUpperCase()} title: ${subject}`,
       `- Due date: ${due}`,
       `- Status: ${reason}`,
       scheduleNote ? `- ${scheduleNote}` : '',
-      '',
-      'Format:',
-      '- 3 short paragraphs.',
-      '- Greeting line addressing the recipient by name if provided.',
-      '- Reference the item, the due date, and ask for a timeline.',
-      '- Sign-off using the PM\'s name if provided, otherwise "Project team".',
-      '- No bullet lists. No subject line. Plain body text only.',
+      // ── User-selected tone profile (drives register, brevity, framing) ──
+      toneBlock('follow_up_email', tone),
+      'Format & content rules (always apply, regardless of tone):',
+      '- HARD BAN on placeholder text. Never write "[Recipient\'s Name]", "[Your Name]", "[Name]", "Dear [Recipient]", or any bracketed token. Use the real name from the facts. If no name is given, open with "Hey —" (em dash, no name) and sign off with the literal sender first name from the facts (or "— Project team" if no sender given).',
+      '- 1-2 short paragraphs (no bullet lists, no headings).',
+      '- Sign-off on its own line: "— [first name of sender]" or "— Project team" if no sender.',
+      '- No subject line. No "Re:". Just the body.',
+      '- If schedule pressure is present in the facts, surface it (the tone profile dictates how — directly, diplomatically, etc.) but never omit it.',
     ]
       .filter(Boolean)
       .join('\n')
@@ -103,6 +162,8 @@ const followUpEmail: IrisTemplate = {
 
 const dailyLog: IrisTemplate = {
   confidence: 0.6,
+  // Daily logs are structured artifacts — there's no "diplomatic crew hours."
+  acceptsTone: false,
   buildPrompt: (item, ctx) => {
     const date = ctx.asOfDate ?? new Date().toISOString().slice(0, 10)
     const weather = ctx.weather
@@ -156,6 +217,8 @@ const dailyLog: IrisTemplate = {
 
 const scheduleSuggestion: IrisTemplate = {
   confidence: 0.7,
+  // Schedule notes are factual analytics output — tone-insensitive.
+  acceptsTone: false,
   buildPrompt: (item, ctx) => {
     const days =
       typeof item.scheduleImpactDays === 'number' && item.scheduleImpactDays > 0
@@ -206,7 +269,8 @@ function renderSection(
 
 const ownerUpdate: IrisTemplate = {
   confidence: 0.5,
-  buildPrompt: (_item, ctx) => {
+  acceptsTone: true,
+  buildPrompt: (_item, ctx, tone) => {
     const period = ctx.reportingPeriodDays ?? 7
 
     // ── Schedule section ──
@@ -273,10 +337,13 @@ const ownerUpdate: IrisTemplate = {
       FROM_LINE(ctx),
       '',
       `Task: Draft an executive owner update covering the last ${period} day${period === 1 ? '' : 's'} of project activity.`,
-      'Length: aim for ~400 words. Structured email-style narrative — short paragraphs, plain professional tone.',
+      'Length: aim for ~400 words. Structured email-style narrative — short paragraphs.',
       'CRITICAL: Use only the facts in the data block below. Do NOT invent activities, dollars, dates, or names.',
       'Every section that has data must cite its source(s) inline — quote the "(Source: …)" labels from the data block in parentheses at the end of the relevant sentence.',
       'For sections marked "No material change", write that phrase (or a one-sentence equivalent) and skip the citation.',
+      // ── User-selected tone profile (drives register; "professional" by
+      // default since owner-facing communications skew formal) ─────────────
+      toneBlock('owner_update', tone),
       '',
       '--- Project Data Block ---',
       renderSection('Schedule status:', scheduleBullets),
@@ -325,7 +392,8 @@ const ownerUpdate: IrisTemplate = {
 
 const rfiResponse: IrisTemplate = {
   confidence: 0.4,                   // intentionally low — content is technical
-  buildPrompt: (item, ctx) => [
+  acceptsTone: true,
+  buildPrompt: (item, ctx, tone) => [
     ROLE_PREAMBLE,
     '',
     PROJECT_LINE(ctx),
@@ -337,11 +405,11 @@ const rfiResponse: IrisTemplate = {
     'Facts you may use:',
     `- RFI title: ${item.title}`,
     `- Status: ${item.reason}`,
-    '',
+    toneBlock('rfi_response', tone),
     'Format:',
     '- 2 short paragraphs.',
     '- Acknowledge receipt, state expected response timeframe in general terms, no commitments.',
-  ].join('\n'),
+  ].filter(Boolean).join('\n'),
   getSources: (item) => {
     const trail = describeSources(item.sourceTrail)
     return trail.length > 0 ? trail : [`RFI: ${item.title}`]
@@ -350,7 +418,8 @@ const rfiResponse: IrisTemplate = {
 
 const submittalReview: IrisTemplate = {
   confidence: 0.5,
-  buildPrompt: (item, ctx) => [
+  acceptsTone: true,
+  buildPrompt: (item, ctx, tone) => [
     ROLE_PREAMBLE,
     '',
     PROJECT_LINE(ctx),
@@ -361,11 +430,11 @@ const submittalReview: IrisTemplate = {
     'Facts you may use:',
     `- Submittal title: ${item.title}`,
     `- Status: ${item.reason}`,
-    '',
+    toneBlock('submittal_review', tone),
     'Format:',
     '- 3–5 short bullet checks (use "- " prefix).',
     '- No verdict. No approval/rejection language.',
-  ].join('\n'),
+  ].filter(Boolean).join('\n'),
   getSources: (item) => {
     const trail = describeSources(item.sourceTrail)
     return trail.length > 0 ? trail : [`Submittal: ${item.title}`]
