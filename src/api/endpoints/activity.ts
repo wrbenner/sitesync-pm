@@ -2,53 +2,53 @@ import { supabase, transformSupabaseError } from '../client'
 import { assertProjectAccess } from '../middleware/projectScope'
 import { getCachedEntityLabel, setCachedEntityLabel } from '../../hooks/useProjectCache'
 import type { ActivityFeedItem } from '../../types/entities'
-import type { ActivityFeedRowWithProfile } from '../../types/api'
+import type { ActivityFeedRow, ActivityFeedRowWithProfile } from '../../types/api'
+
+// Profile-fetch helper with explicit return shape so the joined Supabase v2
+// SelectQueryError union is narrowed at one boundary, not at every call site.
+type ProfileLite = { id: string; full_name: string | null; avatar_url: string | null }
+
+async function fetchProfilesForActivity(userIds: string[]): Promise<Map<string, ProfileLite>> {
+  if (userIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url')
+    .in('id', userIds)
+  if (error) {
+    if (import.meta.env.DEV) console.warn('[ActivityFeed] profile lookup failed:', error.message)
+    return new Map()
+  }
+  return new Map((data ?? []).map((p) => [p.id, p as ProfileLite]))
+}
 
 export const getActivityFeed = async (projectId: string): Promise<ActivityFeedItem[]> => {
   await assertProjectAccess(projectId)
 
-  // Try embedded profiles join first — falls back to a plain select if the FK
-  // relationship isn't configured in this environment (Supabase returns 400).
-  let rows: ActivityFeedRow[] = []
-  const joined = await supabase
+  // Two queries instead of a joined select. Supabase v2's strict generics
+  // turn `select('*, user:profiles(...)')` into a union with SelectQueryError
+  // that breaks downstream `.eq('project_id', ...)` narrowing. The two-query
+  // path is also more resilient: a missing FK relationship in one environment
+  // doesn't break the feed.
+  const { data: rowData, error: rowsError } = await supabase
     .from('activity_feed')
-    .select('*, user:profiles(id, full_name, avatar_url)')
+    .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false })
     .limit(50)
+  if (rowsError) throw transformSupabaseError(rowsError)
+  const rows = (rowData ?? []) as ActivityFeedRow[]
 
-  if (joined.error) {
-    if (import.meta.env.DEV) console.warn('[ActivityFeed] profiles join unavailable, falling back:', joined.error.message)
-    const plain = await supabase
-      .from('activity_feed')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false })
-      .limit(50)
-    if (plain.error) throw transformSupabaseError(plain.error)
-    rows = (plain.data || []) as ActivityFeedRow[]
-  } else {
-    rows = (joined.data || []) as ActivityFeedRow[]
-  }
-
-  // Best-effort: backfill missing user info from profiles in a second query.
+  // Resolve profiles in one batched query so each row gets actor name/avatar.
   const items = rows as ActivityFeedRowWithProfile[]
-  const missingUserIds = Array.from(new Set(
+  const userIds = Array.from(new Set(
     items
-      .filter((r) => !r.user && typeof (r as { user_id?: string | null }).user_id === 'string')
-      .map((r) => (r as unknown as { user_id: string }).user_id)
-      .filter(Boolean)
+      .map((r) => (r as { user_id?: string | null }).user_id ?? null)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)
   ))
-  if (missingUserIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .in('id', missingUserIds)
-    const byId = new Map((profiles ?? []).map((p) => [p.id, p]))
-    for (const r of items) {
-      const uid = (r as unknown as { user_id?: string | null }).user_id
-      if (!r.user && uid && byId.has(uid)) r.user = byId.get(uid)!
-    }
+  const profilesById = await fetchProfilesForActivity(userIds)
+  for (const r of items) {
+    const uid = (r as { user_id?: string | null }).user_id
+    if (!r.user && uid && profilesById.has(uid)) r.user = profilesById.get(uid)!
   }
 
   const labelMap = await batchFetchEntityLabels(items, projectId)
@@ -78,170 +78,111 @@ async function batchFetchEntityLabels(
     if (!grouped[entityType].includes(entityId)) grouped[entityType].push(entityId)
   }
 
-  const fetches: Promise<void>[] = []
+  // Single-shape entity-label loader. Each registered loader specifies the
+  // table to query, the columns it needs, the activity-feed entityType key,
+  // and how to format the label from a row. This replaces nine near-identical
+  // .then().catch() chains — collapsing to one awaited try/catch per loader
+  // also fixes TS2339 ".catch on PromiseLike<void>" because PostgrestBuilder
+  // exposes only .then(), not the full Promise interface.
+  type LabelLoader = () => Promise<void>
+
+  async function loadLabels<R extends { id: string }>(
+    entityType: string,
+    fetchRows: () => Promise<{ data: R[] | null; error: { message: string } | null }>,
+    formatLabel: (row: R) => string,
+  ): Promise<void> {
+    try {
+      const { data, error } = await fetchRows()
+      if (error) {
+        if (import.meta.env.DEV) console.warn(`[ActivityFeed] ${entityType} label fetch failed:`, error.message)
+        return
+      }
+      for (const row of data ?? []) {
+        const label = formatLabel(row)
+        labelMap.set(row.id, label)
+        setCachedEntityLabel(`${projectId}:${entityType}:${row.id}`, label)
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn(`[ActivityFeed] ${entityType} label fetch failed:`, err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const loaders: LabelLoader[] = []
 
   if (grouped['rfi']?.length) {
-    fetches.push(
-      supabase
-        .from('rfis')
-        .select('id, number, title')
-        .eq('project_id', projectId)
-        .in('id', grouped['rfi'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = `RFI-${String(row.number).padStart(3, '0')} ${row.title}`
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:rfi:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['rfi']
+    loaders.push(() => loadLabels(
+      'rfi',
+      () => supabase.from('rfis').select('id, number, title').eq('project_id', projectId).in('id', ids),
+      (row) => `RFI-${String(row.number).padStart(3, '0')} ${row.title}`,
+    ))
   }
-
   if (grouped['submittal']?.length) {
-    fetches.push(
-      supabase
-        .from('submittals')
-        .select('id, number, title')
-        .eq('project_id', projectId)
-        .in('id', grouped['submittal'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = `SUB-${String(row.number).padStart(3, '0')} ${row.title}`
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:submittal:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['submittal']
+    loaders.push(() => loadLabels(
+      'submittal',
+      () => supabase.from('submittals').select('id, number, title').eq('project_id', projectId).in('id', ids),
+      (row) => `SUB-${String(row.number).padStart(3, '0')} ${row.title}`,
+    ))
   }
-
   if (grouped['punch_list_item']?.length) {
-    fetches.push(
-      supabase
-        .from('punch_items')
-        .select('id, title')
-        .eq('project_id', projectId)
-        .in('id', grouped['punch_list_item'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = row.title
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:punch_list_item:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] punch_list_item label fetch failed:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['punch_list_item']
+    loaders.push(() => loadLabels(
+      'punch_list_item',
+      () => supabase.from('punch_items').select('id, title').eq('project_id', projectId).in('id', ids),
+      (row) => row.title,
+    ))
   }
-
   if (grouped['change_order']?.length) {
-    fetches.push(
-      supabase
-        .from('change_orders')
-        .select('id, number, title')
-        .eq('project_id', projectId)
-        .in('id', grouped['change_order'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = `CO-${row.number} ${row.title}`
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:change_order:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['change_order']
+    loaders.push(() => loadLabels(
+      'change_order',
+      () => supabase.from('change_orders').select('id, number, title').eq('project_id', projectId).in('id', ids),
+      (row) => `CO-${row.number} ${row.title}`,
+    ))
   }
-
   if (grouped['punch_item']?.length) {
-    fetches.push(
-      supabase
-        .from('punch_items')
-        .select('id, title, location')
-        .eq('project_id', projectId)
-        .in('id', grouped['punch_item'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = row.location ? `${row.title} at ${row.location}` : row.title
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:punch_item:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['punch_item']
+    loaders.push(() => loadLabels(
+      'punch_item',
+      () => supabase.from('punch_items').select('id, title, location').eq('project_id', projectId).in('id', ids),
+      (row) => row.location ? `${row.title} at ${row.location}` : row.title,
+    ))
   }
-
   if (grouped['daily_log']?.length) {
-    fetches.push(
-      supabase
-        .from('daily_logs')
-        .select('id, log_date')
-        .eq('project_id', projectId)
-        .in('id', grouped['daily_log'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = `Daily Log ${row.log_date}`
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:daily_log:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['daily_log']
+    loaders.push(() => loadLabels(
+      'daily_log',
+      () => supabase.from('daily_logs').select('id, log_date').eq('project_id', projectId).in('id', ids),
+      (row) => `Daily Log ${row.log_date}`,
+    ))
   }
-
   if (grouped['drawing']?.length) {
-    fetches.push(
-      supabase
-        .from('drawings')
-        .select('id, sheet_number, title')
-        .eq('project_id', projectId)
-        .in('id', grouped['drawing'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = `${row.sheet_number} ${row.title}`
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:drawing:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['drawing']
+    loaders.push(() => loadLabels(
+      'drawing',
+      () => supabase.from('drawings').select('id, sheet_number, title').eq('project_id', projectId).in('id', ids),
+      (row) => `${row.sheet_number} ${row.title}`,
+    ))
   }
-
   if (grouped['meeting']?.length) {
-    fetches.push(
-      supabase
-        .from('meetings')
-        .select('id, title, date')
-        .eq('project_id', projectId)
-        .in('id', grouped['meeting'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            const label = row.date ? `${row.title} (${row.date})` : row.title
-            labelMap.set(row.id, label)
-            setCachedEntityLabel(`${projectId}:meeting:${row.id}`, label)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['meeting']
+    loaders.push(() => loadLabels(
+      'meeting',
+      () => supabase.from('meetings').select('id, title, date').eq('project_id', projectId).in('id', ids),
+      (row) => row.date ? `${row.title} (${row.date})` : row.title,
+    ))
   }
-
   if (grouped['task']?.length) {
-    fetches.push(
-      supabase
-        .from('tasks')
-        .select('id, title')
-        .eq('project_id', projectId)
-        .in('id', grouped['task'])
-        .then(({ data }) => {
-          for (const row of data ?? []) {
-            labelMap.set(row.id, row.title)
-            setCachedEntityLabel(`${projectId}:task:${row.id}`, row.title)
-          }
-        })
-        .catch((err: unknown) => { if (import.meta.env.DEV) console.warn('[ActivityFeed] Failed to fetch entity labels for type:', err instanceof Error ? err.message : String(err)) }),
-    )
+    const ids = grouped['task']
+    loaders.push(() => loadLabels(
+      'task',
+      () => supabase.from('tasks').select('id, title').eq('project_id', projectId).in('id', ids),
+      (row) => row.title,
+    ))
   }
 
-  await Promise.allSettled(fetches)
+  await Promise.allSettled(loaders.map((load) => load()))
   return labelMap
 }
 
