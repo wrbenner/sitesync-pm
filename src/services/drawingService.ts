@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { Drawing } from '../types/database';
 import type { DrawingStatus, DrawingMarkup, CreateDrawingInput, CreateMarkupInput } from '../types/drawing';
 import { getValidTransitions, getNextStatus } from '../machines/drawingMachine';
@@ -29,14 +30,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Service ──────────────────────────────────────────────────────────────────
@@ -47,15 +47,14 @@ export const drawingService = {
    * Archived drawings are the soft-delete state.
    */
   async loadDrawings(projectId: string): Promise<Result<Drawing[]>> {
-    const { data, error } = await supabase
-      .from('drawings')
+    const { data, error } = await fromTable('drawings')
       .select('*')
-      .eq('project_id', projectId)
-      .neq('status', 'archived')
+      .eq('project_id' as never, projectId)
+      .neq('status' as never, 'archived')
       .order('title', { ascending: true });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as Drawing[]);
+    return ok((data ?? []) as unknown as Drawing[]);
   },
 
   /**
@@ -103,9 +102,8 @@ export const drawingService = {
     if (input.file_size_bytes != null) row.file_size_bytes = input.file_size_bytes;
     if (input.processing_status != null) row.processing_status = input.processing_status;
 
-    const { data, error } = await supabase
-      .from('drawings')
-      .insert(row)
+    const { data, error } = await fromTable('drawings')
+      .insert(row as never)
       .select()
       .single();
 
@@ -139,7 +137,7 @@ export const drawingService = {
         .catch((err) => console.warn('[drawing_revised chain] dispatch failed:', err));
     }
 
-    return ok(data as Drawing);
+    return ok(data as unknown as Drawing);
   },
 
   /**
@@ -152,23 +150,23 @@ export const drawingService = {
     drawingId: string,
     action: string,
   ): Promise<Result> {
-    const { data: drawing, error: fetchError } = await supabase
-      .from('drawings')
+    const { data: drawing, error: fetchError } = await fromTable('drawings')
       .select('status, project_id, uploaded_by')
-      .eq('id', drawingId)
+      .eq('id' as never, drawingId)
       .single();
 
     if (fetchError || !drawing) {
       return fail(notFoundError('Drawing', drawingId));
     }
+    const drawingRow = drawing as unknown as { status: string | null; project_id: string; uploaded_by: string | null }
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(drawing.project_id, userId);
+    const role = await resolveProjectRole(drawingRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = (drawing.status ?? 'draft') as DrawingStatus;
+    const currentStatus = (drawingRow.status ?? 'draft') as DrawingStatus;
     const validActions = getValidTransitions(currentStatus, role);
     if (!validActions.includes(action)) {
       return fail(
@@ -189,13 +187,12 @@ export const drawingService = {
       );
     }
 
-    const { error } = await supabase
-      .from('drawings')
+    const { error } = await fromTable('drawings')
       .update({
         status: newStatus,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', drawingId);
+      } as never)
+      .eq('id' as never, drawingId);
 
     if (error) return fail(dbError(error.message, { drawingId, action, newStatus }));
     return { data: null, error: null };
@@ -211,10 +208,9 @@ export const drawingService = {
       unknown
     >;
 
-    const { error } = await supabase
-      .from('drawings')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', drawingId);
+    const { error } = await fromTable('drawings')
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, drawingId);
 
     if (error) return fail(dbError(error.message, { drawingId }));
     return { data: null, error: null };
@@ -232,13 +228,12 @@ export const drawingService = {
       return fail(permissionError('Only admins and owners can delete drawings'));
     }
 
-    const { error } = await supabase
-      .from('drawings')
+    const { error } = await fromTable('drawings')
       .update({
         status: 'archived' as DrawingStatus,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', drawingId);
+      } as never)
+      .eq('id' as never, drawingId);
 
     if (error) return fail(dbError(error.message, { drawingId }));
     return { data: null, error: null };
@@ -247,21 +242,19 @@ export const drawingService = {
   // ── Markups ────────────────────────────────────────────────────────────────
 
   async loadMarkups(drawingId: string): Promise<Result<DrawingMarkup[]>> {
-    const { data, error } = await supabase
-      .from('drawing_markups')
+    const { data, error } = await fromTable('drawing_markups')
       .select('*')
-      .eq('drawing_id', drawingId)
+      .eq('drawing_id' as never, drawingId)
       .order('created_at', { ascending: true });
 
     if (error) return fail(dbError(error.message, { drawingId }));
-    return ok((data ?? []) as DrawingMarkup[]);
+    return ok((data ?? []) as unknown as DrawingMarkup[]);
   },
 
   async createMarkup(input: CreateMarkupInput): Promise<Result<DrawingMarkup>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('drawing_markups')
+    const { data, error } = await fromTable('drawing_markups')
       .insert({
         drawing_id: input.drawing_id,
         project_id: input.project_id,
@@ -272,63 +265,59 @@ export const drawingService = {
         linked_rfi_id: input.linked_rfi_id ?? null,
         linked_punch_item_id: input.linked_punch_item_id ?? null,
         created_by: userId,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { drawing_id: input.drawing_id }));
-    return ok(data as DrawingMarkup);
+    return ok(data as unknown as DrawingMarkup);
   },
 
   async updateMarkup(
     markupId: string,
     updates: Partial<Pick<DrawingMarkup, 'data' | 'note' | 'layer' | 'type'>>,
   ): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', markupId);
+    const { error } = await fromTable('drawing_markups')
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId }));
     return { data: null, error: null };
   },
 
   async deleteMarkup(markupId: string): Promise<Result> {
-    const { error } = await supabase.from('drawing_markups').delete().eq('id', markupId);
+    const { error } = await fromTable('drawing_markups').delete().eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId }));
     return { data: null, error: null };
   },
 
   async linkMarkupToRfi(markupId: string, rfiId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
-      .update({ linked_rfi_id: rfiId, updated_at: new Date().toISOString() })
-      .eq('id', markupId);
+    const { error } = await fromTable('drawing_markups')
+      .update({ linked_rfi_id: rfiId, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId, rfiId }));
     return { data: null, error: null };
   },
 
   async linkMarkupToPunchItem(markupId: string, punchItemId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
-      .update({ linked_punch_item_id: punchItemId, updated_at: new Date().toISOString() })
-      .eq('id', markupId);
+    const { error } = await fromTable('drawing_markups')
+      .update({ linked_punch_item_id: punchItemId, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId, punchItemId }));
     return { data: null, error: null };
   },
 
   async unlinkMarkup(markupId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
+    const { error } = await fromTable('drawing_markups')
       .update({
         linked_rfi_id: null,
         linked_punch_item_id: null,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', markupId);
+      } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId }));
     return { data: null, error: null };
@@ -341,20 +330,19 @@ async function resolveProjectRoleById(
   drawingId: string,
   userId: string,
 ): Promise<string | null> {
-  const { data: drawing } = await supabase
-    .from('drawings')
+  const { data: drawing } = await fromTable('drawings')
     .select('project_id')
-    .eq('id', drawingId)
+    .eq('id' as never, drawingId)
     .single();
 
-  if (!drawing?.project_id) return null;
+  const drawingRow = drawing as unknown as { project_id: string } | null
+  if (!drawingRow?.project_id) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', drawing.project_id)
-    .eq('user_id', userId)
+    .eq('project_id' as never, drawingRow.project_id)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
