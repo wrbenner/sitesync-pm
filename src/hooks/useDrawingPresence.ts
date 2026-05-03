@@ -155,7 +155,7 @@ export function useDrawingPresence(
     ch.on('broadcast', { event: 'markup' }, (payload) => {
       // Could trigger a refetch of markups or add to local state
       // For now, we rely on DB polling via React Query
-      console.debug('[DrawingPresence] Markup broadcast received:', payload);
+      if (import.meta.env.DEV) console.debug('[DrawingPresence] Markup broadcast received:', payload);
     });
 
     ch.subscribe(async (status) => {

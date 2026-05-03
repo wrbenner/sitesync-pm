@@ -918,14 +918,16 @@ const DrawingsPage: React.FC = () => {
           : filenameBasedLabel;
 
         if (titleBlock.sheetNumber || titleBlock.title) {
-          console.info(`[text-layer-validator] page ${page.pageNumber}:`, {
-            parserSheet: titleBlock.sheetNumber,
-            parserTitle: titleBlock.title,
-            strategy: titleBlock.titleStrategy,
-            confidence: titleBlock.confidence,
-            regionScoped: titleBlock.regionScoped,
-            note: 'text-layer is validator-only for non-cover pages; AI output wins',
-          });
+          if (import.meta.env.DEV) {
+            console.info(`[text-layer-validator] page ${page.pageNumber}:`, {
+              parserSheet: titleBlock.sheetNumber,
+              parserTitle: titleBlock.title,
+              strategy: titleBlock.titleStrategy,
+              confidence: titleBlock.confidence,
+              regionScoped: titleBlock.regionScoped,
+              note: 'text-layer is validator-only for non-cover pages; AI output wins',
+            });
+          }
         }
 
         // Unique storage key per page — UUID avoids Date.now() collisions
@@ -1050,7 +1052,7 @@ const DrawingsPage: React.FC = () => {
                 .createSignedUrl(cropUploadResult.storagePath || cropPath, 3600);
               if (cropUrlData?.signedUrl) {
                 classifyUrl = cropUrlData.signedUrl;
-                console.info(`[ai-primary] page ${page.pageNumber} — right-strip crop queued for Gemini (${Math.round(cropBlob.size / 1024)}KB)`);
+                if (import.meta.env.DEV) console.info(`[ai-primary] page ${page.pageNumber} — right-strip crop queued for Gemini (${Math.round(cropBlob.size / 1024)}KB)`);
               }
             }
           } catch (err) {
@@ -1163,10 +1165,10 @@ const DrawingsPage: React.FC = () => {
             const text = await extractPdfTextFromPages(file, 5);
             if (text.trim()) {
               const metadata = parseCoverMetadata(text);
-              console.info('[cover] metadata detected for', file.name, metadata);
+              if (import.meta.env.DEV) console.info('[cover] metadata detected for', file.name, metadata);
               coverFindings.push({ fileName: file.name, metadata });
             } else {
-              console.info('[cover] no embedded text in', file.name, '— likely a scanned/image PDF. OCR would be needed.');
+              if (import.meta.env.DEV) console.info('[cover] no embedded text in', file.name, '— likely a scanned/image PDF. OCR would be needed.');
             }
           } catch (err) {
             console.warn('[cover] text extraction failed', err);
@@ -1186,7 +1188,7 @@ const DrawingsPage: React.FC = () => {
               if (firstPageText.trim() && looksLikeCoverText(firstPageText)) {
                 const metadata = parseCoverMetadata(firstPageText);
                 if (metadata.confidence > 0.2) {
-                  console.info('[drawing-title-page] metadata detected on', file.name, metadata);
+                  if (import.meta.env.DEV) console.info('[drawing-title-page] metadata detected on', file.name, metadata);
                   coverFindings.push({ fileName: file.name, metadata });
                 }
               }
@@ -1277,13 +1279,12 @@ const DrawingsPage: React.FC = () => {
     //
     // Safety contract: we ONLY set fields on the projects row that are
     // currently null/empty. We NEVER overwrite user-entered data. The full
-    // parse is logged to the console for the user to review.
     if (coverFindings.length > 0) {
       const merged: CoverMetadata = coverFindings
         .map((f) => f.metadata)
         .reduce((acc, m) => mergeCoverMetadata(acc, m));
 
-      console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
+      if (import.meta.env.DEV) console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
 
       // Fetch current project row to know which fields are already populated
       const { data: currentProject } = await supabase
