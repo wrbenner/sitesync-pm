@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { RFI, RFIResponse, Priority } from '../types/database';
 import type { RfiStatus } from '../types/database';
 import { getValidTransitions, getBallInCourt } from '../machines/rfiMachine';
@@ -29,14 +30,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -58,21 +58,20 @@ export type RfiServiceResult<T = void> = Result<T>;
 
 export const rfiService = {
   async loadRfis(projectId: string): Promise<Result<RFI[]>> {
-    const { data, error } = await supabase
-      .from('rfis')
+    const { data, error } = await fromTable('rfis')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as RFI[]);
+    return ok((data ?? []) as unknown as RFI[]);
   },
 
   async createRfi(input: CreateRfiInput): Promise<Result<RFI>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase.from('rfis')
+    const { data, error } = await fromTable('rfis')
       .insert({
         project_id: input.project_id,
         title: input.title,
@@ -84,12 +83,12 @@ export const rfiService = {
         due_date: input.due_date ?? null,
         ball_in_court: input.assigned_to ?? null,
         linked_drawing_id: input.linked_drawing_id ?? null,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as RFI);
+    return ok(data as unknown as RFI);
   },
 
   /**
@@ -102,23 +101,24 @@ export const rfiService = {
     rfiId: string,
     newStatus: RfiStatus,
   ): Promise<Result> {
-    const { data: rfi, error: fetchError } = await supabase
-      .from('rfis')
+    const { data: rfi, error: fetchError } = await fromTable('rfis')
       .select('status, created_by, assigned_to, project_id')
-      .eq('id', rfiId)
+      .eq('id' as never, rfiId)
       .single();
 
     if (fetchError || !rfi) {
       return fail(notFoundError('RFI', rfiId));
     }
 
+    const rfiRow = rfi as unknown as { status: string | null; created_by: string | null; assigned_to: string | null; project_id: string }
+
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(rfi.project_id, userId);
+    const role = await resolveProjectRole(rfiRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = rfi.status as RfiStatus;
+    const currentStatus = rfiRow.status as RfiStatus;
     const validTransitions = getValidTransitions(currentStatus, role);
     if (!validTransitions.includes(newStatus)) {
       return fail(
@@ -131,17 +131,16 @@ export const rfiService = {
 
     const updates: Record<string, unknown> = {
       status: newStatus,
-      ball_in_court: getBallInCourt(newStatus, rfi.created_by, rfi.assigned_to),
+      ball_in_court: getBallInCourt(newStatus, rfiRow.created_by, rfiRow.assigned_to),
     };
 
     if (newStatus === 'closed') {
       updates.closed_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('rfis')
-      .update(updates)
-      .eq('id', rfiId);
+    const { error } = await fromTable('rfis')
+      .update(updates as never)
+      .eq('id' as never, rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId, newStatus }));
     return { data: null, error: null };
@@ -155,10 +154,9 @@ export const rfiService = {
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
     safeUpdates.updated_by = userId;
 
-    const { error } = await supabase
-      .from('rfis')
-      .update(safeUpdates)
-      .eq('id', rfiId);
+    const { error } = await fromTable('rfis')
+      .update(safeUpdates as never)
+      .eq('id' as never, rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId }));
     return { data: null, error: null };
@@ -167,27 +165,25 @@ export const rfiService = {
   async deleteRfi(rfiId: string): Promise<Result> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('rfis')
+    const { error } = await fromTable('rfis')
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as Record<string, unknown>)
-      .eq('id', rfiId);
+      } as never)
+      .eq('id' as never, rfiId);
 
     if (error) return fail(dbError(error.message, { rfiId }));
     return { data: null, error: null };
   },
 
   async loadResponses(rfiId: string): Promise<Result<RFIResponse[]>> {
-    const { data, error } = await supabase
-      .from('rfi_responses')
+    const { data, error } = await fromTable('rfi_responses')
       .select('*')
-      .eq('rfi_id', rfiId)
+      .eq('rfi_id' as never, rfiId)
       .order('created_at');
 
     if (error) return fail(dbError(error.message, { rfiId }));
-    return ok((data ?? []) as RFIResponse[]);
+    return ok((data ?? []) as unknown as RFIResponse[]);
   },
 
   /**
@@ -204,12 +200,12 @@ export const rfiService = {
   ): Promise<Result> {
     const userId = await getCurrentUserId();
 
-    const { error: insertError } = await supabase.from('rfi_responses').insert({
+    const { error: insertError } = await fromTable('rfi_responses').insert({
       rfi_id: rfiId,
       author_id: userId,
       content: text,
       attachments: attachments ?? null,
-    });
+    } as never);
 
     if (insertError) {
       return fail(dbError(`Failed to insert response: ${insertError.message}`, { rfiId }));
