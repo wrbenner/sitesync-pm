@@ -1,6 +1,7 @@
 import React from 'react'
 import { Check } from 'lucide-react'
 import { colors } from '../styles/theme'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 
 export interface WorkflowTimelineProps {
   states: string[]
@@ -30,6 +31,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
   onTransition,
 }) => {
   const currentIndex = states.indexOf(currentState)
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   return (
     <>
@@ -42,8 +44,9 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         aria-label={`Workflow: ${formatLabel(currentState)}`}
         style={{
           display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
           alignItems: 'flex-start',
-          justifyContent: 'space-between',
+          justifyContent: isMobile ? 'flex-start' : 'space-between',
           gap: 0,
           width: '100%',
           padding: '4px 0',
@@ -73,70 +76,72 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               <div
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
+                  flexDirection: isMobile ? 'row' : 'column',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: isMobile ? 12 : 6,
                   flex: '0 0 auto',
-                  minWidth: 56,
+                  minWidth: isMobile ? undefined : 56,
                 }}
               >
-                {/* Circle */}
+                {/* 56×56 touch-target button (industrial-glove compliant) wrapping the 28×28 visual circle */}
                 <button
                   onClick={canTransitionTo ? () => onTransition!(state) : undefined}
                   disabled={!canTransitionTo}
                   aria-label={stepLabel}
                   style={{
-                    width: 28,
-                    height: 28,
+                    width: 56,
+                    height: 56,
                     borderRadius: '50%',
                     border: 'none',
-                    backgroundColor: circleColor,
+                    backgroundColor: 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: canTransitionTo ? 'pointer' : 'default',
                     padding: 0,
-                    position: 'relative',
-                    transition: 'box-shadow 0.15s',
-                    boxShadow: isCurrent ? `0 0 0 3px ${colors.primaryOrange}25` : 'none',
                     flexShrink: 0,
                   }}
-                  onMouseEnter={(e) => {
-                    if (canTransitionTo) {
-                      e.currentTarget.style.boxShadow = `0 0 0 5px ${colors.primaryOrange}30`
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = isCurrent
-                      ? `0 0 0 3px ${colors.primaryOrange}25`
-                      : 'none'
-                  }}
                 >
-                  {isCompleted ? (
-                    <Check size={14} color="#fff" strokeWidth={2.5} />
-                  ) : isCurrent ? (
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        width: 9,
-                        height: 9,
-                        borderRadius: '50%',
-                        backgroundColor: '#fff',
-                        animation: 'wf-pulse 1.8s ease-in-out infinite',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: colors.textTertiary,
-                        opacity: 0.5,
-                      }}
-                    />
-                  )}
+                  {/* Visual circle (28×28) */}
+                  <span
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      backgroundColor: circleColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: isCurrent ? `0 0 0 3px ${colors.primaryOrange}25` : 'none',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {isCompleted ? (
+                      <Check size={14} color={colors.white} strokeWidth={2.5} />
+                    ) : isCurrent ? (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: '50%',
+                          backgroundColor: colors.white,
+                          animation: 'wf-pulse 1.8s ease-in-out infinite',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          backgroundColor: colors.textTertiary,
+                          opacity: 0.5,
+                        }}
+                      />
+                    )}
+                  </span>
                 </button>
 
                 {/* Label */}
@@ -145,9 +150,9 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                     fontSize: 11,
                     fontWeight: isCurrent ? 700 : 500,
                     color: labelColor,
-                    textAlign: 'center',
+                    textAlign: isMobile ? 'left' : 'center',
                     lineHeight: 1.25,
-                    whiteSpace: 'nowrap',
+                    whiteSpace: isMobile ? 'normal' : 'nowrap',
                     letterSpacing: isCurrent ? '0.01em' : 0,
                   }}
                 >
@@ -159,10 +164,18 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
               {!isLast && (
                 <div
                   aria-hidden="true"
-                  style={{
+                  style={isMobile ? {
+                    // Vertical connector: left-aligned under the circle center
+                    width: 2,
+                    height: 16,
+                    marginLeft: 27, // (56 / 2) - 1 = centers under the 28px circle
+                    backgroundColor: lineColor,
+                    transition: 'background-color 0.3s',
+                  } : {
+                    // Horizontal connector: vertically centered on the circle
                     flex: 1,
                     height: 2,
-                    marginTop: 13,
+                    marginTop: 27, // (56 / 2) - 1 = centers on the 28px circle
                     backgroundColor: lineColor,
                     minWidth: 8,
                     transition: 'background-color 0.3s',
