@@ -1,4 +1,5 @@
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { LienWaiverRow, LienWaiverStatus, LienWaiverType } from '../../types/api'
 
@@ -54,13 +55,12 @@ function mapStatusToDb(status: LienWaiverStatus): DbLienWaiverRow['status'] {
 
 export async function getLienWaivers(projectId: string): Promise<LienWaiverRow[]> {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('lien_waivers')
+  const { data, error } = await fromTable('lien_waivers')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: false })
   if (error) throw transformSupabaseError(error)
-  return (data as DbLienWaiverRow[]).map(mapDbRow)
+  return (data as unknown as DbLienWaiverRow[]).map(mapDbRow)
 }
 
 export async function createLienWaiver(
@@ -68,8 +68,7 @@ export async function createLienWaiver(
   payload: Omit<LienWaiverRow, 'id' | 'created_at'>,
 ): Promise<LienWaiverRow> {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('lien_waivers')
+  const { data, error } = await fromTable('lien_waivers')
     .insert({
       project_id: projectId,
       subcontractor_id: payload.subcontractor_id,
@@ -80,11 +79,11 @@ export async function createLienWaiver(
       payment_app_id: payload.pay_application_id,
       waiver_date: payload.waiver_date ?? null,
       received_at: payload.received_at,
-    })
+    } as never)
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
-  return mapDbRow(data as DbLienWaiverRow)
+  return mapDbRow(data as unknown as DbLienWaiverRow)
 }
 
 /**
@@ -97,32 +96,29 @@ export async function updateLienWaiverStatus(
   status: LienWaiverStatus,
   timestamp?: string,
 ): Promise<{ data: LienWaiverRow; rollback: () => void }> {
-  const { data: previousRow, error: fetchError } = await supabase
-    .from('lien_waivers')
+  const { data: previousRow, error: fetchError } = await fromTable('lien_waivers')
     .select('*')
-    .eq('id', id)
+    .eq('id' as never, id)
     .single()
   if (fetchError) throw new Error('Unable to update lien waiver status. Please try again.')
-  const previousState = previousRow as DbLienWaiverRow
+  const previousState = previousRow as unknown as DbLienWaiverRow
 
   const ts = timestamp ?? new Date().toISOString()
   const update: Partial<DbLienWaiverRow> = { status: mapStatusToDb(status) }
   if (status === 'received') update.received_at = ts
   if (status === 'executed') update.waiver_date = ts
-  const { data: updatedRow, error } = await supabase
-    .from('lien_waivers')
-    .update(update)
-    .eq('id', id)
+  const { data: updatedRow, error } = await fromTable('lien_waivers')
+    .update(update as never)
+    .eq('id' as never, id)
     .select()
     .single()
   if (error) throw new Error('Unable to update lien waiver status. Please try again.')
   return {
-    data: mapDbRow(updatedRow as DbLienWaiverRow),
+    data: mapDbRow(updatedRow as unknown as DbLienWaiverRow),
     rollback: async () => {
-      await supabase
-        .from('lien_waivers')
-        .update({ status: mapStatusToDb(previousState.status) })
-        .eq('id', id)
+      await fromTable('lien_waivers')
+        .update({ status: mapStatusToDb(previousState.status) } as never)
+        .eq('id' as never, id)
     },
   }
 }
@@ -134,11 +130,10 @@ export async function generateWaiversFromPayApp(
   await assertProjectAccess(projectId)
 
   // Fetch line items for this pay application, joined to subcontractor data
-  const { data: lineItems, error: lineError } = await supabase
-    .from('pay_application_line_items')
+  const { data: lineItems, error: lineError } = await fromTable('pay_application_line_items')
     .select('subcontractor_id, amount, payment_period')
-    .eq('pay_application_id', payAppId)
-    .eq('project_id', projectId)
+    .eq('pay_application_id' as never, payAppId)
+    .eq('project_id' as never, projectId)
   if (lineError) throw transformSupabaseError(lineError)
 
   // Deduplicate by subcontractor, summing amounts
@@ -172,12 +167,11 @@ export async function generateWaiversFromPayApp(
     payment_app_id: payAppId,
   }))
 
-  const { data, error } = await supabase
-    .from('lien_waivers')
-    .insert(inserts)
+  const { data, error } = await fromTable('lien_waivers')
+    .insert(inserts as never)
     .select()
   if (error) throw transformSupabaseError(error)
-  return (data as DbLienWaiverRow[]).map(mapDbRow)
+  return (data as unknown as DbLienWaiverRow[]).map(mapDbRow)
 }
 
 // Convenience wrappers kept for backwards compatibility
