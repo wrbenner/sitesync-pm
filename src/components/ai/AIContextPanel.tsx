@@ -85,7 +85,16 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
 
             {/* Content */}
             <div style={{ flex: 1, overflow: 'auto', padding: `${spacing['4']} ${spacing['5']}` }}>
-              {(() => { const analysis: unknown = null; const annotations: unknown[] = []; return analysis ? (
+              {(() => {
+                type Insight = { label: string; value: string | number; trend?: 'up' | 'down' | 'flat'; severity?: keyof typeof severityColors };
+                type Annotation = { id: string; severity: string; title: string; insight: string };
+                type Analysis = { summary: string; insights: Insight[]; recommendation: string };
+                // Wired by future AI-context fetch — null-typed stub keeps the
+                // panel rendering its empty state without removing the markup.
+                let analysis: Analysis | null = null;
+                analysis = analysis as Analysis | null;
+                const annotations: Annotation[] = [];
+                return analysis ? (
                 <>
                   {/* Summary */}
                   <p style={{ fontSize: typography.fontSize.body, color: colors.textPrimary, margin: 0, marginBottom: spacing['5'], lineHeight: typography.lineHeight.relaxed }}>
@@ -94,8 +103,8 @@ export const AIContextPanel: React.FC<AIContextPanelProps> = ({ currentPage }) =
 
                   {/* Metrics */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginBottom: spacing['5'] }}>
-                    {analysis.insights.map((insight: unknown, i: number) => {
-                      const TrendIcon = insight.trend ? trendIcons[insight.trend as keyof typeof trendIcons] : null;
+                    {analysis.insights.map((insight, i) => {
+                      const TrendIcon = insight.trend ? trendIcons[insight.trend] : null;
                       const valueColor = insight.severity ? (severityColors[insight.severity] || colors.textPrimary) : colors.textPrimary;
                       return (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['2']} ${spacing['3']}`, backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
