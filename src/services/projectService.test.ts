@@ -136,8 +136,9 @@ describe('projectService.createProject', () => {
 
     await projectService.createProject({ name: 'Test', organization_id: 'co-1' })
 
-    expect(projectsInsertArg?.status).toBe('active')
-    expect(projectsInsertArg?.name).toBe('Test')
+    const captured = projectsInsertArg as Record<string, unknown> | null
+    expect(captured?.status).toBe('active')
+    expect(captured?.name).toBe('Test')
   })
 
   it('returns DatabaseError on insert failure', async () => {

@@ -21,17 +21,4 @@ export function useDrawingMarkups(drawingId: string | undefined) {
   })
 }
 
-export function useTransmittals(projectId: string | undefined) {
-  return useQuery({
-    queryKey: ['transmittals', projectId],
-    queryFn: async () => {
-      const { data, error } = await fromTable('transmittals')
-        .select('*')
-        .eq('project_id' as never, projectId!)
-        .order('transmittal_number', { ascending: false })
-      if (error) throw error
-      return data
-    },
-    enabled: !!projectId,
-  })
-}
+// useTransmittals lives in ./enterprise-modules — kept there as the canonical source.

@@ -15,7 +15,7 @@ export function useCreatePermit() {
   return useMutation({
     mutationFn: async (payload: PermitInsert) => {
       const { data, error } = await fromTable('permits')
-        .insert(payload as unknown as Record<string, unknown>)
+        .insert(payload as unknown as Record<string, unknown> as never)
         .select()
         .single()
       if (error) throw error
@@ -38,7 +38,7 @@ export function useUpdatePermit() {
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: PermitUpdate }) => {
       const { data, error } = await fromTable('permits')
-        .update(params.updates as unknown as Record<string, unknown>)
+        .update(params.updates as unknown as Record<string, unknown> as never)
         .eq('id' as never, params.id)
         .select()
         .single()

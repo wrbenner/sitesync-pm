@@ -47,7 +47,7 @@ function gradeColor(grade: string): string {
 const ScoreRing: React.FC<{ score: number; grade: string; size?: number }> = ({ score, grade, size = 120 }) => {
   const [animatedScore, setAnimatedScore] = useState(0);
   const [animatedPct, setAnimatedPct] = useState(0);
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const startTime = Date.now();

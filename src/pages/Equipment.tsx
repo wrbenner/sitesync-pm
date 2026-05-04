@@ -101,8 +101,8 @@ function formatShortDate(iso: string | null): string {
 export const EquipmentPage: React.FC = () => {
   const projectId = useProjectId();
   // ─── Migrated from equipmentStore to entityStore on Day 9 ─────────────
-  const { items: equipment, loading, error } = useEntityStore<Equipment>('equipment');
-  const { loadItems: loadEquipment } = useEntityActions<Equipment>('equipment');
+  const { items: equipment, loading, error } = useEntityStore<Equipment & { [k: string]: unknown }>('equipment');
+  const { loadItems: loadEquipment } = useEntityActions<Equipment & { [k: string]: unknown }>('equipment');
 
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);

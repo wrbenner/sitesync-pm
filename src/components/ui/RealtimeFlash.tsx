@@ -23,7 +23,7 @@ interface RealtimeFlashProps {
 
 export const RealtimeFlash: React.FC<RealtimeFlashProps> = React.memo(({ entityId, table, children }) => {
   const [flash, setFlash] = useState<FlashType>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectId = useProjectId()
   const { user } = useAuth()
 
@@ -95,7 +95,7 @@ export const RealtimeFlash: React.FC<RealtimeFlashProps> = React.memo(({ entityI
 
 export function useRealtimeFlash(table: string, entityId: string): FlashType {
   const [flash, setFlash] = useState<FlashType>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectId = useProjectId()
   const { user } = useAuth()
 

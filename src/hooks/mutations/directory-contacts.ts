@@ -19,7 +19,7 @@ export function useCreateDirectoryContact() {
     getEntityTitle: (p) => (p.data.name as string) || undefined,
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('directory_contacts').insert(params.data).select().single()
+      const { data, error } = await from('directory_contacts').insert(params.data as never).select().single()
       if (error) throw error
       return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
@@ -39,7 +39,7 @@ export function useUpdateDirectoryContact() {
     getEntityId: (p) => p.id,
     getAfterState: (p) => p.updates,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').update(params.updates).eq('id' as never, params.id).eq('project_id' as never, params.projectId)
+      const { error } = await from('directory_contacts').update(params.updates as never).eq('id' as never, params.id).eq('project_id' as never, params.projectId)
       if (error) throw error
       return { projectId: params.projectId, id: params.id }
     },

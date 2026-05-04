@@ -10,7 +10,7 @@ export function useCreatePurchaseOrder() {
   return useMutation({
     mutationFn: async (payload: { po: POPayload; lineItems?: LineItemPayload[] }) => {
       const { data, error } = await fromTable('purchase_orders')
-        .insert(payload.po)
+        .insert(payload.po as never)
         .select()
         .single()
       if (error) throw error
@@ -34,7 +34,7 @@ export function useUpdatePurchaseOrder() {
   return useMutation({
     mutationFn: async (payload: { id: string; projectId: string; updates: POPayload }) => {
       const { data, error } = await fromTable('purchase_orders')
-        .update(payload.updates)
+        .update(payload.updates as never)
         .eq('id' as never, payload.id)
         .select()
         .single()

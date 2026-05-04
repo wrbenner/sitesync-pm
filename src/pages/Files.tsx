@@ -251,7 +251,7 @@ const FilesPage: React.FC = () => {
             const targetFolderId = pickedIds[0];
             if (targetFolderId) {
               for (const fileId of ids) {
-                await fromTable('files').update({ parent_folder_id: targetFolderId } as unknown as Record<string, unknown>).eq('id' as never, fileId);
+                await fromTable('files').update({ parent_folder_id: targetFolderId } as never).eq('id' as never, fileId);
               }
               refetch();
             }
@@ -905,7 +905,7 @@ const FilesPage: React.FC = () => {
                 >
                   <DataTable
                     data={displayFiles}
-                    columns={fileTableColumns}
+                    columns={fileTableColumns as never}
                     enableSorting
                     selectable
                     onSelectionChange={setSelectedIds}

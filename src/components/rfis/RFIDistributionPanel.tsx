@@ -73,7 +73,7 @@ const RecipientRow: React.FC<{
       border: `1px solid ${colors.borderSubtle}`,
     }}
   >
-    <Avatar name={recipient.name} size={28} />
+    <Avatar initials={(recipient.name || '?').slice(0, 2).toUpperCase()} size={28} />
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{
         fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
@@ -314,7 +314,7 @@ const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <Avatar name={c.name || 'U'} size={24} />
+                    <Avatar initials={(c.name || 'U').slice(0, 2).toUpperCase()} size={24} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: typography.fontSize.caption, color: colors.textPrimary }}>
                         {c.name || 'Unknown'}

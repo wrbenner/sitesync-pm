@@ -6,17 +6,7 @@ import { fromTable } from '../../lib/db/queries'
 
 // ── Construction Workflows ───────────────────────────────
 
-export function useCloseoutItems(projectId: string | undefined) {
-  return useQuery({
-    queryKey: ['closeout_items', projectId],
-    queryFn: async () => {
-      const { data, error } = await fromTable('closeout_items').select('*').eq('project_id' as never, projectId!).order('trade').order('category')
-      if (error) throw error
-      return data
-    },
-    enabled: !!projectId,
-  })
-}
+// useCloseoutItems lives in ./enterprise-modules — kept there as the canonical source.
 
 export function useWeatherRecords(projectId: string | undefined) {
   return useQuery({

@@ -155,7 +155,7 @@ export const CreateProjectModal: React.FC<Props> = ({ open, onClose, onSuccess }
   const [selected, setSelected]             = useState<AddressSuggestion | null>(null);
   const [mapLoaded, setMapLoaded]           = useState(false);
   const [hlIdx, setHlIdx]                   = useState(-1);
-  const debounceRef    = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef  = useRef<HTMLDivElement>(null);
 
@@ -284,7 +284,7 @@ export const CreateProjectModal: React.FC<Props> = ({ open, onClose, onSuccess }
     await queryClient.invalidateQueries({ queryKey: ['projects'] });
     setSaving(false);
     setSuccess(true);
-    const createdId = (result.data as { id?: string } | null | undefined)?.id;
+    const createdId = result.project?.id;
     setTimeout(() => {
       if (createdId) onSuccess?.(createdId);
       onClose();

@@ -26,7 +26,7 @@ export function useCreateDrawingMarkup() {
   };
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; drawingId: string }) => {
-      const { data, error } = await from('drawing_markups').insert(params.data).select().single()
+      const { data, error } = await from('drawing_markups').insert(params.data as never).select().single()
       if (error) throw error
       return { data, drawingId: params.drawingId }
     },
@@ -67,7 +67,7 @@ export function useCreateTransmittal() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
-      const { data, error } = await from('transmittals').insert(params.data).select().single()
+      const { data, error } = await from('transmittals').insert(params.data as never).select().single()
       if (error) throw error
       return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },

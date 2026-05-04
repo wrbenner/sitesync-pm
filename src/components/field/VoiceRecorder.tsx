@@ -11,7 +11,8 @@ interface VoiceRecorderProps {
 const transcriptionSegments: Array<{ time: number; text: string }> = [];
 
 // AI extraction result populated after voice processing completes
-const aiExtraction: { type: string; title: string; location: string; priority: string; assignee: string } | null = null;
+type AiExtraction = { type: string; title: string; location: string; priority: string; assignee: string }
+const aiExtraction = null as AiExtraction | null;
 
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave }) => {
   const [recording, setRecording] = useState(false);

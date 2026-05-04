@@ -68,7 +68,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               justifyContent: 'center',
               minHeight: '100vh',
               padding: spacing.lg,
-              backgroundColor: colors.bgLight,
+              backgroundColor: colors.surfaceFlat,
             }}
           >
             <div
@@ -151,7 +151,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             justifyContent: 'center',
             minHeight: '100vh',
             padding: spacing['8'],
-            backgroundColor: colors.bgLight,
+            backgroundColor: colors.surfaceFlat,
           }}
         >
           <div
