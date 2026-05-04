@@ -82,14 +82,14 @@ export const PreferencesPage: React.FC = () => {
         digest_schedule: prefs.digest_schedule ?? null,
         bypass_dnd_for_critical: prefs.bypass_dnd_for_critical,
         suggestion_frequency: prefs.suggestion_frequency,
-      })
+      } as never)
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div style={{ padding: spacing['8'], maxWidth: 960, minHeight: '100vh', backgroundColor: colors.surface }}>
+    <div style={{ padding: spacing['8'], maxWidth: 960, minHeight: '100vh', backgroundColor: colors.surfaceRaised }}>
       <Eyebrow>Notifications · Preferences</Eyebrow>
       <PageQuestion size="medium" style={{ marginTop: spacing['2'] }}>
         How should we reach you?

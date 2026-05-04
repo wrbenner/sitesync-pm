@@ -37,7 +37,7 @@ export function useUpdateContract() {
     getAfterState: (p) => p.updates,
     mutationFn: async (params) => {
       const { data, error } = await fromTable('contracts')
-        .update(params.updates)
+        .update(params.updates as never)
         .eq('id' as never, params.id)
         .select()
         .single()
@@ -171,9 +171,9 @@ export function usePunchItemsSummary(projectId: string | undefined) {
         .select('id, status', { count: 'exact' })
         .eq('project_id' as never, projectId!)
       if (error) throw error
-      const items = data ?? []
+      const items = (data ?? []) as unknown as Array<{ status: string | null }>
       const total = count ?? items.length
-      const completed = items.filter((i: { status: string }) =>
+      const completed = items.filter((i) =>
         i.status === 'closed' || i.status === 'verified' || i.status === 'resolved'
       ).length
       return { total, completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0 }

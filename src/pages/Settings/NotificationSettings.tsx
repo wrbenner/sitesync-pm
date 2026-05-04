@@ -244,7 +244,7 @@ const NotificationSettings: React.FC = () => {
       setPreferences((prev) => ({ ...prev, [triggerKey]: value }));
 
       const { error } = await fromTable('notification_preferences').upsert(
-        { user_id: user.id, [triggerKey]: value },
+        { user_id: user.id, [triggerKey]: value } as never,
         { onConflict: 'user_id' },
       );
 
@@ -298,7 +298,7 @@ const NotificationSettings: React.FC = () => {
       setTimezone(tz);
 
       const { error } = await fromTable('notification_preferences').upsert(
-        { user_id: user.id, timezone: tz },
+        { user_id: user.id, timezone: tz } as never,
         { onConflict: 'user_id' },
       );
 

@@ -195,7 +195,7 @@ export const Transmittals: React.FC = () => {
 
       const { error } = await supabase
         .from('transmittals')
-        .update(updatePayload)
+        .update(updatePayload as never)
         .eq('id' as never, transmittal.id)
       if (error) throw error
       queryClient.invalidateQueries({ queryKey: ['transmittals', projectId] })
@@ -255,7 +255,7 @@ export const Transmittals: React.FC = () => {
             {filtered.length > 0 ? (
               <div style={{ marginTop: spacing['3'] }}>
                 <DataTable
-                  columns={columns}
+                  columns={columns as never}
                   data={filtered}
                   onRowClick={(row) => setDetailId(row.id)}
                 />

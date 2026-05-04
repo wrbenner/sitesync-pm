@@ -3,6 +3,7 @@ import {
   Rect as FabricRect,
   IText as FabricIText,
   Line as FabricLine,
+  type Canvas as FabricCanvas,
 } from 'fabric';
 
 export type StampType =
@@ -49,7 +50,7 @@ const INNER_GAP = 3;
  * the signer name, and the date.
  */
 export function createStamp(
-  canvas: fabric.Canvas,
+  canvas: FabricCanvas,
   options: StampOptions
 ): FabricGroup {
   const { type, signerName, date, x, y, scale = 1 } = options;
@@ -120,7 +121,7 @@ export function createStamp(
     editable: false,
   });
 
-  const objects: fabric.Object[] = [outerRect, innerRect, labelText, signerText, dateText];
+  const objects = [outerRect, innerRect, labelText, signerText, dateText];
 
   // For 'void' type, add a diagonal strike-through line
   if (type === 'void') {
