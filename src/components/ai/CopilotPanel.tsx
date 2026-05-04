@@ -107,7 +107,7 @@ const PanelMessageRenderer = memo<{
           {uiBlocks.map((block, i) => (
             <GenerativeUIRenderer
               key={`ui-${i}`}
-              block={block as unknown as Record<string, unknown>}
+              block={block as never}
               onAction={(action, data) => onSend(`Execute: ${action} with ${JSON.stringify(data)}`)}
             />
           ))}

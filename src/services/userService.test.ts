@@ -209,8 +209,9 @@ describe('userService.createOrganization', () => {
 
     await userService.createOrganization('Build & Design LLC', 'u-1')
 
-    expect(insertArg?.slug).toMatch(/^[a-z0-9-]+$/)
-    expect(String(insertArg?.slug)).not.toMatch(/^-|-$/)
+    const captured = insertArg as Record<string, unknown> | null
+    expect(captured?.slug).toMatch(/^[a-z0-9-]+$/)
+    expect(String(captured?.slug)).not.toMatch(/^-|-$/)
   })
 
   it('returns DatabaseError when org insert fails', async () => {

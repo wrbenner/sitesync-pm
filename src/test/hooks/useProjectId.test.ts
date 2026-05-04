@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useProjectId } from '../../hooks/useProjectId'
 
-const mockActiveProjectId = vi.fn<[], string | null>()
+const mockActiveProjectId = vi.fn<() => string | null>()
 
 vi.mock('../../stores/projectStore', () => ({
   useProjectStore: (selector: (s: { activeProjectId: string | null }) => unknown) =>

@@ -278,7 +278,7 @@ export function AICommandCenter() {
 
   const contextPreamble = useMemo(() => {
     const parts: string[] = [`Current page: ${ctx.label}.`]
-    if (Object.keys(ctx.stats).length) {
+    if (ctx.stats && Object.keys(ctx.stats).length) {
       parts.push(`Page stats: ${JSON.stringify(ctx.stats)}.`)
     }
     if (projectId) parts.push(`Project: ${projectId}.`)
@@ -421,7 +421,7 @@ export function AICommandCenter() {
             AI Command Center
           </div>
           <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            {ctx.label}{Object.entries(ctx.stats).map(([k, v]) => ` · ${k}: ${v}`).join('')}
+            {ctx.label}{Object.entries(ctx.stats ?? {}).map(([k, v]) => ` · ${k}: ${v}`).join('')}
           </div>
         </div>
         <button aria-label="Dock right" onClick={() => setDock('right')} style={iconBtn(dock === 'right')}>

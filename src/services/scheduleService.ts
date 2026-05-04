@@ -35,6 +35,10 @@ export type CreatePhaseInput = {
   end_date?: string;
   percent_complete?: number;
   is_critical_path?: boolean;
+  is_milestone?: boolean;
+  baseline_start?: string;
+  baseline_end?: string;
+  float_days?: number;
   depends_on?: string | null;
   assigned_crew_id?: string | null;
 };

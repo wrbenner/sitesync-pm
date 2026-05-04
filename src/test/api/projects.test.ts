@@ -263,7 +263,8 @@ describe('assertProjectAccess', () => {
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
       .mockResolvedValue({ data: { organization_id: ORG_A_ID }, error: null })
 
-    const { supabase: sb } = await import('../../lib/supabase') as unknown
+    const sbMod = await import('../../lib/supabase')
+    const sb = sbMod.supabase as unknown as { from: ReturnType<typeof vi.fn> }
     ;(sb.from as ReturnType<typeof vi.fn>).mockClear()
 
     await Promise.all(Array.from({ length: 10 }, () => assertProjectAccess(PROJ_ID)))

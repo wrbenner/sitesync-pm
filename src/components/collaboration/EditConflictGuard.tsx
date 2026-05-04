@@ -95,8 +95,9 @@ export function useOptimisticLock(
       setCheckFailed(false);
 
       // Evaluate status lock before checking timestamp conflict
+      const row = data as { status?: string; updated_at?: string };
       if (lockedStatuses && lockedStatuses.length > 0) {
-        const status: string | undefined = data.status;
+        const status: string | undefined = row.status;
         if (status && lockedStatuses.includes(status)) {
           setIsStatusLocked(true);
           setLockedStatus(status);
@@ -106,7 +107,7 @@ export function useOptimisticLock(
         }
       }
 
-      const serverTime: string | undefined = data.updated_at;
+      const serverTime: string | undefined = row.updated_at;
       if (serverTime && serverTime !== lastKnownUpdatedAt) {
         setConflictDetected(true);
         setServerUpdatedAt(serverTime);
