@@ -327,7 +327,7 @@ const ReviewBubble: React.FC<{
 
 // ─── Info Card ───────────────────────────────────────────
 
-const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
+const InfoCard: React.FC<{ submittal: Submittal; currentStatus: SubmittalState }> = ({ submittal, currentStatus }) => {
   const [showMore, setShowMore] = useState(false)
   const specDiv = getCSIDivisionName(submittal.spec_section)
   const dueUrgent = submittal.due_date && isOverdue(submittal.due_date) && currentStatus !== 'approved' && currentStatus !== 'closed'
@@ -525,7 +525,7 @@ const InfoCard: React.FC<{ submittal: Record<string, any>; currentStatus: Submit
 
 // ─── Related Intelligence ─────────────────────────────────
 
-const RelatedIntelligence: React.FC<{ submittal: Record<string, any> }> = ({ submittal }) => {
+const RelatedIntelligence: React.FC<{ submittal: Submittal }> = ({ submittal }) => {
   const specDiv = getCSIDivisionName(submittal.spec_section)
 
   const relatedItems: Array<{ type: string; label: string; link: string; color: string }> = []

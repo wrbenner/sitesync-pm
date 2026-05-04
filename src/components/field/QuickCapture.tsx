@@ -187,8 +187,9 @@ export const QuickCapture: React.FC<QuickCaptureProps> = ({ open, onClose, onSav
 
     // Start Web Speech API recognition
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const SpeechRecognition = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
+      type SpeechRecognitionCtor = typeof window.SpeechRecognition
+      const w = window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }
+      const SpeechRecognition = w.SpeechRecognition ?? w.webkitSpeechRecognition
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
