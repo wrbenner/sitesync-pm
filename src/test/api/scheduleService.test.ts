@@ -236,7 +236,7 @@ describe('scheduleService', () => {
         }),
       );
       // deleted_at should be an ISO timestamp
-      const updatePayload = mockUpdate.mock.calls[0][0] as Record<string, unknown>;
+      const updatePayload = mockUpdate.mock.calls[0][0] as unknown as Record<string, unknown>;
       expect(typeof updatePayload['deleted_at']).toBe('string');
       expect(result.error).toBeNull();
     });

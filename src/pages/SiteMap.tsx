@@ -624,7 +624,7 @@ export default function SiteMap() {
       [],
     );
     if (punchItems) {
-      (punchItems as Record<string, unknown>[]).forEach((p) => {
+      (punchItems as unknown as Record<string, unknown>[]).forEach((p) => {
         entities.push({
           id: p.id as string, type: 'punch_item',
           title: p.title as string, status: p.status as string,
@@ -640,7 +640,7 @@ export default function SiteMap() {
       [],
     );
     if (incidentData) {
-      (incidentData as Record<string, unknown>[]).forEach((i) => {
+      (incidentData as unknown as Record<string, unknown>[]).forEach((i) => {
         entities.push({
           id: i.id as string, type: 'incident',
           title: `${(i.type as string || 'incident').replace(/_/g, ' ')} incident`,
@@ -657,7 +657,7 @@ export default function SiteMap() {
       [],
     );
     if (inspectionData) {
-      (inspectionData as Record<string, unknown>[]).forEach((ins) => {
+      (inspectionData as unknown as Record<string, unknown>[]).forEach((ins) => {
         entities.push({
           id: ins.id as string, type: 'inspection',
           title: `${(ins.type as string || 'inspection').replace(/_/g, ' ')} inspection`,
@@ -674,7 +674,7 @@ export default function SiteMap() {
       [],
     );
     if (deliveryData) {
-      (deliveryData as Record<string, unknown>[]).forEach((d) => {
+      (deliveryData as unknown as Record<string, unknown>[]).forEach((d) => {
         const status = d.status as string;
         if (['scheduled', 'in_transit'].includes(status)) {
           entities.push({
@@ -693,7 +693,7 @@ export default function SiteMap() {
       [],
     );
     if (observationData) {
-      (observationData as Record<string, unknown>[]).forEach((o) => {
+      (observationData as unknown as Record<string, unknown>[]).forEach((o) => {
         entities.push({
           id: o.id as string, type: 'observation',
           title: ((o.description as string) || '').slice(0, 60),

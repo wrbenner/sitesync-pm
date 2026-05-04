@@ -117,7 +117,7 @@ export const Transmittals: React.FC = () => {
     items: [{ name: '', description: '', copies: 1 }] as TransmittalItem[],
   })
 
-  const list = (transmittals ?? []) as Transmittal[]
+  const list = (transmittals ?? []) as unknown as Transmittal[]
 
   const filtered = useMemo(() => {
     let result = list

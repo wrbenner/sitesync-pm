@@ -76,7 +76,7 @@ export const getSubmittalRevisions = async (submittalId: string): Promise<Submit
     .eq('submittal_id' as never, submittalId)
     .order('revision_number', { ascending: false })
   if (error) throw transformSupabaseError(error)
-  return data as SubmittalRevision[]
+  return data as unknown as SubmittalRevision[]
 }
 
 export const createSubmittalRevision = async (

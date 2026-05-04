@@ -43,7 +43,7 @@ export function useAIInsights(projectId: string | undefined, page?: string | nul
 
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
-      return data as AIInsight[]
+      return data as unknown as AIInsight[]
     },
     enabled: !!projectId,
   })
@@ -62,7 +62,7 @@ export function useAIInsightsByCategory(projectId: string | undefined, category?
       if (category) query = query.eq('category' as never, category)
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
-      return (data || []) as AIInsight[]
+      return (data || []) as unknown as AIInsight[]
     },
     enabled: !!projectId,
   })

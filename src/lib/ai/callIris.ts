@@ -220,7 +220,7 @@ async function consumeSSE(
     if (!ev.data) return
     let parsed: Record<string, unknown>
     try {
-      parsed = JSON.parse(ev.data) as Record<string, unknown>
+      parsed = JSON.parse(ev.data) as unknown as Record<string, unknown>
     } catch {
       return
     }

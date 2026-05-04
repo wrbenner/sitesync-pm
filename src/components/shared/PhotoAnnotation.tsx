@@ -317,7 +317,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
       .map((obj) => ({
         id: getAnnotationId(obj),
         type: getAnnotationType(obj),
-        data: obj.toObject([...CUSTOM_PROPS]) as Record<string, unknown>,
+        data: obj.toObject([...CUSTOM_PROPS]) as unknown as Record<string, unknown>,
         color: getAnnotationColor(obj),
         createdAt: new Date().toISOString(),
       }))

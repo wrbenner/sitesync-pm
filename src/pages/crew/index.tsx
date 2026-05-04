@@ -309,7 +309,7 @@ const CrewPage: React.FC = () => {
     [workforceData],
   );
   const crews = useMemo(
-    () => (crewData ?? []) as CrewRecord[],
+    () => (crewData ?? []) as unknown as CrewRecord[],
     [crewData],
   );
   const incidents = useMemo(

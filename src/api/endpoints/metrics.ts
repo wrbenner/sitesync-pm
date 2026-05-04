@@ -83,7 +83,7 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
       if (import.meta.env.DEV) console.warn('[getPortfolioMetrics] error:', error)
       return []
     }
-    const rows = (data || []) as PortfolioMetricsRow[]
+    const rows = (data || []) as unknown as PortfolioMetricsRow[]
     return rows.map((metrics) => ({
       ...metrics,
       aiHealthScore: computeProjectHealthScore(metrics as ProjectMetrics),

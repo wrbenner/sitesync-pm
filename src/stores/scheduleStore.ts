@@ -143,7 +143,7 @@ export function useScheduleStore<T = ScheduleHookState>(
       if (!projectId) return [] as SchedulePhase[];
       const { data, error } = await scheduleService.loadPhases(projectId);
       if (error) throw new Error(error);
-      const mapped = ((data ?? []) as Record<string, unknown>[]).map(mapToMappedPhase);
+      const mapped = ((data ?? []) as unknown as Record<string, unknown>[]).map(mapToMappedPhase);
       return mapped;
     },
     enabled: !!projectId,

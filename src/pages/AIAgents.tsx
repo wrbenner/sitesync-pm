@@ -581,7 +581,7 @@ export const AIAgents: React.FC = () => {
   const dbActionCountByDomain = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const action of dbActions || []) {
-      const domain = (action as Record<string, unknown>).agent_type as string
+      const domain = (action as unknown as Record<string, unknown>).agent_type as string
       counts[domain] = (counts[domain] || 0) + 1
     }
     return counts
@@ -717,7 +717,7 @@ export const AIAgents: React.FC = () => {
             <div style={{ marginTop: spacing['3'] }}>
               <DataTable
                 columns={actionColumns}
-                data={dbActions as Record<string, unknown>[]}
+                data={dbActions as unknown as Record<string, unknown>[]}
               />
             </div>
           ) : (

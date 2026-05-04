@@ -48,7 +48,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
         .select('*')
         .eq('organization_id', organizationId)
         .order('name', { ascending: true });
-      return (data as CustomRoleRow[] | null) ?? [];
+      return (data as unknown as CustomRoleRow[] | null) ?? [];
     },
   });
 

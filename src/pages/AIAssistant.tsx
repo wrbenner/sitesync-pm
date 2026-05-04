@@ -1022,7 +1022,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
             }}
           >
             <option value="all">All domains</option>
-            {(Object.keys(DOMAIN_LABEL) as AgentDomain[]).map((d) => (
+            {(Object.keys(DOMAIN_LABEL) as unknown as AgentDomain[]).map((d) => (
               <option key={d} value={d}>{DOMAIN_LABEL[d]}</option>
             ))}
           </select>
@@ -1039,7 +1039,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
             }}
           >
             <option value="all">All statuses</option>
-            {(Object.keys(STATUS_LABEL) as AgentTaskStatus[]).map((s) => (
+            {(Object.keys(STATUS_LABEL) as unknown as AgentTaskStatus[]).map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
           </select>
@@ -1096,7 +1096,7 @@ function AgentTaskCard({ task, showActions, onApprove, onReject, isApproving, is
   const summary = task.tool_name
     ? `${task.tool_name}`
     : (task.tool_input && typeof task.tool_input === 'object' && 'message' in task.tool_input
-        ? String((task.tool_input as Record<string, unknown>).message).slice(0, 80)
+        ? String((task.tool_input as unknown as Record<string, unknown>).message).slice(0, 80)
         : 'Chat turn');
 
   return (

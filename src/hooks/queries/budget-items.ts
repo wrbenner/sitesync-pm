@@ -16,7 +16,7 @@ export function useBudgetItems(projectId: string | undefined) {
         .eq('project_id' as never, projectId!)
         .order('division', { ascending: true })
       if (error) throw error
-      return data as BudgetItem[]
+      return data as unknown as BudgetItem[]
     },
     enabled: !!projectId,
   })

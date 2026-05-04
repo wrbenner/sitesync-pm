@@ -523,7 +523,7 @@ export const Procurement: React.FC = () => {
       return
     }
     try {
-      const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === deliveryForm.purchase_order_id) as Record<string, unknown> | undefined
+      const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === deliveryForm.purchase_order_id) as unknown as Record<string, unknown> | undefined
       await createDelivery.mutateAsync({
         project_id: projectId,
         purchase_order_id: deliveryForm.purchase_order_id || null,
@@ -1265,7 +1265,7 @@ export const Procurement: React.FC = () => {
               value={deliveryForm.purchase_order_id}
               onChange={(e) => {
                 const poId = e.target.value
-                const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === poId) as Record<string, unknown> | undefined
+                const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === poId) as unknown as Record<string, unknown> | undefined
                 setDeliveryForm({
                   ...deliveryForm,
                   purchase_order_id: poId,

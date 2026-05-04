@@ -35,7 +35,7 @@ export const IssueOverlay: React.FC<IssueOverlayProps> = ({ pins, visibleTypes, 
     <>
       {/* Filter toggles */}
       <div style={{ display: 'flex', gap: spacing['2'], position: 'absolute', top: spacing['2'], right: spacing['2'], zIndex: 5 }}>
-        {(Object.keys(pinConfig) as IssuePinType[]).map((type) => {
+        {(Object.keys(pinConfig) as unknown as IssuePinType[]).map((type) => {
           const cfg = pinConfig[type];
           const isActive = visibleTypes.has(type);
           const count = pins.filter((p) => p.type === type).length;

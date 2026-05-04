@@ -55,7 +55,7 @@ export function LienWaivers() {
 
   // Local row shape (API endpoint maps columns to different names)
   type WaiverRow = Record<string, unknown>;
-  const waivers = (rawWaivers ?? []) as WaiverRow[];
+  const waivers = (rawWaivers ?? []) as unknown as WaiverRow[];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
@@ -263,7 +263,7 @@ export function LienWaivers() {
           }}
         >
           <option value="all">All Types</option>
-          {(Object.keys(WAIVER_TYPE_LABELS) as WaiverStateValue[]).map((t) => (
+          {(Object.keys(WAIVER_TYPE_LABELS) as unknown as WaiverStateValue[]).map((t) => (
             <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
           ))}
         </select>
@@ -542,7 +542,7 @@ export function LienWaivers() {
                   fontFamily: typography.fontFamily,
                 }}
               >
-                {(Object.keys(WAIVER_TYPE_LABELS) as WaiverStateValue[]).map((t) => (
+                {(Object.keys(WAIVER_TYPE_LABELS) as unknown as WaiverStateValue[]).map((t) => (
                   <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
                 ))}
               </select>

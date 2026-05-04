@@ -60,7 +60,7 @@ export const WhiteboardPage: React.FC = () => {
 
     // Store in localStorage
     try {
-      const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as SavedBoard[]
+      const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as unknown as SavedBoard[]
       const idx = existing.findIndex(b => b.id === boardId)
       if (idx >= 0) existing[idx] = saved
       else existing.push(saved)

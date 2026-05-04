@@ -47,7 +47,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
         .gte('last_seen_at', cutoff)
         .order('last_seen_at', { ascending: false });
       if (cancelled) return;
-      const rows = ((data as TypingRow[] | null) ?? []).filter(
+      const rows = ((data as unknown as TypingRow[] | null) ?? []).filter(
         (r) => r.user_id !== ignoreUserId,
       );
       setActive(rows);

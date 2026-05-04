@@ -35,7 +35,7 @@ export default function ProjectTemplatesPage() {
         .eq('organization_id', company.id)
         .order('created_at', { ascending: false });
       if (cancelled) return;
-      if (!error && data) setTemplates(data as TemplateRow[]);
+      if (!error && data) setTemplates(data as unknown as TemplateRow[]);
       setLoading(false);
     }
     load();

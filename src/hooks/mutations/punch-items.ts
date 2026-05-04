@@ -72,7 +72,7 @@ export function useUpdatePunchItem() {
       if (typeof updates.status === 'string') {
         await validatePunchItemStatusTransition(id, projectId, updates.status)
       }
-      const cleanUpdates = sanitizePunchData(updates as Record<string, unknown>)
+      const cleanUpdates = sanitizePunchData(updates as unknown as Record<string, unknown>)
       const { error } = await from('punch_items').update(cleanUpdates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }

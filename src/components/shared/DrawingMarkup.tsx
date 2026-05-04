@@ -390,7 +390,7 @@ function drawRectangle(
 }
 
 function drawAnnotation(ctx: CanvasRenderingContext2D, ann: DrawingAnnotation) {
-  const d = ann.data as Record<string, unknown>
+  const d = ann.data as unknown as Record<string, unknown>
   switch (ann.type) {
     case 'cloud':
       drawRevisionCloud(
@@ -445,7 +445,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: DrawingAnnotation) {
 // ── Highlight selected annotation ─────────────────────────
 
 function drawSelectionHighlight(ctx: CanvasRenderingContext2D, ann: DrawingAnnotation) {
-  const d = ann.data as Record<string, unknown>
+  const d = ann.data as unknown as Record<string, unknown>
   ctx.save()
   ctx.strokeStyle = '#3A7BC8'
   ctx.lineWidth = 1.5
@@ -502,7 +502,7 @@ function drawSelectionHighlight(ctx: CanvasRenderingContext2D, ann: DrawingAnnot
 // ── Hit Testing ───────────────────────────────────────────
 
 function hitTest(ann: DrawingAnnotation, px: number, py: number, tolerance: number = 8): boolean {
-  const d = ann.data as Record<string, unknown>
+  const d = ann.data as unknown as Record<string, unknown>
   switch (ann.type) {
     case 'cloud':
     case 'rectangle': {

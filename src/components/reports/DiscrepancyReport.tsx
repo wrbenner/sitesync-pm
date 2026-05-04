@@ -424,9 +424,9 @@ export async function generateDiscrepancyReport(
   const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
   const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
 
-  const pairs: PairRow[] = (pairsRes.data ?? []) as PairRow[]
-  const drawings: DrawingRow[] = (drawingsRes.data ?? []) as DrawingRow[]
-  const rawDiscrepancies: DiscrepancyRow[] = (discRes.data ?? []) as DiscrepancyRow[]
+  const pairs: PairRow[] = (pairsRes.data ?? []) as unknown as PairRow[]
+  const drawings: DrawingRow[] = (drawingsRes.data ?? []) as unknown as DrawingRow[]
+  const rawDiscrepancies: DiscrepancyRow[] = (discRes.data ?? []) as unknown as DiscrepancyRow[]
 
   const drawingById = new Map(drawings.map((d) => [d.id, d]))
   const pairById = new Map(pairs.map((p) => [p.id, p]))
@@ -436,7 +436,7 @@ export async function generateDiscrepancyReport(
   let rfiById = new Map<string, RfiRow>()
   if (rfiIds.length > 0) {
     const { data: rfis } = await fromTable('rfis').select('id, number').in('id' as never, rfiIds)
-    rfiById = new Map(((rfis ?? []) as RfiRow[]).map((r) => [r.id, r]))
+    rfiById = new Map(((rfis ?? []) as unknown as RfiRow[]).map((r) => [r.id, r]))
   }
 
   const selected = opts.drawingIds && opts.drawingIds !== 'all' ? new Set(opts.drawingIds) : null

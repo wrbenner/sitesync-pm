@@ -44,7 +44,7 @@ function readSeededIds(projectId: string): SeedTarget[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY(projectId))
     if (!raw) return []
-    const parsed = JSON.parse(raw) as SeedTarget[]
+    const parsed = JSON.parse(raw) as unknown as SeedTarget[]
     return Array.isArray(parsed) ? parsed : []
   } catch {
     return []

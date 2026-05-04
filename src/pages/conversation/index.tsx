@@ -97,10 +97,10 @@ const ConversationPage: React.FC = () => {
   const qc = useQueryClient();
   const [busyDraftId, setBusyDraftId] = useState<string | null>(null);
 
-  const rfis = useMemo(() => (rfiData?.data ?? []) as Record<string, unknown>[], [rfiData]);
-  const submittals = useMemo(() => (submittalData?.data ?? []) as Record<string, unknown>[], [submittalData]);
-  const changeOrders = useMemo(() => (changeOrderData ?? []) as Record<string, unknown>[], [changeOrderData]);
-  const punchItems = useMemo(() => (punchData?.data ?? []) as Record<string, unknown>[], [punchData]);
+  const rfis = useMemo(() => (rfiData?.data ?? []) as unknown as Record<string, unknown>[], [rfiData]);
+  const submittals = useMemo(() => (submittalData?.data ?? []) as unknown as Record<string, unknown>[], [submittalData]);
+  const changeOrders = useMemo(() => (changeOrderData ?? []) as unknown as Record<string, unknown>[], [changeOrderData]);
+  const punchItems = useMemo(() => (punchData?.data ?? []) as unknown as Record<string, unknown>[], [punchData]);
 
   // ── Iris drafts (waiting on you to approve) ───────────
   const pendingDrafts = useMemo(

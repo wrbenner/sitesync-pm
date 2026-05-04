@@ -122,11 +122,11 @@ function adaptRfis(rows: unknown[]): RfiRow[] {
     const meta = row.metadata ?? {};
     const linked =
       row.linked_activity_id
-      ?? (meta as Record<string, unknown>).linked_activity_id as string | undefined
+      ?? (meta as unknown as Record<string, unknown>).linked_activity_id as string | undefined
       ?? null;
     const slip =
       row.schedule_impact_days
-      ?? ((meta as Record<string, unknown>).schedule_impact_days as number | undefined)
+      ?? ((meta as unknown as Record<string, unknown>).schedule_impact_days as number | undefined)
       ?? null;
     return {
       id: row.id,
@@ -155,7 +155,7 @@ function adaptSubmittals(rows: unknown[]): SubmittalRow[] {
     const meta = row.metadata ?? {};
     const linked =
       row.linked_activity_id
-      ?? ((meta as Record<string, unknown>).linked_activity_id as string | undefined)
+      ?? ((meta as unknown as Record<string, unknown>).linked_activity_id as string | undefined)
       ?? null;
     return {
       id: row.id,

@@ -93,7 +93,7 @@ export function useApproveAgentTask() {
           },
         })
         if (error) throw new Error(error.message)
-        orchestratorResult = (data as Record<string, unknown> | null) ?? null
+        orchestratorResult = (data as unknown as Record<string, unknown> | null) ?? null
       } catch (e) {
         execError = e instanceof Error ? e : new Error(String(e))
       }

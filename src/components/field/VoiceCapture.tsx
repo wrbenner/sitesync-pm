@@ -64,7 +64,7 @@ interface EntityCardProps {
 const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
   const config = ENTITY_CONFIG[entity.type] || ENTITY_CONFIG.general_note
   const Icon = config.icon
-  const data = entity.data as Record<string, unknown>
+  const data = entity.data as unknown as Record<string, unknown>
 
   // Flatten data into displayable key/value pairs
   const displayFields = useMemo(() => {
@@ -83,7 +83,7 @@ const EntityCard = memo<EntityCardProps>(({ entity, index, onRemove }) => {
       if (crew?.[0]) {
         fields.push({ key: 'Crew', value: `${crew[0].headcount} from ${crew[0].company}` })
       }
-      const weather = data.weather as Record<string, unknown> | undefined
+      const weather = data.weather as unknown as Record<string, unknown> | undefined
       if (weather) {
         fields.push({ key: 'Weather', value: `${weather.condition}, ${weather.temp_f}°F` })
       }

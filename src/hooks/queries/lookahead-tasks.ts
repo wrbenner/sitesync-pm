@@ -26,7 +26,7 @@ export function useLookaheadTasks(projectId: string | undefined) {
         .in('status' as never, ['todo', 'in_progress'])
         .order('start_date')
 
-      if (!joined.error) return joined.data as Task[]
+      if (!joined.error) return joined.data as unknown as Task[]
 
       if (import.meta.env.DEV) console.warn('[LookaheadTasks] crews join unavailable, falling back:', joined.error.message)
       const plain = await fromTable('tasks')
@@ -91,7 +91,7 @@ export function useCreateLookaheadTask() {
           constraint_notes: input.constraint_notes || null,
           percent_complete: input.percent_complete ?? 0,
           status: input.status ?? 'todo',
-        } as Record<string, unknown>)
+        } as unknown as Record<string, unknown>)
         .select()
         .single()
       if (error) throw error

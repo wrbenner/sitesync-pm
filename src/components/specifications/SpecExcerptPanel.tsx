@@ -53,7 +53,7 @@ export const SpecExcerptPanel: React.FC<SpecExcerptPanelProps> = ({
         .eq('project_id', projectId)
         .eq('section_number', trimmed)
         .limit(1);
-      if (exact.data && exact.data.length > 0) return exact.data as Specification[];
+      if (exact.data && exact.data.length > 0) return exact.data as unknown as Specification[];
 
       const prefix = await sb
         .from('specifications')
@@ -61,7 +61,7 @@ export const SpecExcerptPanel: React.FC<SpecExcerptPanelProps> = ({
         .eq('project_id', projectId)
         .ilike('section_number', `${trimmed}%`)
         .limit(3);
-      return (prefix.data as Specification[]) ?? [];
+      return (prefix.data as unknown as Specification[]) ?? [];
     },
     { enabled },
   );

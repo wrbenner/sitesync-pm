@@ -238,7 +238,7 @@ const PaymentApplicationsPage: React.FC = () => {
 
   const apps = (payApps ?? []) as Array<Record<string, unknown>>
   const contractList = (contracts ?? []) as Array<Record<string, unknown>>
-  const waivers = (lienWaivers ?? []) as LienWaiverRow[]
+  const waivers = (lienWaivers ?? []) as unknown as LienWaiverRow[]
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
   const isLoading = loadingApps || loadingContracts || loadingRetainage
@@ -260,7 +260,7 @@ const PaymentApplicationsPage: React.FC = () => {
     const contract = contractList.find((c) => c.id === g702ModalApp.contract_id)
     return {
       projectName: (project?.name as string) ?? '',
-      ownerName: (project as Record<string, unknown>)?.owner_name as string ?? '',
+      ownerName: (project as unknown as Record<string, unknown>)?.owner_name as string ?? '',
       architectName: '',
       contractorName: (contract?.counterparty as string) ?? '',
       contractDate: '',
@@ -642,7 +642,7 @@ const PaymentApplicationsPage: React.FC = () => {
                   ))}
                 </div>
                 {(retainageEntries ?? []).map((e, i) => {
-                  const contract = contractList.find((c) => c.id === e.contract_id) as Record<string, unknown> | undefined
+                  const contract = contractList.find((c) => c.id === e.contract_id) as unknown as Record<string, unknown> | undefined
                   const label = (contract?.counterparty as string) || (contract?.description as string) || `Contract ${String(e.contract_id).slice(0, 8)}`
                   const outstanding = (e.amount_held ?? 0) - (e.released_amount ?? 0)
                   const fullyReleased = !!e.released_at || outstanding <= 0.005
@@ -1147,7 +1147,7 @@ const PaymentApplicationsPage: React.FC = () => {
               onChange={(e) => setGenWaiverForm((f) => ({ ...f, type: e.target.value as WaiverType }))}
               style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
             >
-              {(Object.keys(WAIVER_TYPE_LABELS) as WaiverType[]).map((t) => (
+              {(Object.keys(WAIVER_TYPE_LABELS) as unknown as WaiverType[]).map((t) => (
                 <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
               ))}
             </select>

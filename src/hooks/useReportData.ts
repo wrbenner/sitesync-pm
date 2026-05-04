@@ -127,8 +127,8 @@ export function useExecutiveSummaryData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      overallStatus: ((project.data as Record<string, unknown>).health_status as string) ?? 'on_track',
-      progress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
+      overallStatus: ((project.data as unknown as Record<string, unknown>).health_status as string) ?? 'on_track',
+      progress: ((project.data as unknown as Record<string, unknown>).percent_complete as number) ?? 62,
       budgetTotal,
       budgetSpent,
       budgetVariance,
@@ -331,7 +331,7 @@ export function useMonthlyProgressData() {
       periodStart: fmtDate(monthStart.toISOString()),
       periodEnd: fmtDate(now.toISOString()),
       scheduledProgress: 65,
-      actualProgress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
+      actualProgress: ((project.data as unknown as Record<string, unknown>).percent_complete as number) ?? 62,
       milestonesAchieved: phases.filter((p) => p.status === 'completed').slice(0, 5).map((p) => ({
         name: p.name ?? '', date: fmtDate(p.end_date),
       })),
@@ -399,7 +399,7 @@ export function useCostReportData() {
   const totalPhases = phases.length || 1
   const completedPhases = phases.filter((p) => p.status === 'completed').length
   const scheduledPct = totalPhases > 0 ? completedPhases / totalPhases : 0
-  const projectRecord = project.data as Record<string, unknown>
+  const projectRecord = project.data as unknown as Record<string, unknown>
   const rawPctComplete = projectRecord.percent_complete as number | undefined
   const actualPct = rawPctComplete ? rawPctComplete / 100 : scheduledPct
 
@@ -506,16 +506,16 @@ export function useScheduleReportData() {
       startDate: fmtDate(p.start_date),
       endDate: fmtDate(p.end_date),
       status: p.status ?? 'not_started',
-      assignedTo: ((p as Record<string, unknown>).assigned_to as string) ?? '',
+      assignedTo: ((p as unknown as Record<string, unknown>).assigned_to as string) ?? '',
     }))
 
   // Milestones
   const milestones = phaseList
-    .filter((p) => (p as Record<string, unknown>).is_milestone || p.status === 'completed')
+    .filter((p) => (p as unknown as Record<string, unknown>).is_milestone || p.status === 'completed')
     .slice(0, 15)
     .map((p) => {
       const planned = p.end_date ? new Date(p.end_date) : null
-      const phaseRecord = p as Record<string, unknown>
+      const phaseRecord = p as unknown as Record<string, unknown>
       const actualEndDate = phaseRecord.actual_end_date as string | null | undefined
       const actual = p.status === 'completed' ? actualEndDate ? new Date(actualEndDate) : planned : null
       const variance = planned && actual ? Math.round((actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24)) : 0
@@ -542,8 +542,8 @@ export function useScheduleReportData() {
         activity: p.name ?? '',
         plannedFinish: fmtDate(p.end_date),
         daysLate,
-        causeCode: ((p as Record<string, unknown>).delay_cause as string) ?? 'TBD',
-        responsibleParty: ((p as Record<string, unknown>).assigned_to as string) ?? 'TBD',
+        causeCode: ((p as unknown as Record<string, unknown>).delay_cause as string) ?? 'TBD',
+        responsibleParty: ((p as unknown as Record<string, unknown>).assigned_to as string) ?? 'TBD',
         impact: daysLate > 14 ? 'Critical' : daysLate > 7 ? 'Major' : 'Minor',
       }
     })

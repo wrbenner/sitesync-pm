@@ -63,7 +63,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
         const projects = await accApi(config.accessToken, `/project/v1/hubs/${hubId}/projects`)
         // Store available projects for user to select
         await fromTable('integrations').update({
-          config: { ...config, hubId, availableProjects: projects.data?.map((p: Record<string, unknown>) => ({ id: p.id, name: (p.attributes as Record<string, unknown>)?.name ?? '' })) ?? [] },
+          config: { ...config, hubId, availableProjects: projects.data?.map((p: Record<string, unknown>) => ({ id: p.id, name: (p.attributes as unknown as Record<string, unknown>)?.name ?? '' })) ?? [] },
         } as never).eq('id' as never, integrationId)
 
         return { integrationId }

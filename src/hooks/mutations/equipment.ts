@@ -14,7 +14,7 @@ export function useCreateEquipment() {
   return useMutation({
     mutationFn: async (payload: EquipmentInsert) => {
       const { data, error } = await fromTable('equipment')
-        .insert(payload as Record<string, unknown>)
+        .insert(payload as unknown as Record<string, unknown>)
         .select()
         .single()
       if (error) throw error
@@ -37,7 +37,7 @@ export function useUpdateEquipment() {
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: EquipmentUpdate }) => {
       const { data, error } = await fromTable('equipment')
-        .update(params.updates as Record<string, unknown>)
+        .update(params.updates as unknown as Record<string, unknown>)
         .eq('id' as never, params.id)
         .select()
         .single()

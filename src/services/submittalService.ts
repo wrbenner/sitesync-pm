@@ -173,7 +173,7 @@ export const submittalService = {
     submittalId: string,
     updates: Partial<Submittal>,
   ): Promise<Result> {
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
 
     const { error } = await fromTable('submittals')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)

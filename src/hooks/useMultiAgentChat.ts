@@ -157,7 +157,7 @@ export function useMultiAgentChat(
         if (!rows.length) return
 
         const loaded: AgentConversationMessage[] = rows.map((row) => {
-          const meta = (row.metadata ?? {}) as Record<string, unknown>
+          const meta = (row.metadata ?? {}) as unknown as Record<string, unknown>
           return {
             id: row.id,
             role: row.role as AgentConversationMessage['role'],
@@ -407,7 +407,7 @@ export function useMultiAgentChat(
       if (!rows.length) return
 
       const loaded: AgentConversationMessage[] = rows.map((row) => {
-        const meta = (row.metadata ?? {}) as Record<string, unknown>
+        const meta = (row.metadata ?? {}) as unknown as Record<string, unknown>
         return {
           id: row.id,
           role: row.role as AgentConversationMessage['role'],

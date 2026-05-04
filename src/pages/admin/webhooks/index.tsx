@@ -51,7 +51,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
-      return (data as SubRow[] | null) ?? [];
+      return (data as unknown as SubRow[] | null) ?? [];
     },
   });
 
@@ -64,7 +64,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
         .limit(50);
-      return (data as DeliveryRow[] | null) ?? [];
+      return (data as unknown as DeliveryRow[] | null) ?? [];
     },
     refetchInterval: 30_000,
   });

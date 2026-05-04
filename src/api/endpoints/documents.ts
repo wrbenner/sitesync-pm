@@ -94,7 +94,7 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
 
   // Group revisions by drawing_id (already sorted descending by revision_number)
   const revisionsByDrawing = new Map<string, DrawingRevision[]>()
-  for (const rev of (revisionData || []) as DrawingRevision[]) {
+  for (const rev of (revisionData || []) as unknown as DrawingRevision[]) {
     const list = revisionsByDrawing.get(rev.drawing_id) ?? []
     list.push(rev)
     revisionsByDrawing.set(rev.drawing_id, list)
@@ -123,12 +123,12 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
       disciplineLabel: d.discipline ?? '',
       disciplineIcon: getDisciplineIcon(d.discipline ?? ''),
       date: d.created_at?.slice(0, 10) ?? '',
-      sheetCount: (d as Record<string, unknown>).total_pages as number ?? 1,
-      thumbnail_url: (d as Record<string, unknown>).thumbnail_url as string | null ?? null,
+      sheetCount: (d as unknown as Record<string, unknown>).total_pages as number ?? 1,
+      thumbnail_url: (d as unknown as Record<string, unknown>).thumbnail_url as string | null ?? null,
       file_url: d.file_url ?? null,
-      processing_status: (d as Record<string, unknown>).processing_status as string ?? null,
-      source_filename: (d as Record<string, unknown>).source_filename as string ?? null,
-      total_pages: (d as Record<string, unknown>).total_pages as number ?? 1,
+      processing_status: (d as unknown as Record<string, unknown>).processing_status as string ?? null,
+      source_filename: (d as unknown as Record<string, unknown>).source_filename as string ?? null,
+      total_pages: (d as unknown as Record<string, unknown>).total_pages as number ?? 1,
       revisions,
       currentRevision,
       linkedRfiCount: rfiCountByDrawing.get(d.id) ?? 0,
@@ -145,14 +145,14 @@ export const getDrawingRevisionHistory = async (drawingId: string): Promise<Draw
     .eq('drawing_id' as never, drawingId)
     .order('revision_number', { ascending: false })
   if (error) throw transformSupabaseError(error)
-  return (data || []) as DrawingRevision[]
+  return (data || []) as unknown as DrawingRevision[]
 }
 
 export const getFiles = async (projectId: string): Promise<MappedFile[]> => {
   await assertProjectAccess(projectId)
   const { data, error } = await fromTable('files').select('*').eq('project_id' as never, projectId).order('name')
   if (error) throw transformSupabaseError(error)
-  const rows = (data || []) as FileRow[]
+  const rows = (data || []) as unknown as FileRow[]
 
   const isFolderRow = (f: FileRow): boolean => !!(f.content_type?.includes('folder') ?? false) || !!f.folder
 

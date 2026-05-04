@@ -44,7 +44,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as DocRow[]).map((d) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
               title: d.name ?? '',
@@ -65,7 +65,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as DocRow[]).map((d) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
               title: d.name ?? '',
@@ -86,7 +86,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as DocRow[]).map((d) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title ?? '',
@@ -107,7 +107,7 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as DocRow[]).map((d) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title ?? '',

@@ -82,7 +82,7 @@ export function useCreateVendor() {
     action: 'create',
     entityType: 'vendor',
     getEntityTitle: (p) => p.company_name,
-    getAfterState: (p) => p as Record<string, unknown>,
+    getAfterState: (p) => p as unknown as Record<string, unknown>,
     mutationFn: async (payload) => {
       const { data, error } = await fromTable('vendors').insert(payload as never).select().single()
       if (error) throw error
@@ -102,7 +102,7 @@ export function useUpdateVendor() {
     action: 'update',
     entityType: 'vendor',
     getEntityId: (p) => p.id,
-    getAfterState: (p) => p.updates as Record<string, unknown>,
+    getAfterState: (p) => p.updates as unknown as Record<string, unknown>,
     mutationFn: async (params) => {
       const { data, error } = await fromTable('vendors')
         .update(params.updates)
@@ -144,7 +144,7 @@ export function useVendorEvaluations(vendorId: string | undefined) {
         .eq('vendor_id' as never, vendorId!)
         .order('evaluated_at', { ascending: false })
       if (error) throw error
-      return (data || []) as VendorEvaluation[]
+      return (data || []) as unknown as VendorEvaluation[]
     },
     enabled: !!vendorId,
   })

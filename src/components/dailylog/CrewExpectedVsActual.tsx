@@ -65,7 +65,7 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
         .select('id, name, trade, lead_id, planned_arrival_time, status')
         .eq('project_id', projectId)
         .not('planned_arrival_time', 'is', null);
-      return (data as CrewRow[] | null) ?? [];
+      return (data as unknown as CrewRow[] | null) ?? [];
     },
     refetchInterval: 5 * 60_000,
   });
@@ -81,7 +81,7 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
         .select('id, crew_id, attendance_date, planned_arrival_time, actual_check_in_at, no_show_flagged_at, meeting_action_item_id')
         .eq('project_id', projectId)
         .eq('attendance_date', date);
-      return (data as AttendanceRow[] | null) ?? [];
+      return (data as unknown as AttendanceRow[] | null) ?? [];
     },
     refetchInterval: 60_000,
   });

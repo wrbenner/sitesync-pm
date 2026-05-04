@@ -37,7 +37,7 @@ export const AuditChainPanel: React.FC<{ projectId: string | undefined }> = ({ p
       if (error && /column .* does not exist/i.test(error.message)) {
         return { rows: [], result: { ok: true, total: 0, gaps: [] }, partial: true }
       }
-      const typed = (rows ?? []) as AuditLogRow[]
+      const typed = (rows ?? []) as unknown as AuditLogRow[]
       const result = await verifyChain(typed)
       setVerifiedAt(new Date().toISOString())
       return { rows: typed, result, partial: false }

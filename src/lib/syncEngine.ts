@@ -345,7 +345,7 @@ class SyncEngine {
         await markConflict(
           record.table as TableName,
           record.id,
-          data as Record<string, unknown>,
+          data as unknown as Record<string, unknown>,
         )
       }
     } catch {

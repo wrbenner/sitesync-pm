@@ -46,7 +46,7 @@ function usePortfolioHealth(projects: Project[] | undefined) {
         return {};
       }
       const map: Record<string, PortfolioMetricRow> = {};
-      for (const row of (data ?? []) as PortfolioMetricRow[]) {
+      for (const row of (data ?? []) as unknown as PortfolioMetricRow[]) {
         map[row.project_id] = row;
       }
       return map;

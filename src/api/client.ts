@@ -254,7 +254,7 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
   const pageRows = hasMore ? rows.slice(0, pageSize) : rows
 
   const nextCursor: string | null = hasMore
-    ? btoa(String((pageRows[pageRows.length - 1] as Record<string, unknown>)[orderColumn]))
+    ? btoa(String((pageRows[pageRows.length - 1] as unknown as Record<string, unknown>)[orderColumn]))
     : null
 
   const mappedData = mapFn ? pageRows.map(mapFn) : (pageRows as unknown as TMapped[])

@@ -94,8 +94,8 @@ export function useTaskRelations(taskId: string | undefined) {
       if (fromResult.error) throw fromResult.error
       if (toResult.error) throw toResult.error
       return {
-        outgoing: (fromResult.data ?? []) as TaskRelation[],
-        incoming: (toResult.data ?? []) as TaskRelation[],
+        outgoing: (fromResult.data ?? []) as unknown as TaskRelation[],
+        incoming: (toResult.data ?? []) as unknown as TaskRelation[],
         all: [...(fromResult.data ?? []), ...(toResult.data ?? [])] as TaskRelation[],
       }
     },
@@ -169,7 +169,7 @@ export function useWorkingDaysConfig(projectId: string | undefined) {
           .select('settings')
           .eq('id' as never, projectId!)
           .single()
-        const settings = (project as Record<string, unknown>)?.settings as Record<string, unknown> | null
+        const settings = (project as unknown as Record<string, unknown>)?.settings as unknown as Record<string, unknown> | null
         if (settings?.working_week_days && Array.isArray(settings.working_week_days)) {
           workingWeekDays = settings.working_week_days as boolean[]
         }

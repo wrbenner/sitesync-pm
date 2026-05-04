@@ -38,7 +38,7 @@ interface ToolResultCardProps {
 export const ToolResultCard: React.FC<ToolResultCardProps> = ({ result }) => {
   const icon = toolIcons[result.tool] || <Database size={13} />;
   const label = toolLabels[result.tool] || result.tool;
-  const data = result.result as Record<string, unknown>;
+  const data = result.result as unknown as Record<string, unknown>;
 
   // Determine summary text based on tool
   let summary = '';

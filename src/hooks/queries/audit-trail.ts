@@ -51,7 +51,7 @@ export function useAuditTrail(
 
       const { data, error, count } = await query
       if (error) throw error
-      return { data: data as AuditTrailEntry[], count: count ?? 0 }
+      return { data: data as unknown as AuditTrailEntry[], count: count ?? 0 }
     },
     enabled: !!projectId,
   })

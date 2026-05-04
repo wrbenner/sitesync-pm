@@ -14,7 +14,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Send, Camera, Paperclip, ChevronDown, Search, Loader2,
-  Clock, AlertCircle, Calendar, _Hash, BookOpen, FileText
+  Clock, AlertCircle, Calendar, BookOpen, FileText
 } from 'lucide-react'
 import { colors, zIndex } from '../../styles/theme'
 import { Avatar } from '../Primitives'

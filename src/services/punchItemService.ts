@@ -190,7 +190,7 @@ export const punchItemService = {
   ): Promise<PunchItemServiceResult> {
     // Strip status to prevent bypassing lifecycle machine
      
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
 
     const { error } = await fromTable('punch_items')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)

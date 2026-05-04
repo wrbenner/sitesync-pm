@@ -128,13 +128,13 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
     fromTable('field_captures').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }).limit(20),
   ])
 
-  const project = projectRes.data as Record<string, unknown> | null
-  const phases = (phasesRes.data ?? []) as Record<string, unknown>[]
-  const budget = (budgetRes.data ?? []) as Record<string, unknown>[]
-  const changeOrders = (changeOrdersRes.data ?? []) as Record<string, unknown>[]
-  const rfis = (rfisRes.data ?? []) as Record<string, unknown>[]
-  const submittals = (submittalsRes.data ?? []) as Record<string, unknown>[]
-  const photos = (photosRes.data ?? []) as Record<string, unknown>[]
+  const project = projectRes.data as unknown as Record<string, unknown> | null
+  const phases = (phasesRes.data ?? []) as unknown as Record<string, unknown>[]
+  const budget = (budgetRes.data ?? []) as unknown as Record<string, unknown>[]
+  const changeOrders = (changeOrdersRes.data ?? []) as unknown as Record<string, unknown>[]
+  const rfis = (rfisRes.data ?? []) as unknown as Record<string, unknown>[]
+  const submittals = (submittalsRes.data ?? []) as unknown as Record<string, unknown>[]
+  const photos = (photosRes.data ?? []) as unknown as Record<string, unknown>[]
 
   const now = new Date()
   const threeWeeksOut = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)

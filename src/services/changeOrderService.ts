@@ -185,7 +185,7 @@ export const changeOrderService = {
     updates: Partial<ChangeOrder>,
   ): Promise<Result> {
     const userId = await getCurrentUserId();
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
 
     const { error } = await fromTable('change_orders')
       .update({

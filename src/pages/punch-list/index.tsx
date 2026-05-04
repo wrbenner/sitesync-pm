@@ -70,7 +70,7 @@ const EMPTY_COMMENTS: Array<{
 // ── Map raw API row → PunchItem shape ──────────────────────────
 
 function mapPunch(p: unknown): PunchItem {
-  const pp = p as Record<string, unknown>;
+  const pp = p as unknown as Record<string, unknown>;
   const photos = Array.isArray(pp.photos) ? pp.photos : [];
   return {
     id: pp.id as number,

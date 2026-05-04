@@ -56,7 +56,7 @@ export function useTaskDependencies(taskId: string | undefined) {
         .single()
       if (taskError) throw taskError
 
-      const taskRecord = task as Record<string, unknown>
+      const taskRecord = task as unknown as Record<string, unknown>
       const predecessorIds = (taskRecord.predecessor_ids as string[] | null) || []
       const successorIds = (taskRecord.successor_ids as string[] | null) || []
 

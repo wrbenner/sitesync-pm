@@ -35,8 +35,7 @@ import {
   FolderOpen,
   Handshake,
   BarChart3,
-  type LucideIcon,
-} from 'lucide-react'
+  type LucideIcon} from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 import { useUiStore, useAuthStore } from '../stores'

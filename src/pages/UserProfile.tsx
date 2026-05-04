@@ -3,8 +3,7 @@ import { motion } from 'framer-motion';
 import {
   User, Mail, Phone, Building2, Briefcase, Shield, Camera,
   Bell, BellOff, ChevronRight, LogOut, Check, Pencil,
-  Moon, Sun, _Lock, KeyRound, Palette, Trash2,
-} from 'lucide-react';
+  Moon, Sun, KeyRound, Palette, Trash2} from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores';
 import { supabase } from '../lib/supabase';

@@ -82,7 +82,7 @@ export function usePreconSubcontractors(organizationId: string | undefined) {
         .eq('organization_id' as never, organizationId!)
         .order('company_name', { ascending: true })
       if (error) throw error
-      return ((data || []) as unknown) as PreconSubcontractor[]
+      return ((data || []) as unknown) as unknown as PreconSubcontractor[]
     },
     enabled: !!organizationId,
   })
@@ -140,7 +140,7 @@ export function usePreconBidInvitations(bidPackageId: string | undefined) {
         .eq('bid_package_id' as never, bidPackageId!)
         .order('invited_at', { ascending: false })
       if (error) throw error
-      return ((data || []) as unknown) as PreconBidInvitation[]
+      return ((data || []) as unknown) as unknown as PreconBidInvitation[]
     },
     enabled: !!bidPackageId,
   })
@@ -161,7 +161,7 @@ export function useAllProjectInvitations(projectId: string | undefined) {
         .in('bid_package_id' as never, ids)
         .order('invited_at', { ascending: false })
       if (error) throw error
-      return ((data || []) as unknown) as PreconBidInvitation[]
+      return ((data || []) as unknown) as unknown as PreconBidInvitation[]
     },
     enabled: !!projectId,
   })
@@ -222,7 +222,7 @@ export function usePreconScopeItems(bidPackageId: string | undefined) {
         .eq('bid_package_id' as never, bidPackageId!)
         .order('sort_order', { ascending: true })
       if (error) throw error
-      return ((data || []) as unknown) as PreconScopeItem[]
+      return ((data || []) as unknown) as unknown as PreconScopeItem[]
     },
     enabled: !!bidPackageId,
   })
@@ -275,7 +275,7 @@ export function useBulkCreatePreconScopeItems() {
     mutationFn: async (items: Array<Partial<PreconScopeItem> & { bid_package_id: string; description: string }>) => {
       const { data, error } = await from('precon_scope_items').insert(items as never).select()
       if (error) throw error
-      return ((data || []) as unknown) as PreconScopeItem[]
+      return ((data || []) as unknown) as unknown as PreconScopeItem[]
     },
     onSuccess: (_d, vars) => {
       if (vars.length > 0) {
@@ -302,7 +302,7 @@ export function usePreconBidScopeResponses(bidPackageId: string | undefined) {
         .select('*')
         .in('scope_item_id' as never, itemIds)
       if (error) throw error
-      return ((data || []) as unknown) as PreconBidScopeResponse[]
+      return ((data || []) as unknown) as unknown as PreconBidScopeResponse[]
     },
     enabled: !!bidPackageId,
   })

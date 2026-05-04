@@ -138,7 +138,7 @@ export async function generateWaiversFromPayApp(
 
   // Deduplicate by subcontractor, summing amounts
   const bySubcontractor = new Map<string, { amount: number; payment_period: string | null }>()
-  for (const item of (lineItems ?? []) as PayAppLineItemRow[]) {
+  for (const item of (lineItems ?? []) as unknown as PayAppLineItemRow[]) {
     if (!item.subcontractor_id) continue
     const existing = bySubcontractor.get(item.subcontractor_id)
     if (existing) {

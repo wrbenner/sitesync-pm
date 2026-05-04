@@ -761,21 +761,21 @@ export async function getCostData(projectId: string): Promise<{
   const items = budgetResult.data ?? []
   const changeOrders = coResult.data ?? []
   const approvedChanges = changeOrders
-    .filter((co: unknown) => (co as Record<string, unknown>).status === 'approved')
-    .reduce((sum: number, co: unknown) => sum + ((co as Record<string, unknown>).amount as number || 0), 0)
-  const originalBudget = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).original_amount as number || 0), 0)
+    .filter((co: unknown) => (co as unknown as Record<string, unknown>).status === 'approved')
+    .reduce((sum: number, co: unknown) => sum + ((co as unknown as Record<string, unknown>).amount as number || 0), 0)
+  const originalBudget = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).original_amount as number || 0), 0)
   const revisedBudget = originalBudget + approvedChanges
-  const committedCost = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).committed_amount as number || 0), 0)
-  const actualCost = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).actual_amount as number || 0), 0)
-  const projectedFinalCost = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).forecast_amount as number || (i as Record<string, unknown>).original_amount as number || 0), 0)
+  const committedCost = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).committed_amount as number || 0), 0)
+  const actualCost = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).actual_amount as number || 0), 0)
+  const projectedFinalCost = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).forecast_amount as number || (i as unknown as Record<string, unknown>).original_amount as number || 0), 0)
   const varianceDollars = revisedBudget - projectedFinalCost
   const variancePercent = revisedBudget > 0 ? (varianceDollars / revisedBudget) * 100 : 0
-  const contingencyItem = items.find((i: unknown) => ((i as Record<string, unknown>).csi_division as string || '').startsWith('01'))
+  const contingencyItem = items.find((i: unknown) => ((i as unknown as Record<string, unknown>).csi_division as string || '').startsWith('01'))
   const contingencyOriginal = (contingencyItem as unknown as Record<string, unknown>)?.original_amount as number || 0
   const contingencyUsed = (contingencyItem as unknown as Record<string, unknown>)?.actual_amount as number || 0
   const contingencyRemaining = contingencyOriginal - contingencyUsed
   const lineItems = items.map((i: unknown) => {
-    const row = i as Record<string, unknown>
+    const row = i as unknown as Record<string, unknown>
     const origAmt = (row.original_amount as number) || 0
     const forecastAmt = (row.forecast_amount as number) || origAmt
     return {

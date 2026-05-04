@@ -449,7 +449,7 @@ const DailyLogPage: React.FC = () => {
 
   // ── Data derivation ───────────────────────────────────────────────────────
   const allLogs: ExtendedDailyLog[] = useMemo(
-    () => (dailyLogData?.data ?? []) as ExtendedDailyLog[],
+    () => (dailyLogData?.data ?? []) as unknown as ExtendedDailyLog[],
     [dailyLogData?.data],
   );
   const todayLog = useMemo(
@@ -513,7 +513,7 @@ const DailyLogPage: React.FC = () => {
     for (const e of entries) {
       const photoArr = Array.isArray(e.photos) ? (e.photos as unknown[]) : [];
       for (const p of photoArr) {
-        const rec = p as Record<string, unknown>;
+        const rec = p as unknown as Record<string, unknown>;
         out.push({
           id: (rec.id as string) ?? `${e.id}:${out.length}`,
           url: (rec.url as string) ?? '',
@@ -549,7 +549,7 @@ const DailyLogPage: React.FC = () => {
     try {
       await updateDailyLog.mutateAsync({
         id: todayLog.id, projectId,
-        updates: updates as Record<string, unknown>,
+        updates: updates as unknown as Record<string, unknown>,
       });
     } catch {
       // mutation toasts on its own

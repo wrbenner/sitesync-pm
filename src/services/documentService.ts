@@ -369,7 +369,7 @@ export const documentService = {
     updates: Partial<Omit<DocumentRecord, 'id' | 'project_id' | 'document_status' | 'created_by' | 'created_at'>>,
   ): Promise<Result> {
     const { document_status: _s, created_by: _c, created_at: _ca, ...safeUpdates } =
-      updates as Record<string, unknown>;
+      updates as unknown as Record<string, unknown>;
 
     const { error } = await fromTable('files')
       .update(safeUpdates as never)

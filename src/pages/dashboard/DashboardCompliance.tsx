@@ -62,9 +62,9 @@ function useComplianceData(projectId: string | undefined) {
       ]);
 
       return {
-        permits: (permitsRes.data ?? []) as PermitRow[],
-        certs: (certsRes.data ?? []) as CertRow[],
-        inspections: (inspectionsRes.data ?? []) as InspectionRow[],
+        permits: (permitsRes.data ?? []) as unknown as PermitRow[],
+        certs: (certsRes.data ?? []) as unknown as CertRow[],
+        inspections: (inspectionsRes.data ?? []) as unknown as InspectionRow[],
       };
     },
     enabled: !!projectId,

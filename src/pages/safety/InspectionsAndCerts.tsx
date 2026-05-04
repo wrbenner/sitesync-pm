@@ -194,7 +194,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
       <Card style={{ marginBottom: spacing['4'] }}>
         <p style={{ margin: `0 0 ${spacing['3']} 0`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Run Inspection Checklist</p>
         <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', marginBottom: activeTemplate ? spacing['5'] : 0 }}>
-          {(Object.keys(CHECKLIST_TEMPLATES) as TemplateKey[]).map((key) => {
+          {(Object.keys(CHECKLIST_TEMPLATES) as unknown as TemplateKey[]).map((key) => {
             const isActive = activeTemplate === key;
             return (
               <button
@@ -324,7 +324,7 @@ export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ corr
     <>
       <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         {(['open', 'in_progress', 'closed'] as const).map((s) => {
-          const count = correctiveActions.filter((ca: unknown) => (ca as Record<string, unknown>).status === s || (s === 'closed' && (ca as Record<string, unknown>).status === 'verified')).length;
+          const count = correctiveActions.filter((ca: unknown) => (ca as unknown as Record<string, unknown>).status === s || (s === 'closed' && (ca as unknown as Record<string, unknown>).status === 'verified')).length;
           const colorMap = {
             open: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
             in_progress: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
@@ -336,7 +336,7 @@ export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ corr
         })}
         {(() => {
           const overdueCount = correctiveActions.filter((ca: unknown) => {
-            const c = ca as Record<string, unknown>;
+            const c = ca as unknown as Record<string, unknown>;
             if (!c.due_date) return false;
             if (c.status === 'closed' || c.status === 'verified') return false;
             return new Date(c.due_date as string) < new Date();

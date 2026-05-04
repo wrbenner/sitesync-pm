@@ -32,7 +32,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getUser: mockGetUser },
     from: vi.fn().mockImplementation(() => {
-      const chain: unknown = {}
+      const chain: Record<string, unknown> = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
       chain.maybeSingle = mockMaybySingle
@@ -59,7 +59,7 @@ const mockRfiRow = {
 
 vi.mock('../../api/client', () => {
   const makeChain = (resolvedRow: unknown = mockRfiRow) => {
-    const chain: unknown = {}
+    const chain: Record<string, unknown> = {}
     chain.select = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockReturnValue(chain)
     chain.in = vi.fn().mockReturnValue(chain)
@@ -76,11 +76,11 @@ vi.mock('../../api/client', () => {
     supabase: {
       from: vi.fn().mockImplementation(() => makeChain()),
     },
-    supabaseMutation: vi.fn().mockImplementation(async (fn: unknown) => {
+    supabaseMutation: vi.fn().mockImplementation(async (fn: (client: unknown) => unknown) => {
       const result = await fn({
         from: () => makeChain(),
       })
-      const resolved = await result
+      const resolved = (await result) as { data?: unknown; error?: unknown } | undefined
       const { data, error } = resolved ?? { data: mockRfiRow, error: null }
       if (error) throw error
       return data

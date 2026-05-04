@@ -65,7 +65,7 @@ export function useApprovalTemplates(entityType?: ApprovalEntityType) {
       if (entityType) q = q.eq('entity_type', entityType)
       const { data, error } = await q.order('created_at', { ascending: false })
       if (error) throw error
-      return (data as ApprovalWorkflowTemplate[]) ?? []
+      return (data as unknown as ApprovalWorkflowTemplate[]) ?? []
     },
   })
 }
@@ -95,7 +95,7 @@ export function useApprovalStatus(entityType: string | undefined, entityId: stri
       return {
         instance,
         template: (tplRes.data as ApprovalWorkflowTemplate | null) ?? null,
-        actions: (actionsRes.data as ApprovalStepAction[] | null) ?? [],
+        actions: (actionsRes.data as unknown as ApprovalStepAction[] | null) ?? [],
       }
     },
   })

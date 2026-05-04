@@ -56,7 +56,7 @@ function useCarbonData(projectId: string | undefined) {
         .eq('project_id' as never, projectId)
         .order('created_at', { ascending: true });
 
-      const entries = ((entriesRes.data ?? []) as CarbonEntry[]).filter((e) => typeof e.carbon_kg === 'number');
+      const entries = ((entriesRes.data ?? []) as unknown as CarbonEntry[]).filter((e) => typeof e.carbon_kg === 'number');
 
       if (entries.length > 0) {
         return { entries, fallbackTotal: 0 };
@@ -68,8 +68,8 @@ function useCarbonData(projectId: string | undefined) {
         fromTable('carbon_factors').select('id, material_name, embodied_carbon_kg_per_unit, unit'),
       ]);
 
-      const deliveries = (deliveriesRes.data ?? []) as DeliveryRow[];
-      const factors = (factorsRes.data ?? []) as CarbonFactor[];
+      const deliveries = (deliveriesRes.data ?? []) as unknown as DeliveryRow[];
+      const factors = (factorsRes.data ?? []) as unknown as CarbonFactor[];
 
       let fallbackTotal = 0;
       const derived: CarbonEntry[] = [];

@@ -130,7 +130,7 @@ const incidentColumns = [
     id: 'ca_count',
     header: 'Corrective Actions',
     cell: (info) => {
-      const count = (info.row.original as Record<string, unknown>).corrective_action_count as number ?? 0
+      const count = (info.row.original as unknown as Record<string, unknown>).corrective_action_count as number ?? 0
       if (count === 0) return <span style={{ color: colors.textTertiary }}>None</span>
       return (
         <span style={{
@@ -983,7 +983,7 @@ export const Safety: React.FC = () => {
         },
         projectId: projectId!,
       })
-      const incidentId = (result.data as Record<string, unknown>)?.id as string | undefined
+      const incidentId = (result.data as unknown as Record<string, unknown>)?.id as string | undefined
       // Upload photo to Supabase storage if provided
       if (incidentForm.photo && incidentId) {
         const ext = incidentForm.photo.name.split('.').pop() || 'jpg'
@@ -1359,7 +1359,7 @@ export const Safety: React.FC = () => {
               Run Inspection Checklist
             </p>
             <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', marginBottom: activeTemplate ? spacing['5'] : 0 }}>
-              {(Object.keys(CHECKLIST_TEMPLATES) as TemplateKey[]).map((key) => {
+              {(Object.keys(CHECKLIST_TEMPLATES) as unknown as TemplateKey[]).map((key) => {
                 const isActive = activeTemplate === key
                 return (
                   <button

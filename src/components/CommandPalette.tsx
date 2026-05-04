@@ -84,7 +84,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
   const results = useMemo<RecentResult[]>(() => {
     const out: RecentResult[] = []
     for (const r of rfis.data?.data ?? []) {
-      const rec = r as Record<string, unknown>
+      const rec = r as unknown as Record<string, unknown>
       const number = (rec.number as number | string | undefined) ?? ''
       const subject = (rec.subject as string | undefined) ?? (rec.title as string | undefined) ?? 'Untitled RFI'
       out.push({
@@ -96,7 +96,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
       })
     }
     for (const s of submittals.data?.data ?? []) {
-      const rec = s as Record<string, unknown>
+      const rec = s as unknown as Record<string, unknown>
       const spec = (rec.spec_section as string | undefined) ?? (rec.specification as string | undefined) ?? ''
       const title = (rec.title as string | undefined) ?? 'Untitled submittal'
       out.push({
@@ -108,7 +108,7 @@ function useRecentItems(): { results: RecentResult[]; loading: boolean } {
       })
     }
     for (const p of punchItems.data?.data ?? []) {
-      const rec = p as Record<string, unknown>
+      const rec = p as unknown as Record<string, unknown>
       const title = (rec.title as string | undefined) ?? (rec.description as string | undefined) ?? 'Punch item'
       out.push({
         kind: 'punch',

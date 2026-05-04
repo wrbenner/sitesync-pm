@@ -1945,7 +1945,7 @@ export const Contracts: React.FC = () => {
   useRealtimeInvalidation(projectId ?? undefined)
 
   // Single typed reference — eliminates repeated `as Contract[]` casts (#6)
-  const typedContracts = useMemo<Contract[]>(() => (contracts ?? []) as Contract[], [contracts])
+  const typedContracts = useMemo<Contract[]>(() => (contracts ?? []) as unknown as Contract[], [contracts])
 
   // Roll retainage (from schedule_of_values) up per contract so the
   // list can show actual retained amounts, not just the contract's

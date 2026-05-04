@@ -153,5 +153,5 @@ export async function estimateCost(
       provenance: 'cost_database query error',
     }
   }
-  return estimateCostFromCandidates(lineItems, (data ?? []) as CostRow[])
+  return estimateCostFromCandidates(lineItems, (data ?? []) as unknown as CostRow[])
 }

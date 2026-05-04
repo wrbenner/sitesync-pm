@@ -16,7 +16,7 @@ export function useSchedulePhases(projectId: string | undefined) {
         .eq('project_id' as never, projectId!)
         .order('start_date', { ascending: true })
       if (error) throw error
-      return data as SchedulePhase[]
+      return data as unknown as SchedulePhase[]
     },
     enabled: !!projectId,
   })

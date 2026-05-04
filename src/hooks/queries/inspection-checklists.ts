@@ -65,7 +65,7 @@ export function useInspectionChecklists(
 
       const { data, error } = await query
       if (error) throw error
-      return data as InspectionChecklist[]
+      return data as unknown as InspectionChecklist[]
     },
     enabled: !!projectId,
   })
@@ -82,7 +82,7 @@ export function useChecklistTemplates(projectId: string | undefined) {
         .order('name')
 
       if (error) throw error
-      return data as InspectionChecklist[]
+      return data as unknown as InspectionChecklist[]
     },
     enabled: !!projectId,
   })
@@ -98,7 +98,7 @@ export function useChecklistItems(checklistId: string | undefined) {
         .order('sort_order', { ascending: true })
 
       if (error) throw error
-      return data as InspectionChecklistItem[]
+      return data as unknown as InspectionChecklistItem[]
     },
     enabled: !!checklistId,
   })

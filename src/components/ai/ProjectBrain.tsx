@@ -2,9 +2,8 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   Brain, X, Send, FileText, Loader2, Sparkles, Database, ChevronRight,
   MessageSquare, Scale, FolderOpen, History, Plus, Trash2, AlertTriangle,
-  CheckCircle, Shield, Clock, ArrowRight, Search, _Upload, Eye,
-  BarChart3, Zap, BookOpen, HardHat, FileCheck,
-} from 'lucide-react';
+  CheckCircle, Shield, Clock, ArrowRight, Search, Eye,
+  BarChart3, Zap, BookOpen, HardHat, FileCheck} from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 import { useProjectId } from '../../hooks/useProjectId';
@@ -793,7 +792,7 @@ ${text.slice(0, 15000)}`;
         analyzedAt: Date.now(),
         summary: analysis.summary || 'Analysis complete.',
         overallRisk: (analysis.overallRisk as 'high' | 'medium' | 'low') || 'medium',
-        findings: (analysis.findings || []) as RiskFinding[],
+        findings: (analysis.findings || []) as unknown as RiskFinding[],
         keyTerms: (analysis.keyTerms || []) as { label: string; value: string }[],
       };
 

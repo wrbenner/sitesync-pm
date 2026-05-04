@@ -7,8 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  CheckCircle, XCircle, RotateCcw, _FileText, _Clock,
-} from 'lucide-react';
+  CheckCircle, XCircle, RotateCcw, } from 'lucide-react';
 import { SlideOverPanel, PanelSection, PanelField, StatusBadge } from '../SlideOverPanel';
 import type { SlideOverAction } from '../SlideOverPanel';
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals';

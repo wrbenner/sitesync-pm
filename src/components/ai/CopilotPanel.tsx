@@ -97,7 +97,7 @@ const PanelMessageRenderer = memo<{
     {message.toolCalls && message.toolCalls.length > 0 && (() => {
       const uiBlocks = message.generativeBlocks || []
       const plainToolCalls = message.toolCalls.filter(
-        (tc) => !(tc.result as Record<string, unknown>).ui_type,
+        (tc) => !(tc.result as unknown as Record<string, unknown>).ui_type,
       )
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginTop: spacing['2'], marginLeft: '40px' }}>
@@ -107,7 +107,7 @@ const PanelMessageRenderer = memo<{
           {uiBlocks.map((block, i) => (
             <GenerativeUIRenderer
               key={`ui-${i}`}
-              block={block as Record<string, unknown>}
+              block={block as unknown as Record<string, unknown>}
               onAction={(action, data) => onSend(`Execute: ${action} with ${JSON.stringify(data)}`)}
             />
           ))}
@@ -119,7 +119,7 @@ const PanelMessageRenderer = memo<{
         {message.generativeBlocks.map((block, i) => (
           <GenerativeUIRenderer
             key={`gen-${i}`}
-            block={block as Record<string, unknown>}
+            block={block as unknown as Record<string, unknown>}
             onAction={(action, data) => onSend(`Execute: ${action} with ${JSON.stringify(data)}`)}
           />
         ))}

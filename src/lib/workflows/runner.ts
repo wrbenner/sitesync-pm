@@ -324,7 +324,7 @@ function resolvePath(path: string, entity: Record<string, unknown>): unknown {
   for (let i = startIdx; i < parts.length; i++) {
     if (current === null || current === undefined) return undefined
     if (typeof current !== 'object') return undefined
-    current = (current as Record<string, unknown>)[parts[i]]
+    current = (current as unknown as Record<string, unknown>)[parts[i]]
   }
   return current
 }

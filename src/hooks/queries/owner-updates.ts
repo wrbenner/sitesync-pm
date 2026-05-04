@@ -49,7 +49,7 @@ export function useOwnerUpdatesForProject(projectId: string | undefined) {
         .eq('project_id' as never, projectId! as never)
         .order('created_at' as never, { ascending: false }) as unknown as Promise<{ data: unknown[] | null; error: Error | null }>)
       if (error) throw error
-      return ((data ?? []) as unknown) as OwnerUpdate[]
+      return ((data ?? []) as unknown) as unknown as OwnerUpdate[]
     },
     enabled: !!projectId,
   })

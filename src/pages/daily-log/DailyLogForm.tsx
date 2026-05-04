@@ -808,12 +808,12 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
             kind="daily_log"
             label="Voice daily log"
             onStructured={(structured, transcript) => {
-              const s = (structured || {}) as Record<string, unknown>;
+              const s = (structured || {}) as unknown as Record<string, unknown>;
               const activities = Array.isArray(s.activities) ? s.activities : [];
               const summaryParts: string[] = [];
               if (typeof s.summary === 'string' && s.summary) summaryParts.push(s.summary);
               activities.forEach((a) => {
-                const obj = a as Record<string, unknown>;
+                const obj = a as unknown as Record<string, unknown>;
                 const desc = typeof obj.description === 'string' ? obj.description : '';
                 const loc = typeof obj.location === 'string' ? obj.location : '';
                 if (desc) summaryParts.push(`• ${desc}${loc ? ` (${loc})` : ''}`);
@@ -823,7 +823,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
               if (aiSummaryGenerated) setAiSummaryGenerated(false);
               const issues = Array.isArray(s.issues) ? s.issues : [];
               if (issues.length > 0) {
-                setIssuesDelays(issues.map((i) => `• ${(i as Record<string, unknown>).description || ''}`).join('\n'));
+                setIssuesDelays(issues.map((i) => `• ${(i as unknown as Record<string, unknown>).description || ''}`).join('\n'));
               }
             }}
           />

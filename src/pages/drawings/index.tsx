@@ -430,7 +430,7 @@ const DrawingsPage: React.FC = () => {
       for (const d of missing) {
         const disc = inferDisciplineFromFilename(d.setNumber || d.title);
         if (disc) {
-          await drawingService.updateDrawing(String(d.id), { discipline: disc } as Record<string, unknown>);
+          await drawingService.updateDrawing(String(d.id), { discipline: disc } as unknown as Record<string, unknown>);
           updated++;
         }
       }
@@ -1227,7 +1227,7 @@ const DrawingsPage: React.FC = () => {
         // Flag without blocking — AI classification may still fix them later.
         await Promise.all(
           duplicateIds.map((id) =>
-            drawingService.updateDrawing(id, { processing_status: 'needs_review' } as Record<string, unknown>),
+            drawingService.updateDrawing(id, { processing_status: 'needs_review' } as unknown as Record<string, unknown>),
           ),
         );
         addToast(
@@ -1360,7 +1360,7 @@ const DrawingsPage: React.FC = () => {
             if (fallback) {
               await drawingService.updateDrawing(
                 t.drawingId,
-                { discipline: fallback, processing_status: 'failed' } as Record<string, unknown>,
+                { discipline: fallback, processing_status: 'failed' } as unknown as Record<string, unknown>,
               );
             }
           }

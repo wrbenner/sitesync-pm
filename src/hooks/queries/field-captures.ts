@@ -16,7 +16,7 @@ export function useFieldCaptures(projectId: string | undefined) {
         .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return data as FieldCapture[]
+      return data as unknown as FieldCapture[]
     },
     enabled: !!projectId,
   })

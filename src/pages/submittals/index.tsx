@@ -125,7 +125,7 @@ const SubmittalsPage: React.FC = () => {
     const q = searchQuery.trim().toLowerCase()
     if (q) {
       rows = rows.filter((s) => {
-        const r = s as Record<string, unknown>
+        const r = s as unknown as Record<string, unknown>
         return (
           String(r.title ?? '').toLowerCase().includes(q) ||
           String(r.number ?? '').toLowerCase().includes(q) ||
@@ -278,7 +278,7 @@ const SubmittalsPage: React.FC = () => {
           <GroupedSubmittalsView
             filteredSubmittals={filteredSubmittals}
             groupBy={groupBy}
-            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+            onRowClick={(sub) => navigate(`/submittals/${(sub as unknown as Record<string, unknown>).id}`)}
           />
         ) : viewMode === 'table' ? (
           <SubmittalsTable
@@ -287,7 +287,7 @@ const SubmittalsPage: React.FC = () => {
             selectedIds={selectedIds}
             setSelectedIds={setSelectedIds}
             loading={loading}
-            onRowClick={(sub) => navigate(`/submittals/${(sub as Record<string, unknown>).id}`)}
+            onRowClick={(sub) => navigate(`/submittals/${(sub as unknown as Record<string, unknown>).id}`)}
             clearFilters={() => { setStatusFilter('all'); setSearchQuery('') }}
             projectId={projectId}
             updateSubmittalMutateAsync={updateSubmittal.mutateAsync}

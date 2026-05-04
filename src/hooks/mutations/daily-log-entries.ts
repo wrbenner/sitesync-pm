@@ -84,7 +84,7 @@ export function useSubmitDailyLog() {
         return {
           ...prev,
           data: (prev?.data ?? []).map((log: unknown) => {
-            const l = log as Record<string, unknown>
+            const l = log as unknown as Record<string, unknown>
             return l.id === id ? { ...l, status: 'submitted', is_submitted: true } : l
           }),
         }

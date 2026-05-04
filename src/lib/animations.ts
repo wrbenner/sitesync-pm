@@ -225,7 +225,7 @@ export function withReducedMotion<T extends Record<string, unknown>>(
 ): T {
   if (!prefersReduced) return props
 
-  const safe = { ...props } as Record<string, unknown>
+  const safe = { ...props } as unknown as Record<string, unknown>
 
   if ('transition' in safe) safe.transition = instantTransition
   if (safe.initial && typeof safe.initial === 'object') safe.initial = { opacity: 0 }

@@ -105,7 +105,7 @@ async function searchAddress(query: string): Promise<AddressSuggestion[]> {
       { signal: AbortSignal.timeout(4000), headers: { 'User-Agent': 'SiteSyncPM/1.0' } },
     );
     if (!res.ok) return [];
-    return (await res.json()) as AddressSuggestion[];
+    return (await res.json()) as unknown as AddressSuggestion[];
   } catch {
     return [];
   }

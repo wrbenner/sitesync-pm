@@ -17,7 +17,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getUser: mockGetUser },
     from: vi.fn().mockImplementation(() => {
-      const chain: unknown = {}
+      const chain: Record<string, unknown> = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
       chain.maybeSingle = mockMaybySingle

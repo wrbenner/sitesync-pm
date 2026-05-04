@@ -284,7 +284,7 @@ export const Permits: React.FC = () => {
             <Btn
               size="sm"
               variant="secondary"
-              onClick={() => openEditPermit(info.row.original as Record<string, unknown>)}
+              onClick={() => openEditPermit(info.row.original as unknown as Record<string, unknown>)}
             >
               Edit
             </Btn>
@@ -292,7 +292,7 @@ export const Permits: React.FC = () => {
               <Btn
                 size="sm"
                 variant="ghost"
-                onClick={() => handleDelete(info.row.original as Record<string, unknown>)}
+                onClick={() => handleDelete(info.row.original as unknown as Record<string, unknown>)}
                 disabled={deletePermit.isPending}
                 aria-label="Delete this permit"
                 data-testid="delete-permit-button"

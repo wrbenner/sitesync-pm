@@ -135,7 +135,7 @@ const FilePage: React.FC = () => {
   // ── Data ────────────────────────────────────────────────
   const { data: fileData, isPending: filesLoading } = useFiles(projectId);
   const files = useMemo(
-    () => (fileData ?? []) as ProjectFile[],
+    () => (fileData ?? []) as unknown as ProjectFile[],
     [fileData],
   );
 

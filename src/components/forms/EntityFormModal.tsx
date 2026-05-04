@@ -125,9 +125,9 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
     const values: Record<string, unknown> = {}
     for (const field of fields) {
       if (field.type === 'checkbox') {
-        values[field.name] = (defaults as Record<string, unknown>)[field.name] ?? false
+        values[field.name] = (defaults as unknown as Record<string, unknown>)[field.name] ?? false
       } else {
-        values[field.name] = (defaults as Record<string, unknown>)[field.name] ?? ''
+        values[field.name] = (defaults as unknown as Record<string, unknown>)[field.name] ?? ''
       }
     }
     return values

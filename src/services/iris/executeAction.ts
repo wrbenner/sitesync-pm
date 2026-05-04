@@ -138,7 +138,7 @@ async function markFailed(draftId: string, errorMessage: string): Promise<void> 
   await fromTable('drafted_actions')
     .update({
       status: 'failed',
-      execution_result: { error: errorMessage } as Record<string, unknown>,
+      execution_result: { error: errorMessage } as unknown as Record<string, unknown>,
     } as never)
     .eq('id' as never, draftId)
 }

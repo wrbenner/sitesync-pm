@@ -2,9 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { Btn, DetailPanel, Avatar } from '../../components/Primitives';
 import {
   Camera, CheckCircle, MessageSquare, RefreshCw, XCircle,
-  MapPin, Wrench, Calendar, User, Clock, _ChevronRight,
-  Play, Eye, Shield, AlertTriangle, Send,
-} from 'lucide-react';
+  MapPin, Wrench, Calendar, User, Clock,
+  Play, Eye, Shield, AlertTriangle, Send} from 'lucide-react';
 import { colors, spacing, typography } from '../../styles/theme';
 import { EditableDetailField } from '../../components/forms/EditableField';
 import { PermissionGate } from '../../components/auth/PermissionGate';

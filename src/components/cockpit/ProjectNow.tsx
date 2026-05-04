@@ -249,7 +249,7 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role, resolveName
       (acc, b) => {
         const approved = Number(b.original_amount ?? 0)
         const committed = Number(
-          (b as Record<string, unknown>).committed_amount ?? b.actual_amount ?? 0,
+          (b as unknown as Record<string, unknown>).committed_amount ?? b.actual_amount ?? 0,
         )
         acc.approved += approved
         acc.committed += committed

@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  Send, _Clock, _User, _MessageSquare, _AlertTriangle, _CheckCircle,
+  Send,
 } from 'lucide-react';
 import { SlideOverPanel, PanelSection, PanelField, StatusBadge } from '../SlideOverPanel';
 import type { SlideOverAction } from '../SlideOverPanel';

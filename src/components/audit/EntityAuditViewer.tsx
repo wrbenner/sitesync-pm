@@ -64,7 +64,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
         .order('created_at', { ascending: true })
         .order('id', { ascending: true });
       if (error) throw error;
-      return (data as AuditLogRow[]) ?? [];
+      return (data as unknown as AuditLogRow[]) ?? [];
     },
   });
 

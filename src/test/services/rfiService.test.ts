@@ -330,7 +330,7 @@ describe('rfiService.transitionStatus', () => {
     const result = await rfiService.transitionStatus('rfi-1', 'closed')
 
     expect(result.error).toBeNull()
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(typeof payload['closed_date']).toBe('string')
   })
 
@@ -353,7 +353,7 @@ describe('rfiService.transitionStatus', () => {
 
     await rfiService.transitionStatus('rfi-1', 'open')
 
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload['ball_in_court']).toBeDefined()
     expect(payload['status']).toBe('open')
   })

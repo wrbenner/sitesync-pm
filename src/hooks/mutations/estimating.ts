@@ -55,7 +55,7 @@ export function useUpdateEstimatingItem() {
     mutationFn: async ({ id, patch }) => {
       // total_cost is generated; never patch it directly
       const cleanPatch = { ...patch }
-      delete (cleanPatch as Record<string, unknown>).total_cost
+      delete (cleanPatch as unknown as Record<string, unknown>).total_cost
       const { data, error } = await from('estimating_items')
         .update(cleanPatch as never)
         .eq('id' as never, id)

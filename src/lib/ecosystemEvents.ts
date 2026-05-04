@@ -154,7 +154,7 @@ export async function dispatchEcosystemEvent(
       await fromTable('audit_trail').insert({
         project_id: event.data.projectId,
         entity_type: event.type.split('.')[0],
-        entity_id: (event.data as Record<string, unknown>)[`${event.type.split('.')[0]}Id`] as string || null,
+        entity_id: (event.data as unknown as Record<string, unknown>)[`${event.type.split('.')[0]}Id`] as string || null,
         action: event.type,
         metadata: {
           ecosystem_chain: steps.filter((s) => s.status !== 'skipped').map((s) => `${s.integration}:${s.action}`),

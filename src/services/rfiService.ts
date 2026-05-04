@@ -151,7 +151,7 @@ export const rfiService = {
    */
   async updateRfi(rfiId: string, updates: Partial<RFI>): Promise<Result> {
     const userId = await getCurrentUserId();
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
     safeUpdates.updated_by = userId;
 
     const { error } = await fromTable('rfis')

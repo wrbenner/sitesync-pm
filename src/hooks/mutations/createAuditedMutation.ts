@@ -130,7 +130,7 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
       // Step 2: Validate input with Zod schema (if provided)
       if (config.schema) {
         const key = config.schemaKey || 'data'
-        const dataToValidate = (params as Record<string, unknown>)[key] ?? params
+        const dataToValidate = (params as unknown as Record<string, unknown>)[key] ?? params
         try {
           config.schema.parse(dataToValidate)
         } catch (err) {

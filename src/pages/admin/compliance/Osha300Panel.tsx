@@ -54,9 +54,9 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
           .gte('date' as never, `${year}-01-01`)
           .lte('date' as never, `${year}-12-31T23:59:59Z`)
           .limit(500)
-        return { rows: (r2.data ?? []) as Record<string, unknown>[], error: r2.error, partial: true }
+        return { rows: (r2.data ?? []) as unknown as Record<string, unknown>[], error: r2.error, partial: true }
       }
-      return { rows: (rows ?? []) as Record<string, unknown>[], error, partial: false }
+      return { rows: (rows ?? []) as unknown as Record<string, unknown>[], error, partial: false }
     },
   })
 

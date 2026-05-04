@@ -110,7 +110,7 @@ export async function runRfiOverdueSweep(projectId: string): Promise<WorkflowRes
           assigned_to: assignee,
           due_date: dueDateIso,
           metadata: { source: 'rfi_overdue_sweep', rfi_id: rfi.id },
-        } as Record<string, unknown>)
+        } as unknown as Record<string, unknown>)
         .select('id')
         .single();
 
@@ -214,7 +214,7 @@ export async function runSubmittalRejectedChain(submittalId: string): Promise<Wo
         ball_in_court: suggestedAssignee ?? null,
         drawing_reference: submittal.spec_section ?? null,
         metadata: { source: 'submittal_rejected', submittal_id: submittalId },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -292,7 +292,7 @@ export async function runDailyLogIncidentChain(entryId: string): Promise<Workflo
         description,
         investigation_status: 'open',
         metadata: { source: 'daily_log_incident', daily_log_entry_id: entryId, daily_log_id: entry.daily_log_id },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -376,7 +376,7 @@ export async function runDrawingRevisedChain(
 
     // Idempotency: skip RFIs already flagged for this exact revision drawing.
     const toFlag = (candidateRfis as any[]).filter((rfi) => {
-      const existing = (rfi.metadata as Record<string, unknown> | null) ?? {};
+      const existing = (rfi.metadata as unknown as Record<string, unknown> | null) ?? {};
       const flags = (existing.affected_by_revisions as string[] | undefined) ?? [];
       return !flags.includes(newDrawingId);
     });
@@ -389,7 +389,7 @@ export async function runDrawingRevisedChain(
     // a jsonb array" in a bulk update without raw SQL, and the volume is low.
     const flagged: string[] = [];
     for (const rfi of toFlag) {
-      const existingMeta = (rfi.metadata as Record<string, unknown> | null) ?? {};
+      const existingMeta = (rfi.metadata as unknown as Record<string, unknown> | null) ?? {};
       const existingFlags = (existingMeta.affected_by_revisions as string[] | undefined) ?? [];
       const newMeta = {
         ...existingMeta,
@@ -515,7 +515,7 @@ export async function runScheduleSlipChain(
           new_end_date: newEndDate,
           days_added: daysAdded,
         },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -612,7 +612,7 @@ export async function runDiscrepancyDetectedChain(
         is_auto_generated: true,
         source_discrepancy_id: discrepancyId,
         metadata: { source: 'discrepancy_detected', discrepancy_id: discrepancyId },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -711,7 +711,7 @@ export async function runDailyLogDelayChain(entryId: string): Promise<WorkflowRe
           suggested_shift_days: suggestedDays,
           affected_task_ids: taskList.map((t) => t.id),
         },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -778,7 +778,7 @@ export async function runMeetingActionItemTaskSweep(
             action_item_id: item.id,
             meeting_id: item.meeting_id,
           },
-        } as Record<string, unknown>)
+        } as unknown as Record<string, unknown>)
         .select('id')
         .single();
 
@@ -882,7 +882,7 @@ export async function runSubmittalApprovedChain(
           buyout_by_date: buyoutByDate,
           delivery_eta: deliveryEta,
         },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -962,7 +962,7 @@ export async function runPunchVerifiedChain(
           area: area.toLowerCase(),
           last_punch_id: punchItemId,
         },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -1038,7 +1038,7 @@ export async function runPermitApprovedChain(
           permit_number: permitNumber,
           expiration_date: expires,
         },
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 
@@ -1133,7 +1133,7 @@ export async function runCrewNoShowChain(input: {
         priority: 'high',
         status: 'open',
         due_date: date,
-      } as Record<string, unknown>)
+      } as unknown as Record<string, unknown>)
       .select('id')
       .single();
 

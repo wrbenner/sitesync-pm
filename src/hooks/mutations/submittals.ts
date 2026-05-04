@@ -94,7 +94,7 @@ export function useUpdateSubmittal() {
       if (typeof updates.status === 'string') {
         await validateSubmittalStatusTransition(id, projectId, updates.status)
       }
-      const cleanUpdates = sanitizeSubmittalData(updates as Record<string, unknown>)
+      const cleanUpdates = sanitizeSubmittalData(updates as unknown as Record<string, unknown>)
       const { error } = await from('submittals').update(cleanUpdates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
 

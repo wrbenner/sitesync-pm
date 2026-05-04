@@ -67,7 +67,7 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
         headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
       if (res.error) throw res.error;
-      return (res.data?.risks ?? []) as ScheduleRisk[];
+      return (res.data?.risks ?? []) as unknown as ScheduleRisk[];
     },
   });
 

@@ -217,9 +217,9 @@ export async function generateDrawingAnalysisReport(
   ])
 
   const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
-  const drawings: DrawingLite[] = (drawingsRes.data ?? []) as DrawingLite[]
-  const classifications: ClassificationLite[] = (classificationsRes.data ?? []) as ClassificationLite[]
-  const pairs: PairLite[] = (pairsRes.data ?? []) as PairLite[]
+  const drawings: DrawingLite[] = (drawingsRes.data ?? []) as unknown as DrawingLite[]
+  const classifications: ClassificationLite[] = (classificationsRes.data ?? []) as unknown as ClassificationLite[]
+  const pairs: PairLite[] = (pairsRes.data ?? []) as unknown as PairLite[]
 
   const classByDrawing = new Map<string, ClassificationLite>()
   for (const c of classifications) {

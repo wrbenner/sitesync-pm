@@ -346,13 +346,13 @@ export const getDailyLogs = async (
       weather: l.weather,
       weather_am: l.weather_am,
       weather_pm: l.weather_pm,
-      weather_source: (l as Record<string, unknown>).weather_source as string | null ?? null,
+      weather_source: (l as unknown as Record<string, unknown>).weather_source as string | null ?? null,
       wind_speed: l.wind_speed,
       workers_onsite: l.workers_onsite,
       is_submitted: l.status === 'submitted' || l.status === 'approved',
       submitted_at: (l.status === 'submitted' || l.status === 'approved') ? l.updated_at : null,
-      submitted_by: (l as Record<string, unknown>).submitted_by as string | null ?? null,
-      amended_from_id: (l as Record<string, unknown>).amended_from_id as string | null ?? null,
+      submitted_by: (l as unknown as Record<string, unknown>).submitted_by as string | null ?? null,
+      amended_from_id: (l as unknown as Record<string, unknown>).amended_from_id as string | null ?? null,
       // version not stored in DB; default to 1
       version: 1,
       // Computed fields

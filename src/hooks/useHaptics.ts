@@ -39,8 +39,8 @@ async function getHaptics() {
   try {
     // Only import on Capacitor native runtime (iOS/Android)
     const isNative =
-      typeof (window as Record<string, unknown>).Capacitor !== 'undefined' &&
-      (window as Record<string, unknown>).Capacitor !== null
+      typeof (window as unknown as Record<string, unknown>).Capacitor !== 'undefined' &&
+      (window as unknown as Record<string, unknown>).Capacitor !== null
 
     if (!isNative) return null
 

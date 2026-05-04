@@ -54,7 +54,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
-      return (data as TokenRow[] | null) ?? [];
+      return (data as unknown as TokenRow[] | null) ?? [];
     },
   });
 

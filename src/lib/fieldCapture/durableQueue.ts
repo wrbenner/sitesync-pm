@@ -163,7 +163,7 @@ export async function listAll(): Promise<QueueItem[]> {
   return new Promise((resolve, reject) => {
     const store = tx(db, 'readonly')
     const req = store.getAll()
-    req.onsuccess = () => resolve((req.result ?? []) as QueueItem[])
+    req.onsuccess = () => resolve((req.result ?? []) as unknown as QueueItem[])
     req.onerror = () => reject(req.error)
   })
 }

@@ -232,7 +232,7 @@ export const equipmentService = {
       return fail(notFoundError('Equipment', equipmentId))
     }
 
-    const projectId = (eq as Record<string, unknown>).project_id as string
+    const projectId = (eq as unknown as Record<string, unknown>).project_id as string
     if (!projectId) {
       return fail(permissionError('Equipment is not associated with any project'))
     }
@@ -243,7 +243,7 @@ export const equipmentService = {
       return fail(permissionError('User is not a member of this project'))
     }
 
-    const currentStatus = (eq as Record<string, unknown>).status as EquipmentStatus ?? 'idle'
+    const currentStatus = (eq as unknown as Record<string, unknown>).status as EquipmentStatus ?? 'idle'
     const validTransitions = getValidEquipmentTransitions(currentStatus, role)
     if (!validTransitions.includes(newStatus)) {
       return fail(
@@ -280,7 +280,7 @@ export const equipmentService = {
     updates: Partial<Omit<Equipment, 'id' | 'created_by' | 'deleted_at' | 'deleted_by'>>,
   ): Promise<Result> {
     const userId = await getCurrentUserId()
-    const safeUpdates = { ...(updates as Record<string, unknown>) }
+    const safeUpdates = { ...(updates as unknown as Record<string, unknown>) }
     delete safeUpdates.status
     safeUpdates.updated_by = userId
 
@@ -327,14 +327,14 @@ export const equipmentService = {
       return fail(notFoundError('Equipment', equipmentId))
     }
 
-    const projectId = (eq as Record<string, unknown>).project_id as string
+    const projectId = (eq as unknown as Record<string, unknown>).project_id as string
     const userId = await getCurrentUserId()
     const role = await resolveProjectRole(input.target_project_id || projectId, userId)
     if (!role) {
       return fail(permissionError('User is not a member of this project'))
     }
 
-    const currentStatus = (eq as Record<string, unknown>).status as EquipmentStatus ?? 'idle'
+    const currentStatus = (eq as unknown as Record<string, unknown>).status as EquipmentStatus ?? 'idle'
     if (currentStatus !== 'idle') {
       return fail(
         validationError(
@@ -375,14 +375,14 @@ export const equipmentService = {
       return fail(notFoundError('Equipment', equipmentId))
     }
 
-    const projectId = (eq as Record<string, unknown>).project_id as string
+    const projectId = (eq as unknown as Record<string, unknown>).project_id as string
     const userId = await getCurrentUserId()
     const role = await resolveProjectRole(projectId, userId)
     if (!role) {
       return fail(permissionError('User is not a member of this project'))
     }
 
-    const currentStatus = (eq as Record<string, unknown>).status as EquipmentStatus ?? 'idle'
+    const currentStatus = (eq as unknown as Record<string, unknown>).status as EquipmentStatus ?? 'idle'
     if (currentStatus !== 'active' && currentStatus !== 'transit') {
       return fail(
         validationError(
@@ -505,7 +505,7 @@ export const equipmentService = {
     if (error) return fail(dbError(error.message, { maintenanceId }))
 
     // Transition equipment back to idle
-    const equipmentId = (maint as Record<string, unknown>).equipment_id as string
+    const equipmentId = (maint as unknown as Record<string, unknown>).equipment_id as string
     const transResult = await equipmentService.transitionStatus(equipmentId, 'idle')
     if (transResult.error) {
       return fail({
@@ -560,7 +560,7 @@ export const equipmentService = {
         .eq('id' as never, input.equipment_id)
         .single()
 
-      const currentHours = ((eq as Record<string, unknown> | null)?.hours_meter as number | null) ?? 0
+      const currentHours = ((eq as unknown as Record<string, unknown> | null)?.hours_meter as number | null) ?? 0
       await fromTable('equipment')
         .update({
           hours_meter: currentHours + input.hours_used,

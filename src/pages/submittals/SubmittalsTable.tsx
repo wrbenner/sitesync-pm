@@ -178,7 +178,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       size: 110,
       cell: (info) => {
         const val = info.getValue() as string;
-        const sub = info.row.original as Record<string, unknown>;
+        const sub = info.row.original as unknown as Record<string, unknown>;
         const number = sub.number ? `SUB-${String(sub.number).padStart(3, '0')}` : null;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -199,7 +199,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       header: 'Title',
       size: 360,
       cell: (info) => {
-        const sub = info.row.original as Record<string, unknown>;
+        const sub = info.row.original as unknown as Record<string, unknown>;
         const wks = sub.lead_time_weeks as number | undefined;
         const showLead = wks != null && wks > 0;
         const leadColor = !wks ? '' : wks > 12 ? TONE_CRITICAL : wks >= 8 ? TONE_RUST : TONE_TRACK;
@@ -245,7 +245,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       cell: (info) => {
         const val = info.getValue() as string | null;
         if (!val) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>;
-        const sub = info.row.original as Record<string, unknown>;
+        const sub = info.row.original as unknown as Record<string, unknown>;
         const remaining = countRemainingApprovers(sub);
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -291,7 +291,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       size: 120,
       cell: (info) => {
         const val = info.getValue() as string | null;
-        const sub = info.row.original as Record<string, unknown>;
+        const sub = info.row.original as unknown as Record<string, unknown>;
         if (!val) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>;
         const overdueNow = isOverdue(val) && sub.status !== 'approved' && sub.status !== 'approved_as_noted';
         const businessDays = calcBusinessDaysRemaining(val);
@@ -332,7 +332,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       header: 'Schedule Risk',
       size: 130,
       cell: (info) => {
-        const sub = info.getValue() as Record<string, unknown>;
+        const sub = info.getValue() as unknown as Record<string, unknown>;
         const days = calcScheduleRiskDays(sub);
         const tone = pickRiskTone(days, sub.status as string | undefined);
         if (!tone) return <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>;
@@ -387,7 +387,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       />
     ),
     cell: (info) => {
-      const id = String((info.row.original as Record<string, unknown>).id);
+      const id = String((info.row.original as unknown as Record<string, unknown>).id);
       return (
         <input
           type="checkbox"
@@ -444,9 +444,9 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
         containerHeight={600}
         onRowClick={onRowClick}
         selectedRowId={null}
-        getRowId={(row) => String((row as Record<string, unknown>).id)}
+        getRowId={(row) => String((row as unknown as Record<string, unknown>).id)}
         getRowStyle={(row) => {
-          const sub = row as Record<string, unknown>;
+          const sub = row as unknown as Record<string, unknown>;
           const dueRaw = (sub.due_date as string) || (sub.dueDate as string);
           if (!dueRaw) return {};
           const status = (sub.status as string) ?? '';
@@ -463,7 +463,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
         loading={loading}
         emptyMessage="No submittals match your filters"
         onRowToggleSelectByIndex={(i) => {
-          const id = String((filteredSubmittals[i] as Record<string, unknown>)?.id);
+          const id = String((filteredSubmittals[i] as unknown as Record<string, unknown>)?.id);
           if (!id) return;
           setSelectedIds((prev) => {
             const next = new Set(prev);
@@ -514,7 +514,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
               const csv = [
                 'Submittal #,Title,Subcontractor,Status,Due Back,Required Onsite,Lead Weeks',
                 ...selected.map((s) => {
-                  const r = s as Record<string, unknown>;
+                  const r = s as unknown as Record<string, unknown>;
                   return [
                     r.number ?? r.id ?? '',
                     `"${String(r.title ?? '')}"`,

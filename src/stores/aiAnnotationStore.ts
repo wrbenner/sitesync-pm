@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase, fromTable } from '../lib/supabase';
+import { supabase} from '../lib/supabase';
 import { AnnotationHistory, type AnnotationShape } from '../components/drawings/AnnotationHistory';
 import type { AnnotationTool } from '../components/drawings/AnnotationCanvas';
 

@@ -16,7 +16,7 @@ export function useCrews(projectId: string | undefined) {
         .select('*')
         .eq('project_id' as never, projectId!)
       if (error) throw error
-      return data as Crew[]
+      return data as unknown as Crew[]
     },
     enabled: !!projectId,
   })

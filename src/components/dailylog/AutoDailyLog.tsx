@@ -7,12 +7,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Cloud, Sun, CloudRain, CloudSnow, _Wind, _Droplets,
+  Cloud, Sun, CloudRain, CloudSnow,
   Users, ShieldCheck, AlertTriangle, Camera,
-  Clock, Check, RefreshCw, Loader2, Send,
-  _ChevronDown, X, _Thermometer,
-  FileText, Wrench, Truck, HardHat, Mic,
-} from 'lucide-react';
+  Clock, Check, RefreshCw, Loader2, Send, X,
+  FileText, Wrench, Truck, HardHat, Mic} from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { dailyLogService } from '../../services/dailyLogService';
 import type { CompiledLog } from '../../services/dailyLogService';
@@ -209,8 +207,8 @@ export function AutoDailyLog({ projectLat, projectLon, projectAddress }: AutoDai
 
   // Expose refresh for external capture components
   useEffect(() => {
-    (window as Record<string, unknown>).__refreshDailyLogEntries = refresh;
-    return () => { delete (window as Record<string, unknown>).__refreshDailyLogEntries; };
+    (window as unknown as Record<string, unknown>).__refreshDailyLogEntries = refresh;
+    return () => { delete (window as unknown as Record<string, unknown>).__refreshDailyLogEntries; };
   }, [refresh]);
 
   // ── Loading skeleton ──

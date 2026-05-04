@@ -822,7 +822,7 @@ const DigitalTwinPage: React.FC = () => {
                 backdropFilter: 'blur(8px)',
               }}
             >
-              {(Object.keys(STATUS_COLORS) as PhaseStatus[]).map((status) => (
+              {(Object.keys(STATUS_COLORS) as unknown as PhaseStatus[]).map((status) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                   <div
                     style={{

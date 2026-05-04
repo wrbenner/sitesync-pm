@@ -34,7 +34,7 @@ export const InboxPage: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(100)
       if (!mounted) return
-      setRows((data as NotificationRow[]) ?? [])
+      setRows((data as unknown as NotificationRow[]) ?? [])
       setLoading(false)
     })()
     return () => {

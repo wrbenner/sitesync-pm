@@ -33,8 +33,8 @@ export function useCreateTask() {
     offlineQueue: {
       table: 'tasks',
       operation: 'insert',
-      getData: (p) => ({ ...(p.data as Record<string, unknown>), project_id: p.projectId }),
-      getStubResult: (p) => ({ data: { ...(p.data as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+      getData: (p) => ({ ...(p.data as unknown as Record<string, unknown>), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...(p.data as unknown as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
     },
   })
 }

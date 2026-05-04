@@ -146,7 +146,7 @@ export const offlineDb = new SiteSyncOfflineDB()
 
 /** Type-safe dynamic table access for Dexie. Returns the Table or null if the name is unknown. */
 function getDexieTable(name: string): Table | null {
-  const db = offlineDb as Record<string, unknown>
+  const db = offlineDb as unknown as Record<string, unknown>
   const table = db[name]
   if (table && typeof table === 'object' && 'toArray' in table) {
     return table as Table
@@ -466,7 +466,7 @@ export async function processSyncQueue(
                 )
                 if (canAutoMerge) {
                   // Non-conflicting changes on both sides: apply merged result silently
-                  const mergedRecord = merged as Record<string, unknown>
+                  const mergedRecord = merged as unknown as Record<string, unknown>
                   const mergedId = mergedRecord.id
                   const mergedUpdates = Object.fromEntries(
                     Object.entries(mergedRecord).filter(([k]) => k !== 'id' && k !== 'updated_at')
@@ -571,7 +571,7 @@ export async function queueFileUpload(fileName: string, bucket: string, path: st
 function classifyUploadError(error: unknown): { permanent: boolean; statusCode: number } {
   // Extract HTTP status from Supabase storage error
   if (error && typeof error === 'object') {
-    const e = error as Record<string, unknown>
+    const e = error as unknown as Record<string, unknown>
     const statusCode = (e.statusCode ?? e.status ?? e.httpStatus ?? 0) as number
 
     if (typeof statusCode === 'number' && PERMANENT_UPLOAD_ERRORS.has(statusCode)) {
@@ -579,7 +579,7 @@ function classifyUploadError(error: unknown): { permanent: boolean; statusCode: 
     }
 
     // Check error message for known permanent failures
-    const msg = String((e as Record<string, unknown>).message ?? '').toLowerCase()
+    const msg = String((e as unknown as Record<string, unknown>).message ?? '').toLowerCase()
     if (msg.includes('payload too large') || msg.includes('entity too large')) {
       return { permanent: true, statusCode: 413 }
     }

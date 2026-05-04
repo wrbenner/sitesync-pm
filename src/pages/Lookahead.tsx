@@ -167,7 +167,7 @@ export const Lookahead: React.FC = () => {
       const newStart = new Date(boardStartDate);
       newStart.setDate(newStart.getDate() + newDayIndex);
       const { error } = await fromTable('tasks')
-        .update({ start_date: newStart.toISOString().slice(0, 10), trade: newCrew } as Record<string, unknown>)
+        .update({ start_date: newStart.toISOString().slice(0, 10), trade: newCrew } as unknown as Record<string, unknown>)
         .eq('id' as never, dbId);
       if (error) {
         addToast('error', 'Failed to save task move');
@@ -207,7 +207,7 @@ export const Lookahead: React.FC = () => {
       // For material/inspection constraints, resolved means the requirement is fulfilled
       // We store a constraint_notes update for other types
       if (field) {
-        await fromTable('tasks').update({ [field]: !resolvedConstraint.resolved } as Record<string, unknown>).eq('id' as never, dbId);
+        await fromTable('tasks').update({ [field]: !resolvedConstraint.resolved } as unknown as Record<string, unknown>).eq('id' as never, dbId);
       }
     }
     addToast('info', 'Constraint updated');
@@ -300,7 +300,7 @@ export const Lookahead: React.FC = () => {
                 entity_type: 'lookahead',
                 user_id: user?.id ?? '',
                 link: '/lookahead',
-              } as Record<string, unknown>);
+              } as unknown as Record<string, unknown>);
               addToast('success', 'Lookahead sent to field team');
             } catch {
               addToast('error', 'Failed to send notification');

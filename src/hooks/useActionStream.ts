@@ -536,26 +536,26 @@ export function useActionStream(role?: StreamRole): ActionStreamResult {
     const now = new Date()
     const assembled: StreamItem[] = []
 
-    const rfis = (rfisQ.data?.data ?? []) as RFIRow[]
+    const rfis = (rfisQ.data?.data ?? []) as unknown as RFIRow[]
     for (const r of rfis) {
       if (RFI_TERMINAL.includes((r.status ?? '').toLowerCase())) continue
       assembled.push(transformRFI(r, now))
     }
 
-    const punchItems = (punchQ.data?.data ?? []) as PunchRow[]
+    const punchItems = (punchQ.data?.data ?? []) as unknown as PunchRow[]
     for (const p of punchItems) {
       if (PUNCH_TERMINAL.includes((p.status ?? '').toLowerCase())) continue
       assembled.push(transformPunch(p, now))
     }
 
-    const submittals = (submittalsQ.data?.data ?? []) as SubmittalRow[]
+    const submittals = (submittalsQ.data?.data ?? []) as unknown as SubmittalRow[]
     for (const s of submittals) {
       const status = (s.status ?? '').toLowerCase()
       if (!SUBMITTAL_INCLUDE.includes(status)) continue
       assembled.push(transformSubmittal(s, now))
     }
 
-    const tasks = (tasksQ.data?.data ?? []) as TaskRow[]
+    const tasks = (tasksQ.data?.data ?? []) as unknown as TaskRow[]
     for (const t of tasks) {
       if (TASK_TERMINAL.includes((t.status ?? '').toLowerCase())) continue
       assembled.push(transformTask(t, now))
@@ -570,7 +570,7 @@ export function useActionStream(role?: StreamRole): ActionStreamResult {
     const logs = (dailyLogsQ.data?.data ?? []) as DailyLogRow[]
     assembled.push(...deriveDailyLogItems(logs, now))
 
-    const schedule = (scheduleQ.data ?? []) as ScheduleRow[]
+    const schedule = (scheduleQ.data ?? []) as unknown as ScheduleRow[]
     for (const a of schedule) {
       const item = transformSchedule(a, now)
       if (item) assembled.push(item)

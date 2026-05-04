@@ -88,7 +88,7 @@ export async function getUserNotificationPreferences(
   }
 
   const prefs: NotificationPreferences = { ...DEFAULT_PREFERENCES }
-  const triggers = Object.keys(DEFAULT_PREFERENCES) as NotificationTrigger[]
+  const triggers = Object.keys(DEFAULT_PREFERENCES) as unknown as NotificationTrigger[]
   for (const trigger of triggers) {
     const val = (data as unknown as Record<string, unknown>)[trigger]
     if (val === 'instant' || val === 'digest' || val === 'off') {

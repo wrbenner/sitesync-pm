@@ -824,7 +824,7 @@ const PhotosPage: React.FC = () => {
   const { addToast } = useToast();
   const { data: capturesData, isLoading, refetch } = useFieldCaptures(projectId);
   const { data: dailyLogsData } = useDailyLogs(projectId);
-  const captures = (capturesData ?? []) as FieldCaptureRow[];
+  const captures = (capturesData ?? []) as unknown as FieldCaptureRow[];
 
   const [filter, setFilter] = useState<FilterChip>('all');
   const [group, setGroup] = useState<GroupMode>('flat');

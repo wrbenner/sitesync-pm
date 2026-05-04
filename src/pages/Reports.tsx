@@ -125,7 +125,7 @@ function useScheduleHealth(projectId: string | undefined): ScheduleHealth {
         console.warn('[Reports] schedule_phases unreadable:', error.message)
         return []
       }
-      return (data ?? []) as SchedulePhaseLite[]
+      return (data ?? []) as unknown as SchedulePhaseLite[]
     },
   })
 
@@ -192,7 +192,7 @@ function useBudgetBurn(projectId: string | undefined): BudgetBurn {
         console.warn('[Reports] budget_items unreadable:', error.message)
         return []
       }
-      return (data ?? []) as BudgetItemLite[]
+      return (data ?? []) as unknown as BudgetItemLite[]
     },
   })
 
@@ -254,7 +254,7 @@ function useSafetyPulse(projectId: string | undefined): SafetyPulse {
         console.warn('[Reports] incidents unreadable:', error.message)
         return { raw: [], fetchedAtMs: Date.now() }
       }
-      return { raw: (data ?? []) as IncidentLite[], fetchedAtMs: Date.now() }
+      return { raw: (data ?? []) as unknown as IncidentLite[], fetchedAtMs: Date.now() }
     },
   })
 

@@ -109,7 +109,7 @@ export const msProjectProvider: IntegrationProvider = {
       .eq('id' as never, integrationId)
       .single()
 
-    const config = (integration?.config ?? {}) as Record<string, unknown>
+    const config = (integration?.config ?? {}) as unknown as Record<string, unknown>
     const projectId = config.projectId as string
 
     if (direction === 'export') {

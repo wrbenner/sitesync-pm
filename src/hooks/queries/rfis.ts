@@ -43,7 +43,7 @@ export function useRFI(id: string | undefined) {
       if (responsesResult.error) throw responsesResult.error
       return {
         ...(rfiResult.data as RFI),
-        responses: responsesResult.data as RFIResponse[],
+        responses: responsesResult.data as unknown as RFIResponse[],
       }
     },
     enabled: !!id,

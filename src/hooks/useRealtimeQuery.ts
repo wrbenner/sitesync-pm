@@ -95,7 +95,7 @@ export function useRealtimeQuery<T>(
 
           // Toast for changes by OTHER users
           if (options.showToasts !== false) {
-            const record = (payload.new || payload.old) as Record<string, unknown> | null
+            const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
             const changedBy = record?.updated_by ?? record?.created_by ?? record?.submitted_by
             if (changedBy && changedBy !== currentUserId) {
               const label = TABLE_LABELS[table] ?? table
@@ -158,7 +158,7 @@ export function useOptimisticLock(
         .eq('id' as never, entityId)
         .single()
       if (error) return null
-      return (data as Record<string, unknown>)?.updated_at as string | null
+      return (data as unknown as Record<string, unknown>)?.updated_at as string | null
     },
     enabled: !!entityId && !!loadedUpdatedAt,
     refetchInterval: 10_000, // Check every 10 seconds while editing

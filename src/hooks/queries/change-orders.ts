@@ -16,7 +16,7 @@ export function useChangeOrders(projectId: string | undefined) {
         .eq('project_id' as never, projectId!)
         .order('number', { ascending: false })
       if (error) throw error
-      return data as ChangeOrder[]
+      return data as unknown as ChangeOrder[]
     },
     enabled: !!projectId,
   })

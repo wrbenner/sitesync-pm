@@ -4,9 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
 
   Save, Users, Building2, MapPin, Calendar, DollarSign,
-  FileText, HardHat, CheckCircle, Settings, _ChevronDown, Shield,
-  UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
-} from 'lucide-react';
+  FileText, HardHat, CheckCircle, Settings, Shield,
+  UserPlus, Mail, Check, X, AlertCircle, RefreshCw} from 'lucide-react';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';

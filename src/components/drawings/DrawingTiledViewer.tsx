@@ -1196,7 +1196,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     if (!dbMarkups || !showAnnotations) return [];
     return dbMarkups
       .map((row: Record<string, unknown>) => {
-        const d = (row.data && typeof row.data === 'object' ? row.data : {}) as Record<string, unknown>;
+        const d = (row.data && typeof row.data === 'object' ? row.data : {}) as unknown as Record<string, unknown>;
         const geometry = (row.normalized_coords as NormalizedGeometry | undefined)
           ?? (d.normalized_coords as NormalizedGeometry | undefined);
         if (!geometry) return null;
@@ -2325,7 +2325,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                     fontFamily: typography.fontFamily,
                   }}
                 >
-                  {(Object.keys(STAMP_CONFIGS) as StampType[]).map((key) => (
+                  {(Object.keys(STAMP_CONFIGS) as unknown as StampType[]).map((key) => (
                     <option key={key} value={key}>{STAMP_CONFIGS[key].label}</option>
                   ))}
                 </select>

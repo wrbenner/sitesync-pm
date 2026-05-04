@@ -99,7 +99,7 @@ export function useCreatePurchaseOrder() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['purchase_orders', (vars.po as Record<string, unknown>).project_id] })
+      qc.invalidateQueries({ queryKey: ['purchase_orders', (vars.po as unknown as Record<string, unknown>).project_id] })
     },
   })
 }

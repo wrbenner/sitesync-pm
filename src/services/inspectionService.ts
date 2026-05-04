@@ -136,7 +136,7 @@ export const inspectionService = {
    */
   async updateInspection(inspectionId: string, updates: Partial<Inspection>): Promise<Result> {
     const userId = await getCurrentUserId();
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
     safeUpdates.updated_by = userId;
 
     const { error } = await fromTable('inspections')

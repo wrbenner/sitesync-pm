@@ -120,7 +120,7 @@ export function useApplyTaskTemplate() {
         .single()
       if (templateError) throw templateError
 
-      const tmpl = template as Record<string, unknown>
+      const tmpl = template as unknown as Record<string, unknown>
       const taskData = (Array.isArray(tmpl.task_data) ? tmpl.task_data : []) as Array<Record<string, unknown>>
 
       // ATOMIC: Batch insert all tasks in a single operation

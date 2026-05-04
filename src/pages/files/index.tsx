@@ -143,14 +143,14 @@ const FilesPage: React.FC = () => {
   const metrics = useMemo(() => {
     const all = rawFiles || [];
     const totalFiles = all.length;
-    const drawings = all.filter((f: unknown) => (f as Record<string, unknown>).category === 'drawing' || ((f as Record<string, unknown>).file_type && String((f as Record<string, unknown>).file_type).includes('pdf'))).length;
+    const drawings = all.filter((f: unknown) => (f as unknown as Record<string, unknown>).category === 'drawing' || ((f as unknown as Record<string, unknown>).file_type && String((f as unknown as Record<string, unknown>).file_type).includes('pdf'))).length;
     const weekAgo = nowMs - 7 * 86400000;
     const recentUploads = all.filter((f: unknown) => {
-      const rf = f as Record<string, unknown>;
+      const rf = f as unknown as Record<string, unknown>;
       const ts = rf.uploaded_at || rf.created_at;
       return ts && new Date(ts as string).getTime() > weekAgo;
     }).length;
-    const totalBytes = all.reduce((sum: number, f: unknown) => sum + ((f as Record<string, unknown>).file_size_bytes as number || 0), 0);
+    const totalBytes = all.reduce((sum: number, f: unknown) => sum + ((f as unknown as Record<string, unknown>).file_size_bytes as number || 0), 0);
     return { totalFiles, drawings, recentUploads, totalBytes };
   }, [rawFiles, nowMs]);
 

@@ -14,9 +14,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Upload, FileText, X, Plus, _ChevronDown, _Calendar, _Clock,
-  Send, _Paperclip, Image, File, Sparkles, _ArrowRight, _Check
-} from 'lucide-react'
+  Upload, FileText, X, Plus,
+  Send, Image, File, Sparkles} from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
 import { useRealtimeDirectoryContacts } from '../../hooks/queries/realtime'

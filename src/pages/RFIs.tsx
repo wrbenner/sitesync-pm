@@ -1247,7 +1247,7 @@ const RFIsPage: React.FC = () => {
                         display: '-webkit-box', WebkitLineClamp: 3,
                         WebkitBoxOrient: 'vertical', overflow: 'hidden',
                       } as React.CSSProperties}>
-                        {response.content ?? (response as Record<string, unknown>).response_text as string ?? ''}
+                        {response.content ?? (response as unknown as Record<string, unknown>).response_text as string ?? ''}
                       </p>
                     </div>
                   ))}

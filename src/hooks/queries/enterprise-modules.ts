@@ -95,7 +95,7 @@ export function useCreateTransmittal() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['transmittals', (vars as Record<string, unknown>).project_id] })
+      qc.invalidateQueries({ queryKey: ['transmittals', (vars as unknown as Record<string, unknown>).project_id] })
     },
   })
 }
@@ -126,7 +126,7 @@ export function useCreateCloseoutItem() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['closeout_items', (vars as Record<string, unknown>).project_id] })
+      qc.invalidateQueries({ queryKey: ['closeout_items', (vars as unknown as Record<string, unknown>).project_id] })
     },
   })
 }
@@ -208,7 +208,7 @@ export function useCreatePreTaskPlan() {
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['pre_task_plans', (vars as Record<string, unknown>).project_id] })
+      qc.invalidateQueries({ queryKey: ['pre_task_plans', (vars as unknown as Record<string, unknown>).project_id] })
     },
   })
 }

@@ -694,7 +694,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     if (fc && createAnnotationMutate) {
       setIsSaving(true);
       try {
-        const objects = fc.toJSON().objects as Record<string, unknown>[];
+        const objects = fc.toJSON().objects as unknown as Record<string, unknown>[];
         for (const obj of objects) {
           createAnnotationMutate(obj);
         }

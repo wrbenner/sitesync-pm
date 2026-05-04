@@ -51,7 +51,7 @@ export const LienRightsPanel: React.FC<{ projectId: string | undefined }> = ({ p
       return {
         project: proj.data,
         contracts: contracts.data ?? [],
-        rules: (rules.data ?? []) as StateLienRule[],
+        rules: (rules.data ?? []) as unknown as StateLienRule[],
         errors: [proj.error, contracts.error, rules.error].filter(Boolean),
       }
     },

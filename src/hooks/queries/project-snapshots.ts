@@ -16,7 +16,7 @@ export function useProjectSnapshots(projectId: string | undefined) {
         .eq('project_id' as never, projectId!)
         .order('snapshot_date', { ascending: false })
       if (error) throw error
-      return data as ProjectSnapshot[]
+      return data as unknown as ProjectSnapshot[]
     },
     enabled: !!projectId,
   })
@@ -36,7 +36,7 @@ export function useWeeklyDigests(projectId: string | undefined) {
         .order('snapshot_date', { ascending: false })
         .limit(12)
       if (error) throw error
-      return (data || []) as ProjectSnapshot[]
+      return (data || []) as unknown as ProjectSnapshot[]
     },
     enabled: !!projectId,
   })

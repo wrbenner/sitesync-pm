@@ -263,9 +263,9 @@ export async function generateScaleAuditReport(
   const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
   const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
 
-  const pairs: PairWithClassifications[] = (pairsRes.data ?? []) as PairWithClassifications[]
-  const drawings: DrawingForScale[] = (drawingsRes.data ?? []) as DrawingForScale[]
-  const classifications: ClassificationForScale[] = (classificationsRes.data ?? []) as ClassificationForScale[]
+  const pairs: PairWithClassifications[] = (pairsRes.data ?? []) as unknown as PairWithClassifications[]
+  const drawings: DrawingForScale[] = (drawingsRes.data ?? []) as unknown as DrawingForScale[]
+  const classifications: ClassificationForScale[] = (classificationsRes.data ?? []) as unknown as ClassificationForScale[]
 
   const drawingById = new Map(drawings.map((d) => [d.id, d]))
   const classByDrawing = new Map<string, ClassificationForScale>()

@@ -30,7 +30,7 @@ export const JobProgressView: React.FC = () => {
         .order('started_at', { ascending: false })
         .limit(20);
       if (cancelled) return;
-      if (!error && data) setJobs(data as ImportJobRow[]);
+      if (!error && data) setJobs(data as unknown as ImportJobRow[]);
       setLoading(false);
     }
     load();

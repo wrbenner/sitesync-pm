@@ -210,7 +210,7 @@ const NotificationSettings: React.FC = () => {
         .maybeSingle();
 
       if (!error && data) {
-        const row = data as Record<string, unknown>;
+        const row = data as unknown as Record<string, unknown>;
         const updated: Record<string, PreferenceValue> = { ...DEFAULT_PREFERENCES };
         for (const trigger of TRIGGER_CONFIG) {
           const val = row[trigger.key];

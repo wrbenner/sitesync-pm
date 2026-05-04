@@ -20,7 +20,7 @@ import { fromTable } from '../lib/db/queries'
  *     non-trivial and don't fit the entityStore CRUD pattern.
  */
 import { create } from 'zustand';
-import { supabase, fromTable } from '../lib/supabase';
+import { supabase} from '../lib/supabase';
 
 export interface PunchComment {
   id: string;

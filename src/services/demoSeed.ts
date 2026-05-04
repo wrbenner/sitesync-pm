@@ -100,7 +100,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
         // we don't overwrite real data on tables where the column may differ.
         ...('jurisdiction' in DEMO_BUNDLE.project ? { jurisdiction: (DEMO_BUNDLE.project as { jurisdiction: string }).jurisdiction } : {}),
         is_demo: true,
-      } as Record<string, unknown>,
+      } as unknown as Record<string, unknown>,
       { onConflict: 'id' },
     )
 

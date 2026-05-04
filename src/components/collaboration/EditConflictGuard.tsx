@@ -2,7 +2,7 @@ import { fromTable } from '../../lib/db/queries'
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Lock, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { supabase, fromTable } from '../../lib/supabase';
+import { supabase} from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
 import { usePresenceStore } from '../../stores/presenceStore';
 import { useShallow } from 'zustand/react/shallow';

@@ -119,7 +119,7 @@ const SetPage: React.FC = () => {
   // ── Data ────────────────────────────────────────────────
   const { data: drawingData, isPending: drawingsLoading } = useDrawings(projectId);
   const drawings = useMemo(
-    () => (drawingData?.data ?? []) as Drawing[],
+    () => (drawingData?.data ?? []) as unknown as Drawing[],
     [drawingData],
   );
 

@@ -18,9 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Camera, MapPin, Wrench, Clock, Calendar,
   CheckCircle2, XCircle, Play, Eye, AlertTriangle,
-  User, _MessageSquare, Shield, Send, Pencil, ChevronLeft,
-
-} from 'lucide-react'
+  User, Shield, Send, Pencil, ChevronLeft} from 'lucide-react'
 import { colors, typography, shadows } from '../../styles/theme'
 
 import { usePunchItems } from '../../hooks/queries'
@@ -563,7 +561,7 @@ const PunchItemDetailPage: React.FC = () => {
   const item: PunchItem | null = useMemo(() => {
     const raw = punchListRaw.find((p: Record<string, unknown>) =>
       String(p.id) === itemId || String(p.number) === itemId
-    ) as Record<string, unknown> | undefined
+    ) as unknown as Record<string, unknown> | undefined
     if (!raw) return null
     const photos = Array.isArray(raw.photos) ? raw.photos : []
     return {

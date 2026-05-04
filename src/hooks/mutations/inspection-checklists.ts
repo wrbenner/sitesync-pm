@@ -54,7 +54,7 @@ export function useCreateChecklistFromTemplate() {
       if (iErr) throw iErr
 
       // 3. Create new checklist from template
-      const t = template as Record<string, unknown>
+      const t = template as unknown as Record<string, unknown>
       const { data: newChecklist, error: cErr } = await from('inspection_checklists')
         .insert({
           project_id: params.projectId,
@@ -72,9 +72,9 @@ export function useCreateChecklistFromTemplate() {
       if (cErr) throw cErr
 
       // 4. Copy items
-      const nc = newChecklist as Record<string, unknown>
+      const nc = newChecklist as unknown as Record<string, unknown>
       if (templateItems && (templateItems as unknown[]).length > 0) {
-        const items = (templateItems as Record<string, unknown>[]).map((item) => ({
+        const items = (templateItems as unknown as Record<string, unknown>[]).map((item) => ({
           checklist_id: nc.id,
           sort_order: item.sort_order,
           task_type: item.task_type,

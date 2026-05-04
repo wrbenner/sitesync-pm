@@ -70,8 +70,8 @@ export function useTimesheetHoursByActivity(projectId: string | undefined) {
 
       const map = new Map<string, { hours: number; entries: number }>()
       for (const row of data ?? []) {
-        const key = ((row as Record<string, unknown>).activity as string) || '(unassigned)'
-        const hrs = Number((row as Record<string, unknown>).hours ?? 0)
+        const key = ((row as unknown as Record<string, unknown>).activity as string) || '(unassigned)'
+        const hrs = Number((row as unknown as Record<string, unknown>).hours ?? 0)
         const curr = map.get(key) ?? { hours: 0, entries: 0 }
         curr.hours += hrs
         curr.entries += 1

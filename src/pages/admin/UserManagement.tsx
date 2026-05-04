@@ -4,10 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
 
   UserPlus, Mail, Search, Check, Shield, Users,
-  X, _Copy, _Clock, AlertCircle, _MoreHorizontal,
-} from 'lucide-react';
+  X, AlertCircle} from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { supabase, fromTable } from '../../lib/supabase';
+import { supabase} from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import type { Profile } from '../../types/database';
 
@@ -79,7 +78,7 @@ export function UserManagement() {
       .select('*')
       .eq('organization_id', company.id)
       .order('created_at');
-    if (data) setMembers(data as Profile[]);
+    if (data) setMembers(data as unknown as Profile[]);
     setLoading(false);
   };
 

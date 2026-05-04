@@ -94,10 +94,10 @@ const FieldPage: React.FC = () => {
   const { data: fieldCaptures, isPending: capturesLoading } = useFieldCaptures(projectId);
   const { data: incidents, isPending: incidentsLoading } = useIncidents(projectId);
 
-  const dailyLogs = useMemo(() => (dailyLogData?.data ?? []) as Record<string, unknown>[], [dailyLogData]);
-  const punchItems = useMemo(() => (punchData?.data ?? []) as Record<string, unknown>[], [punchData]);
-  const photos = useMemo(() => (fieldCaptures ?? []) as Record<string, unknown>[], [fieldCaptures]);
-  const safetyIncidents = useMemo(() => (incidents ?? []) as Record<string, unknown>[], [incidents]);
+  const dailyLogs = useMemo(() => (dailyLogData?.data ?? []) as unknown as Record<string, unknown>[], [dailyLogData]);
+  const punchItems = useMemo(() => (punchData?.data ?? []) as unknown as Record<string, unknown>[], [punchData]);
+  const photos = useMemo(() => (fieldCaptures ?? []) as unknown as Record<string, unknown>[], [fieldCaptures]);
+  const safetyIncidents = useMemo(() => (incidents ?? []) as unknown as Record<string, unknown>[], [incidents]);
 
   // ── Build unified stream ────────────────────────────────
   const streamEntries = useMemo<StreamEntry[]>(() => {

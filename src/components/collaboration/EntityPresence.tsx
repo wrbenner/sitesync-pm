@@ -133,7 +133,7 @@ export const PresenceDots: React.FC<PresenceDotsProps> = ({ entityId, maxVisible
               e.preventDefault()
               const items = overflowContainerRef.current?.querySelectorAll('[role="menuitem"]')
               if (!items || items.length === 0) return
-              const itemsArray = Array.from(items) as HTMLElement[]
+              const itemsArray = Array.from(items) as unknown as HTMLElement[]
               const currentIdx = itemsArray.findIndex((el) => el === document.activeElement)
               if (e.key === 'ArrowDown') {
                 const nextIdx = currentIdx === itemsArray.length - 1 ? 0 : currentIdx + 1

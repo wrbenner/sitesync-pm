@@ -114,7 +114,7 @@ export const projectMemberService = {
         lifecycleState: getMemberLifecycleState({
           invited_at: row.invited_at,
           accepted_at: row.accepted_at,
-          permissions: row.permissions as Record<string, unknown> | null,
+          permissions: row.permissions as unknown as Record<string, unknown> | null,
         }),
       }))
       .filter((m) => m.lifecycleState !== 'removed');
@@ -300,7 +300,7 @@ export const projectMemberService = {
     const currentState = getMemberLifecycleState({
       invited_at: row.invited_at,
       accepted_at: row.accepted_at,
-      permissions: row.permissions as Record<string, unknown> | null,
+      permissions: row.permissions as unknown as Record<string, unknown> | null,
     });
 
     if (currentState !== 'invited') {
@@ -363,7 +363,7 @@ export const projectMemberService = {
     const currentState = getMemberLifecycleState({
       invited_at: row.invited_at,
       accepted_at: row.accepted_at,
-      permissions: row.permissions as Record<string, unknown> | null,
+      permissions: row.permissions as unknown as Record<string, unknown> | null,
     });
 
     if (currentState === 'removed') {
@@ -371,7 +371,7 @@ export const projectMemberService = {
     }
 
     const updatedPermissions = {
-      ...(row.permissions as Record<string, unknown> | null ?? {}),
+      ...(row.permissions as unknown as Record<string, unknown> | null ?? {}),
       ...getDefaultPermissions(newRole),
     };
 
@@ -411,7 +411,7 @@ export const projectMemberService = {
     const currentState = getMemberLifecycleState({
       invited_at: row.invited_at,
       accepted_at: row.accepted_at,
-      permissions: row.permissions as Record<string, unknown> | null,
+      permissions: row.permissions as unknown as Record<string, unknown> | null,
     });
 
     const validTransitions = getValidMemberTransitions(currentState, callerRole);
@@ -424,7 +424,7 @@ export const projectMemberService = {
       );
     }
 
-    const existingPermissions = (row.permissions as Record<string, unknown> | null) ?? {};
+    const existingPermissions = (row.permissions as unknown as Record<string, unknown> | null) ?? {};
     const updatedPermissions: Record<string, unknown> = { ...existingPermissions };
 
     if (newState === 'active') {
@@ -476,7 +476,7 @@ export const projectMemberService = {
       return fail(permissionError('Only project managers and above can update member details'));
     }
 
-    const { role: _role, ...safeUpdates } = updates as Record<string, unknown>;
+    const { role: _role, ...safeUpdates } = updates as unknown as Record<string, unknown>;
 
     const { error } = await fromTable('project_members')
       .update(safeUpdates as never)
@@ -512,7 +512,7 @@ export const projectMemberService = {
       return fail(permissionError('Only project managers and above can update member permissions'));
     }
 
-    const existing = (row.permissions as Record<string, unknown> | null) ?? {};
+    const existing = (row.permissions as unknown as Record<string, unknown> | null) ?? {};
     const systemKeys: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(existing)) {
       if (k.startsWith('_')) systemKeys[k] = v;
@@ -563,7 +563,7 @@ export const projectMemberService = {
       lifecycleState: getMemberLifecycleState({
         invited_at: row.invited_at,
         accepted_at: row.accepted_at,
-        permissions: row.permissions as Record<string, unknown> | null,
+        permissions: row.permissions as unknown as Record<string, unknown> | null,
       }),
     });
   },

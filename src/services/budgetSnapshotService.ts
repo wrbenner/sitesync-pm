@@ -42,7 +42,7 @@ export const budgetSnapshotService = {
     return (data ?? []).map(row => ({
       ...row,
       division_data: Array.isArray(row.division_data) ? row.division_data : [],
-    })) as BudgetSnapshotRow[]
+    })) as unknown as BudgetSnapshotRow[]
   },
 
   async saveSnapshot(input: CreateSnapshotInput): Promise<BudgetSnapshotRow> {

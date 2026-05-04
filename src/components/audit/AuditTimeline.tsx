@@ -163,8 +163,8 @@ interface ChangeDiffProps {
 }
 
 const ChangeDiff: React.FC<ChangeDiffProps> = ({ fields, before, after }) => {
-  const beforeObj = (before ?? {}) as Record<string, unknown>;
-  const afterObj = (after ?? {}) as Record<string, unknown>;
+  const beforeObj = (before ?? {}) as unknown as Record<string, unknown>;
+  const afterObj = (after ?? {}) as unknown as Record<string, unknown>;
 
   return (
     <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>

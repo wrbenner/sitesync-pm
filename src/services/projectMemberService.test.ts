@@ -727,7 +727,7 @@ describe('projectMemberService.updatePermissions', () => {
     await projectMemberService.updatePermissions('m-1', { 'rfis.create': true })
 
     // System keys must be preserved
-    expect((capturedUpdate as Record<string, unknown> | null)?.['permissions']).toMatchObject({
+    expect((capturedUpdate as unknown as Record<string, unknown> | null)?.['permissions']).toMatchObject({
       _memberStatus: 'suspended',
       _suspendedReason: 'violation',
       'rfis.create': true,

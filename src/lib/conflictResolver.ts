@@ -13,8 +13,8 @@ function deepEqual(a: unknown, b: unknown): boolean {
     return true
   }
   if (Array.isArray(b)) return false
-  const ao = a as Record<string, unknown>
-  const bo = b as Record<string, unknown>
+  const ao = a as unknown as Record<string, unknown>
+  const bo = b as unknown as Record<string, unknown>
   const aKeys = Object.keys(ao)
   if (aKeys.length !== Object.keys(bo).length) return false
   for (const k of aKeys) {

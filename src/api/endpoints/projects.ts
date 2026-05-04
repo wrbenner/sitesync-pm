@@ -89,7 +89,7 @@ export async function getProject(projectId: string): Promise<EnrichedProject> {
       'Project not found.',
     )
   }
-  const proj = data as Record<string, unknown>
+  const proj = data as unknown as Record<string, unknown>
   const targetCompletion = (proj.target_completion as string | null) ?? null
   return {
     ...(data as object),

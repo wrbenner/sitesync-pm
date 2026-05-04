@@ -205,7 +205,7 @@ export const JhaTab: React.FC<{ onNavigateToPTP?: () => void }> = ({ onNavigateT
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const jhaList: Jha[] = (ptps ?? []).map((p: unknown) => mapPreTaskPlanToJha(p as Record<string, unknown>));
+  const jhaList: Jha[] = (ptps ?? []).map((p: unknown) => mapPreTaskPlanToJha(p as unknown as Record<string, unknown>));
 
   if (isLoading) {
     return (
@@ -396,7 +396,7 @@ export const SdsTab: React.FC = () => {
     quantity: '',
   });
 
-  const chemicals: Chemical[] = (materials ?? []).map((m: unknown) => mapMaterialToChemical(m as Record<string, unknown>));
+  const chemicals: Chemical[] = (materials ?? []).map((m: unknown) => mapMaterialToChemical(m as unknown as Record<string, unknown>));
 
   const filtered = chemicals.filter(c =>
     c.productName.toLowerCase().includes(search.toLowerCase()) ||
@@ -637,7 +637,7 @@ export const PermitsTab: React.FC = () => {
     }
   };
 
-  const permitList: WorkPermit[] = (permits ?? []).map((p: unknown) => mapPermitRow(p as Record<string, unknown>));
+  const permitList: WorkPermit[] = (permits ?? []).map((p: unknown) => mapPermitRow(p as unknown as Record<string, unknown>));
   const activeCt = permitList.filter(p => p.status === 'active').length;
 
   if (isLoading) {

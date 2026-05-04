@@ -217,8 +217,8 @@ function stableStringify(value: unknown): string {
   const sorter = (_: string, v: unknown) => {
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       const out: Record<string, unknown> = {};
-      for (const k of Object.keys(v as Record<string, unknown>).sort()) {
-        out[k] = (v as Record<string, unknown>)[k];
+      for (const k of Object.keys(v as unknown as Record<string, unknown>).sort()) {
+        out[k] = (v as unknown as Record<string, unknown>)[k];
       }
       return out;
     }

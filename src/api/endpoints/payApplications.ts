@@ -221,7 +221,7 @@ export const upsertPayApplication = async (
 ): Promise<PayApplication> => {
   validateProjectId(projectId)
   const { id, ...rest } = payload
-  const dbPayload = sanitizePayAppPayload(rest as Record<string, unknown>)
+  const dbPayload = sanitizePayAppPayload(rest as unknown as Record<string, unknown>)
   // Compute contract_sum_to_date if not provided
   const ocs = (dbPayload.original_contract_sum as number) ?? 0
   const nco = (dbPayload.net_change_orders as number) ?? 0

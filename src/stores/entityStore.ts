@@ -222,7 +222,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
     createItem: async (payload: Omit<T, 'id'>) => {
       const { data, error } = await supabase
         .from(key)
-        .insert(payload as Record<string, unknown>)
+        .insert(payload as unknown as Record<string, unknown>)
         .select()
         .single();
 
@@ -248,7 +248,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
     updateItem: async (id: string, updates: Partial<T>) => {
       const { error } = await supabase
         .from(key)
-        .update(updates as Record<string, unknown>)
+        .update(updates as unknown as Record<string, unknown>)
         .eq('id', id);
 
       if (error) return { error: error.message };

@@ -15,7 +15,7 @@ import { useProjectId } from '../hooks/useProjectId';
 import { useFiles } from '../hooks/queries';
 import { useCreateFile, useDeleteFile } from '../hooks/mutations';
 import { useConfirm } from '../components/ConfirmDialog';
-import { supabase, fromTable } from '../lib/supabase';
+import { supabase} from '../lib/supabase';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
 import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
@@ -251,7 +251,7 @@ const FilesPage: React.FC = () => {
             const targetFolderId = pickedIds[0];
             if (targetFolderId) {
               for (const fileId of ids) {
-                await fromTable('files').update({ parent_folder_id: targetFolderId } as Record<string, unknown>).eq('id', fileId);
+                await fromTable('files').update({ parent_folder_id: targetFolderId } as unknown as Record<string, unknown>).eq('id', fileId);
               }
               refetch();
             }

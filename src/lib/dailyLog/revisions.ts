@@ -50,8 +50,8 @@ const TRACKED_FIELDS: Array<keyof DailyLogValueBag> = [
 export function diffRevisions(before: DailyLogValueBag, after: DailyLogValueBag): RevisionEntry[] {
   const out: RevisionEntry[] = []
   for (const field of TRACKED_FIELDS) {
-    const a = (before as Record<string, unknown>)[field] ?? null
-    const b = (after as Record<string, unknown>)[field] ?? null
+    const a = (before as unknown as Record<string, unknown>)[field] ?? null
+    const b = (after as unknown as Record<string, unknown>)[field] ?? null
     if (a !== b) out.push({ field, oldValue: a, newValue: b })
   }
   return out

@@ -21,7 +21,7 @@ export const WikiPanel: React.FC = () => {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState({ title: '', content: '' })
 
-  const list = (data ?? []) as WikiPage[]
+  const list = (data ?? []) as unknown as WikiPage[]
 
   const openCreate = () => {
     setEditId(null)

@@ -86,7 +86,7 @@ export function useProfileNames(userIds: (string | null | undefined)[]) {
         .in('user_id' as never, unique)
       if (error) throw error
       const map: ProfileMap = new Map()
-      for (const row of (data as ProfileSummary[] | null) ?? []) {
+      for (const row of (data as unknown as ProfileSummary[] | null) ?? []) {
         map.set(row.user_id, row)
       }
       // Fill gaps with synthetic-seed names so demo UUIDs don't render

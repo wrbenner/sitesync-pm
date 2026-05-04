@@ -64,7 +64,7 @@ async function batchFetchEntityLabels(
   // Group entity IDs by type, skipping anything already cached
   const grouped: Record<string, string[]> = {}
   for (const item of items) {
-    const meta = (item.metadata ?? {}) as Record<string, unknown>
+    const meta = (item.metadata ?? {}) as unknown as Record<string, unknown>
     const entityType = item.type ?? ''
     const entityId = (meta.entity_id as string) || ''
     if (!entityId || !entityType) continue
@@ -199,7 +199,7 @@ export async function enrichActivityItem(
   projectId: string,
   prefetchedLabels?: Map<string, string>,
 ): Promise<ActivityFeedItem> {
-  const meta = (item.metadata ?? {}) as Record<string, unknown>
+  const meta = (item.metadata ?? {}) as unknown as Record<string, unknown>
   const entityType = item.type ?? ''
   const entityId = (meta.entity_id as string) || ''
   const verb = (meta.action as string) || entityType || 'updated'

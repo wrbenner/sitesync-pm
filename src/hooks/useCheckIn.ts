@@ -85,7 +85,7 @@ export function useHeadcount() {
       const records = (data ?? []) as unknown as Array<Record<string, unknown>>
 
       const checkIns: CheckInRecord[] = records.map((r) => {
-        const member = r.workforce_members as Record<string, unknown> | null
+        const member = r.workforce_members as unknown as Record<string, unknown> | null
         const checkIn = r.check_in_at as string
         const checkOut = r.check_out_at as string | undefined
         const hours = checkOut

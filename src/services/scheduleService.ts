@@ -100,7 +100,7 @@ export const scheduleService = {
       .order('end_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
-    const milestones = (data ?? []).filter((p) => (p as Record<string, unknown>)['is_milestone']);
+    const milestones = (data ?? []).filter((p) => (p as unknown as Record<string, unknown>)['is_milestone']);
     return { data: milestones, error: null };
   },
 
@@ -109,7 +109,7 @@ export const scheduleService = {
    */
   async createPhase(input: CreatePhaseInput): Promise<ScheduleServiceResult<unknown>> {
     const userId = await getCurrentUserId();
-    const extras = input as Record<string, unknown>;
+    const extras = input as unknown as Record<string, unknown>;
     const payload: AugmentedInsert = {
       project_id: input.project_id,
       name: input.name,
@@ -200,7 +200,7 @@ export const scheduleService = {
   ): Promise<ScheduleServiceResult> {
     const userId = await getCurrentUserId();
     const payload = sanitizeSchedulePhaseData({
-      ...(updates as Record<string, unknown>),
+      ...(updates as unknown as Record<string, unknown>),
       updated_at: new Date().toISOString(),
       updated_by: userId,
     });

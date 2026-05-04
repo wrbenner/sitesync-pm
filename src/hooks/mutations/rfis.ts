@@ -47,8 +47,8 @@ export function useCreateRFI() {
     offlineQueue: {
       table: 'rfis',
       operation: 'insert',
-      getData: (p) => ({ ...(p.data as Record<string, unknown>), project_id: p.projectId }),
-      getStubResult: (p) => ({ data: { ...(p.data as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+      getData: (p) => ({ ...(p.data as unknown as Record<string, unknown>), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...(p.data as unknown as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
     },
   })
 }
@@ -78,7 +78,7 @@ export function useUpdateRFI() {
         return {
           ...prev,
           data: (prev?.data ?? []).map((rfi: unknown) => {
-            const r = rfi as Record<string, unknown>
+            const r = rfi as unknown as Record<string, unknown>
             return r.id === p.id ? { ...r, ...p.updates } : r
           }),
         }

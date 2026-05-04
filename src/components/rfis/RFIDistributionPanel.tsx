@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Send, Mail, Eye, Clock, CheckCircle, _Users, Plus, X,
-  Bell, _ExternalLink, Copy, Check
+  Send, Mail, Eye, Clock, CheckCircle, Plus, X,
+  Bell, Copy, Check
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
