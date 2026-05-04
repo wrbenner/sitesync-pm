@@ -137,7 +137,7 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const firstFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null)
 
   // Load draft on open
@@ -369,7 +369,7 @@ interface FieldRendererProps {
   disabled?: boolean
 }
 
-const FieldRenderer: React.FC<FieldRendererProps> = ({ field, value, error, onChange, inputRef, disabled }) => {
+const FieldRenderer: React.FC<FieldRendererProps> = ({ field, value, error, onChange, disabled }) => {
   const stringValue = String(value ?? '')
 
   if (field.type === 'checkbox') {
@@ -406,7 +406,6 @@ const FieldRenderer: React.FC<FieldRendererProps> = ({ field, value, error, onCh
             fontSize: typography.fontSize.body, color: colors.textTertiary,
           }}>$</span>
           <FormInput
-            ref={inputRef as React.Ref<HTMLInputElement>}
             type="number"
             value={stringValue}
             onChange={(e) => onChange(field.name, e.target.value)}
@@ -426,7 +425,6 @@ const FieldRenderer: React.FC<FieldRendererProps> = ({ field, value, error, onCh
     return (
       <FormField label={field.label} required={field.required} error={error}>
         <FormTextarea
-          ref={inputRef as React.Ref<HTMLTextAreaElement>}
           value={stringValue}
           onChange={(e) => onChange(field.name, e.target.value)}
           placeholder={field.placeholder}
@@ -441,7 +439,6 @@ const FieldRenderer: React.FC<FieldRendererProps> = ({ field, value, error, onCh
     return (
       <FormField label={field.label} required={field.required} error={error}>
         <FormSelect
-          ref={inputRef as React.Ref<HTMLSelectElement>}
           value={stringValue}
           onChange={(e) => onChange(field.name, e.target.value)}
           disabled={disabled}
@@ -458,7 +455,6 @@ const FieldRenderer: React.FC<FieldRendererProps> = ({ field, value, error, onCh
   return (
     <FormField label={field.label} required={field.required} error={error}>
       <FormInput
-        ref={inputRef as React.Ref<HTMLInputElement>}
         type={field.type}
         value={stringValue}
         onChange={(e) => onChange(field.name, e.target.value)}

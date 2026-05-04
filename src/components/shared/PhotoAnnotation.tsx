@@ -268,7 +268,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
   const saveHistory = useCallback(() => {
     const canvas = fabricRef.current
     if (!canvas || isRestoringRef.current) return
-    const json = JSON.stringify(canvas.toJSON([...CUSTOM_PROPS]))
+    const json = JSON.stringify((canvas.toJSON as (props?: string[]) => unknown)([...CUSTOM_PROPS]))
     const idx = historyIndexRef.current
     // Trim future history if we've undone
     historyRef.current = historyRef.current.slice(0, idx + 1)
@@ -422,12 +422,13 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
       if (annotations?.length) {
         annotations.forEach((ann) => {
           FabricObject.fromObject(ann.data).then((obj) => {
-            tagObject(obj, ann.type, ann.color, ann.id)
+            const o = obj as never as import('fabric').FabricObject & { selectable: boolean; evented: boolean }
+            tagObject(o, ann.type, ann.color, ann.id)
             if (readOnly) {
-              obj.selectable = false
-              obj.evented = false
+              o.selectable = false
+              o.evented = false
             }
-            canvas.add(obj)
+            canvas.add(o)
             canvas.renderAll()
           }).catch(() => {
             // Skip malformed annotations silently
