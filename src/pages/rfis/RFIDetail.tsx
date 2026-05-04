@@ -22,6 +22,7 @@ import {
   Copy, ExternalLink, Share2
 } from 'lucide-react'
 import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -604,6 +605,13 @@ export function RFIDetail() {
   const transitions = getValidTransitions(currentStatus, 'admin')
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
+  const RFI_WORKFLOW_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
+  const RFI_WORKFLOW_LABELS: Record<RFIState, string> = {
+    draft: 'Draft', open: 'Open', under_review: 'Under Review',
+    answered: 'Answered', closed: 'Closed', void: 'Void',
+  }
+  const workflowCompletedStates = RFI_WORKFLOW_STATES.slice(0, RFI_WORKFLOW_STATES.indexOf(currentStatus))
+
   const newResponseCount = useMemo(() => {
     if (!lastViewed || responses.length === 0) return 0
     return responses.filter(r => r.created_at && r.created_at > lastViewed).length
@@ -707,6 +715,16 @@ export function RFIDetail() {
         >
           <ArrowLeft size={14} /> Back to RFIs
         </button>
+
+        {/* ── Workflow Timeline ───────────────────────────── */}
+        <div style={{ marginBottom: '20px' }}>
+          <WorkflowTimeline
+            states={RFI_WORKFLOW_STATES}
+            currentState={currentStatus}
+            completedStates={workflowCompletedStates}
+            labels={RFI_WORKFLOW_LABELS}
+          />
+        </div>
 
         {/* ── Header ─────────────────────────────────────── */}
         <div style={{ marginBottom: '20px' }}>
