@@ -20,7 +20,7 @@ import {
 } from '../hooks/mutations/directory';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { supabase } from '../lib/supabase';
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRows } from '../lib/db/queries'
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { DirectoryContact } from '../types/database';
@@ -238,20 +238,6 @@ function isPrequalExpired(lastUpdated: string): boolean {
 // TODO: Wire to Supabase tables: 'prequalifications', 'communication_logs'
 // These tables need to be created. For now, using local state with empty defaults.
 
-const DEFAULT_PREQUAL: PrequalInfo = {
-  status: 'not_started',
-  bondingCapacity: '',
-  insuranceLimits: '',
-  emrRate: 0,
-  yearsInBusiness: 0,
-  licenseNumbers: '',
-  lastUpdated: '',
-};
-
-function _getDefaultPrequal(): PrequalInfo {
-  return { ...DEFAULT_PREQUAL };
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const PrequalDetailPanel: React.FC<{ companyContactId: string; projectId?: string; onStatusChange?: (s: PrequalStatus) => void }> = ({ companyContactId, projectId, onStatusChange }) => {
@@ -344,8 +330,16 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
       .eq('project_id' as never, projectId)
       .eq('company' as never, companyName)
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          setRecords(data.map(r => ({
+        const rows = asRows<{
+          policy_type: string | null
+          carrier: string | null
+          policy_number: string | null
+          coverage_amount: number | null
+          expiration_date: string | null
+          additional_insured: boolean | null
+        }>(data)
+        if (rows.length > 0) {
+          setRecords(rows.map(r => ({
             type: (r.policy_type || 'GL') as COIRecord['type'],
             carrier: r.carrier || '',
             policyNumber: r.policy_number || '',
