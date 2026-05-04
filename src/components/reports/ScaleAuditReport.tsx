@@ -260,8 +260,9 @@ export async function generateScaleAuditReport(
     fromTable('drawing_classifications').select('drawing_id, scale_text, scale_ratio').eq('project_id' as never, projectId),
   ])
 
-  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
-  const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
+  const projectRow = projectRes.data as unknown as { name: string | null; location: string | null } | null
+  const projectName = projectRow?.name ?? 'Project'
+  const projectAddress = projectRow?.location ?? undefined
 
   const pairs: PairWithClassifications[] = (pairsRes.data ?? []) as unknown as PairWithClassifications[]
   const drawings: DrawingForScale[] = (drawingsRes.data ?? []) as unknown as DrawingForScale[]

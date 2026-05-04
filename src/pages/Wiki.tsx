@@ -253,7 +253,7 @@ const Wiki: React.FC = () => {
       setNewTitle('')
       setNewTemplate('')
       setNewParent(null)
-      setSelectedId((created as { id: string }).id)
+      setSelectedId((created as unknown as { id: string }).id)
     } catch (e) {
       toast.error('Failed to create page')
       console.error(e)
@@ -300,7 +300,7 @@ const Wiki: React.FC = () => {
         updated_by: user.id,
       })
       toast.success('Summary page created')
-      setSelectedId((created as { id: string }).id)
+      setSelectedId((created as unknown as { id: string }).id)
     } catch (e) {
       toast.error('Failed to generate summary')
       console.error(e)

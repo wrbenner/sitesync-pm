@@ -83,7 +83,7 @@ export function useDiscrepanciesForDrawing(
         .or(`arch_drawing_id.eq.${drawingId!},struct_drawing_id.eq.${drawingId!}`)
         .eq('project_id' as never, projectId!)
       if (pairErr) throw pairErr
-      const pairIds = (pairs ?? []).map((p: { id: string }) => p.id)
+      const pairIds = ((pairs ?? []) as unknown as Array<{ id: string }>).map((p) => p.id)
       if (pairIds.length === 0) return []
       const { data, error } = await fromTable('drawing_discrepancies')
         .select('*')
@@ -143,8 +143,9 @@ async function getDrawingFileUrls(pairId: string, supabaseClient = supabase) {
     .single()
   if (error) throw error
   type DrawingRef = { file_url: string | null } | { file_url: string | null }[] | null
-  const archRef = data?.arch as DrawingRef
-  const structRef = data?.struct as DrawingRef
+  const row = data as unknown as { arch: DrawingRef; struct: DrawingRef } | null
+  const archRef = row?.arch ?? null
+  const structRef = row?.struct ?? null
   const archRow = Array.isArray(archRef) ? archRef[0] : archRef
   const structRow = Array.isArray(structRef) ? structRef[0] : structRef
   return {

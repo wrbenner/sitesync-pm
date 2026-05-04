@@ -60,7 +60,7 @@ export function useDailyLogs(projectId: string) {
         .order('log_date', { ascending: false })
 
       if (queryError) throw queryError
-      setData((rows ?? []).map(mapRow))
+      setData(((rows ?? []) as unknown as Parameters<typeof mapRow>[0][]).map(mapRow))
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -118,10 +118,11 @@ export function useDailyLogs(projectId: string) {
         created_by: user?.id ?? null,
       }
       const { data: rows, error: insertError } = await fromTable('daily_logs')
-        .insert([insert])
+        .insert([insert] as never)
         .select()
       if (insertError) throw insertError
-      return rows?.[0] ? mapRow(rows[0]) : null
+      const typed = (rows ?? []) as unknown as Parameters<typeof mapRow>[0][]
+      return typed[0] ? mapRow(typed[0]) : null
     },
     [projectId],
   )
@@ -133,7 +134,8 @@ export function useDailyLogs(projectId: string) {
         .eq('id' as never, id)
         .select()
       if (updateError) throw updateError
-      return rows?.[0] ? mapRow(rows[0]) : null
+      const typed = (rows ?? []) as unknown as Parameters<typeof mapRow>[0][]
+      return typed[0] ? mapRow(typed[0]) : null
     },
     [],
   )

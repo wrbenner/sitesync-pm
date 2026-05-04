@@ -64,12 +64,12 @@ export function useVendors(projectId: string | undefined) {
       ])
       if (scoped.error) throw scoped.error
       if (globals.error) throw globals.error
-      const combined = [...(scoped.data ?? []), ...(globals.data ?? [])]
+      const combined = [...(scoped.data ?? []), ...(globals.data ?? [])] as unknown as Array<{ company_name: string | null }>
       // Stable sort by company_name across the merged set.
       combined.sort((a, b) =>
-        ((a.company_name as string) ?? '').localeCompare((b.company_name as string) ?? '')
+        (a.company_name ?? '').localeCompare(b.company_name ?? '')
       )
-      return combined as Vendor[]
+      return combined as unknown as Vendor[]
     },
     enabled: valid,
   })
@@ -105,7 +105,7 @@ export function useUpdateVendor() {
     getAfterState: (p) => p.updates as unknown as Record<string, unknown>,
     mutationFn: async (params) => {
       const { data, error } = await fromTable('vendors')
-        .update(params.updates)
+        .update(params.updates as never)
         .eq('id' as never, params.id)
         .select()
         .single()

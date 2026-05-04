@@ -50,7 +50,7 @@ export function usePOLineItems(projectId: string | undefined) {
       const { data: poData, error: poError } = await fromTable('purchase_orders').select('id').eq('project_id' as never, projectId!)
       if (poError) throw poError
       if (!poData || poData.length === 0) return []
-      const poIds = poData.map(po => po.id)
+      const poIds = (poData as unknown as Array<{ id: string }>).map(po => po.id)
       const { data, error } = await fromTable('po_line_items').select('*').in('purchase_order_id' as never, poIds).order('sort_order', { ascending: true })
       if (error) throw error
       return data
@@ -89,10 +89,11 @@ export function useCreatePurchaseOrder() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { po: Record<string, unknown>; lineItems: Array<Record<string, unknown>> }) => {
-      const { data, error } = await fromTable('purchase_orders').insert(payload.po).select().single()
+      const { data, error } = await fromTable('purchase_orders').insert(payload.po as never).select().single()
       if (error) throw error
+      const inserted = data as unknown as { id: string }
       if (payload.lineItems.length > 0) {
-        const items = payload.lineItems.map((li, i) => ({ ...li, purchase_order_id: data.id, sort_order: i }))
+        const items = payload.lineItems.map((li, i) => ({ ...li, purchase_order_id: inserted.id, sort_order: i }))
         const { error: liError } = await fromTable('po_line_items').insert(items as never)
         if (liError) throw liError
       }

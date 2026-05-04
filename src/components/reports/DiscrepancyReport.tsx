@@ -219,14 +219,14 @@ const TableOfContentsPage: React.FC<{ items: DiscrepancyItem[] }> = ({ items }) 
     <View
       fixed
       style={styles.pageFooter}
-      render={({ pageNumber, totalPages }) => (
+      render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
         <>
           <Text>SiteSync PM</Text>
           <Text>
             Page {pageNumber} of {totalPages}
           </Text>
         </>
-      )}
+      )) as never}
     />
   </Page>
 )
@@ -263,14 +263,14 @@ const SummaryStatsPage: React.FC<{ data: DiscrepancyReportData }> = ({ data }) =
       <View
         fixed
         style={styles.pageFooter}
-        render={({ pageNumber, totalPages }) => (
+        render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
           <>
             <Text>SiteSync PM</Text>
             <Text>
               Page {pageNumber} of {totalPages}
             </Text>
           </>
-        )}
+        )) as never}
       />
     </Page>
   )
@@ -357,14 +357,14 @@ export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ d
         <View
           fixed
           style={styles.pageFooter}
-          render={({ pageNumber, totalPages }) => (
+          render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
             <>
               <Text>SiteSync PM — {data.projectName}</Text>
               <Text>
                 Page {pageNumber} of {totalPages}
               </Text>
             </>
-          )}
+          )) as never}
         />
       </Page>
     )}
@@ -421,8 +421,9 @@ export async function generateDiscrepancyReport(
     fromTable('drawings').select('id, sheet_number, thumbnail_url').eq('project_id' as never, projectId),
   ])
 
-  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
-  const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
+  const projectRow = projectRes.data as unknown as { name: string | null; location: string | null } | null
+  const projectName = projectRow?.name ?? 'Project'
+  const projectAddress = projectRow?.location ?? undefined
 
   const pairs: PairRow[] = (pairsRes.data ?? []) as unknown as PairRow[]
   const drawings: DrawingRow[] = (drawingsRes.data ?? []) as unknown as DrawingRow[]

@@ -86,9 +86,10 @@ export function useReleaseRetainageEntry() {
         .eq('id' as never, input.id)
         .single()
       if (readErr) throw readErr
+      const row = existing as unknown as { amount_held: number | null; released_amount: number | null; released_at: string | null } | null
 
-      const amountHeld = Number(existing.amount_held ?? 0)
-      const alreadyReleased = Number(existing.released_amount ?? 0)
+      const amountHeld = Number(row?.amount_held ?? 0)
+      const alreadyReleased = Number(row?.released_amount ?? 0)
       const outstanding = amountHeld - alreadyReleased
       if (outstanding <= 0) {
         throw new Error('No outstanding retainage to release on this entry')
