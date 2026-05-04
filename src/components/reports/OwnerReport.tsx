@@ -444,7 +444,7 @@ export const OwnerReport: React.FC = () => {
                   tickFormatter={(v: number) => compactDollars(v)}
                 />
                 <Tooltip
-                  formatter={(value: number) => [compactDollars(value), 'Amount']}
+                  formatter={((value: number) => [compactDollars(value), 'Amount']) as never}
                   contentStyle={{
                     backgroundColor: colors.surfaceRaised,
                     border: `1px solid ${colors.borderSubtle}`,

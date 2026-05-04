@@ -180,7 +180,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
               {Object.entries(aiExtraction).filter(([k]) => k !== 'type' && k !== 'title').map(([key, val]) => (
                 <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDarkMuted, textTransform: 'capitalize' }}>{key}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDark, fontWeight: typography.fontWeight.medium }}>{val}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDark, fontWeight: typography.fontWeight.medium }}>{String(val ?? '')}</span>
                 </div>
               ))}
             </div>

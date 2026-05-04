@@ -207,7 +207,7 @@ const TrendChart: React.FC<{ summary: AICostSummary }> = ({ summary }) => {
               <CartesianGrid stroke={colors.borderSubtle} strokeDasharray="3 3" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: colors.textTertiary }} />
               <YAxis tick={{ fontSize: 11, fill: colors.textTertiary }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(value: number) => `$${value.toFixed(4)}`} />
+              <Tooltip formatter={((value: number) => `$${value.toFixed(4)}`) as never} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {services.map((service, idx) => (
                 <Line
