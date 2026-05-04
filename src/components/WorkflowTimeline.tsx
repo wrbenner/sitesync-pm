@@ -46,7 +46,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
   const touchSize = 56
 
   return (
-    <nav
+    <div
       role="progressbar"
       aria-label="Workflow progress"
       aria-valuenow={currentIndex}
@@ -200,6 +200,6 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
           </React.Fragment>
         )
       })}
-    </nav>
+    </div>
   )
 }
