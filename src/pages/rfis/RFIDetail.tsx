@@ -22,6 +22,7 @@ import {
   Copy, ExternalLink, Share2
 } from 'lucide-react'
 import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -279,15 +280,6 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
-          <span style={{
-            fontSize: '10px', color: colors.textTertiary,
-            padding: '1px 6px', borderRadius: '10px',
-            backgroundColor: colors.surfaceInset,
-          }}>
-            {(response as any).company}
-          </span>
-        )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
           {relativeTime(response.created_at)}
         </span>
@@ -708,6 +700,28 @@ export function RFIDetail() {
           <ArrowLeft size={14} /> Back to RFIs
         </button>
 
+        {/* ── Workflow Timeline ───────────────────────────── */}
+        <Card style={{ marginBottom: spacing['4'], padding: `${spacing['2']} 0` }}>
+          <WorkflowTimeline
+            states={['draft', 'open', 'under_review', 'answered', 'closed']}
+            currentState={currentStatus === 'void' ? 'closed' : currentStatus}
+            completedStates={
+              (() => {
+                const order = ['draft', 'open', 'under_review', 'answered', 'closed']
+                const idx = order.indexOf(currentStatus === 'void' ? 'closed' : currentStatus)
+                return order.slice(0, idx)
+              })()
+            }
+            stateLabels={{
+              draft: 'Draft',
+              open: 'Submitted',
+              under_review: 'In Review',
+              answered: 'Answered',
+              closed: 'Closed',
+            }}
+          />
+        </Card>
+
         {/* ── Header ─────────────────────────────────────── */}
         <div style={{ marginBottom: '20px' }}>
           {/* Top row: number + status badges + actions */}
@@ -801,15 +815,6 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
-                  <span style={{
-                    marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
-                    padding: '1px 6px', borderRadius: '10px',
-                    backgroundColor: colors.surfaceInset,
-                  }}>
-                    {(rfi as any).from_company}
-                  </span>
-                )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
                   {formatDateTime(rfi.created_at)}
                 </div>
@@ -826,7 +831,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || rfi.title}
             </div>
 
             {/* Metadata pills */}
