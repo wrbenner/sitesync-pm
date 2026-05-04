@@ -13,7 +13,7 @@ async function fetchProfilesForActivity(userIds: string[]): Promise<Map<string, 
   if (userIds.length === 0) return new Map()
   const { data, error } = await fromTable('profiles')
     .select('id, full_name, avatar_url')
-    .in('id', inIds(userIds))
+    .in('id' as never, inIds(userIds))
   if (error) {
     if (import.meta.env.DEV) console.warn('[ActivityFeed] profile lookup failed:', error.message)
     return new Map()
@@ -29,7 +29,7 @@ export const getActivityFeed = async (projectId: string): Promise<ActivityFeedIt
 
   // Two queries instead of a joined select. Supabase v2's strict generics
   // turn `select('*, user:profiles(...)')` into a union with SelectQueryError
-  // that breaks downstream `.eq('project_id', ...)` narrowing. The two-query
+  // that breaks downstream `.eq('project_id' as never, ...)` narrowing. The two-query
   // path is also more resilient: a missing FK relationship in one environment
   // doesn't break the feed.
   const { data: rowData, error: rowsError } = await selectScoped('activity_feed', projectId, '*')
@@ -121,7 +121,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['rfi']
     loaders.push(() => loadLabels(
       'rfi',
-      () => selectScoped('rfis', projectId, 'id, number, title').in('id', inIds(ids)),
+      () => selectScoped('rfis', projectId, 'id, number, title').in('id' as never, inIds(ids)),
       (row) => `RFI-${String(row.number).padStart(3, '0')} ${row.title}`,
     ))
   }
@@ -129,7 +129,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['submittal']
     loaders.push(() => loadLabels(
       'submittal',
-      () => selectScoped('submittals', projectId, 'id, number, title').in('id', inIds(ids)),
+      () => selectScoped('submittals', projectId, 'id, number, title').in('id' as never, inIds(ids)),
       (row) => `SUB-${String(row.number).padStart(3, '0')} ${row.title}`,
     ))
   }
@@ -137,7 +137,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['punch_list_item']
     loaders.push(() => loadLabels(
       'punch_list_item',
-      () => selectScoped('punch_items', projectId, 'id, title').in('id', inIds(ids)),
+      () => selectScoped('punch_items', projectId, 'id, title').in('id' as never, inIds(ids)),
       (row) => String(row.title),
     ))
   }
@@ -145,7 +145,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['change_order']
     loaders.push(() => loadLabels(
       'change_order',
-      () => selectScoped('change_orders', projectId, 'id, number, title').in('id', inIds(ids)),
+      () => selectScoped('change_orders', projectId, 'id, number, title').in('id' as never, inIds(ids)),
       (row) => `CO-${row.number} ${row.title}`,
     ))
   }
@@ -153,7 +153,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['punch_item']
     loaders.push(() => loadLabels(
       'punch_item',
-      () => selectScoped('punch_items', projectId, 'id, title, location').in('id', inIds(ids)),
+      () => selectScoped('punch_items', projectId, 'id, title, location').in('id' as never, inIds(ids)),
       (row) => row.location ? `${row.title} at ${row.location}` : String(row.title),
     ))
   }
@@ -161,7 +161,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['daily_log']
     loaders.push(() => loadLabels(
       'daily_log',
-      () => selectScoped('daily_logs', projectId, 'id, log_date').in('id', inIds(ids)),
+      () => selectScoped('daily_logs', projectId, 'id, log_date').in('id' as never, inIds(ids)),
       (row) => `Daily Log ${row.log_date}`,
     ))
   }
@@ -169,7 +169,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['drawing']
     loaders.push(() => loadLabels(
       'drawing',
-      () => selectScoped('drawings', projectId, 'id, sheet_number, title').in('id', inIds(ids)),
+      () => selectScoped('drawings', projectId, 'id, sheet_number, title').in('id' as never, inIds(ids)),
       (row) => `${row.sheet_number} ${row.title}`,
     ))
   }
@@ -177,7 +177,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['meeting']
     loaders.push(() => loadLabels(
       'meeting',
-      () => selectScoped('meetings', projectId, 'id, title, date').in('id', inIds(ids)),
+      () => selectScoped('meetings', projectId, 'id, title, date').in('id' as never, inIds(ids)),
       (row) => row.date ? `${row.title} (${row.date})` : String(row.title),
     ))
   }
@@ -185,7 +185,7 @@ async function batchFetchEntityLabels(
     const ids = grouped['task']
     loaders.push(() => loadLabels(
       'task',
-      () => selectScoped('tasks', projectId, 'id, title').in('id', inIds(ids)),
+      () => selectScoped('tasks', projectId, 'id, title').in('id' as never, inIds(ids)),
       (row) => String(row.title),
     ))
   }

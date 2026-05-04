@@ -23,6 +23,7 @@ import type { WeatherData, WeatherDay } from '../../lib/weather';
 import { getProjectCoordinates } from '../../lib/geocoding';
 import type { GeocodingResult } from '../../lib/geocoding';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -436,11 +437,10 @@ export function useDecisionEngine(): SundialData {
   const { data: crewData } = useQuery({
     queryKey: ['sundial_crews', projectId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('crews')
+      const { data } = await fromTable('crews')
         .select('id, name, size, status, trade, current_task')
-        .eq('project_id', projectId!)
-        .eq('status', 'active');
+        .eq('project_id' as never, projectId!)
+        .eq('status' as never, 'active');
       return data ?? [];
     },
     enabled: !!projectId,
@@ -452,14 +452,12 @@ export function useDecisionEngine(): SundialData {
     queryKey: ['sundial_live_metrics', projectId],
     queryFn: async () => {
       const [rfis, budgetItems] = await Promise.all([
-        supabase
-          .from('rfis')
+        fromTable('rfis')
           .select('id, status, due_date')
-          .eq('project_id', projectId!),
-        supabase
-          .from('budget_items')
+          .eq('project_id' as never, projectId!),
+        fromTable('budget_items')
           .select('original_amount, actual_amount')
-          .eq('project_id', projectId!),
+          .eq('project_id' as never, projectId!),
       ]);
       const rfiRows = rfis.data ?? [];
       const budgetRows = budgetItems.data ?? [];

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useProjectId } from './useProjectId'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { useAgentOrchestrator } from '../stores/agentOrchestrator'
 import {
   parseAgentMention,
@@ -26,18 +27,17 @@ async function createConversation(
   topic: string,
 ): Promise<string | null> {
   try {
-    const { data, error } = await supabase
-      .from('ai_conversations')
+    const { data, error } = await fromTable('ai_conversations')
       .insert({
         project_id: projectId,
         user_id: userId ?? null,
         conversation_topic: topic.slice(0, 50),
         started_at: new Date().toISOString(),
-      })
+      } as never)
       .select('id')
       .single()
     if (error) { if (import.meta.env.DEV) console.warn('[AI] Failed to create conversation:', error); return null }
-    return data.id
+    return (data as unknown as { id: string }).id
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[AI] Error creating conversation:', err)
     return null
@@ -53,14 +53,13 @@ async function persistMessage(
     if (msg.agentDomain) metadata.agent_domain = msg.agentDomain
     if (msg.toolCalls?.length) metadata.tool_calls = msg.toolCalls.length
 
-    const { error } = await supabase
-      .from('ai_messages')
+    const { error } = await fromTable('ai_messages')
       .insert({
         conversation_id: conversationId,
         role: msg.role,
         content: msg.content,
         metadata: Object.keys(metadata).length > 0 ? metadata : null,
-      })
+      } as never)
     if (error && import.meta.env.DEV) console.warn('[AI] Failed to persist message:', error)
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[AI] Error persisting message:', err)
@@ -76,10 +75,9 @@ export function useConversationHistory() {
   const load = useCallback(async () => {
     if (!isSupabaseConfigured || !projectId) return []
     try {
-      const { data, error } = await supabase
-        .from('ai_conversations')
+      const { data, error } = await fromTable('ai_conversations')
         .select('id, conversation_topic, started_at, created_at')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('started_at', { ascending: false })
         .limit(20)
       if (error) { if (import.meta.env.DEV) console.warn('[AI] Failed to load conversation history:', error); return [] }
@@ -148,16 +146,17 @@ export function useMultiAgentChat(
 
     ;(async () => {
       try {
-        const { data, error } = await supabase
-          .from('ai_messages')
+        const { data, error } = await fromTable('ai_messages')
           .select('id, role, content, metadata, created_at')
-          .eq('conversation_id', initialConversationId)
+          .eq('conversation_id' as never, initialConversationId)
           .order('created_at', { ascending: true })
 
         if (error) { if (import.meta.env.DEV) console.warn('[AI] Failed to load messages:', error); return }
-        if (!data?.length) return
+        type MsgRow = { id: string; role: string; content: string; metadata: unknown; created_at: string | null }
+        const rows = (data ?? []) as unknown as MsgRow[]
+        if (!rows.length) return
 
-        const loaded: AgentConversationMessage[] = data.map((row) => {
+        const loaded: AgentConversationMessage[] = rows.map((row) => {
           const meta = (row.metadata ?? {}) as Record<string, unknown>
           return {
             id: row.id,
@@ -272,7 +271,7 @@ export function useMultiAgentChat(
                   const routeKey = pageContext
                     ? routeFromPath(`/${pageContext}`)
                     : routeFromPath(typeof window !== 'undefined' ? window.location.pathname : '/')
-                  const routeCtx = await getRouteContext(routeKey, projectId).catch(() => null)
+                  const routeCtx = await getRouteContext(routeKey, projectId ?? null).catch(() => null)
                   return {
                     projectId,
                     userId: session?.user?.id,
@@ -397,16 +396,17 @@ export function useMultiAgentChat(
 
     isLoadingHistoryRef.current = true
     try {
-      const { data, error } = await supabase
-        .from('ai_messages')
+      const { data, error } = await fromTable('ai_messages')
         .select('id, role, content, metadata, created_at')
-        .eq('conversation_id', id)
+        .eq('conversation_id' as never, id)
         .order('created_at', { ascending: true })
 
       if (error) { if (import.meta.env.DEV) console.warn('[AI] Failed to load messages:', error); return }
-      if (!data?.length) return
+      type MsgRow2 = { id: string; role: string; content: string; metadata: unknown; created_at: string | null }
+      const rows = (data ?? []) as unknown as MsgRow2[]
+      if (!rows.length) return
 
-      const loaded: AgentConversationMessage[] = data.map((row) => {
+      const loaded: AgentConversationMessage[] = rows.map((row) => {
         const meta = (row.metadata ?? {}) as Record<string, unknown>
         return {
           id: row.id,
@@ -456,7 +456,7 @@ export function useMultiAgentChat(
 async function simulateMultiAgentResponse(
   query: string,
   mentionedAgent: AgentDomain | null,
-  pageContext: string | undefined,
+  _pageContext: string | undefined,
   store: ReturnType<typeof useAgentOrchestrator.getState>,
 ) {
   const lower = query.toLowerCase()

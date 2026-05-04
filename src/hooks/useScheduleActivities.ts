@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useId } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 export interface ScheduleActivity {
   id: string
@@ -34,19 +35,26 @@ export function useScheduleActivities(projectId: string) {
   const refetch = useCallback(async () => {
     try {
       setIsLoading(true)
-      const { data: rows, error: queryError } = await supabase
-        .from('schedule_phases')
+      const { data: rows, error: queryError } = await fromTable('schedule_phases')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('start_date', { ascending: true })
 
       if (queryError) throw queryError
 
-      if (!rows || rows.length === 0) {
+      type ScheduleRow = {
+        id: string; project_id: string; name: string; start_date: string | null; end_date: string | null;
+        baseline_start: string | null; baseline_end: string | null; percent_complete: number | null;
+        status: string | null; is_critical_path: boolean | null; float_days: number | null;
+        dependencies: string[] | null; depends_on: string | null; earned_value: number | null;
+        assigned_crew_id: string | null; created_at: string | null; updated_at: string | null;
+      }
+      const rowsTyped = (rows ?? []) as unknown as ScheduleRow[]
+      if (rowsTyped.length === 0) {
         setData([])
       } else {
         setData(
-          rows.map((row) => ({
+          rowsTyped.map<ScheduleActivity>((row) => ({
             id: row.id,
             project_id: row.project_id,
             name: row.name,

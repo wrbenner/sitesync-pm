@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import type { PunchItem } from '../types/database';
 import type { PunchItemState } from '../machines/punchItemMachine';
 import { getValidPunchTransitions, getNextPunchStatus } from '../machines/punchItemMachine';
@@ -20,11 +21,10 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
   return data?.role ?? null;
@@ -59,14 +59,13 @@ export const punchItemService = {
    * Soft-delete filtering is applied when the column exists via RLS policy.
    */
   async loadPunchItems(projectId: string): Promise<PunchItemServiceResult<PunchItem[]>> {
-    const { data, error } = await supabase
-      .from('punch_items')
+    const { data, error } = await fromTable('punch_items')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('number', { ascending: false });
 
     if (error) return { data: null, error: error.message };
-    return { data: (data ?? []) as PunchItem[], error: null };
+    return { data: (data ?? []) as unknown as PunchItem[], error: null };
   },
 
   /**
@@ -76,8 +75,7 @@ export const punchItemService = {
   async createPunchItem(input: CreatePunchItemInput): Promise<PunchItemServiceResult<PunchItem>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('punch_items')
+    const { data, error } = await fromTable('punch_items')
       .insert({
         project_id: input.project_id,
         title: input.title,
@@ -116,10 +114,9 @@ export const punchItemService = {
     action: string,
   ): Promise<PunchItemServiceResult> {
     // 1. Fetch current item
-    const { data: item, error: fetchError } = await supabase
-      .from('punch_items')
+    const { data: item, error: fetchError } = await fromTable('punch_items')
       .select('status, reported_by, assigned_to, project_id')
-      .eq('id', punchItemId)
+      .eq('id' as never, punchItemId)
       .single();
 
     if (fetchError || !item) {
@@ -161,10 +158,9 @@ export const punchItemService = {
       updates.verified_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('punch_items')
-      .update(updates)
-      .eq('id', punchItemId);
+    const { error } = await fromTable('punch_items')
+      .update(updates as never)
+      .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };
 
@@ -196,10 +192,9 @@ export const punchItemService = {
      
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
-    const { error } = await supabase
-      .from('punch_items')
+    const { error } = await fromTable('punch_items')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', punchItemId);
+      .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -211,10 +206,9 @@ export const punchItemService = {
    * A migration adding those columns would enable soft-delete here.
    */
   async deletePunchItem(punchItemId: string): Promise<PunchItemServiceResult> {
-    const { error } = await supabase
-      .from('punch_items')
+    const { error } = await fromTable('punch_items')
       .delete()
-      .eq('id', punchItemId);
+      .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };

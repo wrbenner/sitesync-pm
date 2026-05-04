@@ -2,6 +2,7 @@
 // OAuth2 via Autodesk Forge. Syncs model versions, issues, and markups.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -45,7 +46,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
       return { integrationId: '', error: 'Integration ID required (OAuth flow must complete first)' }
     }
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+    const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
     const config = integration?.config as Record<string, string> | null
 
     if (!config?.accessToken) {
@@ -61,17 +62,17 @@ export const autodeskBIMProvider: IntegrationProvider = {
 
         const projects = await accApi(config.accessToken, `/project/v1/hubs/${hubId}/projects`)
         // Store available projects for user to select
-        await supabase.from('integrations').update({
+        await fromTable('integrations').update({
           config: { ...config, hubId, availableProjects: projects.data?.map((p: Record<string, unknown>) => ({ id: p.id, name: (p.attributes as Record<string, unknown>)?.name ?? '' })) ?? [] },
-        }).eq('id', integrationId)
+        }).eq('id' as never, integrationId)
 
         return { integrationId }
       }
 
       // Project selected, store it
-      await supabase.from('integrations').update({
+      await fromTable('integrations').update({
         config: { ...config, accProjectId },
-      }).eq('id', integrationId)
+      }).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -86,7 +87,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+    const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
     const config = integration?.config as Record<string, string> | null
 
     if (!config?.accessToken || !config?.accProjectId) {
@@ -117,7 +118,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
             try {
               // Map ACC issues to SiteSync punch items or RFIs based on type
               const attrs = issue.attributes ?? issue
-              await supabase.from('punch_items').upsert({
+              await fromTable('punch_items').upsert({
                 title: attrs.title ?? attrs.displayId ?? '',
                 description: attrs.description ?? '',
                 status: mapACCIssueStatus(attrs.status ?? ''),
@@ -136,10 +137,9 @@ export const autodeskBIMProvider: IntegrationProvider = {
 
       if (direction === 'export' || direction === 'bidirectional') {
         // Export: push SiteSync issues back to ACC
-        const { data: items } = await supabase
-          .from('punch_items')
+        const { data: items } = await fromTable('punch_items')
           .select('*')
-          .is('external_id', null)
+          .is('external_id' as never, null)
           .limit(50)
 
         details.pendingExports = items?.length ?? 0
@@ -162,7 +162,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
     return {
       status: (data?.status as IntegrationStatus) ?? 'disconnected',
       lastSync: data?.last_sync ?? null,

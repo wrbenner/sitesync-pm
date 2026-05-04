@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import type { SchedulePhaseInsert, SchedulePhaseUpdate } from '../types/api';
 import type { ScheduleStatus } from '../machines/scheduleMachine';
 import { getValidScheduleTransitions } from '../machines/scheduleMachine';
@@ -16,11 +17,10 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
   return data?.role ?? null;
@@ -78,11 +78,10 @@ export const scheduleService = {
    * Load all active (non-deleted) phases for a project, ordered by start date.
    */
   async loadPhases(projectId: string): Promise<ScheduleServiceResult<unknown[]>> {
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('start_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
@@ -94,11 +93,10 @@ export const scheduleService = {
    * Filters in-memory on is_critical_path.
    */
   async loadMilestones(projectId: string): Promise<ScheduleServiceResult<unknown[]>> {
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('end_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
@@ -130,8 +128,7 @@ export const scheduleService = {
       updated_by: userId,
     } as AugmentedInsert;
 
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .insert(payload as unknown as SchedulePhaseInsert)
       .select()
       .single();
@@ -152,10 +149,9 @@ export const scheduleService = {
     newStatus: ScheduleStatus,
   ): Promise<ScheduleServiceResult> {
     // 1. Fetch current phase
-    const { data: phase, error: fetchError } = await supabase
-      .from('schedule_phases')
+    const { data: phase, error: fetchError } = await fromTable('schedule_phases')
       .select('status, project_id')
-      .eq('id', phaseId)
+      .eq('id' as never, phaseId)
       .single();
 
     if (fetchError || !phase) {
@@ -186,10 +182,9 @@ export const scheduleService = {
       ...(newStatus === 'completed' ? { percent_complete: 100 } : {}),
     } as AugmentedUpdate;
 
-    const { error } = await supabase
-      .from('schedule_phases')
+    const { error } = await fromTable('schedule_phases')
       .update(updates as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -210,10 +205,9 @@ export const scheduleService = {
       updated_by: userId,
     });
 
-    const { error } = await supabase
-      .from('schedule_phases')
+    const { error } = await fromTable('schedule_phases')
       .update(payload as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -225,13 +219,12 @@ export const scheduleService = {
   async deletePhase(phaseId: string): Promise<ScheduleServiceResult> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('schedule_phases')
+    const { error } = await fromTable('schedule_phases')
       .update({
         deleted_at: now,
         deleted_by: userId,
       } as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -252,10 +245,9 @@ export const scheduleService = {
       updated_by: userId,
     } as AugmentedUpdate;
 
-    const { error } = await supabase
-      .from('schedule_phases')
+    const { error } = await fromTable('schedule_phases')
       .update(payload as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };

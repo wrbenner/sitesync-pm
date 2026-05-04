@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { uploadCloseoutDocument } from '../../lib/storage'
 import type { CloseoutItemStatus } from '../../machines/closeoutMachine'
 import {
@@ -48,15 +48,14 @@ export function useCloseoutData(projectId: string | undefined) {
   return useQuery({
     queryKey: ['closeout_items', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('closeout_items')
+      const { data, error } = await fromTable('closeout_items')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('trade', { ascending: true })
         .order('category', { ascending: true })
 
       if (error) throw error
-      const items = (data ?? []) as CloseoutItemRow[]
+      const items = (data ?? []) as unknown as CloseoutItemRow[]
 
       // Compute summary stats
       const total = items.length
@@ -129,8 +128,7 @@ export function useCreateCloseoutItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: CreateCloseoutItemParams) => {
-      const { data, error } = await supabase
-        .from('closeout_items')
+      const { data, error } = await fromTable('closeout_items')
         .insert({
           project_id: params.project_id,
           category: params.category,
@@ -140,7 +138,7 @@ export function useCreateCloseoutItem() {
           due_date: params.due_date || null,
           notes: params.notes || null,
           status: params.status || 'required',
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
@@ -161,13 +159,13 @@ export function useGenerateCloseoutList() {
       const templates = generateCloseoutList(projectType)
 
       // Check if items already exist to avoid duplicates
-      const { data: existing } = await supabase
-        .from('closeout_items')
+      const { data: existing } = await fromTable('closeout_items')
         .select('description, category')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
 
+      const existingRows = (existing ?? []) as unknown as Array<{ description: string; category: string | null }>
       const existingSet = new Set(
-        (existing ?? []).map((e: { description: string; category: string | null }) => `${e.category}::${e.description}`)
+        existingRows.map((e) => `${e.category}::${e.description}`)
       )
 
       const newItems = templates
@@ -183,7 +181,7 @@ export function useGenerateCloseoutList() {
 
       if (newItems.length === 0) return { count: 0 }
 
-      const { error } = await supabase.from('closeout_items').insert(newItems)
+      const { error } = await fromTable('closeout_items').insert(newItems as never)
       if (error) throw error
       return { count: newItems.length }
     },
@@ -198,7 +196,7 @@ export function useGenerateCloseoutList() {
 export function useTransitionCloseoutStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status, projectId }: { id: string; status: CloseoutItemStatus; projectId: string }) => {
+    mutationFn: async ({ id, status, projectId: _projectId }: { id: string; status: CloseoutItemStatus; projectId: string }) => {
       const updates: Record<string, unknown> = {
         status,
         updated_at: new Date().toISOString(),
@@ -206,10 +204,9 @@ export function useTransitionCloseoutStatus() {
       if (status === 'approved') {
         updates.completed_date = new Date().toISOString()
       }
-      const { data, error } = await supabase
-        .from('closeout_items')
-        .update(updates)
-        .eq('id', id)
+      const { data, error } = await fromTable('closeout_items')
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -228,17 +225,16 @@ export function useUpdateCloseoutItem() {
   return useMutation({
     mutationFn: async ({
       id,
-      projectId,
+      projectId: _projectId,
       updates,
     }: {
       id: string
       projectId: string
       updates: Partial<Pick<CloseoutItemRow, 'description' | 'trade' | 'assigned_to' | 'due_date' | 'notes' | 'document_url' | 'category'>>
     }) => {
-      const { data, error } = await supabase
-        .from('closeout_items')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const { data, error } = await fromTable('closeout_items')
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -256,7 +252,7 @@ export function useDeleteCloseoutItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await supabase.from('closeout_items').delete().eq('id', id)
+      const { error } = await fromTable('closeout_items').delete().eq('id' as never, id)
       if (error) throw error
       return { projectId }
     },
@@ -275,7 +271,7 @@ export function useUploadCloseoutDoc() {
       projectId,
       closeoutItemId,
       file,
-      userId,
+      userId: _userId,
     }: {
       projectId: string
       closeoutItemId: string
@@ -291,13 +287,12 @@ export function useUploadCloseoutDoc() {
       if (uploadError) throw new Error(uploadError)
 
       // Update the closeout item's document_url
-      await supabase
-        .from('closeout_items')
+      await fromTable('closeout_items')
         .update({
           document_url: url,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', closeoutItemId)
+        } as never)
+        .eq('id' as never, closeoutItemId)
 
       return { url, path, fileName: file.name, fileSize: file.size }
     },

@@ -1,6 +1,7 @@
 // Microsoft Project Integration: Import/Export schedules (.xml format)
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -103,10 +104,9 @@ export const msProjectProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase
-      .from('integrations')
+    const { data: integration } = await fromTable('integrations')
       .select('config')
-      .eq('id', integrationId)
+      .eq('id' as never, integrationId)
       .single()
 
     const config = (integration?.config ?? {}) as Record<string, unknown>
@@ -129,7 +129,7 @@ export const msProjectProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
     return {
       status: (data?.status as IntegrationStatus) ?? 'disconnected',
       lastSync: data?.last_sync ?? null,
@@ -151,7 +151,7 @@ async function importSchedule(integrationId: string, projectId: string, xmlData:
 
     for (const task of tasks) {
       try {
-        await supabase.from('schedule_phases').upsert({
+        await fromTable('schedule_phases').upsert({
           project_id: projectId,
           name: task.name,
           start_date: task.start ? task.start.slice(0, 10) : null,
@@ -169,7 +169,7 @@ async function importSchedule(integrationId: string, projectId: string, xmlData:
   }
 
   // Clear the pending import
-  await supabase.from('integrations').update({ config: { projectId, pendingImportXml: null } }).eq('id', integrationId)
+  await fromTable('integrations').update({ config: { projectId, pendingImportXml: null } }).eq('id' as never, integrationId)
 
   const result: SyncResult = { success: errors.length === 0, recordsSynced: synced, recordsFailed: failed, errors, details: { phases: synced } }
   await logSyncResult(integrationId, result, 'import')
@@ -179,8 +179,8 @@ async function importSchedule(integrationId: string, projectId: string, xmlData:
 
 async function exportSchedule(integrationId: string, projectId: string): Promise<SyncResult> {
   try {
-    const { data: project } = await supabase.from('projects').select('name').eq('id', projectId).single()
-    const { data: phases } = await supabase.from('schedule_phases').select('*').eq('project_id', projectId).order('start_date')
+    const { data: project } = await fromTable('projects').select('name').eq('id' as never, projectId).single()
+    const { data: phases } = await fromTable('schedule_phases').select('*').eq('project_id' as never, projectId).order('start_date')
 
     if (!phases || phases.length === 0) {
       return { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['No schedule phases to export'] }

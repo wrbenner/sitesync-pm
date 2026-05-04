@@ -3,6 +3,7 @@
 // Narrative generation calls the AI edge function; everything else is pure data assembly.
 
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { dollarsToCents, fromCents, addCents } from '../types/money'
 import type { Cents } from '../types/money'
 
@@ -118,13 +119,13 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
     submittalsRes,
     photosRes,
   ] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).single(),
-    supabase.from('schedule_phases').select('*').eq('project_id', projectId).order('start_date', { ascending: true }),
-    supabase.from('budget_items').select('*').eq('project_id', projectId),
-    supabase.from('change_orders').select('*').eq('project_id', projectId),
-    supabase.from('rfis').select('*').eq('project_id', projectId),
-    supabase.from('submittals').select('*').eq('project_id', projectId),
-    supabase.from('field_captures').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(20),
+    fromTable('projects').select('*').eq('id' as never, projectId).single(),
+    fromTable('schedule_phases').select('*').eq('project_id' as never, projectId).order('start_date', { ascending: true }),
+    fromTable('budget_items').select('*').eq('project_id' as never, projectId),
+    fromTable('change_orders').select('*').eq('project_id' as never, projectId),
+    fromTable('rfis').select('*').eq('project_id' as never, projectId),
+    fromTable('submittals').select('*').eq('project_id' as never, projectId),
+    fromTable('field_captures').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }).limit(20),
   ])
 
   const project = projectRes.data as Record<string, unknown> | null
@@ -440,16 +441,15 @@ export async function getProgressPhotos(
   projectId: string,
   dateRange?: { start: Date; end: Date },
 ): Promise<ProgressPhoto[]> {
-  let query = supabase
-    .from('field_captures')
+  let query = fromTable('field_captures')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: false })
 
   if (dateRange) {
     query = query
-      .gte('created_at', dateRange.start.toISOString())
-      .lte('created_at', dateRange.end.toISOString())
+      .gte('created_at' as never, dateRange.start.toISOString())
+      .lte('created_at' as never, dateRange.end.toISOString())
   }
 
   const { data } = await query.limit(20)

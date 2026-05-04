@@ -1,6 +1,7 @@
 // QuickBooks Online Integration: Sync budget items and change orders
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -64,10 +65,9 @@ export const quickbooksProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase
-      .from('integrations')
+    const { data: integration } = await fromTable('integrations')
       .select('config')
-      .eq('id', integrationId)
+      .eq('id' as never, integrationId)
       .single()
 
     if (!integration?.config) {
@@ -86,10 +86,9 @@ export const quickbooksProvider: IntegrationProvider = {
     try {
       if (direction === 'export' || direction === 'bidirectional') {
         // Export approved change orders as journal entries
-        const { data: changeOrders } = await supabase
-          .from('change_orders')
+        const { data: changeOrders } = await fromTable('change_orders')
           .select('*')
-          .eq('status', 'approved')
+          .eq('status' as never, 'approved')
 
         if (changeOrders) {
           for (const co of changeOrders) {
@@ -127,7 +126,7 @@ export const quickbooksProvider: IntegrationProvider = {
         }
 
         // Export budget items as accounts/classes
-        const { data: budgetItems } = await supabase.from('budget_items').select('*')
+        const { data: budgetItems } = await fromTable('budget_items').select('*')
         if (budgetItems) {
           details.budgetItems = budgetItems.length
         }
@@ -157,7 +156,7 @@ export const quickbooksProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
     return {
       status: (data?.status as IntegrationStatus) ?? 'disconnected',
       lastSync: data?.last_sync ?? null,

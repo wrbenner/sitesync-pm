@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId } from 'react'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { getAiInsights } from '../../api/endpoints/ai'
 import type {
   AIInsight,
@@ -31,14 +32,13 @@ export function useAIInsights(projectId: string | undefined, page?: string | nul
   return useQuery({
     queryKey: ['ai_insights', projectId, page ?? null],
     queryFn: async () => {
-      let query = supabase
-        .from('ai_insights')
+      let query = fromTable('ai_insights')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('dismissed', false)
+        .eq('project_id' as never, projectId!)
+        .eq('dismissed' as never, false)
 
       if (page) {
-        query = query.eq('page', page)
+        query = query.eq('page' as never, page)
       }
 
       const { data, error } = await query.order('created_at', { ascending: false })
@@ -55,12 +55,11 @@ export function useAIInsightsByCategory(projectId: string | undefined, category?
     queryFn: async () => {
       // category column added by migration but not yet in generated DB types
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let query: any = supabase
-        .from('ai_insights')
+      let query: any = fromTable('ai_insights')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('dismissed', false)
-      if (category) query = query.eq('category', category)
+        .eq('project_id' as never, projectId!)
+        .eq('dismissed' as never, false)
+      if (category) query = query.eq('category' as never, category)
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
       return (data || []) as AIInsight[]
@@ -83,10 +82,9 @@ export function useTaskRiskScores(projectId: string | undefined) {
     queryKey: ['task_risks', projectId],
     queryFn: async () => {
       // risk_score and risk_level added by migration 00031 but not yet in generated DB types
-      const { data, error } = await supabase
-        .from('tasks')
+      const { data, error } = await fromTable('tasks')
         .select('id, title, risk_score, risk_level')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (error) throw error
       return ((data || []) as Array<{ id: string; title: string; risk_score: number | null; risk_level: string | null }>)
         .filter(t => t.risk_level != null)
@@ -101,9 +99,9 @@ export function useEarnedValueData(projectId: string | undefined) {
     queryKey: ['earned_value', projectId],
     queryFn: async () => {
       const [budgetRes, phasesRes, projectRes] = await Promise.all([
-        supabase.from('budget_items').select('original_amount, actual_amount, committed_amount, percent_complete').eq('project_id', projectId!),
-        supabase.from('schedule_phases').select('percent_complete, status').eq('project_id', projectId!),
-        supabase.from('projects').select('start_date, target_completion').eq('id', projectId!).single(),
+        fromTable('budget_items').select('original_amount, actual_amount, committed_amount, percent_complete').eq('project_id' as never, projectId!),
+        fromTable('schedule_phases').select('percent_complete, status').eq('project_id' as never, projectId!),
+        fromTable('projects').select('start_date, target_completion').eq('id' as never, projectId!).single(),
       ])
       if (budgetRes.error) throw budgetRes.error
       const items = budgetRes.data || []

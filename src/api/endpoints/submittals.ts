@@ -1,4 +1,5 @@
 import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type {
   SubmittalRow,
@@ -28,10 +29,9 @@ export const getSubmittals = async (
   await assertProjectAccess(projectId)
   return buildPaginatedQuery<SubmittalRow, MappedSubmittal>(
     (from, to) =>
-      supabase
-        .from('submittals')
+      fromTable('submittals')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('number', { ascending: false })
         .range(from, to),
     pagination,
@@ -40,7 +40,7 @@ export const getSubmittals = async (
 }
 export const getSubmittalById = async (projectId: string, id: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('submittals').select('*').eq('project_id', projectId).eq('id', id).single()
+  const { data, error } = await fromTable('submittals').select('*').eq('project_id' as never, projectId).eq('id' as never, id).single()
   if (error) throw transformSupabaseError(error)
   return mapSubmittal(data)
 }
@@ -62,8 +62,8 @@ export const updateSubmittal = async (
   const data = await supabaseMutation<SubmittalRow>(client =>
     client.from('submittals')
       .update({ ...updates, updated_at: new Date().toISOString() } as Database['public']['Tables']['submittals']['Update'])
-      .eq('id', id)
-      .eq('project_id', projectId)
+      .eq('id' as never, id)
+      .eq('project_id' as never, projectId)
       .select()
       .single()
   )
@@ -71,10 +71,9 @@ export const updateSubmittal = async (
 }
 
 export const getSubmittalRevisions = async (submittalId: string): Promise<SubmittalRevision[]> => {
-  const { data, error } = await supabase
-    .from('submittal_revisions')
+  const { data, error } = await fromTable('submittal_revisions')
     .select('*')
-    .eq('submittal_id', submittalId)
+    .eq('submittal_id' as never, submittalId)
     .order('revision_number', { ascending: false })
   if (error) throw transformSupabaseError(error)
   return data as SubmittalRevision[]
@@ -84,10 +83,9 @@ export const createSubmittalRevision = async (
   submittalId: string,
   payload: CreateSubmittalRevisionPayload
 ): Promise<SubmittalRevision> => {
-  const { data: existing, error: fetchError } = await supabase
-    .from('submittal_revisions')
+  const { data: existing, error: fetchError } = await fromTable('submittal_revisions')
     .select('revision_number')
-    .eq('submittal_id', submittalId)
+    .eq('submittal_id' as never, submittalId)
     .order('revision_number', { ascending: false })
     .limit(1)
   if (fetchError) throw transformSupabaseError(fetchError)
@@ -97,8 +95,7 @@ export const createSubmittalRevision = async (
       ? (existing[0] as { revision_number: number }).revision_number + 1
       : 1
 
-  const { data, error } = await supabase
-    .from('submittal_revisions')
+  const { data, error } = await fromTable('submittal_revisions')
     .insert({
       submittal_id: submittalId,
       revision_number: nextRevision,
@@ -114,7 +111,7 @@ export const createSubmittalRevision = async (
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as SubmittalRevision
+  return data as unknown as SubmittalRevision
 }
 
 export const updateRevisionReview = async (
@@ -122,18 +119,17 @@ export const updateRevisionReview = async (
   status: SubmittalRevision['review_status'],
   comments: string | null = null
 ): Promise<SubmittalRevision> => {
-  const { data, error } = await supabase
-    .from('submittal_revisions')
+  const { data, error } = await fromTable('submittal_revisions')
     .update({
       review_status: status,
       review_comments: comments,
       reviewed_at: new Date().toISOString(),
     })
-    .eq('id', revisionId)
+    .eq('id' as never, revisionId)
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
-  return data as SubmittalRevision
+  return data as unknown as SubmittalRevision
 }
 
 /** Returns the reviewer_role of the latest pending revision, or null if none. */
