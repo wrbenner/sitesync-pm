@@ -367,7 +367,10 @@ const FieldPage: React.FC = () => {
           {/* ── Field Capture Modal ─────────────────────── */}
           {showCapture && (
             <FieldCaptureModal
+              open={showCapture}
               onClose={() => setShowCapture(false)}
+              projectId={projectId ?? ''}
+              dailyLogId={null}
             />
           )}
         </div>
@@ -841,25 +844,25 @@ const PunchView: React.FC<{ items: Record<string, unknown>[]; projectId: string 
                   color: isDone ? colors.ink3 : colors.ink,
                   textDecoration: isDone ? 'line-through' : 'none',
                 }}>
-                  {item.itemNumber ?? 'PL'} — {(item.description as string) ?? 'No description'}
+                  {String(item.itemNumber ?? 'PL')} — {(item.description as string) ?? 'No description'}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-                {item.area && (
+                {item.area ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: typography.fontFamily, fontSize: '12px', color: colors.ink3 }}>
                     <MapPin size={11} /> {item.area as string}
                   </span>
-                )}
-                {item.assigned && (
+                ) : null}
+                {item.assigned ? (
                   <span style={{ fontFamily: typography.fontFamily, fontSize: '12px', color: colors.ink3 }}>
                     → {item.assigned as string}
                   </span>
-                )}
-                {item.dueDate && (
+                ) : null}
+                {item.dueDate ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: typography.fontFamily, fontSize: '12px', color: isOverdue(item.dueDate as string) ? colors.statusCritical : colors.ink3 }}>
                     <Calendar size={11} /> {formatShortDate(item.dueDate as string)}
                   </span>
-                )}
+                ) : null}
               </div>
             </a>
 
@@ -997,7 +1000,7 @@ const SafetyView: React.FC<{ incidents: Record<string, unknown>[] }> = ({ incide
                   {severity}
                 </span>
               </div>
-              {inc.description && (
+              {inc.description ? (
                 <p style={{
                   fontFamily: typography.fontFamilySerif,
                   fontSize: '14px',
@@ -1012,7 +1015,7 @@ const SafetyView: React.FC<{ incidents: Record<string, unknown>[] }> = ({ incide
                 }}>
                   {inc.description as string}
                 </p>
-              )}
+              ) : null}
               <Eyebrow color="muted" style={{ fontSize: '10px' }}>
                 {formatDateSpine((inc.date as string)?.split('T')[0] ?? '')} · {status.replace(/_/g, ' ')}
               </Eyebrow>
@@ -1073,7 +1076,7 @@ const PhotosView: React.FC<{ captures: Record<string, unknown>[] }> = ({ capture
                     position: 'relative',
                   }}
                 >
-                  {cap.gps_lat && (
+                  {cap.gps_lat ? (
                     <div
                       style={{
                         position: 'absolute',
@@ -1090,7 +1093,7 @@ const PhotosView: React.FC<{ captures: Record<string, unknown>[] }> = ({ capture
                       <MapPin size={9} style={{ color: '#fff' }} />
                       <span style={{ fontFamily: typography.fontFamily, fontSize: '9px', color: '#fff' }}>GPS</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div
