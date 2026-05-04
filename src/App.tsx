@@ -40,10 +40,16 @@ import { useProjectCache } from './hooks/useProjectCache';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { OrganizationProvider } from './hooks/useOrganization';
 
-function lazyWithRetry(importFn: () => Promise<unknown>, retries = 3, delay = 1000) {
-  return lazy(() => new Promise<{ default: unknown }>((resolve, reject) => {
+function lazyWithRetry(
+  importFn: () => Promise<unknown>,
+  retries = 3,
+  delay = 1000,
+) {
+  return lazy(() => new Promise<{ default: React.ComponentType<unknown> }>((resolve, reject) => {
     function attempt(retriesLeft: number) {
-      importFn().then(resolve).catch((err: Error) => {
+      importFn()
+        .then((m) => resolve(m as { default: React.ComponentType<unknown> }))
+        .catch((err: Error) => {
         if (retriesLeft > 0) {
           setTimeout(() => attempt(retriesLeft - 1), delay);
         } else {
@@ -123,7 +129,7 @@ const EquipmentPage = lazy(() => import('./pages/Equipment'));
 const Procurement = lazy(() => import('./pages/Procurement'));
 const Permits = lazy(() => import('./pages/Permits'));
 // Documents & Closeout
-const Files = lazy(() => import('./pages/files').then((m) => ({ default: m.Files })));
+const Files = lazy(() => import('./pages/Files').then((m) => ({ default: m.Files })));
 const Reports = lazy(() => import('./pages/Reports'));
 const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m.Closeout })));
 const BIMViewerPage = lazy(() => import('./pages/bim/BIMViewerPage'));
@@ -227,7 +233,7 @@ function ChunkLoadFallback() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        backgroundColor: colors.bgLight,
+        backgroundColor: colors.surfacePage,
         padding: spacing['8'],
       }}
     >
@@ -756,7 +762,7 @@ function ErrorFallback() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        backgroundColor: colors.bgLight,
+        backgroundColor: colors.surfacePage,
         padding: spacing['8'],
       }}
     >
