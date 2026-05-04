@@ -109,7 +109,8 @@ export const msProjectProvider: IntegrationProvider = {
       .eq('id' as never, integrationId)
       .single()
 
-    const config = (integration?.config ?? {}) as unknown as Record<string, unknown>
+    const integrationRow = integration as unknown as { config?: Record<string, unknown> } | null
+    const config = (integrationRow?.config ?? {}) as Record<string, unknown>
     const projectId = config.projectId as string
 
     if (direction === 'export') {
@@ -130,9 +131,10 @@ export const msProjectProvider: IntegrationProvider = {
 
   async getStatus(integrationId) {
     const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as unknown as { status?: string; last_sync?: string | null } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
     }
   },
 
@@ -182,16 +184,21 @@ async function exportSchedule(integrationId: string, projectId: string): Promise
     const { data: project } = await fromTable('projects').select('name').eq('id' as never, projectId).single()
     const { data: phases } = await fromTable('schedule_phases').select('*').eq('project_id' as never, projectId).order('start_date')
 
-    if (!phases || phases.length === 0) {
+    const projectRow = project as unknown as { name?: string } | null
+    const projectName = projectRow?.name ?? 'Project'
+    type PhaseRow = { name?: string | null; start_date?: string | null; end_date?: string | null; percent_complete?: number | null; status?: string | null }
+    const phaseRows = (phases ?? []) as unknown as PhaseRow[]
+
+    if (phaseRows.length === 0) {
       return { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['No schedule phases to export'] }
     }
 
     const xml = generateProjectXml(
-      project?.name ?? 'Project',
-      phases.map((p) => ({
+      projectName,
+      phaseRows.map((p) => ({
         name: p.name ?? '',
-        start_date: p.start_date,
-        end_date: p.end_date,
+        start_date: p.start_date ?? null,
+        end_date: p.end_date ?? null,
         percent_complete: p.percent_complete ?? 0,
         status: p.status ?? 'not_started',
       }))
@@ -202,11 +209,11 @@ async function exportSchedule(integrationId: string, projectId: string): Promise
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${project?.name ?? 'Schedule'}_${new Date().toISOString().slice(0, 10)}.xml`
+    a.download = `${projectName}_${new Date().toISOString().slice(0, 10)}.xml`
     a.click()
     URL.revokeObjectURL(url)
 
-    const result: SyncResult = { success: true, recordsSynced: phases.length, recordsFailed: 0, errors: [], details: { phases: phases.length } }
+    const result: SyncResult = { success: true, recordsSynced: phaseRows.length, recordsFailed: 0, errors: [], details: { phases: phaseRows.length } }
     await logSyncResult(integrationId, result, 'export')
     await updateIntegrationStatus(integrationId, 'connected')
     return result

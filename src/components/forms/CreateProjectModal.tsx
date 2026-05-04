@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 interface Props {
   open: boolean;
   onClose: () => void;
+  onSuccess?: (projectId: string) => void;
 }
 
 interface NominatimAddress {
@@ -136,7 +137,7 @@ const row = (delay: number) => ({
 // Component
 // ═══════════════════════════════════════════════════════════
 
-export const CreateProjectModal: React.FC<Props> = ({ open, onClose }) => {
+export const CreateProjectModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
   // ── Form state ──────────────────────────────────────────
   const [name, setName]                     = useState('');
@@ -283,7 +284,11 @@ export const CreateProjectModal: React.FC<Props> = ({ open, onClose }) => {
     await queryClient.invalidateQueries({ queryKey: ['projects'] });
     setSaving(false);
     setSuccess(true);
-    setTimeout(onClose, 1600);
+    const createdId = (result.data as { id?: string } | null | undefined)?.id;
+    setTimeout(() => {
+      if (createdId) onSuccess?.(createdId);
+      onClose();
+    }, 1600);
   };
 
   // ── Bail ────────────────────────────────────────────────

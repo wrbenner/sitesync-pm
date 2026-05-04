@@ -94,7 +94,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     // Then fetch live from DB
     Promise.all(
       messageIds.map(async (id) => {
-        const rows = await fetchReactions(id);
+        const rows = await fetchReactions(String(id));
         const grouped: { emoji: string; userIds: string[] }[] = [];
         rows.forEach(({ emoji, userId }) => {
           const existing = grouped.find((g) => g.emoji === emoji);
@@ -174,9 +174,9 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     const existing = reactions[messageId]?.find((g) => g.emoji === emoji);
     const hasReacted = existing?.userIds.includes(currentUserId) ?? false;
     if (hasReacted) {
-      await removeReaction(messageId, currentUserId, emoji);
+      await removeReaction(String(messageId), currentUserId, emoji);
     } else {
-      await addReaction(messageId, currentUserId, emoji);
+      await addReaction(String(messageId), currentUserId, emoji);
     }
   };
 

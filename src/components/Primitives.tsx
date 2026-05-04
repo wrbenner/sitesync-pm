@@ -230,12 +230,15 @@ interface BtnProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
+  'data-testid'?: string;
   disabled?: boolean;
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   'aria-label'?: string;
+  'aria-disabled'?: boolean;
+  title?: string;
   type?: 'button' | 'submit' | 'reset';
   style?: React.CSSProperties;
   loading?: boolean;
@@ -251,6 +254,8 @@ export const Btn: React.FC<BtnProps> = ({
   icon,
   iconPosition = 'left',
   'aria-label': ariaLabel,
+  'aria-disabled': ariaDisabled,
+  title,
   type = 'button',
   style: styleProp,
   loading = false,
@@ -305,7 +310,8 @@ export const Btn: React.FC<BtnProps> = ({
       disabled={disabled || loading}
       aria-label={ariaLabel}
       aria-busy={loading || undefined}
-      aria-disabled={disabled || undefined}
+      aria-disabled={ariaDisabled ?? disabled ?? undefined}
+      title={title}
       style={{
         display: 'inline-flex',
         width: fullWidth ? '100%' : 'auto',

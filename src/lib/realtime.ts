@@ -209,7 +209,20 @@ export function subscribeToPresence(
 
       for (const [key, presences] of Object.entries(state)) {
         if (key === userId) continue // Skip self
-        const latest = (presences as Array<{ editingSince?: number; action?: string; name?: string; displayName?: string; role?: string; initials?: string; page?: string; editingEntity?: string }>)[0]
+        const latest = (presences as Array<{
+          editingSince?: number
+          action?: string
+          name?: string
+          displayName?: string
+          role?: string
+          initials?: string
+          page?: string
+          entityId?: string
+          editingEntity?: string
+          editingEntityType?: string
+          editingEntityId?: string
+          lastSeen?: number
+        }>)[0]
         if (latest) {
           // Release stale editing locks (30 second timeout)
           const editingSince = latest.editingSince as number | undefined

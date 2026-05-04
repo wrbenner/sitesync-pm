@@ -22,7 +22,6 @@ import {
   OrangeDot,
   Eyebrow,
 } from '../../components/atoms';
-import { DollarSign, FileText } from 'lucide-react';
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
 import CreateChangeOrderModal from '../../components/forms/CreateChangeOrderModal';
 import { useCreateChangeOrder } from '../../hooks/mutations/change-orders';
@@ -217,13 +216,13 @@ const LedgerPage: React.FC = () => {
   const { data: budgetData, isPending: budgetLoading } = useBudgetItems(projectId);
   const { data: changeOrderData, isPending: coLoading } = useChangeOrders(projectId);
   const { data: contractData } = useContracts(projectId);
-  const { data: payAppData } = usePayApplications(projectId);
+  usePayApplications(projectId);
 
   if (!projectId) return <ProjectGate />;
 
   // ── Data arrays ─────────────────────────────────────────
   const budgetItems = useMemo(
-    () => (budgetData ?? []) as Array<{
+    () => (budgetData ?? []) as unknown as Array<{
       id: string; name: string; category: string;
       budgeted_amount: number; actual_amount: number;
       committed_amount: number; status: string;
@@ -240,7 +239,7 @@ const LedgerPage: React.FC = () => {
   );
 
   const contracts = useMemo(
-    () => (contractData ?? []) as Array<{
+    () => (contractData ?? []) as unknown as Array<{
       id: string; name: string; vendor_name: string;
       contract_value: number; status: string;
     }>,

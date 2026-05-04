@@ -601,7 +601,7 @@ const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = 
   const handleDelete = async (item: CloseoutItemRow) => {
     const ok = await confirmManual({
       title: 'Remove O&M manual?',
-      description: `"${item.title}"${item.subcontractor ? ` from ${item.subcontractor}` : ''} — closeout package will no longer include this manual.`,
+      description: `"${item.description}"${item.trade ? ` from ${item.trade}` : ''} — closeout package will no longer include this manual.`,
       destructiveLabel: 'Remove manual',
     })
     if (!ok) return
@@ -826,7 +826,7 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
   const handleDelete = async (item: CloseoutItemRow) => {
     const ok = await confirmTraining({
       title: 'Delete training entry?',
-      description: `"${item.title}" — training record will be removed from the project closeout package.`,
+      description: `"${item.description}" — training record will be removed from the project closeout package.`,
       destructiveLabel: 'Delete entry',
     })
     if (!ok) return

@@ -207,7 +207,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
     loadItems: async (projectId: string) => {
       setSlice({ loading: true, error: null });
       const { data, error } = await supabase
-        .from(key)
+        .from(key as never)
         .select('*')
         .eq('project_id' as never, projectId)
         .order('created_at', { ascending: false });
@@ -221,7 +221,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
 
     createItem: async (payload: Omit<T, 'id'>) => {
       const { data, error } = await supabase
-        .from(key)
+        .from(key as never)
         .insert(payload as never)
         .select()
         .single();
@@ -247,7 +247,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
 
     updateItem: async (id: string, updates: Partial<T>) => {
       const { error } = await supabase
-        .from(key)
+        .from(key as never)
         .update(updates as never)
         .eq('id' as never, id);
 
@@ -269,7 +269,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
     },
 
     deleteItem: async (id: string) => {
-      const { error } = await supabase.from(key).delete().eq('id' as never, id);
+      const { error } = await supabase.from(key as never).delete().eq('id' as never, id);
 
       if (error) return { error: error.message };
 

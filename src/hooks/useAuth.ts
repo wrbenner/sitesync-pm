@@ -210,8 +210,7 @@ async function recordFailedLogin(email: string): Promise<void> {
   try {
     await supabase.rpc('record_failed_login', {
       email_to_record: email,
-      ip_hint_text: null,
-      user_agent_text: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 256) : null,
+      user_agent_text: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 256) : undefined,
     })
   } catch {
     // best-effort; never block sign-in path on a failed record

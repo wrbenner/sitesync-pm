@@ -66,14 +66,14 @@ export const EarnedValueDashboard: React.FC = () => {
 
   if (budgetItems.length === 0) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: spacing['8'], gap: spacing['3'], background: colors.backgroundCard, borderRadius: borderRadius.lg, border: '1px solid ' + colors.borderLight }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: spacing['8'], gap: spacing['3'], background: colors.surfaceRaised, borderRadius: borderRadius.lg, border: '1px solid ' + colors.borderLight }}>
         <TrendingUp size={40} color={colors.textTertiary} />
         <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: 0, textAlign: 'center' }}>Set up your budget to see earned value metrics</p>
         <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0, textAlign: 'center' }}>Earned value analysis requires budget line items with scheduled values and progress data.</p>
         <button
           onClick={() => { window.location.hash = '#budget-setup'; }}
           style={{
-            background: colors.primary,
+            background: colors.primaryOrange,
             color: 'white',
             border: 'none',
             borderRadius: borderRadius.md,
@@ -175,9 +175,9 @@ export const EarnedValueDashboard: React.FC = () => {
           gap: spacing['3'],
           marginBottom: spacing['4'],
           padding: spacing['3'],
-          backgroundColor: `${colors.primary}08`,
+          backgroundColor: `${colors.primaryOrange}08`,
           borderRadius: borderRadius.md,
-          border: `1px solid ${colors.primary}20`,
+          border: `1px solid ${colors.primaryOrange}20`,
           flexWrap: 'wrap',
         }}
       >

@@ -177,7 +177,7 @@ export function hasPermission(role: string, permission: ProjectPermission): bool
  */
 export function scopedQuery(table: string) {
   const ctx = getTenantContext();
-  const query = fromTable(table).select('*');
+  const query = fromTable(table as never).select('*');
   if (ctx) {
     return query.eq('project_id' as never, ctx.projectId);
   }
@@ -258,7 +258,7 @@ export function scopedInsert(table: string, data: Record<string, unknown>) {
   const enriched = ctx
     ? { ...data, project_id: ctx.projectId, created_by: ctx.userId }
     : data;
-  return fromTable(table).insert(enriched as never);
+  return fromTable(table as never).insert(enriched as never);
 }
 
 /**
@@ -269,7 +269,7 @@ export async function validateOwnership(table: string, entityId: string): Promis
   const ctx = getTenantContext();
   if (!ctx || !isSupabaseConfigured) return true;
 
-  const { data } = await fromTable(table)
+  const { data } = await fromTable(table as never)
     .select('id')
     .eq('id' as never, entityId)
     .eq('project_id' as never, ctx.projectId)

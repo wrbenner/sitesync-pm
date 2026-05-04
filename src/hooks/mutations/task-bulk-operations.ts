@@ -7,12 +7,9 @@ import { invalidateEntity } from '../../api/invalidation'
 import { toast } from 'sonner'
 import Sentry from '../../lib/sentry'
 
-
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Task Bulk Operations ─────────────────────────────────
 
@@ -114,7 +111,7 @@ export function useApplyTaskTemplate() {
   return useMutation({
     mutationFn: async ({ templateId, projectId }: { templateId: string; projectId: string }) => {
       // task_templates added by migration but not yet in generated DB types
-      const { data: template, error: templateError } = await fromTable('task_templates' as keyof Database['public']['Tables'])
+      const { data: template, error: templateError } = await fromTable('task_templates' as never)
         .select('*')
         .eq('id' as never, templateId)
         .single()

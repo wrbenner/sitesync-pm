@@ -590,12 +590,12 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
       return
     }
     try {
-      const request = await createRequest.mutateAsync({
+      const request = (await createRequest.mutateAsync({
         project_id: projectId,
         title: sigTitle.trim(),
         source_file_url: sigUrl.trim(),
         signing_order: sigOrder,
-      })
+      })) as { id: string }
 
       const palette = getSignerColorPalette()
       for (let i = 0; i < validSigners.length; i++) {
@@ -1397,9 +1397,12 @@ interface Contract {
   contract_number: string | null
   title: string
   counterparty_name: string
+  counterparty: string | null
   counterparty_contact: string | null
   counterparty_email: string | null
   contract_amount: number
+  original_value: number | null
+  revised_value: number | null
   status: string
   start_date: string | null
   end_date: string | null
@@ -2333,7 +2336,7 @@ export const Contracts: React.FC = () => {
             {filtered.length > 0 ? (
               <div style={{ marginTop: spacing['3'] }}>
                 <DataTable
-                  columns={columns}
+                  columns={columns as never}
                   data={filtered}
                   onRowClick={handleRowClick}
                 />

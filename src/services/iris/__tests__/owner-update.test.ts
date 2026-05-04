@@ -166,6 +166,7 @@ describe('generateIrisDraft — owner_update path', () => {
     // matters. Cast through unknown to satisfy the strict signature.
     const draft = await generateIrisDraft(triggerItem, richContext, {
       generate: generate as unknown as typeof import('ai').generateText,
+    } as never)
     })
     expect(draft.content.length).toBeGreaterThan(0)
     expect(draft.status).toBe('pending')
@@ -182,6 +183,7 @@ describe('generateIrisDraft — owner_update path', () => {
     })
     await generateIrisDraft(triggerItem, richContext, {
       generate: generate as unknown as typeof import('ai').generateText,
+    } as never)
     })
     expect(capturedPrompt).toContain('Schedule status:')
     expect(capturedPrompt).toContain('Budget status:')
@@ -193,6 +195,7 @@ describe('generateIrisDraft — owner_update path', () => {
     const generate = vi.fn().mockResolvedValue({ text: fakeBody })
     const draft = await generateIrisDraft(triggerItem, richContext, {
       generate: generate as unknown as typeof import('ai').generateText,
+    } as never)
     })
     expect(draft.sources).toContain('Schedule activity #142')
     expect(draft.sources).toContain('Cost Codes — committed vs approved')
@@ -206,6 +209,7 @@ describe('generateIrisDraft — owner_update path', () => {
     })
     const draft = await generateIrisDraft(triggerItem, sparseContext, {
       generate: generate as unknown as typeof import('ai').generateText,
+    } as never)
     })
     expect(draft.content.length).toBeGreaterThan(0)
     expect(draft.status).toBe('pending')

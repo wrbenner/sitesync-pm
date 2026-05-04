@@ -3,9 +3,8 @@ import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from './createAuditedMutation'
 import { budgetLineItemSchema } from '../../components/forms/schemas'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Budget line items (budget_line_items table) ──────────
 //

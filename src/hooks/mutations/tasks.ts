@@ -7,10 +7,9 @@ import {
 } from '../../components/forms/schemas'
 import { validateTaskStatusTransition } from './state-machine-validation-helpers'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-// Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
+// Dynamic table access helper. `as never` collapses the table-name union
+// so the strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Tasks ─────────────────────────────────────────────────
 
@@ -23,7 +22,7 @@ export function useCreateTask() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('tasks').insert(params.data).select().single()
+      const { data, error } = await from('tasks').insert(params.data as never).select().single()
       if (error) throw error
       return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },

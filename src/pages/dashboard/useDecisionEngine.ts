@@ -138,8 +138,8 @@ function generateWeatherDecision(
   }> | undefined,
   weather: WeatherData | undefined,
   crewCount: number,
-  budgetSpent: number,
-  budgetTotal: number,
+  _budgetSpent: number,
+  _budgetTotal: number,
 ): Decision | null {
   if (!forecast || !schedulePhases) return null;
 
@@ -398,7 +398,7 @@ export function useDecisionEngine(): SundialData {
   const { data: project, isPending: projectLoading } = useProject(projectId);
   const { data: schedulePhases } = useSchedulePhases(projectId);
   const { data: matViewMetrics } = useProjectMetrics(projectId);
-  const { data: insightsData } = useAiInsightsMeta(projectId);
+  const { data: _insightsData } = useAiInsightsMeta(projectId);
 
   // Geocoding
   const { data: geoResult } = useQuery<GeocodingResult>({
@@ -459,8 +459,8 @@ export function useDecisionEngine(): SundialData {
           .select('original_amount, actual_amount')
           .eq('project_id' as never, projectId!),
       ]);
-      const rfiRows = rfis.data ?? [];
-      const budgetRows = budgetItems.data ?? [];
+      const rfiRows = (rfis.data ?? []) as unknown as Array<{ id: string; status: string | null; due_date: string | null }>;
+      const budgetRows = (budgetItems.data ?? []) as unknown as Array<{ original_amount: number | null; actual_amount: number | null }>;
       const today = new Date().toISOString().split('T')[0];
       return {
         rfis_open: rfiRows.filter(
@@ -494,10 +494,11 @@ export function useDecisionEngine(): SundialData {
 
   const projectName = project?.name ?? '';
   const startDate = project?.start_date ? new Date(project.start_date) : null;
+  const projectAny = project as unknown as Record<string, unknown> | null
   const endDate = project?.target_completion
     ? new Date(project.target_completion)
-    : project?.scheduled_end_date
-      ? new Date(project.scheduled_end_date)
+    : projectAny?.scheduled_end_date
+      ? new Date(projectAny.scheduled_end_date as string)
       : null;
   const dayNumber = startDate
     ? Math.max(1, Math.ceil((now.getTime() - startDate.getTime()) / 86400000))
@@ -511,7 +512,7 @@ export function useDecisionEngine(): SundialData {
       : null;
 
   const crewCount = crewData
-    ? crewData.reduce((sum, c) => sum + (c.size ?? 0), 0)
+    ? (crewData as unknown as Array<{ size: number | null }>).reduce((sum, c) => sum + (c.size ?? 0), 0)
     : 0;
 
   const budgetSpent =

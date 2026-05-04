@@ -31,7 +31,7 @@ function useProactiveAlerts(projectId: string | undefined) {
       const inSevenDays = new Date(now.getTime() + 7 * 86400000);
       const inThirtyDays = new Date(now.getTime() + 30 * 86400000);
 
-      const safeRun = async <T,>(fn: () => Promise<{ data: T | null; error: unknown }>): Promise<T[]> => {
+      const safeRun = async <T,>(fn: () => PromiseLike<{ data: T | null; error: unknown }>): Promise<T[]> => {
         try {
           const res = await fn();
           if (res.error) {

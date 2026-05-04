@@ -96,6 +96,7 @@ interface DailyLogEntry {
   equipment_hours: number | null;
   description: string | null;
   inspector_name: string | null;
+  inspection_result: string | null;
   time_in: string | null;
   time_out: string | null;
   delay_cause: string | null;

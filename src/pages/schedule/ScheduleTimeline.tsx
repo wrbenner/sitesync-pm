@@ -186,11 +186,11 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({
           const end = phase.end_date ? new Date(phase.end_date).getTime() : null;
           if (!start || !end) return null;
 
-          const baselineStart = phase.baseline_start
-            ? new Date(phase.baseline_start).getTime()
+          const baselineStart = phase.baselineStartDate
+            ? new Date(phase.baselineStartDate).getTime()
             : null;
-          const baselineEnd = phase.baseline_end
-            ? new Date(phase.baseline_end).getTime()
+          const baselineEnd = phase.baselineEndDate
+            ? new Date(phase.baselineEndDate).getTime()
             : null;
 
           const milestone = isMilestone(phase);

@@ -432,8 +432,9 @@ export async function processSyncQueue(
 
     try {
       await offlineDb.pendingMutations.update(m.id!, { status: 'syncing' })
-      // Dynamic table name requires casting; the table name is validated against validTableNames on enqueue
-      const from = fromTable(m.table as keyof Database['public']['Tables'])
+      // Dynamic table name requires casting; the table name is validated against validTableNames on enqueue.
+      // `as never` collapses the union so .select('*') doesn't trigger TS2589 on every table's row type.
+      const from = fromTable(m.table as never)
 
       if (m.operation === 'insert') {
         const { error } = await from.insert(m.data as never)
@@ -717,7 +718,8 @@ export async function cacheProjectData(
     onProgress?.({ total, completed: tablesCompleted, currentTable: supaTable })
 
     try {
-      const { data, error } = await fromTable(supaTable as keyof Database['public']['Tables'])
+      // `as never` collapses the dynamic-table union so .select('*') doesn't trigger TS2589.
+      const { data, error } = await fromTable(supaTable as never)
         .select('*')
         .eq('project_id' as never, projectId)
         .limit(clampedLimit)

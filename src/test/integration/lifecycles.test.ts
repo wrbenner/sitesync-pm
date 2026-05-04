@@ -586,7 +586,7 @@ describe('RFI DB Persistence Lifecycle', () => {
       actors: createRfiActors(createFn, updateFn),
     })
     const actor = createActor(configuredMachine, {
-      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as unknown,
+      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as never,
     })
     actor.start()
 

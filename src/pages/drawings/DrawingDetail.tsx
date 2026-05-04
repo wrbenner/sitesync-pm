@@ -13,7 +13,7 @@ import type { DrawingClassification, DrawingDiscrepancy } from '../../types/ai';
 import { formatRevDate } from './types';
 import { useLinkedEntities } from '../../hooks/useLinkedEntities';
 import { createEntityLink, removeEntityLink } from '../../services/entityLinkService';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import type { EntityType, LinkedItem } from '../../components/shared/LinkedEntities';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -763,27 +763,27 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
     queryFn: async () => {
       if (!projectId || !pickerKind) return [];
       if (pickerKind === 'rfi') {
-        const { data, error } = await supabase
-          .from('rfis')
+        const { data, error } = await fromTable('rfis')
           .select('id, number, subject, title, status')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('number', { ascending: false })
           .limit(50);
         if (error) throw error;
-        return (data ?? []).map((r: Record<string, unknown>) => ({
+        const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+        return rows.map((r) => ({
           id: String(r.id),
           label: `RFI #${r.number ?? '?'} — ${String(r.subject ?? r.title ?? 'Untitled')}`,
           sub: String(r.status ?? ''),
         }));
       }
-      const { data, error } = await supabase
-        .from('punch_items')
+      const { data, error } = await fromTable('punch_items')
         .select('id, item_number, description, status')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('item_number', { ascending: false })
         .limit(50);
       if (error) throw error;
-      return (data ?? []).map((r: Record<string, unknown>) => ({
+      const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
+      return rows.map((r) => ({
         id: String(r.id),
         label: `Punch #${r.item_number ?? '?'} — ${String(r.description ?? 'No description')}`,
         sub: String(r.status ?? ''),
@@ -823,16 +823,16 @@ const LinkedTab: React.FC<{ drawingId: string; projectId?: string }> = ({ drawin
   const handleUnlink = async (item: LinkedItem) => {
     if (!projectId) return;
     // Find the entity_links row id (source or target direction).
-    const { data: rows } = await supabase
-      .from('entity_links')
+    const { data: rows } = await fromTable('entity_links')
       .select('id')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .or(
         `and(source_type.eq.drawing,source_id.eq.${drawingId},target_type.eq.${item.type},target_id.eq.${item.id}),` +
         `and(source_type.eq.${item.type},source_id.eq.${item.id},target_type.eq.drawing,target_id.eq.${drawingId})`,
       )
       .limit(1);
-    const linkId = rows?.[0]?.id as string | undefined;
+    const linkRows = (rows ?? []) as unknown as Array<{ id?: string }>;
+    const linkId = linkRows[0]?.id;
     if (!linkId) return;
     setBusyId(item.id);
     try {
@@ -1054,20 +1054,20 @@ const AITab: React.FC<{
                 <span style={{ fontSize: '11px', fontWeight: 500, color: colors.textPrimary }}>{classification.scale_text}</span>
               </div>
             )}
-            {classification.confidence != null && (
+            {classification.classification_confidence != null && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', color: colors.textTertiary, width: '60px' }}>Confidence</span>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{ flex: 1, height: '3px', borderRadius: '2px', backgroundColor: colors.borderSubtle, overflow: 'hidden' }}>
                     <div style={{
                       height: '100%',
-                      width: `${Math.round(classification.confidence * 100)}%`,
-                      backgroundColor: classification.confidence > 0.8 ? '#10B981' : classification.confidence > 0.5 ? '#F59E0B' : '#EF4444',
+                      width: `${Math.round(classification.classification_confidence * 100)}%`,
+                      backgroundColor: classification.classification_confidence > 0.8 ? '#10B981' : classification.classification_confidence > 0.5 ? '#F59E0B' : '#EF4444',
                       borderRadius: '2px',
                     }} />
                   </div>
                   <span style={{ fontSize: '10px', fontWeight: 600, color: colors.textSecondary }}>
-                    {Math.round(classification.confidence * 100)}%
+                    {Math.round(classification.classification_confidence * 100)}%
                   </span>
                 </div>
               </div>

@@ -165,7 +165,8 @@ const TimeTracking: React.FC = () => {
   // --- Derive certified payroll employee data from real time entries ---
   const memberMap = useMemo(() => {
     const map = new Map<string, { name: string; trade: string; hourly_rate: number; overtime_rate: number }>()
-    ;(workforceMembers ?? []).forEach((m: Record<string, unknown>) => {
+    const members = (workforceMembers ?? []) as unknown as Array<Record<string, unknown>>
+    members.forEach((m) => {
       map.set(m.id as string, {
         name: (m.name as string) ?? 'Unknown',
         trade: (m.trade as string) ?? 'General',
@@ -445,7 +446,7 @@ const TimeTracking: React.FC = () => {
               display: 'flex', alignItems: 'center', gap: spacing['1'],
               padding: `${spacing['2']} ${spacing['3']}`,
               fontSize: typography.fontSize.sm, fontWeight: activeTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
-              color: activeTab === tab.key ? colors.brand : colors.textSecondary,
+              color: activeTab === tab.key ? colors.primaryOrange : colors.textSecondary,
               background: activeTab === tab.key ? colors.surfaceInset : 'transparent',
               border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
               whiteSpace: 'nowrap', flexShrink: 0,
@@ -541,7 +542,7 @@ const TimeTracking: React.FC = () => {
                   {h > 0 ? h.toFixed(2) : '—'}
                 </div>
               ))}
-              <div style={{ textAlign: 'right', color: colors.brand }}>{weekTotal.toFixed(2)}</div>
+              <div style={{ textAlign: 'right', color: colors.primaryOrange }}>{weekTotal.toFixed(2)}</div>
             </div>
           </div>
         )}
@@ -604,8 +605,8 @@ const TimeTracking: React.FC = () => {
       <div style={{ marginTop: spacing['4'] }} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
-        <MetricBox label="Total Hours" value={totals.hours.toFixed(1)} icon={Clock} />
-        <MetricBox label="Approved" value={totals.approved.toFixed(1)} icon={CheckCircle2} />
+        <MetricBox label="Total Hours" value={totals.hours.toFixed(1)} icon={<Clock size={16} />} />
+        <MetricBox label="Approved" value={totals.approved.toFixed(1)} icon={<CheckCircle2 size={16} />} />
         <MetricBox label="Pending" value={totals.pending.toFixed(1)} />
         <MetricBox label="Overtime" value={totals.overtime.toFixed(1)} />
       </div>
@@ -751,7 +752,7 @@ const TimeTracking: React.FC = () => {
                         <td style={{ textAlign: 'right', padding: spacing['2'] }}>${emp.fica.toFixed(2)}</td>
                         <td style={{ textAlign: 'right', padding: spacing['2'] }}>${emp.withholding.toFixed(2)}</td>
                         <td style={{ textAlign: 'right', padding: spacing['2'] }}>${emp.other.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right', padding: spacing['2'], fontWeight: typography.fontWeight.semibold, color: colors.brand }}>${net.toFixed(2)}</td>
+                        <td style={{ textAlign: 'right', padding: spacing['2'], fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>${net.toFixed(2)}</td>
                       </tr>
                     )
                   })}
@@ -824,7 +825,7 @@ const TimeTracking: React.FC = () => {
             const subtotal = laborTotal + materialTotal + equipmentTotal
             const markup = subtotal * (tmMarkup / 100)
             const ticketTotal = subtotal + markup
-            const statusColors: Record<string, string> = { Draft: colors.textTertiary, Submitted: '#D97706', Approved: '#059669', Billed: colors.brand }
+            const statusColors: Record<string, string> = { Draft: colors.textTertiary, Submitted: '#D97706', Approved: '#059669', Billed: colors.primaryOrange }
             return (
               <Card key={ticket.id} padding={spacing['4']} style={{ marginBottom: spacing['3'] }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing['3'] }}>
@@ -943,7 +944,7 @@ const TimeTracking: React.FC = () => {
                         <td style={{ textAlign: 'right', padding: spacing['2'] }}>${r.pension.toFixed(2)}</td>
                         <td style={{ textAlign: 'right', padding: spacing['2'] }}>${r.training.toFixed(2)}</td>
                         <td style={{ textAlign: 'right', padding: spacing['2'] }}>${r.other.toFixed(2)}</td>
-                        <td style={{ textAlign: 'right', padding: spacing['2'], fontWeight: typography.fontWeight.semibold, color: colors.brand }}>${totalPkg.toFixed(2)}</td>
+                        <td style={{ textAlign: 'right', padding: spacing['2'], fontWeight: typography.fontWeight.semibold, color: colors.primaryOrange }}>${totalPkg.toFixed(2)}</td>
                         <td style={{ textAlign: 'center', padding: spacing['2'] }}>{r.otMult}x</td>
                         <td style={{ textAlign: 'center', padding: spacing['2'], fontSize: typography.fontSize.xs }}>{r.effective}</td>
                         <td style={{ textAlign: 'center', padding: spacing['2'], fontSize: typography.fontSize.xs }}>{r.expires}</td>
@@ -1071,7 +1072,7 @@ const TimeTracking: React.FC = () => {
               style={{ width: '100%', padding: spacing['3'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minHeight: 56 }}
             >
               <option value="">Select worker</option>
-              {(workforceMembers ?? []).map((w: Record<string, unknown>) => (
+              {((workforceMembers ?? []) as unknown as Array<Record<string, unknown>>).map((w) => (
                 <option key={w.id as string} value={w.id as string}>
                   {((w.name as string) ?? 'Unnamed')}{w.trade ? ` — ${w.trade as string}` : ''}
                 </option>
@@ -1147,7 +1148,7 @@ const TimeTracking: React.FC = () => {
               const lr = Number(tmForm.laborRate) || 0
               const mc = Number(tmForm.materialCost) || 0
               const ec = Number(tmForm.equipmentCost) || 0
-              const { error } = await fromTable('time_material_tickets').insert({
+              const { error } = await fromTable('time_material_tickets' as never).insert({
                 project_id: projectId,
                 ticket_number: `TM-${Date.now().toString(36).toUpperCase()}`,
                 date: tmForm.date,

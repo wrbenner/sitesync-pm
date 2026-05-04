@@ -3,10 +3,9 @@ import { useAuditedMutation } from './createAuditedMutation'
 import { dailyLogDbSchema,
 } from '../../components/forms/schemas'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Daily Logs ────────────────────────────────────────────
 

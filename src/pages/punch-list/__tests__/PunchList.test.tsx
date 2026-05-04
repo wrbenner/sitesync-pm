@@ -12,7 +12,7 @@ const permissionsState = {
 const punchItemsState = {
   data: { data: [] as unknown[] } as { data: unknown[] } | undefined,
   isLoading: false,
-  error: null as unknown,
+  error: null as Error | null,
   refetch: vi.fn(),
   fetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
 }

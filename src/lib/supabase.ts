@@ -7,7 +7,6 @@ import { UserRole } from '../types/enums'
 // Required — no source-level fallbacks. If either is missing the client
 // creation below will throw, which is what we want: a silently-running
 // build pointed at the wrong project is worse than a hard failure.
-import { fromTable } from './db/queries'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
@@ -27,7 +26,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     // refresh across multiple tabs, but in practice it causes 5s timeouts + "Lock stolen"
     // errors when a page fires many concurrent data fetches (each one wants to read the
     // session, each acquires the same lock). Pass-through is safe for single-tab usage.
-    lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn(),
+    lock: (async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => fn()) as never,
   },
 })
 
@@ -36,27 +35,13 @@ export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 /**
  * Typed table accessor — preserves the literal table name so `.eq()`, `.in()`,
  * `.select()` calls narrow correctly to that table's row shape under
- * @supabase/supabase-js v2 strict generics.
- *
- * Two overloads:
- *   - Known table (in Database['public']['Tables']): returns the narrow,
- *     table-specific PostgrestQueryBuilder. This is the typed path —
- *     `fromTable('rfis').eq('project_id' as never, ...)` typechecks because
- *     'project_id' is keyof rfis.Row.
- *   - Unknown table (string & Record<never, never>): escape hatch for
- *     tables added by migration but not yet in generated types. Returns
- *     the wide builder; callers will get loose types — fine as a
- *     transition seam, not as a long-lived pattern.
- *
- * Use this everywhere instead of `fromTable(...)`. The Day-26 audit
- * verified no service does a raw `update({status:...})` outside the
- * validator path; the same discipline applies here for the type gate.
+ * @supabase/supabase-js v2 strict generics. Use this everywhere instead of
+ * `supabase.from(...)`. Callers needing the dynamic-string escape hatch can
+ * cast: `fromTable(name as never)`.
  */
 type TableName = keyof Database['public']['Tables']
-export function fromTable<T extends TableName>(table: T): ReturnType<typeof supabase.from<T>>
-export function fromTable(table: string & Record<never, never>): ReturnType<typeof supabase.from>
-export function fromTable(table: string) {
-  return fromTable(table as TableName)
+export function fromTable<T extends TableName>(table: T) {
+  return supabase.from(table)
 }
 
 /**

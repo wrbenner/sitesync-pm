@@ -67,7 +67,7 @@ const ViolationCard = memo<{
         )}
 
         {/* Action button */}
-        <PermissionGate permission="safety.create">
+        <PermissionGate permission="safety.manage">
           <button
             onClick={() => onCreateObservation(
               `${violation.type}: ${violation.description}${violation.location ? ` at ${violation.location}` : ''}`,
@@ -201,7 +201,6 @@ export const AIPhotoAnalysis: React.FC = () => {
           }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = colors.primaryOrange }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = colors.borderDefault }}
-          role="button"
           aria-label="Upload site photo for AI safety analysis"
         >
           <div style={{
@@ -373,7 +372,7 @@ export const AIPhotoAnalysis: React.FC = () => {
 
               {/* Bulk create action */}
               {result.safetyViolations.length > 0 && (
-                <PermissionGate permission="safety.create">
+                <PermissionGate permission="safety.manage">
                   <Btn
                     onClick={() => {
                       toast.success(`${result.safetyViolations.length} safety observations created from photo analysis`)

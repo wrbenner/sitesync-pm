@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom'
 const rfisState = {
   data: { data: [] as unknown[] } as { data: unknown[] } | undefined,
   isPending: false,
-  error: null as unknown,
+  error: null as Error | null,
   refetch: vi.fn(),
 }
 
