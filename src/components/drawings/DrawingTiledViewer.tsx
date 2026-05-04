@@ -26,7 +26,7 @@ import React, {
   useEffect,
   useMemo,
 } from 'react';
-import OpenSeadragon from 'openseadragon';
+import * as OpenSeadragon from 'openseadragon';
 import {
   X,
   ZoomIn,
@@ -154,7 +154,7 @@ const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool,
 const OsdLoupe: React.FC<{
   screenX: number;
   screenY: number;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   viewerRef: React.RefObject<OpenSeadragon.Viewer | null>;
   /** Optional: when scale is known, render a true-measure bar along the loupe's bottom. */
   scaleLabel?: string | null;
@@ -376,6 +376,7 @@ interface AnnotationOverlayItem {
 const VIEWER_ID = 'osd-tiled-viewer';
 const NAVIGATOR_ID = 'osd-navigator';
 const _EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
+      void _EASING;
 
 
 const HEADER_HEIGHT = 48;
@@ -935,8 +936,9 @@ const AnnotationSvgOverlay: React.FC<AnnotationSvgOverlayProps> = React.memo(({
               />
             );
           }
-          case 'line':
-          case 'measure': {
+          case 'line': {
+            // 'measure' geometries are short-circuited above (rendered by
+            // MeasurementOverlay instead).
             if (pts.length < 2) return null;
             return wrap(
               <line
@@ -1183,7 +1185,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   const posLabel = currentIdx >= 0 ? `${currentIdx + 1} / ${drawings.length}` : '';
 
   // Load markups from DB
-  const { data: dbMarkups } = useDrawingMarkups(drawing.id, projectId);
+  const { data: dbMarkups } = useDrawingMarkups(drawing.id);
   const createMarkup = useCreateDrawingMarkup();
   const deleteMarkup = useDeleteDrawingMarkup();
   // Currently selected annotation (id). Click on a markup while in select tool to highlight it.
@@ -1194,27 +1196,27 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // (which we write into when schema-enhancement migrations aren't applied).
   const annotations: AnnotationOverlayItem[] = useMemo(() => {
     if (!dbMarkups || !showAnnotations) return [];
-    return dbMarkups
-      .map((row: Record<string, unknown>) => {
-        const d = (row.data && typeof row.data === 'object' ? row.data : {}) as unknown as Record<string, unknown>;
-        const geometry = (row.normalized_coords as NormalizedGeometry | undefined)
-          ?? (d.normalized_coords as NormalizedGeometry | undefined);
-        if (!geometry) return null;
-        return {
-          id: row.id as string,
-          geometry,
-          layer: ((row.layer as AnnotationLayer | undefined) ?? (d.layer as AnnotationLayer | undefined) ?? 'default') as AnnotationLayer,
-          visibility: ((row.visibility as AnnotationVisibility | undefined) ?? (d.visibility as AnnotationVisibility | undefined) ?? 'team') as AnnotationVisibility,
-          strokeColor: (row.color as string | undefined) || (d.color as string | undefined) || '#E05252',
-          strokeWidth: (d.strokeWidth as number | undefined) ?? 0.002,
-          fillColor: d.fillColor as string | undefined,
-          opacity: (d.opacity as number | undefined) ?? 0.85,
-          text: (row.content as string | undefined) ?? (d.text as string | undefined),
-          stampType: (row.stamp_type as string | undefined) ?? (d.stampType as string | undefined),
-          uiTool: d.uiType as MarkupTool | undefined,
-        };
-      })
-      .filter((a): a is AnnotationOverlayItem => !!a);
+    const rows = dbMarkups as unknown as Array<Record<string, unknown>>;
+    const mapped: Array<AnnotationOverlayItem | null> = rows.map((row): AnnotationOverlayItem | null => {
+      const d = (row.data && typeof row.data === 'object' ? row.data : {}) as unknown as Record<string, unknown>;
+      const geometry = (row.normalized_coords as NormalizedGeometry | undefined)
+        ?? (d.normalized_coords as NormalizedGeometry | undefined);
+      if (!geometry) return null;
+      return {
+        id: row.id as string,
+        geometry,
+        layer: ((row.layer as AnnotationLayer | undefined) ?? (d.layer as AnnotationLayer | undefined) ?? 'default') as AnnotationLayer,
+        visibility: ((row.visibility as AnnotationVisibility | undefined) ?? (d.visibility as AnnotationVisibility | undefined) ?? 'team') as AnnotationVisibility,
+        strokeColor: (row.color as string | undefined) || (d.color as string | undefined) || '#E05252',
+        strokeWidth: (d.strokeWidth as number | undefined) ?? 0.002,
+        fillColor: d.fillColor as string | undefined,
+        opacity: (d.opacity as number | undefined) ?? 0.85,
+        text: (row.content as string | undefined) ?? (d.text as string | undefined),
+        stampType: (row.stamp_type as string | undefined) ?? (d.stampType as string | undefined),
+        uiTool: d.uiType as MarkupTool | undefined,
+      };
+    });
+    return mapped.filter((a): a is AnnotationOverlayItem => a !== null);
   }, [dbMarkups, showAnnotations]);
 
   // ── Tile source — DZI when tiled, simple image when not ────────────────
@@ -1730,7 +1732,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               project_id: projectId,
               drawing_id: drawing.id,
               page_number: 1,
-              annotation_type: baseData.annotation_type,
+              annotation_type: baseData.type,
               geometry_type: ann.geometry.type,
               normalized_coords: ann.geometry,
               color: ann.strokeColor,
