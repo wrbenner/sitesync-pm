@@ -1045,7 +1045,7 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
 }
 
 // ─── Loupe: circular magnified view of the PDF canvas around the cursor ──
-const Loupe: React.FC<{ x: number; y: number; sourceRef: React.RefObject<HTMLDivElement>; pageWidth: number; pageHeight: number }> = ({ x, y, sourceRef, pageWidth, pageHeight }) => {
+const Loupe: React.FC<{ x: number; y: number; sourceRef: React.RefObject<HTMLDivElement | null>; pageWidth: number; pageHeight: number }> = ({ x, y, sourceRef, pageWidth, pageHeight }) => {
   const LOUPE_SIZE = 140;
   const MAG = 3;
   const canvasRef = useRef<HTMLCanvasElement>(null);

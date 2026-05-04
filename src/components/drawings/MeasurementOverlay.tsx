@@ -14,7 +14,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { colors, typography, borderRadius } from '../../styles/theme';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 

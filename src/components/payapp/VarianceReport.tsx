@@ -39,7 +39,7 @@ export const VarianceReport: React.FC<VarianceReportProps> = ({ report }) => {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <div>
           <Eyebrow>Variance Report</Eyebrow>
-          <div style={{ marginTop: 6, ...typography.body, color: colors.textSecondary }}>
+          <div style={{ marginTop: 6, fontSize: typography.fontSize.body, color: colors.textSecondary }}>
             Schedule vs Pay App, applied tolerance ±{report.appliedTolerancePct.toFixed(0)}pp.
           </div>
         </div>

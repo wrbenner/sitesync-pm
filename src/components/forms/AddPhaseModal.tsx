@@ -155,7 +155,7 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
   };
 
   const progressColor = percentComplete === 100
-    ? colors.statusApproved
+    ? colors.statusActive
     : percentComplete > 0
     ? colors.primaryOrange
     : colors.borderDefault;

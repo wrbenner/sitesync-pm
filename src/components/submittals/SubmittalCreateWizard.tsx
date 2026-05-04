@@ -620,7 +620,7 @@ const SubmittalCreateWizard: React.FC<SubmittalCreateWizardProps> = ({
               overflowY: 'auto',
               backgroundColor: colors.surfaceRaised,
               borderRadius: borderRadius.xl,
-              boxShadow: shadows.xl,
+              boxShadow: shadows.lg,
               border: `1px solid ${colors.borderSubtle}`,
               pointerEvents: 'auto',
             }}

@@ -206,7 +206,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ initial, onSav
           width: 320,
           padding: spacing['4'],
           borderLeft: `1px solid ${colors.borderSubtle}`,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceRaised,
           overflow: 'auto',
         }}
       >
