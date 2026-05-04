@@ -61,12 +61,12 @@ export function useCreateSubmittal() {
     action: 'create',
     entityType: 'submittal',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const insertData = sanitizeSubmittalData(params.data)
       const { data, error } = await from('submittals').insert(insertData as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'submittal_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -88,7 +88,7 @@ export function useUpdateSubmittal() {
     action: 'update',
     entityType: 'submittal',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       // State machine enforcement: validate status transition before persisting
       if (typeof updates.status === 'string') {

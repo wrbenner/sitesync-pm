@@ -17,7 +17,7 @@ export function useCreateDailyLog() {
     action: 'create',
     entityType: 'daily_log',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const { data, error } = await from('daily_logs').insert(params.data as never).select().single()
       if (error) throw error
@@ -37,7 +37,7 @@ export function useUpdateDailyLog() {
     action: 'update',
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       const { error } = await from('daily_logs').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error

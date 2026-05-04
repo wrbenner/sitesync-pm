@@ -20,7 +20,7 @@ export function useCreateDailyLogEntry() {
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('daily_log_entries').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result: { data: unknown; projectId: string }) => {
       invalidateEntity('daily_log', result.projectId)

@@ -40,12 +40,12 @@ export function useCreatePunchItem() {
     action: 'create',
     entityType: 'punch_item',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const insertData = sanitizePunchData(params.data)
       const { data, error } = await from('punch_items').insert(insertData as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'punch_item_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -67,7 +67,7 @@ export function useUpdatePunchItem() {
     action: 'update',
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       if (typeof updates.status === 'string') {
         await validatePunchItemStatusTransition(id, projectId, updates.status)

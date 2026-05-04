@@ -29,7 +29,7 @@ export function useCreateBudgetItem() {
       const payload = { ...params.data, project_id: params.projectId }
       const { data, error } = await from('budget_line_items').insert(payload as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     invalidateKeys: (p) => [
       [`costData-${p.projectId}`],

@@ -24,7 +24,7 @@ export function useCreateRFI() {
     action: 'create',
     entityType: 'rfi',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const { data, error } = await from('rfis').insert(params.data as never).select().single()
       if (error) throw error
@@ -61,7 +61,7 @@ export function useUpdateRFI() {
     action: 'update',
     entityType: 'rfi',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       // State machine enforcement: validate status transition before persisting
       if (typeof updates.status === 'string') {

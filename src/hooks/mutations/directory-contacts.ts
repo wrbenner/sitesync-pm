@@ -22,7 +22,7 @@ export function useCreateDirectoryContact() {
     mutationFn: async (params) => {
       const { data, error } = await from('directory_contacts').insert(params.data).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'directory_contact_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),

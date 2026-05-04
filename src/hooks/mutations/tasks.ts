@@ -21,11 +21,11 @@ export function useCreateTask() {
     action: 'create',
     entityType: 'task',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const { data, error } = await from('tasks').insert(params.data).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'task_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -47,7 +47,7 @@ export function useUpdateTask() {
     action: 'update',
     entityType: 'task',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       if (typeof updates.status === 'string') {
         await validateTaskStatusTransition(id, projectId, updates.status)

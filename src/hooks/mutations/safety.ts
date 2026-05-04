@@ -20,7 +20,7 @@ export function useCreateCorrectiveAction() {
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('corrective_actions').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
@@ -54,7 +54,7 @@ export function useCreateSafetyInspection() {
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('safety_inspections').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['safety_inspections', result.projectId] })
@@ -72,7 +72,7 @@ export function useCreateIncident() {
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('incidents').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })

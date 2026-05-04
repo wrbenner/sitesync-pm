@@ -18,6 +18,8 @@ type CertPayload = {
   waiver_of_subrogation?: boolean | null
   document_url?: string | null
   verified?: boolean | null
+  verified_by?: string | null
+  verified_at?: string | null
 }
 
 const COI_BUCKET = 'project-files'

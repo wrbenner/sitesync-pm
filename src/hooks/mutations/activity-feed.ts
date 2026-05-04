@@ -20,7 +20,7 @@ export function useCreateActivityFeedItem() {
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
       const { data, error } = await from('activity_feed').insert(params.data).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['activity_feed', result.projectId] })
