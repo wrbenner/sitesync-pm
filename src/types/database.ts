@@ -21904,6 +21904,11 @@ export type Profile = TableRow<'profiles'>
 export type Priority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done'
 
+// ProjectRole — canonical 15-value role enum. Defined in ./stream (locked
+// contract for the homepage redesign). Re-exported here so legacy import
+// sites (`from '../types/database'`) keep resolving.
+export type { ProjectRole } from './stream'
+
 // UserRole lives in ./enums — import from there directly. Re-exporting an
 // enum through this type-heavy barrel breaks under verbatimModuleSyntax
 // (Vite dev server fails to resolve the runtime value).

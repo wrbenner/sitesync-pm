@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 import { callIris, IrisCallError } from '../../lib/ai/callIris'
+import { supabase } from '../../lib/supabase'
 
 // ── Test helpers ────────────────────────────────────────────────────────────
 

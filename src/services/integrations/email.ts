@@ -177,9 +177,10 @@ export const emailProvider: IntegrationProvider = {
 
   async getStatus(integrationId) {
     const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as { status: string | null; last_sync: string | null; error_log: unknown } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
     }
   },
 
@@ -195,7 +196,8 @@ export async function sendRFIResponseEmail(
   to: string[],
   rfi: { number: string; title: string; response: string; respondedBy: string; projectName: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const integration = data as { config: Record<string, string> | null } | null
   if (!integration?.config) return { success: false, error: 'Email integration not configured' }
 
   const config = integration.config as Record<string, string>
@@ -213,7 +215,8 @@ export async function sendSubmittalTransmittal(
   to: string[],
   submittal: { number: string; title: string; status: string; specSection: string; projectName: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const integration = data as { config: Record<string, string> | null } | null
   if (!integration?.config) return { success: false, error: 'Email integration not configured' }
 
   const config = integration.config as Record<string, string>
@@ -231,7 +234,8 @@ export async function sendDailyLogSummaryEmail(
   to: string[],
   log: { date: string; workers: number; manHours: number; incidents: number; weather: string; summary: string; projectName: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const integration = data as { config: Record<string, string> | null } | null
   if (!integration?.config) return { success: false, error: 'Email integration not configured' }
 
   const config = integration.config as Record<string, string>
