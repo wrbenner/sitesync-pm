@@ -66,7 +66,7 @@ export async function executeDraftedPayApp(draft: DraftedAction): Promise<{
   }))
 
   if (lineRows.length > 0) {
-    const { error: linesError } = await fromTable('payment_application_line_items')
+    const { error: linesError } = await fromTable('payment_application_line_items' as never)
       .insert(lineRows as never)
 
     if (linesError) {

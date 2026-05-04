@@ -36,7 +36,7 @@ const talkColumns = [
 // ── Toolbox list ─────────────────────────────────────────────
 
 interface ToolboxTalksListProps {
-  talks: unknown[];
+  talks: Record<string, unknown>[];
   onNewTalk: () => void;
 }
 

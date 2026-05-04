@@ -754,7 +754,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
                       border: `1.5px solid ${colors.borderDefault}`,
                       borderRadius: 10, resize: 'none', outline: 'none',
                       color: colors.textPrimary,
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.surfaceRaised,
                       boxSizing: 'border-box',
                       minHeight: 36,
                     }}

@@ -32,8 +32,6 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     status: (d['status'] as string | null) ?? 'upcoming',
     is_critical_path: isCritical,
     float_days: (d['float_days'] as number | null) ?? 0,
-    baseline_start: (d['baseline_start'] as string | null) ?? null,
-    baseline_end: baselineEnd,
     earned_value: (d['earned_value'] as number | null) ?? null,
     assigned_crew_id: (d['assigned_crew_id'] as string | null) ?? null,
     dependencies: (d['predecessor_ids'] as string[] | null) ?? null,

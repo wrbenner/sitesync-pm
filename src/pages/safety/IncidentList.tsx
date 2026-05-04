@@ -67,7 +67,7 @@ const incidentColumns = [
 ];
 
 interface IncidentListProps {
-  incidents: unknown[];
+  incidents: Record<string, unknown>[];
   onReportIncident: () => void;
 }
 

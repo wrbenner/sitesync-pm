@@ -670,7 +670,7 @@ export const PermitsTab: React.FC = () => {
         <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowCreatePermit(true)}>New Permit</Btn>
       </div>
       {showCreatePermit && (
-        <Modal title="Create Work Permit" onClose={() => setShowCreatePermit(false)}>
+        <Modal open={showCreatePermit} title="Create Work Permit" onClose={() => setShowCreatePermit(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
             <div>
               <label style={{ display: 'block', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary, marginBottom: spacing['1'] }}>Permit Type</label>

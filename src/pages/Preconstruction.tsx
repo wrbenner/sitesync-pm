@@ -1600,7 +1600,7 @@ function SubcontractorsView({
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                         <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{sub.company_name}</span>
-                        {sub.prequalified && <Shield size={12} style={{ color: colors.statusActive }} title="Prequalified" />}
+                        {sub.prequalified && <span title="Prequalified"><Shield size={12} color={colors.statusActive} /></span>}
                       </div>
                       <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                         {sub.primary_trade || '—'}{sub.city ? ` · ${sub.city}${sub.state ? `, ${sub.state}` : ''}` : ''}

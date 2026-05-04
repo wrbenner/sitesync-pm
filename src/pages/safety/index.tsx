@@ -49,7 +49,7 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data;
 
   const displayIncidents: unknown[] = incidents ?? [];
-  const displayCAs: unknown[] = correctiveActions ?? [];
+  const displayCAs: Record<string, unknown>[] = (correctiveActions ?? []) as Record<string, unknown>[];
 
   // ── Real-time subscriptions ───────────────────────────────────
   useEffect(() => {

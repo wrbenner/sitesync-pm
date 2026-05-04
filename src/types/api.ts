@@ -243,6 +243,7 @@ export interface PayApplication {
   project_id: string
   contract_id: string | null
   application_number: number
+  period_from: string | null
   period_to: string
   status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'gc_review' | 'owner_review' | 'paid' | 'void'
   original_contract_sum: number | null
@@ -257,6 +258,7 @@ export interface PayApplication {
   submitted_date: string | null
   certified_date: string | null
   certified_by: string | null
+  approved_date: string | null
   paid_date: string | null
   paid_amount: number | null
   signature_url: string | null
