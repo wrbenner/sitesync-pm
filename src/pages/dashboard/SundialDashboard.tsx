@@ -76,6 +76,7 @@ function handleDecisionAnswer(
     default: {
       // Exhaustiveness: TS will flag if a new kind is added without a case
       const _exhaustive: never = decision.kind;
+            void _exhaustive;
       toast.message('Action noted.');
       return;
     }
@@ -102,13 +103,6 @@ function dayFrac(m: number, sunrise: number, sunset: number): number {
   return Math.max(0, Math.min(1, (m - sunrise) / (sunset - sunrise)));
 }
 
-function _fmtTime(m: number): string {
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  const h12 = ((h + 11) % 12) + 1;
-  const ap = h < 12 ? 'A' : 'P';
-  return `${h12}:${String(mm).padStart(2, '0')}${ap}`;
-}
 
 function fmtTimeLower(m: number): string {
   const h = Math.floor(m / 60);

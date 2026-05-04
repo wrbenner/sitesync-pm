@@ -255,36 +255,6 @@ const TradeRow: React.FC<{ trade: string; count: number }> = ({ trade, count }) 
 
 // ── Quick Link ───────────────────────────────────────────
 
-const _QuickLink: React.FC<{ href: string; label: string; sub?: string }> = ({ href, label, sub }) => (
-  <a
-    href={href}
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '13px 16px',
-      backgroundColor: '#FFFFFF',
-      border: '1px solid var(--hairline)',
-      borderRadius: '10px',
-      textDecoration: 'none',
-      color: 'inherit',
-      transition: transitions.quick,
-    }}
-  >
-    <div>
-      <div style={{ fontFamily: typography.fontFamily, fontSize: '14px', fontWeight: 500, color: colors.ink }}>
-        {label}
-      </div>
-      {sub && (
-        <div style={{ fontFamily: typography.fontFamily, fontSize: '12px', color: colors.ink3, marginTop: 1 }}>
-          {sub}
-        </div>
-      )}
-    </div>
-    <ChevronRight size={14} style={{ color: colors.ink4 }} />
-  </a>
-);
-
 // ── The Crew Page ─────────────────────────────────────────
 
 const CrewPage: React.FC = () => {

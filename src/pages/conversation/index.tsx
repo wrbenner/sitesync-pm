@@ -636,15 +636,6 @@ function displayAssignee(raw: string | undefined): string {
   return raw;
 }
 
-function _formatShortDate(dateStr: string): string {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr.split('T')[0] + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  } catch {
-    return dateStr;
-  }
-}
 
 // ── Create Modal Wrappers ─────────────────────────────────
 

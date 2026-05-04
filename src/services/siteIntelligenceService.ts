@@ -169,12 +169,6 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return { miles: Math.round(miles * 100) / 100, feet: Math.round(miles * 5280) };
 }
 
-function _driveTimeEstimate(miles: number): string {
-  if (miles < 0.3) return `${Math.round(miles * 5280 / 260)} min walk`;
-  const minutes = Math.max(1, Math.round(miles * 2.5)); // ~24mph avg city speed
-  return `${minutes} min`;
-}
-
 // ── 1. Geocoding (Nominatim) ──────────────────────────────────
 
 export async function geocodeAddress(query: string): Promise<GeocodingResult[]> {

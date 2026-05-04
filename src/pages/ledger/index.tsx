@@ -199,42 +199,6 @@ function BudgetBar({
   );
 }
 
-// ── Quick Link Button ───────────────────────────────────────
-
-function _QuickLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        padding: '10px 20px',
-        borderRadius: 6,
-        border: `1px solid ${colors.hairline2}`,
-        backgroundColor: colors.parchment2,
-        color: colors.ink,
-        fontFamily: typography.fontFamily,
-        fontSize: '13px',
-        fontWeight: 500,
-        letterSpacing: '0.01em',
-        textDecoration: 'none',
-        transition: transitions.quick,
-        cursor: 'pointer',
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = colors.parchment3;
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = colors.hairline3;
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = colors.parchment2;
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = colors.hairline2;
-      }}
-    >
-      {label}
-    </a>
-  );
-}
-
 // ── The Ledger Page ─────────────────────────────────────────
 
 const LedgerPage: React.FC = () => {
@@ -290,6 +254,7 @@ const LedgerPage: React.FC = () => {
     }>,
     [payAppData]
   );
+  void _payApps;
 
   // ── Derived values — prefer live data, fallback to metrics ──
   const budgetTotal = useMemo(() => {
