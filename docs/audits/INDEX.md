@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-01
+**Last updated:** 2026-05-04
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -24,6 +24,10 @@ entries before starting work. Update this file when you add a new doc.
 | 7 | (No standalone receipt — see Day 8 doc) | — | authStore absorbs organizationStore; projectContext renamed to projectStore. |
 | 8 | Group A dead-store sweep + uiStore merge | `DAY_8_ZUSTAND_RECEIPT_2026-05-01.md` | 14 stores deleted, notificationStore merged, 2 shims removed. 33→16. |
 | 9 | Group B migrations + AI-store decision | `DAY_9_ZUSTAND_RECEIPT_2026-05-01.md` | crew/equipment/submittal deleted, punchList slimmed. 16→13. |
+| 10–11 | Scattered state | `DAY_10_11_SCATTERED_STATE_RECEIPT_2026-05-01.md` | Scattered state cleanup. |
+| 14–19 | Money-cents migration | `DAY_15_PAYAPP_CENTS_RECEIPT_2026-05-03.md`, `DAY_17_19_MONEY_CENTS_RECEIPT_2026-05-03.md` | PayApp + global money-to-cents migration shipped. |
+| 26 | Permission gate sweep | `DAY_26_GATE_SWEEP_RECEIPT_2026-05-03.md` | PermissionGate audit closure. |
+| ~ | Typecheck → ZERO | `TYPECHECK_ZERO_2026-05-04.md` | 4339 → 0 errors. CI tsc gate green for the first time since the campaign began. |
 
 ---
 
@@ -31,10 +35,10 @@ entries before starting work. Update this file when you add a new doc.
 
 | Day(s) | Theme | Spec | Status |
 |---|---|---|---|
-| 14–19 | Money-cents migration | `MONEY_CENTS_AUDIT_2026-05-01.md` | ✅ Spec ready |
-| 20–24 | State machine wiring | `STATE_MACHINE_INVENTORY_2026-05-01.md` | 🟡 Forthcoming |
-| 27–28 | Bundle attack | `BUNDLE_ATTACK_SPEC_2026-05-01.md` | 🟡 Forthcoming |
-| 30 | Lap 1 acceptance gate | `LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md` | 🟡 Forthcoming |
+| 14–19 | Money-cents migration | `MONEY_CENTS_AUDIT_2026-05-01.md` | ✅ Shipped (see receipts above) |
+| 20–24 | State machine wiring | `STATE_MACHINE_INVENTORY_2026-05-01.md` | 🟡 Spec ready, NOT executed |
+| 27–28 | Bundle attack | `BUNDLE_ATTACK_SPEC_2026-05-01.md` | 🟡 Spec ready, NOT executed |
+| 30 | Lap 1 acceptance gate | `LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md` | 🟡 Spec ready, NOT executed |
 
 ---
 
