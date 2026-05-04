@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 import { detectConflicts } from './conflictResolver'
 import type { Database } from '../types/database'
 
@@ -432,7 +433,7 @@ export async function processSyncQueue(
     try {
       await offlineDb.pendingMutations.update(m.id!, { status: 'syncing' })
       // Dynamic table name requires casting; the table name is validated against validTableNames on enqueue
-      const from = supabase.from(m.table as keyof Database['public']['Tables'])
+      const from = fromTable(m.table as keyof Database['public']['Tables'])
 
       if (m.operation === 'insert') {
         const { error } = await from.insert(m.data)
@@ -441,7 +442,7 @@ export async function processSyncQueue(
         // Fetch current server version to check for conflicts
         const { data: serverRow } = await from
           .select('*')
-          .eq('id', m.data.id)
+          .eq('id' as never, m.data.id)
           .single()
 
         if (serverRow && serverRow.updated_at) {
@@ -452,7 +453,7 @@ export async function processSyncQueue(
             if (isStatusOnlyChange(m.data)) {
               // Status-only fields use last-write-wins: always apply local
               const { id, ...updates } = m.data
-              const { error } = await from.update(updates).eq('id', id)
+              const { error } = await from.update(updates as never).eq('id' as never, id)
               if (error) throw error
             } else {
               // Attempt three-way merge using the cached base version
@@ -470,7 +471,7 @@ export async function processSyncQueue(
                   const mergedUpdates = Object.fromEntries(
                     Object.entries(mergedRecord).filter(([k]) => k !== 'id' && k !== 'updated_at')
                   )
-                  const { error } = await from.update(mergedUpdates).eq('id', mergedId as string)
+                  const { error } = await from.update(mergedUpdates as never).eq('id' as never, mergedId as string)
                   if (error) throw error
                   // Keep local cache in sync with the merged record
                   const dexieTableName = getDexieTableName(m.table)
@@ -503,16 +504,16 @@ export async function processSyncQueue(
             }
           } else {
             const { id, ...updates } = m.data
-            const { error } = await from.update(updates).eq('id', id)
+            const { error } = await from.update(updates as never).eq('id' as never, id)
             if (error) throw error
           }
         } else {
           const { id, ...updates } = m.data
-          const { error } = await from.update(updates).eq('id', id)
+          const { error } = await from.update(updates as never).eq('id' as never, id)
           if (error) throw error
         }
       } else if (m.operation === 'delete' && m.data.id) {
-        const { error } = await from.delete().eq('id', m.data.id)
+        const { error } = await from.delete().eq('id' as never, m.data.id)
         if (error) throw error
       }
 
@@ -695,7 +696,7 @@ export async function cacheProjectData(
   // Cache the project record
   onProgress?.({ total, completed: 0, currentTable: 'projects' })
   try {
-    const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single()
+    const { data, error } = await fromTable('projects').select('*').eq('id' as never, projectId).single()
     if (error) throw error
     if (data) {
       await offlineDb.projects.put(data)
@@ -715,10 +716,9 @@ export async function cacheProjectData(
     onProgress?.({ total, completed: tablesCompleted, currentTable: supaTable })
 
     try {
-      const { data, error } = await supabase
-        .from(supaTable as keyof Database['public']['Tables'])
+      const { data, error } = await fromTable(supaTable as keyof Database['public']['Tables'])
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .limit(clampedLimit)
       if (error) throw error
 

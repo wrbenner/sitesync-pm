@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export type NotificationTrigger =
   | 'rfi_assigned'
@@ -61,7 +62,7 @@ export async function queueNotification(
   recipientUserId: string,
   templateData: Record<string, string>,
 ): Promise<void> {
-  const { error } = await supabase.from('notification_queue').insert({
+  const { error } = await fromTable('notification_queue').insert({
     project_id: projectId,
     trigger,
     recipient_user_id: recipientUserId,
@@ -69,7 +70,7 @@ export async function queueNotification(
     status: 'pending',
     sent_at: null,
     error: null,
-  })
+  } as never)
 
   if (error) throw error
 }
@@ -77,10 +78,9 @@ export async function queueNotification(
 export async function getUserNotificationPreferences(
   userId: string,
 ): Promise<NotificationPreferences> {
-  const { data, error } = await supabase
-    .from('notification_preferences')
+  const { data, error } = await fromTable('notification_preferences')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id' as never, userId)
     .single()
 
   if (error || !data) {
@@ -90,7 +90,7 @@ export async function getUserNotificationPreferences(
   const prefs: NotificationPreferences = { ...DEFAULT_PREFERENCES }
   const triggers = Object.keys(DEFAULT_PREFERENCES) as NotificationTrigger[]
   for (const trigger of triggers) {
-    const val = (data as Record<string, unknown>)[trigger]
+    const val = (data as unknown as Record<string, unknown>)[trigger]
     if (val === 'instant' || val === 'digest' || val === 'off') {
       prefs[trigger] = val
     }
@@ -113,29 +113,27 @@ async function sendEmail(notification: EmailNotification): Promise<void> {
   })
 
   if (invokeError) {
-    await supabase
-      .from('notification_queue')
-      .update({ status: 'failed', error: invokeError.message })
-      .eq('id', notification.id)
+    await fromTable('notification_queue')
+      .update({ status: 'failed', error: invokeError.message } as never)
+      .eq('id' as never, notification.id)
     throw invokeError
   }
 
-  await supabase
-    .from('notification_queue')
-    .update({ status: 'sent', sent_at: new Date().toISOString(), error: null })
-    .eq('id', notification.id)
+  await fromTable('notification_queue')
+    .update({ status: 'sent', sent_at: new Date().toISOString(), error: null } as never)
+    .eq('id' as never, notification.id)
 }
 
 export async function processNotificationQueue(): Promise<void> {
-  const { data: pending, error } = await supabase
-    .from('notification_queue')
+  const { data: pending, error } = await fromTable('notification_queue')
     .select('*')
-    .eq('status', 'pending')
+    .eq('status' as never, 'pending')
 
   if (error) throw error
   if (!pending || pending.length === 0) return
 
-  for (const row of pending) {
+  type QueueRow = { id: string; project_id: string; recipient_user_id: string; recipient_email: string; trigger: string; template_data: unknown; status: string; sent_at: string | null; error: string | null; created_at: string | null }
+  for (const row of (pending as unknown as QueueRow[])) {
     const notification: EmailNotification = {
       id: row.id,
       projectId: row.project_id,
@@ -146,16 +144,15 @@ export async function processNotificationQueue(): Promise<void> {
       status: row.status as EmailNotification['status'],
       sentAt: row.sent_at,
       error: row.error,
-      createdAt: row.created_at,
+      createdAt: row.created_at ?? new Date().toISOString(),
     }
 
     const prefs = await getUserNotificationPreferences(notification.recipientUserId)
 
     if (prefs[notification.trigger] === 'off') {
-      await supabase
-        .from('notification_queue')
-        .update({ status: 'skipped' })
-        .eq('id', notification.id)
+      await fromTable('notification_queue')
+        .update({ status: 'skipped' } as never)
+        .eq('id' as never, notification.id)
       continue
     }
 
