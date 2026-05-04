@@ -92,7 +92,7 @@ async function initAuth() {
     setState({ loading: false })
   }
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+  const { data: { subscription: _subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
       setState({ session: s, user: s?.user ?? null, error: null })
       if (s?.user) {

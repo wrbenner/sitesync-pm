@@ -87,7 +87,7 @@ const credentialDemoData: WorkerCredential[] = [
 ]
 
 // ── Headcount Forecast Demo Data ────────────────────────
-const forecastMonths = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
+const _forecastMonths = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
 const forecastMonthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 interface ForecastTrade { trade: string; planned: number[]; actual: number[]; needed: number[]; phase: string[] }
 const forecastDemoData: ForecastTrade[] = [
@@ -604,7 +604,7 @@ export const Workforce: React.FC = () => {
         const totalPlanned = forecastDemoData.reduce((s, t) => s + t.planned[currentMonthIdx], 0)
         const totalActual = forecastDemoData.reduce((s, t) => s + t.actual[currentMonthIdx], 0)
         const totalGap = totalPlanned - totalActual
-        const maxHeadcount = Math.max(...forecastDemoData.flatMap(t => [...t.planned, ...t.actual, ...t.needed]))
+        const _maxHeadcount = Math.max(...forecastDemoData.flatMap(t => [...t.planned, ...t.actual, ...t.needed]))
         return (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>

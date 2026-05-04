@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
   "_version": 7,
-  "_updated": "2026-05-04T08:30:00Z",
+  "_updated": "2026-05-04T14:00:00Z",
   "_updatedBy": "auto/polish-20260503-2026",
-  "_floor_realignment_note": "v7: Record<string,any> fully eliminated (3 instances: DailySummaryPage, SubmittalDetailPage×2). supabase.ts dev-bypass crash fixed — e2ePassRate raised from 0 to 1.0 (28/28 desktop sweep green). QuickCapture SpeechRecognition typed without any. DailySummaryPage now uses ExtendedDailyLog with correct DB field names.",
+  "_floor_realignment_note": "v7: Record<string,any> fully eliminated. supabase.ts dev-bypass crash fixed. v8 (this session): ESLint errors 480→123 via dead import removal and unused-var prefixing across 100+ files.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 480,
+  "eslintErrors": 123,
   "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,

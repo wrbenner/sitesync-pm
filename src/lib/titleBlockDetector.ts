@@ -34,7 +34,7 @@ export interface TitleBlockRegion {
 
 // pdfjs operator codes. Not exported from the library type defs, so we
 // hard-code them; they've been stable since pdfjs 2.x.
-const OP_SET_FILL_RGB = 31;
+const _OP_SET_FILL_RGB = 31;
 const OP_CONSTRUCT_PATH = 91;
 const SUB_OP_RECT = 19;
 const SUB_OP_MOVE_TO = 13;

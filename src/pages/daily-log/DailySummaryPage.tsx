@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Printer, Calendar, Sparkles } from 'lucide-r
 import { PageContainer, Btn } from '../../components/Primitives';
 import { AIDailySummary } from '../../components/ai/AIDailySummary';
 import type { AIDailySummaryProps } from '../../components/ai/AIDailySummary';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
 import type { ExtendedDailyLog } from './types';
