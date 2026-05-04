@@ -14,14 +14,14 @@ export function useCreateDailyLog() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'daily_log.create',
     schema: dailyLogDbSchema,
-    action: 'create_daily_log',
+    action: 'create',
     entityType: 'daily_log',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('daily_logs').insert(params.data).select().single()
+      const { data, error } = await from('daily_logs').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'daily_log_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -34,7 +34,7 @@ export function useUpdateDailyLog() {
     permission: 'daily_log.edit',
     schema: dailyLogDbSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_daily_log',
+    action: 'update',
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
@@ -53,7 +53,7 @@ export function useUpdateDailyLog() {
 export function useDeleteDailyLog() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'daily_log.edit',
-    action: 'delete_daily_log',
+    action: 'delete',
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {

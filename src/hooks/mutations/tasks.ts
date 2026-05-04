@@ -18,7 +18,7 @@ export function useCreateTask() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'tasks.create',
     schema: taskSchema,
-    action: 'create_task',
+    action: 'create',
     entityType: 'task',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
@@ -44,7 +44,7 @@ export function useUpdateTask() {
     permission: 'tasks.edit',
     schema: taskSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_task',
+    action: 'update',
     entityType: 'task',
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,

@@ -21,14 +21,14 @@ export function useCreateRFI() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'rfis.create',
     schema: rfiSchema,
-    action: 'create_rfi',
+    action: 'create',
     entityType: 'rfi',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('rfis').insert(params.data).select().single()
+      const { data, error } = await from('rfis').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as Record<string, unknown>, projectId: params.projectId }
     },
     optimistic: {
       queryKey: (p) => ['rfis', p.projectId],
@@ -58,7 +58,7 @@ export function useUpdateRFI() {
     permission: 'rfis.edit',
     schema: rfiSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_rfi',
+    action: 'update',
     entityType: 'rfi',
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
@@ -99,7 +99,7 @@ export function useUpdateRFI() {
 export function useDeleteRFI() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'rfis.edit',
-    action: 'delete_rfi',
+    action: 'delete',
     entityType: 'rfi',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
@@ -123,7 +123,7 @@ export function useCreateRFIResponse() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; rfiId: string; projectId: string }) => {
-      const { data, error } = await from('rfi_responses').insert(params.data).select().single()
+      const { data, error } = await from('rfi_responses').insert(params.data as never).select().single()
       if (error) throw error
       return { data, rfiId: params.rfiId, projectId: params.projectId }
     },

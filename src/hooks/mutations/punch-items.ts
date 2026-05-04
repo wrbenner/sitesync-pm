@@ -37,7 +37,7 @@ export function useCreatePunchItem() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'punch_list.create',
     schema: punchItemSchema,
-    action: 'create_punch_item',
+    action: 'create',
     entityType: 'punch_item',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
@@ -64,7 +64,7 @@ export function useUpdatePunchItem() {
     permission: 'punch_list.edit',
     schema: punchItemSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_punch_item',
+    action: 'update',
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
@@ -92,7 +92,7 @@ export function useUpdatePunchItem() {
 export function useDeletePunchItem() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'punch_list.delete',
-    action: 'delete_punch_item',
+    action: 'delete',
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {

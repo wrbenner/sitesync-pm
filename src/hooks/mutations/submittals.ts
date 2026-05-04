@@ -58,7 +58,7 @@ export function useCreateSubmittal() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'submittals.create',
     schema: submittalSchema,
-    action: 'create_submittal',
+    action: 'create',
     entityType: 'submittal',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
@@ -85,7 +85,7 @@ export function useUpdateSubmittal() {
     permission: 'submittals.edit',
     schema: submittalSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_submittal',
+    action: 'update',
     entityType: 'submittal',
     getEntityId: (p) => p.id,
     getNewValue: (p) => p.updates,
@@ -132,7 +132,7 @@ export function useUpdateSubmittal() {
 export function useDeleteSubmittal() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'submittals.delete',
-    action: 'delete_submittal',
+    action: 'delete',
     entityType: 'submittal',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
