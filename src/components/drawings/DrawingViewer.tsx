@@ -18,7 +18,6 @@ import {
 import { DrawingPresenceBar } from '../collaboration/PresenceBar';
 
 import { fromTable } from '../../lib/db/queries'
-import type { Database } from '../../types/database';
 import { useUiStore } from '../../stores';
 import { useAuthStore } from '../../stores/authStore';
 import { useDrawingAnnotations, useCreateDrawingAnnotation } from '../../hooks/queries/drawing-annotations';
