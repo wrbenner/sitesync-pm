@@ -382,7 +382,7 @@ const FilesPage: React.FC = () => {
           navigateToBreadcrumb={navigateToBreadcrumb}
           handleFileClick={handleFileClick}
           handleDeleteFile={handleDeleteFile}
-          addToast={addToast}
+          addToast={addToast as never}
           showUpload={showUpload}
           setShowUpload={setShowUpload}
           handleInternalDragStart={handleInternalDragStart}

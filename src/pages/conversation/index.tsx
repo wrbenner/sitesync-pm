@@ -681,7 +681,7 @@ const CreateDailyLogModalWrapper: React.FC<{ open: boolean; onClose: () => void;
     await createDL.mutateAsync({ data: { ...data, project_id: projectId }, projectId });
     onClose();
   }, [createDL, projectId, onClose]);
-  return <CreateDailyLogModal open={open} onClose={onClose} onSubmit={handleSubmit} />;
+  return <CreateDailyLogModal open={open} onClose={onClose} onSubmit={handleSubmit as never} />;
 };
 
 const CreateTaskModalWrapper: React.FC<{ open: boolean; onClose: () => void; projectId: string }> = ({ open, onClose, projectId }) => {

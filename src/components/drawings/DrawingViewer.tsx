@@ -102,7 +102,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
         project_id: props.projectId!,
         drawing_id: drawingId!,
         page_number: 1,
-        annotation_type: 'markup',
+        annotation_type: 'markup' as never,
         shape_data: shapeData,
         color: '#F47820',
       });
@@ -718,7 +718,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
         created_by: presenceUser.name,
         created_at: new Date().toISOString(),
       }));
-      await fromTable('drawing_markups').insert(records as Database['public']['Tables']['drawing_markups']['Insert'][]);
+      await fromTable('drawing_markups').insert(records as never);
     } finally {
       setIsSaving(false);
     }

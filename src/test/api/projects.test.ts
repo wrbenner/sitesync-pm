@@ -270,7 +270,7 @@ describe('assertProjectAccess', () => {
     await Promise.all(Array.from({ length: 10 }, () => assertProjectAccess(PROJ_ID)))
 
     const memberCalls = (sb.from as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([t]: [string]) => t === 'project_members',
+      (call: unknown[]) => call[0] === 'project_members',
     )
     expect(memberCalls).toHaveLength(1)
   })

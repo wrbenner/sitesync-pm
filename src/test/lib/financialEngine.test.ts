@@ -18,6 +18,7 @@ function makeDivision(overrides: Partial<MappedDivision> = {}): MappedDivision {
   return {
     id: 'div-1',
     name: 'Concrete',
+    csi_division: null,
     budget: 500_000,
     spent: 200_000,
     committed: 400_000,

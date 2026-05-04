@@ -458,7 +458,7 @@ export const ReportGenerationModal: React.FC<ReportGenerationModalProps> = ({
               ) : (
                 drawings.map((d) => {
                   const checked =
-                    allSelected || (selectedIds !== 'all' && selectedIds.has(d.id))
+                    allSelected || (typeof selectedIds !== 'string' && selectedIds.has(d.id))
                   return (
                     <label
                       key={d.id}

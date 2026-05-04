@@ -121,7 +121,7 @@ export function createStamp(
     editable: false,
   });
 
-  const objects = [outerRect, innerRect, labelText, signerText, dateText];
+  const objects: Array<FabricRect | FabricIText | FabricLine> = [outerRect, innerRect, labelText, signerText, dateText];
 
   // For 'void' type, add a diagonal strike-through line
   if (type === 'void') {

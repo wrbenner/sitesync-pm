@@ -250,7 +250,7 @@ describe('Change Order State Machine', () => {
       const status: ChangeOrderState = 'pending_review'
       const amount = 50000
       const approved_amount: number | null = null
-      const approved_cost = status === 'approved' ? (approved_amount ?? amount ?? 0) : 0
+      const approved_cost = (status as string) === 'approved' ? (approved_amount ?? amount ?? 0) : 0
       expect(approved_cost).toBe(0)
     })
 

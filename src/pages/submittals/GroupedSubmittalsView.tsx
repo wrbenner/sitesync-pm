@@ -162,7 +162,7 @@ function groupByReviewer(
     if (reviewer && !isUuid(reviewer)) key = reviewer;
     else if (isUuid(reviewer)) key = displayName(profileMap, reviewer, 'Unassigned');
     else if (isUuid(assigned)) key = displayName(profileMap, assigned, 'Unassigned');
-    else key = (assigned as string) || 'Unassigned';
+    else key = (assigned ?? 'Unassigned') || 'Unassigned';
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(s);
   }

@@ -318,7 +318,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       });
 
       if (createError || !rfi) {
-        throw new Error(createError || 'Failed to create RFI');
+        throw new Error(createError?.message || 'Failed to create RFI');
       }
 
       // Transition to open

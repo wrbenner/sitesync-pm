@@ -84,7 +84,7 @@ describe('projectScopedQuery tenant isolation', () => {
     }
     // Make the builder thenable so await works
     const resolvedValue = { data: [{ id: 'row-1', project_id: PROJECT_A }], error: null }
-    builder.then = (resolve: (v: typeof resolvedValue) => void) => resolve(resolvedValue)
+    builder.then = ((resolve: (v: typeof resolvedValue) => void) => resolve(resolvedValue)) as never
 
     vi.mocked(supabase.from).mockReturnValue(builder as never)
 

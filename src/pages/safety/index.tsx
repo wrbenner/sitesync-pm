@@ -48,7 +48,7 @@ export const Safety: React.FC = () => {
   const { data: dailyLogsResult } = useDailyLogs(projectId);
   const dailyLogs = dailyLogsResult?.data;
 
-  const displayIncidents: unknown[] = incidents ?? [];
+  const displayIncidents: Record<string, unknown>[] = (incidents ?? []) as Record<string, unknown>[];
   const displayCAs: Record<string, unknown>[] = (correctiveActions ?? []) as Record<string, unknown>[];
 
   // ── Real-time subscriptions ───────────────────────────────────

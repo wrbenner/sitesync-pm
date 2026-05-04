@@ -58,7 +58,7 @@ export default function CostCodeLibraryPage() {
     }
     const { error: dbErr } = await supabase
       .from('cost_codes')
-      .upsert(rows, { onConflict: 'organization_id,code' });
+      .upsert(rows as never, { onConflict: 'organization_id,code' });
     if (dbErr) {
       setError(dbErr.message);
       return;
