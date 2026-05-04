@@ -241,6 +241,7 @@ interface BtnProps {
   title?: string;
   type?: 'button' | 'submit' | 'reset';
   style?: React.CSSProperties;
+  className?: string;
   loading?: boolean;
 }
 
@@ -258,6 +259,7 @@ export const Btn: React.FC<BtnProps> = ({
   title,
   type = 'button',
   style: styleProp,
+  className,
   loading = false,
 }) => {
   const variants = {
@@ -311,6 +313,7 @@ export const Btn: React.FC<BtnProps> = ({
       aria-label={ariaLabel}
       aria-busy={loading || undefined}
       aria-disabled={ariaDisabled ?? disabled ?? undefined}
+      className={className}
       title={title}
       style={{
         display: 'inline-flex',

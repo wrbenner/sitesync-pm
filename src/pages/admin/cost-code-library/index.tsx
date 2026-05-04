@@ -116,7 +116,7 @@ export default function CostCodeLibraryPage() {
             style={{
               marginTop: 24,
               fontFamily: typography.fontFamily,
-              color: colors.statusOverdue ?? colors.primaryOrange,
+              color: colors.statusCritical,
             }}
           >
             {error}

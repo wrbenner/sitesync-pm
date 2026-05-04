@@ -126,8 +126,8 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
       const result = await budgetService.importDivisionRows(activeProject.id, payload);
       setImportProgress(80);
 
-      if (!result.ok) {
-        setError(result.error?.message || 'Import failed');
+      if (result.error) {
+        setError(result.error.message || 'Import failed');
         setStep('preview');
         return;
       }
@@ -209,7 +209,7 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
           display: 'flex',
           flexDirection: 'column',
           fontFamily: typography.fontFamily,
-          transition: `width ${transitions.normal}`,
+          transition: `width ${transitions.base}`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -549,7 +549,7 @@ export function BudgetUpload({ open, onClose, onSuccess }: BudgetUploadProps) {
           {step === 'importing' && (
             <div style={{ textAlign: 'center', padding: `${spacing['8']} 0` }}>
               <div style={{ width: '100%', height: 4, backgroundColor: colors.surfaceInset, borderRadius: 2, overflow: 'hidden', marginBottom: spacing['4'] }}>
-                <div style={{ width: `${importProgress}%`, height: '100%', backgroundColor: colors.primaryOrange, borderRadius: 2, transition: `width ${transitions.normal}` }} />
+                <div style={{ width: `${importProgress}%`, height: '100%', backgroundColor: colors.primaryOrange, borderRadius: 2, transition: `width ${transitions.base}` }} />
               </div>
               <p style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
                 Importing {activeRows.length} line items into {grouped.size} divisions...

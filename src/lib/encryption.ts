@@ -32,11 +32,11 @@ export async function encryptField(
   plaintext: string
 ): Promise<string> {
   // Store the plaintext in Supabase Vault (encrypted at rest by Vault)
-  const { data, error } = await supabase.rpc('vault.create_secret', {
+  const { data, error } = await supabase.rpc('vault.create_secret' as never, {
     new_secret: plaintext,
     new_name: `${entityType}:${entityId}:${fieldName}`,
     new_description: `Encrypted field for ${entityType}.${fieldName}`,
-  })
+  } as never)
 
   if (error) throw new Error(`Encryption failed: ${error.message}`)
 
@@ -72,9 +72,9 @@ export async function decryptField(
   if (!ref?.vault_secret_id) return null
 
   // Retrieve from Vault
-  const { data, error } = await supabase.rpc('vault.read_secret', {
+  const { data, error } = await supabase.rpc('vault.read_secret' as never, {
     secret_id: ref.vault_secret_id,
-  })
+  } as never)
 
   if (error) throw new Error(`Decryption failed: ${error.message}`)
   return data as string

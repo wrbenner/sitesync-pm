@@ -102,7 +102,7 @@ export const ImportJobProgress: React.FC<ImportJobProgressProps> = ({ job }) => 
 
 function statusColor(s: ImportJobRow['status']): string {
   if (s === 'succeeded') return colors.statusActive;
-  if (s === 'failed') return colors.statusOverdue ?? colors.primaryOrange;
+  if (s === 'failed') return colors.statusCritical;
   if (s === 'running') return colors.primaryOrange;
   return colors.textTertiary;
 }

@@ -39,7 +39,7 @@ export async function buildCollaborationContext(projectId: string): Promise<Coll
   if (activityRes.status === 'fulfilled') {
     for (const entry of activityRes.value) {
       const uid = (entry as { user_id?: string | null }).user_id
-      const ts = entry.created_at ? new Date(entry.created_at).getTime() : 0
+      const ts = entry.createdAt ? new Date(entry.createdAt).getTime() : 0
       if (uid && ts) {
         const prev = lastActivityByUser.get(uid) ?? 0
         if (ts > prev) lastActivityByUser.set(uid, ts)

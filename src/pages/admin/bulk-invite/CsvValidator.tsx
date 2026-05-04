@@ -40,7 +40,7 @@ export const CsvValidator: React.FC<CsvValidatorProps> = ({ rows, errors }) => {
               style={{
                 fontFamily: typography.fontFamily,
                 fontSize: 13,
-                color: colors.statusOverdue ?? colors.primaryOrange,
+                color: colors.statusCritical,
               }}
             >
               Row {e.row}: {e.field} — {e.message}

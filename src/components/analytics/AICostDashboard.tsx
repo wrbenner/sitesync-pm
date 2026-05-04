@@ -129,7 +129,7 @@ const ServiceBreakdown: React.FC<{ summary: AICostSummary }> = ({ summary }) => 
                   style={{
                     width: '100%',
                     height: 8,
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceRaised,
                     borderRadius: borderRadius.full,
                     overflow: 'hidden',
                   }}
@@ -318,7 +318,7 @@ export const AICostDashboard: React.FC<AICostDashboardProps> = ({ projectId, sin
         style={{
           padding: spacing['6'],
           textAlign: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.lg,
           border: `1px solid ${colors.borderSubtle}`,
         }}
@@ -354,7 +354,7 @@ export const AICostDashboard: React.FC<AICostDashboardProps> = ({ projectId, sin
         style={{
           padding: spacing['6'],
           textAlign: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.lg,
           border: `1px dashed ${colors.borderSubtle}`,
         }}

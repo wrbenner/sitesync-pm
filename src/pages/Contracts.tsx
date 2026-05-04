@@ -1644,6 +1644,7 @@ const InsuranceTab: React.FC<{ projectId: string; search: string; userId: string
     try {
       await updateCert.mutateAsync({
         id: cert.id,
+        projectId,
         updates: {
           verified: true,
           verified_by: userId ?? null,
@@ -1660,6 +1661,7 @@ const InsuranceTab: React.FC<{ projectId: string; search: string; userId: string
     try {
       await updateCert.mutateAsync({
         id: cert.id,
+        projectId,
         updates: { verified: false, verified_by: null, verified_at: null },
       })
       toast.success(`Marked ${cert.company} COI as unverified`)
@@ -2058,7 +2060,7 @@ export const Contracts: React.FC = () => {
                 <Btn
                   size="sm"
                   variant="ghost"
-                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteContract(contract) }}
+                  onClick={(e) => { e?.stopPropagation(); handleDeleteContract(contract) }}
                   disabled={deleteContract.isPending}
                   aria-label={`Delete ${contract.title}`}
                   data-testid="delete-contract-button"

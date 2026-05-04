@@ -69,8 +69,8 @@ export const WhiteboardPage: React.FC = () => {
       // Silently fail on storage quota
     }
 
-    if (toast?.showToast) {
-      toast.showToast('Board saved successfully', 'success')
+    if (toast?.addToast) {
+      toast.addToast('success', 'Board saved successfully')
     }
   }, [boardId, boardName, boardData, toast])
 

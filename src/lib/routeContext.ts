@@ -50,7 +50,7 @@ async function countRows(
   filters: Record<string, unknown> = {},
 ): Promise<number> {
   try {
-    let query = fromTable(table)
+    let query = fromTable(table as never)
       .select('id', { count: 'exact', head: true })
       .eq('project_id' as never, projectId)
     for (const [k, v] of Object.entries(filters)) {

@@ -66,7 +66,7 @@ export function useZipUpload() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null)
   const [job, setJob] = useState<ZipUploadJob | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null)
 
   const clearPoll = () => {
     if (pollTimerRef.current) {
@@ -88,7 +88,7 @@ export function useZipUpload() {
           .eq('id' as never, jobId)
           .single()
         if (error) return
-        const j = data as ZipUploadJob
+        const j = data as unknown as ZipUploadJob
         setJob(j)
         if (j.status === 'completed' || j.status === 'failed') {
           clearPoll()

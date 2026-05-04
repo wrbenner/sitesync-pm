@@ -145,7 +145,7 @@ export const caColumns = [
 // ── Inspections Tab ───────────────────────────────────────────
 
 interface InspectionsTabProps {
-  inspections: unknown[];
+  inspections: Record<string, unknown>[];
   passCount: number;
   failCount: number;
 }
@@ -280,7 +280,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
 // ── Certifications Tab ────────────────────────────────────────
 
 interface CertificationsTabProps {
-  certifications: unknown[];
+  certifications: Record<string, unknown>[];
 }
 
 export const CertificationsTab: React.FC<CertificationsTabProps> = ({ certifications }) => {
@@ -306,7 +306,7 @@ export const CertificationsTab: React.FC<CertificationsTabProps> = ({ certificat
 // ── Corrective Actions Tab ────────────────────────────────────
 
 interface CorrectiveActionsTabProps {
-  correctiveActions: unknown[];
+  correctiveActions: Record<string, unknown>[];
 }
 
 export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ correctiveActions }) => {
