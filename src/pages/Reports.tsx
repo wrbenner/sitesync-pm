@@ -118,7 +118,7 @@ function useScheduleHealth(projectId: string | undefined): ScheduleHealth {
       const { data, error } = await supabase
         .from('schedule_phases')
         .select('id, name, status, is_critical_path, is_critical, end_date, percent_complete, float_days')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .is('deleted_at', null)
       if (error) {
         // Graceful degradation — table might be missing or RLS-blocked.
@@ -187,7 +187,7 @@ function useBudgetBurn(projectId: string | undefined): BudgetBurn {
       const { data, error } = await supabase
         .from('budget_items')
         .select('id, division, description, csi_division, cost_code, original_amount, committed_amount, actual_amount')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (error) {
         console.warn('[Reports] budget_items unreadable:', error.message)
         return []
@@ -247,7 +247,7 @@ function useSafetyPulse(projectId: string | undefined): SafetyPulse {
       const { data, error } = await supabase
         .from('incidents')
         .select('id, date, severity, type, description, osha_recordable')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('date', { ascending: false })
         .limit(30)
       if (error) {

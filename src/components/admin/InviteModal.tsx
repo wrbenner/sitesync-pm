@@ -67,7 +67,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       try {
         const { data } = await fromTable('projects')
           .select('id, name')
-          .eq('organization_id', organizationId)
+          .eq('organization_id' as never, organizationId)
           .order('name');
         if (!cancelled) setProjects((data as unknown as Project[]) ?? []);
       } catch {

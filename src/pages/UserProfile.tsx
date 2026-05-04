@@ -297,7 +297,7 @@ export default function UserProfile() {
     const { error } = await supabase
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() } as never)
-      .eq('user_id', user.id);
+      .eq('user_id' as never, user.id);
 
     setSaving(false);
     setEditingField(null);

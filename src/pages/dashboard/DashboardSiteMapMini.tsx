@@ -34,7 +34,7 @@ function useRecentCrewPins(projectId: string | undefined) {
       const { data, error } = await supabase
         .from('crew_gps_locations')
         .select('crew_id, latitude, longitude, recorded_at, crews(name)')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .gte('recorded_at', since)
         .order('recorded_at', { ascending: false });
       if (error) return [];

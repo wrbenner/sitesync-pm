@@ -153,7 +153,7 @@ const WalkthroughPage: React.FC = () => {
                 parsed: parse.result,
                 status: 'pending_review',
               } as never)
-              .eq('id', saved.id)
+              .eq('id' as never, saved.id)
             setCaptures((prev) =>
               prev.map((c) => c.id === tempId
                 ? { ...saved, transcript: tx.transcript ?? null, transcript_confidence: tx.confidence ?? null, parsed: parse.result, status: 'pending_review' }
@@ -185,7 +185,7 @@ const WalkthroughPage: React.FC = () => {
     const { error } = await supabase
       .from('walkthrough_sessions')
       .update({ ended_at: new Date().toISOString(), status: 'reviewing' } as never)
-      .eq('id', session.id)
+      .eq('id' as never, session.id)
     if (error) {
       toast.error('Could not end session')
       return
@@ -202,7 +202,7 @@ const WalkthroughPage: React.FC = () => {
       const { error } = await supabase
         .from('walkthrough_captures')
         .update({ status } as never)
-        .eq('id', capture.id)
+        .eq('id' as never, capture.id)
       setBusyId(null)
       if (error) {
         toast.error('Could not update capture')

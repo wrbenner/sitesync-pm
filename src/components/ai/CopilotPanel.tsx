@@ -205,8 +205,8 @@ export const CopilotPanel: React.FC = () => {
         const { data, error } = await supabase
           .from('ai_conversations')
           .select('id, conversation_topic, started_at, message_count')
-          .eq('project_id', activeProjectId)
-          .eq('user_id', userId)
+          .eq('project_id' as never, activeProjectId)
+          .eq('user_id' as never, userId)
           .order('started_at', { ascending: false })
           .limit(10)
         if (error) throw error

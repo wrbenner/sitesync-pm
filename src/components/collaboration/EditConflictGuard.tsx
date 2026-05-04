@@ -66,7 +66,7 @@ export function useOptimisticLock(
       const runQuery = () =>
         fromTable(table)
           .select(selectFields)
-          .eq('id', entityId)
+          .eq('id' as never, entityId)
           .single();
 
       let { data, error } = await runQuery();

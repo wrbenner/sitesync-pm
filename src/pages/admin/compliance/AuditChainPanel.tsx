@@ -28,7 +28,7 @@ export const AuditChainPanel: React.FC<{ projectId: string | undefined }> = ({ p
       const { data: rows, error } = await supabase
         .from('audit_log')
         .select('id, created_at, user_id, user_email, user_name, project_id, organization_id, entity_type, entity_id, action, before_state, after_state, changed_fields, metadata, previous_hash, entry_hash')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: true })
         .limit(2000)
       // Older audit_log rows may be missing the chain-hash columns (created

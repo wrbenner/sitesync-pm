@@ -196,7 +196,7 @@ export const Transmittals: React.FC = () => {
       const { error } = await supabase
         .from('transmittals')
         .update(updatePayload)
-        .eq('id', transmittal.id)
+        .eq('id' as never, transmittal.id)
       if (error) throw error
       queryClient.invalidateQueries({ queryKey: ['transmittals', projectId] })
       toast.success(`Status updated to ${STATUS_LABELS[nextStatus]}`)
