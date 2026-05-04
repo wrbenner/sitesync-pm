@@ -314,7 +314,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
         title: editMode ? editSubject : aiDraft.subject,
         description: editMode ? editQuestion : aiDraft.question,
         priority,
-        assigned_to: aiDraft.suggested_assignee_id,
+        assigned_to: aiDraft.suggested_assignee_id ?? undefined,
       });
 
       if (createError || !rfi) {

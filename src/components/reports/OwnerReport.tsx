@@ -936,10 +936,10 @@ export const OwnerReportPdfDoc: React.FC<{ data: OwnerReportData }> = ({ data })
         <View
           fixed
           style={pdfStyles.footer}
-          render={({ pageNumber, totalPages }) => (
+          render={({ pageNumber, ...rest }) => (
             <>
               <Text>SiteSync PM — {projectName} — Owner Report {reportDate}</Text>
-              <Text>Page {pageNumber} of {totalPages}</Text>
+              <Text>Page {pageNumber} of {(rest as { totalPages?: number }).totalPages ?? '?'}</Text>
             </>
           )}
         />

@@ -39,6 +39,7 @@ export type CreatePhaseInput = {
   baseline_start?: string;
   baseline_end?: string;
   float_days?: number;
+  status?: string;
   depends_on?: string | null;
   assigned_crew_id?: string | null;
 };

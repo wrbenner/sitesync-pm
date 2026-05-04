@@ -157,11 +157,11 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
         <View
           fixed
           style={styles.footer}
-          render={({ pageNumber, totalPages }) => (
+          render={({ pageNumber, ...rest }) => (
             <>
               <Text>SiteSync PM — {data.projectName}</Text>
               <Text>
-                Page {pageNumber} of {totalPages}
+                Page {pageNumber} of {(rest as { totalPages?: number }).totalPages ?? '?'}
               </Text>
             </>
           )}
