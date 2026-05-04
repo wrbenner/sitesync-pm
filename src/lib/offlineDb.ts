@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import { detectConflicts } from './conflictResolver'
 import type { Database } from '../types/database'
 
@@ -436,14 +436,15 @@ export async function processSyncQueue(
       const from = fromTable(m.table as keyof Database['public']['Tables'])
 
       if (m.operation === 'insert') {
-        const { error } = await from.insert(m.data)
+        const { error } = await from.insert(m.data as never)
         if (error) throw error
       } else if (m.operation === 'update' && m.data.id) {
         // Fetch current server version to check for conflicts
-        const { data: serverRow } = await from
+        const { data } = await from
           .select('*')
           .eq('id' as never, m.data.id)
           .single()
+        const serverRow = asRow<Record<string, unknown> & { updated_at: string | null }>(data)
 
         if (serverRow && serverRow.updated_at) {
           const serverUpdated = new Date(serverRow.updated_at).getTime()

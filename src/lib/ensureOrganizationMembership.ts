@@ -1,5 +1,5 @@
 
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import { useAuthStore } from '../stores/authStore'
 import type { Organization } from '../types/database'
 
@@ -42,25 +42,27 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
 
   // 1. If no active org in store, try to find any org the user belongs to.
   if (!activeOrgId) {
-    const { data: existingMember } = await fromTable('organization_members')
+    const { data } = await fromTable('organization_members')
       .select('organization_id, organizations:organizations(*)')
       .eq('user_id' as never, userId)
       .limit(1)
       .maybeSingle()
+    const existingMember = asRow<{ organization_id: string | null; organizations: Parameters<typeof toOrganization>[0] | null }>(data)
 
     if (existingMember?.organization_id) {
       activeOrgId = existingMember.organization_id
-      const orgRow = (existingMember as { organizations?: Parameters<typeof toOrganization>[0] | null }).organizations
+      const orgRow = existingMember.organizations
       if (orgRow) store.setCurrentOrg(toOrganization(orgRow))
     }
   }
 
   // 2. Still no org — create one for this user (first-time onboarding path).
   if (!activeOrgId) {
-    const { data: newOrg, error: orgErr } = await fromTable('organizations')
+    const { data, error: orgErr } = await fromTable('organizations')
       .insert({ name: 'My Organization' } as never)
       .select()
       .single()
+    const newOrg = asRow<Parameters<typeof toOrganization>[0] & { id: string }>(data)
 
     if (orgErr || !newOrg) return null
     activeOrgId = newOrg.id
@@ -68,11 +70,12 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
   }
 
   // 3. Ensure organization_members row exists (idempotent).
-  const { data: memberRow } = await fromTable('organization_members')
+  const { data: memberData } = await fromTable('organization_members')
     .select('id')
     .eq('organization_id' as never, activeOrgId)
     .eq('user_id' as never, userId)
     .maybeSingle()
+  const memberRow = asRow<{ id: string }>(memberData)
 
   if (!memberRow) {
     await fromTable('organization_members').insert({
