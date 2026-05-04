@@ -359,11 +359,11 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
                   fontWeight: Number(selected.revision_number ?? 0) > 0 ? typography.fontWeight.semibold : typography.fontWeight.normal,
                   color: Number(selected.revision_number ?? 0) > 0 ? colors.statusCritical : colors.textSecondary,
                 }}>
-                  Rev {selected.revision_number ?? 0}
+                  Rev {String(selected.revision_number ?? 0)}
                 </span>
               }
             />
-            {selected.spec_section && (
+            {selected.spec_section ? (
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Spec Section</div>
                 <span style={{ fontSize: typography.fontSize.base, fontFamily: 'monospace', color: colors.textPrimary }}>{selected.spec_section as string}</span>
@@ -372,10 +372,10 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
                   specSection={selected.spec_section as string | null | undefined}
                 />
               </div>
-            )}
-            {projectId && selected.id && (
+            ) : null}
+            {projectId && selected.id ? (
               <IrisSuggests entityType="submittal" entityId={String(selected.id)} projectId={projectId} />
-            )}
+            ) : null}
             {draftedActions.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], marginTop: spacing['3'], marginBottom: spacing['4'] }}>
                 {draftedActions.map((draft) => (
@@ -399,7 +399,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
                 ))}
               </div>
             )}
-            {selected.stamp && (
+            {selected.stamp ? (
               <div>
                 <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stamp</div>
                 <span style={{
@@ -420,7 +420,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
                   {String(selected.stamp).replace(/_/g, ' ').toUpperCase()}
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Description */}
@@ -517,7 +517,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
           </div>
 
           {/* Related Items */}
-          <RelatedItems items={getRelatedItemsForSubmittal(selected.id as string | number)} onNavigate={appNavigate} />
+          <RelatedItems items={getRelatedItemsForSubmittal(Number(selected.id))} onNavigate={appNavigate} />
 
           {/* Actions */}
           {selected.status !== 'approved' && (
