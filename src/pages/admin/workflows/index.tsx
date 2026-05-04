@@ -9,7 +9,7 @@ import { WorkflowBuilder } from '../../../components/workflows/WorkflowBuilder'
 import { buildDefaultWorkflow } from '../../../lib/workflows'
 import type { WorkflowDefinition, WorkflowEntityType } from '../../../types/workflows'
 
-import { fromTable } from '../../../lib/db/queries'
+import { fromTable, asRow } from '../../../lib/db/queries'
 
 const ENTITY_TYPES: WorkflowEntityType[] = ['rfi', 'submittal', 'change_order']
 
@@ -25,7 +25,8 @@ export const AdminWorkflowsPage: React.FC = () => {
     ;(async () => {
       // Best-effort: pull the user's first project membership.
       const { data } = await fromTable('project_members').select('project_id').limit(1).maybeSingle()
-      if (mounted && data?.project_id) setProjectId(data.project_id as string)
+      const member = asRow<{ project_id: string | null }>(data)
+      if (mounted && member?.project_id) setProjectId(member.project_id)
     })()
     return () => {
       mounted = false
@@ -45,15 +46,22 @@ export const AdminWorkflowsPage: React.FC = () => {
         .limit(1)
         .maybeSingle()
       if (!mounted) return
-      if (data) {
+      const def = asRow<{
+        id: string
+        version: number
+        name: string
+        start_step: string
+        definition: { steps?: unknown[] } | null
+      }>(data)
+      if (def) {
         setDefinition({
-          id: data.id as string,
+          id: def.id,
           project_id: projectId,
           entity_type: entity,
-          version: data.version as number,
-          name: data.name as string,
-          start_step: data.start_step as string,
-          steps: ((data.definition as { steps?: unknown[] })?.steps ?? []) as WorkflowDefinition['steps'],
+          version: def.version,
+          name: def.name,
+          start_step: def.start_step,
+          steps: (def.definition?.steps ?? []) as WorkflowDefinition['steps'],
         })
       } else {
         setDefinition(buildDefaultWorkflow(entity, projectId))
@@ -80,7 +88,7 @@ export const AdminWorkflowsPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: spacing['8'], maxWidth: '100%', minHeight: '100vh', backgroundColor: colors.surface }}>
+    <div style={{ padding: spacing['8'], maxWidth: '100%', minHeight: '100vh', backgroundColor: colors.surfaceRaised }}>
       <Eyebrow>Admin · Workflows</Eyebrow>
       <PageQuestion size="medium" style={{ marginTop: spacing['2'] }}>
         How should this entity move through the team?

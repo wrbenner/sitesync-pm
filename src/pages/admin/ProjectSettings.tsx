@@ -1,4 +1,3 @@
-import { fromTable } from '../../lib/db/queries'
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -263,7 +262,7 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
 
 export function ProjectSettings() {
   const { activeProject, updateProject, members, loadMembers } = useProjectStore();
-  const { company, profile } = useAuthStore();
+  const { organization, profile } = useAuthStore();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [projectType, setProjectType] = useState('');
@@ -284,12 +283,12 @@ export function ProjectSettings() {
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const handleInvite = async () => {
-    if (!inviteEmail || !company?.id) return;
+    if (!inviteEmail || !organization?.id) return;
     setInviteLoading(true);
     setInviteError(null);
     try {
-      const { error } = await fromTable('invitations').insert({
-        company_id: company.id,
+      const { error } = await fromTable('user_invitations').insert({
+        organization_id: organization.id,
         email: inviteEmail,
         role: inviteRole,
         invited_by: profile!.id,
@@ -320,10 +319,10 @@ export function ProjectSettings() {
         setName(activeProject.name);
         setAddress(activeProject.address ?? '');
         setProjectType(activeProject.project_type ?? '');
-        setTotalValue(activeProject.total_value ? formatCurrency(String(activeProject.total_value)) : '');
+        setTotalValue(activeProject.contract_value ? formatCurrency(String(activeProject.contract_value)) : '');
         setDescription(activeProject.description ?? '');
         setStartDate(activeProject.start_date ?? '');
-        setEndDate(activeProject.scheduled_end_date ?? '');
+        setEndDate(activeProject.target_completion ?? '');
         setHasChanges(false);
         loadMembers(activeProject.id);
       }, 0);
@@ -340,10 +339,10 @@ export function ProjectSettings() {
       name,
       address: address || null,
       project_type: projectType || null,
-      total_value: rawValue ? parseFloat(rawValue) : null,
+      contract_value: rawValue ? parseFloat(rawValue) : null,
       description: description || null,
       start_date: startDate || null,
-      scheduled_end_date: endDate || null,
+      target_completion: endDate || null,
     });
     setSaving(false);
     setSaved(true);
