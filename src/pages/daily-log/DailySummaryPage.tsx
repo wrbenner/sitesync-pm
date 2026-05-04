@@ -46,10 +46,7 @@ const DailySummaryPage: React.FC = () => {
   // Find the log for the selected date
   const dailyLog = useMemo(() => {
     if (!dailyLogData?.data) return null;
-    return dailyLogData.data.find((log: any) => {
-      const logDate = (log as any).log_date ?? (log as any).date ?? '';
-      return logDate === selectedDate;
-    }) ?? null;
+    return dailyLogData.data.find((log) => log.log_date === selectedDate) ?? null;
   }, [dailyLogData, selectedDate]);
 
   // Fetch entries for that log
@@ -57,29 +54,28 @@ const DailySummaryPage: React.FC = () => {
 
   // Map data into AIDailySummaryProps shape
   const summaryProps: AIDailySummaryProps = useMemo(() => {
-    const log = dailyLog as Record<string, any> | null;
+    const log = dailyLog;
 
-    // Weather
+    // Weather — DB columns: weather, temperature_high, temperature_low, precipitation
     let weather: AIDailySummaryProps['weather'] | undefined;
-    if (log?.weather_condition || log?.weather) {
+    if (log?.weather) {
       weather = {
-        condition: log.weather_condition ?? log.weather ?? 'Clear',
-        highTemp: Number(log.high_temp ?? log.temperature_high ?? 75),
-        lowTemp: Number(log.low_temp ?? log.temperature_low ?? 55),
+        condition: log.weather,
+        highTemp: Number(log.temperature_high ?? 75),
+        lowTemp: Number(log.temperature_low ?? 55),
         precipitation: log.precipitation ?? undefined,
       };
     }
 
-    // Crew counts
+    // Crew counts — use crew_entries from enriched log
     let crewCounts: AIDailySummaryProps['crewCounts'] | undefined;
-    const totalWorkers = Number(log?.workers_onsite ?? log?.total_workers ?? 0);
+    const totalWorkers = Number(log?.workers_onsite ?? 0);
     if (totalWorkers > 0) {
-      // Try to build trade breakdown from manpower or crew_hours fields
       const byTrade: Record<string, number> = {};
-      if (log?.manpower && Array.isArray(log.manpower)) {
-        for (const m of log.manpower) {
-          const trade = (m as any).trade ?? (m as any).category ?? 'General';
-          byTrade[trade] = (byTrade[trade] ?? 0) + Number((m as any).count ?? (m as any).workers ?? 1);
+      if (log?.crew_entries && log.crew_entries.length > 0) {
+        for (const m of log.crew_entries) {
+          const trade = m.trade ?? 'General';
+          byTrade[trade] = (byTrade[trade] ?? 0) + Number(m.headcount ?? 1);
         }
       }
       if (Object.keys(byTrade).length === 0) {
@@ -88,11 +84,10 @@ const DailySummaryPage: React.FC = () => {
       crewCounts = { total: totalWorkers, byTrade };
     }
 
-    // Safety incidents
-    const incidentCount = Number(log?.incidents ?? log?.safety_incidents ?? 0);
+    // Safety incidents — DB column: incidents (count)
+    const incidentCount = Number(log?.incidents ?? 0);
     let safetyIncidents: AIDailySummaryProps['safetyIncidents'] | undefined;
     if (incidentCount > 0) {
-      // Generate placeholder incidents from count since we don't have detailed data
       safetyIncidents = Array.from({ length: incidentCount }, (_, i) => ({
         type: 'Incident',
         description: `Safety incident #${i + 1} reported on site`,
@@ -100,19 +95,18 @@ const DailySummaryPage: React.FC = () => {
       }));
     }
 
-    // Daily log entries
+    // Daily log entries — DB columns: type, description, trade
     let dailyLogEntries: AIDailySummaryProps['dailyLogEntries'] | undefined;
     if (entriesRaw && Array.isArray(entriesRaw) && entriesRaw.length > 0) {
-      dailyLogEntries = entriesRaw.map((e: any) => ({
-        category: e.category ?? e.entry_type ?? 'General',
-        description: e.description ?? e.notes ?? e.content ?? '',
-        author: e.author ?? e.created_by ?? 'Field Staff',
+      dailyLogEntries = entriesRaw.map((e) => ({
+        category: e.type ?? 'General',
+        description: e.description ?? '',
+        author: e.trade ?? 'Field Staff',
       }));
-    } else if (log?.summary || log?.work_performed) {
-      // Fall back to log-level summary
+    } else if (log?.summary) {
       dailyLogEntries = [{
         category: 'General',
-        description: String(log.summary ?? log.work_performed ?? ''),
+        description: log.summary,
         author: 'Daily Log',
       }];
     }
