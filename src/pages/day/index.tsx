@@ -98,6 +98,7 @@ function CockpitHeader({ projectName }: { projectName: string }) {
   })
   return (
     <header
+      data-testid="dashboard-hero"
       style={{
         display: 'flex',
         alignItems: 'baseline',

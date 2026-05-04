@@ -146,6 +146,7 @@ export const AuditTrail: React.FC = () => {
         ) : (<>
           {filtered.map((entry, i) => (
             <div key={entry.id} role="button" tabIndex={0}
+              data-testid="audit-row"
               aria-label={`View changes for ${entry.entity_type} ${entry.entity_title ?? ''}`}
               onClick={() => setSelectedEntry(entry)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedEntry(entry); } }}
@@ -269,7 +270,7 @@ const AuditDiffModal: React.FC<{ entry: AuditEntry | null; onClose: () => void }
 
   return (
     <Modal open={!!entry} onClose={onClose} title="Change details" width="820px">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+      <div data-testid="audit-row-drawer" style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
         <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
           <div style={{ textTransform: 'capitalize', color: colors.textPrimary, fontWeight: typography.fontWeight.semibold, marginBottom: spacing['1'] }}>
             {summary}
