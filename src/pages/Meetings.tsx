@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw, Trash2, Clock, Users, FileText, ChevronDown, ChevronUp, CheckCircle, UserPlus, Video, Link2, Copy, Download, Bell, ArrowRight, Layout } from 'lucide-react';
+import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw, Trash2, Clock, Users, FileText, ChevronUp, CheckCircle, UserPlus, Video, Link2, Copy, Download, Bell, ArrowRight, Layout } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState, Modal, InputField, SectionHeader, Card,
+  PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState, Modal, InputField,
 } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
@@ -1663,7 +1663,7 @@ export const Meetings: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(groupedByAssignee).map(([assignee, items]) =>
+                    {Object.entries(groupedByAssignee).map(([_assignee, items]) =>
                       items.map((item, idx) => {
                         const daysOver = getDaysOverdue(item.dueDate);
                         const isOverdue = item.status === 'open' && daysOver > 0;

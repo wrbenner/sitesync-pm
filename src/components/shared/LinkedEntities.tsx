@@ -15,7 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { colors, spacing, typography, shadows } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ export const LinkedEntities: React.FC<LinkedEntitiesProps> = ({ links, onNavigat
   const toggleGroup = (type: EntityType) => {
     setCollapsed((prev) => {
       const next = new Set(prev);
-      next.has(type) ? next.delete(type) : next.add(type);
+      if (next.has(type)) { next.delete(type) } else { next.add(type) }
       return next;
     });
   };

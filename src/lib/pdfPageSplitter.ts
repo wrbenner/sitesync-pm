@@ -9,7 +9,6 @@
  * individual page images, not entire 80MB PDFs) and provides thumbnails
  * for the drawing card grid.
  */
-import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { detectTitleBlockRegion, type TitleBlockRegion } from './titleBlockDetector'
 
 /**

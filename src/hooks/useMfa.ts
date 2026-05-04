@@ -70,7 +70,7 @@ export function useMfa(): MfaState {
   // though it's the canonical "fetch on mount" pattern; refactoring to
   // TanStack Query is queued as a Phase 2 cleanup. Disabling here with
   // a clear pointer to that work item.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => {
     void refresh()
   }, [refresh])

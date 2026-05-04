@@ -3,12 +3,20 @@ import type { Session } from '@supabase/supabase-js'
 import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/enums'
 
+// Dev-bypass mode: active when DEV=true, VITE_DEV_BYPASS=true, and no real Supabase vars.
+// In this mode we initialize the client with placeholder values — API calls will fail
+// gracefully, which is acceptable for local UI testing without a live Supabase project.
+const _isDevBypass =
+  import.meta.env.DEV === true &&
+  import.meta.env.VITE_DEV_BYPASS === 'true' &&
+  !import.meta.env.VITE_SUPABASE_URL &&
+  !import.meta.env.VITE_SUPABASE_ANON_KEY
+
 // Supabase config: env vars are injected at build time by Vite.
-// Required — no source-level fallbacks. If either is missing the client
-// creation below will throw, which is what we want: a silently-running
-// build pointed at the wrong project is worse than a hard failure.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+// Required in production — no source-level fallbacks. In dev-bypass mode we use
+// placeholder values so the module loads and the UI can be tested without a live project.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? (_isDevBypass ? 'http://localhost:54321' : '')
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? (_isDevBypass ? 'placeholder-anon-key' : '')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
@@ -31,10 +39,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
 
-/**
- * Typed table accessor that accepts tables added by migration but not yet in generated types.
- * Use this instead of `supabase.from('table' as any)` to avoid `as any` casts.
- */
+/** Typed table accessor that accepts tables added by migration but not yet in generated types. */
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 export const fromTable = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
 

@@ -3,9 +3,10 @@ import { ChevronLeft, ChevronRight, Printer, Calendar, Sparkles } from 'lucide-r
 import { PageContainer, Btn } from '../../components/Primitives';
 import { AIDailySummary } from '../../components/ai/AIDailySummary';
 import type { AIDailySummaryProps } from '../../components/ai/AIDailySummary';
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
+import type { ExtendedDailyLog } from './types';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -44,12 +45,8 @@ const DailySummaryPage: React.FC = () => {
   const { data: dailyLogData, isPending: logsLoading } = useDailyLogs(projectId);
 
   // Find the log for the selected date
-  const dailyLog = useMemo(() => {
-    if (!dailyLogData?.data) return null;
-    return dailyLogData.data.find((log: any) => {
-      const logDate = (log as any).log_date ?? (log as any).date ?? '';
-      return logDate === selectedDate;
-    }) ?? null;
+  const dailyLog = useMemo((): ExtendedDailyLog | null => {
+    return dailyLogData?.data?.find((log) => log.log_date === selectedDate) ?? null;
   }, [dailyLogData, selectedDate]);
 
   // Fetch entries for that log
@@ -57,30 +54,25 @@ const DailySummaryPage: React.FC = () => {
 
   // Map data into AIDailySummaryProps shape
   const summaryProps: AIDailySummaryProps = useMemo(() => {
-    const log = dailyLog as Record<string, any> | null;
-
-    // Weather
+    // Weather — use DB field names from daily_logs Row type
     let weather: AIDailySummaryProps['weather'] | undefined;
-    if (log?.weather_condition || log?.weather) {
+    if (dailyLog?.weather) {
       weather = {
-        condition: log.weather_condition ?? log.weather ?? 'Clear',
-        highTemp: Number(log.high_temp ?? log.temperature_high ?? 75),
-        lowTemp: Number(log.low_temp ?? log.temperature_low ?? 55),
-        precipitation: log.precipitation ?? undefined,
+        condition: dailyLog.weather ?? 'Clear',
+        highTemp: Number(dailyLog.temperature_high ?? 75),
+        lowTemp: Number(dailyLog.temperature_low ?? 55),
+        precipitation: dailyLog.precipitation ?? undefined,
       };
     }
 
-    // Crew counts
+    // Crew counts — use workers_onsite from DB type; breakdown via crew_entries extension
     let crewCounts: AIDailySummaryProps['crewCounts'] | undefined;
-    const totalWorkers = Number(log?.workers_onsite ?? log?.total_workers ?? 0);
+    const totalWorkers = Number(dailyLog?.workers_onsite ?? 0);
     if (totalWorkers > 0) {
-      // Try to build trade breakdown from manpower or crew_hours fields
       const byTrade: Record<string, number> = {};
-      if (log?.manpower && Array.isArray(log.manpower)) {
-        for (const m of log.manpower) {
-          const trade = (m as any).trade ?? (m as any).category ?? 'General';
-          byTrade[trade] = (byTrade[trade] ?? 0) + Number((m as any).count ?? (m as any).workers ?? 1);
-        }
+      for (const entry of dailyLog?.crew_entries ?? []) {
+        const trade = entry.trade ?? 'General';
+        byTrade[trade] = (byTrade[trade] ?? 0) + (entry.headcount ?? 1);
       }
       if (Object.keys(byTrade).length === 0) {
         byTrade['General Labor'] = totalWorkers;
@@ -88,11 +80,10 @@ const DailySummaryPage: React.FC = () => {
       crewCounts = { total: totalWorkers, byTrade };
     }
 
-    // Safety incidents
-    const incidentCount = Number(log?.incidents ?? log?.safety_incidents ?? 0);
+    // Safety incidents — use incidents count from DB type
+    const incidentCount = Number(dailyLog?.incidents ?? 0);
     let safetyIncidents: AIDailySummaryProps['safetyIncidents'] | undefined;
     if (incidentCount > 0) {
-      // Generate placeholder incidents from count since we don't have detailed data
       safetyIncidents = Array.from({ length: incidentCount }, (_, i) => ({
         type: 'Incident',
         description: `Safety incident #${i + 1} reported on site`,
@@ -100,19 +91,19 @@ const DailySummaryPage: React.FC = () => {
       }));
     }
 
-    // Daily log entries
+    // Daily log entries — map DailyLogEntry fields to AIDailySummary shape
     let dailyLogEntries: AIDailySummaryProps['dailyLogEntries'] | undefined;
-    if (entriesRaw && Array.isArray(entriesRaw) && entriesRaw.length > 0) {
-      dailyLogEntries = entriesRaw.map((e: any) => ({
-        category: e.category ?? e.entry_type ?? 'General',
-        description: e.description ?? e.notes ?? e.content ?? '',
-        author: e.author ?? e.created_by ?? 'Field Staff',
+    if (entriesRaw && entriesRaw.length > 0) {
+      dailyLogEntries = entriesRaw.map((e) => ({
+        category: e.type ?? 'General',
+        description: e.description ?? '',
+        author: e.trade ?? e.company ?? 'Field Staff',
       }));
-    } else if (log?.summary || log?.work_performed) {
-      // Fall back to log-level summary
+    } else if (dailyLog?.ai_summary) {
+      // Fall back to AI summary if no entry records exist
       dailyLogEntries = [{
         category: 'General',
-        description: String(log.summary ?? log.work_performed ?? ''),
+        description: dailyLog.ai_summary,
         author: 'Daily Log',
       }];
     }
