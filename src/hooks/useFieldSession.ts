@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+
 import { fromTable } from '../lib/db/queries'
 import { useAuth } from './useAuth'
 import { useProjectId } from './useProjectId'

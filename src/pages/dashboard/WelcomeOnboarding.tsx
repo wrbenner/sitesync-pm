@@ -8,7 +8,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../styles
 import { duration, easing } from '../../styles/animations';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';

@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+
 import { fromTable } from '../lib/db/queries'
 import { useAuthStore } from '../stores/authStore'
 import type { Organization } from '../types/database'

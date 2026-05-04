@@ -7,6 +7,8 @@ import { UserRole } from '../types/enums'
 // Required — no source-level fallbacks. If either is missing the client
 // creation below will throw, which is what we want: a silently-running
 // build pointed at the wrong project is worse than a hard failure.
+import { fromTable } from './db/queries'
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
 if (!supabaseUrl || !supabaseAnonKey) {

@@ -12,7 +12,7 @@ import { FileText } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
-import { supabase } from '../../../lib/supabase'
+
 import { fromTable } from '../../../lib/db/queries'
 import { computeDeadlines, alertTier, type StateLienRule } from '../../../lib/compliance/lienRights'
 import { KpiTile, StatusPill, DegradedBanner, TableHeaderRow, TableBodyRow, type StatusPillTone } from './_kit'

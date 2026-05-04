@@ -16,7 +16,7 @@ import {
   useEventListener,
 } from '../../lib/liveblocks';
 import { DrawingPresenceBar } from '../collaboration/PresenceBar';
-import { supabase } from '../../api/client';
+
 import { fromTable } from '../../lib/db/queries'
 import type { Database } from '../../types/database';
 import { useUiStore } from '../../stores';

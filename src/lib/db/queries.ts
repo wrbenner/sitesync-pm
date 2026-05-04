@@ -43,6 +43,8 @@ import type { Database } from '../../types/database'
 
 // ── Type primitives ──────────────────────────────────────────────────────────
 
+import { fromTable } from './queries'
+
 export type TableName = keyof Database['public']['Tables']
 export type Row<T extends TableName> = Database['public']['Tables'][T]['Row']
 export type InsertRow<T extends TableName> = Database['public']['Tables'][T]['Insert']

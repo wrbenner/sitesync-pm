@@ -8,7 +8,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 import { useAuthStore } from '../../stores/authStore';
 import type { PortfolioProjectInput } from '../../types/portfolio';

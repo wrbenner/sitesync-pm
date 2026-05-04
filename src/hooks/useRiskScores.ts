@@ -1,6 +1,7 @@
+import { fromTable } from '../lib/db/queries'
 import { useQuery } from '@tanstack/react-query'
-import { fromTable } from '../lib/supabase'
 import {
+
   computeRFIRisk, computeBudgetRisk, computeScheduleRisk, computeSafetyRisk,
   overallProjectRisk,
   type ScoredEntity, type RiskScore,

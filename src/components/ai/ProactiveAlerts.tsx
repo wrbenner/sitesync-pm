@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Clock, TrendingUp, Award, Bell, ChevronRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { Card } from '../Primitives';

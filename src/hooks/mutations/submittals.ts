@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from './createAuditedMutation'
 import { submittalSchema,
 } from '../../components/forms/schemas'

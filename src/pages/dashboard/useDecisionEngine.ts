@@ -22,7 +22,7 @@ import { fetchWeather, fetchWeatherForecast5Day } from '../../lib/weather';
 import type { WeatherData, WeatherDay } from '../../lib/weather';
 import { getProjectCoordinates } from '../../lib/geocoding';
 import type { GeocodingResult } from '../../lib/geocoding';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 
 // ── Types ─────────────────────────────────────────────────

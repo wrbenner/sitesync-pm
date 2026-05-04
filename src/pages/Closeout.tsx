@@ -11,7 +11,7 @@ import {
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { PermissionGate } from '../components/auth/PermissionGate'
-import { ProjectGate } from '../components/ProjectGate'
+
 import { useCloseoutData, type CloseoutItemRow } from '../hooks/queries/closeout'
 import { usePunchItems } from '../hooks/queries/punch-items'
 import { useProfileNames, displayName } from '../hooks/queries/profiles'

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { uploadFile } from '../../lib/storage'
 

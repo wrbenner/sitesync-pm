@@ -132,7 +132,7 @@ export function detectBudgetSheets(workbook: XLSX.WorkBook): SheetCandidate[] {
 
     // Name-based scoring
     const nameLower = name.toLowerCase();
-    let _nameMatched = false;
+
     for (const { term, bonus } of BUDGET_SHEET_KEYWORDS) {
       if (nameLower.includes(term)) {
         score += bonus;
@@ -568,9 +568,10 @@ function _detectSectionContext(
   headerRow: number,
   columns: DetectedColumn[],
 ): SectionContext | null {
+  void _detectSectionContext;
   // Scan backward from this row to find the nearest section total or section header
   const descCol = columns.find(c => c.role === 'description');
-  const _codeCol = columns.find(c => c.role === 'code');
+
 
   // Scan forward to find the next "TOTAL" row — that tells us our section
   // Use the description column specifically to avoid false matches from numeric cells

@@ -1,14 +1,16 @@
+import { fromTable } from '../../lib/db/queries'
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+
   UserPlus, Mail, Search, Check, Shield, Users,
-  ChevronDown, X, _Copy, _Clock, AlertCircle, _MoreHorizontal,
+  X, _Copy, _Clock, AlertCircle, _MoreHorizontal,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase, fromTable } from '../../lib/supabase';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import type { Profile } from '../../types/database';
-import type { UserRole } from '../../types/enums';
+
 import { PermissionGate } from '../../components/auth/PermissionGate';
 
 /* ─────────────────────── Constants ─────────────────────── */

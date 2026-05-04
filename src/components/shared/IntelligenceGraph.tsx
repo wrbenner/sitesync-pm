@@ -330,6 +330,7 @@ export function IntelligenceGraph({
   }, [])
 
   const _worldToScreen = useCallback((wx: number, wy: number) => {
+        void _worldToScreen;
     const t = transformRef.current
     return {
       x: wx * t.scale + t.offsetX,

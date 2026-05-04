@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { retainageKeys, type RetainageEntry } from '../queries/retainage'
 

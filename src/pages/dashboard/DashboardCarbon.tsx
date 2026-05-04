@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Leaf } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 

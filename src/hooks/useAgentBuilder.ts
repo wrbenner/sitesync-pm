@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────
 
+
 export type AgentTrigger = 'schedule' | 'event' | 'manual'
 export type AgentEventType = 'entity_created' | 'entity_updated' | 'status_changed' | 'threshold_exceeded' | 'deadline_approaching'
 

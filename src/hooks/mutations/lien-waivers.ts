@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 
 // The 4-way domain enum the Generate-Waiver flow exposes in the UI.

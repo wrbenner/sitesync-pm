@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import type { ProjectMetrics } from '../../types/api'
 import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/healthScoring'

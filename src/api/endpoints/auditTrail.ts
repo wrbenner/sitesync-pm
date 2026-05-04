@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { transformSupabaseError } from '../errors'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'

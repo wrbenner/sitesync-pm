@@ -24,7 +24,7 @@ import {
 } from '../../components/atoms'
 import { PendingPunchStack } from '../../components/walkthrough/PendingPunchStack'
 import { SessionPdfExport } from '../../components/walkthrough/SessionPdfExport'
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 import type {

@@ -104,6 +104,7 @@ function dayFrac(m: number, sunrise: number, sunset: number): number {
 }
 
 function _fmtTime(m: number): string {
+         void _fmtTime;
   const h = Math.floor(m / 60);
   const mm = m % 60;
   const h12 = ((h + 11) % 12) + 1;

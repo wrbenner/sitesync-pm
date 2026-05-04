@@ -29,7 +29,7 @@ import {
   borderRadius,
   shadows,
   transitions,
-  zIndex,
+
 } from '../../styles/theme'
 
 // ── Types ─────────────────────────────────────────────────

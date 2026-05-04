@@ -249,6 +249,7 @@ const DEFAULT_PREQUAL: PrequalInfo = {
 };
 
 function _getDefaultPrequal(): PrequalInfo {
+         void _getDefaultPrequal;
   return { ...DEFAULT_PREQUAL };
 }
 

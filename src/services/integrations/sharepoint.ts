@@ -1,7 +1,7 @@
 // SharePoint/OneDrive Integration: Microsoft Graph API
 // OAuth2 via MSAL. File sync with project document library.
 
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {

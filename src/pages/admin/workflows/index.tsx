@@ -8,7 +8,7 @@ import { Eyebrow, Hairline, PageQuestion, SectionHeading } from '../../../compon
 import { WorkflowBuilder } from '../../../components/workflows/WorkflowBuilder'
 import { buildDefaultWorkflow } from '../../../lib/workflows'
 import type { WorkflowDefinition, WorkflowEntityType } from '../../../types/workflows'
-import { supabase } from '../../../lib/supabase'
+
 import { fromTable } from '../../../lib/db/queries'
 
 const ENTITY_TYPES: WorkflowEntityType[] = ['rfi', 'submittal', 'change_order']

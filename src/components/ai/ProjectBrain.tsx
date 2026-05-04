@@ -3,7 +3,7 @@ import {
   Brain, X, Send, FileText, Loader2, Sparkles, Database, ChevronRight,
   MessageSquare, Scale, FolderOpen, History, Plus, Trash2, AlertTriangle,
   CheckCircle, Shield, Clock, ArrowRight, Search, _Upload, Eye,
-  ChevronDown, BarChart3, Zap, BookOpen, HardHat, FileCheck,
+  BarChart3, Zap, BookOpen, HardHat, FileCheck,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';

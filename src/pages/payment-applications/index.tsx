@@ -126,6 +126,7 @@ const PaymentApplicationsPage: React.FC = () => {
   }, [])
 
   const _handleRetainageRelease = useCallback(async (itemId: string) => {
+        void _handleRetainageRelease;
     setRetainageItems((prev) => prev.map((item) =>
       item.id === itemId
         ? { ...item, stage: 'requested' as RetainageStage }

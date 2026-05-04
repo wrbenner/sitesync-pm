@@ -1,4 +1,6 @@
 /**
+import { fromTable } from '../lib/db/queries'
+
  * punchListStore — Focused comment slice for the Punch List feature.
  *
  * SCOPE (post-Day-9 slim):

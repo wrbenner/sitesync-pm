@@ -6,7 +6,7 @@
  *   • Reject fires onReject
  *   • busy=true disables both buttons (no double-execute on click spam)
  */
-import React from 'react'
+
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { IrisApprovalGate } from '../IrisApprovalGate'

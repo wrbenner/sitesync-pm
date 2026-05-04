@@ -5,7 +5,7 @@
 
 import React from 'react'
 import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer'
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────

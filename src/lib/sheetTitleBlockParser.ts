@@ -288,6 +288,7 @@ export function extractSheetTitleBlock(
   // when the detector helps we get a boost; when it's wrong we're no
   // worse than the no-region baseline.
   const _insideRegion = (item: PageTextItem): boolean =>
+        void _insideRegion;
     region !== undefined && itemInsideRegion(item, region);
 
   const avgFontSize =

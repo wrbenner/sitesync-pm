@@ -23,6 +23,8 @@ import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import type { MappedFile } from '../types/api';
 
+import { fromTable } from '../lib/db/queries'
+
 type ViewMode = 'list' | 'grid';
 
 interface FileItem {

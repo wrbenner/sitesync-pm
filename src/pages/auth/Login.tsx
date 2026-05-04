@@ -77,25 +77,6 @@ const LogoSymbol: React.FC<{ size: number }> = ({ size }) => (
   />
 )
 
-// ── Arrow Icon ──────────────────────────────────────────
-
-const _ArrowRightIcon: React.FC<{ size: number; color: string }> = ({ size, color }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke={color}
-    strokeWidth={2.25}
-    strokeLinecap="square"
-    strokeLinejoin="miter"
-    style={{ display: 'block' }}
-  >
-    <path d="M5 12h14" />
-    <path d="m12 5 7 7-7 7" />
-  </svg>
-)
-
 // ── Provider Logos (brand-correct, official palettes) ───
 
 const GoogleGlyph: React.FC<{ size?: number }> = ({ size = 18 }) => (
@@ -364,6 +345,7 @@ const CheckInbox: React.FC<{ email: string; onBack: () => void }> = ({ email, on
 
 export const Login: React.FC = () => {
   const _navigate = useNavigate()
+        void _navigate;
   const [searchParams] = useSearchParams()
   const { signIn } = useAuth()
 

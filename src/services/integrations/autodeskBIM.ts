@@ -1,7 +1,7 @@
 // Autodesk Construction Cloud / BIM 360 Integration
 // OAuth2 via Autodesk Forge. Syncs model versions, issues, and markups.
 
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {

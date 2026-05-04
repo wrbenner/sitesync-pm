@@ -25,14 +25,14 @@ import {
   SectionHeading,
 } from '../../components/atoms';
 import {
-  WifiOff,
+
   ChevronRight,
   Calendar,
   TrendingUp,
   AlertTriangle,
   CheckCircle,
   Clock,
-  ExternalLink,
+
 } from 'lucide-react';
 
 // ── Helpers ─────────────────────────────────────────────────

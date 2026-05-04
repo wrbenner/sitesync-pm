@@ -13,7 +13,7 @@
  * doesn't fit the schema is preserved in `iris_metadata` jsonb.
  */
 
-import { supabase } from '../../../lib/supabase'
+
 import { fromTable } from '../../../lib/db/queries'
 import type { DraftedAction, DraftedDailyLogPayload } from '../../../types/draftedActions'
 

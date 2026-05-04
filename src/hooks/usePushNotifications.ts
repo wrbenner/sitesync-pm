@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 // ── Notification Types ───────────────────────────────────
 
+
 export type NotificationType = 'assigned' | 'overdue' | 'mentioned' | 'approval_needed' | 'status_changed' | 'comment'
 
 interface PushData {

@@ -1,6 +1,8 @@
+import { fromTable } from '../../lib/db/queries'
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+
   Save, Users, Building2, MapPin, Calendar, DollarSign,
   FileText, HardHat, CheckCircle, Settings, _ChevronDown, Shield,
   UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
@@ -399,7 +401,7 @@ export function ProjectSettings() {
     );
   }
 
-  const _selectedType = PROJECT_TYPES.find((t) => t.value === projectType);
+
 
   return (
     <div style={{

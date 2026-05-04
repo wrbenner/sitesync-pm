@@ -202,6 +202,7 @@ function BudgetBar({
 // ── Quick Link Button ───────────────────────────────────────
 
 function _QuickLink({ href, label }: { href: string; label: string }) {
+         void _QuickLink;
   return (
     <a
       href={href}
@@ -290,6 +291,7 @@ const LedgerPage: React.FC = () => {
     }>,
     [payAppData]
   );
+  void _payApps;
 
   // ── Derived values — prefer live data, fallback to metrics ──
   const budgetTotal = useMemo(() => {

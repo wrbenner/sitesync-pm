@@ -3,7 +3,7 @@ import { Card, Btn } from '../../components/Primitives';
 import { DataTable, createColumnHelper } from '../../components/shared/DataTable';
 import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 import { useProjectId } from '../../hooks/useProjectId';
 

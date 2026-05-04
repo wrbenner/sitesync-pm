@@ -115,6 +115,7 @@ export default function IntelligenceGraphPage() {
   }, [focusMode])
 
   const _handleNodeSelect = useCallback((node: GraphNode) => {
+        void _handleNodeSelect;
     if (focusMode) {
       setFocusNodeId(node.id)
     }

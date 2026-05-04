@@ -15,7 +15,7 @@ import { ProjectGate } from '../components/ProjectGate';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
-import { supabase } from '../lib/supabase';
+
 import { fromTable } from '../lib/db/queries'
 import { useEntityStore, useEntityActions } from '../stores/entityStore';
 import type { Crew } from '../types/database';

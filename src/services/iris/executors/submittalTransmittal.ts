@@ -13,7 +13,7 @@
  * shows up as a separate alert; the transmittal record itself is intact.
  */
 
-import { supabase } from '../../../lib/supabase'
+
 import { fromTable } from '../../../lib/db/queries'
 import type {
   DraftedAction,

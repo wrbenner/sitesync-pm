@@ -16,14 +16,14 @@ import { RelatedItems } from '../../components/Primitives';
 import { toast } from 'sonner';
 import type { PunchItem, Comment } from './types';
 import {
-  statusLabel,
-  STATUS_COLORS,
+
+
   formatDate,
   getDueDateColor,
-  getDaysRemaining,
+
   getBallInCourt,
 } from './types';
-import { StatusDot } from './PunchListPrimitives';
+
 import { IrisSuggests } from '../../components/iris/IrisSuggests';
 
 // ── Verification Pipeline ───────────────────────────────

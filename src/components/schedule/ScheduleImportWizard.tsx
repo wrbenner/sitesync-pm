@@ -1,9 +1,11 @@
+import { fromTable } from '../../lib/db/queries'
 // SiteSync PM — Schedule Import/Export Wizard
 // Multi-step wizard for importing P6 (.xer), MS Project (.xml), CSV, and PDF Gantt files.
 // Also provides export dropdown for all formats.
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
+
   Upload, FileText, AlertTriangle, CheckCircle, ChevronRight, ChevronLeft,
   ChevronDown, Download, X, Search, ArrowRightLeft, Loader, Calendar,
   Clock, Link2, Users,
@@ -21,7 +23,7 @@ import {
 import type { ImportedActivity, ImportResult } from '../../lib/scheduleImport';
 import { parsePdfSchedule } from '../../lib/schedulePdfImport';
 import { exportToXER, exportToCSV, downloadFile } from '../../lib/scheduleExport';
-import { supabase } from '../../lib/supabase';
+
 
 // Valid schedule_phases.status values per the DB CHECK constraint
 // (see migrations 00001_initial_schema.sql and 20260418000019_schedule_dependencies.sql).

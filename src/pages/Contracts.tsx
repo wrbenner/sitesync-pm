@@ -25,7 +25,7 @@ import {
   type SignatureRequest,
 } from '../hooks/queries/signatures'
 import { getSignerColorPalette } from '../services/signatureService'
-import { supabase } from '../lib/supabase'
+
 import { fromTable } from '../lib/db/queries'
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation'
 import { PageInsightBanners } from '../components/ai/PredictiveAlert'

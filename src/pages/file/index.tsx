@@ -25,7 +25,7 @@ import {
   SectionHeading,
 } from '../../components/atoms';
 import {
-  WifiOff,
+
   ChevronRight,
   FileText,
   File,
@@ -34,7 +34,7 @@ import {
   Film,
   Archive,
   FileSpreadsheet,
-  ExternalLink,
+
   Clock,
 } from 'lucide-react';
 

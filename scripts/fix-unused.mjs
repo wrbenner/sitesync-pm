@@ -62,12 +62,76 @@ for (const [file, errs] of byFile) {
     if (!lineText) continue
 
     const trimmed = lineText.trim()
+    // Detect if we're inside a multi-line import block
+    const insideMultilineImport = (() => {
+      // Walk backwards to find a line starting with `import` and no closing brace yet
+      for (let i = lineIdx; i >= 0; i--) {
+        const ln = linesArr[i]
+        if (/^\s*import\s/.test(ln)) {
+          // Check if this import was already closed before our line
+          let depth = 0
+          let foundOpen = false
+          for (let j = i; j <= lineIdx; j++) {
+            const t = linesArr[j]
+            for (const ch of t) {
+              if (ch === '{') { depth++; foundOpen = true }
+              else if (ch === '}') depth--
+            }
+          }
+          if (foundOpen && depth > 0) return true
+          return false
+        }
+        if (ln.trim() && !ln.includes(',') && !ln.includes('{') && !ln.includes('}') && !ln.startsWith(' ')) break
+      }
+      return false
+    })()
+
+    if (insideMultilineImport) {
+      // Remove `, NAME` or `NAME, ` or just `NAME,` on the line
+      const name = err.name
+      const beforeComma = new RegExp(`,\\s*${name}\\b`)
+      const afterComma = new RegExp(`\\b${name}\\s*,\\s*`)
+      const onlyOnLine = new RegExp(`^\\s*${name}\\s*,?\\s*$`)
+      if (onlyOnLine.test(lineText)) {
+        // Whole line is just this import — blank it
+        linesArr[lineIdx] = ''
+        imports++
+        modified = true
+        continue
+      }
+      if (beforeComma.test(lineText)) {
+        linesArr[lineIdx] = lineText.replace(beforeComma, '')
+        imports++
+        modified = true
+        continue
+      }
+      if (afterComma.test(lineText)) {
+        linesArr[lineIdx] = lineText.replace(afterComma, '')
+        imports++
+        modified = true
+        continue
+      }
+      skipped++
+      continue
+    }
+
     if (trimmed.startsWith('import ')) {
       const name = err.name
       let newLine = lineText
       const beforeComma = new RegExp(`,\\s*${name}\\b`)
       const afterComma = new RegExp(`\\b${name}\\s*,\\s*`)
       const onlyName = new RegExp(`\\{\\s*${name}\\s*\\}`)
+      // Whole-line import: `import { NAME } from '...'` or `import NAME from '...'`
+      const wholeLineNamed = new RegExp(`^\\s*import\\s+\\{\\s*${name}\\s*\\}\\s+from\\s+['"][^'"]+['"]\\s*;?\\s*$`)
+      const wholeLineDefault = new RegExp(`^\\s*import\\s+${name}\\s+from\\s+['"][^'"]+['"]\\s*;?\\s*$`)
+      const wholeLineTypeNamed = new RegExp(`^\\s*import\\s+type\\s+\\{\\s*${name}\\s*\\}\\s+from\\s+['"][^'"]+['"]\\s*;?\\s*$`)
+      if (wholeLineNamed.test(newLine) || wholeLineDefault.test(newLine) || wholeLineTypeNamed.test(newLine)) {
+        // Replace with empty line to preserve line numbers for remaining errors
+        linesArr[lineIdx] = ''
+        imports++
+        modified = true
+        continue
+      }
       if (onlyName.test(newLine)) {
         skipped++
         continue
@@ -100,7 +164,32 @@ for (const [file, errs] of byFile) {
         continue
       }
       if (err.name.startsWith('_')) {
-        skipped++
+        // Already-underscored: TS still flags top-level const/let. Delete the line if it's a single-statement declaration.
+        const match = lineText.match(/^(\s*)(const|let|var)\s+(\w+)\s*=/)
+        if (match && match[3] === err.name && lineText.trim().endsWith(';') || (match && match[3] === err.name && (after.includes(';') || after.includes(' = ')))) {
+          // Try a single-line const with assignment ending in `;`
+          if (/^\s*(const|let|var)\s+\w+\s*=[^;]*;\s*$/.test(lineText)) {
+            linesArr[lineIdx] = ''
+            renamed++
+            modified = true
+            continue
+          }
+        }
+        // Otherwise: add `void <name>` immediately after the declaration line to mark used.
+        // This works for destructured params/locals too.
+        // Insert before next non-empty line, but only if not already inserted.
+        const insertLine = `${' '.repeat(Math.max(0, col))}void ${err.name};`
+        // Don't insert if next line already has it
+        if (linesArr[lineIdx + 1] && linesArr[lineIdx + 1].includes(`void ${err.name}`)) {
+          skipped++
+          continue
+        }
+        // Find end of statement (semicolon or = ...; or `,` in destructure)
+        // Simplest: append `; void <name>;` to the same line if no semicolon, else after
+        // Actually, easiest: just insert a `void <name>;` line immediately after lineIdx.
+        linesArr.splice(lineIdx + 1, 0, insertLine)
+        renamed++
+        modified = true
         continue
       }
       const trimmedBefore = before.trimEnd()

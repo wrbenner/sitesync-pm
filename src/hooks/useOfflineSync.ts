@@ -17,7 +17,7 @@ import {
   onConnectivityChange,
   type PendingAnnotation,
 } from '../lib/offlineQueue';
-import { supabase } from '../lib/supabase';
+
 import { fromTable } from '../lib/db/queries'
 
 interface UseOfflineSyncReturn {

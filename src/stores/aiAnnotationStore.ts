@@ -3,6 +3,8 @@ import { supabase, fromTable } from '../lib/supabase';
 import { AnnotationHistory, type AnnotationShape } from '../components/drawings/AnnotationHistory';
 import type { AnnotationTool } from '../components/drawings/AnnotationCanvas';
 
+import { fromTable } from '../lib/db/queries'
+
 export type { AnnotationShape } from '../components/drawings/AnnotationHistory';
 export type { AnnotationTool } from '../components/drawings/AnnotationCanvas';
 

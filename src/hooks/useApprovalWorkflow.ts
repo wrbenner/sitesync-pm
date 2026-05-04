@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fromTable, supabase } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 
+
 export type ApprovalEntityType = 'submittal' | 'rfi' | 'change_order' | 'pay_application' | 'daily_log' | 'safety_inspection'
 export type ApprovalActionType = 'approve' | 'review' | 'acknowledge'
 export type ApprovalAction = 'approved' | 'rejected' | 'returned' | 'acknowledged'

@@ -19,10 +19,10 @@ import {
   ArrowLeft, Camera, MapPin, Wrench, Clock, Calendar,
   CheckCircle2, XCircle, Play, Eye, AlertTriangle,
   User, _MessageSquare, Shield, Send, Pencil, ChevronLeft,
-  Maximize2,
+
 } from 'lucide-react'
 import { colors, typography, shadows } from '../../styles/theme'
-import { Avatar } from '../../components/Primitives'
+
 import { usePunchItems } from '../../hooks/queries'
 import { useUpdatePunchItem } from '../../hooks/mutations'
 import { useProjectId } from '../../hooks/useProjectId'
@@ -37,6 +37,7 @@ import type { PunchItem } from './types'
 // ─── Helpers ──────────────────────────────────────────────
 
 const _getInitials = (s: string) =>
+      void _getInitials;
   ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const relativeTime = (dateStr: string) => {

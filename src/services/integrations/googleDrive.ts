@@ -1,7 +1,7 @@
 // Google Drive Integration: OAuth2 + Drive API v3
 // Syncs drawings, submittals, RFI attachments, daily log photos to/from a project folder.
 
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {

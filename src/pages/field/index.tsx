@@ -19,7 +19,7 @@ import { PageState } from '../../components/shared/PageState';
 import { useCopilotStore } from '../../stores/copilotStore';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useProject, useDailyLogs, usePunchItems, useFieldCaptures, useIncidents } from '../../hooks/queries';
-import { useAuthStore } from '../../stores/authStore';
+
 import { useIsOnline } from '../../hooks/useOfflineStatus';
 import { useIsMobile } from '../../hooks/useWindowSize';
 import { colors, typography, transitions } from '../../styles/theme';
@@ -29,12 +29,12 @@ import {
 } from '../../components/atoms';
 import { CalendarNav } from '../../components/dailylog/CalendarNav';
 import {
-  Camera, BookOpen, CheckSquare, Shield, Image, Truck,
+  BookOpen, CheckSquare, Shield, Image, Truck,
   WifiOff, Plus, ChevronRight, Users, Clock, AlertTriangle,
   MapPin, Calendar,
 } from 'lucide-react';
 import { FieldCaptureModal } from '../../components/field-capture/FieldCaptureModal';
-import { useFieldCapture } from '../../hooks/useFieldCapture';
+
 import { useUpdatePunchItem } from '../../hooks/mutations/punch-items';
 
 // ── View Types ──────────────────────────────────────────────
@@ -78,7 +78,7 @@ const FieldPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   const isMobile = useIsMobile();
   const isOnline = useIsOnline();
-  const _user = useAuthStore((s) => s.user);
+
 
   useEffect(() => { setPageContext('field'); }, [setPageContext]);
 

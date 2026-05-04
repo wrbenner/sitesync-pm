@@ -1,3 +1,4 @@
+import { fromTable } from '../../lib/db/queries'
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Lock, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
@@ -8,6 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores';
 import { Btn } from '../Primitives';
 import {
+
   acquireEditLock,
   renewEditLock,
   releaseEditLock,

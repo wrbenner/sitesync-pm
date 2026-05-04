@@ -2,7 +2,7 @@
 // Compiles project data into the owner/OAC meeting report shape.
 // Narrative generation calls the AI edge function; everything else is pure data assembly.
 
-import { supabase } from '../lib/supabase'
+
 import { fromTable } from '../lib/db/queries'
 import { dollarsToCents, fromCents, addCents } from '../types/money'
 import type { Cents } from '../types/money'

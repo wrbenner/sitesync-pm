@@ -5,10 +5,12 @@ import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { toast } from 'sonner';
 import { CHECKLIST_TEMPLATES, type TemplateKey } from './safetyTypes';
-import { supabase } from '../../lib/supabase';
+
 import { useProjectId } from '../../hooks/useProjectId';
 
 // ── Inspection columns ────────────────────────────────────────
+
+import { fromTable } from '../../lib/db/queries'
 
 const inspectionCol = createColumnHelper<Record<string, unknown>>();
 const inspectionColumns = [

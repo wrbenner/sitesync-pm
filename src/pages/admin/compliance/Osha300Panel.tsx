@@ -15,7 +15,7 @@ import { FileDown } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
-import { supabase } from '../../../lib/supabase'
+
 import { fromTable } from '../../../lib/db/queries'
 import { buildForm300, buildForm300A, exportItaCsv, type IncidentRow, type Form300Row } from '../../../lib/compliance/osha300'
 import { KpiTile, StatusPill, DegradedBanner, TableHeaderRow, TableBodyRow } from './_kit'

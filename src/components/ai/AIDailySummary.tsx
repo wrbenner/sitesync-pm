@@ -3,7 +3,7 @@ import {
   Sparkles, Sun, CloudRain, Cloud, CloudSnow, Wind, Thermometer,
   Users, ShieldAlert, FileQuestion, ClipboardCheck, Truck, Search,
   AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight,
-  Printer, _Calendar,
+  _Calendar,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 

@@ -1,8 +1,10 @@
-import { supabase } from '../../lib/supabase'
+
 import { useAuditedMutation } from './createAuditedMutation'
 import { contactSchema } from '../../components/forms/schemas'
 
 import type { Database } from '../../types/database'
+import { fromTable } from '../../lib/db/queries'
+
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])

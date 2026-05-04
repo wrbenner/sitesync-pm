@@ -37,8 +37,8 @@ import {
   Layers,
   Pencil,
   RotateCw,
-  Grid3X3,
-  Wifi,
+
+
   WifiOff,
   CloudOff,
   MessageSquarePlus,
@@ -46,18 +46,18 @@ import {
 import CreateRFIModal from '../forms/CreateRFIModal';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useUiStore } from '../../stores';
+
 import { MarkupToolbar, type MarkupTool } from './MarkupToolbar';
 import { STAMP_CONFIGS, type StampType } from './tools/StampTool';
 import type { NormalizedGeometry, AnnotationLayer, AnnotationVisibility } from '../../lib/annotationGeometry';
 import {
-  toNormalized,
-  fromNormalized,
+
+
   denormalizeStrokeWidth,
   generateCloudPath,
   type GeometryType,
   type NormalizedPoint,
-  type PageDimensions,
+
 } from '../../lib/annotationGeometry';
 import { useDrawingMarkups } from '../../hooks/queries/document-management';
 import { useCreateDrawingMarkup, useDeleteDrawingMarkup } from '../../hooks/mutations/documents';
@@ -376,8 +376,9 @@ interface AnnotationOverlayItem {
 const VIEWER_ID = 'osd-tiled-viewer';
 const NAVIGATOR_ID = 'osd-navigator';
 const _EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
+      void _EASING;
 
-const _TOOLBAR_HEIGHT = 52;
+
 const HEADER_HEIGHT = 48;
 
 // ── Styles ─────────────────────────────────────────────────────────────────

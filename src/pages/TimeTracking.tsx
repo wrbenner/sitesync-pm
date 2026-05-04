@@ -1,3 +1,4 @@
+import { fromTable } from '../lib/db/queries'
 import React, { useMemo, useState } from 'react'
 import { Clock, Plus, Download, Sparkles, CheckCircle2, FileText, DollarSign, Briefcase, Upload, Users } from 'lucide-react'
 import { generateWH347PDF, exportPayrollCSV, type WH347Employee } from '../lib/reports/wh347Pdf'
@@ -6,10 +7,11 @@ import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
-import { supabase } from '../lib/supabase'
+
 import { useProject } from '../hooks/queries'
 import { useWorkforceMembers } from '../hooks/queries/workforce'
 import {
+
   useTimeEntries,
   useCreateTimeEntry,
   useApproveTimeEntry,

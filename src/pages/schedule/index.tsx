@@ -1,4 +1,6 @@
 /**
+import { fromTable } from '../../lib/db/queries'
+
  * Schedule — the timeline of truth.
  *
  * Investor-readiness rewrite per `specs/homepage-redesign/DESIGN-RESET.md`:
@@ -10,7 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, FileUp, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
+
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { useProjectStore } from '../../stores/projectStore';

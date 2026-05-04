@@ -10,7 +10,7 @@ import {
   type OfflineRecord,
   type TableName,
 } from './offlineStore'
-import { supabase } from './supabase'
+
 import { fromTable } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────

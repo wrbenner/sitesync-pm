@@ -28,11 +28,13 @@ import { computeProjectFinancials } from '../lib/financialEngine'
 import type { BudgetItemRow } from '../types/api'
 import type { MappedChangeOrder } from '../api/endpoints/budget'
 import { fromCents, type Cents } from '../types/money'
-import { supabase } from '../lib/supabase'
+
 
 // ── Page-local design tokens ────────────────────────────────────────────────
 // Investor view colors are not tied to the parchment surface — see
 // specs/homepage-redesign/DESIGN-RESET.md for the locked palette.
+import { fromTable } from '../lib/db/queries'
+
 const C = {
   surface: '#FCFCFA',         // true off-white data surface
   surfaceAlt: '#F5F5F1',      // grouping rows / subtotals

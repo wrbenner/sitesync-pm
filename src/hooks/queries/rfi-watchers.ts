@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 
 
 
 // ── RFI Watchers ─────────────────────────────────────────
+
+import { fromTable } from '../../lib/db/queries'
 
 export function useRFIWatchers(rfiId: string | undefined) {
   return useQuery({

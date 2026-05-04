@@ -8,6 +8,8 @@ import { Modal, Btn, InputField } from '../Primitives';
 import { supabase, fromTable } from '../../lib/supabase';
 import { colors, spacing, typography } from '../../styles/theme';
 
+import { fromTable } from '../../lib/db/queries'
+
 export type InviteRole = 'admin' | 'pm' | 'editor' | 'viewer';
 
 interface Project {

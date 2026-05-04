@@ -14,7 +14,7 @@
  * the inbox; nothing leaks into production state.
  */
 
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 import type { DraftedAction, DraftedActionType } from '../../types/draftedActions'
 import { executeDraftedRfi } from './executors/rfi'

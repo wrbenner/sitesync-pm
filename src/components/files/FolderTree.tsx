@@ -1,3 +1,4 @@
+import { fromTable } from '../../lib/db/queries'
 // Phase 7 — FolderTree
 // Virtualized folder hierarchy for the Files page. Folders are derived from
 // distinct `folder` paths on `files` (e.g. "Drawings/Architectural").
@@ -11,6 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+
   Folder,
   FolderOpen,
   ChevronRight,

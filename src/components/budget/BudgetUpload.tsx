@@ -11,7 +11,7 @@ import {
   toImportPayload,
   type SheetCandidate,
   type ParseResult,
-  type ParsedBudgetRow,
+
 } from '../../lib/budgetParser';
 import { budgetService } from '../../services/budgetService';
 

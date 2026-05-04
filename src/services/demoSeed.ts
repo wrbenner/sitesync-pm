@@ -31,7 +31,7 @@
 // gracefully shows "Unassigned." A follow-up enhancement can use the
 // service-role path to seed phantom demo team members.
 
-import { supabase } from '../lib/supabase'
+
 import { fromTable } from '../lib/db/queries'
 import { DEMO_BUNDLE } from '../lib/demoData'
 

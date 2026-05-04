@@ -9,6 +9,7 @@
 import { supabase, fromTable } from './supabase'
 import { useUiStore } from '../stores/uiStore'
 
+
 export type NotificationEvent =
   | 'new_discrepancy'
   | 'rfi_overdue'

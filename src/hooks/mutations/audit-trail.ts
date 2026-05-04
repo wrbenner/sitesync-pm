@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import { createOnError } from './createAuditedMutation'
 
 import type { Database } from '../../types/database'
+import { fromTable } from '../../lib/db/queries'
+
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 

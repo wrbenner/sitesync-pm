@@ -848,6 +848,7 @@ export const Safety: React.FC = () => {
 
   const dartValue = dart !== null ? parseFloat(dart) : null
   const _dartColor: 'success' | 'warning' | 'danger' | undefined =
+        void _dartColor;
     dartValue === null ? undefined
     : dartValue <= 1.5 ? 'success'
     : dartValue <= 2.5 ? 'warning'

@@ -12,7 +12,7 @@
  * reviews and signs.
  */
 
-import { supabase } from '../../../lib/supabase'
+
 import { fromTable } from '../../../lib/db/queries'
 import type { DraftedAction, DraftedPayAppPayload } from '../../../types/draftedActions'
 

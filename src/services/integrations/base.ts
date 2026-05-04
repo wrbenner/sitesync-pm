@@ -1,7 +1,7 @@
 // Base integration framework.
 // All external service connectors implement IntegrationProvider.
 
-import { supabase } from '../../lib/supabase'
+
 import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────

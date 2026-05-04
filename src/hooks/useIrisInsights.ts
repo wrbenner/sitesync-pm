@@ -12,7 +12,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { supabase } from '../lib/supabase';
+
 import { fromTable } from '../lib/db/queries'
 import { useRFIs } from './queries/rfis';
 import { useSubmittals } from './queries/submittals';

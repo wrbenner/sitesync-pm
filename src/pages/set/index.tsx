@@ -25,13 +25,13 @@ import {
   SectionHeading,
 } from '../../components/atoms';
 import {
-  WifiOff,
+
   ChevronRight,
   FileText,
   Layers,
-  ExternalLink,
+
   Clock,
-  Box,
+
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import type { AuditLogEntry } from '../api/endpoints/auditTrail'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 
+
 export interface AuditEntry {
   id: string
   project_id: string

@@ -5,7 +5,7 @@ import {
   AlertCircle, DollarSign, HelpCircle, Calendar, ChevronRight,
   Shield, ClipboardList, CloudSun,
   Sparkles, Scale, FileText, Send, Clock,
-  ArrowUpRight,
+
 } from 'lucide-react';
 import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
@@ -27,7 +27,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import type { AIInsight } from '../../types/ai';
 import { useProjectStore } from '../../stores/projectStore';
 import { useScheduleStore } from '../../stores/scheduleStore';
-import { supabase } from '../../lib/supabase';
+
 import { fromTable } from '../../lib/db/queries'
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
@@ -221,6 +221,7 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
 // ════════════════════════════════════════════════════════════════
 
 const _DashboardInner: React.FC = () => {
+      void _DashboardInner;
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();

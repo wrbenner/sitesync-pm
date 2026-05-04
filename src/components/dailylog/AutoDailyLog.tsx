@@ -10,7 +10,7 @@ import {
   Cloud, Sun, CloudRain, CloudSnow, _Wind, _Droplets,
   Users, ShieldCheck, AlertTriangle, Camera,
   Clock, Check, RefreshCw, Loader2, Send,
-  Plus, _ChevronDown, X, _Thermometer,
+  _ChevronDown, X, _Thermometer,
   FileText, Wrench, Truck, HardHat, Mic,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
@@ -32,6 +32,7 @@ interface AutoDailyLogProps {
 // ── Helpers ─────────────────────────────────────────────────
 
 function _timeAgo(iso: string): string {
+         void _timeAgo;
   try {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);

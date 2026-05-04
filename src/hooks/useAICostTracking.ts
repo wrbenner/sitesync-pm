@@ -3,7 +3,7 @@
 // dashboard displays: daily spend by service, per project totals, ROI.
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
+
 import { fromTable } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────

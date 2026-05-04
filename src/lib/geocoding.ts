@@ -4,7 +4,7 @@
  * Results are cached in the projects table (latitude/longitude columns).
  */
 
-import { supabase } from './supabase'
+
 import { fromTable } from '../lib/db/queries'
 
 // Common US city coordinates for instant lookup (no API call needed)

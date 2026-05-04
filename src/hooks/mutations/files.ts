@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
 import { invalidateEntity } from '../../api/invalidation'
@@ -7,6 +7,8 @@ import { invalidateEntity } from '../../api/invalidation'
 
 
 import type { Database } from '../../types/database'
+import { fromTable } from '../../lib/db/queries'
+
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])

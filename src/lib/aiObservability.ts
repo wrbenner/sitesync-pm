@@ -7,9 +7,9 @@
 // `traceLLM` and we record model, tokens, cost, latency, and success.
 
 import { supabase, fromTable } from './supabase'
-
 // Model cost reference, USD per 1K tokens. Update when Anthropic/OpenAI/Google
 // publish new pricing. Values are input → output.
+
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
   'claude-opus-4-7': { input: 0.015, output: 0.075 },
   'claude-sonnet-4-6': { input: 0.003, output: 0.015 },
