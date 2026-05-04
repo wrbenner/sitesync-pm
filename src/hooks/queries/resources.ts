@@ -44,7 +44,7 @@ function makeListHook<T>(table: string, queryKey: string) {
     return useQuery({
       queryKey: [queryKey, projectId],
       queryFn: async () => {
-        const { data, error } = await fromTable(table).select('*').eq('project_id' as never, projectId!).order('created_at', { ascending: false })
+        const { data, error } = await fromTable(table as never).select('*').eq('project_id' as never, projectId!).order('created_at', { ascending: false })
         if (error) throw error
         return (data || []) as T[]
       },
@@ -58,7 +58,7 @@ function makeCreateHook<T>(table: string, queryKey: string) {
     const qc = useQueryClient()
     return useMutation({
       mutationFn: async (payload: Partial<T> & { project_id: string }) => {
-        const { data, error } = await fromTable(table).insert(payload as never).select().single()
+        const { data, error } = await fromTable(table as never).insert(payload as never).select().single()
         if (error) throw error
         return data as T
       },

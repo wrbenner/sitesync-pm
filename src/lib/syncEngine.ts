@@ -313,7 +313,7 @@ class SyncEngine {
    */
   private async detectConflict(record: OfflineRecord): Promise<boolean> {
     try {
-      const { data } = await fromTable(record.table)
+      const { data } = await fromTable(record.table as never)
         .select('updated_at')
         .eq('id' as never, record.id)
         .single()
@@ -336,7 +336,7 @@ class SyncEngine {
     record: OfflineRecord,
   ): Promise<'conflict'> {
     try {
-      const { data } = await fromTable(record.table)
+      const { data } = await fromTable(record.table as never)
         .select('*')
         .eq('id' as never, record.id)
         .single()

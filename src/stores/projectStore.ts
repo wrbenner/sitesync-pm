@@ -12,7 +12,7 @@ import { persist } from 'zustand/middleware';
 import { projectService } from '../services/projectService';
 import type { ProjectMemberWithProfile } from '../services/projectService';
 import type { Project } from '../types/entities';
-import type { ProjectMember } from '../types/entities';
+import type { ProjectRole } from '../types/database';
 
 interface ProjectState {
   projects: Project[];
@@ -37,7 +37,7 @@ interface ProjectState {
     created_by: string;
   }) => Promise<{ error: string | null; project: Project | null }>;
   updateProject: (projectId: string, updates: Partial<Project>) => Promise<{ error: string | null }>;
-  addMember: (projectId: string, userId: string, role: ProjectMember['role']) => Promise<{ error: string | null }>;
+  addMember: (projectId: string, userId: string, role: ProjectRole) => Promise<{ error: string | null }>;
   removeMember: (memberId: string) => Promise<{ error: string | null }>;
 }
 

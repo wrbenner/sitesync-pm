@@ -64,7 +64,7 @@ export function useOptimisticLock(
       const selectFields =
         lockedStatuses && lockedStatuses.length > 0 ? 'updated_at, status' : 'updated_at';
       const runQuery = () =>
-        fromTable(table)
+        fromTable(table as never)
           .select(selectFields)
           .eq('id' as never, entityId)
           .single();
