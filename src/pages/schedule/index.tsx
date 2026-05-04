@@ -1,6 +1,4 @@
 /**
-import { fromTable } from '../../lib/db/queries'
-
  * Schedule — the timeline of truth.
  *
  * Investor-readiness rewrite per `specs/homepage-redesign/DESIGN-RESET.md`:
@@ -17,8 +15,9 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useCopilotStore } from '../../stores/copilotStore';
-import AddPhaseModal from '../../components/forms/AddPhaseModal';
+import AddPhaseModal, { type PhaseData } from '../../components/forms/AddPhaseModal';
 import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
+import { fromTable } from '../../lib/db/queries';
 import { colors, typography, spacing } from '../../styles/theme';
 import type { SchedulePhase } from '../../stores/scheduleStore';
 import { ScheduleTimeline } from './ScheduleTimeline';
@@ -237,7 +236,7 @@ const SchedulePage: React.FC = () => {
   );
 
   const handleAddPhase = useCallback(
-    async (data: Record<string, unknown>) => {
+    async (data: PhaseData) => {
       const projectId = activeProject?.id;
       if (!projectId) {
         toast.error('No project selected');

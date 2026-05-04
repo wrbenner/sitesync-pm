@@ -1,6 +1,4 @@
 /**
-import { fromTable } from '../lib/db/queries'
-
  * punchListStore — Focused comment slice for the Punch List feature.
  *
  * SCOPE (post-Day-9 slim):
@@ -20,7 +18,8 @@ import { fromTable } from '../lib/db/queries'
  *     non-trivial and don't fit the entityStore CRUD pattern.
  */
 import { create } from 'zustand';
-import { supabase} from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 
 export interface PunchComment {
   id: string;
@@ -99,7 +98,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
         comments: {
           ...s.comments,
           [itemId]: (s.comments[itemId] ?? []).map((c) =>
-            c.id === optimistic.id ? (data as PunchComment) : c,
+            c.id === optimistic.id ? (data as unknown as PunchComment) : c,
           ),
         },
       }));
@@ -111,10 +110,10 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
     const { data, error } = await supabase
       .from('punch_item_comments')
       .select('*')
-      .eq('punch_item_id', itemId)
+      .eq('punch_item_id' as never, itemId)
       .order('created_at', { ascending: true });
     if (error) return;
-    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    const rows = (data ?? []) as unknown as Array<Record<string, unknown>>;
     const normalized: PunchComment[] = rows.map((r) => ({
       id: String(r.id),
       punch_item_id: String(r.punch_item_id),

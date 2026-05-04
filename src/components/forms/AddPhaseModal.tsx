@@ -8,7 +8,7 @@ import { useProjectStore } from '../../stores/projectStore';
 
 /* ── Types ────────────────────────────────────────────────── */
 
-interface PhaseData {
+export interface PhaseData {
   name: string;
   start_date: string;
   end_date: string;

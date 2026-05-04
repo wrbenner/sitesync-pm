@@ -178,7 +178,7 @@ export function UserManagement() {
             margin: 0, marginTop: spacing['1'],
             marginLeft: 48,
           }}>
-            {company?.name} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
+            {organization?.name} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
           </p>
         </div>
 
