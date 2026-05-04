@@ -2,13 +2,12 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Shield, AlertTriangle, Clock, DollarSign, Users, Building2, FileText,
   ChevronRight, ChevronDown, Search, Plus, X, Check, Edit2, TrendingUp,
-  Calendar, BarChart3, Award, Target, Percent, ArrowRight, Download,
-  CheckCircle, Info, AlertCircle, Filter, Eye, Calculator, Camera, Zap
+  Calendar, BarChart3, Target, Download,
+  CheckCircle, Info, AlertCircle, Calculator, Camera, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
-import { fromTable } from '../../lib/supabase';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { fromTable } from '../../lib/db/queries';
 import { useProjectId } from '../../hooks/useProjectId';
 
 // ── Types ───────────────────────────────────────────────
@@ -156,7 +155,7 @@ const EmptyCard: React.FC<{ icon: React.ElementType; title: string; description:
       <Icon size={28} color={colors.textTertiary} />
     </div>
     <div>
-      <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>{title}</div>
+      <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.xs }}>{title}</div>
       <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, maxWidth: 400 }}>{description}</div>
     </div>
   </div>
@@ -183,7 +182,7 @@ const HUDCompliancePage: React.FC = () => {
 
   // ── State for Supabase data ─────────────────────────────
   const [programs, setPrograms] = useState<ComplianceProgram[]>([]);
-  const [lihtcUnits, setLihtcUnits] = useState<LIHTCUnit[]>([]);
+  const [lihtcUnits, _setLihtcUnits] = useState<LIHTCUnit[]>([]);
   const [wageRates, setWageRates] = useState<WageRate[]>([]);
   const [payrollEntries, setPayrollEntries] = useState<PayrollEntry[]>([]);
   const [section3Workers, setSection3Workers] = useState<Section3Worker[]>([]);
@@ -194,6 +193,7 @@ const HUDCompliancePage: React.FC = () => {
   // ── Fetch compliance programs from compliance_reports ────
   useEffect(() => {
     if (!projectId) { setLoading(false); return; }
+    const pid: string = projectId;
     let cancelled = false;
 
     async function fetchData() {
@@ -202,12 +202,12 @@ const HUDCompliancePage: React.FC = () => {
         // Fetch compliance reports (these are org-level, so we try with project_id)
         const { data: reports } = await fromTable('compliance_reports')
           .select('*')
-          .eq('project_id' as never, projectId)
+          .eq('project_id' as never, pid)
           .order('created_at', { ascending: false });
 
         if (!cancelled && reports && reports.length > 0) {
           // Map compliance_reports to ComplianceProgram shape
-          const mapped: ComplianceProgram[] = reports.map((r: Record<string, unknown>, i: number) => ({
+          const mapped: ComplianceProgram[] = (reports as unknown as Array<Record<string, unknown>>).map((r) => ({
             id: String(r.id),
             name: String(r.report_type ?? 'Compliance Report'),
             code: String(r.report_type ?? 'Report').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
@@ -232,7 +232,7 @@ const HUDCompliancePage: React.FC = () => {
           .order('trade', { ascending: true });
 
         if (!cancelled && wages && wages.length > 0) {
-          const mapped: WageRate[] = wages.map((w: Record<string, unknown>) => ({
+          const mapped: WageRate[] = (wages as unknown as Array<Record<string, unknown>>).map((w) => ({
             classification: String(w.trade ?? ''),
             journeymanRate: Number(w.base_hourly_rate ?? 0),
             fringes: Number(w.fringe_benefits ?? 0),
@@ -252,27 +252,27 @@ const HUDCompliancePage: React.FC = () => {
       try {
         const { data: payrolls } = await fromTable('certified_payroll_reports')
           .select('*')
-          .eq('project_id' as never, projectId)
+          .eq('project_id' as never, pid)
           .order('week_ending_date', { ascending: false })
           .limit(20);
 
         if (!cancelled && payrolls && payrolls.length > 0) {
           // Fetch employees for all payroll reports
-          const reportIds = payrolls.map((p: Record<string, unknown>) => String(p.id));
+          const reportIds = (payrolls as unknown as Array<Record<string, unknown>>).map((p) => String(p.id));
           const { data: employees } = await fromTable('certified_payroll_employees')
             .select('*')
             .in('payroll_report_id' as never, reportIds);
 
           const employeesByReport = new Map<string, Record<string, unknown>[]>();
-          (employees || []).forEach((emp: Record<string, unknown>) => {
+          ((employees || []) as unknown as Array<Record<string, unknown>>).forEach((emp) => {
             const rid = String(emp.payroll_report_id);
             if (!employeesByReport.has(rid)) employeesByReport.set(rid, []);
             employeesByReport.get(rid)!.push(emp);
           });
 
-          const mapped: PayrollEntry[] = payrolls.map((p: Record<string, unknown>) => {
+          const mapped: PayrollEntry[] = (payrolls as unknown as Array<Record<string, unknown>>).map((p) => {
             const emps = employeesByReport.get(String(p.id)) || [];
-            const mappedEmps: PayrollEmployee[] = emps.map((e: Record<string, unknown>) => {
+            const mappedEmps: PayrollEmployee[] = (emps as unknown as Array<Record<string, unknown>>).map((e) => {
               const totalHours = Number(e.hours_worked ?? 0);
               const rate = Number(e.hourly_rate ?? 0);
               const gross = Number(e.gross_pay ?? 0);
@@ -332,26 +332,26 @@ const HUDCompliancePage: React.FC = () => {
       try {
         const { data: workers } = await fromTable('workforce_members')
           .select('*')
-          .eq('project_id' as never, projectId)
+          .eq('project_id' as never, pid)
           .eq('status' as never, 'active')
           .order('name', { ascending: true });
 
         if (!cancelled && workers && workers.length > 0) {
           // Fetch total hours from time_entries for each worker
-          const workerIds = workers.map((w: Record<string, unknown>) => String(w.id));
+          const workerIds = (workers as unknown as Array<Record<string, unknown>>).map((w) => String(w.id));
           const { data: timeEntries } = await fromTable('time_entries')
             .select('workforce_member_id, regular_hours, overtime_hours')
-            .eq('project_id' as never, projectId)
+            .eq('project_id' as never, pid)
             .in('workforce_member_id' as never, workerIds);
 
           const hoursByWorker = new Map<string, number>();
-          (timeEntries || []).forEach((te: Record<string, unknown>) => {
+          ((timeEntries || []) as unknown as Array<Record<string, unknown>>).forEach((te) => {
             const wid = String(te.workforce_member_id);
             const hrs = Number(te.regular_hours ?? 0) + Number(te.overtime_hours ?? 0);
             hoursByWorker.set(wid, (hoursByWorker.get(wid) ?? 0) + hrs);
           });
 
-          const mapped: Section3Worker[] = workers.map((w: Record<string, unknown>) => ({
+          const mapped: Section3Worker[] = (workers as unknown as Array<Record<string, unknown>>).map((w) => ({
             id: String(w.id),
             name: String(w.name ?? ''),
             qualification: 'N/A', // No section3 qualification field in DB yet
@@ -372,11 +372,11 @@ const HUDCompliancePage: React.FC = () => {
       try {
         const { data: vendors } = await fromTable('vendors')
           .select('*')
-          .eq('project_id' as never, projectId)
+          .eq('project_id' as never, pid)
           .order('company_name', { ascending: true });
 
         if (!cancelled && vendors && vendors.length > 0) {
-          const mapped: Section3Business[] = vendors.map((v: Record<string, unknown>) => ({
+          const mapped: Section3Business[] = (vendors as unknown as Array<Record<string, unknown>>).map((v) => ({
             id: String(v.id),
             name: String(v.company_name ?? ''),
             certType: 'None', // No section3 cert type in DB yet
@@ -497,7 +497,7 @@ const HUDCompliancePage: React.FC = () => {
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3,
                     background: prog.healthScore >= 90 ? colors.statusActive : prog.healthScore >= 70 ? colors.statusWarning : colors.statusCritical }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm }}>
-                    <span style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{prog.code}</span>
+                    <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{prog.code}</span>
                     <span style={badgeStyle(prog.status)}>{prog.status}</span>
                   </div>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing.sm }}>{prog.name}</div>
@@ -526,7 +526,7 @@ const HUDCompliancePage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
           {/* Upcoming Deadlines */}
           <div style={cardStyle}>
-            <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+            <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
               <Calendar size={18} color={colors.primaryOrange} /> Upcoming Deadlines
             </div>
             {programs.length > 0 ? (
@@ -555,7 +555,7 @@ const HUDCompliancePage: React.FC = () => {
 
           {/* Active Alerts */}
           <div style={cardStyle}>
-            <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+            <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
               <AlertTriangle size={18} color={colors.statusWarning} /> Active Alerts
             </div>
             <div style={{ position: 'relative', marginBottom: spacing.md }}>
@@ -610,14 +610,14 @@ const HUDCompliancePage: React.FC = () => {
           ].map((item, i) => (
             <div key={i} style={cardStyle}>
               <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing.xs }}>{item.label}</div>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{item.value}</div>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{item.value}</div>
             </div>
           ))}
         </div>
 
         {/* Compliance Timeline */}
         <div style={cardStyle}>
-          <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+          <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
             Compliance Timeline (30-Year Extended Use Period)
           </div>
           <div style={{ display: 'flex', gap: 2, height: 32, borderRadius: borderRadius.md, overflow: 'hidden' }}>
@@ -644,7 +644,7 @@ const HUDCompliancePage: React.FC = () => {
         {/* Applicable Fraction Calculator */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-            <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
+            <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, display: 'flex', alignItems: 'center', gap: spacing.sm }}>
               <Calculator size={18} color={colors.primaryOrange} /> Applicable Fraction Calculator
             </div>
           </div>
@@ -697,7 +697,7 @@ const HUDCompliancePage: React.FC = () => {
         {/* Unit Table */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-            <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Unit Compliance ({lihtcUnits.length} units)
             </div>
             <button style={btnPrimary} onClick={() => setShowUnitModal(true)}>
@@ -795,7 +795,7 @@ const HUDCompliancePage: React.FC = () => {
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
             <div>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                 Prevailing Wage Rates
               </div>
               <div style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
@@ -826,7 +826,7 @@ const HUDCompliancePage: React.FC = () => {
 
         {/* Prevailing Wage Rates Table */}
         <div style={cardStyle}>
-          <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+          <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
             Prevailing Wage Rates
           </div>
           {wageRates.length > 0 ? (
@@ -862,7 +862,7 @@ const HUDCompliancePage: React.FC = () => {
         {/* Certified Payroll List */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-            <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               Certified Payroll (WH-347)
             </div>
             <button
@@ -985,7 +985,7 @@ const HUDCompliancePage: React.FC = () => {
             return (
               <div key={i} style={cardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing.sm }}>
-                  <span style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{goal.label}</span>
+                  <span style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{goal.label}</span>
                   <span style={badgeStyle(met ? 'active' : 'warning')}>{met ? 'Met' : 'Below Target'}</span>
                 </div>
                 <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginBottom: spacing.sm }}>
@@ -1013,7 +1013,7 @@ const HUDCompliancePage: React.FC = () => {
 
         {/* Trend Chart */}
         <div style={cardStyle}>
-          <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+          <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
             Monthly Section 3 Labor Hours Trend
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: spacing.md, height: 180, padding: `0 ${spacing.md}` }}>
@@ -1037,7 +1037,7 @@ const HUDCompliancePage: React.FC = () => {
 
         {/* Worker Registry */}
         <div style={cardStyle}>
-          <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+          <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
             Worker Registry
           </div>
           {hasWorkerData ? (
@@ -1076,7 +1076,7 @@ const HUDCompliancePage: React.FC = () => {
 
         {/* Business Registry */}
         <div style={cardStyle}>
-          <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+          <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
             Business Registry
           </div>
           {hasBusinessData ? (
@@ -1153,7 +1153,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* NPS Application Status */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 NPS Application Progress
               </div>
               <div style={{ display: 'flex', gap: spacing.lg }}>
@@ -1184,7 +1184,7 @@ const HUDCompliancePage: React.FC = () => {
             {/* Photo Documentation Grid */}
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                   Photo Documentation
                 </div>
                 <button
@@ -1209,7 +1209,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* QRE Tracker */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Qualified Rehabilitation Expenditures (QRE)
               </div>
               <EmptyCard
@@ -1240,7 +1240,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* 7-Year Timeline */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 7-Year Compliance Period
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
@@ -1260,7 +1260,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* Jobs Created */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Jobs Created / Retained
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.lg }}>
@@ -1298,7 +1298,7 @@ const HUDCompliancePage: React.FC = () => {
 
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-                <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+                <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
                   Unit Certification Status
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
@@ -1344,7 +1344,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* Credit Calculator */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 45L Credit Calculator
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: spacing.lg }}>
@@ -1355,7 +1355,7 @@ const HUDCompliancePage: React.FC = () => {
                 ].map((t, i) => (
                   <div key={i} style={{ padding: spacing.md, background: colors.surfaceInset, borderRadius: borderRadius.md,
                     borderTop: `3px solid ${t.color}` }}>
-                    <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.bold, color: t.color }}>{t.tier}</div>
+                    <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.bold, color: t.color }}>{t.tier}</div>
                     <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, marginTop: spacing.xs }}>{t.desc}</div>
                   </div>
                 ))}
@@ -1383,7 +1383,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* Energy Model Summary */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Energy Model — ASHRAE 90.1 Comparison
               </div>
               <EmptyCard
@@ -1395,7 +1395,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* Bonus Qualifiers */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Bonus Deduction Qualifiers
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: spacing.md }}>
@@ -1439,7 +1439,7 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* Substantial Improvement Test */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Substantial Improvement Test
               </div>
               <EmptyCard
@@ -1451,13 +1451,13 @@ const HUDCompliancePage: React.FC = () => {
 
             {/* 30-Month Deadline Countdown */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 30-Month Improvement Deadline
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing.lg, textAlign: 'center' }}>
                 <div style={{ padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Start Date</div>
-                  <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>—</div>
                 </div>
                 <div style={{ padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Days Remaining</div>
@@ -1466,14 +1466,14 @@ const HUDCompliancePage: React.FC = () => {
                 </div>
                 <div style={{ padding: spacing.lg, background: colors.surfaceInset, borderRadius: borderRadius.md }}>
                   <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Deadline</div>
-                  <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>—</div>
+                  <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textTertiary }}>—</div>
                 </div>
               </div>
             </div>
 
             {/* Basis Tracking */}
             <div style={cardStyle}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, marginBottom: spacing.md }}>
                 Improvement Basis Tracking
               </div>
               <EmptyCard

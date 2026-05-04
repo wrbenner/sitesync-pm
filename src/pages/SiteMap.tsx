@@ -16,23 +16,23 @@
 // • Search across all map items
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PageContainer, Btn, Card, Modal } from '../components/Primitives';
+import { PageContainer, Btn, Modal } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { supabase } from '../lib/supabase';
 import { fromTable } from '../lib/db/queries'
 import { useProjectId } from '../hooks/useProjectId';
 import { toast } from 'sonner';
 import {
-  MapPin, Wrench, HardHat, Package, ShieldAlert, Camera, Plus,
-  Image as ImageIcon, Globe, Search, Trash2, X, Eye, EyeOff, Crosshair,
-  Layers, Cloud, Thermometer, Wind, Droplets, ChevronDown, ChevronRight,
-  AlertTriangle, ClipboardCheck, Truck, Navigation, Ruler,
-  Filter, Building2, CircleDot, TriangleAlert, Maximize2, Minimize2,
+  MapPin, Wrench, HardHat, Package, ShieldAlert, Camera,
+  Image as ImageIcon, Globe, Search, Trash2, Eye, EyeOff,
+  Layers, Wind, Droplets, ChevronDown, ChevronRight,
+  AlertTriangle, ClipboardCheck, Truck,
+  Building2, Maximize2, Minimize2,
   RefreshCw, MapPinned, Satellite, Map as MapIcon, Mountain,
-  Clock, CheckCircle, AlertCircle, XCircle as XCircleIcon, Pencil, Save,
-  Upload, Download, ZoomIn, ZoomOut, LocateFixed,
+  CheckCircle,
+  Upload, LocateFixed,
 } from 'lucide-react';
-import type { Map as LeafletMap, LayerGroup, Marker, LatLngBoundsLiteral, TileLayer as LeafletTileLayer, Control } from 'leaflet';
+import type { Map as LeafletMap, LayerGroup, Marker, LatLngBoundsLiteral, TileLayer as LeafletTileLayer } from 'leaflet';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -139,18 +139,6 @@ const PIN_CONFIG: Record<PinType, { label: string; color: string; icon: React.El
 
 const PIN_TYPES: PinType[] = ['equipment', 'crew', 'delivery', 'safety_zone', 'photo', 'custom'];
 
-const ZONE_TYPES = [
-  { value: 'work_area', label: 'Work Area', color: '#3B82F6' },
-  { value: 'safety_zone', label: 'Safety Zone', color: '#EF4444' },
-  { value: 'staging_area', label: 'Staging Area', color: '#8B5CF6' },
-  { value: 'parking', label: 'Parking', color: '#64748B' },
-  { value: 'material_storage', label: 'Material Storage', color: '#F47820' },
-  { value: 'exclusion_zone', label: 'Exclusion Zone', color: '#DC2626' },
-  { value: 'crane_radius', label: 'Crane Radius', color: '#F59E0B' },
-  { value: 'pedestrian_path', label: 'Pedestrian Path', color: '#10B981' },
-  { value: 'vehicle_route', label: 'Vehicle Route', color: '#6366F1' },
-  { value: 'utility_corridor', label: 'Utility Corridor', color: '#06B6D4' },
-];
 
 const ENTITY_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   punch_item:   { label: 'Punch Items',   color: '#F47820', icon: CheckCircle },
@@ -519,11 +507,12 @@ export default function SiteMap() {
         .select('latitude, longitude, address, city, state')
         .eq('id' as never, projectId)
         .single();
-      if (data?.latitude && data?.longitude) {
-        setProjectCoords({ lat: Number(data.latitude), lng: Number(data.longitude) });
-      } else if (data?.address || data?.city) {
+      const projRow = data as unknown as { latitude?: number | string | null; longitude?: number | string | null; address?: string | null; city?: string | null; state?: string | null } | null;
+      if (projRow?.latitude && projRow?.longitude) {
+        setProjectCoords({ lat: Number(projRow.latitude), lng: Number(projRow.longitude) });
+      } else if (projRow?.address || projRow?.city) {
         // Geocode from address using Nominatim (free, no API key)
-        const q = [data.address, data.city, data.state].filter(Boolean).join(', ');
+        const q = [projRow.address, projRow.city, projRow.state].filter(Boolean).join(', ');
         try {
           const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`);
           const results = await resp.json();
@@ -533,7 +522,7 @@ export default function SiteMap() {
             // Persist the geocoded coordinates back to the project
             await fromTable('projects').update({
               latitude: coords.lat, longitude: coords.lng,
-            }).eq('id' as never, projectId);
+            } as never).eq('id' as never, projectId);
           }
         } catch { /* geocoding failed, user can set manually */ }
       }
@@ -574,7 +563,7 @@ export default function SiteMap() {
 
   // ── Safe query helper (handles missing tables gracefully) ──
   const safeQuery = useCallback(async <T,>(
-    queryFn: () => PromiseLike<{ data: T | null; error: { message: string; code?: string } | null }>,
+    queryFn: () => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>,
     fallback: T,
   ): Promise<T> => {
     try {
@@ -588,7 +577,7 @@ export default function SiteMap() {
         console.warn('[SiteMap] Query error:', error.message);
         return fallback;
       }
-      return data ?? fallback;
+      return (data ?? fallback) as T;
     } catch {
       return fallback;
     }
@@ -601,7 +590,7 @@ export default function SiteMap() {
       () => fromTable('site_map_pins').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }),
       [] as Pin[],
     );
-    setPins(data as Pin[]);
+    setPins(data as unknown as Pin[]);
   }, [projectId, safeQuery]);
 
   // ── Load zones ──
@@ -611,7 +600,7 @@ export default function SiteMap() {
       () => fromTable('site_map_zones').select('*').eq('project_id' as never, projectId).eq('is_active' as never, true),
       [] as Zone[],
     );
-    setZones(data as Zone[]);
+    setZones(data as unknown as Zone[]);
   }, [projectId, safeQuery]);
 
   // ── Load site plans ──
@@ -621,7 +610,7 @@ export default function SiteMap() {
       () => fromTable('site_plans').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }),
       [] as SitePlan[],
     );
-    setSitePlans(data as SitePlan[]);
+    setSitePlans(data as unknown as SitePlan[]);
   }, [projectId, safeQuery]);
 
   // ── Load linked entities (real data from existing tables) ──
@@ -1033,7 +1022,7 @@ export default function SiteMap() {
         file_path: path,
         file_url: signed.signedUrl,
         floor: floorFilter || null,
-      });
+      } as never);
       if (dbErr) console.warn('Could not save site plan record:', dbErr.message);
 
       setSitePlanUrl(signed.signedUrl);

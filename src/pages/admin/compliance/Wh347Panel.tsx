@@ -11,7 +11,6 @@ import { FileDown, FileText } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
-import { supabase } from '../../../lib/supabase'
 import { fromTable } from '../../../lib/db/queries'
 import { generateWh347 } from '../../../lib/compliance/wh347'
 import { renderText, renderPdf } from '../../../lib/compliance/wh347/render'
@@ -55,11 +54,14 @@ export const Wh347Panel: React.FC<{ projectId: string | undefined }> = ({ projec
           .limit(2000),
         fromTable('prevailing_wage_decisions').select('*').limit(500),
       ])
+      type MemberRow = { id: string; name: string | null; trade: string | null; role: string | null; hourly_rate: number | null }
+      type EntryRow = { workforce_member_id: string; date: string; regular_hours: number | null; overtime_hours: number | null; double_time_hours: number | null; cost_code: string | null }
+      type ProjectRow = { id: string; name: string | null; address: string | null; city: string | null; state: string | null }
       return {
-        project: proj.data,
-        members: members.data ?? [],
-        entries: entries.data ?? [],
-        decisions: decisions.data ?? [],
+        project: proj.data as unknown as ProjectRow | null,
+        members: (members.data ?? []) as unknown as MemberRow[],
+        entries: (entries.data ?? []) as unknown as EntryRow[],
+        decisions: (decisions.data ?? []) as unknown as Array<Record<string, unknown>>,
         errors: [proj.error, members.error, entries.error, decisions.error].filter(Boolean),
       }
     },
@@ -173,7 +175,7 @@ export const Wh347Panel: React.FC<{ projectId: string | undefined }> = ({ projec
           fringeBenefits: 'paid_to_plans',
           exceptions: [],
         },
-        decisions: data!.decisions as Parameters<typeof generateWh347>[0]['decisions'],
+        decisions: data!.decisions as unknown as Parameters<typeof generateWh347>[0]['decisions'],
       })
     },
   })
@@ -185,7 +187,7 @@ export const Wh347Panel: React.FC<{ projectId: string | undefined }> = ({ projec
   const handleExportPdf = async () => {
     if (!showGenerated) return
     const bytes = await renderPdf(showGenerated)
-    const blob = new Blob([bytes], { type: 'application/pdf' })
+    const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -251,6 +253,7 @@ export const Wh347Panel: React.FC<{ projectId: string | undefined }> = ({ projec
       {genLoading && <Skeleton width="100%" height="200px" />}
       {!genLoading && (!showGenerated || showGenerated.workers.length === 0) && (
         <EmptyState
+          icon={<FileText size={32} />}
           title="No worker hours for this week"
           description="Time entries from workforce_members feed the WH-347. Confirm crew check-ins logged hours for this week ending."
         />
