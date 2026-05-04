@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 import { signupSchema } from '../../schemas/auth'
 
@@ -127,9 +128,8 @@ export const Signup: React.FC = () => {
 
       // Insert organization row
       const slug = company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ name: company.trim(), slug })
+      const { data: orgData, error: orgError } = await fromTable('organizations')
+        .insert({ name: company.trim(), slug } as never)
         .select('id')
         .single()
 
@@ -137,22 +137,22 @@ export const Signup: React.FC = () => {
 
       // Add user as owner of the organization
       if (organizationId) {
-        await supabase.from('organization_members').insert({
+        await fromTable('organization_members').insert({
           organization_id: organizationId,
           user_id: userId,
           role: 'owner',
-        })
+        } as never)
       }
 
       // Create user profile
-      await supabase.from('profiles').insert({
+      await fromTable('profiles').insert({
         user_id: userId,
         full_name: `${firstName.trim()} ${lastName.trim()}`,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         job_title: jobTitle.trim() || null,
         organization_id: organizationId,
-      })
+      } as never)
 
       setSuccess(true)
     } finally {
@@ -204,7 +204,7 @@ export const Signup: React.FC = () => {
 
   function fieldFocus(e: React.FocusEvent<HTMLInputElement>, hasError: boolean) {
     e.currentTarget.style.borderColor = hasError ? colors.statusCritical : colors.borderFocus
-    if (!hasError) e.currentTarget.style.boxShadow = '0 0 0 2px #F47820'
+    if (!hasError) e.currentTarget.style.boxShadow = '0 0 0 3px rgba(244,120,32,0.15)'
   }
   function fieldBlurStyle(e: React.FocusEvent<HTMLInputElement>, hasError: boolean) {
     e.currentTarget.style.borderColor = hasError ? colors.statusCritical : colors.borderDefault
@@ -243,25 +243,30 @@ export const Signup: React.FC = () => {
           </div>
           <h1
             style={{
-              fontSize: typography.fontSize.heading,
-              fontWeight: typography.fontWeight.semibold,
+              // Brand surface — serif italic welcome per DESIGN-RESET.
+              fontFamily: '"EB Garamond", Garamond, "Cormorant Garamond", "Times New Roman", serif',
+              fontStyle: 'italic',
+              fontSize: 36,
+              fontWeight: 500,
+              lineHeight: 1.1,
               color: colors.textPrimary,
               margin: 0,
-              letterSpacing: typography.letterSpacing.tight,
+              letterSpacing: '-0.01em',
             }}
           >
-            SiteSync PM
+            Welcome.
           </h1>
           <p
             style={{
               fontSize: typography.fontSize.body,
               color: colors.textTertiary,
               margin: 0,
-              marginTop: spacing['2'],
+              marginTop: spacing['3'],
               letterSpacing: typography.letterSpacing.normal,
+              fontFamily: typography.fontFamily,
             }}
           >
-            Create your account to get started
+            Create your account to get started.
           </p>
         </div>
 

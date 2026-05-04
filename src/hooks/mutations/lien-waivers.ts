@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 // The 4-way domain enum the Generate-Waiver flow exposes in the UI.
 // (unconditional/conditional) × (partial/final).
@@ -106,9 +107,8 @@ export function useGenerateLienWaiver() {
         notes: encodeWaiverNotes(input.type, input.notes),
       }
 
-      const { data, error } = await supabase
-        .from('lien_waivers')
-        .insert(payload)
+      const { data, error } = await fromTable('lien_waivers')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -141,14 +141,13 @@ export function useMarkLienWaiverSigned() {
       signed_by: string
       document_url?: string | null
     }) => {
-      const { data, error } = await supabase
-        .from('lien_waivers')
+      const { data, error } = await fromTable('lien_waivers')
         .update({
           signed_at: new Date().toISOString(),
           signed_by: params.signed_by,
           document_url: params.document_url ?? null,
-        })
-        .eq('id', params.id)
+        } as never)
+        .eq('id' as never, params.id)
         .select()
         .single()
       if (error) throw error

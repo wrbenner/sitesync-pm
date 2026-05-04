@@ -47,6 +47,9 @@ export type SubmittalReviewer = SubmittalApproval
 export type CreateSubmittalInput = {
   project_id: string
   title: string
+  description?: string
+  priority?: 'low' | 'medium' | 'high' | 'critical'
+  created_by?: string
   spec_section?: string
   assigned_to?: string
   subcontractor?: string

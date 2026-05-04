@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable, asRow } from '../lib/db/queries'
 import type { SchedulePhaseInsert, SchedulePhaseUpdate } from '../types/api';
 import type { ScheduleStatus } from '../machines/scheduleMachine';
 import { getValidScheduleTransitions } from '../machines/scheduleMachine';
@@ -16,14 +17,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -35,6 +35,11 @@ export type CreatePhaseInput = {
   end_date?: string;
   percent_complete?: number;
   is_critical_path?: boolean;
+  is_milestone?: boolean;
+  baseline_start?: string;
+  baseline_end?: string;
+  float_days?: number;
+  status?: string;
   depends_on?: string | null;
   assigned_crew_id?: string | null;
 };
@@ -78,11 +83,10 @@ export const scheduleService = {
    * Load all active (non-deleted) phases for a project, ordered by start date.
    */
   async loadPhases(projectId: string): Promise<ScheduleServiceResult<unknown[]>> {
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('start_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
@@ -94,15 +98,14 @@ export const scheduleService = {
    * Filters in-memory on is_critical_path.
    */
   async loadMilestones(projectId: string): Promise<ScheduleServiceResult<unknown[]>> {
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('end_date', { ascending: true });
 
     if (error) return { data: null, error: error.message };
-    const milestones = (data ?? []).filter((p) => (p as Record<string, unknown>)['is_milestone']);
+    const milestones = (data ?? []).filter((p) => (p as unknown as Record<string, unknown>)['is_milestone']);
     return { data: milestones, error: null };
   },
 
@@ -111,7 +114,7 @@ export const scheduleService = {
    */
   async createPhase(input: CreatePhaseInput): Promise<ScheduleServiceResult<unknown>> {
     const userId = await getCurrentUserId();
-    const extras = input as Record<string, unknown>;
+    const extras = input as unknown as Record<string, unknown>;
     const payload: AugmentedInsert = {
       project_id: input.project_id,
       name: input.name,
@@ -130,9 +133,8 @@ export const scheduleService = {
       updated_by: userId,
     } as AugmentedInsert;
 
-    const { data, error } = await supabase
-      .from('schedule_phases')
-      .insert(payload as unknown as SchedulePhaseInsert)
+    const { data, error } = await fromTable('schedule_phases')
+      .insert(payload as never)
       .select()
       .single();
 
@@ -152,11 +154,11 @@ export const scheduleService = {
     newStatus: ScheduleStatus,
   ): Promise<ScheduleServiceResult> {
     // 1. Fetch current phase
-    const { data: phase, error: fetchError } = await supabase
-      .from('schedule_phases')
+    const { data: phaseData, error: fetchError } = await fromTable('schedule_phases')
       .select('status, project_id')
-      .eq('id', phaseId)
+      .eq('id' as never, phaseId)
       .single();
+    const phase = asRow<{ status: string | null; project_id: string }>(phaseData)
 
     if (fetchError || !phase) {
       return { data: null, error: fetchError?.message ?? 'Phase not found' };
@@ -186,10 +188,9 @@ export const scheduleService = {
       ...(newStatus === 'completed' ? { percent_complete: 100 } : {}),
     } as AugmentedUpdate;
 
-    const { error } = await supabase
-      .from('schedule_phases')
-      .update(updates as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+    const { error } = await fromTable('schedule_phases')
+      .update(updates as never)
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -205,15 +206,14 @@ export const scheduleService = {
   ): Promise<ScheduleServiceResult> {
     const userId = await getCurrentUserId();
     const payload = sanitizeSchedulePhaseData({
-      ...(updates as Record<string, unknown>),
+      ...(updates as unknown as Record<string, unknown>),
       updated_at: new Date().toISOString(),
       updated_by: userId,
     });
 
-    const { error } = await supabase
-      .from('schedule_phases')
-      .update(payload as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+    const { error } = await fromTable('schedule_phases')
+      .update(payload as never)
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -225,13 +225,12 @@ export const scheduleService = {
   async deletePhase(phaseId: string): Promise<ScheduleServiceResult> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('schedule_phases')
+    const { error } = await fromTable('schedule_phases')
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+      } as never)
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -252,10 +251,9 @@ export const scheduleService = {
       updated_by: userId,
     } as AugmentedUpdate;
 
-    const { error } = await supabase
-      .from('schedule_phases')
-      .update(payload as unknown as SchedulePhaseUpdate)
-      .eq('id', phaseId);
+    const { error } = await fromTable('schedule_phases')
+      .update(payload as never)
+      .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };

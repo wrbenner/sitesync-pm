@@ -1,7 +1,8 @@
 // SharePoint/OneDrive Integration: Microsoft Graph API
 // OAuth2 via MSAL. File sync with project document library.
 
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -46,8 +47,9 @@ export const sharePointProvider: IntegrationProvider = {
       return { integrationId: '', error: 'Integration ID required (OAuth flow must complete first)' }
     }
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data: integrationData } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = integrationData as { config: Record<string, string> | null } | null
+    const config = integration?.config ?? null
 
     if (!config?.accessToken) {
       return { integrationId: '', error: 'No access token. Complete OAuth flow first.' }
@@ -75,7 +77,8 @@ export const sharePointProvider: IntegrationProvider = {
       }
 
       // Create project folder
-      const { data: project } = await supabase.from('projects').select('name').eq('id', projectId).single()
+      const { data: projectData } = await fromTable('projects').select('name').eq('id' as never, projectId).single()
+      const project = projectData as { name: string | null } | null
       const folderName = `SiteSync: ${project?.name ?? 'Project'}`
 
       let folderId: string
@@ -95,9 +98,9 @@ export const sharePointProvider: IntegrationProvider = {
         folderId = created.id
       }
 
-      await supabase.from('integrations').update({
+      await fromTable('integrations').update({
         config: { ...config, driveId, folderId, siteUrl: siteUrl ?? 'onedrive' },
-      }).eq('id', integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -112,8 +115,9 @@ export const sharePointProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase.from('integrations').select('config, last_sync').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data: integrationData } = await fromTable('integrations').select('config, last_sync').eq('id' as never, integrationId).single()
+    const integration = integrationData as { config: Record<string, string> | null; last_sync: string | null } | null
+    const config = integration?.config ?? null
 
     if (!config?.accessToken || !config?.driveId || !config?.folderId) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Not configured. Reconnect SharePoint.'] }
@@ -140,14 +144,14 @@ export const sharePointProvider: IntegrationProvider = {
 
         for (const item of items) {
           try {
-            await supabase.from('documents').upsert({
+            await fromTable('documents').upsert({
               name: item.name,
               mime_type: (item.file as Record<string, string>)?.mimeType ?? 'application/octet-stream',
               external_id: item.id,
               external_source: 'sharepoint',
               file_size: item.size ?? 0,
               updated_at: item.lastModifiedDateTime,
-            }, { onConflict: 'external_id,external_source' })
+            } as never, { onConflict: 'external_id,external_source' })
             synced++
           } catch {
             failed++
@@ -156,9 +160,9 @@ export const sharePointProvider: IntegrationProvider = {
 
         // Store delta link for next incremental sync
         if (delta['@odata.deltaLink']) {
-          await supabase.from('integrations').update({
+          await fromTable('integrations').update({
             config: { ...config, deltaLink: delta['@odata.deltaLink'] },
-          }).eq('id', integrationId)
+          } as never).eq('id' as never, integrationId)
         }
       }
 
@@ -177,11 +181,12 @@ export const sharePointProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as { status: string | null; last_sync: string | null; error_log: unknown } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

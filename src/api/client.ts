@@ -6,6 +6,7 @@
 // cross-project data leakage.
 
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { Database } from '../types/database'
 import { transformSupabaseError } from './errors'
 import { assertProjectAccess } from './middleware/projectScope'
@@ -29,7 +30,7 @@ const UNSCOPED_TABLES = new Set([
   'project_members', 'portfolio_projects', 'portfolios',
 ])
 
-// Tables that have a deleted_at column and should receive the .is('deleted_at', null) soft-delete filter.
+// Tables that have a deleted_at column and should receive the .is('deleted_at' as never, null) soft-delete filter.
 // Tables without this column (e.g. audit_trail, activity_feed, notification_queue) must NOT receive it.
 const SOFT_DELETE_TABLES = new Set([
   'rfis', 'submittals', 'change_orders', 'daily_logs', 'punch_items', 'tasks',
@@ -47,7 +48,7 @@ export function clearScopedClientCache(): void {
 
 /**
  * Wraps the Supabase client so that every terminal operation (select, insert,
- * update, delete, upsert) automatically appends .eq('project_id', projectId).
+ * update, delete, upsert) automatically appends .eq('project_id' as never, projectId).
  * The .eq() is injected after the terminal call so that callers receive a
  * full PostgrestQueryBuilder from .from() and can chain freely before the
  * filter is applied. Tables in UNSCOPED_TABLES are excluded from scoping.
@@ -81,16 +82,16 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
             get(qbTarget, qbProp, qbReceiver) {
               if (!skipScoping && typeof qbProp === 'string' && TERMINAL_OPS.has(qbProp)) {
                 return (...args: unknown[]) => {
-                  const result = (qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod).call(qbTarget, ...args).eq('project_id', projectId)
+                  const result = (qbTarget[qbProp as keyof typeof qbTarget] as TerminalMethod).call(qbTarget, ...args).eq('project_id' as never, projectId)
                   if ((qbProp === 'select' || qbProp === 'update' || qbProp === 'delete') && SOFT_DELETE_TABLES.has(table)) {
-                    return (result as { is: (col: string, val: null) => unknown }).is('deleted_at', null)
+                    return (result as { is: (col: string, val: null) => unknown }).is('deleted_at' as never, null)
                   }
                   return result
                 }
               }
               return Reflect.get(qbTarget, qbProp, qbReceiver)
             },
-          }) as ReturnType<typeof supabase.from>
+          }) as unknown as ReturnType<typeof supabase.from>
         }
       }
       return Reflect.get(target, prop, receiver)
@@ -183,7 +184,7 @@ export async function buildPaginatedQuery<TRaw, TResult = TRaw>(
   const to = from + pageSize - 1
   const { data, error, count } = await queryFn(from, to)
   if (error) throw transformSupabaseError(error)
-  const rows = (data ?? []) as TRaw[]
+  const rows = (data ?? []) as unknown as TRaw[]
   const mappedData = transform ? rows.map(transform) : (rows as unknown as TResult[])
   const total = count ?? 0
   return {
@@ -226,10 +227,9 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
   } = options
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
-    .from(tableName as TableName)
+  let query: any = fromTable(tableName as never)
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
 
   if (filterFn) {
     query = filterFn(query)
@@ -249,12 +249,12 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
   const { data, error } = await query
   if (error) throw transformSupabaseError(error)
 
-  const rows = (data ?? []) as TRow[]
+  const rows = (data ?? []) as unknown as TRow[]
   const hasMore = rows.length > pageSize
   const pageRows = hasMore ? rows.slice(0, pageSize) : rows
 
   const nextCursor: string | null = hasMore
-    ? btoa(String((pageRows[pageRows.length - 1] as Record<string, unknown>)[orderColumn]))
+    ? btoa(String((pageRows[pageRows.length - 1] as unknown as Record<string, unknown>)[orderColumn]))
     : null
 
   const mappedData = mapFn ? pageRows.map(mapFn) : (pageRows as unknown as TMapped[])

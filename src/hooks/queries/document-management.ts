@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 
 
@@ -9,10 +10,9 @@ export function useDrawingMarkups(drawingId: string | undefined) {
   return useQuery({
     queryKey: ['drawing_markups', drawingId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_markups')
+      const { data, error } = await fromTable('drawing_markups')
         .select('*')
-        .eq('drawing_id', drawingId!)
+        .eq('drawing_id' as never, drawingId!)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data
@@ -21,18 +21,4 @@ export function useDrawingMarkups(drawingId: string | undefined) {
   })
 }
 
-export function useTransmittals(projectId: string | undefined) {
-  return useQuery({
-    queryKey: ['transmittals', projectId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transmittals')
-        .select('*')
-        .eq('project_id', projectId!)
-        .order('transmittal_number', { ascending: false })
-      if (error) throw error
-      return data
-    },
-    enabled: !!projectId,
-  })
-}
+// useTransmittals lives in ./enterprise-modules — kept there as the canonical source.

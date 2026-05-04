@@ -3,17 +3,23 @@ import { Card, PriorityTag } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { ChevronRight, ChevronDown, AlertTriangle, Package } from 'lucide-react';
 import { CSI_DIVISIONS } from '../../machines/submittalMachine';
+import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles';
 import {
   isOverdue,
   formatCSICode,
   SubmittalStatusTag,
   MiniApprovalChain,
-  BallInCourtBadge,
 } from './types';
+
+// `assigned_to` is a uuid; `current_reviewer` is text but legacy rows may
+// hold a uuid copy. The same shape-detector used in SubmittalsTable keeps
+// us from rendering raw ids as group labels.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (s: string | null | undefined): s is string => !!s && UUID_RE.test(s);
 
 // ── Types ───────────────────────────────────────────────
 
-export type GroupByMode = 'spec_section' | 'subcontractor' | 'none';
+export type GroupByMode = 'spec_section' | 'subcontractor' | 'reviewer' | 'none';
 
 interface GroupedSubmittalsViewProps {
   filteredSubmittals: Array<Record<string, unknown>>;
@@ -40,7 +46,7 @@ interface SubmittalGroup {
 
 function getCSIDivisionCode(specSection: string | null | undefined): string {
   if (!specSection) return '00';
-  const digits = specSection.replace(/[\s\-]/g, '');
+  const digits = specSection.replace(/[\s-]/g, '');
   return digits.slice(0, 2);
 }
 
@@ -138,6 +144,39 @@ function groupBySubcontractor(submittals: Array<Record<string, unknown>>): Submi
     .map(([key, subs]) => ({
       key,
       label: key,
+      submittals: subs,
+      stats: computeStats(subs),
+    }));
+}
+
+function groupByReviewer(
+  submittals: Array<Record<string, unknown>>,
+  profileMap: ProfileMap | undefined,
+): SubmittalGroup[] {
+  const map = new Map<string, Array<Record<string, unknown>>>();
+
+  for (const s of submittals) {
+    const reviewer = s.current_reviewer as string | null | undefined;
+    const assigned = s.assigned_to as string | null | undefined;
+    let key: string;
+    if (reviewer && !isUuid(reviewer)) key = reviewer;
+    else if (isUuid(reviewer)) key = displayName(profileMap, reviewer, 'Unassigned');
+    else if (isUuid(assigned)) key = displayName(profileMap, assigned, 'Unassigned');
+    else key = (assigned ?? 'Unassigned') || 'Unassigned';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+
+  return [...map.entries()]
+    .sort(([a], [b]) => {
+      if (a === 'Unassigned') return 1;
+      if (b === 'Unassigned') return -1;
+      return a.localeCompare(b);
+    })
+    .map(([key, subs]) => ({
+      key,
+      label: key,
+      sublabel: subs.length === 1 ? '1 in queue' : `${subs.length} in queue`,
       submittals: subs,
       stats: computeStats(subs),
     }));
@@ -243,7 +282,7 @@ const SubmittalRow: React.FC<{
           {submittal.title as string}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          {showSpecSection && submittal.spec_section && (
+          {showSpecSection && Boolean(submittal.spec_section) && (
             <span style={{
               fontSize: 10,
               fontFamily: typography.fontFamilyMono,
@@ -256,7 +295,7 @@ const SubmittalRow: React.FC<{
               {formatCSICode(submittal.spec_section as string)}
             </span>
           )}
-          {showSubcontractor && (submittal.subcontractor || submittal.from) && (
+          {showSubcontractor && Boolean(submittal.subcontractor || submittal.from) && (
             <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
               {(submittal.subcontractor as string) || (submittal.from as string)}
             </span>
@@ -288,10 +327,10 @@ const SubmittalRow: React.FC<{
         {!dueDate && <span style={{ fontSize: 11, color: colors.textTertiary, opacity: 0.5 }}>—</span>}
       </div>
 
-      {/* Ball in Court */}
-      <BallInCourtBadge value={submittal.ball_in_court as string | null} />
-
-      {/* Approval chain */}
+      {/* Approval chain — current reviewer + remaining steps. Submittals
+          have no `ball_in_court` column; the workflow ball-of-yarn lives on
+          `current_reviewer` + `approval_chain`, which the chain widget
+          surfaces directly. */}
       <MiniApprovalChain status={submittal.status as string} approvalChain={submittal.approval_chain} />
     </div>
   );
@@ -460,11 +499,27 @@ export const GroupedSubmittalsView: React.FC<GroupedSubmittalsViewProps> = ({
 }) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
+  // Resolve every uuid that might surface as a reviewer key so the group
+  // label reads as a name, not a raw id.
+  const reviewerUserIds = useMemo(() => {
+    if (groupBy !== 'reviewer') return [];
+    const ids: string[] = [];
+    for (const s of filteredSubmittals) {
+      const reviewer = s.current_reviewer as string | null | undefined;
+      const assigned = s.assigned_to as string | null | undefined;
+      if (isUuid(reviewer)) ids.push(reviewer);
+      if (isUuid(assigned)) ids.push(assigned);
+    }
+    return ids;
+  }, [filteredSubmittals, groupBy]);
+  const profileMap = useProfileNames(reviewerUserIds).data;
+
   const groups = useMemo(() => {
     if (groupBy === 'spec_section') return groupBySpecSection(filteredSubmittals);
     if (groupBy === 'subcontractor') return groupBySubcontractor(filteredSubmittals);
+    if (groupBy === 'reviewer') return groupByReviewer(filteredSubmittals, profileMap);
     return [];
-  }, [filteredSubmittals, groupBy]);
+  }, [filteredSubmittals, groupBy, profileMap]);
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups((prev) => {
@@ -498,7 +553,12 @@ export const GroupedSubmittalsView: React.FC<GroupedSubmittalsViewProps> = ({
           fontSize: typography.fontSize.caption,
           color: colors.textTertiary,
         }}>
-          {groups.length} {groupBy === 'spec_section' ? 'divisions' : 'subcontractors'}
+          {groups.length}{' '}
+          {groupBy === 'spec_section'
+            ? 'divisions'
+            : groupBy === 'reviewer'
+              ? 'reviewers'
+              : 'subcontractors'}
           {' · '}
           {filteredSubmittals.length} submittals
         </span>
@@ -571,9 +631,10 @@ export const GroupBySelector: React.FC<{
   onChange: (mode: GroupByMode) => void;
 }> = ({ value, onChange }) => {
   const options: Array<{ mode: GroupByMode; label: string }> = [
-    { mode: 'spec_section', label: 'Spec Section' },
-    { mode: 'subcontractor', label: 'Subcontractor' },
-    { mode: 'none', label: 'None' },
+    { mode: 'none', label: 'Flat' },
+    { mode: 'spec_section', label: 'Spec' },
+    { mode: 'reviewer', label: 'Reviewer' },
+    { mode: 'subcontractor', label: 'Sub' },
   ];
 
   return (

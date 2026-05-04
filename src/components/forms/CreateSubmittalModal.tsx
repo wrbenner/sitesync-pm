@@ -45,4 +45,5 @@ const CreateSubmittalModal: React.FC<CreateSubmittalModalProps> = ({ open, onClo
   />
 )
 
+export { CreateSubmittalModal }
 export default CreateSubmittalModal

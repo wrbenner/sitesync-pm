@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+
   Save, Users, Building2, MapPin, Calendar, DollarSign,
-  FileText, HardHat, CheckCircle, Settings, ChevronDown, Shield,
-  UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
-} from 'lucide-react';
+  FileText, HardHat, CheckCircle, Settings, Shield,
+  UserPlus, Mail, Check, X, AlertCircle, RefreshCw} from 'lucide-react';
 import { toast } from 'sonner';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
-import { supabase, fromTable } from '../../lib/supabase';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { fromTable } from '../../lib/supabase';
 import { resetDemoProject } from '../../services/demoSeed';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { DemoSeedButton } from '../../components/admin/DemoSeedButton';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -160,14 +162,20 @@ const SectionCard: React.FC<{
 const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
   const [resetting, setResetting] = useState(false)
 
+  const { confirm: confirmResetDemo, dialog: resetDemoDialog } = useConfirm()
+
   const handleReset = async () => {
     if (!orgId) {
       toast.error('Organization context unavailable; cannot reset demo.')
       return
     }
-    if (!window.confirm(
-      'Reset all demo data back to its starting state? Any changes made to RFIs, submittals, change orders, etc. on this demo project will be overwritten.',
-    )) return
+    const ok = await confirmResetDemo({
+      title: 'Reset demo data?',
+      description: 'All changes to RFIs, submittals, change orders, daily logs, and other entities on this demo project will be overwritten with the starting seed.',
+      destructiveLabel: 'Reset demo',
+      typeToConfirm: 'RESET',
+    })
+    if (!ok) return
 
     setResetting(true)
     try {
@@ -188,6 +196,7 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
   }
 
   return (
+    <>
     <section
       style={{
         marginTop: spacing['6'],
@@ -246,12 +255,14 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
         </div>
       </div>
     </section>
+    {resetDemoDialog}
+    </>
   )
 }
 
 export function ProjectSettings() {
-  const { activeProject, updateProject, members, loadMembers } = useProjectContext();
-  const { company, profile } = useAuthStore();
+  const { activeProject, updateProject, members, loadMembers } = useProjectStore();
+  const { organization, profile } = useAuthStore();
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [projectType, setProjectType] = useState('');
@@ -272,19 +283,19 @@ export function ProjectSettings() {
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const handleInvite = async () => {
-    if (!inviteEmail || !company?.id) return;
+    if (!inviteEmail || !organization?.id) return;
     setInviteLoading(true);
     setInviteError(null);
     try {
-      const { error } = await fromTable('invitations').insert({
-        company_id: company.id,
+      const { error } = await fromTable('user_invitations').insert({
+        organization_id: organization.id,
         email: inviteEmail,
         role: inviteRole,
         invited_by: profile!.id,
         status: 'pending',
         token: crypto.randomUUID(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
+      } as never);
       if (error) {
         setInviteError(error.message ?? 'Failed to send invitation');
         setInviteLoading(false);
@@ -308,10 +319,10 @@ export function ProjectSettings() {
         setName(activeProject.name);
         setAddress(activeProject.address ?? '');
         setProjectType(activeProject.project_type ?? '');
-        setTotalValue(activeProject.total_value ? formatCurrency(String(activeProject.total_value)) : '');
+        setTotalValue(activeProject.contract_value ? formatCurrency(String(activeProject.contract_value)) : '');
         setDescription(activeProject.description ?? '');
         setStartDate(activeProject.start_date ?? '');
-        setEndDate(activeProject.scheduled_end_date ?? '');
+        setEndDate(activeProject.target_completion ?? '');
         setHasChanges(false);
         loadMembers(activeProject.id);
       }, 0);
@@ -328,10 +339,10 @@ export function ProjectSettings() {
       name,
       address: address || null,
       project_type: projectType || null,
-      total_value: rawValue ? parseFloat(rawValue) : null,
+      contract_value: rawValue ? parseFloat(rawValue) : null,
       description: description || null,
       start_date: startDate || null,
-      scheduled_end_date: endDate || null,
+      target_completion: endDate || null,
     });
     setSaving(false);
     setSaved(true);
@@ -339,7 +350,7 @@ export function ProjectSettings() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const inputStyle = (focused?: boolean): React.CSSProperties => ({
+  const inputStyle = (_focused?: boolean): React.CSSProperties => ({
     width: '100%',
     height: 40,
     padding: `0 ${spacing['3']}`,
@@ -388,7 +399,7 @@ export function ProjectSettings() {
     );
   }
 
-  const selectedType = PROJECT_TYPES.find((t) => t.value === projectType);
+
 
   return (
     <div style={{
@@ -912,6 +923,14 @@ export function ProjectSettings() {
           orgId={(activeProject as { organization_id?: string }).organization_id ?? ''}
         />
       )}
+
+      {/* Local seeder — admin/owner/PM only. Hydrates the active project
+          with realistic RFIs / submittals / punch / schedule / budget /
+          photos / commitments so a freshly-created project is demo-ready
+          in one click. Hidden for non-admin users by the component itself. */}
+      <div style={{ marginTop: spacing['6'] }}>
+        <DemoSeedButton />
+      </div>
 
       {/* Unsaved changes indicator */}
       <AnimatePresence>

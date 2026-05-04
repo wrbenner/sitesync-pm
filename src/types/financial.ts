@@ -79,7 +79,7 @@ export interface WeeklyCashFlowRow {
 export interface PayAppRow {
   id: string
   project_id: string
-  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  status: string
   approved_date: string | null
   period_to: string | null
   current_payment_due: number | null

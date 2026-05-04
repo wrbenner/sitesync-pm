@@ -39,13 +39,13 @@ async function getHaptics() {
   try {
     // Only import on Capacitor native runtime (iOS/Android)
     const isNative =
-      typeof (window as Record<string, unknown>).Capacitor !== 'undefined' &&
-      (window as Record<string, unknown>).Capacitor !== null
+      typeof (window as unknown as Record<string, unknown>).Capacitor !== 'undefined' &&
+      (window as unknown as Record<string, unknown>).Capacitor !== null
 
     if (!isNative) return null
 
     const mod = await import('@capacitor/haptics')
-    hapticsPlugin = mod.Haptics
+    hapticsPlugin = mod.Haptics as unknown as typeof hapticsPlugin
     return hapticsPlugin
   } catch {
     // @capacitor/haptics not available (web build)

@@ -18,7 +18,7 @@ export function useUpdateProject() {
     action: 'update',
     entityType: 'project',
     getEntityId: (p) => p.projectId,
-    getAfterState: (p) => p.updates as Record<string, unknown>,
+    getAfterState: (p) => p.updates as unknown as Record<string, unknown>,
     mutationFn: async (params) => {
       const { error } = await projectService.updateProject(params.projectId, params.updates)
       if (error) throw new Error(error.userMessage)

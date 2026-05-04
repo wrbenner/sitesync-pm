@@ -70,7 +70,7 @@ vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: true,
 }))
 
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 describe('RFI end-to-end flow', () => {
   beforeEach(() => {
@@ -84,20 +84,20 @@ describe('RFI end-to-end flow', () => {
   it('create → appears in list → detail loads → response → status updates', async () => {
     // Step 1: Create
     const payload = { project_id: 'proj-1', title: 'Clarify grid B3 connection', created_by: 'user-1' }
-    const insertRes = await supabase.from('rfis').insert(payload).select().single()
+    const insertRes = await fromTable('rfis').insert(payload as never).select().single()
     expect(insertRes.data).toMatchObject({ id: 'rfi-id-1', title: payload.title, status: 'draft' })
-    const createdId = (insertRes.data as Record<string, unknown>).id as string
+    const createdId = (insertRes.data as unknown as Record<string, unknown>).id as string
 
     // Step 2: Appears in list (seed list from the insert row)
-    mockListRows([insertRes.data as Record<string, unknown>])
-    const listRes = await supabase.from('rfis').select('*').eq('project_id', 'proj-1').order('created_at')
+    mockListRows([insertRes.data as unknown as Record<string, unknown>])
+    const listRes = await fromTable('rfis').select('*').eq('project_id' as never, 'proj-1').order('created_at')
     expect(listRes.data).toHaveLength(1)
-    expect(((listRes.data as Record<string, unknown>[])[0]).id).toBe(createdId)
+    expect(((listRes.data as unknown as Record<string, unknown>[])[0]).id).toBe(createdId)
 
     // Step 3: Detail load by id
-    mockDetailRow(insertRes.data as Record<string, unknown>)
+    mockDetailRow(insertRes.data as unknown as Record<string, unknown>)
     mockUpdateRow(null) // single() should return detail, not update row
-    const detailRes = await supabase.from('rfis').select('*').eq('id', createdId).single()
+    const detailRes = await fromTable('rfis').select('*').eq('id' as never, createdId).single()
     expect(detailRes.data).toMatchObject({ id: createdId, status: 'draft' })
 
     // Step 4: State-machine lifecycle — submit (draft → open)
@@ -109,7 +109,7 @@ describe('RFI end-to-end flow', () => {
     expect(getRfiNext('draft', 'Submit')).toBe('open')
 
     // Persist the status move
-    const openRes = await supabase.from('rfis').update({ status: 'open' }).eq('id', createdId).select().single()
+    const openRes = await fromTable('rfis').update({ status: 'open' } as never).eq('id' as never, createdId).select().single()
     expect(openRes.data).toMatchObject({ status: 'open' })
 
     // Step 5: Add a response — assign to reviewer, then respond
@@ -118,10 +118,9 @@ describe('RFI end-to-end flow', () => {
     actor.send({ type: 'RESPOND', content: 'Use W14x22 per spec 5.2', userId: 'reviewer-1' })
     expect(actor.getSnapshot().value).toBe('answered')
 
-    const respondRes = await supabase
-      .from('rfis')
-      .update({ status: 'answered', response: 'Use W14x22 per spec 5.2' })
-      .eq('id', createdId)
+    const respondRes = await fromTable('rfis')
+      .update({ status: 'answered', response: 'Use W14x22 per spec 5.2' } as never)
+      .eq('id' as never, createdId)
       .select()
       .single()
     expect(respondRes.data).toMatchObject({ status: 'answered', response: 'Use W14x22 per spec 5.2' })
@@ -129,7 +128,7 @@ describe('RFI end-to-end flow', () => {
     // Step 6: Close
     actor.send({ type: 'CLOSE', userId: 'user-1' })
     expect(actor.getSnapshot().value).toBe('closed')
-    const closeRes = await supabase.from('rfis').update({ status: 'closed' }).eq('id', createdId).select().single()
+    const closeRes = await fromTable('rfis').update({ status: 'closed' } as never).eq('id' as never, createdId).select().single()
     expect(closeRes.data).toMatchObject({ status: 'closed' })
     actor.stop()
   })
@@ -137,13 +136,13 @@ describe('RFI end-to-end flow', () => {
   it('list pagination returns multiple factories', async () => {
     const rows = rfiFactory.buildList(3)
     mockListRows(rows)
-    const res = await supabase.from('rfis').select('*').order('created_at')
+    const res = await fromTable('rfis').select('*').order('created_at')
     expect(res.data).toHaveLength(3)
   })
 
   it('insert payload is passed through unchanged', async () => {
     const payload = { project_id: 'p', title: 'T', priority: 'high' }
-    const res = await supabase.from('rfis').insert(payload).select().single()
+    const res = await fromTable('rfis').insert(payload as never).select().single()
     expect(res.data).toMatchObject(payload)
   })
 })

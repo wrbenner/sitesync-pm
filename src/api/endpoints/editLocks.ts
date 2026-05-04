@@ -1,7 +1,8 @@
 // Edit lock API: pessimistic locking for collaborative editing.
 // Upserts a row in edit_locks (entity_type, entity_id, locked_by_user_id, locked_at, expires_at).
 
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../client'
+import { fromTable } from '../../lib/db/queries'
 
 // 2-minute lock duration. The frontend MUST call renewEditLock on a 60-second
 // setInterval while the user is actively editing, otherwise the lock will expire.
@@ -26,10 +27,9 @@ export type AcquireEditLockResult = EditLockAcquired | EditLockBlocked
  * Called opportunistically on every acquireEditLock and from a 5-minute cron edge function.
  */
 export async function cleanupExpiredLocks(): Promise<number> {
-  const { data, error } = await supabase
-    .from('edit_locks')
+  const { data, error } = await fromTable('edit_locks')
     .delete()
-    .lt('expires_at', new Date().toISOString())
+    .lt('expires_at' as never, new Date().toISOString())
     .select('entity_id')
 
   if (error) throw transformSupabaseError(error)
@@ -66,36 +66,35 @@ export async function forceReleaseLock(
   const tableName = entityTableMap[entityType]
   if (!tableName) throw new Error(`Unknown entityType for lock release: ${entityType}`)
 
-  const { data: entity, error: entityError } = await supabase
-    .from(tableName)
+  const { data: entity, error: entityError } = await fromTable(tableName as never)
     .select('project_id')
-    .eq('id', entityId)
+    .eq('id' as never, entityId)
     .maybeSingle()
 
   if (entityError) throw transformSupabaseError(entityError)
   if (!entity) throw new Error(`Entity not found: ${entityType}/${entityId}`)
 
+  const entityRow = entity as unknown as { project_id: string }
+
   // Verify requesting user has project_manager or higher role.
-  const { data: membership, error: memberError } = await supabase
-    .from('project_members')
+  const { data: membership, error: memberError } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', entity.project_id)
-    .eq('user_id', requestingUserId)
+    .eq('project_id' as never, entityRow.project_id)
+    .eq('user_id' as never, requestingUserId)
     .maybeSingle()
 
   if (memberError) throw transformSupabaseError(memberError)
 
-  const userRoleIndex = membership ? ROLE_HIERARCHY.indexOf(membership.role) : -1
+  const userRoleIndex = membership ? ROLE_HIERARCHY.indexOf((membership as unknown as { role: string }).role) : -1
   const minRoleIndex = ROLE_HIERARCHY.indexOf('project_manager')
   if (userRoleIndex < minRoleIndex) {
     throw new Error('Insufficient permissions: project_manager or higher required to force release a lock')
   }
 
-  const { error: deleteError } = await supabase
-    .from('edit_locks')
+  const { error: deleteError } = await fromTable('edit_locks')
     .delete()
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
+    .eq('entity_type' as never, entityType)
+    .eq('entity_id' as never, entityId)
 
   if (deleteError) throw transformSupabaseError(deleteError)
 
@@ -115,8 +114,7 @@ export async function getActiveLocks(
   lockedByName: string | null
   expiresAt: string
 }>> {
-  const { data, error } = await supabase
-    .from('edit_locks')
+  const { data, error } = await fromTable('edit_locks')
     .select(`
       entity_type,
       entity_id,
@@ -124,16 +122,23 @@ export async function getActiveLocks(
       expires_at,
       profiles!edit_locks_locked_by_user_id_fkey (full_name)
     `)
-    .eq('project_id', projectId)
-    .gt('expires_at', new Date().toISOString())
+    .eq('project_id' as never, projectId)
+    .gt('expires_at' as never, new Date().toISOString())
 
   if (error) throw transformSupabaseError(error)
 
-  return (data ?? []).map((row) => ({
+  type LockRow = {
+    entity_type: string
+    entity_id: string
+    locked_by_user_id: string
+    expires_at: string
+    profiles?: { full_name: string | null } | null
+  }
+  return ((data ?? []) as unknown as LockRow[]).map((row) => ({
     entityType: row.entity_type,
     entityId: row.entity_id,
     lockedBy: row.locked_by_user_id,
-    lockedByName: (row.profiles as { full_name: string | null } | null)?.full_name ?? null,
+    lockedByName: row.profiles?.full_name ?? null,
     expiresAt: row.expires_at,
   }))
 }
@@ -158,40 +163,39 @@ export async function acquireEditLock(
   await cleanupExpiredLocks()
 
   // Check for an existing lock on this entity
-  const { data: existing, error: fetchError } = await supabase
-    .from('edit_locks')
+  const { data: existing, error: fetchError } = await fromTable('edit_locks')
     .select('locked_by_user_id, expires_at')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
+    .eq('entity_type' as never, entityType)
+    .eq('entity_id' as never, entityId)
     .maybeSingle()
 
   if (fetchError) throw transformSupabaseError(fetchError)
 
-  if (existing) {
-    const isExpired = new Date(existing.expires_at) <= now
-    const ownedByUs = existing.locked_by_user_id === userId
+  const existingRow = existing as unknown as { locked_by_user_id: string; expires_at: string } | null
+
+  if (existingRow) {
+    const isExpired = new Date(existingRow.expires_at) <= now
+    const ownedByUs = existingRow.locked_by_user_id === userId
 
     if (!isExpired && !ownedByUs) {
       // Active lock held by someone else: fetch their display name
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: profile } = await fromTable('profiles')
         .select('full_name')
-        .eq('id', existing.locked_by_user_id)
+        .eq('id' as never, existingRow.locked_by_user_id)
         .maybeSingle()
 
       return {
         locked: true,
         lockedBy: {
-          userId: existing.locked_by_user_id,
-          name: profile?.full_name ?? null,
+          userId: existingRow.locked_by_user_id,
+          name: (profile as unknown as { full_name?: string | null } | null)?.full_name ?? null,
         },
       }
     }
   }
 
   // Safe to upsert: no lock, expired lock, or we already own it
-  const { error: upsertError } = await supabase
-    .from('edit_locks')
+  const { error: upsertError } = await fromTable('edit_locks')
     .upsert(
       {
         entity_type: entityType,
@@ -199,7 +203,7 @@ export async function acquireEditLock(
         locked_by_user_id: userId,
         locked_at: now.toISOString(),
         expires_at: expiresAt.toISOString(),
-      },
+      } as never,
       // onConflict matches the unique constraint defined in supabase/migrations/*_create_edit_locks.sql
       { onConflict: 'entity_type,entity_id' },
     )
@@ -223,12 +227,11 @@ export async function renewEditLock(
 ): Promise<boolean> {
   const expiresAt = new Date(Date.now() + LOCK_DURATION_MS)
 
-  const { data, error } = await supabase
-    .from('edit_locks')
-    .update({ expires_at: expiresAt.toISOString() })
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .eq('locked_by_user_id', userId)
+  const { data, error } = await fromTable('edit_locks')
+    .update({ expires_at: expiresAt.toISOString() } as never)
+    .eq('entity_type' as never, entityType)
+    .eq('entity_id' as never, entityId)
+    .eq('locked_by_user_id' as never, userId)
     .select('entity_id')
 
   if (error) throw transformSupabaseError(error)
@@ -245,12 +248,11 @@ export async function releaseEditLock(
   entityId: string,
   userId: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('edit_locks')
+  const { error } = await fromTable('edit_locks')
     .delete()
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .eq('locked_by_user_id', userId)
+    .eq('entity_type' as never, entityType)
+    .eq('entity_id' as never, entityId)
+    .eq('locked_by_user_id' as never, userId)
 
   if (error) throw transformSupabaseError(error)
 }

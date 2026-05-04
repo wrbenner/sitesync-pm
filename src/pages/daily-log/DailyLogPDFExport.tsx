@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
@@ -111,32 +112,34 @@ export const DailyLogPDFExport: React.FC<DailyLogPDFExportProps> = ({
   }, [isGenerating, project, today, weather, logStatus]);
 
   return (
-    <button
-      type="button"
-      onClick={handleExport}
-      disabled={isGenerating}
-      aria-busy={isGenerating}
-      aria-label={isGenerating ? 'Generating PDF' : 'Export daily log as PDF'}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: spacing['1'],
-        padding: `0 ${spacing['3']}`,
-        minHeight: touchTarget.field,
-        border: `1px solid ${colors.borderDefault}`,
-        borderRadius: borderRadius.md,
-        backgroundColor: colors.surfaceRaised,
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        fontFamily: typography.fontFamily,
-        color: colors.textPrimary,
-        cursor: isGenerating ? 'wait' : 'pointer',
-        opacity: isGenerating ? 0.6 : 1,
-        transition: `all ${transitions.instant}`,
-      }}
-    >
-      <Download size={14} aria-hidden="true" />
-      {isGenerating ? 'Generating…' : 'Export PDF'}
-    </button>
+    <PermissionGate permission="export.data">
+      <button
+        type="button"
+        onClick={handleExport}
+        disabled={isGenerating}
+        aria-busy={isGenerating}
+        aria-label={isGenerating ? 'Generating PDF' : 'Export daily log as PDF'}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: spacing['1'],
+          padding: `0 ${spacing['3']}`,
+          minHeight: touchTarget.field,
+          border: `1px solid ${colors.borderDefault}`,
+          borderRadius: borderRadius.md,
+          backgroundColor: colors.surfaceRaised,
+          fontSize: typography.fontSize.sm,
+          fontWeight: typography.fontWeight.medium,
+          fontFamily: typography.fontFamily,
+          color: colors.textPrimary,
+          cursor: isGenerating ? 'wait' : 'pointer',
+          opacity: isGenerating ? 0.6 : 1,
+          transition: `all ${transitions.instant}`,
+        }}
+      >
+        <Download size={14} aria-hidden="true" />
+        {isGenerating ? 'Generating…' : 'Export PDF'}
+      </button>
+    </PermissionGate>
   );
 };

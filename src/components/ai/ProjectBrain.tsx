@@ -2,13 +2,13 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   Brain, X, Send, FileText, Loader2, Sparkles, Database, ChevronRight,
   MessageSquare, Scale, FolderOpen, History, Plus, Trash2, AlertTriangle,
-  CheckCircle, Shield, Clock, ArrowRight, Search, Upload, Eye,
-  ChevronDown, BarChart3, Zap, BookOpen, HardHat, FileCheck,
-} from 'lucide-react';
+  CheckCircle, Shield, Clock, ArrowRight, Search, Eye,
+  BarChart3, Zap, BookOpen, HardHat, FileCheck} from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 import { useProjectId } from '../../hooks/useProjectId';
 import { supabase } from '../../lib/supabase';
+import { fromTable, asRow, asRows } from '../../lib/db/queries'
 import { toast } from 'sonner';
 
 // ── Types ─────────────────────────────────────────────────────
@@ -495,10 +495,11 @@ export const ProjectBrain: React.FC = () => {
   const refreshStats = useCallback(async () => {
     if (!projectId) return;
     const [chunksRes, filesRes] = await Promise.all([
-      supabase.from('document_chunks').select('document_id', { count: 'exact', head: false }).eq('project_id', projectId),
-      supabase.from('files').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
+      fromTable('document_chunks').select('document_id', { count: 'exact', head: false }).eq('project_id' as never, projectId),
+      fromTable('files').select('id', { count: 'exact', head: true }).eq('project_id' as never, projectId),
     ]);
-    const uniqueDocs = new Set((chunksRes.data || []).map((r: { document_id: string | null }) => r.document_id).filter(Boolean));
+    const chunks = asRows<{ document_id: string | null }>(chunksRes.data);
+    const uniqueDocs = new Set(chunks.map((r) => r.document_id).filter(Boolean));
     setIndexedCount(uniqueDocs.size);
     setFileCount(filesRes.count || 0);
   }, [projectId]);
@@ -506,14 +507,16 @@ export const ProjectBrain: React.FC = () => {
   const refreshDocuments = useCallback(async () => {
     if (!projectId) return;
     const [filesRes, chunksRes] = await Promise.all([
-      supabase.from('files').select('id, name, content_type, created_at').eq('project_id', projectId).order('created_at', { ascending: false }),
-      supabase.from('document_chunks').select('document_id').eq('project_id', projectId),
+      fromTable('files').select('id, name, content_type, created_at').eq('project_id' as never, projectId).order('created_at', { ascending: false }),
+      fromTable('document_chunks').select('document_id').eq('project_id' as never, projectId),
     ]);
+    const chunks = asRows<{ document_id: string | null }>(chunksRes.data);
     const chunkCounts: Record<string, number> = {};
-    (chunksRes.data || []).forEach((r: { document_id: string | null }) => {
+    chunks.forEach((r) => {
       if (r.document_id) chunkCounts[r.document_id] = (chunkCounts[r.document_id] || 0) + 1;
     });
-    const docs: IndexedDocument[] = (filesRes.data || []).map((f: { id: string; name: string; content_type: string | null; created_at: string }) => ({
+    const files = asRows<{ id: string; name: string; content_type: string | null; created_at: string }>(filesRes.data);
+    const docs: IndexedDocument[] = files.map((f) => ({
       id: f.id,
       name: f.name,
       contentType: f.content_type,
@@ -636,19 +639,19 @@ export const ProjectBrain: React.FC = () => {
     if (!projectId || indexing) return;
     setIndexing(true);
     try {
-      const { data: files, error } = await supabase
-        .from('files')
+      const { data: files, error } = await fromTable('files')
         .select('id, name, file_url, content_type')
-        .eq('project_id', projectId);
+        .eq('project_id' as never, projectId);
       if (error) throw error;
 
-      const { data: existingChunks } = await supabase
-        .from('document_chunks')
+      const { data: existingChunks } = await fromTable('document_chunks')
         .select('document_id')
-        .eq('project_id', projectId);
-      const indexed = new Set((existingChunks || []).map((r: { document_id: string | null }) => r.document_id).filter(Boolean));
+        .eq('project_id' as never, projectId);
+      const chunkRows = asRows<{ document_id: string | null }>(existingChunks);
+      const indexed = new Set(chunkRows.map((r) => r.document_id).filter(Boolean));
 
-      const pending = (files || []).filter((f: ProjectFile) => !indexed.has(f.id));
+      const fileRows = asRows<ProjectFile>(files);
+      const pending = fileRows.filter((f) => !indexed.has(f.id));
       if (pending.length === 0) {
         toast.info('All documents already indexed');
         return;
@@ -708,7 +711,8 @@ export const ProjectBrain: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       // Get file content
-      const { data: fileData } = await supabase.from('files').select('file_url, content_type').eq('id', fileId).single();
+      const { data: rawFile } = await fromTable('files').select('file_url, content_type').eq('id' as never, fileId).single();
+      const fileData = asRow<{ file_url: string; content_type: string | null }>(rawFile);
       if (!fileData) throw new Error('File not found');
 
       let text = '';
@@ -794,7 +798,7 @@ ${text.slice(0, 15000)}`;
         analyzedAt: Date.now(),
         summary: analysis.summary || 'Analysis complete.',
         overallRisk: (analysis.overallRisk as 'high' | 'medium' | 'low') || 'medium',
-        findings: (analysis.findings || []) as RiskFinding[],
+        findings: (analysis.findings || []) as unknown as RiskFinding[],
         keyTerms: (analysis.keyTerms || []) as { label: string; value: string }[],
       };
 

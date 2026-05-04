@@ -1,0 +1,11 @@
+{
+  "projectId": "e2000001-0000-4000-8000-000000000001",
+  "name": "E2E Small — Single Tower",
+  "address": "100 Test St, Austin, TX",
+  "size": "small",
+  "memberCount": 4,
+  "rfiCount": 6,
+  "submittalCount": 4,
+  "punchCount": 12,
+  "expectedFastLoadMs": 800
+}

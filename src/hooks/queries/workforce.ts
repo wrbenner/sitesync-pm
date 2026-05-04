@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 
 
@@ -9,7 +10,7 @@ export function useWorkforceMembers(projectId: string | undefined) {
   return useQuery({
     queryKey: ['workforce_members', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('workforce_members').select('*').eq('project_id', projectId!).order('name')
+      const { data, error } = await fromTable('workforce_members').select('*').eq('project_id' as never, projectId!).order('name')
       if (error) throw error
       return data
     },
@@ -21,7 +22,7 @@ export function useTimeEntries(projectId: string | undefined) {
   return useQuery({
     queryKey: ['time_entries', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('time_entries').select('*, workforce_members(name)').eq('project_id', projectId!).order('date', { ascending: false }).limit(100)
+      const { data, error } = await fromTable('time_entries').select('*, workforce_members(name)').eq('project_id' as never, projectId!).order('date', { ascending: false }).limit(100)
       if (error) throw error
       return (data ?? []).map((d: Record<string, unknown>) => ({
         ...d,
@@ -38,12 +39,13 @@ export function useCreateWorkforceMember() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('workforce_members').insert(payload).select().single()
+      const { data, error } = await fromTable('workforce_members').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['workforce_members', (vars as any).project_id] })
+      const projectId = (vars as { project_id?: string }).project_id
+      qc.invalidateQueries({ queryKey: ['workforce_members', projectId] })
     },
   })
 }
@@ -52,7 +54,7 @@ export function useDeleteWorkforceMember() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; project_id: string }) => {
-      const { error } = await supabase.from('workforce_members').delete().eq('id', payload.id)
+      const { error } = await fromTable('workforce_members').delete().eq('id' as never, payload.id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
@@ -65,12 +67,13 @@ export function useCreateTimeEntry() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('time_entries').insert(payload).select().single()
+      const { data, error } = await fromTable('time_entries').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['time_entries', (vars as any).project_id] })
+      const projectId = (vars as { project_id?: string }).project_id
+      qc.invalidateQueries({ queryKey: ['time_entries', projectId] })
     },
   })
 }
@@ -79,7 +82,7 @@ export function useApproveTimeEntry() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; project_id: string; approved_by: string }) => {
-      const { error } = await supabase.from('time_entries').update({ approved: true, approved_by: payload.approved_by }).eq('id', payload.id)
+      const { error } = await fromTable('time_entries').update({ approved: true, approved_by: payload.approved_by } as never).eq('id' as never, payload.id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {

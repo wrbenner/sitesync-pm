@@ -189,7 +189,7 @@ async function parsePdfScheduleHeuristic(file: File): Promise<ImportResult> {
         y,
         width,
         height,
-        fontName: (item as Record<string, unknown>).fontName as string | undefined,
+        fontName: (item as unknown as Record<string, unknown>).fontName as string | undefined,
       });
     }
 

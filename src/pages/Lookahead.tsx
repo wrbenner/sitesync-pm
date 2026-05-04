@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { AlertTriangle, Calendar, Plus, Printer, RefreshCw, Share2, X } from 'lucide-react';
 import { PageContainer, Card, Btn, Skeleton, EmptyState, useToast } from '../components/Primitives';
-import { PermissionGate } from '../components/auth/PermissionGate';
+
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { LookaheadBoard } from '../components/schedule/LookaheadBoard';
@@ -11,6 +11,7 @@ import { useCreateLookaheadTask } from '../hooks/queries/lookahead-tasks';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useProjectId } from '../hooks/useProjectId';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { getWeatherForecast } from '../lib/weather';
 import type { WeatherDay } from '../lib/weather';
 import type { Task, Crew } from '../types/database';
@@ -140,7 +141,7 @@ export const Lookahead: React.FC = () => {
         readiness,
         constraints,
         progress: t.percent_complete ?? 0,
-        work_type: t.work_type as string | undefined,
+        work_type: (t as { work_type?: string }).work_type,
         location: t.location as string | undefined,
         _taskId: t.id, // preserve DB id for mutations
       };
@@ -165,10 +166,9 @@ export const Lookahead: React.FC = () => {
     if (dbId) {
       const newStart = new Date(boardStartDate);
       newStart.setDate(newStart.getDate() + newDayIndex);
-      const { error } = await supabase
-        .from('tasks')
-        .update({ start_date: newStart.toISOString().slice(0, 10), trade: newCrew } as Record<string, unknown>)
-        .eq('id', dbId);
+      const { error } = await fromTable('tasks')
+        .update({ start_date: newStart.toISOString().slice(0, 10), trade: newCrew } as never)
+        .eq('id' as never, dbId);
       if (error) {
         addToast('error', 'Failed to save task move');
         return;
@@ -178,12 +178,12 @@ export const Lookahead: React.FC = () => {
   }, [addToast, tasks, boardStartDate]);
 
   const handleConstraintToggle = useCallback(async (taskId: number, constraintIndex: number) => {
-    let resolvedConstraint: { type: string; resolved: boolean } | null = null;
+    let resolved: { type: string; resolved: boolean } | null = null;
     setTasks((prev) => prev.map((t) => {
       if (t.id !== taskId) return t;
       const newConstraints = t.constraints.map((c, i) => {
         if (i === constraintIndex) {
-          resolvedConstraint = { type: c.type, resolved: !c.resolved };
+          resolved = { type: c.type, resolved: !c.resolved };
           return { ...c, resolved: !c.resolved };
         }
         return c;
@@ -200,14 +200,15 @@ export const Lookahead: React.FC = () => {
     // Persist constraint state to Supabase
     const task = tasks.find(t => t.id === taskId);
     const dbId = (task as (LookaheadTask & { _taskId?: string }))?._taskId;
-    if (dbId && resolvedConstraint) {
-      const field = resolvedConstraint.type === 'material' ? 'material_delivery_required'
-        : resolvedConstraint.type === 'inspection' ? 'inspection_required'
+    const r = resolved as { type: string; resolved: boolean } | null;
+    if (dbId && r) {
+      const field = r.type === 'material' ? 'material_delivery_required'
+        : r.type === 'inspection' ? 'inspection_required'
         : null;
       // For material/inspection constraints, resolved means the requirement is fulfilled
       // We store a constraint_notes update for other types
       if (field) {
-        await supabase.from('tasks').update({ [field]: !resolvedConstraint.resolved } as Record<string, unknown>).eq('id', dbId);
+        await fromTable('tasks').update({ [field]: !r.resolved } as never).eq('id' as never, dbId);
       }
     }
     addToast('info', 'Constraint updated');
@@ -292,7 +293,7 @@ export const Lookahead: React.FC = () => {
             if (!projectId) return;
             try {
               const { data: { user } } = await supabase.auth.getUser();
-              await supabase.from('notifications').insert({
+              await fromTable('notifications').insert({
                 project_id: projectId,
                 title: `${weekView}-Week Lookahead Published`,
                 body: `Lookahead schedule with ${tasks.length} tasks sent to field team.`,
@@ -300,7 +301,7 @@ export const Lookahead: React.FC = () => {
                 entity_type: 'lookahead',
                 user_id: user?.id ?? '',
                 link: '/lookahead',
-              } as Record<string, unknown>);
+              } as never);
               addToast('success', 'Lookahead sent to field team');
             } catch {
               addToast('error', 'Failed to send notification');
@@ -391,8 +392,8 @@ const CreateLookaheadTaskModal: React.FC<CreateLookaheadTaskModalProps> = ({
   const [constraintNotes, setConstraintNotes] = useState('');
   const [percentComplete, setPercentComplete] = useState(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
     if (!title.trim()) return;
 
     createTask.mutate(

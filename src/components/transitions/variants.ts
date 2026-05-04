@@ -140,7 +140,7 @@ export function withReducedMotion<T extends Record<string, unknown>>(
 ): T {
   if (!prefersReduced) return variants;
 
-  const reduced = { ...variants } as Record<string, unknown>;
+  const reduced = { ...variants } as unknown as Record<string, unknown>;
 
   // Replace all transitions with instant ones
   if ('transition' in reduced) {

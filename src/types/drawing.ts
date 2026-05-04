@@ -1,6 +1,10 @@
 import type { TableRow } from './database';
 
 export type DrawingStatus =
+  | 'current'
+  | 'superseded'
+  | 'void'
+  | 'for_review'
   | 'draft'
   | 'under_review'
   | 'approved'

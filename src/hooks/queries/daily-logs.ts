@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import type {
   DailyLog,
@@ -79,10 +80,9 @@ export function useDailyLogs(projectId: string | undefined, pagination?: Paginat
     queryFn: async (): Promise<PaginatedResult<ExtendedDailyLog>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      const { data, error, count } = await supabase
-        .from('daily_logs')
+      const { data, error, count } = await fromTable('daily_logs')
         .select('*, daily_log_entries(*)', { count: 'exact' })
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('log_date', { ascending: false })
         .range(from, to)
       if (error) throw error

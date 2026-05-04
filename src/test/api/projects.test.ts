@@ -17,7 +17,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getUser: mockGetUser },
     from: vi.fn().mockImplementation(() => {
-      const chain: unknown = {}
+      const chain: Record<string, unknown> = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
       chain.maybeSingle = mockMaybySingle
@@ -26,8 +26,8 @@ vi.mock('../../lib/supabase', () => ({
   },
 }))
 
-vi.mock('../../stores/organizationStore', () => ({
-  useOrganizationStore: { getState: mockOrgGetState },
+vi.mock('../../stores/authStore', () => ({
+  useAuthStore: { getState: mockOrgGetState },
 }))
 
 function makeMetrics(overrides: Partial<ProjectMetrics> = {}): ProjectMetrics {
@@ -208,7 +208,7 @@ describe('assertProjectAccess', () => {
   beforeEach(() => {
     mockMaybySingle.mockReset()
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
-    mockOrgGetState.mockReturnValue({ currentOrg: { id: ORG_A_ID } })
+    mockOrgGetState.mockReturnValue({ organization: { id: ORG_A_ID } })
     clearTtlCache()
   })
 
@@ -226,14 +226,30 @@ describe('assertProjectAccess', () => {
     await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
-  it('throws 403 when no active organization context', async () => {
-    mockOrgGetState.mockReturnValue({ currentOrg: null })
-    mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+  it('defers to RLS when no active organization context and membership exists', async () => {
+    // Behavior change (src/api/middleware/projectScope.ts:188-196): when
+    // membership is proven but the organization context hasn't hydrated
+    // yet (and all four hydration paths come up empty), the gate now
+    // *defers* rather than rejecting. The rationale is that this only
+    // happens during a transient client-state race; RLS still enforces
+    // org isolation at the database layer for every downstream query.
+    // The previous "throws 403" behavior was incorrectly punishing
+    // legitimate users on first load before OrganizationProvider resolved.
+    mockOrgGetState.mockReturnValue({ organization: null })
+    mockMaybySingle
+      // 1st call: membership lookup → found
+      .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+      // hydration paths all return null → activeOrg stays null → defer
+      .mockResolvedValue({ data: null, error: null })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('throws 403 when user is not a project member', async () => {
-    mockMaybySingle.mockResolvedValueOnce({ data: null, error: null })
+    // assertProjectAccess: 1st maybeSingle → membership miss
+    // self-heal path: 2nd maybeSingle → owner lookup, also miss → throws 403
+    mockMaybySingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
     await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
   })
 
@@ -247,13 +263,14 @@ describe('assertProjectAccess', () => {
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
       .mockResolvedValue({ data: { organization_id: ORG_A_ID }, error: null })
 
-    const { supabase: sb } = await import('../../lib/supabase') as unknown
+    const sbMod = await import('../../lib/supabase')
+    const sb = sbMod.supabase as unknown as { from: ReturnType<typeof vi.fn> }
     ;(sb.from as ReturnType<typeof vi.fn>).mockClear()
 
     await Promise.all(Array.from({ length: 10 }, () => assertProjectAccess(PROJ_ID)))
 
     const memberCalls = (sb.from as ReturnType<typeof vi.fn>).mock.calls.filter(
-      ([t]: [string]) => t === 'project_members',
+      (call: unknown[]) => call[0] === 'project_members',
     )
     expect(memberCalls).toHaveLength(1)
   })

@@ -121,8 +121,12 @@ export const FileGrid: React.FC<FileGridProps> = ({
       variant: 'secondary' as const,
       onClick: async (ids: string[]) => {
         const links = ids.map((id) => `${window.location.origin}/files/${id}`).join('\n');
-        await navigator.clipboard.writeText(links).catch(() => {});
-        addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        try {
+          await navigator.clipboard.writeText(links);
+          addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        } catch {
+          addToast('error', 'Could not access clipboard. Tap a link to copy manually.');
+        }
       },
     },
   ], [files, addToast]);
@@ -371,7 +375,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
               <EmptyState icon={FileText} title="No files uploaded yet" description="Upload project documents, drawings, and photos to keep everything organized in one place." action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }} />
             ) : (
               <div ref={listRef} tabIndex={0} onKeyDown={handleKeyDown} role="list" aria-label="Project files" style={{ outline: 'none' }}>
-                <DataTable data={displayFiles} columns={fileTableColumns} enableSorting selectable onSelectionChange={setSelectedIds} onRowClick={handleFileClick} emptyMessage={searchQuery ? 'No files match your search' : 'This folder is empty'} />
+                <DataTable data={displayFiles} columns={fileTableColumns as never} enableSorting selectable onSelectionChange={setSelectedIds} onRowClick={handleFileClick} emptyMessage={searchQuery ? 'No files match your search' : 'This folder is empty'} />
               </div>
             )}
           </>

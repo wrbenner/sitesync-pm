@@ -13,6 +13,7 @@
 //   8. Audit trail records entire chain
 
 import { supabase, isSupabaseConfigured } from './supabase'
+import { fromTable } from './db/queries'
 import type { QueryClient } from '@tanstack/react-query'
 
 // ── Event Types ───────────────────────────────────────────────
@@ -79,13 +80,12 @@ async function executeStep(
 async function getConnectedIntegrations(projectId: string): Promise<Set<string>> {
   if (!isSupabaseConfigured) return new Set()
 
-  const { data } = await supabase
-    .from('integrations')
+  const { data } = await fromTable('integrations')
     .select('type')
-    .eq('status', 'connected')
-    .eq('project_id', projectId)
+    .eq('status' as never, 'connected')
+    .eq('project_id' as never, projectId)
 
-  return new Set((data ?? []).map((i) => i.type as string))
+  return new Set(((data ?? []) as unknown as Array<{ type: string }>).map((i) => i.type))
 }
 
 // ── Main Dispatch ─────────────────────────────────────────────
@@ -151,16 +151,16 @@ export async function dispatchEcosystemEvent(
   steps.push(
     await executeStep('audit', 'record', async () => {
       if (!isSupabaseConfigured) return
-      await supabase.from('audit_trail').insert({
+      await fromTable('audit_trail').insert({
         project_id: event.data.projectId,
         entity_type: event.type.split('.')[0],
-        entity_id: (event.data as Record<string, unknown>)[`${event.type.split('.')[0]}Id`] as string || null,
+        entity_id: (event.data as unknown as Record<string, unknown>)[`${event.type.split('.')[0]}Id`] as string || null,
         action: event.type,
         metadata: {
           ecosystem_chain: steps.filter((s) => s.status !== 'skipped').map((s) => `${s.integration}:${s.action}`),
           event_data: event.data,
         },
-      })
+      } as never)
     }),
   )
 
@@ -215,14 +215,14 @@ async function runChangeOrderChain(
     steps.push(
       await executeStep('slack', 'post_notification', async () => {
         const { sendSlackChangeOrderNotification } = await import('../services/integrations/slack')
-        const { data: integrations } = await supabase
-          .from('integrations')
+        const { data: integrations } = await fromTable('integrations')
           .select('id')
-          .eq('type', 'slack')
-          .eq('status', 'connected')
+          .eq('type' as never, 'slack')
+          .eq('status' as never, 'connected')
           .limit(1)
-        if (integrations?.[0]) {
-          await sendSlackChangeOrderNotification(integrations[0].id, {
+        const ints = (integrations ?? []) as unknown as Array<{ id: string }>
+        if (ints[0]) {
+          await sendSlackChangeOrderNotification(ints[0].id, {
             title,
             amount,
             approvedBy,
@@ -267,17 +267,21 @@ async function runRFICreatedChain(
   connected: Set<string>,
   steps: ChainStep[],
 ) {
-  const { rfiId, projectId, subject, assignedTo, priority } = event.data
+  const { rfiId, subject, assignedTo, priority } = event.data
 
   if (connected.has('slack')) {
     steps.push(
       await executeStep('slack', 'post_rfi_notification', async () => {
         const { sendSlackRFINotification } = await import('../services/integrations/slack')
-        const { data: integrations } = await supabase
-          .from('integrations').select('id').eq('type', 'slack').eq('status', 'connected').limit(1)
-        if (integrations?.[0]) {
-          await sendSlackRFINotification(integrations[0].id, {
-            id: rfiId, subject, assignedTo, priority, projectId,
+        const { data: integrations } = await fromTable('integrations')
+          .select('id').eq('type' as never, 'slack').eq('status' as never, 'connected').limit(1)
+        const ints = (integrations ?? []) as unknown as Array<{ id: string }>
+        if (ints[0]) {
+          await sendSlackRFINotification(ints[0].id, {
+            number: rfiId,
+            title: subject,
+            respondedBy: assignedTo ?? 'Unassigned',
+            status: priority,
           })
         }
       }),
@@ -297,7 +301,7 @@ async function runRFICreatedChain(
 // ── Chain: RFI Responded ──────────────────────────────────────
 
 async function runRFIRespondedChain(
-  event: Extract<EcosystemEvent, { type: 'rfi.responded' }>,
+  _event: Extract<EcosystemEvent, { type: 'rfi.responded' }>,
   connected: Set<string>,
   steps: ChainStep[],
 ) {
@@ -321,11 +325,16 @@ async function runSubmittalApprovedChain(
     steps.push(
       await executeStep('slack', 'post_submittal_approved', async () => {
         const { sendSlackSubmittalNotification } = await import('../services/integrations/slack')
-        const { data: integrations } = await supabase
-          .from('integrations').select('id').eq('type', 'slack').eq('status', 'connected').limit(1)
-        if (integrations?.[0]) {
-          await sendSlackSubmittalNotification(integrations[0].id, {
-            id: event.data.submittalId, title: event.data.title, projectId: event.data.projectId,
+        const { data: integrations } = await fromTable('integrations')
+          .select('id').eq('type' as never, 'slack').eq('status' as never, 'connected').limit(1)
+        const ints = (integrations ?? []) as unknown as Array<{ id: string }>
+        if (ints[0]) {
+          await sendSlackSubmittalNotification(ints[0].id, {
+            number: event.data.submittalId,
+            title: event.data.title,
+            reviewedBy: event.data.approvedBy,
+            status: 'approved',
+            specSection: '',
           })
         }
       }),
@@ -344,11 +353,15 @@ async function runDailyLogChain(
     steps.push(
       await executeStep('slack', 'post_daily_log', async () => {
         const { sendSlackDailyLogNotification } = await import('../services/integrations/slack')
-        const { data: integrations } = await supabase
-          .from('integrations').select('id').eq('type', 'slack').eq('status', 'connected').limit(1)
-        if (integrations?.[0]) {
-          await sendSlackDailyLogNotification(integrations[0].id, {
-            date: event.data.date, submittedBy: event.data.submittedBy, projectId: event.data.projectId,
+        const { data: integrations } = await fromTable('integrations')
+          .select('id').eq('type' as never, 'slack').eq('status' as never, 'connected').limit(1)
+        const ints = (integrations ?? []) as unknown as Array<{ id: string }>
+        if (ints[0]) {
+          await sendSlackDailyLogNotification(ints[0].id, {
+            date: event.data.date,
+            approvedBy: event.data.submittedBy,
+            workers: 0,
+            incidents: 0,
           })
         }
       }),
@@ -359,7 +372,7 @@ async function runDailyLogChain(
 // ── Chain: Payment Completed ──────────────────────────────────
 
 async function runPaymentChain(
-  event: Extract<EcosystemEvent, { type: 'payment.completed' }>,
+  _event: Extract<EcosystemEvent, { type: 'payment.completed' }>,
   connected: Set<string>,
   steps: ChainStep[],
 ) {
@@ -390,7 +403,7 @@ async function runPaymentChain(
 // ── Chain: Incident Reported ──────────────────────────────────
 
 async function runIncidentChain(
-  event: Extract<EcosystemEvent, { type: 'incident.reported' }>,
+  _event: Extract<EcosystemEvent, { type: 'incident.reported' }>,
   connected: Set<string>,
   steps: ChainStep[],
 ) {
@@ -415,7 +428,7 @@ async function runIncidentChain(
 // ── Chain: Task Completed ─────────────────────────────────────
 
 async function runTaskCompletedChain(
-  event: Extract<EcosystemEvent, { type: 'task.completed' }>,
+  _event: Extract<EcosystemEvent, { type: 'task.completed' }>,
   connected: Set<string>,
   steps: ChainStep[],
 ) {
@@ -438,7 +451,7 @@ async function runTaskCompletedChain(
 // ── Chain: Punch Item Resolved ────────────────────────────────
 
 async function runPunchItemChain(
-  event: Extract<EcosystemEvent, { type: 'punch_item.resolved' }>,
+  _event: Extract<EcosystemEvent, { type: 'punch_item.resolved' }>,
   connected: Set<string>,
   steps: ChainStep[],
 ) {

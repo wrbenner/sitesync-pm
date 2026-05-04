@@ -254,20 +254,6 @@ function titleBlockLocationScore(
   return score;
 }
 
-/**
- * Test whether a text item lies inside the vector-detected title-block
- * region. pdfjs coordinates are bottom-up: an item at y=0 is at the
- * bottom of the page; region.y is the rectangle's lower edge.
- */
-function itemInsideRegion(it: PageTextItem, region: TitleBlockRegion): boolean {
-  return (
-    it.x >= region.x &&
-    it.x <= region.x + region.w &&
-    it.y >= region.y &&
-    it.y <= region.y + region.h
-  );
-}
-
 export function extractSheetTitleBlock(
   text: string,
   textItems: PageTextItem[],
@@ -287,9 +273,6 @@ export function extractSheetTitleBlock(
   // but extraction still sees the full page. This is strictly safer —
   // when the detector helps we get a boost; when it's wrong we're no
   // worse than the no-region baseline.
-  const insideRegion = (item: PageTextItem): boolean =>
-    region !== undefined && itemInsideRegion(item, region);
-
   const avgFontSize =
     textItems.reduce((s, it) => s + it.fontSize, 0) / textItems.length || 1;
   const lines = clusterIntoLines(textItems);

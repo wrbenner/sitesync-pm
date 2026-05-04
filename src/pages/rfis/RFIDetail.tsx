@@ -16,22 +16,33 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
+  AlertTriangle, MessageSquare, FileText,
+  Image, ChevronDown, User, Eye, EyeOff,
+  Paperclip, Flag, Timer, Zap,
 } from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
-import { supabase } from '../../lib/supabase'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors, spacing, borderRadius } from '../../styles/theme'
+import { fromTable } from '../../lib/db/queries'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
+import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
+import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
+import { SpecExcerptPanel } from '../../components/specifications/SpecExcerptPanel'
+import { RfiSlaPanel } from '../../components/conversation/RfiSlaPanel'
+import { IrisSuggests } from '../../components/iris/IrisSuggests'
+import { IrisApprovalGate } from '../../components/iris/IrisApprovalGate'
+import {
+  useDraftedActions,
+  useApproveDraftedAction,
+  useRejectDraftedAction,
+} from '../../hooks/queries/draftedActions'
+import { toast as sonnerToast } from 'sonner'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
@@ -42,7 +53,7 @@ import type { RFI, RFIResponse } from '../../types/database'
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const formatDate = (d: string | null) => {
   if (!d) return null
@@ -76,24 +87,17 @@ const relativeTime = (d: string | null) => {
 
 // ─── Types ────────────────────────────────────────────────
 
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
-}
-
 // ─── Watchers Hook ────────────────────────────────────────
 
 function useRFIWatchers(rfiId: string | undefined) {
   return useQuery({
     queryKey: ['rfi_watchers', rfiId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rfi_watchers')
+      const { data, error } = await fromTable('rfi_watchers')
         .select('*')
-        .eq('rfi_id', rfiId!)
+        .eq('rfi_id' as never, rfiId!)
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as unknown as Array<{ user_id: string; id: string; rfi_id: string; created_at: string | null }>
     },
     enabled: !!rfiId,
   })
@@ -104,16 +108,14 @@ function useToggleWatch(rfiId: string, userId: string | undefined) {
   return useMutation({
     mutationFn: async (watching: boolean) => {
       if (watching) {
-        const { error } = await supabase
-          .from('rfi_watchers')
+        const { error } = await fromTable('rfi_watchers')
           .delete()
-          .eq('rfi_id', rfiId)
-          .eq('user_id', userId!)
+          .eq('rfi_id' as never, rfiId)
+          .eq('user_id' as never, userId!)
         if (error) throw error
       } else {
-        const { error } = await supabase
-          .from('rfi_watchers')
-          .insert({ rfi_id: rfiId, user_id: userId! })
+        const { error } = await fromTable('rfi_watchers')
+          .insert({ rfi_id: rfiId, user_id: userId! } as never)
         if (error) throw error
       }
     },
@@ -250,7 +252,7 @@ const ResponseBubble: React.FC<{
   isNew?: boolean
   profileMap?: ProfileMap
 }> = ({ response, index, isNew, profileMap }) => {
-  const authorName = displayName(profileMap, response.created_by)
+  const authorName = displayName(profileMap, response.author_id)
   return (
   <motion.div
     initial={{ opacity: 0, y: 8 }}
@@ -279,13 +281,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {(response as RFIResponse & { company?: string }).company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {(response as RFIResponse & { company?: string }).company}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -568,6 +570,11 @@ export function RFIDetail() {
   const { data: watchers = [] } = useRFIWatchers(rfiId)
   const updateRFI = useUpdateRFI()
 
+  // Iris approval gate — drafts targeting THIS RFI go below the IrisSuggests panel.
+  const { data: draftedActions = [] } = useDraftedActions('rfi', rfiId)
+  const approveDraft = useApproveDraftedAction()
+  const rejectDraft = useRejectDraftedAction()
+
   // Realtime: invalidate this RFI's detail cache when another user edits it.
   useRealtimeRowInvalidation('rfis', rfiId, [
     ['rfis', 'detail', rfiId],
@@ -592,7 +599,7 @@ export function RFIDetail() {
   const responses = rfi?.responses ?? []
 
   const userIdsToResolve = useMemo(
-    () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.created_by)],
+    () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.author_id)],
     [rfi?.created_by, rfi?.assigned_to, responses],
   )
   const { data: profileMap } = useProfileNames(userIdsToResolve)
@@ -669,7 +676,13 @@ export function RFIDetail() {
             RFI not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: '14px' }}>
-            {error?.message || 'This RFI may have been deleted or you don\'t have access.'}
+            {/*
+              Hide raw Supabase / PostgREST errors like "Cannot coerce the
+              result to a single JSON object" or "JSON object requested,
+              multiple (or no) rows returned" — pure developer-speak.
+              Always render the friendly explanation in the not-found state.
+            */}
+            This RFI may have been deleted or you don&apos;t have access.
           </p>
           <Btn onClick={() => navigate('/rfis')}>Back to RFIs</Btn>
         </div>
@@ -740,6 +753,11 @@ export function RFIDetail() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AuditTrailButton
+                entityType="rfi"
+                entityId={rfi.id}
+                projectId={rfi.project_id}
+              />
               <WatchButton rfiId={rfi.id} watchers={watchers} userId={user?.id} />
               <StatusControl
                 currentStatus={currentStatus}
@@ -770,14 +788,42 @@ export function RFIDetail() {
               fontSize: '12px', color: colors.primaryOrange, fontWeight: 600,
             }}>
               <Flag size={11} />
-              Ball in court: {rfi.ball_in_court}
+              Ball in court: {displayName(profileMap, rfi.ball_in_court)}
             </div>
           )}
+        </div>
+
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        <div
+          style={{
+            marginBottom: '24px',
+            padding: spacing['4'],
+            backgroundColor: colors.surfaceRaised,
+            borderRadius: borderRadius.lg,
+            border: `1px solid ${colors.borderSubtle}`,
+          }}
+        >
+          <WorkflowTimeline
+            ariaLabel={`RFI ${rfiNumber} workflow status`}
+            currentState={currentStatus === 'void' ? 'closed' : currentStatus}
+            states={[
+              { key: 'draft', label: 'Draft' },
+              { key: 'open', label: 'Open', mobileLabel: 'Open' },
+              { key: 'under_review', label: 'Under Review', mobileLabel: 'Reviewing' },
+              { key: 'answered', label: 'Answered' },
+              { key: 'closed', label: 'Closed' },
+            ]}
+          />
         </div>
 
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
+        </div>
+
+        {/* ── Audit timeline (the moat) ──────────────────── */}
+        <div style={{ marginBottom: '24px' }}>
+          <EntityHistoryPanel entityType="rfi" entityId={rfi.id} />
         </div>
 
         {/* ── The Question + Thread Card ──────────────────── */}
@@ -801,13 +847,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {(rfi as RFI & { from_company?: string }).from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {(rfi as RFI & { from_company?: string }).from_company}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -816,7 +862,7 @@ export function RFIDetail() {
               </div>
               {rfi.priority && rfi.priority !== 'medium' && (
                 <div style={{ marginLeft: 'auto' }}>
-                  <PriorityTag priority={rfi.priority} />
+                  <PriorityTag priority={rfi.priority as 'critical' | 'high' | 'medium' | 'low'} />
                 </div>
               )}
             </div>
@@ -826,8 +872,48 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || (rfi as RFI & { question?: string }).question || rfi.title}
             </div>
+
+            {/* SLA timer + pause/resume + bounce surface */}
+            <RfiSlaPanel
+              rfiId={rfi.id}
+              projectId={rfi.project_id}
+              dueDate={(rfi as RFI & { response_due_date?: string | null }).response_due_date ?? rfi.due_date ?? null}
+              pausedAt={(rfi as RFI & { sla_paused_at?: string | null }).sla_paused_at ?? null}
+              pausedReason={(rfi as RFI & { sla_paused_reason?: string | null }).sla_paused_reason ?? null}
+            />
+
+            {/* Spec excerpt — auto-loaded when rfi.spec_section is set */}
+            <SpecExcerptPanel projectId={rfi.project_id} specSection={rfi.spec_section} />
+
+            {/* Iris suggestions — proactive draft responses, escalations, follow-ups */}
+            <IrisSuggests entityType="rfi" entityId={rfi.id} projectId={rfi.project_id} />
+
+            {/* Iris approval gates — drafted actions awaiting one-click approval */}
+            {draftedActions.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'], margin: `${spacing['3']} 0 ${spacing['4']}` }}>
+                {draftedActions.map((draft) => (
+                  <IrisApprovalGate
+                    key={draft.id}
+                    draft={draft}
+                    busy={approveDraft.isPending || rejectDraft.isPending}
+                    onApprove={async (d) => {
+                      try {
+                        await approveDraft.mutateAsync(d)
+                        sonnerToast.success('Approved')
+                      } catch {
+                        sonnerToast.error('Could not approve — please try again')
+                      }
+                    }}
+                    onReject={async (d) => {
+                      await rejectDraft.mutateAsync({ draft: d, reason: undefined })
+                      sonnerToast('Rejected')
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Metadata pills */}
             <MetadataSection rfi={rfi} assignedName={assignedName} />

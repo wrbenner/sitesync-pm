@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import { createOnError } from './createAuditedMutation'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+import { fromTable } from '../../lib/db/queries'
+
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Audit Trail ────────────────────────────────────────────
 
@@ -29,11 +30,11 @@ export function useLogAuditEvent() {
           entity_title: params.entityTitle || null,
           old_value: params.oldValue || null,
           new_value: params.newValue || null,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['audit_trail', result.projectId] })

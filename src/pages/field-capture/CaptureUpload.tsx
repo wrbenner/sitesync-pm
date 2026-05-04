@@ -165,19 +165,21 @@ export const PhotoOverlay: React.FC<PhotoOverlayProps> = ({ dataUrl, location, i
             />
             <button
               type="button"
-              aria-label="Voice to text"
-              title="Voice to text"
+              disabled
+              aria-label="Voice to text — coming soon"
+              title="Voice-to-text not yet wired. Use the keyboard for now."
               style={{
                 position: 'absolute',
                 top: spacing['3'],
                 right: spacing['3'],
                 background: 'none',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: 'not-allowed',
                 padding: '2px',
                 color: colors.textTertiary,
                 display: 'flex',
                 alignItems: 'center',
+                opacity: 0.5,
               }}
             >
               <Mic size={16} />

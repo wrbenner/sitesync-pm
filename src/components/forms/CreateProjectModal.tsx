@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, CheckCircle, Search, Loader2 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, zIndex } from '../../styles/theme';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { colors, spacing, typography, zIndex } from '../../styles/theme';
+import { useProjectStore } from '../../stores/projectStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrganization } from '../../hooks/useOrganization';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 interface Props {
   open: boolean;
   onClose: () => void;
+  onSuccess?: (projectId: string) => void;
 }
 
 interface NominatimAddress {
@@ -105,7 +106,7 @@ async function searchAddress(query: string): Promise<AddressSuggestion[]> {
       { signal: AbortSignal.timeout(4000), headers: { 'User-Agent': 'SiteSyncPM/1.0' } },
     );
     if (!res.ok) return [];
-    return (await res.json()) as AddressSuggestion[];
+    return (await res.json()) as unknown as AddressSuggestion[];
   } catch {
     return [];
   }
@@ -136,7 +137,7 @@ const row = (delay: number) => ({
 // Component
 // ═══════════════════════════════════════════════════════════
 
-export const CreateProjectModal: React.FC<Props> = ({ open, onClose }) => {
+export const CreateProjectModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
 
   // ── Form state ──────────────────────────────────────────
   const [name, setName]                     = useState('');
@@ -154,14 +155,14 @@ export const CreateProjectModal: React.FC<Props> = ({ open, onClose }) => {
   const [selected, setSelected]             = useState<AddressSuggestion | null>(null);
   const [mapLoaded, setMapLoaded]           = useState(false);
   const [hlIdx, setHlIdx]                   = useState(-1);
-  const debounceRef    = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef    = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef  = useRef<HTMLDivElement>(null);
 
   // ── Hooks ───────────────────────────────────────────────
   const { user }       = useAuth();
   const { currentOrg } = useOrganization();
-  const createProject  = useProjectContext((s) => s.createProject);
+  const createProject  = useProjectStore((s) => s.createProject);
   const queryClient    = useQueryClient();
   const nameRef        = useRef<HTMLInputElement>(null);
 
@@ -283,7 +284,11 @@ export const CreateProjectModal: React.FC<Props> = ({ open, onClose }) => {
     await queryClient.invalidateQueries({ queryKey: ['projects'] });
     setSaving(false);
     setSuccess(true);
-    setTimeout(onClose, 1600);
+    const createdId = result.project?.id;
+    setTimeout(() => {
+      if (createdId) onSuccess?.(createdId);
+      onClose();
+    }, 1600);
   };
 
   // ── Bail ────────────────────────────────────────────────

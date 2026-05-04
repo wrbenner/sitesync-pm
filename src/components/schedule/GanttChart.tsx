@@ -498,7 +498,7 @@ function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase
   const arrows = useMemo(() => {
     const result: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
     for (const phase of phases) {
-      const deps = phase.dependencies || (phase.depends_on ? [phase.depends_on] : []);
+      const deps = phase.predecessor_ids || (phase.depends_on ? [phase.depends_on] : []);
       for (const depId of deps) {
         const source = phaseMap.get(depId);
         const target = phaseMap.get(phase.id);
@@ -550,7 +550,7 @@ function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase
 }
 
 // ── Today marker ────────────────────────────────────────
-function TodayMarker({ chartStart, pxPerDay, totalHeight }: { chartStart: Date; pxPerDay: number; totalHeight: number }) {
+function TodayMarker({ chartStart, pxPerDay }: { chartStart: Date; pxPerDay: number; totalHeight: number }) {
   const today = startOfDay(new Date());
   const offset = (today.getTime() - chartStart.getTime()) / DAY_MS;
   const left = offset * pxPerDay;
@@ -1065,7 +1065,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onAddActivity,
   onPhaseClick,
   onPhaseUpdate,
-  baselinePhases,
+  baselinePhases: _baselinePhases,
   showBaseline: showBaselineProp,
   zoomLevel: zoomLevelProp,
   whatIfMode = false,
@@ -1339,7 +1339,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             ))}
 
             {/* Weekend shading (day zoom only) */}
-            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h, i) => {
+            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h, _i) => {
               const idx = cellHeaders.indexOf(h);
               return (
                 <div key={`we-${h.key}`} style={{

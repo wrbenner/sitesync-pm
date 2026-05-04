@@ -1,12 +1,14 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Upload, Eye, Loader2, ChevronRight, CloudOff, Zap } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { FileText, Upload, Eye, Loader2, MessageSquare, MessageCircle, Sparkles } from 'lucide-react';
 import { Btn } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 import type { DrawingItem } from './DrawingList';
 import { formatRevDate } from './types';
 import { useSignedUrl } from '../../hooks/useSignedUrl';
-import { DISCIPLINE_COLORS, DISCIPLINE_ABBREV, DISCIPLINE_LABELS, STATUS_CONFIG, groupByDiscipline } from './constants';
+import { DISCIPLINE_COLORS, STATUS_CONFIG, groupByDiscipline } from './constants';
+
+// Iris/AI accent — used for the "Iris analyzed" pill on classified sheets.
+const IRIS_INDIGO = '#4F46E5';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -21,27 +23,30 @@ interface DrawingCardGridProps {
   onViewDrawing: (d: DrawingItem) => void;
   onUploadClick: () => void;
   searchQuery: string;
+  /** ID of the keyboard-focused (j/k) sheet, used to highlight without
+   *  hijacking selection. */
+  focusedId?: string | null;
 }
 
-// ─── Styles (Linear-inspired: minimal, calm, content-first) ─────────────────
+// ─── Styles (industrial: dense, content-first, no decorative motion) ────────
 
 const S = {
-  // Grid — generous spacing, let cards breathe
+  // Grid — 220px target card, generous gutters
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-    gap: '20px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gap: '16px',
   } as React.CSSProperties,
 
   // Discipline group
   groupWrap: {
-    marginBottom: '40px',
+    marginBottom: '32px',
   } as React.CSSProperties,
   groupHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    marginBottom: '16px',
+    marginBottom: '12px',
     padding: '0 2px',
   } as React.CSSProperties,
   groupBadge: (color: string) => ({
@@ -69,41 +74,38 @@ const S = {
     fontWeight: 400,
   } as React.CSSProperties,
 
-  // Card — clean, quiet, content-first
+  // Card — flat, industrial, no shadow
   card: (isSelected: boolean, isFocused: boolean) => ({
     position: 'relative' as const,
-    borderRadius: '12px',
-    border: `1px solid ${isSelected ? colors.primaryOrange : colors.borderSubtle}`,
+    borderRadius: '8px',
+    border: `1px solid ${isSelected ? colors.primaryOrange : isFocused ? colors.borderDefault : colors.borderSubtle}`,
     overflow: 'hidden',
     cursor: 'pointer',
     backgroundColor: colors.surfaceRaised,
-    transition: 'all 220ms ease',
-    boxShadow: isSelected
-      ? `0 0 0 1px ${colors.primaryOrange}`
-      : isFocused
-        ? '0 4px 16px rgba(0,0,0,0.06)'
-        : '0 1px 3px rgba(0,0,0,0.02)',
+    transition: 'border-color 120ms ease, background-color 120ms ease',
   }),
 
-  // Thumbnail
+  // Thumbnail — sheet-aspect-ratio favoring portrait so sheet number reads
+  // legibly when the source PDF is loaded; 200px tall + 80px info = ~280 card.
   thumbWrap: {
-    height: '170px',
+    height: '200px',
     overflow: 'hidden',
     backgroundColor: '#FAFAFA',
     position: 'relative' as const,
+    borderBottom: `1px solid ${colors.borderSubtle}`,
   } as React.CSSProperties,
   thumbImage: {
     width: '100%',
     height: '100%',
     objectFit: 'cover' as const,
-    transition: 'transform 300ms ease',
   } as React.CSSProperties,
   thumbFallback: (color: string) => ({
-    height: '170px',
-    backgroundColor: `${color}05`,
+    height: '200px',
+    backgroundColor: `${color}06`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottom: `1px solid ${colors.borderSubtle}`,
   } as React.CSSProperties),
   thumbFallbackText: (color: string) => ({
     fontSize: '24px',
@@ -114,7 +116,7 @@ const S = {
   } as React.CSSProperties),
 
   // Status badge overlay — subtle, frosted glass
-  statusBadge: (bg: string, color: string) => ({
+  statusBadge: (_bg: string, _color: string) => ({
     position: 'absolute' as const,
     top: '8px',
     right: '8px',
@@ -150,23 +152,26 @@ const S = {
     boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
   } as React.CSSProperties,
 
-  // Card info — minimal, typographic
+  // Card info — sheet # is the headline; everything else is supporting.
   info: {
-    padding: '10px 12px 12px',
+    padding: '10px 12px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '3px',
   } as React.CSSProperties,
   sheetNumber: {
-    fontSize: '13px',
+    fontSize: '15px',
     fontWeight: 600,
     color: colors.textPrimary,
     fontFamily: typography.fontFamilyMono,
     margin: 0,
-    marginBottom: '2px',
     letterSpacing: '-0.01em',
+    fontVariantNumeric: 'tabular-nums',
   } as React.CSSProperties,
   title: {
     margin: 0,
-    fontSize: '11.5px',
-    color: colors.textTertiary,
+    fontSize: '12px',
+    color: colors.textSecondary,
     whiteSpace: 'nowrap' as const,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -175,18 +180,50 @@ const S = {
   meta: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    marginTop: '6px',
+    gap: '8px',
+    marginTop: '4px',
+    flexWrap: 'wrap' as const,
   } as React.CSSProperties,
-  revBadge: {
-    fontFamily: typography.fontFamilyMono,
-    fontSize: '10px',
+  revPill: {
+    fontFamily: typography.fontFamily,
+    fontSize: '11px',
     fontWeight: 500,
-    color: colors.textTertiary,
+    color: colors.textSecondary,
+    backgroundColor: colors.surfaceInset,
+    padding: '2px 7px',
+    borderRadius: '4px',
+    whiteSpace: 'nowrap' as const,
+    fontVariantNumeric: 'tabular-nums',
   } as React.CSSProperties,
-  date: {
-    fontSize: '10px',
-    color: colors.textTertiary,
+  countBadge: (color: string) => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    fontSize: '11px',
+    fontWeight: 500,
+    color,
+    fontVariantNumeric: 'tabular-nums' as const,
+  } as React.CSSProperties),
+
+  // Iris-analyzed pill — indigo, top-left of the thumbnail.
+  irisPill: {
+    position: 'absolute' as const,
+    top: '8px',
+    left: '8px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    color: IRIS_INDIGO,
+    fontSize: '9.5px',
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase' as const,
+    border: `1px solid ${IRIS_INDIGO}25`,
   } as React.CSSProperties,
 
   // Skeleton
@@ -277,14 +314,13 @@ const DrawingThumbnail: React.FC<{
 export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
   drawings,
   loading,
-  error,
-  refetch,
   selectedIds,
   onToggleSelect,
   onSelectDrawing,
   onViewDrawing,
   onUploadClick,
   searchQuery,
+  focusedId,
 }) => {
   const groups = useMemo(() => groupByDiscipline(drawings), [drawings]);
 
@@ -346,21 +382,16 @@ export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
   if (showFlat) {
     return (
       <div style={S.grid}>
-        {drawings.map((drawing, i) => (
-          <motion.div
+        {drawings.map((drawing) => (
+          <SheetCard
             key={drawing.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: Math.min(i * 0.03, 0.4), ease: [0.16, 1, 0.3, 1] }}
-          >
-            <SheetCard
-              drawing={drawing}
-              isSelected={selectedIds.has(drawing.id)}
-              onSelect={onSelectDrawing}
-              onView={onViewDrawing}
-              onToggleSelect={onToggleSelect}
-            />
-          </motion.div>
+            drawing={drawing}
+            isSelected={selectedIds.has(drawing.id)}
+            isFocused={focusedId === drawing.id}
+            onSelect={onSelectDrawing}
+            onView={onViewDrawing}
+            onToggleSelect={onToggleSelect}
+          />
         ))}
       </div>
     );
@@ -368,14 +399,8 @@ export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
 
   return (
     <div>
-      {groups.map((group, gi) => (
-        <motion.div
-          key={group.discipline}
-          style={S.groupWrap}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: gi * 0.06, ease: [0.16, 1, 0.3, 1] }}
-        >
+      {groups.map((group) => (
+        <div key={group.discipline} style={S.groupWrap}>
           {/* Discipline group header */}
           <div style={S.groupHeader}>
             <div style={S.groupBadge(group.color)}>
@@ -387,24 +412,19 @@ export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
 
           {/* Sheet cards */}
           <div style={S.grid}>
-            {group.drawings.map((drawing, di) => (
-              <motion.div
+            {group.drawings.map((drawing) => (
+              <SheetCard
                 key={drawing.id}
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.25, delay: gi * 0.06 + Math.min(di * 0.02, 0.3), ease: [0.16, 1, 0.3, 1] }}
-              >
-                <SheetCard
-                  drawing={drawing}
-                  isSelected={selectedIds.has(drawing.id)}
-                  onSelect={onSelectDrawing}
-                  onView={onViewDrawing}
-                  onToggleSelect={onToggleSelect}
-                />
-              </motion.div>
+                drawing={drawing}
+                isSelected={selectedIds.has(drawing.id)}
+                isFocused={focusedId === drawing.id}
+                onSelect={onSelectDrawing}
+                onView={onViewDrawing}
+                onToggleSelect={onToggleSelect}
+              />
             ))}
           </div>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
@@ -412,34 +432,61 @@ export const DrawingCardGrid: React.FC<DrawingCardGridProps> = ({
 
 // ─── Sheet Card ─────────────────────────────────────────────────────────────
 
+function shortIssuedDate(raw: string | null | undefined): string {
+  if (!raw) return '';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+  } catch {
+    return raw;
+  }
+}
+
+/** A drawing has been "Iris analyzed" once the classifier pipeline produced
+ *  a real discipline (anything other than 'unclassified'). The signal lives
+ *  in the existing data — no new field needed. */
+function wasIrisAnalyzed(drawing: DrawingItem): boolean {
+  const disc = (drawing.discipline || '').toLowerCase();
+  if (!disc || disc === 'unclassified') return false;
+  // 'splitting' / 'classifying' / 'pending' all imply not-yet-done.
+  const stage = drawing.processing_status?.toLowerCase() ?? '';
+  if (stage && stage !== 'completed' && stage !== 'classified' && stage !== 'ready') return false;
+  return true;
+}
+
 const SheetCard: React.FC<{
   drawing: DrawingItem;
   isSelected: boolean;
+  isFocused: boolean;
   onSelect: (d: DrawingItem) => void;
   onView: (d: DrawingItem) => void;
   onToggleSelect: (id: string) => void;
-}> = ({ drawing, isSelected, onSelect, onView, onToggleSelect }) => {
+}> = ({ drawing, isSelected, isFocused, onView, onToggleSelect }) => {
   const [hovered, setHovered] = React.useState(false);
   const discColor = DISCIPLINE_COLORS[drawing.discipline] || DISCIPLINE_COLORS.unclassified;
   const statusKey = drawing.status || 'current';
   const badge = STATUS_CONFIG[statusKey] || STATUS_CONFIG.current;
   const rev = drawing.currentRevision?.revision_number ?? drawing.revision ?? '';
-  const issuedDate = drawing.currentRevision?.issued_date
-    ? formatRevDate(drawing.currentRevision.issued_date)
-    : drawing.date || '';
+  const issuedDate = drawing.currentRevision?.issued_date ?? null;
+  const issuedShort = shortIssuedDate(issuedDate);
+  const markupCount = drawing.markupCount ?? 0;
+  const rfiCount = drawing.linkedRfiCount ?? 0;
+  const irisAnalyzed = wasIrisAnalyzed(drawing);
 
   return (
     <div
       role="button"
       tabIndex={0}
       aria-label={`${drawing.setNumber} ${drawing.title}`}
-      onClick={() => onSelect(drawing)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(drawing); } }}
+      data-drawing-id={drawing.id}
+      onClick={() => onView(drawing)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(drawing); } }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        ...S.card(isSelected, hovered),
-        transform: hovered ? 'translateY(-2px)' : 'none',
+        ...S.card(isSelected, isFocused || hovered),
+        backgroundColor: isFocused ? colors.surfaceHover : colors.surfaceRaised,
       }}
     >
       {/* Thumbnail */}
@@ -451,32 +498,18 @@ const SheetCard: React.FC<{
           processing={drawing.processing_status}
         />
 
-        {/* Status badge */}
+        {/* Iris-analyzed pill (top-left) */}
+        {irisAnalyzed && (
+          <span style={S.irisPill} title="Iris classified this sheet">
+            <Sparkles size={9} strokeWidth={2.5} />
+            Iris analyzed
+          </span>
+        )}
+
+        {/* Status badge (top-right) */}
         <span style={S.statusBadge(badge.bg, badge.color)}>
           {badge.label}
         </span>
-
-        {/* Tile-ready indicator (deep-zoom available) */}
-        {drawing.tile_status === 'ready' && (
-          <div
-            title="Deep-zoom tiles ready"
-            style={{
-              position: 'absolute',
-              bottom: 8,
-              left: 8,
-              width: 22,
-              height: 22,
-              borderRadius: '6px',
-              backgroundColor: 'rgba(78,200,150,0.9)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backdropFilter: 'blur(8px)',
-            }}
-          >
-            <Zap size={12} color="#fff" />
-          </div>
-        )}
 
         {/* Quick view button — visible on hover */}
         <button
@@ -491,10 +524,10 @@ const SheetCard: React.FC<{
         <div
           style={{
             position: 'absolute',
-            top: '8px',
+            bottom: '8px',
             left: '8px',
             opacity: isSelected || hovered ? 1 : 0,
-            transition: 'opacity 150ms ease-out',
+            transition: 'opacity 120ms ease-out',
           }}
           onClick={(e) => { e.stopPropagation(); onToggleSelect(drawing.id); }}
         >
@@ -502,26 +535,36 @@ const SheetCard: React.FC<{
             type="checkbox"
             checked={isSelected}
             onChange={() => {}}
-            style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: colors.primaryOrange }}
+            aria-label={`Select ${drawing.setNumber}`}
+            style={{ width: '15px', height: '15px', cursor: 'pointer', accentColor: colors.primaryOrange }}
           />
         </div>
       </div>
 
-      {/* Info — clean typographic hierarchy */}
+      {/* Info — sheet # is the headline */}
       <div style={S.info}>
         <p style={S.sheetNumber}>{drawing.setNumber || '—'}</p>
-        <p style={S.title}>{drawing.title}</p>
+        <p style={S.title} title={drawing.title}>{drawing.title}</p>
         <div style={S.meta}>
-          <span style={S.revBadge}>Rev {rev}</span>
-          <span style={{ color: colors.borderSubtle, fontSize: 8 }}>·</span>
-          {issuedDate && issuedDate !== '—' && (
-            <span style={S.date}>
-              {(() => {
-                try {
-                  const d = new Date(issuedDate);
-                  return isNaN(d.getTime()) ? issuedDate : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                } catch { return issuedDate; }
-              })()}
+          <span style={S.revPill} title={issuedDate ? `Issued ${formatRevDate(issuedDate)}` : 'No issue date recorded'}>
+            Rev {rev}{issuedShort ? ` — Issued ${issuedShort}` : ''}
+          </span>
+          {markupCount > 0 && (
+            <span
+              style={S.countBadge(colors.primaryOrange)}
+              title={`${markupCount} markup${markupCount === 1 ? '' : 's'} on this sheet`}
+            >
+              <MessageSquare size={11} strokeWidth={2.25} />
+              {markupCount}
+            </span>
+          )}
+          {rfiCount > 0 && (
+            <span
+              style={S.countBadge(colors.textSecondary)}
+              title={`${rfiCount} linked RFI${rfiCount === 1 ? '' : 's'}`}
+            >
+              <MessageCircle size={11} strokeWidth={2.25} />
+              {rfiCount}
             </span>
           )}
         </div>

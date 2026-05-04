@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import { fetchWeatherForProject } from '../lib/weather';
 import type { WeatherSnapshot } from '../lib/weather';
 import type { DailyLog, DailyLogEntry } from '../types/entities';
@@ -16,13 +17,12 @@ async function resolveProjectRole(
   userId: string | null,
 ): Promise<string | null> {
   if (!userId) return null;
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 /**
@@ -96,16 +96,22 @@ export const dailyLogService = {
   async loadTodayLog(projectId: string): Promise<DailyLogServiceResult<DailyLog>> {
     const today = new Date().toISOString().split('T')[0];
 
-    const { data: existingLog, error: fetchError } = await supabase
-      .from('daily_logs')
+    // Defensively .limit(1) before maybeSingle: at least one production
+    // project has duplicate daily_logs rows for the same (project_id, log_date),
+    // which makes maybeSingle throw "multiple (or no) rows returned" and
+    // strands the user with a red error toast on /daily-log. Order by
+    // created_at desc so we always pick the most recent if a duplicate
+    // exists; a follow-up migration should add a uniqueness constraint.
+    const { data: existingLog, error: fetchError } = await fromTable('daily_logs')
       .select('*')
-      .eq('project_id', projectId)
-      .eq('log_date', today)
+      .eq('project_id' as never, projectId)
+      .eq('log_date' as never, today)
       .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (fetchError) return { data: null, error: fetchError.message };
-    if (existingLog) return { data: existingLog as DailyLog, error: null };
+    if (existingLog) return { data: existingLog as unknown as DailyLog, error: null };
 
     const userId = await getCurrentUserId();
     let weather: WeatherSnapshot | null = null;
@@ -115,8 +121,7 @@ export const dailyLogService = {
       // Weather fetch is non-critical
     }
 
-    const { data: created, error: createError } = await supabase
-      .from('daily_logs')
+    const { data: created, error: createError } = await fromTable('daily_logs')
       .insert({
         project_id: projectId,
         log_date: today,
@@ -127,12 +132,12 @@ export const dailyLogService = {
         temperature_low: weather?.temperature_low ?? null,
         wind_speed: weather ? `${weather.wind_speed} mph` : null,
         precipitation: weather ? `${weather.precipitation_probability}%` : null,
-      })
+      } as never)
       .select()
       .single();
 
     if (createError) return { data: null, error: createError.message };
-    return { data: created as DailyLog, error: null };
+    return { data: created as unknown as DailyLog, error: null };
   },
 
   async addCapture(
@@ -157,27 +162,26 @@ export const dailyLogService = {
       condition: (data.condition as string) ?? null,
     };
 
-    const { data: entry, error } = await supabase
-      .from('daily_log_entries')
-      .insert(entryData)
+    const { data: entry, error } = await fromTable('daily_log_entries')
+      .insert(entryData as never)
       .select()
       .single();
 
     if (error) return { data: null, error: error.message };
-    return { data: entry as DailyLogEntry, error: null };
+    return { data: entry as unknown as DailyLogEntry, error: null };
   },
 
   async compileLog(logId: string): Promise<DailyLogServiceResult<CompiledLog>> {
     const [logRes, entriesRes] = await Promise.all([
-      supabase.from('daily_logs').select('*').eq('id', logId).single(),
-      supabase.from('daily_log_entries').select('*').eq('daily_log_id', logId).order('created_at'),
+      fromTable('daily_logs').select('*').eq('id' as never, logId).single(),
+      fromTable('daily_log_entries').select('*').eq('daily_log_id' as never, logId).order('created_at'),
     ]);
 
     if (logRes.error) return { data: null, error: logRes.error.message };
     if (entriesRes.error) return { data: null, error: entriesRes.error.message };
 
-    const log = logRes.data;
-    const entries = (entriesRes.data ?? []) as DailyLogEntry[];
+    const log = logRes.data as unknown as DailyLog;
+    const entries = (entriesRes.data ?? []) as unknown as DailyLogEntry[];
 
     const crews = entries.filter((e) => e.type === 'crew');
     const safetyEntries = entries.filter((e) => e.type === 'safety');
@@ -293,8 +297,7 @@ export const dailyLogService = {
       return { data: null, error: 'Failed to fetch weather' };
     }
 
-    const { error } = await supabase
-      .from('daily_logs')
+    const { error } = await fromTable('daily_logs')
       .update({
         weather: weather.conditions,
         temperature_high: weather.temperature_high,
@@ -302,33 +305,31 @@ export const dailyLogService = {
         wind_speed: `${weather.wind_speed} mph`,
         precipitation: `${weather.precipitation_probability}%`,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', logId);
+      } as never)
+      .eq('id' as never, logId);
 
     if (error) return { data: null, error: error.message };
     return { data: weather, error: null };
   },
 
   async loadEntries(logId: string): Promise<DailyLogServiceResult<DailyLogEntry[]>> {
-    const { data, error } = await supabase
-      .from('daily_log_entries')
+    const { data, error } = await fromTable('daily_log_entries')
       .select('*')
-      .eq('daily_log_id', logId)
+      .eq('daily_log_id' as never, logId)
       .order('created_at');
 
     if (error) return { data: null, error: error.message };
-    return { data: (data ?? []) as DailyLogEntry[], error: null };
+    return { data: (data ?? []) as unknown as DailyLogEntry[], error: null };
   },
 
   async listLogs(projectId: string): Promise<DailyLogServiceResult<DailyLog[]>> {
-    const { data, error } = await supabase
-      .from('daily_logs')
+    const { data, error } = await fromTable('daily_logs')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('log_date', { ascending: false });
 
     if (error) return { data: null, error: error.message };
-    return { data: (data ?? []) as DailyLog[], error: null };
+    return { data: (data ?? []) as unknown as DailyLog[], error: null };
   },
 
   /**
@@ -349,23 +350,23 @@ export const dailyLogService = {
     logId: string,
     newStatus: DailyLogState,
   ): Promise<{ data: null; error: { message: string } | null }> {
-    const { data: log, error: fetchError } = await supabase
-      .from('daily_logs')
+    const { data: log, error: fetchError } = await fromTable('daily_logs')
       .select('status, project_id')
-      .eq('id', logId)
+      .eq('id' as never, logId)
       .single();
 
     if (fetchError || !log) {
       return { data: null, error: { message: `Daily log not found (id: ${logId})` } };
     }
+    const logRow = log as unknown as { status: string | null; project_id: string }
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(log.project_id, userId);
+    const role = await resolveProjectRole(logRow.project_id, userId);
     if (!role) {
       return { data: null, error: { message: 'User is not a member of this project' } };
     }
 
-    const currentStatus = (log.status ?? 'draft') as DailyLogState;
+    const currentStatus = (logRow.status ?? 'draft') as DailyLogState;
     const valid = getValidDailyLogTransitions(currentStatus, role);
     if (!valid.includes(newStatus)) {
       return {
@@ -388,20 +389,18 @@ export const dailyLogService = {
       updates.approved_by = userId;
     }
 
-    const { error } = await supabase
-      .from('daily_logs')
-      .update(updates)
-      .eq('id', logId);
+    const { error } = await fromTable('daily_logs')
+      .update(updates as never)
+      .eq('id' as never, logId);
 
     if (error) return { data: null, error: { message: error.message } };
     return { data: null, error: null };
   },
 
   async updateSummary(logId: string, summary: string): Promise<DailyLogServiceResult> {
-    const { error } = await supabase
-      .from('daily_logs')
-      .update({ ai_summary: summary, updated_at: new Date().toISOString() })
-      .eq('id', logId);
+    const { error } = await fromTable('daily_logs')
+      .update({ ai_summary: summary, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, logId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };

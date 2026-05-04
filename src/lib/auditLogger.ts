@@ -1,10 +1,11 @@
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 
 interface AuditEntry {
   projectId: string
   entityType: string
   entityId: string
-  action: 'create' | 'update' | 'delete' | 'status_change' | 'approve' | 'reject' | 'submit' | 'close'
+  action: 'create' | 'update' | 'delete' | 'status_change' | 'approve' | 'reject' | 'submit' | 'submit_with_override' | 'close'
   beforeState?: Record<string, unknown>
   afterState?: Record<string, unknown>
   metadata?: Record<string, unknown>
@@ -28,7 +29,7 @@ function diffFields(
 export async function logAuditEntry(entry: AuditEntry): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from('audit_log').insert({
+  const { error } = await fromTable('audit_log').insert({
     project_id: entry.projectId,
     user_id: user?.id ?? null,
     user_email: user?.email ?? null,
@@ -45,7 +46,7 @@ export async function logAuditEntry(entry: AuditEntry): Promise<void> {
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
     },
-  })
+  } as never)
 
   if (error) {
     // Never block the user's action due to audit logging failures

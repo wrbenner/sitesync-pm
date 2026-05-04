@@ -19,6 +19,7 @@ function makeChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {
     select: vi.fn(),
     eq: vi.fn(),
+    in: vi.fn(),
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
@@ -26,9 +27,11 @@ function makeChain() {
     single: mockSingle,
     neq: vi.fn(),
   }
-  for (const key of ['select', 'eq', 'insert', 'update', 'delete', 'order', 'neq']) {
+  for (const key of ['select', 'eq', 'in', 'insert', 'update', 'delete', 'order', 'neq']) {
     chain[key].mockReturnValue(chain)
   }
+  // .in() is the terminator for the profiles batch query — default to empty.
+  chain.in.mockResolvedValue({ data: [], error: null })
   return chain
 }
 

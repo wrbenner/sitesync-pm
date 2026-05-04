@@ -5,7 +5,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Mail, UserPlus, Users, AlertCircle, Check, X } from 'lucide-react';
 import { Modal, Btn, InputField } from '../Primitives';
-import { supabase, fromTable } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { colors, spacing, typography } from '../../styles/theme';
 
 export type InviteRole = 'admin' | 'pm' | 'editor' | 'viewer';
@@ -66,9 +67,9 @@ export const InviteModal: React.FC<InviteModalProps> = ({
       try {
         const { data } = await fromTable('projects')
           .select('id, name')
-          .eq('organization_id', organizationId)
+          .eq('organization_id' as never, organizationId)
           .order('name');
-        if (!cancelled) setProjects((data as Project[]) ?? []);
+        if (!cancelled) setProjects((data as unknown as Project[]) ?? []);
       } catch {
         if (!cancelled) setProjects([]);
       }

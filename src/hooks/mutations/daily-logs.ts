@@ -1,12 +1,11 @@
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from './createAuditedMutation'
 import { dailyLogDbSchema,
 } from '../../components/forms/schemas'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Daily Logs ────────────────────────────────────────────
 
@@ -14,14 +13,14 @@ export function useCreateDailyLog() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'daily_log.create',
     schema: dailyLogDbSchema,
-    action: 'create_daily_log',
+    action: 'create',
     entityType: 'daily_log',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('daily_logs').insert(params.data).select().single()
+      const { data, error } = await from('daily_logs').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'daily_log_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -34,12 +33,12 @@ export function useUpdateDailyLog() {
     permission: 'daily_log.edit',
     schema: dailyLogDbSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_daily_log',
+    action: 'update',
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
-      const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('daily_logs').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -53,11 +52,11 @@ export function useUpdateDailyLog() {
 export function useDeleteDailyLog() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'daily_log.edit',
-    action: 'delete_daily_log',
+    action: 'delete',
     entityType: 'daily_log',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('daily_logs').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('daily_logs').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

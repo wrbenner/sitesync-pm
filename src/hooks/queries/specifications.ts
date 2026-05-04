@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+import { fromTable } from '../../lib/db/queries'
+
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Specifications ─────────────────────────────────────
 
@@ -32,7 +32,7 @@ export function useSpecifications(projectId: string | undefined) {
     queryFn: async (): Promise<Specification[]> => {
       const { data, error } = await from('specifications')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('section_number')
       if (error) throw error
       return data as unknown as Specification[]
@@ -60,7 +60,7 @@ export function useCreateSpecification() {
   return useMutation({
     mutationFn: async (input: CreateSpecificationInput) => {
       const { data, error } = await from('specifications')
-        .insert(input)
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error
@@ -83,8 +83,8 @@ export function useUpdateSpecification() {
   return useMutation({
     mutationFn: async ({ id, updates }: UpdateSpecificationInput) => {
       const { data, error } = await from('specifications')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -100,7 +100,7 @@ export function useDeleteSpecification() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await from('specifications').delete().eq('id', id)
+      const { error } = await from('specifications').delete().eq('id' as never, id)
       if (error) throw error
       return { projectId }
     },

@@ -14,7 +14,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { colors, typography, borderRadius } from '../../styles/theme';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -68,7 +67,7 @@ const WITNESS_GAP = 6;
 const TICK_SIZE = 5;
 /** Frosted label pill padding */
 const PILL_PAD_X = 10;
-const PILL_PAD_Y = 5;
+
 
 // Architectural orange — warm, confident, reads on any background
 const DIM_COLOR = '#F47820';
@@ -80,7 +79,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${Date.now()}_${crypto.randomUUID().slice(0, 5)}`;
 
 function normalizedDistance(
   a: NormalizedPoint,

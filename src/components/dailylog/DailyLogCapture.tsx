@@ -345,7 +345,7 @@ export function DailyLogCapture({ logId, visible = true }: DailyLogCaptureProps)
       setMode(null);
       setExpanded(false);
       // Notify AutoDailyLog to refresh
-      const refreshFn = (window as Record<string, unknown>).__refreshDailyLogEntries;
+      const refreshFn = (window as unknown as Record<string, unknown>).__refreshDailyLogEntries;
       if (typeof refreshFn === 'function') (refreshFn as () => void)();
     }
   }, [logId]);

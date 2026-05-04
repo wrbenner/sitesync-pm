@@ -77,7 +77,7 @@ export const Specifications: React.FC = () => {
 
   const [form, setForm] = useState<FormState>({ ...emptyForm })
 
-  const list = (specs ?? []) as Specification[]
+  const list = (specs ?? []) as unknown as Specification[]
 
   const filtered = useMemo(() => {
     let result = list

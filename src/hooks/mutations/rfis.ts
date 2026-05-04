@@ -1,17 +1,18 @@
+import { fromTable } from '../../lib/db/queries'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import posthog from '../../lib/analytics'
 import { useAuditedMutation, createOnError } from './createAuditedMutation'
 import { invalidateEntity } from '../../api/invalidation'
 import {
+
   rfiSchema,
 } from '../../components/forms/schemas'
 import { validateRfiStatusTransition } from './state-machine-validation-helpers'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── RFIs (Permission-checked + Audited) ──────────────────
 
@@ -19,14 +20,14 @@ export function useCreateRFI() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'rfis.create',
     schema: rfiSchema,
-    action: 'create_rfi',
+    action: 'create',
     entityType: 'rfi',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('rfis').insert(params.data).select().single()
+      const { data, error } = await from('rfis').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as Record<string, unknown>, projectId: params.projectId }
     },
     optimistic: {
       queryKey: (p) => ['rfis', p.projectId],
@@ -45,8 +46,8 @@ export function useCreateRFI() {
     offlineQueue: {
       table: 'rfis',
       operation: 'insert',
-      getData: (p) => ({ ...(p.data as Record<string, unknown>), project_id: p.projectId }),
-      getStubResult: (p) => ({ data: { ...(p.data as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+      getData: (p) => ({ ...(p.data as unknown as Record<string, unknown>), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...(p.data as unknown as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
     },
   })
 }
@@ -56,16 +57,16 @@ export function useUpdateRFI() {
     permission: 'rfis.edit',
     schema: rfiSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_rfi',
+    action: 'update',
     entityType: 'rfi',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       // State machine enforcement: validate status transition before persisting
       if (typeof updates.status === 'string') {
         await validateRfiStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('rfis').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('rfis').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -76,7 +77,7 @@ export function useUpdateRFI() {
         return {
           ...prev,
           data: (prev?.data ?? []).map((rfi: unknown) => {
-            const r = rfi as Record<string, unknown>
+            const r = rfi as unknown as Record<string, unknown>
             return r.id === p.id ? { ...r, ...p.updates } : r
           }),
         }
@@ -97,11 +98,11 @@ export function useUpdateRFI() {
 export function useDeleteRFI() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'rfis.edit',
-    action: 'delete_rfi',
+    action: 'delete',
     entityType: 'rfi',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('rfis').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('rfis').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -121,7 +122,7 @@ export function useCreateRFIResponse() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; rfiId: string; projectId: string }) => {
-      const { data, error } = await from('rfi_responses').insert(params.data).select().single()
+      const { data, error } = await from('rfi_responses').insert(params.data as never).select().single()
       if (error) throw error
       return { data, rfiId: params.rfiId, projectId: params.projectId }
     },

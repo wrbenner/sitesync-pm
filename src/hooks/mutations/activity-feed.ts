@@ -1,14 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
 
+import { fromTable } from '../../lib/db/queries'
 
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Activity Feed ─────────────────────────────────────────
 
@@ -16,9 +15,9 @@ export function useCreateActivityFeedItem() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
-      const { data, error } = await from('activity_feed').insert(params.data).select().single()
+      const { data, error } = await from('activity_feed').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     onSuccess: (result: { projectId: string }) => {
       queryClient.invalidateQueries({ queryKey: ['activity_feed', result.projectId] })

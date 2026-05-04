@@ -1,5 +1,7 @@
 // @ts-strict-check
-import { supabase, transformSupabaseError, supabaseMutation } from '../client'
+import { transformSupabaseError } from '../errors'
+import { supabaseMutation } from '../client'
+import { fromTable, selectScoped } from '../../lib/db/queries'
 import type { ChangeOrderType, ChangeOrderState, ReasonCode } from '../../machines/changeOrderMachine'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { BudgetItemRow, BudgetLineItemRow, ChangeOrderRow, CreateChangeOrderPayload } from '../../types/api'
@@ -194,9 +196,9 @@ export const createChangeOrder = async (
   payload: CreateChangeOrderPayload
 ): Promise<MappedChangeOrder> => {
   validateProjectId(projectId)
-  const data = await supabaseMutation<ChangeOrderRow>(client =>
-    client.from('change_orders')
-      .insert({ ...payload, project_id: projectId, status: payload.status || 'draft', type: payload.type || 'pco' })
+  const data = await supabaseMutation<ChangeOrderRow>(() =>
+    fromTable('change_orders')
+      .insert({ ...payload, project_id: projectId, status: payload.status || 'draft', type: payload.type || 'pco' } as never)
       .select()
       .single() as unknown as MutationResult<ChangeOrderRow>
   )
@@ -210,11 +212,11 @@ export const updateChangeOrderStatus = async (
   updates?: Partial<CreateChangeOrderPayload>
 ): Promise<MappedChangeOrder> => {
   validateProjectId(projectId)
-  const data = await supabaseMutation<ChangeOrderRow>(client =>
-    client.from('change_orders')
-      .update({ ...updates, status, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('project_id', projectId)
+  const data = await supabaseMutation<ChangeOrderRow>(() =>
+    fromTable('change_orders')
+      .update({ ...updates, status, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, id)
+      .eq('project_id' as never, projectId)
       .select()
       .single() as unknown as MutationResult<ChangeOrderRow>
   )
@@ -239,8 +241,8 @@ export const fetchBudgetDivisions = async (projectId: string) => {
   // budget_line_items is an optional table — some deployments don't have it.
   // Fetch it separately so a missing table doesn't crash the whole page.
   const [budgetRes, coRes] = await Promise.all([
-    supabase.from('budget_items').select('*').eq('project_id', projectId).order('division'),
-    supabase.from('change_orders').select('*').eq('project_id', projectId).order('number', { ascending: false }),
+    selectScoped('budget_items', projectId, '*').order('division'),
+    selectScoped('change_orders', projectId, '*').order('number', { ascending: false }),
   ])
   if (budgetRes.error) throw transformSupabaseError(budgetRes.error)
   if (coRes.error) throw transformSupabaseError(coRes.error)
@@ -248,13 +250,10 @@ export const fetchBudgetDivisions = async (projectId: string) => {
   // Non-fatal: budget_line_items table may not exist in all schemas
   let lineItemsData: BudgetLineItemRow[] = []
   try {
-    const lineItemsRes = await supabase
-      .from('budget_line_items')
-      .select('*')
-      .eq('project_id', projectId)
+    const lineItemsRes = await selectScoped('budget_line_items', projectId, '*')
       .order('csi_code')
     if (!lineItemsRes.error) {
-      lineItemsData = lineItemsRes.data || []
+      lineItemsData = (lineItemsRes.data || []) as unknown as BudgetLineItemRow[]
     } else if (import.meta.env.DEV) {
       console.warn('[Budget] budget_line_items query failed (table may not exist):', lineItemsRes.error.message)
     }
@@ -262,7 +261,7 @@ export const fetchBudgetDivisions = async (projectId: string) => {
     // Table doesn't exist or other non-critical failure — continue without line items
   }
 
-  const rawBudgetItems: BudgetItemRow[] = budgetRes.data || []
+  const rawBudgetItems: BudgetItemRow[] = (budgetRes.data || []) as unknown as BudgetItemRow[]
 
   const divisions: MappedDivision[] = rawBudgetItems.map((b: BudgetItemRow) => ({
     id: b.id,
@@ -275,7 +274,7 @@ export const fetchBudgetDivisions = async (projectId: string) => {
     cost_code: b.cost_code || null,
   }))
 
-  const changeOrders: MappedChangeOrder[] = (coRes.data || []).map(mapChangeOrderRow)
+  const changeOrders: MappedChangeOrder[] = ((coRes.data || []) as unknown as ChangeOrderRow[]).map(mapChangeOrderRow)
 
   const lineItems: BudgetLineItem[] = lineItemsData.map(mapBudgetLineItemRow)
 
@@ -325,13 +324,10 @@ export interface BudgetSummaryMetrics {
 export async function getBudgetSummaryMetrics(projectId: string): Promise<BudgetSummaryMetrics> {
   await assertProjectAccess(projectId)
 
-  const { data, error } = await supabase
-    .from('budget_items')
-    .select('*')
-    .eq('project_id', projectId)
+  const { data, error } = await selectScoped('budget_items', projectId, '*')
   if (error) throw transformSupabaseError(error)
 
-  const rows: BudgetItemRow[] = data || []
+  const rows: BudgetItemRow[] = (data || []) as unknown as BudgetItemRow[]
 
   // Work in integer cents to avoid floating point drift; convert to dollars on return.
   const toCents = (v: number | null | undefined): number => Math.round((v ?? 0) * 100)
@@ -454,32 +450,38 @@ export async function getPayApplication(
 ): Promise<PayApplicationData> {
   await assertProjectAccess(projectId)
 
-  const { data: payApp, error: paError } = await supabase
-    .from('pay_applications')
-    .select('*')
-    .eq('project_id', projectId)
-    .eq('application_number', appNumber)
+  const { data: payApp, error: paError } = await selectScoped('pay_applications', projectId, '*')
+    .eq('application_number' as never, appNumber)
     .single()
   if (paError) throw transformSupabaseError(paError)
+  const payAppRow = payApp as unknown as { id: string; contract_id: string; application_number: number | null; period_to: string; original_contract_sum: number | null; net_change_orders: number | null; less_previous_certificates: number | null }
 
   const [contractRes, projectRes, sovRes] = await Promise.all([
-    supabase.from('contracts').select('*').eq('id', payApp.contract_id).single(),
-    supabase.from('projects').select('name, general_contractor').eq('id', projectId).single(),
-    supabase
-      .from('schedule_of_values')
-      .select('*')
-      .eq('contract_id', payApp.contract_id)
+    selectScoped('contracts', projectId, '*').eq('id' as never, payAppRow.contract_id).single(),
+    fromTable('projects').select('name, general_contractor').eq('id' as never, projectId).single(),
+    fromTable('schedule_of_values').select('*')
+      .eq('contract_id' as never, payAppRow.contract_id)
       .order('sort_order', { ascending: true }),
   ])
   if (contractRes.error) throw transformSupabaseError(contractRes.error)
   if (projectRes.error) throw transformSupabaseError(projectRes.error)
   if (sovRes.error) throw transformSupabaseError(sovRes.error)
 
-  const contract = contractRes.data
-  const project = projectRes.data
+  const contract = contractRes.data as unknown as { retainage_percent: number | null; original_value: number; counterparty: string }
+  const project = projectRes.data as unknown as { name: string; general_contractor: string | null }
   const retainageRate = (contract.retainage_percent ?? 10) / 100
 
-  const lineItems: SOVLineItem[] = (sovRes.data || []).map((row, i) => {
+  type SOVRow = {
+    id: string
+    item_number: string | null
+    description: string
+    scheduled_value: number | null
+    previous_completed: number | null
+    this_period_completed: number | null
+    materials_stored: number | null
+    cost_code: string | null
+  }
+  const lineItems: SOVLineItem[] = ((sovRes.data || []) as unknown as SOVRow[]).map((row, i) => {
     const scheduled = row.scheduled_value || 0
     const prevAmt = row.previous_completed || 0
     const thisAmt = row.this_period_completed || 0
@@ -499,16 +501,16 @@ export async function getPayApplication(
   })
 
   return {
-    payAppId: payApp.id,
-    contractId: payApp.contract_id,
+    payAppId: payAppRow.id,
+    contractId: payAppRow.contract_id,
     projectId,
     projectName: project.name,
     contractorName: project.general_contractor || contract.counterparty,
-    applicationNumber: payApp.application_number ?? appNumber,
-    periodTo: payApp.period_to,
-    originalContractSum: payApp.original_contract_sum ?? contract.original_value,
-    netChangeOrders: payApp.net_change_orders ?? 0,
-    lessPreviousCertificates: payApp.less_previous_certificates ?? 0,
+    applicationNumber: payAppRow.application_number ?? appNumber,
+    periodTo: payAppRow.period_to,
+    originalContractSum: payAppRow.original_contract_sum ?? contract.original_value,
+    netChangeOrders: payAppRow.net_change_orders ?? 0,
+    lessPreviousCertificates: payAppRow.less_previous_certificates ?? 0,
     retainageRate,
     lineItems,
   }
@@ -528,13 +530,13 @@ export async function saveSOVProgress(
 ): Promise<void> {
   await Promise.all(
     updates.map((u) =>
-      supabase.from('schedule_of_values').update({
+      fromTable('schedule_of_values').update({
         this_period_completed: u.this_period_completed,
         materials_stored: u.materials_stored,
         total_completed: u.total_completed,
         percent_complete: u.percent_complete,
         updated_at: new Date().toISOString(),
-      }).eq('id', u.id),
+      } as never).eq('id' as never, u.id),
     ),
   )
 
@@ -551,15 +553,14 @@ export async function saveSOVProgress(
     patch.submitted_date = new Date().toISOString()
   }
 
-  const { error } = await supabase.from('pay_applications').update(patch).eq('id', payAppId)
+  const { error } = await fromTable('pay_applications').update(patch as never).eq('id' as never, payAppId)
   if (error) throw transformSupabaseError(error)
 }
 
 export async function approvePayApplication(payAppId: string): Promise<void> {
-  const { error } = await supabase
-    .from('pay_applications')
-    .update({ status: 'approved', updated_at: new Date().toISOString() })
-    .eq('id', payAppId)
+  const { error } = await fromTable('pay_applications')
+    .update({ status: 'approved', updated_at: new Date().toISOString() } as never)
+    .eq('id' as never, payAppId)
   if (error) throw transformSupabaseError(error)
 }
 
@@ -571,34 +572,23 @@ export async function getCostCodesByDivision(
 ): Promise<DivisionDetail> {
   await assertProjectAccess(projectId)
 
-  const { data: b, error: divErr } = await supabase
-    .from('budget_items')
-    .select('*')
-    .eq('id', divisionId)
+  const { data: b, error: divErr } = await selectScoped('budget_items', projectId, '*')
+    .eq('id' as never, divisionId)
     .single()
   if (divErr) throw transformSupabaseError(divErr)
 
-  const budgetItem = b as BudgetItemRow
+  const budgetItem = b as unknown as BudgetItemRow
 
   const [costCodesRes, invoicesRes, coRes] = await Promise.all([
-    supabase
-      .from('job_cost_entries')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('budget_item_id', divisionId)
+    selectScoped('job_cost_entries', projectId, '*')
+      .eq('budget_item_id' as never, divisionId)
       .order('date', { ascending: false }),
-    supabase
-      .from('invoices_payable')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('budget_item_id', divisionId)
+    selectScoped('invoices_payable', projectId, '*')
+      .eq('budget_item_id' as never, divisionId)
       .order('invoice_date', { ascending: false }),
     budgetItem.cost_code
-      ? supabase
-          .from('change_orders')
-          .select('*')
-          .eq('project_id', projectId)
-          .eq('cost_code', budgetItem.cost_code)
+      ? selectScoped('change_orders', projectId, '*')
+          .eq('cost_code' as never, budgetItem.cost_code)
           .order('number', { ascending: false })
       : Promise.resolve({ data: [] as ChangeOrderRow[], error: null }),
   ])
@@ -617,7 +607,8 @@ export async function getCostCodesByDivision(
     cost_code: budgetItem.cost_code || null,
   }
 
-  const costCodes: DivisionCostCode[] = (costCodesRes.data || []).map((e) => ({
+  type CostCodeRow = { id: string; cost_code: string; description: string | null; amount: number | null; cost_type: string | null; date: string | null; vendor: string | null }
+  const costCodes: DivisionCostCode[] = ((costCodesRes.data || []) as unknown as CostCodeRow[]).map((e) => ({
     id: e.id,
     cost_code: e.cost_code,
     description: e.description || null,
@@ -627,7 +618,8 @@ export async function getCostCodesByDivision(
     vendor: e.vendor || null,
   }))
 
-  const invoices: DivisionInvoice[] = (invoicesRes.data || []).map((inv) => ({
+  type InvoiceRow = { id: string; invoice_number: string | null; vendor: string; invoice_date: string | null; total: number | null; status: string | null; due_date: string | null }
+  const invoices: DivisionInvoice[] = ((invoicesRes.data || []) as unknown as InvoiceRow[]).map((inv) => ({
     id: inv.id,
     invoice_number: inv.invoice_number || null,
     vendor: inv.vendor,
@@ -637,7 +629,7 @@ export async function getCostCodesByDivision(
     due_date: inv.due_date || null,
   }))
 
-  const changeOrders: MappedChangeOrder[] = (coRes.data || []).map(mapChangeOrderRow)
+  const changeOrders: MappedChangeOrder[] = ((coRes.data || []) as unknown as ChangeOrderRow[]).map(mapChangeOrderRow)
 
   return { division, costCodes, invoices, changeOrders }
 }
@@ -646,14 +638,11 @@ export async function getCostCodesByDivision(
 
 export async function getBudgetSummary(projectId: string): Promise<BudgetSummary> {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase
-    .from('budget_line_items')
-    .select('*')
-    .eq('project_id', projectId)
+  const { data, error } = await selectScoped('budget_line_items', projectId, '*')
     .order('csi_code')
   if (error) throw transformSupabaseError(error)
 
-  const rows = data || []
+  const rows = (data || []) as unknown as BudgetLineItemRow[]
 
   let total_original_budget = 0
   let total_approved_changes = 0
@@ -702,27 +691,24 @@ export async function updateBudgetLineItem(
   const { updated_at: expectedUpdatedAt, ...fields } = updates
 
   if (expectedUpdatedAt) {
-    const { data: current, error: fetchError } = await supabase
-      .from('budget_line_items')
-      .select('updated_at')
-      .eq('id', itemId)
-      .eq('project_id', projectId)
+    const { data: current, error: fetchError } = await selectScoped('budget_line_items', projectId, 'updated_at')
+      .eq('id' as never, itemId)
       .single()
     if (fetchError) throw transformSupabaseError(fetchError)
-    if (current?.updated_at !== expectedUpdatedAt) {
+    const currentRow = current as unknown as { updated_at: string | null } | null
+    if (currentRow?.updated_at !== expectedUpdatedAt) {
       throw new Error('Conflict: this item was modified by another user. Please refresh and try again.')
     }
   }
 
-  const { data, error } = await supabase
-    .from('budget_line_items')
-    .update({ ...fields, updated_at: new Date().toISOString() })
-    .eq('id', itemId)
-    .eq('project_id', projectId)
+  const { data, error } = await fromTable('budget_line_items')
+    .update({ ...fields, updated_at: new Date().toISOString() } as never)
+    .eq('id' as never, itemId)
+    .eq('project_id' as never, projectId)
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
-  return mapBudgetLineItemRow(data as BudgetLineItemRow)
+  return mapBudgetLineItemRow(data as unknown as BudgetLineItemRow)
 }
 
 export async function createBudgetLineItem(
@@ -731,9 +717,9 @@ export async function createBudgetLineItem(
 ): Promise<BudgetLineItem> {
   await assertProjectAccess(projectId)
   const now = new Date().toISOString()
-  const data = await supabaseMutation<BudgetLineItemRow>(client =>
-    client.from('budget_line_items')
-      .insert({ ...input, project_id: projectId, created_at: now, updated_at: now })
+  const data = await supabaseMutation<BudgetLineItemRow>(() =>
+    fromTable('budget_line_items')
+      .insert({ ...input, project_id: projectId, created_at: now, updated_at: now } as never)
       .select()
       .single() as unknown as MutationResult<BudgetLineItemRow>
   )
@@ -768,28 +754,28 @@ export async function getCostData(projectId: string): Promise<{
 }> {
   await assertProjectAccess(projectId)
   const [budgetResult, coResult] = await Promise.all([
-    supabase.from('budget_items').select('*').eq('project_id', projectId).order('csi_division'),
-    supabase.from('change_orders').select('id, amount, status').eq('project_id', projectId),
+    selectScoped('budget_items', projectId, '*').order('csi_division'),
+    selectScoped('change_orders', projectId, 'id, amount, status'),
   ])
   if (budgetResult.error) throw transformSupabaseError(budgetResult.error)
   const items = budgetResult.data ?? []
   const changeOrders = coResult.data ?? []
   const approvedChanges = changeOrders
-    .filter((co: unknown) => (co as Record<string, unknown>).status === 'approved')
-    .reduce((sum: number, co: unknown) => sum + ((co as Record<string, unknown>).amount as number || 0), 0)
-  const originalBudget = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).original_amount as number || 0), 0)
+    .filter((co: unknown) => (co as unknown as Record<string, unknown>).status === 'approved')
+    .reduce((sum: number, co: unknown) => sum + ((co as unknown as Record<string, unknown>).amount as number || 0), 0)
+  const originalBudget = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).original_amount as number || 0), 0)
   const revisedBudget = originalBudget + approvedChanges
-  const committedCost = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).committed_amount as number || 0), 0)
-  const actualCost = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).actual_amount as number || 0), 0)
-  const projectedFinalCost = items.reduce((sum: number, i: unknown) => sum + ((i as Record<string, unknown>).forecast_amount as number || (i as Record<string, unknown>).original_amount as number || 0), 0)
+  const committedCost = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).committed_amount as number || 0), 0)
+  const actualCost = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).actual_amount as number || 0), 0)
+  const projectedFinalCost = items.reduce((sum: number, i: unknown) => sum + ((i as unknown as Record<string, unknown>).forecast_amount as number || (i as unknown as Record<string, unknown>).original_amount as number || 0), 0)
   const varianceDollars = revisedBudget - projectedFinalCost
   const variancePercent = revisedBudget > 0 ? (varianceDollars / revisedBudget) * 100 : 0
-  const contingencyItem = items.find((i: unknown) => ((i as Record<string, unknown>).csi_division as string || '').startsWith('01'))
-  const contingencyOriginal = (contingencyItem as Record<string, unknown>)?.original_amount as number || 0
-  const contingencyUsed = (contingencyItem as Record<string, unknown>)?.actual_amount as number || 0
+  const contingencyItem = items.find((i: unknown) => ((i as unknown as Record<string, unknown>).csi_division as string || '').startsWith('01'))
+  const contingencyOriginal = (contingencyItem as unknown as Record<string, unknown>)?.original_amount as number || 0
+  const contingencyUsed = (contingencyItem as unknown as Record<string, unknown>)?.actual_amount as number || 0
   const contingencyRemaining = contingencyOriginal - contingencyUsed
   const lineItems = items.map((i: unknown) => {
-    const row = i as Record<string, unknown>
+    const row = i as unknown as Record<string, unknown>
     const origAmt = (row.original_amount as number) || 0
     const forecastAmt = (row.forecast_amount as number) || origAmt
     return {

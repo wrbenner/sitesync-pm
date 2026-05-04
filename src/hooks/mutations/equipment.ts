@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 import Sentry from '../../lib/sentry'
 import posthog from '../../lib/analytics'
@@ -12,9 +13,8 @@ export function useCreateEquipment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: EquipmentInsert) => {
-      const { data, error } = await supabase
-        .from('equipment')
-        .insert(payload as Record<string, unknown>)
+      const { data, error } = await fromTable('equipment')
+        .insert(payload as unknown as Record<string, unknown> as never)
         .select()
         .single()
       if (error) throw error
@@ -36,10 +36,9 @@ export function useUpdateEquipment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: EquipmentUpdate }) => {
-      const { data, error } = await supabase
-        .from('equipment')
-        .update(params.updates as Record<string, unknown>)
-        .eq('id', params.id)
+      const { data, error } = await fromTable('equipment')
+        .update(params.updates as unknown as Record<string, unknown> as never)
+        .eq('id' as never, params.id)
         .select()
         .single()
       if (error) throw error
@@ -61,7 +60,7 @@ export function useDeleteEquipment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string }) => {
-      const { error } = await supabase.from('equipment').delete().eq('id', params.id)
+      const { error } = await fromTable('equipment').delete().eq('id' as never, params.id)
       if (error) throw error
       return params
     },

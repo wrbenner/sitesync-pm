@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 type ContractPayload = Record<string, unknown>
 
@@ -7,9 +8,8 @@ export function useCreateContract() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: ContractPayload) => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .insert(payload)
+      const { data, error } = await fromTable('contracts')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -25,10 +25,9 @@ export function useUpdateContract() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: ContractPayload }) => {
-      const { data, error } = await supabase
-        .from('contracts')
-        .update(params.updates)
-        .eq('id', params.id)
+      const { data, error } = await fromTable('contracts')
+        .update(params.updates as never)
+        .eq('id' as never, params.id)
         .select()
         .single()
       if (error) throw error
@@ -45,7 +44,7 @@ export function useDeleteContract() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string }) => {
-      const { error } = await supabase.from('contracts').delete().eq('id', params.id)
+      const { error } = await fromTable('contracts').delete().eq('id' as never, params.id)
       if (error) throw error
       return params
     },

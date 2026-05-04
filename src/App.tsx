@@ -3,7 +3,7 @@ import { HardHat } from 'lucide-react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SidebarContext, ToastProvider } from './components/Primitives';
-import { CommandPalette } from './components/shared/CommandPalette';
+import { CommandPalette } from './components/CommandPalette';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Sentry from './lib/sentry';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -31,6 +31,7 @@ import { useProjectId } from './hooks/useProjectId';
 import { useProjectInit } from './hooks/useProjectInit';
 import { ProjectGate } from './components/ProjectGate';
 import { useAuth } from './hooks/useAuth';
+import { useFieldSession } from './hooks/useFieldSession';
 import { SkipToContent } from './components/ui/SkipToContent';
 import { RouteAnnouncer } from './components/ui/RouteAnnouncer';
 import { LiveRegion } from './components/ui/LiveRegion';
@@ -39,10 +40,16 @@ import { useProjectCache } from './hooks/useProjectCache';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { OrganizationProvider } from './hooks/useOrganization';
 
-function lazyWithRetry(importFn: () => Promise<unknown>, retries = 3, delay = 1000) {
-  return lazy(() => new Promise<{ default: unknown }>((resolve, reject) => {
+function lazyWithRetry(
+  importFn: () => Promise<unknown>,
+  retries = 3,
+  delay = 1000,
+) {
+  return lazy(() => new Promise<{ default: React.ComponentType<unknown> }>((resolve, reject) => {
     function attempt(retriesLeft: number) {
-      importFn().then(resolve).catch((err: Error) => {
+      importFn()
+        .then((m) => resolve(m as { default: React.ComponentType<unknown> }))
+        .catch((err: Error) => {
         if (retriesLeft > 0) {
           setTimeout(() => attempt(retriesLeft - 1), delay);
         } else {
@@ -60,18 +67,37 @@ const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: 
 // Public, unauthenticated trust center page used by procurement reviewers.
 const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { FLAGS } from './lib/featureFlags';
+const MagicLinkSubRoute = lazy(() => import('./components/MagicLinkSubRoute'));
+const MagicLinkOwnerRoute = lazy(() => import('./components/MagicLinkOwnerRoute'));
 
 // Lazy loaded overlay panels (only render when opened)
 const AIContextPanel = lazy(() => import('./components/ai/AIContextPanel').then((m) => ({ default: m.AIContextPanel })));
 const FloatingAIButton = lazy(() => import('./components/ai/FloatingAIButton').then((m) => ({ default: m.FloatingAIButton })));
 const CopilotPanel = lazy(() => import('./components/ai/CopilotPanel').then((m) => ({ default: m.CopilotPanel })));
-const NotificationCenter = lazy(() => import('./components/notifications/NotificationCenter').then((m) => ({ default: m.NotificationCenter })));
+// NotificationList from this same module is statically imported by
+// MobileLayout, which pulls the whole file into the eager bundle anyway.
+// Keeping NotificationCenter lazy here would just trigger a duplicate
+// chunking warning without saving bytes — import directly instead.
+import { NotificationCenter } from './components/notifications/NotificationCenter';
 const ShortcutOverlay = lazy(() => import('./components/ui/ShortcutOverlay').then((m) => ({ default: m.ShortcutOverlay })));
 const ExportCenter = lazy(() => import('./components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })));
 
 // ── Lazy loaded pages ─────────────────────────────────────
+// The Nine
+const DayPage = lazyWithRetry(() => import('./pages/day/index'));
+const FieldPage = lazyWithRetry(() => import('./pages/field/index'));
+// /conversation and /site now redirect to /day (Wave 1 homepage redesign);
+// their page components are no longer routed.
+const PlanPage = lazyWithRetry(() => import('./pages/plan/index'));
+const LedgerPage = lazyWithRetry(() => import('./pages/ledger/index'));
+const CrewPage = lazyWithRetry(() => import('./pages/crew/index'));
+const SetPage = lazyWithRetry(() => import('./pages/set/index'));
+const FilePage = lazyWithRetry(() => import('./pages/file/index'));
 // Core 10
-const Dashboard = lazyWithRetry(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })));
+// /dashboard redirects to /day (Wave 1 homepage redesign), so the legacy
+// Dashboard component no longer needs to be lazy-imported. The page file is
+// retained (smoke tests still reference it) but is unrouted.
 const DailyLog = lazyWithRetry(() => import('./pages/daily-log').then((m) => ({ default: m.DailyLog })));
 const Schedule = lazyWithRetry(() => import('./pages/schedule').then((m) => ({ default: m.Schedule })));
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
@@ -84,7 +110,10 @@ const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => (
 const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetailPage'));
 const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
 const ChangeOrders = lazy(() => import('./pages/ChangeOrders').then((m) => ({ default: m.ChangeOrders })));
+const Tasks = lazyWithRetry(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
+const Commitments = lazyWithRetry(() => import('./pages/Commitments').then((m) => ({ default: m.Commitments })));
 const Safety = lazy(() => import('./pages/safety/index').then((m) => ({ default: m.Safety })));
+const FieldCapture = lazy(() => import('./pages/field-capture/index').then((m) => ({ default: m.FieldCapturePage })));
 // People & Labor
 const Workforce = lazy(() => import('./pages/Workforce'));
 const Crews = lazy(() => import('./pages/Crews').then((m) => ({ default: m.Crews })));
@@ -100,12 +129,13 @@ const EquipmentPage = lazy(() => import('./pages/Equipment'));
 const Procurement = lazy(() => import('./pages/Procurement'));
 const Permits = lazy(() => import('./pages/Permits'));
 // Documents & Closeout
-const Files = lazy(() => import('./pages/files').then((m) => ({ default: m.Files })));
+const Files = lazy(() => import('./pages/Files').then((m) => ({ default: m.Files })));
 const Reports = lazy(() => import('./pages/Reports'));
 const Closeout = lazy(() => import('./pages/Closeout').then((m) => ({ default: m.Closeout })));
 const BIMViewerPage = lazy(() => import('./pages/bim/BIMViewerPage'));
 // Intelligence
 const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+const IrisInbox = lazy(() => import('./pages/iris/IrisInboxPage'));
 // Utility & Admin
 const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ default: m.AuditTrail })));
 const Integrations = lazy(() => import('./pages/Integrations'));
@@ -118,6 +148,13 @@ const UserProfile = lazy(() => import('./pages/UserProfile'));
 const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
 const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
+const BulkInvitePage = lazy(() => import('./pages/admin/bulk-invite'));
+const CostCodeLibraryPage = lazy(() => import('./pages/admin/cost-code-library'));
+const ProjectTemplatesPage = lazy(() => import('./pages/admin/project-templates'));
+const ProcoreImportPage = lazy(() => import('./pages/admin/procore-import'));
+const ComplianceCockpit = lazy(() => import('./pages/admin/compliance'));
+const WalkthroughPage = lazy(() => import('./pages/walkthrough'));
+const OwnerPayAppPreviewPage = lazy(() => import('./pages/share/OwnerPayAppPreview'));
 
 const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' };
 
@@ -129,7 +166,10 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
     const prefetch = () => {
-      import('./pages/dashboard');
+      import('./pages/day/index');
+      import('./pages/field/index');
+      import('./pages/plan/index');
+      import('./pages/ledger/index');
       import('./pages/RFIs');
       import('./pages/daily-log');
     };
@@ -193,7 +233,7 @@ function ChunkLoadFallback() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        backgroundColor: colors.bgLight,
+        backgroundColor: colors.surfacePage,
         padding: spacing['8'],
       }}
     >
@@ -255,7 +295,7 @@ function ChunkLoadFallback() {
             textDecoration: 'none',
           }}
         >
-          Go to Dashboard
+          Go home
         </a>
       </div>
     </div>
@@ -331,9 +371,29 @@ function AppRoutes() {
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
             <Route path="/security" element={<PageSuspense><SecurityOverview /></PageSuspense>} />
 
+            {/* ── The Nine ── */}
+            <Route path="/day" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/field" element={<PageSuspense><ProtectedRoute moduleId="field" moduleName="The Field"><FieldPage /></ProtectedRoute></PageSuspense>} />
+            {/* /conversation merges into the Command stream — Wave 1 redirect */}
+            <Route path="/conversation" element={<Navigate to="/day" replace />} />
+            <Route path="/plan" element={<PageSuspense><ProtectedRoute moduleId="plan" moduleName="The Plan"><PlanPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/ledger" element={<PageSuspense><ProtectedRoute moduleId="ledger" moduleName="The Ledger"><LedgerPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/crew" element={<PageSuspense><ProtectedRoute moduleId="crew" moduleName="The Crew"><CrewPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/set" element={<PageSuspense><ProtectedRoute moduleId="set" moduleName="The Set"><SetPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/file" element={<PageSuspense><ProtectedRoute moduleId="file" moduleName="The File"><FilePage /></ProtectedRoute></PageSuspense>} />
+            {/* /site merges into the Command stream — Wave 1 redirect */}
+            <Route path="/site" element={<Navigate to="/day" replace />} />
+
+            {/* Magic-link sub access — renders the same DayPage with an
+                ActorContext of kind 'magic_link'. Token validation is handled
+                by the wrapper; no auth session required. */}
+            <Route path="/sub/:token" element={<PageSuspense><MagicLinkSubRoute /></PageSuspense>} />
+            <Route path="/owner/:token" element={<PageSuspense><MagicLinkOwnerRoute /></PageSuspense>} />
+
             {/* ── Core 10 ── */}
-            <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
-            <Route path="/dashboard" element={<PageSuspense><ProtectedRoute moduleId="dashboard" moduleName="Dashboard"><Dashboard /></ProtectedRoute></PageSuspense>} />
+            <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />
+            {/* /dashboard merges into the Command stream — Wave 1 redirect */}
+            <Route path="/dashboard" element={<Navigate to="/day" replace />} />
             <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
             <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
             <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
@@ -341,7 +401,7 @@ function AppRoutes() {
             <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/submittals/spec-parser" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/spec-parser" element={FLAGS.specParser ? <PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense> : <Navigate to="/submittals" replace />} />
             <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />
             <Route path="/punch-list/:itemId" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch Item Detail"><PunchItemDetailPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/drawings" element={<PageSuspense><ProtectedRoute moduleId="drawings" moduleName="Drawings"><Drawings /></ProtectedRoute></PageSuspense>} />
@@ -369,27 +429,38 @@ function AppRoutes() {
             {/* ── Documents & Closeout ── */}
             <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
             <Route path="/reports" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><Reports /></ProtectedRoute></PageSuspense>} />
-            <Route path="/reports/owner" element={<PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/reports/owner" element={FLAGS.ownerReport ? <PageSuspense><ProtectedRoute moduleId="reports" moduleName="Reports"><OwnerReportPage /></ProtectedRoute></PageSuspense> : <Navigate to="/reports" replace />} />
             <Route path="/closeout" element={<PageSuspense><ProtectedRoute moduleId="closeout" moduleName="Closeout"><Closeout /></ProtectedRoute></PageSuspense>} />
-            <Route path="/bim" element={<PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/bim" element={FLAGS.bimViewer ? <PageSuspense><ProtectedRoute moduleId="bim" moduleName="3D Model Viewer"><BIMViewerPage /></ProtectedRoute></PageSuspense> : <Navigate to="/dashboard" replace />} />
 
             {/* ── Intelligence ── */}
             <Route path="/ai" element={<PageSuspense><ProtectedRoute moduleId="ai" moduleName="AI Assistant"><AIAssistant /></ProtectedRoute></PageSuspense>} />
+            <Route path="/iris/inbox" element={FLAGS.irisInbox ? <PageSuspense><ProtectedRoute moduleId="ai" moduleName="Iris Inbox"><IrisInbox /></ProtectedRoute></PageSuspense> : <Navigate to="/ai" replace />} />
 
             {/* ── Utility & Admin ── */}
             <Route path="/audit-trail" element={<PageSuspense><ProtectedRoute moduleId="audit-trail" moduleName="Audit Trail"><AuditTrail /></ProtectedRoute></PageSuspense>} />
             <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
-            <Route path="/settings/workflows" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense>} />
+            <Route path="/settings/workflows" element={FLAGS.approvalWorkflows ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense> : <Navigate to="/settings" replace />} />
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
+            <Route path="/admin/bulk-invite" element={FLAGS.bulkInvite ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense> : <Navigate to="/settings/team" replace />} />
+            <Route path="/admin/cost-code-library" element={<PageSuspense><ProtectedRoute moduleId="settings" moduleName="Cost Code Library"><CostCodeLibraryPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/admin/project-templates" element={FLAGS.projectTemplates ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Project Templates"><ProjectTemplatesPage /></ProtectedRoute></PageSuspense> : <Navigate to="/dashboard" replace />} />
+            <Route path="/admin/procore-import" element={FLAGS.procoreImport ? <PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Procore Import"><ProcoreImportPage /></ProtectedRoute></PageSuspense> : <Navigate to="/integrations" replace />} />
+            <Route path="/admin/compliance" element={FLAGS.complianceCockpit ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Compliance"><ComplianceCockpit /></ProtectedRoute></PageSuspense> : <Navigate to="/dashboard" replace />} />
+            <Route path="/walkthrough" element={FLAGS.walkthrough ? <PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Walk-Through"><WalkthroughPage /></ProtectedRoute></PageSuspense> : <Navigate to="/field-capture" replace />} />
+            <Route path="/share/owner-payapp/:token" element={<PageSuspense><OwnerPayAppPreviewPage /></PageSuspense>} />
             <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
 
+            {/* Catch-all PM/super inbox + commitment register. */}
+            <Route path="/tasks" element={<PageSuspense><ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute></PageSuspense>} />
+            <Route path="/commitments" element={<PageSuspense><ProtectedRoute moduleId="commitments" moduleName="Commitments"><Commitments /></ProtectedRoute></PageSuspense>} />
+
             {/* ── Redirects: merged pages ── */}
-            <Route path="/tasks" element={<Navigate to="/dashboard" replace />} />
             <Route path="/lookahead" element={<Navigate to="/schedule" replace />} />
-            <Route path="/field-capture" element={<Navigate to="/daily-log" replace />} />
+            <Route path="/field-capture" element={<PageSuspense><ProtectedRoute moduleId="field-capture" moduleName="Field Capture"><FieldCapture /></ProtectedRoute></PageSuspense>} />
             <Route path="/financials" element={<Navigate to="/budget" replace />} />
             <Route path="/cost-management" element={<Navigate to="/budget" replace />} />
             <Route path="/vendors" element={<Navigate to="/contracts" replace />} />
@@ -438,6 +509,10 @@ function AppContent() {
   usePrefetchRoutes(!!user);
   const { conflictCount } = useOfflineStatus();
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  // PMF telemetry: the metric that decides whether the vision is working.
+  // See VISION.md and useFieldSuperPMF — target is 8+ field sessions/day
+  // per super within 30 days of onboarding.
+  useFieldSession('view');
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
@@ -468,10 +543,13 @@ function AppContent() {
   const prevDesktopCollapsed = useRef(sidebarCollapsed);
 
   useEffect(() => {
+    // Mobile uses MobileLayout entirely — collapse so any flicker through the
+    // desktop tree doesn't widen the layout. iPad keeps the full sidebar
+    // because (a) the Sidebar component renders at a fixed 252px regardless of
+    // the `collapsed` flag, so collapsing only desyncs the main margin and
+    // hides content behind the sidebar, and (b) 1024px viewports comfortably
+    // fit 252px sidebar + 772px content.
     if (isMobile) {
-      prevDesktopCollapsed.current = sidebarCollapsed;
-      setSidebarCollapsed(true);
-    } else if (isTablet) {
       prevDesktopCollapsed.current = sidebarCollapsed;
       setSidebarCollapsed(true);
     } else {
@@ -496,7 +574,7 @@ function AppContent() {
     { key: 's', meta: true, description: 'Save current form', action: () => {} },
     { key: 'e', meta: true, description: 'Export', action: () => setExportOpen(true) },
     // Page navigation: Cmd+1 through Cmd+9
-    { key: '1', meta: true, description: 'Dashboard', action: () => handleNavigate('dashboard') },
+    { key: '1', meta: true, description: 'Command (The Day)', action: () => handleNavigate('day') },
     { key: '2', meta: true, description: 'Tasks', action: () => handleNavigate('tasks') },
     { key: '3', meta: true, description: 'Schedule', action: () => handleNavigate('schedule') },
     { key: '4', meta: true, description: 'Budget', action: () => handleNavigate('budget') },
@@ -513,7 +591,7 @@ function AppContent() {
   useKeyboardShortcuts([
     { keys: ['meta+/'], action: () => setShortcutsOpen((p) => !p) },
     { keys: ['meta+k'], action: () => setCommandPaletteOpen(prev => !prev) },
-    { keys: ['g', 'd'], sequential: true, action: () => navigate('/dashboard') },
+    { keys: ['g', 'd'], sequential: true, action: () => navigate('/day') },
     { keys: ['g', 'r'], sequential: true, action: () => navigate('/rfis') },
     { keys: ['g', 'b'], sequential: true, action: () => navigate('/budget') },
     { keys: ['g', 's'], sequential: true, action: () => navigate('/schedule') },
@@ -550,17 +628,30 @@ function AppContent() {
     <SidebarContext.Provider value={{ collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed }}>
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'row',
+          // CSS Grid is the layout's single source of truth: the sidebar
+          // lives in the first track sized by --sidebar-w, the main column
+          // takes the rest. Sidebar width and main offset cannot desync
+          // because they are literally the same grid track. Both children
+          // explicitly pin themselves to their column so adding any future
+          // sibling (overlays, providers, dev banners) cannot perturb the
+          // auto-flow and push <main> into column 1 — that exact bug
+          // collapsed the entire viewport when the sidebar was hidden.
+          display: 'grid',
+          gridTemplateColumns: `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
           height: '100vh',
           backgroundColor: colorVars.surfacePage,
           fontFamily: typographyConfig.fontFamily,
           touchAction: 'manipulation',
+          transition: 'grid-template-columns 150ms ease-out',
         }}
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+        {!sidebarCollapsed && (
+          <div style={{ gridColumn: '1 / 2', minWidth: 0, overflow: 'hidden' }}>
+            <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+          </div>
+        )}
 
         <main
           id="main-content"
@@ -568,14 +659,62 @@ function AppContent() {
           aria-label="Page content"
           tabIndex={-1}
           style={{
-            flex: 1,
+            // Always live in column 2 regardless of which siblings are
+            // mounted. Without this, when <Sidebar> is unmounted on
+            // collapse, <main> auto-flows into column 1 (which is 0px
+            // wide while collapsed) and the viewport goes blank.
+            gridColumn: '2 / 3',
             display: 'flex',
             flexDirection: 'column',
-            marginLeft: isMobile ? 0 : (sidebarCollapsed ? 64 : 252),
+            minWidth: 0,
             overflow: 'auto',
-            transition: 'margin-left 150ms ease-out',
+            position: 'relative',
           }}
         >
+          {/* Floating "show menu" button when sidebar is collapsed.
+              Without this, hiding the sidebar via Cmd+B left the user
+              with no visible affordance to bring it back. */}
+          {sidebarCollapsed && !isMobile && (
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(false)}
+              aria-label="Show navigation menu"
+              title="Show navigation (⌘B)"
+              style={{
+                position: 'fixed',
+                top: 16,
+                left: 16,
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                border: `1px solid var(--color-borderSubtle)`,
+                backgroundColor: 'var(--color-surfaceRaised)',
+                color: 'var(--color-textSecondary)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 50,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
           {user && <MfaRequiredBanner />}
       <OfflineBanner />
           <ChunkLoadErrorBoundary>
@@ -591,7 +730,7 @@ function AppContent() {
         </main>
 
         <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
-        {notificationsOpen && <Suspense fallback={null}><NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} /></Suspense>}
+        {notificationsOpen && <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />}
         {shortcutsOpen && <Suspense fallback={null}><ShortcutOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} /></Suspense>}
         {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
         {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}
@@ -623,7 +762,7 @@ function ErrorFallback() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        backgroundColor: colors.bgLight,
+        backgroundColor: colors.surfacePage,
         padding: spacing['8'],
       }}
     >
@@ -698,7 +837,7 @@ function ErrorFallback() {
             textDecoration: 'none',
           }}
         >
-          Go to Dashboard
+          Go home
         </a>
       </div>
     </div>

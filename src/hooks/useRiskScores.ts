@@ -1,6 +1,7 @@
+import { fromTable } from '../lib/db/queries'
 import { useQuery } from '@tanstack/react-query'
-import { fromTable } from '../lib/supabase'
 import {
+
   computeRFIRisk, computeBudgetRisk, computeScheduleRisk, computeSafetyRisk,
   overallProjectRisk,
   type ScoredEntity, type RiskScore,
@@ -27,7 +28,7 @@ export function useRiskScores(projectId: string | null | undefined) {
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const safeRun = async <T,>(fn: () => Promise<{ data: unknown; error: unknown }>): Promise<T[]> => {
+      const safeRun = async <T,>(fn: () => PromiseLike<{ data: unknown; error: unknown }>): Promise<T[]> => {
         try {
           const res = await fn()
           if (res.error) {
@@ -43,15 +44,15 @@ export function useRiskScores(projectId: string | null | undefined) {
 
       const [rfis, budgets, activities, incidents, inspections] = await Promise.all([
         safeRun<{ id: string; title: string | null; created_at: string; status: string | null; priority: string | null }>(() =>
-          fromTable('rfis').select('id,title,created_at,status,priority').eq('project_id', projectId!).limit(200)),
+          fromTable('rfis').select('id,title,created_at,status,priority').eq('project_id' as never, projectId!).limit(200)),
         safeRun<{ id: string; code: string | null; description: string | null; budget: number; actual: number; committed: number }>(() =>
-          fromTable('budget_items').select('id,cost_code,description,original_amount,actual_amount,committed_amount').eq('project_id', projectId!).limit(200)),
+          fromTable('budget_items').select('id,cost_code,description,original_amount,actual_amount,committed_amount').eq('project_id' as never, projectId!).limit(200)),
         safeRun<{ id: string; name: string; percent_complete: number; planned_start: string | null; planned_finish: string | null }>(() =>
-          fromTable('schedule_activities').select('id,name,percent_complete,planned_start,planned_finish').eq('project_id', projectId!).limit(200)),
+          fromTable('schedule_activities' as never).select('id,name,percent_complete,planned_start,planned_finish').eq('project_id' as never, projectId!).limit(200)),
         safeRun<{ incident_date: string }>(() =>
-          fromTable('safety_incidents').select('id,incident_date').eq('project_id', projectId!).order('incident_date', { ascending: false }).limit(1)),
+          fromTable('safety_incidents' as never).select('id,incident_date').eq('project_id' as never, projectId!).order('incident_date', { ascending: false }).limit(1)),
         safeRun<{ status: string | null; inspection_date: string }>(() =>
-          fromTable('safety_inspections').select('id,status,inspection_date').eq('project_id', projectId!).limit(200)),
+          fromTable('safety_inspections').select('id,status,inspection_date').eq('project_id' as never, projectId!).limit(200)),
       ])
 
       const rfiScored: ScoredEntity[] = rfis

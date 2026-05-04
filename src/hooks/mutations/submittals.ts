@@ -1,13 +1,12 @@
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from './createAuditedMutation'
 import { submittalSchema,
 } from '../../components/forms/schemas'
 import { validateSubmittalStatusTransition } from './state-machine-validation-helpers'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -58,15 +57,15 @@ export function useCreateSubmittal() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'submittals.create',
     schema: submittalSchema,
-    action: 'create_submittal',
+    action: 'create',
     entityType: 'submittal',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const insertData = sanitizeSubmittalData(params.data)
-      const { data, error } = await from('submittals').insert(insertData).select().single()
+      const { data, error } = await from('submittals').insert(insertData as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'submittal_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -85,18 +84,35 @@ export function useUpdateSubmittal() {
     permission: 'submittals.edit',
     schema: submittalSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_submittal',
+    action: 'update',
     entityType: 'submittal',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       // State machine enforcement: validate status transition before persisting
       if (typeof updates.status === 'string') {
         await validateSubmittalStatusTransition(id, projectId, updates.status)
       }
-      const cleanUpdates = sanitizeSubmittalData(updates as Record<string, unknown>)
-      const { error } = await from('submittals').update(cleanUpdates).eq('id', id).eq('project_id', projectId)
+      const cleanUpdates = sanitizeSubmittalData(updates as unknown as Record<string, unknown>)
+      const { error } = await from('submittals').update(cleanUpdates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
+
+      // Cross-feature trigger: a rejected submittal drafts a follow-up RFI to
+      // the architect. Fire-and-forget — the chain is idempotent (skips when
+      // an RFI for this submittal already exists) and fail-soft so it can
+      // never break the user's primary mutation.
+      // Mirrors the same dispatch in submittalService.transitionStatus —
+      // some call sites (form Save, bulk edits) flow through this hook
+      // instead of the service.
+      if (typeof updates.status === 'string' && updates.status === 'rejected') {
+        void import('../../lib/crossFeatureWorkflows')
+          .then(({ runSubmittalRejectedChain }) => runSubmittalRejectedChain(id))
+          .then((result) => {
+            if (result.error) console.warn('[submittal_rejected chain]', result.error)
+            else if (result.created) console.info('[submittal_rejected chain] created', result.created)
+          })
+          .catch((err) => console.warn('[submittal_rejected chain] dispatch failed:', err))
+      }
       return { projectId, id }
     },
     invalidateKeys: (_, r) => [['submittals', 'detail', r.id]],
@@ -115,11 +131,11 @@ export function useUpdateSubmittal() {
 export function useDeleteSubmittal() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'submittals.delete',
-    action: 'delete_submittal',
+    action: 'delete',
     entityType: 'submittal',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('submittals').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('submittals').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

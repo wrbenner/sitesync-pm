@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { colors } from '../styles/theme'
 import { useEffect, useId } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable, asRow } from '../lib/db/queries'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 import { isDevBypassActive } from '../lib/devBypass'
@@ -30,7 +31,7 @@ export type Permission =
   | 'project.settings' | 'project.members' | 'project.delete'
   | 'org.settings' | 'org.billing' | 'org.members'
   | 'ai.use' | 'export.data' | 'reports.view'
-  | 'financials.view' | 'financials.edit' | 'estimating.view' | 'procurement.view'
+  | 'financials.view' | 'financials.edit' | 'estimating.view' | 'estimating.manage' | 'procurement.view'
 
 // ── Role Hierarchy ───────────────────────────────────────
 
@@ -87,6 +88,7 @@ export const PERMISSION_MATRIX: Record<Permission, ProjectRole[]> = {
   'financials.view': ['owner', 'admin', 'project_manager'],
   'financials.edit': ['owner', 'admin', 'project_manager'],
   'estimating.view': ['owner', 'admin', 'project_manager'],
+  'estimating.manage': ['owner', 'admin', 'project_manager'],
   'procurement.view': ['owner', 'admin', 'project_manager', 'superintendent'],
   'schedule.view': ['owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer'],
   'schedule.edit': ['owner', 'admin', 'project_manager'],
@@ -136,11 +138,25 @@ export const PERMISSION_MATRIX: Record<Permission, ProjectRole[]> = {
 export const MODULE_PERMISSIONS: Record<string, Permission> = {
   dashboard: 'dashboard.view',
   'project-health': 'dashboard.view',
+  // The Nine — every authenticated user with dashboard access can reach
+  // the question-shaped destinations. Sub-permissions still gate writes
+  // inside each page (e.g. creating an RFI from /conversation needs rfis.create).
+  day: 'dashboard.view',
+  field: 'dashboard.view',
+  conversation: 'rfis.view',
+  plan: 'schedule.view',
+  ledger: 'budget.view',
+  crew: 'crews.view',
+  set: 'drawings.view',
+  file: 'files.view',
+  site: 'dashboard.view',
+  ai: 'ai.use',
   copilot: 'ai.use',
   'ai-agents': 'ai.use',
   'time-machine': 'dashboard.view',
   lookahead: 'schedule.view',
   tasks: 'tasks.view',
+  commitments: 'tasks.view',
   schedule: 'schedule.view',
   budget: 'budget.view',
   'pay-apps': 'budget.view',
@@ -214,44 +230,44 @@ export function usePermissions(): PermissionsResult {
       if (!projectId || !user?.id) return null
 
       // 1. Try project_members first (normal path)
-      const { data, error } = await supabase
-        .from('project_members')
+      const { data, error } = await fromTable('project_members')
         .select('role')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
+        .eq('project_id' as never, projectId)
+        .eq('user_id' as never, user.id)
         .maybeSingle()
-      if (!error && data?.role) return data.role as ProjectRole
+      const member = asRow<{ role: string | null }>(data)
+      if (!error && member?.role) return member.role as ProjectRole
 
       // 2. Fallback: check if user is the project owner
-      const { data: proj } = await supabase
-        .from('projects')
+      const { data: projData } = await fromTable('projects')
         .select('owner_id')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .maybeSingle()
+      const proj = asRow<{ owner_id: string | null }>(projData)
       if (proj?.owner_id === user.id) {
         // Auto-insert membership row for the owner (best-effort, may fail due to RLS)
-        await supabase.from('project_members').upsert({
+        await fromTable('project_members').upsert({
           project_id: projectId,
           user_id: user.id,
           role: 'owner',
           accepted_at: new Date().toISOString(),
-        }, { onConflict: 'project_id,user_id' }).select().maybeSingle()
+        } as never, { onConflict: 'project_id,user_id' }).select().maybeSingle()
         return 'owner' as ProjectRole
       }
 
       // 3. Fallback: check if user created the project (created_by field)
-      const { data: projCreator } = await supabase
-        .from('projects')
+      const { data: projCreatorData } = await fromTable('projects')
         .select('created_by')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .maybeSingle()
+      const projCreator = asRow<{ created_by: string | null }>(projCreatorData)
       if (projCreator?.created_by === user.id) {
-        await supabase.from('project_members').upsert({
+        await fromTable('project_members').upsert({
           project_id: projectId,
           user_id: user.id,
           role: 'project_manager',
           accepted_at: new Date().toISOString(),
-        }, { onConflict: 'project_id,user_id' }).select().maybeSingle()
+        } as never, { onConflict: 'project_id,user_id' }).select().maybeSingle()
         return 'project_manager' as ProjectRole
       }
 
@@ -269,7 +285,7 @@ export function usePermissions(): PermissionsResult {
   useEffect(() => {
     if (!projectId || !user?.id) return
 
-    const suffix = Math.random().toString(36).slice(2, 8)
+    const suffix = crypto.randomUUID().slice(0, 6)
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     try {
@@ -285,7 +301,7 @@ export function usePermissions(): PermissionsResult {
           },
           (payload) => {
             // If this user's role changed, or they were removed, invalidate immediately
-            const row = (payload.new as Record<string, unknown>) ?? (payload.old as Record<string, unknown>)
+            const row = (payload.new as unknown as Record<string, unknown>) ?? (payload.old as unknown as Record<string, unknown>)
             if (row?.user_id === user.id || payload.eventType === 'DELETE') {
               queryClient.invalidateQueries({ queryKey: ['project_membership', projectId, user.id] })
             }
@@ -364,9 +380,11 @@ export function usePermissions(): PermissionsResult {
 // ── Permission Error ─────────────────────────────────────
 
 export class PermissionError extends Error {
-  constructor(message: string, public permission?: string) {
+  permission?: string
+  constructor(message: string, permission?: string) {
     super(message)
     this.name = 'PermissionError'
+    this.permission = permission
   }
 }
 

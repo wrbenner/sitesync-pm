@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { Drawing } from '../types/database';
 import type { DrawingStatus, DrawingMarkup, CreateDrawingInput, CreateMarkupInput } from '../types/drawing';
 import { getValidTransitions, getNextStatus } from '../machines/drawingMachine';
@@ -29,14 +30,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Service ──────────────────────────────────────────────────────────────────
@@ -47,15 +47,14 @@ export const drawingService = {
    * Archived drawings are the soft-delete state.
    */
   async loadDrawings(projectId: string): Promise<Result<Drawing[]>> {
-    const { data, error } = await supabase
-      .from('drawings')
+    const { data, error } = await fromTable('drawings')
       .select('*')
-      .eq('project_id', projectId)
-      .neq('status', 'archived')
+      .eq('project_id' as never, projectId)
+      .neq('status' as never, 'archived')
       .order('title', { ascending: true });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as Drawing[]);
+    return ok((data ?? []) as unknown as Drawing[]);
   },
 
   /**
@@ -65,29 +64,80 @@ export const drawingService = {
   async createDrawing(input: CreateDrawingInput): Promise<Result<Drawing>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('drawings')
-      .insert({
-        project_id: input.project_id,
-        title: input.title,
-        status: 'draft' as DrawingStatus,
-        file_url: input.file_url ?? null,
-        discipline: input.discipline ?? null,
-        sheet_number: input.sheet_number ?? null,
-        revision: input.revision ?? null,
-        uploaded_by: userId,
-        // Pipeline fields — columns added in migration 20260420000005
-        ...(input.thumbnail_url != null && { thumbnail_url: input.thumbnail_url }),
-        ...(input.total_pages != null && { total_pages: input.total_pages }),
-        ...(input.source_filename != null && { source_filename: input.source_filename }),
-        ...(input.file_size_bytes != null && { file_size_bytes: input.file_size_bytes }),
-        ...(input.processing_status != null && { processing_status: input.processing_status }),
-      })
+    // Sanitise discipline: the DB constraint (construction_discipline domain)
+    // only accepts a fixed set of values. Values outside the set (e.g.
+    // food_service, laundry, vertical_transportation) must be mapped to
+    // null so the insert succeeds — AI classification fills the real value
+    // later anyway.
+    const ALLOWED_DISCIPLINES = new Set([
+      'architectural','structural','mechanical','electrical','plumbing',
+      'civil','fire_protection','landscape','interior','interior_design',
+      'mep','unclassified','cover','demolition','survey','geotechnical',
+      'hazmat','telecommunications',
+    ]);
+    const safeDiscipline = input.discipline && ALLOWED_DISCIPLINES.has(input.discipline)
+      ? input.discipline
+      : null;
+
+    // Build the row to insert. Only include pipeline columns when they have
+    // a value — this avoids 400 errors if older migration hasn't run.
+    const row: Record<string, unknown> = {
+      project_id: input.project_id,
+      title: input.title,
+      // 'for_review' is in every version of the status CHECK constraint
+      // (original 00019 + the wider 20260428100000 migration).
+      status: 'for_review',
+      file_url: input.file_url ?? null,
+      discipline: safeDiscipline,
+      sheet_number: input.sheet_number ?? null,
+      revision: input.revision ?? null,
+      uploaded_by: userId,
+    };
+
+    // Pipeline fields — columns added in migration 20260420000005.
+    // Only add them when the caller provides a value.
+    if (input.thumbnail_url != null) row.thumbnail_url = input.thumbnail_url;
+    if (input.total_pages != null) row.total_pages = input.total_pages;
+    if (input.source_filename != null) row.source_filename = input.source_filename;
+    if (input.file_size_bytes != null) row.file_size_bytes = input.file_size_bytes;
+    if (input.processing_status != null) row.processing_status = input.processing_status;
+
+    const { data, error } = await fromTable('drawings')
+      .insert(row as never)
       .select()
       .single();
 
-    if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as Drawing);
+    if (error) {
+      console.error('[drawingService.createDrawing] insert failed:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        row,
+      });
+      return fail(dbError(error.message, { project_id: input.project_id }));
+    }
+
+    // Cross-feature workflow: if this drawing was uploaded for a sheet number
+    // that already exists in the project, treat it as a revision and flag
+    // open RFIs that reference that sheet. Fire-and-forget — failures are
+    // logged inside the chain, never surfaced to the upload UX.
+    const inserted = data as { id?: string; sheet_number?: string | null } | null;
+    if (inserted?.id && inserted.sheet_number) {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runDrawingRevisedChain }) => runDrawingRevisedChain(inserted.id!))
+        .then((result) => {
+          if (result.error) console.warn('[drawing_revised chain]', result.error);
+          else if (result.affectedRfiIds && result.affectedRfiIds.length > 0) {
+            console.info(
+              `[drawing_revised chain] flagged ${result.affectedRfiIds.length} affected RFI(s)`,
+            );
+          }
+        })
+        .catch((err) => console.warn('[drawing_revised chain] dispatch failed:', err));
+    }
+
+    return ok(data as unknown as Drawing);
   },
 
   /**
@@ -100,23 +150,23 @@ export const drawingService = {
     drawingId: string,
     action: string,
   ): Promise<Result> {
-    const { data: drawing, error: fetchError } = await supabase
-      .from('drawings')
+    const { data: drawing, error: fetchError } = await fromTable('drawings')
       .select('status, project_id, uploaded_by')
-      .eq('id', drawingId)
+      .eq('id' as never, drawingId)
       .single();
 
     if (fetchError || !drawing) {
       return fail(notFoundError('Drawing', drawingId));
     }
+    const drawingRow = drawing as unknown as { status: string | null; project_id: string; uploaded_by: string | null }
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(drawing.project_id, userId);
+    const role = await resolveProjectRole(drawingRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = (drawing.status ?? 'draft') as DrawingStatus;
+    const currentStatus = (drawingRow.status ?? 'draft') as DrawingStatus;
     const validActions = getValidTransitions(currentStatus, role);
     if (!validActions.includes(action)) {
       return fail(
@@ -137,13 +187,12 @@ export const drawingService = {
       );
     }
 
-    const { error } = await supabase
-      .from('drawings')
+    const { error } = await fromTable('drawings')
       .update({
         status: newStatus,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', drawingId);
+      } as never)
+      .eq('id' as never, drawingId);
 
     if (error) return fail(dbError(error.message, { drawingId, action, newStatus }));
     return { data: null, error: null };
@@ -159,10 +208,9 @@ export const drawingService = {
       unknown
     >;
 
-    const { error } = await supabase
-      .from('drawings')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', drawingId);
+    const { error } = await fromTable('drawings')
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, drawingId);
 
     if (error) return fail(dbError(error.message, { drawingId }));
     return { data: null, error: null };
@@ -180,13 +228,12 @@ export const drawingService = {
       return fail(permissionError('Only admins and owners can delete drawings'));
     }
 
-    const { error } = await supabase
-      .from('drawings')
+    const { error } = await fromTable('drawings')
       .update({
         status: 'archived' as DrawingStatus,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', drawingId);
+      } as never)
+      .eq('id' as never, drawingId);
 
     if (error) return fail(dbError(error.message, { drawingId }));
     return { data: null, error: null };
@@ -195,21 +242,19 @@ export const drawingService = {
   // ── Markups ────────────────────────────────────────────────────────────────
 
   async loadMarkups(drawingId: string): Promise<Result<DrawingMarkup[]>> {
-    const { data, error } = await supabase
-      .from('drawing_markups')
+    const { data, error } = await fromTable('drawing_markups')
       .select('*')
-      .eq('drawing_id', drawingId)
+      .eq('drawing_id' as never, drawingId)
       .order('created_at', { ascending: true });
 
     if (error) return fail(dbError(error.message, { drawingId }));
-    return ok((data ?? []) as DrawingMarkup[]);
+    return ok((data ?? []) as unknown as DrawingMarkup[]);
   },
 
   async createMarkup(input: CreateMarkupInput): Promise<Result<DrawingMarkup>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('drawing_markups')
+    const { data, error } = await fromTable('drawing_markups')
       .insert({
         drawing_id: input.drawing_id,
         project_id: input.project_id,
@@ -220,63 +265,59 @@ export const drawingService = {
         linked_rfi_id: input.linked_rfi_id ?? null,
         linked_punch_item_id: input.linked_punch_item_id ?? null,
         created_by: userId,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { drawing_id: input.drawing_id }));
-    return ok(data as DrawingMarkup);
+    return ok(data as unknown as DrawingMarkup);
   },
 
   async updateMarkup(
     markupId: string,
     updates: Partial<Pick<DrawingMarkup, 'data' | 'note' | 'layer' | 'type'>>,
   ): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', markupId);
+    const { error } = await fromTable('drawing_markups')
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId }));
     return { data: null, error: null };
   },
 
   async deleteMarkup(markupId: string): Promise<Result> {
-    const { error } = await supabase.from('drawing_markups').delete().eq('id', markupId);
+    const { error } = await fromTable('drawing_markups').delete().eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId }));
     return { data: null, error: null };
   },
 
   async linkMarkupToRfi(markupId: string, rfiId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
-      .update({ linked_rfi_id: rfiId, updated_at: new Date().toISOString() })
-      .eq('id', markupId);
+    const { error } = await fromTable('drawing_markups')
+      .update({ linked_rfi_id: rfiId, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId, rfiId }));
     return { data: null, error: null };
   },
 
   async linkMarkupToPunchItem(markupId: string, punchItemId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
-      .update({ linked_punch_item_id: punchItemId, updated_at: new Date().toISOString() })
-      .eq('id', markupId);
+    const { error } = await fromTable('drawing_markups')
+      .update({ linked_punch_item_id: punchItemId, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId, punchItemId }));
     return { data: null, error: null };
   },
 
   async unlinkMarkup(markupId: string): Promise<Result> {
-    const { error } = await supabase
-      .from('drawing_markups')
+    const { error } = await fromTable('drawing_markups')
       .update({
         linked_rfi_id: null,
         linked_punch_item_id: null,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', markupId);
+      } as never)
+      .eq('id' as never, markupId);
 
     if (error) return fail(dbError(error.message, { markupId }));
     return { data: null, error: null };
@@ -289,20 +330,19 @@ async function resolveProjectRoleById(
   drawingId: string,
   userId: string,
 ): Promise<string | null> {
-  const { data: drawing } = await supabase
-    .from('drawings')
+  const { data: drawing } = await fromTable('drawings')
     .select('project_id')
-    .eq('id', drawingId)
+    .eq('id' as never, drawingId)
     .single();
 
-  if (!drawing?.project_id) return null;
+  const drawingRow = drawing as unknown as { project_id: string } | null
+  if (!drawingRow?.project_id) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', drawing.project_id)
-    .eq('user_id', userId)
+    .eq('project_id' as never, drawingRow.project_id)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }

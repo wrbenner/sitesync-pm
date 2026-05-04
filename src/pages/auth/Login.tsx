@@ -1,1166 +1,937 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+/**
+ * Login — "The Threshold"
+ *
+ * Direction 1 Minimal: Da Vinci x Jobs.
+ *
+ * Construction metaphor:
+ *   The page's level line is the FLOOR. The field's underline IS the
+ *   level line. Email text sits above the line (where text always sits).
+ *   The line ends in the black circle (the period at the end).
+ *
+ * Greeting states (via localStorage):
+ *   hello  — recognized device, name stored   → "Good morning, Alex."
+ *   back   — returning flag, no name          → "Welcome back."
+ *   time   — (fallback) time-of-day only      → "Good morning."
+ *   first  — first-time visitor               → "Welcome."
+ */
+
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Loader2, Eye, EyeOff, Mail, Lock, User, Shield,
-  CheckCircle, ArrowRight, Sparkles, X, Building2,
-  HardHat, BarChart3, FileCheck, Cloud,
-} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { magicLinkSchema, loginSchema } from '../../schemas/auth'
 import { useAuth } from '../../hooks/useAuth'
-import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme'
-import { loginSchema, signupSchema, magicLinkSchema, resetPasswordSchema } from '../../schemas/auth'
 
-/* ─────────────────────── Helpers ─────────────────────── */
+// ── Design Tokens (raw values — this page opts out of CSS vars for
+//    pixel-perfect control on the only page that lives OUTSIDE the app shell) ──
 
-function mapAuthError(message: string): string {
-  const msg = message.toLowerCase()
-  if (msg.includes('invalid') || msg.includes('credentials')) return 'Email or password is incorrect'
-  if (msg.includes('email not confirmed')) return 'Please check your email to confirm your account'
-  if (msg.includes('rate limit') || msg.includes('too many')) return 'Too many attempts. Please try again in a few minutes'
-  if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed')) return 'Unable to connect. Check your internet connection'
-  if (msg.includes('already registered') || msg.includes('already been registered')) return 'An account with this email already exists'
-  if (msg.includes('user already registered')) return 'An account with this email already exists'
-  if (msg.includes('password') && msg.includes('short')) return 'Password must be at least 6 characters'
-  return message
+const SS_BG    = '#FAFAF8'
+const SS_FG1   = '#1A1613'
+const SS_FG3   = '#767170'
+const SS_ORANGE = '#F47820'
+
+const FONT = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+// Serif stack for the brand-surface welcome — Login is one of the only
+// pages allowed to lead with Garamond per DESIGN-RESET.
+const SERIF_FONT = '"EB Garamond", Garamond, "Cormorant Garamond", "Times New Roman", serif'
+
+// ── Greeting Logic ──────────────────────────────────────
+
+interface GreetingState {
+  kind: 'named' | 'plain'
+  prefix?: string
+  name?: string
+  text?: string
 }
 
-function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
-  if (!pw) return { score: 0, label: '', color: colors.borderSubtle }
-  let s = 0
-  if (pw.length >= 8) s++
-  if (pw.length >= 12) s++
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++
-  if (/\d/.test(pw)) s++
-  if (/[^A-Za-z0-9]/.test(pw)) s++
-
-  if (s <= 1) return { score: 1, label: 'Weak', color: colors.statusCritical }
-  if (s <= 2) return { score: 2, label: 'Fair', color: colors.statusPending }
-  if (s <= 3) return { score: 3, label: 'Good', color: colors.statusInfo }
-  return { score: 4, label: 'Strong', color: colors.statusActive }
+function getTimeOfDay(): string {
+  const hour = new Date().getHours()
+  if (hour < 5) return 'Good evening'
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
 }
 
-const APPLE_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
+function useGreetingState(): GreetingState {
+  const tod = getTimeOfDay()
+  try {
+    const name = localStorage.getItem('ss:last-name')
+    const returning = localStorage.getItem('ss:returning')
+    if (name) return { kind: 'named', prefix: tod, name }
+    if (returning) return { kind: 'plain', text: 'Welcome back.' }
+  } catch {
+    // localStorage unavailable — first visit
+  }
+  return { kind: 'plain', text: 'Welcome.' }
+}
 
-const FEATURES = [
-  { icon: HardHat, label: 'Project Management', desc: 'RFIs, submittals, and change orders' },
-  { icon: BarChart3, label: 'Real-Time Analytics', desc: 'Budget tracking and schedule insights' },
-  { icon: FileCheck, label: 'Punch Lists', desc: 'Photo-attached, location-tagged items' },
-  { icon: Cloud, label: 'AI-Powered', desc: 'Weather forecasts and risk analysis' },
-]
+// ── Logo Symbol ─────────────────────────────────────────
 
-/* ─────────────────────── Sub-components ─────────────────────── */
+const LogoSymbol: React.FC<{ size: number }> = ({ size }) => (
+  <img
+    src={`${import.meta.env.BASE_URL}logos/sitesync-symbol.png`}
+    alt="SiteSync"
+    width={size}
+    height={size}
+    style={{ display: 'block', objectFit: 'contain' }}
+  />
+)
 
-const PremiumInput: React.FC<{
-  id: string
-  type?: string
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  icon?: React.ReactNode
-  required?: boolean
-  autoComplete?: string
-  autoFocus?: boolean
-  error?: string | null
-  onBlurValidate?: (val: string) => string | null
-  rightElement?: React.ReactNode
-}> = ({ id, type = 'text', label, value, onChange, placeholder, icon, required, autoComplete, autoFocus, error: externalError, onBlurValidate, rightElement }) => {
-  const [focused, setFocused] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
-  const error = externalError ?? localError
+// ── Provider Logos (brand-correct, official palettes) ───
 
-  return (
-    <div>
-      <label
-        htmlFor={id}
-        style={{
-          display: 'block',
-          fontSize: typography.fontSize.sm,
-          fontWeight: typography.fontWeight.medium,
-          color: error ? colors.statusCritical : focused ? colors.textPrimary : colors.textSecondary,
-          marginBottom: spacing['1.5'],
-          transition: `color 120ms ease`,
-          letterSpacing: typography.letterSpacing.wide,
-        }}
+const GoogleGlyph: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" style={{ display: 'block' }}>
+    <path fill="#4285F4" d="M17.64 9.205c0-.638-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" />
+    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+    <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
+    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
+  </svg>
+)
+
+const MicrosoftGlyph: React.FC<{ size?: number }> = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true" style={{ display: 'block' }}>
+    <rect x="0"  y="0"  width="8" height="8" fill="#F25022" />
+    <rect x="10" y="0"  width="8" height="8" fill="#7FBA00" />
+    <rect x="0"  y="10" width="8" height="8" fill="#00A4EF" />
+    <rect x="10" y="10" width="8" height="8" fill="#FFB900" />
+  </svg>
+)
+
+// ── Submit Pill (shared between magic-link and password rows) ──
+
+interface SubmitPillProps {
+  buttonSize: number
+  pillWidth: number
+  pillHeight: number
+  fieldHeight: number
+  isMobile: boolean
+  submitting: boolean
+  isValid: boolean
+  isHovering: boolean
+  isPressed: boolean
+  setIsHovering: (v: boolean) => void
+  setIsPressed: (v: boolean) => void
+}
+
+const SubmitPill: React.FC<SubmitPillProps> = ({
+  pillWidth, pillHeight, fieldHeight, isMobile, submitting, isValid,
+  isHovering, isPressed, setIsHovering, setIsPressed,
+}) => (
+  <button
+    type="submit"
+    aria-label="Continue"
+    disabled={submitting}
+    onMouseEnter={() => !submitting && setIsHovering(true)}
+    onMouseLeave={() => { setIsHovering(false); setIsPressed(false) }}
+    onMouseDown={() => !submitting && setIsPressed(true)}
+    onMouseUp={() => setIsPressed(false)}
+    onTouchStart={() => !submitting && setIsPressed(true)}
+    onTouchEnd={() => setIsPressed(false)}
+    style={{
+      position: 'absolute',
+      right: 0,
+      top: (fieldHeight - pillHeight) / 2,
+      width: pillWidth,
+      height: pillHeight,
+      background: '#1A1613',
+      color: '#fff',
+      border: 'none',
+      borderRadius: pillHeight / 2,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: submitting ? 'wait' : 'pointer',
+      transform: isPressed
+        ? 'scale(0.96)'
+        : isHovering && !submitting
+          ? 'translateX(4px)'
+          : 'translateX(0)',
+      transition: 'transform 80ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease',
+      zIndex: 2,
+      opacity: submitting ? 0.7 : isValid ? 1 : 0.45,
+    }}
+  >
+    {submitting ? (
+      <svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth={2}
+        strokeLinecap="round"
+        style={{ animation: 'ss-spin 0.8s linear infinite' }}
+        aria-hidden="true"
       >
-        {label}
-      </label>
-      {required && <span aria-hidden="true" style={{
-        color: colors.primaryOrange, marginLeft: 2, position: 'relative',
-        top: -spacing['1.5'], fontSize: typography.fontSize.sm,
-      }}>*</span>}
-      <div style={{ position: 'relative' }}>
-        {icon && (
-          <span style={{
-            position: 'absolute', left: spacing['3'], top: '50%', transform: 'translateY(-50%)',
-            color: error ? colors.statusCritical : focused ? colors.primaryOrange : colors.textTertiary,
-            transition: `color 120ms ease`, display: 'flex', pointerEvents: 'none',
-          }}>
-            {icon}
-          </span>
-        )}
-        <input
-          id={id}
-          type={type}
-          value={value}
-          onChange={(e) => { onChange(e.target.value); if (error) setLocalError(null) }}
-          placeholder={placeholder}
-          required={required}
-          autoComplete={autoComplete}
-          autoFocus={autoFocus}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-          onFocus={() => setFocused(true)}
-          onBlur={(e) => {
-            setFocused(false)
-            if (onBlurValidate) setLocalError(onBlurValidate(e.target.value))
-          }}
-          style={{
-            width: '100%',
-            height: 48,
-            padding: `0 ${rightElement ? '44px' : spacing['4']} 0 ${icon ? '40px' : spacing['4']}`,
-            fontSize: typography.fontSize.body,
-            fontFamily: typography.fontFamily,
-            color: colors.textPrimary,
-            backgroundColor: colors.surfaceInset,
-            border: `1px solid ${error ? colors.statusCritical : focused ? colors.primaryOrange : colors.borderSubtle}`,
-            borderRadius: borderRadius.md,
-            outline: 'none',
-            boxShadow: focused ? `0 0 0 3px ${error ? colors.statusCriticalSubtle : colors.orangeSubtle}` : 'none',
-            transition: `border-color 120ms ease, box-shadow 120ms ease`,
-            boxSizing: 'border-box' as const,
-            letterSpacing: typography.letterSpacing.normal,
-          }}
-        />
-        {rightElement && (
-          <span style={{
-            position: 'absolute', right: spacing['3'], top: '50%', transform: 'translateY(-50%)',
-            display: 'flex',
-          }}>
-            {rightElement}
-          </span>
-        )}
-      </div>
-      <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 4 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            id={`${id}-error`}
-            role="alert"
-            style={{ margin: 0, fontSize: typography.fontSize.sm, color: colors.statusCritical }}
-          >
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
-    </div>
-  )
+        <path d="M12 2a10 10 0 0 1 10 10" />
+      </svg>
+    ) : (
+      <svg
+        width={isMobile ? 17 : 18}
+        height={isMobile ? 17 : 18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#fff"
+        strokeWidth={2.25}
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+        aria-hidden="true"
+        style={{ display: 'block' }}
+      >
+        <path d="M5 12h14" />
+        <path d="m12 5 7 7-7 7" />
+      </svg>
+    )}
+  </button>
+)
+
+// ── OAuth Button ────────────────────────────────────────
+
+interface OAuthButtonProps {
+  label: string
+  short: string
+  icon: React.ReactNode
+  onClick: () => void
+  pending: boolean
+  disabled: boolean
+  isMobile: boolean
 }
 
-const PasswordStrengthBar: React.FC<{ password: string }> = ({ password }) => {
-  const { score, label, color } = getPasswordStrength(password)
-  if (!password) return null
+const OAuthButton: React.FC<OAuthButtonProps> = ({
+  label, short, icon, onClick, pending, disabled, isMobile,
+}) => {
+  const [isHovering, setIsHovering] = useState(false)
   return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, height: 0 }}
-      style={{ marginTop: spacing['1.5'] }}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      onMouseEnter={() => !disabled && setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      style={{
+        flex: 1,
+        height: 38,
+        background: 'transparent',
+        border: `1px solid ${isHovering && !disabled ? 'rgba(26,22,19,0.28)' : 'rgba(26,22,19,0.12)'}`,
+        borderRadius: 19,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 9,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled && !pending ? 0.55 : 1,
+        font: `500 13px/1 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`,
+        letterSpacing: '-0.005em',
+        color: '#1A1613',
+        padding: '0 14px',
+        transition: 'border-color 200ms ease, opacity 200ms ease, background 200ms ease',
+      }}
     >
-      <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} style={{
-            flex: 1, height: 3, borderRadius: 2,
-            backgroundColor: i <= score ? color : colors.borderSubtle,
-            transition: `background-color 200ms ease`,
-          }} />
-        ))}
-      </div>
-      <span style={{ fontSize: typography.fontSize.caption, color, fontWeight: typography.fontWeight.medium }}>
-        {label}
-      </span>
-    </motion.div>
+      {pending ? (
+        <span aria-live="polite" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" style={{ animation: 'ss-spin 0.8s linear infinite' }}>
+            <path d="M12 2a10 10 0 0 1 10 10" />
+          </svg>
+          Connecting…
+        </span>
+      ) : (
+        <>
+          {icon}
+          <span>{isMobile ? label : short}</span>
+        </>
+      )}
+    </button>
   )
 }
 
-/* ─────────────────────── Main Component ─────────────────────── */
+// ── Greeting Component ──────────────────────────────────
+
+const Greeting: React.FC<{ size: number }> = ({ size }) => {
+  const g = useGreetingState()
+  // Brand surface — serif italic welcome, sans-serif "Good morning, Name."
+  // for returning users so the personal greeting still reads modern.
+  const isPlain = g.kind === 'plain'
+  const sty: React.CSSProperties = {
+    fontFamily: isPlain ? SERIF_FONT : FONT,
+    fontSize: size,
+    fontWeight: isPlain ? 500 : 500,
+    fontStyle: isPlain ? 'italic' : 'normal',
+    lineHeight: 1,
+    letterSpacing: isPlain ? '-0.01em' : size >= 36 ? '-0.035em' : '-0.030em',
+    color: SS_FG1,
+    margin: 0,
+    marginBottom: size === 36 ? 40 : 36,
+    textAlign: 'center',
+    whiteSpace: 'nowrap',
+  }
+  if (isPlain) return <h1 style={sty}>{g.text}</h1>
+  return (
+    <h1 style={sty}>
+      {g.prefix},{' '}
+      <span style={{ fontFamily: SERIF_FONT, fontStyle: 'italic', fontWeight: 400 }}>{g.name}</span>.
+    </h1>
+  )
+}
+
+// ── Check Your Inbox (success state) ────────────────────
+
+const CheckInbox: React.FC<{ email: string; onBack: () => void }> = ({ email, onBack }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+    style={{ textAlign: 'center' }}
+  >
+    {/* Checkmark circle */}
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ delay: 0.1, duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+      style={{
+        width: 56, height: 56, borderRadius: '50%',
+        backgroundColor: SS_FG1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 24px',
+      }}
+    >
+      <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+    </motion.div>
+
+    <h2 style={{
+      font: `500 28px/1.2 ${FONT}`,
+      letterSpacing: '-0.025em',
+      color: SS_FG1,
+      margin: '0 0 12px',
+    }}>
+      Check your inbox.
+    </h2>
+
+    <p style={{
+      font: `400 14px/1.6 ${FONT}`,
+      color: SS_FG3,
+      margin: '0 0 8px',
+      letterSpacing: '-0.005em',
+    }}>
+      We sent a sign-in link to
+    </p>
+    <p style={{
+      font: `500 14px/1.6 ${FONT}`,
+      color: SS_FG1,
+      margin: '0 0 32px',
+      letterSpacing: '-0.005em',
+    }}>
+      {email}
+    </p>
+
+    <button
+      onClick={onBack}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        font: `400 13px/1 ${FONT}`,
+        color: SS_FG3,
+        letterSpacing: '-0.005em',
+        padding: '8px 0',
+      }}
+    >
+      Use a different email
+    </button>
+  </motion.div>
+)
+
+// ── Main Login Component ────────────────────────────────
 
 export const Login: React.FC = () => {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { signIn } = useAuth()
 
-  // Tab state
-  const [tab, setTab] = useState<'signin' | 'signup' | 'magic'>('signin')
-
-  // Sign in state
+  const [mode, setMode] = useState<'magic' | 'password'>('magic')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
-  const [passwordError, setPasswordError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showReset, setShowReset] = useState(false)
-  const [resetEmail, setResetEmail] = useState('')
-  const [resetSent, setResetSent] = useState(false)
-  const [resetError, setResetError] = useState<string | null>(null)
-  const [resetLoading, setResetLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [oauthPending, setOauthPending] = useState<null | 'google' | 'azure'>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const [isPressed, setIsPressed] = useState(false)
 
-  // Magic link state
-  const [magicEmail, setMagicEmail] = useState('')
-  const [magicLoading, setMagicLoading] = useState(false)
-  const [magicSuccess, setMagicSuccess] = useState(false)
-  const [magicError, setMagicError] = useState<string | null>(null)
+  // Validity is parsed live so the circle "wakes up" the moment the
+  // user finishes typing a credible address (magic mode) or finishes
+  // both fields (password mode). Empty input keeps the circle dimmed,
+  // which reads as "not ready yet" without a separate disabled visual.
+  const isValid = mode === 'magic'
+    ? magicLinkSchema.safeParse({ email }).success
+    : loginSchema.safeParse({ email, password }).success
 
-  // Sign up state
-  const [signupFirstName, setSignupFirstName] = useState('')
-  const [signupLastName, setSignupLastName] = useState('')
-  const [signupEmail, setSignupEmail] = useState('')
-  const [signupPassword, setSignupPassword] = useState('')
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('')
-  const [signupError, setSignupError] = useState<string | null>(null)
-  const [signupSuccess, setSignupSuccess] = useState(false)
-  const [signupSubmitting, setSignupSubmitting] = useState(false)
-  const [signupEmailError, setSignupEmailError] = useState<string | null>(null)
-  const [signupPasswordError, setSignupPasswordError] = useState<string | null>(null)
-  const [signupConfirmError, setSignupConfirmError] = useState<string | null>(null)
-  const [showSignupPassword, setShowSignupPassword] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setEmailError(null)
-    setPasswordError(null)
+  // Responsive
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
-    const parsed = loginSchema.safeParse({ email, password })
-    if (!parsed.success) {
-      const errs = parsed.error.flatten().fieldErrors
-      if (errs.email?.[0]) setEmailError(errs.email[0])
-      if (errs.password?.[0]) setPasswordError(errs.password[0])
-      return
+  // Focus input on mount
+  useEffect(() => {
+    // Small delay to let the entrance animation settle
+    const t = setTimeout(() => inputRef.current?.focus(), 400)
+    return () => clearTimeout(t)
+  }, [])
+
+  // ── Redirect URL helper ─────────────────────────────────
+  // Lands the user back at the app root, including Vite's base path
+  // (`/sitesync-pm/` in dev, `/` on Vercel). We can't append a hash
+  // route here because supabase overwrites the URL fragment with auth
+  // tokens; instead we rely on detectSessionInUrl + ProtectedRoute to
+  // get the user to the Day command stream once the session lands.
+  // returnTo (if present) is stashed in sessionStorage so the global
+  // SIGNED_IN handler can navigate after the auth state settles.
+  const buildRedirectUrl = useCallback(() => {
+    const baseUrl = import.meta.env.BASE_URL || '/'
+    const returnTo = searchParams.get('returnTo')
+    if (returnTo) {
+      try { sessionStorage.setItem('ss:returnTo', returnTo) } catch { /* noop */ }
     }
+    return window.location.origin + baseUrl
+  }, [searchParams])
 
-    setIsSubmitting(true)
-    try {
-      const result = await signIn(parsed.data.email, parsed.data.password)
-      if (result.error) {
-        setError(result.error)
-      } else {
-        const returnTo = searchParams.get('returnTo')
-        const destination = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard'
-        navigate(destination)
+  // ── Submit Handler ────────────────────────────────────
+
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return
+    setErrorMessage(null)
+
+    // ── Password Mode ─────────────────────────────────────
+    if (mode === 'password') {
+      const parsed = loginSchema.safeParse({ email, password })
+      if (!parsed.success) {
+        const fields = parsed.error.flatten().fieldErrors
+        const firstErr = fields.email?.[0] ?? fields.password?.[0]
+        setErrorMessage(firstErr ?? 'Check your email and password.')
+        return
       }
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSignupError(null)
-    setSignupEmailError(null)
-    setSignupPasswordError(null)
-    setSignupConfirmError(null)
-
-    const parsed = signupSchema.safeParse({
-      email: signupEmail,
-      password: signupPassword,
-      confirmPassword: signupConfirmPassword,
-      firstName: signupFirstName,
-      lastName: signupLastName,
-      organization: 'pending',
-    })
-    if (!parsed.success) {
-      const errs = parsed.error.flatten().fieldErrors
-      if (errs.email?.[0]) setSignupEmailError(errs.email[0])
-      if (errs.password?.[0]) setSignupPasswordError(errs.password[0])
-      if (errs.confirmPassword?.[0]) setSignupConfirmError(errs.confirmPassword[0])
+      setSubmitting(true)
+      try {
+        const { error } = await signIn(parsed.data.email, parsed.data.password)
+        if (error) {
+          // signIn already maps + handles lockout; just surface the message.
+          setErrorMessage(error)
+        } else {
+          // SIGNED_IN listener in useAuth.ts handles redirect to dashboard.
+          // Land on success state briefly in case routing takes a tick.
+        }
+      } catch {
+        setErrorMessage('Check your connection and try again.')
+      } finally {
+        setSubmitting(false)
+      }
       return
     }
 
-    setSignupSubmitting(true)
+    // ── Magic-Link Mode (default) ─────────────────────────
+    const parsed = magicLinkSchema.safeParse({ email })
+    if (!parsed.success) {
+      const fieldErr = parsed.error.flatten().fieldErrors.email?.[0]
+      setErrorMessage(fieldErr ?? 'Check your spelling and try again.')
+      return
+    }
+
+    setSubmitting(true)
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email: parsed.data.email,
-        password: parsed.data.password,
         options: {
-          data: {
-            first_name: parsed.data.firstName.trim(),
-            last_name: parsed.data.lastName.trim(),
-          },
+          emailRedirectTo: buildRedirectUrl(),
         },
       })
-
-      if (signUpError) {
-        setSignupError(mapAuthError(signUpError.message))
-      } else if (data.session) {
-        navigate('/dashboard')
+      if (error) {
+        const raw = error.message
+        const msg = raw.toLowerCase()
+        if (msg.includes('rate limit') || msg.includes('too many') || msg.includes('security purposes')) {
+          // Supabase commonly returns "For security purposes, you can only
+          // request this after N seconds." — surface N when present so the
+          // user knows whether to wait 30s or come back tomorrow.
+          const secondsMatch = raw.match(/(\d+)\s*second/i)
+          if (secondsMatch) {
+            const s = Number(secondsMatch[1])
+            setErrorMessage(`Too many requests. Try again in ${s} second${s === 1 ? '' : 's'}.`)
+          } else {
+            setErrorMessage('Too many requests. Try again in about a minute, or use Google / Microsoft.')
+          }
+        } else if (msg.includes('not found') || msg.includes('invalid')) {
+          setErrorMessage("We couldn't find that address.")
+        } else {
+          setErrorMessage('Something went wrong. Try again.')
+        }
       } else {
-        setSignupSuccess(true)
+        setSuccess(true)
       }
+    } catch {
+      setErrorMessage('Check your connection and try again.')
     } finally {
-      setSignupSubmitting(false)
+      setSubmitting(false)
     }
-  }
+  }, [mode, email, password, submitting, buildRedirectUrl, signIn])
 
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setMagicError(null)
-
-    const parsed = magicLinkSchema.safeParse({ email: magicEmail })
-    if (!parsed.success) {
-      setMagicError(parsed.error.flatten().fieldErrors.email?.[0] ?? 'Invalid email')
-      return
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSubmit()
     }
+    if (e.key === 'Escape') {
+      setEmail('')
+      setErrorMessage(null)
+    }
+  }, [handleSubmit])
 
-    setMagicLoading(true)
+  // ── OAuth Handler ────────────────────────────────────
+  // Hands the browser off to the provider's consent screen. On success
+  // the provider redirects back to redirectTo with tokens in the URL
+  // fragment; supabase's `detectSessionInUrl: true` picks them up and
+  // fires SIGNED_IN, which the global onAuthStateChange listener handles
+  // (see hooks/useAuth.ts). This function never returns to a rendered
+  // success state — the page navigates away mid-call.
+  const signInWithProvider = useCallback(async (provider: 'google' | 'azure') => {
+    if (oauthPending || submitting) return
+    setErrorMessage(null)
+    setOauthPending(provider)
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ email: parsed.data.email })
-      if (otpError) setMagicError(mapAuthError(otpError.message))
-      else setMagicSuccess(true)
-    } finally {
-      setMagicLoading(false)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: buildRedirectUrl(),
+        },
+      })
+      if (error) {
+        setOauthPending(null)
+        const friendly = provider === 'azure' ? 'Microsoft' : 'Google'
+        setErrorMessage(`We couldn't reach ${friendly}. Try again.`)
+      }
+    } catch {
+      setOauthPending(null)
+      setErrorMessage('Check your connection and try again.')
     }
+  }, [oauthPending, submitting, buildRedirectUrl])
+
+  // ── Measurements ──────────────────────────────────────
+  //
+  // Desktop column: 24(mark) + 56(gap) + 36(h1) + 40(gap) + 56(field) = 212
+  //   → translateY(-212px) from page 50% puts field-bottom at center.
+  //
+  // Mobile column:  22(mark) + 44(gap) + 28(h1) + 36(gap) + 52(field) = 182
+  //   → translateY(-182px) from page 50%.
+
+  const markSize       = isMobile ? 22 : 24
+  const markGap        = isMobile ? 44 : 56
+  const greetingSize   = isMobile ? 28 : 36
+  const fieldHeight    = isMobile ? 52 : 56
+  const pillWidth      = isMobile ? 60 : 68
+  const pillHeight     = isMobile ? 34 : 38
+  // In password mode the strong level line moves to the password row,
+  // which is one fieldHeight below the email row. Lift the column by
+  // that delta so the strong line still meets the page-wide level
+  // gradients at viewport center.
+  const baseOffset     = isMobile ? 182 : 212
+  const columnOffset   = mode === 'password' ? baseOffset + fieldHeight : baseOffset
+  const columnWidth    = isMobile ? undefined : 360
+  const pagePadding    = isMobile ? 32 : 0
+
+  // Level line widths
+  const lineSideWidth  = isMobile ? '24px' : 'calc(50% - 240px)'
+
+  // ── Success State ─────────────────────────────────────
+
+  if (success) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: SS_BG,
+        fontFamily: FONT,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+      }}>
+        <CheckInbox email={email} onBack={() => { setSuccess(false); setEmail('') }} />
+      </div>
+    )
   }
 
-  const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setResetError(null)
-
-    const parsed = resetPasswordSchema.safeParse({ email: resetEmail })
-    if (!parsed.success) {
-      setResetError(parsed.error.flatten().fieldErrors.email?.[0] ?? 'Invalid email')
-      return
-    }
-
-    setResetLoading(true)
-    const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email)
-    if (err) setResetError(mapAuthError(err.message))
-    else setResetSent(true)
-    setResetLoading(false)
-  }
-
-  // ─── Shared button style ────────
-  const primaryBtnStyle = (loading: boolean): React.CSSProperties => ({
-    width: '100%',
-    height: 48,
-    padding: `0 ${spacing['6']}`,
-    fontSize: typography.fontSize.body,
-    fontWeight: typography.fontWeight.semibold,
-    fontFamily: typography.fontFamily,
-    color: colors.white,
-    background: loading
-      ? colors.orangeHover
-      : `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
-    border: 'none',
-    borderRadius: borderRadius.md,
-    cursor: loading ? 'not-allowed' : 'pointer',
-    transition: `all 160ms ease`,
-    letterSpacing: typography.letterSpacing.normal,
-    opacity: loading ? 0.8 : 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing['2'],
-    boxShadow: loading ? 'none' : '0 2px 8px rgba(244, 120, 32, 0.25)',
-  })
+  // ── Main Render ───────────────────────────────────────
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      fontFamily: typography.fontFamily,
-    }}>
+    <div
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        backgroundColor: SS_BG,
+        fontFamily: FONT,
+        overflow: 'hidden',
+      }}
+      role="main"
+      aria-label="Sign in to SiteSync"
+    >
+      {/* The global *:focus-visible rule paints a 2px orange ring around
+          any focused element. This page's input auto-focuses on mount and
+          is supposed to render as a bare underline — so we scope a rule
+          that nukes the ring on this page's input only. */}
       <style>{`
-        @keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes float-glow { 0%, 100% { opacity: 0.4; transform: translateY(0); } 50% { opacity: 0.7; transform: translateY(-8px); } }
+        .ss-login-input:focus,
+        .ss-login-input:focus-visible {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+        @keyframes ss-spin {
+          to { transform: rotate(360deg); }
+        }
       `}</style>
 
-      {/* ─── Left Panel — Brand Showcase ─── */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: spacing['12'],
-        background: `linear-gradient(145deg, #1A1613 0%, #2A1F16 50%, #1A1613 100%)`,
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: '100vh',
-      }}>
-        {/* Ambient glow */}
-        <div style={{
+      {/* ─── Form Column ────────────────────────────────
+          Outer non-motion <div> owns positioning — `position: absolute`
+          + `translate(-50%, ...)` to center horizontally and lift to the
+          composed level-line height. Framer-motion's animated transform
+          would otherwise override our centering translate, slamming the
+          column 50% to the right of the viewport. The inner motion.div
+          carries only opacity/y enter animation. */}
+      <div
+        style={{
           position: 'absolute',
-          width: 400, height: 400,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(244, 120, 32, 0.12) 0%, transparent 70%)`,
-          top: '20%', left: '30%',
-          animation: 'float-glow 6s ease-in-out infinite',
-          pointerEvents: 'none',
-        }} />
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: APPLE_EASE }}
-          style={{ position: 'relative', zIndex: 1, maxWidth: 440, width: '100%' }}
-        >
-          {/* Logo */}
-          <div style={{
-            width: 48, height: 48,
-            borderRadius: borderRadius.xl,
-            background: `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: spacing['8'],
-            boxShadow: '0 4px 20px rgba(244, 120, 32, 0.3)',
-          }}>
-            <span style={{
-              color: colors.white,
-              fontSize: typography.fontSize.medium,
-              fontWeight: typography.fontWeight.bold,
-            }}>S</span>
-          </div>
-
-          <h1 style={{
-            fontSize: '36px',
-            fontWeight: typography.fontWeight.bold,
-            color: '#FFFFFF',
-            margin: 0,
-            letterSpacing: typography.letterSpacing.tighter,
-            lineHeight: typography.lineHeight.tight,
-          }}>
-            Build smarter.
-            <br />
-            <span style={{ color: colors.primaryOrange }}>Ship faster.</span>
-          </h1>
-
-          <p style={{
-            fontSize: typography.fontSize.title,
-            color: 'rgba(255,255,255,0.55)',
-            margin: 0, marginTop: spacing['4'],
-            lineHeight: typography.lineHeight.relaxed,
-            maxWidth: 360,
-          }}>
-            Construction management powered by real-time data and AI insights.
-          </p>
-
-          {/* Feature cards */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
-            gap: spacing['3'], marginTop: spacing['10'],
-          }}>
-            {FEATURES.map((feat, i) => (
-              <motion.div
-                key={feat.label}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.1, duration: 0.4, ease: APPLE_EASE }}
-                style={{
-                  padding: spacing['4'],
-                  borderRadius: borderRadius.lg,
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                <feat.icon size={20} color={colors.primaryOrange} strokeWidth={1.5} />
-                <p style={{
-                  margin: 0, marginTop: spacing['2'],
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: typography.fontWeight.medium,
-                  color: 'rgba(255,255,255,0.85)',
-                }}>
-                  {feat.label}
-                </p>
-                <p style={{
-                  margin: 0, marginTop: 2,
-                  fontSize: typography.fontSize.caption,
-                  color: 'rgba(255,255,255,0.4)',
-                }}>
-                  {feat.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ─── Right Panel — Auth Forms ─── */}
-      <div style={{
-        width: 520,
-        minWidth: 420,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: `${spacing['10']} ${spacing['12']}`,
-        backgroundColor: colors.surfacePage,
-        overflowY: 'auto',
-      }}>
-        <div style={{ width: '100%', maxWidth: 380 }}>
-          {/* Header */}
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            style={{ marginBottom: spacing['6'] }}
-          >
-            <h2 style={{
-              fontSize: typography.fontSize.large,
-              fontWeight: typography.fontWeight.semibold,
-              color: colors.textPrimary,
-              margin: 0,
-              letterSpacing: typography.letterSpacing.tight,
-            }}>
-              {tab === 'signin' ? 'Welcome back' : tab === 'signup' ? 'Create your account' : 'Magic link sign in'}
-            </h2>
-            <p style={{
-              fontSize: typography.fontSize.body,
-              color: colors.textTertiary,
-              margin: 0, marginTop: spacing['1.5'],
-            }}>
-              {tab === 'signin'
-                ? 'Sign in to access your projects'
-                : tab === 'signup'
-                  ? 'Start managing construction with AI'
-                  : 'We\'ll send a link to your email'
-              }
-            </p>
-          </motion.div>
-
-          {/* Tab Toggle */}
-          <div style={{
-            display: 'flex',
-            backgroundColor: colors.surfaceInset,
-            borderRadius: borderRadius.md,
-            padding: 3,
-            marginBottom: spacing['6'],
-            position: 'relative',
-          }}>
-            {(['signin', 'magic', 'signup'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => { setTab(t); setError(null); setSignupError(null); setMagicError(null); setMagicSuccess(false) }}
-                style={{
-                  flex: 1,
-                  padding: `${spacing['2']} ${spacing['3']}`,
-                  fontSize: typography.fontSize.sm,
-                  fontWeight: tab === t ? typography.fontWeight.semibold : typography.fontWeight.normal,
-                  fontFamily: typography.fontFamily,
-                  color: tab === t ? colors.textPrimary : colors.textTertiary,
-                  background: tab === t ? colors.surfaceRaised : 'transparent',
-                  border: 'none',
-                  borderRadius: borderRadius.base,
-                  cursor: 'pointer',
-                  transition: `all 120ms ease`,
-                  boxShadow: tab === t ? shadows.sm : 'none',
-                  position: 'relative',
-                  zIndex: 1,
-                }}
-              >
-                {t === 'signin' ? 'Sign In' : t === 'magic' ? 'Magic Link' : 'Sign Up'}
-              </button>
-            ))}
-          </div>
-
-          {/* Form Card */}
-          <div style={{
-            backgroundColor: colors.surfaceRaised,
-            borderRadius: borderRadius.xl,
-            padding: spacing['7'],
-            boxShadow: shadows.card,
-            border: `1px solid ${colors.borderSubtle}`,
-          }}>
-            <AnimatePresence mode="wait">
-              {/* ─── Sign In Form ─── */}
-              {tab === 'signin' && (
-                <motion.form
-                  key="signin"
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 8 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleSubmit}
-                  aria-label="Sign in to SiteSync"
-                  style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
-                >
-                  <PremiumInput
-                    id="login-email"
-                    type="email"
-                    label="Email address"
-                    value={email}
-                    onChange={(v) => { setEmail(v); if (emailError) setEmailError(null) }}
-                    placeholder="you@company.com"
-                    icon={<Mail size={16} />}
-                    required
-                    autoComplete="email"
-                    autoFocus
-                    error={emailError}
-                    onBlurValidate={(v) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email' : null}
-                  />
-
-                  <PremiumInput
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    label="Password"
-                    value={password}
-                    onChange={setPassword}
-                    placeholder="Enter your password"
-                    icon={<Lock size={16} />}
-                    required
-                    autoComplete="current-password"
-                    error={passwordError}
-                    rightElement={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          padding: 0, display: 'flex', color: colors.textTertiary,
-                        }}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    }
-                  />
-
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        role="alert"
-                        style={{
-                          padding: `${spacing['3']} ${spacing['4']}`,
-                          borderRadius: borderRadius.md,
-                          backgroundColor: colors.statusCriticalSubtle,
-                          color: colors.statusCritical,
-                          fontSize: typography.fontSize.sm,
-                          border: `1px solid ${colors.statusCritical}20`,
-                        }}
-                      >
-                        {error}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <div style={{ textAlign: 'right' }}>
-                    <button
-                      type="button"
-                      onClick={() => { setShowReset(true); setResetEmail(email); setResetSent(false); setResetError(null) }}
-                      style={{
-                        background: 'none', border: 'none',
-                        color: colors.orangeText,
-                        fontSize: typography.fontSize.sm,
-                        fontFamily: typography.fontFamily,
-                        cursor: 'pointer', padding: 0,
-                        fontWeight: typography.fontWeight.medium,
-                      }}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
-
-                  <button type="submit" disabled={isSubmitting} style={primaryBtnStyle(isSubmitting)}>
-                    {isSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-                    {isSubmitting ? 'Signing in...' : 'Sign In'}
-                    {!isSubmitting && <ArrowRight size={16} />}
-                  </button>
-                </motion.form>
-              )}
-
-              {/* ─── Magic Link Form ─── */}
-              {tab === 'magic' && (
-                <motion.div
-                  key="magic"
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 8 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {magicSuccess ? (
-                    <div style={{ textAlign: 'center', padding: `${spacing['6']} 0` }}>
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-                        style={{
-                          width: 56, height: 56, borderRadius: borderRadius.full,
-                          background: `linear-gradient(135deg, ${colors.statusActive}, #34D399)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          margin: '0 auto', marginBottom: spacing['4'],
-                          boxShadow: '0 4px 20px rgba(74, 222, 128, 0.3)',
-                        }}
-                      >
-                        <CheckCircle size={28} color={colors.white} strokeWidth={2.5} />
-                      </motion.div>
-                      <h3 style={{
-                        margin: 0, fontSize: typography.fontSize.subtitle,
-                        fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
-                      }}>
-                        Check your email
-                      </h3>
-                      <p style={{
-                        margin: 0, marginTop: spacing['2'],
-                        fontSize: typography.fontSize.body, color: colors.textSecondary,
-                      }}>
-                        We sent a sign-in link to <strong>{magicEmail}</strong>
-                      </p>
-                    </div>
-                  ) : (
-                    <form
-                      onSubmit={handleMagicLink}
-                      style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
-                    >
-                      <AnimatePresence>
-                        {magicError && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            role="alert"
-                            style={{
-                              padding: `${spacing['3']} ${spacing['4']}`,
-                              borderRadius: borderRadius.md,
-                              backgroundColor: colors.statusCriticalSubtle,
-                              color: colors.statusCritical,
-                              fontSize: typography.fontSize.sm,
-                            }}
-                          >
-                            {magicError}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      <PremiumInput
-                        id="magic-email"
-                        type="email"
-                        label="Email address"
-                        value={magicEmail}
-                        onChange={setMagicEmail}
-                        placeholder="you@company.com"
-                        icon={<Mail size={16} />}
-                        required
-                        autoComplete="email"
-                        autoFocus
-                      />
-
-                      <button type="submit" disabled={magicLoading} style={primaryBtnStyle(magicLoading)}>
-                        {magicLoading && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-                        {magicLoading ? 'Sending...' : 'Send Magic Link'}
-                        {!magicLoading && <Sparkles size={16} />}
-                      </button>
-                    </form>
-                  )}
-                </motion.div>
-              )}
-
-              {/* ─── Sign Up Form ─── */}
-              {tab === 'signup' && (
-                <motion.div
-                  key="signup"
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 8 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {signupSuccess ? (
-                    <div style={{ textAlign: 'center', padding: `${spacing['6']} 0` }}>
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-                        style={{
-                          width: 56, height: 56, borderRadius: borderRadius.full,
-                          background: `linear-gradient(135deg, ${colors.statusActive}, #34D399)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          margin: '0 auto', marginBottom: spacing['4'],
-                          boxShadow: '0 4px 20px rgba(74, 222, 128, 0.3)',
-                        }}
-                      >
-                        <CheckCircle size={28} color={colors.white} strokeWidth={2.5} />
-                      </motion.div>
-                      <h3 style={{
-                        margin: 0, fontSize: typography.fontSize.subtitle,
-                        fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
-                      }}>
-                        Account created
-                      </h3>
-                      <p style={{
-                        margin: 0, marginTop: spacing['2'],
-                        fontSize: typography.fontSize.body, color: colors.textSecondary,
-                      }}>
-                        Check your email to confirm your account
-                      </p>
-                    </div>
-                  ) : (
-                    <form
-                      onSubmit={handleSignUp}
-                      style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
-                    >
-                      <AnimatePresence>
-                        {signupError && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            role="alert"
-                            style={{
-                              padding: `${spacing['3']} ${spacing['4']}`,
-                              borderRadius: borderRadius.md,
-                              backgroundColor: colors.statusCriticalSubtle,
-                              color: colors.statusCritical,
-                              fontSize: typography.fontSize.sm,
-                            }}
-                          >
-                            {signupError}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Name fields */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
-                        <PremiumInput
-                          id="signup-first-name"
-                          label="First name"
-                          value={signupFirstName}
-                          onChange={setSignupFirstName}
-                          placeholder="Jane"
-                          icon={<User size={16} />}
-                          required
-                          autoComplete="given-name"
-                          autoFocus
-                        />
-                        <PremiumInput
-                          id="signup-last-name"
-                          label="Last name"
-                          value={signupLastName}
-                          onChange={setSignupLastName}
-                          placeholder="Smith"
-                          required
-                          autoComplete="family-name"
-                        />
-                      </div>
-
-                      <PremiumInput
-                        id="signup-email"
-                        type="email"
-                        label="Work email"
-                        value={signupEmail}
-                        onChange={(v) => { setSignupEmail(v); if (signupEmailError) setSignupEmailError(null) }}
-                        placeholder="you@construction.com"
-                        icon={<Mail size={16} />}
-                        required
-                        autoComplete="email"
-                        error={signupEmailError}
-                        onBlurValidate={(v) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Please enter a valid email' : null}
-                      />
-
-                      <div>
-                        <PremiumInput
-                          id="signup-password"
-                          type={showSignupPassword ? 'text' : 'password'}
-                          label="Password"
-                          value={signupPassword}
-                          onChange={(v) => { setSignupPassword(v); if (signupPasswordError) setSignupPasswordError(null) }}
-                          placeholder="At least 8 characters"
-                          icon={<Lock size={16} />}
-                          required
-                          autoComplete="new-password"
-                          error={signupPasswordError}
-                          onBlurValidate={(v) => v && v.length < 8 ? 'Must be at least 8 characters' : null}
-                          rightElement={
-                            <button
-                              type="button"
-                              onClick={() => setShowSignupPassword(!showSignupPassword)}
-                              aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
-                              style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                padding: 0, display: 'flex', color: colors.textTertiary,
-                              }}
-                            >
-                              {showSignupPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                          }
-                        />
-                        <PasswordStrengthBar password={signupPassword} />
-                      </div>
-
-                      <PremiumInput
-                        id="signup-confirm-password"
-                        type="password"
-                        label="Confirm password"
-                        value={signupConfirmPassword}
-                        onChange={(v) => { setSignupConfirmPassword(v); if (signupConfirmError) setSignupConfirmError(null) }}
-                        placeholder="Re-enter your password"
-                        icon={<Shield size={16} />}
-                        required
-                        autoComplete="new-password"
-                        error={signupConfirmError}
-                        onBlurValidate={(v) => v && v !== signupPassword ? 'Passwords do not match' : null}
-                      />
-
-                      <button type="submit" disabled={signupSubmitting} style={primaryBtnStyle(signupSubmitting)}>
-                        {signupSubmitting && <Loader2 size={16} style={{ animation: 'spin-loader 0.75s linear infinite' }} />}
-                        {signupSubmitting ? 'Creating account...' : 'Create Account'}
-                        {!signupSubmitting && <ArrowRight size={16} />}
-                      </button>
-
-                      <p style={{
-                        margin: 0, fontSize: typography.fontSize.caption,
-                        color: colors.textTertiary, textAlign: 'center',
-                        lineHeight: typography.lineHeight.normal,
-                      }}>
-                        By signing up, you agree to our terms of service and privacy policy.
-                      </p>
-                    </form>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Bottom link */}
-          <p style={{
-            textAlign: 'center',
-            fontSize: typography.fontSize.sm,
-            color: colors.textTertiary,
-            marginTop: spacing['6'],
-          }}>
-            {tab === 'signin' ? (
-              <>
-                No account yet?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setTab('signup'); setError(null) }}
-                  style={{
-                    background: 'none', border: 'none',
-                    color: colors.orangeText,
-                    fontSize: 'inherit', fontFamily: typography.fontFamily,
-                    fontWeight: typography.fontWeight.medium,
-                    cursor: 'pointer', padding: 0,
-                  }}
-                >
-                  Create an account
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setTab('signin'); setSignupError(null) }}
-                  style={{
-                    background: 'none', border: 'none',
-                    color: colors.orangeText,
-                    fontSize: 'inherit', fontFamily: typography.fontFamily,
-                    fontWeight: typography.fontWeight.medium,
-                    cursor: 'pointer', padding: 0,
-                  }}
-                >
-                  Sign in
-                </button>
-              </>
-            )}
-          </p>
+          top: '50%',
+          ...(isMobile
+            ? { left: pagePadding, right: pagePadding, transform: `translateY(-${columnOffset}px)` }
+            : { left: '50%', width: columnWidth, transform: `translate(-50%, -${columnOffset}px)` }
+          ),
+        }}
+      >
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        {/* Mark */}
+        <div style={{ marginBottom: markGap }}>
+          <LogoSymbol size={markSize} />
         </div>
-      </div>
 
-      {/* ─── Reset Password Modal ─── */}
-      <AnimatePresence>
-        {showReset && (
-          <div
-            style={{
-              position: 'fixed', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: zIndex.modal as number,
-            }}
-          >
-            <motion.div
+        {/* Greeting */}
+        <Greeting size={greetingSize} />
+
+        {/* ─── Field Block ───────────────────────────────
+            Two stacked rows in password mode (email + password), one row
+            in magic mode (email only). The pill button + strong level
+            line attach to whichever row is the "submit row" — email when
+            magic, password when password. The non-submit email row in
+            password mode gets a thin separator underline so the rows
+            still feel connected without two competing strong lines. */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+          }}
+          aria-label={mode === 'password' ? 'Sign in with email and password' : 'Sign in with email'}
+        >
+          {/* ─── Email Row ────────────────────────────── */}
+          <div style={{ width: '100%', height: fieldHeight, position: 'relative' }}>
+            <input
+              ref={inputRef}
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (errorMessage) setErrorMessage(null)
+              }}
+              onKeyDown={handleKeyDown}
+              aria-label="Email"
+              aria-invalid={!!errorMessage}
+              aria-describedby={errorMessage ? 'login-error' : undefined}
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              disabled={submitting}
+              placeholder={mode === 'password' ? 'Email' : ''}
+              className="ss-login-input"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: mode === 'magic' ? pillWidth + 16 : 0,
+                top: 0,
+                bottom: 1,
+                width: 'auto',
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                borderRadius: 0,
+                font: `400 ${isMobile ? 16 : 17}px/1 ${FONT}`,
+                letterSpacing: '-0.011em',
+                color: SS_FG1,
+                caretColor: SS_FG1,
+              }}
+            />
+
+            {/* Underline: strong (level line) in magic mode,
+                thin separator in password mode (the strong line moves
+                to the password row). */}
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 1,
+              background: mode === 'magic' ? SS_FG1 : 'rgba(26,22,19,0.16)',
+              transition: 'background 200ms ease',
+            }} />
+
+            {mode === 'magic' && (
+              <SubmitPill
+                buttonSize={pillWidth}
+                pillWidth={pillWidth}
+                pillHeight={pillHeight}
+                fieldHeight={fieldHeight}
+                isMobile={isMobile}
+                submitting={submitting}
+                isValid={isValid}
+                isHovering={isHovering}
+                isPressed={isPressed}
+                setIsHovering={setIsHovering}
+                setIsPressed={setIsPressed}
+              />
+            )}
+          </div>
+
+          {/* ─── Password Row (conditional) ──────────── */}
+          {mode === 'password' && (
+            <div style={{ width: '100%', height: fieldHeight, position: 'relative' }}>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (errorMessage) setErrorMessage(null)
+                }}
+                onKeyDown={handleKeyDown}
+                aria-label="Password"
+                aria-invalid={!!errorMessage}
+                aria-describedby={errorMessage ? 'login-error' : undefined}
+                autoComplete="current-password"
+                disabled={submitting}
+                placeholder="Password"
+                className="ss-login-input"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: pillWidth + 16,
+                  top: 0,
+                  bottom: 1,
+                  width: 'auto',
+                  padding: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  borderRadius: 0,
+                  font: `400 ${isMobile ? 16 : 17}px/1 ${FONT}`,
+                  letterSpacing: '-0.011em',
+                  color: SS_FG1,
+                  caretColor: SS_FG1,
+                }}
+              />
+
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 1,
+                background: SS_FG1,
+              }} />
+
+              <SubmitPill
+                buttonSize={pillWidth}
+                pillWidth={pillWidth}
+                pillHeight={pillHeight}
+                fieldHeight={fieldHeight}
+                isMobile={isMobile}
+                submitting={submitting}
+                isValid={isValid}
+                isHovering={isHovering}
+                isPressed={isPressed}
+                setIsHovering={setIsHovering}
+                setIsPressed={setIsPressed}
+              />
+            </div>
+          )}
+        </form>
+
+        {/* ─── Hint / Error Slot ─────────────────────────── */}
+        <div style={{ height: 40 }} />
+        <div
+          id="login-error"
+          role={errorMessage ? 'alert' : undefined}
+          style={{
+            font: `400 13px/1.6 ${FONT}`,
+            color: SS_FG3,
+            letterSpacing: '-0.005em',
+            textAlign: 'center',
+            minHeight: '1.6em',
+            transition: 'opacity 200ms ease',
+          }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={errorMessage || `hint-${mode}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowReset(false)}
-              style={{
-                position: 'absolute', inset: 0,
-                backgroundColor: colors.overlayScrim,
-                backdropFilter: 'blur(4px)',
-              }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97, y: 8 }}
-              transition={{ duration: 0.25, ease: APPLE_EASE }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: 'relative',
-                backgroundColor: colors.surfaceRaised,
-                borderRadius: borderRadius.xl,
-                padding: spacing['7'],
-                width: '100%',
-                maxWidth: 400,
-                boxShadow: '0 24px 80px rgba(0,0,0,0.25)',
-                border: `1px solid ${colors.borderSubtle}`,
-              }}
+              transition={{ duration: 0.15 }}
             >
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                marginBottom: spacing['4'],
-              }}>
-                <div>
-                  <h2 style={{
-                    fontSize: typography.fontSize.subtitle,
-                    fontWeight: typography.fontWeight.semibold,
-                    color: colors.textPrimary,
-                    margin: 0,
-                    letterSpacing: typography.letterSpacing.tight,
-                  }}>
-                    Reset Password
-                  </h2>
-                  <p style={{
-                    fontSize: typography.fontSize.sm,
-                    color: colors.textTertiary,
-                    margin: 0, marginTop: spacing['1'],
-                  }}>
-                    We'll send a reset link to your email
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowReset(false)}
-                  style={{
-                    width: 28, height: 28, display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', backgroundColor: 'transparent',
-                    border: `1px solid ${colors.borderSubtle}`,
-                    borderRadius: borderRadius.base, cursor: 'pointer',
-                    color: colors.textTertiary,
-                  }}
-                >
-                  <X size={14} />
-                </button>
-              </div>
+              {errorMessage || (mode === 'password'
+                ? 'Sign in with your password.'
+                : "We'll send a sign-in link.")}
+            </motion.span>
+          </AnimatePresence>
+        </div>
 
-              {resetSent ? (
-                <div>
-                  <div style={{
-                    textAlign: 'center', padding: `${spacing['4']} 0 ${spacing['5']}`,
-                  }}>
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-                      style={{
-                        width: 48, height: 48, borderRadius: borderRadius.full,
-                        background: `linear-gradient(135deg, ${colors.statusActive}, #34D399)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto', marginBottom: spacing['3'],
-                      }}
-                    >
-                      <CheckCircle size={24} color={colors.white} strokeWidth={2.5} />
-                    </motion.div>
-                    <p style={{
-                      fontSize: typography.fontSize.body, color: colors.textSecondary,
-                      margin: 0,
-                    }}>
-                      Check your email for a reset link
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowReset(false)}
-                    style={{
-                      width: '100%', padding: `${spacing['2.5']} ${spacing['4']}`,
-                      fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-                      fontFamily: typography.fontFamily, color: colors.textSecondary,
-                      backgroundColor: colors.surfaceInset,
-                      border: `1px solid ${colors.borderSubtle}`,
-                      borderRadius: borderRadius.md, cursor: 'pointer',
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
-                  <AnimatePresence>
-                    {resetError && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        style={{
-                          padding: `${spacing['3']} ${spacing['4']}`,
-                          borderRadius: borderRadius.md,
-                          backgroundColor: colors.statusCriticalSubtle,
-                          color: colors.statusCritical,
-                          fontSize: typography.fontSize.sm,
-                        }}
-                      >
-                        {mapAuthError(resetError)}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+        {/* ─── OAuth Row ──────────────────────────────────────
+            Whitespace-separated from the form (no "OR" caps divider —
+            the gap itself does the work). Buttons are quieter than a
+            primary CTA: thin border, small chip, brand glyph forward. */}
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 10,
+          width: '100%',
+          marginTop: 36,
+        }}>
+          <OAuthButton
+            label="Continue with Google"
+            short="Google"
+            icon={<GoogleGlyph size={16} />}
+            onClick={() => signInWithProvider('google')}
+            pending={oauthPending === 'google'}
+            disabled={!!oauthPending || submitting}
+            isMobile={isMobile}
+          />
+          <OAuthButton
+            label="Continue with Microsoft"
+            short="Microsoft"
+            icon={<MicrosoftGlyph size={16} />}
+            onClick={() => signInWithProvider('azure')}
+            pending={oauthPending === 'azure'}
+            disabled={!!oauthPending || submitting}
+            isMobile={isMobile}
+          />
+        </div>
+      </motion.div>
+      </div>
 
-                  <PremiumInput
-                    id="reset-email"
-                    type="email"
-                    label="Email address"
-                    value={resetEmail}
-                    onChange={setResetEmail}
-                    placeholder="you@company.com"
-                    icon={<Mail size={16} />}
-                    required
-                    autoComplete="email"
-                    autoFocus
-                  />
+      {/* ─── Bottom Anchor: secondary links ──────────────────
+          Lives at the page footer, not below the form column —
+          decongests the central composition and echoes the original
+          "Use single sign-on" placement. A middot separates the two
+          actions; one flips the form mode, the other links to signup. */}
+      <div style={{
+        position: 'absolute',
+        bottom: isMobile ? 56 : 48,
+        left: 0,
+        right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 14,
+        font: `400 12px/1 ${FONT}`,
+        color: SS_FG3,
+        letterSpacing: '0.01em',
+        pointerEvents: 'none', // children re-enable
+      }}>
+        <button
+          type="button"
+          onClick={() => {
+            setMode((m) => (m === 'magic' ? 'password' : 'magic'))
+            setPassword('')
+            setErrorMessage(null)
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            font: 'inherit',
+            color: 'inherit',
+            letterSpacing: 'inherit',
+            pointerEvents: 'auto',
+          }}
+        >
+          {mode === 'magic' ? 'Sign in with password' : 'Use a sign-in link'}
+        </button>
+        <span aria-hidden="true" style={{ opacity: 0.5 }}>·</span>
+        <a
+          href="#/signup"
+          style={{
+            color: 'inherit',
+            textDecoration: 'none',
+            pointerEvents: 'auto',
+          }}
+        >
+          Sign up
+        </a>
+      </div>
 
-                  <div style={{ display: 'flex', gap: spacing['3'] }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowReset(false)}
-                      style={{
-                        flex: 1, height: 44,
-                        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-                        fontFamily: typography.fontFamily, color: colors.textSecondary,
-                        backgroundColor: colors.surfaceInset,
-                        border: `1px solid ${colors.borderSubtle}`,
-                        borderRadius: borderRadius.md, cursor: 'pointer',
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={resetLoading}
-                      style={{
-                        flex: 1, height: 44,
-                        fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
-                        fontFamily: typography.fontFamily, color: colors.white,
-                        background: `linear-gradient(135deg, ${colors.primaryOrange}, ${colors.orangeGradientEnd})`,
-                        border: 'none',
-                        borderRadius: borderRadius.md,
-                        cursor: resetLoading ? 'not-allowed' : 'pointer',
-                        opacity: resetLoading ? 0.8 : 1,
-                      }}
-                    >
-                      {resetLoading ? 'Sending...' : 'Send Reset Link'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* ─── Level Lines (extend from form to page edges) ─── */}
+      {/* Left */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: 0,
+          width: lineSideWidth,
+          height: 1,
+          transform: 'translateY(-0.5px)',
+          background: 'linear-gradient(to right, transparent 0%, rgba(26,22,19,0.07) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Right */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          right: 0,
+          width: lineSideWidth,
+          height: 1,
+          transform: 'translateY(-0.5px)',
+          background: 'linear-gradient(to left, transparent 0%, rgba(26,22,19,0.07) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* ─── Surveyor's Dot ──────────────────────────────── */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          bottom: isMobile ? 68 : 60,
+          right: isMobile ? 32 : 56,
+          width: 4,
+          height: 4,
+          borderRadius: '50%',
+          background: SS_ORANGE,
+        }}
+      />
     </div>
   )
 }

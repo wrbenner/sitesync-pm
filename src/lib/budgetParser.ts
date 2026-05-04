@@ -13,6 +13,12 @@
  */
 
 import * as XLSX from 'xlsx';
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+} from '../types/money';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -126,12 +132,11 @@ export function detectBudgetSheets(workbook: XLSX.WorkBook): SheetCandidate[] {
 
     // Name-based scoring
     const nameLower = name.toLowerCase();
-    let nameMatched = false;
+
     for (const { term, bonus } of BUDGET_SHEET_KEYWORDS) {
       if (nameLower.includes(term)) {
         score += bonus;
         reasons.push(`name contains "${term}"`);
-        nameMatched = true;
         break;
       }
     }
@@ -556,52 +561,6 @@ const CSI_DIVISION_NAMES: Record<string, string> = {
   '33': 'Utilities',
 };
 
-function detectSectionContext(
-  sheet: XLSX.Sheet,
-  rowIndex: number,
-  headerRow: number,
-  columns: DetectedColumn[],
-): SectionContext | null {
-  // Scan backward from this row to find the nearest section total or section header
-  const descCol = columns.find(c => c.role === 'description');
-  const codeCol = columns.find(c => c.role === 'code');
-
-  // Scan forward to find the next "TOTAL" row — that tells us our section
-  // Use the description column specifically to avoid false matches from numeric cells
-  for (let r = rowIndex + 1; r < rowIndex + 60; r++) {
-    // Check the description column first
-    const dc = descCol ? sheet[XLSX.utils.encode_cell({ r, c: descCol.index })] : null;
-    const descText = String(dc?.v ?? '').trim();
-
-    // Also check all cells for merged/shifted layouts
-    let scanText = descText;
-    if (!descText) {
-      for (let c = 0; c <= 6; c++) { // only check first few columns
-        const cell = sheet[XLSX.utils.encode_cell({ r, c })];
-        if (cell) {
-          const v = String(cell.v ?? '').trim();
-          if (v.toUpperCase().includes('TOTAL')) {
-            scanText = v;
-            break;
-          }
-        }
-      }
-    }
-
-    // Look for "SOMETHING TOTAL" pattern
-    const totalMatch = scanText.match(/^(.+?)\s+TOTAL/i);
-    if (totalMatch) {
-      const sectionName = totalMatch[1].trim().toLowerCase();
-      for (const [key, csi] of Object.entries(SECTION_TO_CSI)) {
-        if (sectionName.includes(key) || key.includes(sectionName)) {
-          return { name: totalMatch[1].trim(), csiCode: csi };
-        }
-      }
-    }
-  }
-
-  return null;
-}
 
 function mapDescriptionToCSI(description: string): { code: string; name: string } | null {
   const lower = description.toLowerCase();
@@ -906,8 +865,14 @@ export function parseBudgetWorkbook(
     });
   }
 
-  // Compute verification totals
-  const computedTotal = rows.reduce((s, r) => s + r.budgetAmount, 0);
+  // Compute verification totals on integer cents so 200+ XLSX rows can't
+  // accumulate float drift before the comparison against the spreadsheet's
+  // own grand-total cell.
+  const computedTotalC: Cents = rows.reduce<Cents>(
+    (acc, r) => addCents(acc, dollarsToCents(r.budgetAmount)),
+    0 as Cents,
+  );
+  const computedTotal = fromCents(computedTotalC) / 100;
 
   if (grandTotal !== null && Math.abs(computedTotal - grandTotal) > 1) {
     const diff = computedTotal - grandTotal;

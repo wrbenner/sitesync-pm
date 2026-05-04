@@ -238,7 +238,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            outline: actionFocused ? `2px solid ${colors.primary}` : 'none',
+            outline: actionFocused ? `2px solid ${colors.primaryOrange}` : 'none',
             outlineOffset: actionFocused ? '2px' : undefined,
           }}
         >
@@ -262,7 +262,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
             fontWeight: 600,
             padding: `0 ${spacing['2']}`,
             flexShrink: 0,
-            outline: actionFocused ? `2px solid ${colors.primary}` : 'none',
+            outline: actionFocused ? `2px solid ${colors.primaryOrange}` : 'none',
             outlineOffset: actionFocused ? '2px' : undefined,
           }}
         >
@@ -303,7 +303,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
           borderRadius: borderRadius.sm,
           flexShrink: 0,
           transition: `color ${transitions.instant}`,
-          outline: dismissFocused ? `2px solid ${colors.primary}` : 'none',
+          outline: dismissFocused ? `2px solid ${colors.primaryOrange}` : 'none',
           outlineOffset: dismissFocused ? '2px' : undefined,
         }}
         onMouseEnter={(e) => {
@@ -387,8 +387,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           pointerEvents: toasts.length === 0 ? 'none' : 'auto',
         }}
       >
-        {toasts.map((toast, index) => (
-          <ToastEntry key={toast.id} toast={toast} onClose={closeToast} isLast={index === toasts.length - 1} />
+        {toasts.map((toast) => (
+          <ToastEntry key={toast.id} toast={toast} onClose={closeToast} />
         ))}
       </div>
     </ToastContext.Provider>

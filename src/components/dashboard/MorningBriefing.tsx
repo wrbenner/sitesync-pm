@@ -9,6 +9,7 @@ import { duration, easingArray } from '../../styles/animations';
 import { useAuth } from '../../hooks/useAuth';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useProject } from '../../hooks/queries';
+import { useProfileNames, displayName } from '../../hooks/queries/profiles';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useEntityStore } from '../../stores/entityStore';
 import type { RFI } from '../../types/database';
@@ -18,7 +19,7 @@ import type { WeatherSnapshot } from '../../lib/weather';
 import { interpretWeather, getWeatherIcon } from '../../lib/weatherIntelligence';
 import type { ConstructionWeather } from '../../lib/weatherIntelligence';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 
 // ── Time Helpers ────────────────────────────────────────
 
@@ -157,12 +158,11 @@ export const MorningBriefing: React.FC = () => {
   const { data: submittalData } = useQuery({
     queryKey: ['submittals_briefing', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('submittals')
+      const { data, error } = await fromTable('submittals')
         .select('id, status, due_date')
-        .eq('project_id', projectId!);
+        .eq('project_id' as never, projectId!);
       if (error) return { pending: 0, overdue: 0 };
-      const rows = data ?? [];
+      const rows = (data ?? []) as unknown as Array<{ id: string; status: string | null; due_date: string | null }>;
       const today = new Date().toISOString().split('T')[0];
       const pending = rows.filter((s) => s.status === 'submitted' || s.status === 'in_review').length;
       const overdue = rows.filter((s) =>
@@ -178,12 +178,11 @@ export const MorningBriefing: React.FC = () => {
   const { data: budgetData } = useQuery({
     queryKey: ['budget_briefing', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('budget_items')
+      const { data, error } = await fromTable('budget_items')
         .select('original_amount, actual_amount')
-        .eq('project_id', projectId!);
+        .eq('project_id' as never, projectId!);
       if (error) return { total: 0, spent: 0 };
-      const rows = data ?? [];
+      const rows = (data ?? []) as unknown as Array<{ original_amount: number | null; actual_amount: number | null }>;
       return {
         total: rows.reduce((sum, b) => sum + (b.original_amount ?? 0), 0),
         spent: rows.reduce((sum, b) => sum + (b.actual_amount ?? 0), 0),
@@ -233,6 +232,10 @@ export const MorningBriefing: React.FC = () => {
   // Watch items
   const todayStr = useMemo(() => new Date(mountTime).toISOString().split('T')[0], [mountTime]);
 
+  // Resolve ball_in_court UUIDs to names so the briefing reads
+  // "3d with Sarah Garcia" instead of "3d with a0000001-…".
+  const { data: bicProfileMap } = useProfileNames(rfis.map((r) => r.ball_in_court ?? null))
+
   const watchItems = useMemo<WatchItem[]>(() => {
     const items: WatchItem[] = [];
 
@@ -271,7 +274,7 @@ export const MorningBriefing: React.FC = () => {
           id: `rfi-bic-${rfi.id}`,
           severity: 'red',
           icon: '\uD83D\uDD34',
-          text: `RFI #${rfi.number} \u2014 ${rfi.title} \u2014 ${daysSince}d with ${rfi.ball_in_court || 'reviewer'}`,
+          text: `RFI #${rfi.number} \u2014 ${rfi.title} \u2014 ${daysSince}d with ${displayName(bicProfileMap, rfi.ball_in_court, 'reviewer')}`,
         });
       }
     }
@@ -288,7 +291,7 @@ export const MorningBriefing: React.FC = () => {
     }
 
     return items.slice(0, 5);
-  }, [rfis, rfiLoading, phases, mountTime, todayStr]);
+  }, [rfis, rfiLoading, phases, mountTime, todayStr, bicProfileMap]);
 
   // Pulse metrics
   const scheduleLabel = useMemo(() => {

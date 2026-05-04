@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import type { Inspection, InspectionFinding, CreateInspectionInput, InspectionStatus } from '../types/inspection';
 import { getValidInspectionTransitions } from '../machines/inspectionMachine';
 import {
@@ -28,36 +29,33 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export const inspectionService = {
   async loadInspections(projectId: string): Promise<Result<Inspection[]>> {
-    const { data, error } = await supabase
-      .from('inspections')
+    const { data, error } = await fromTable('inspections')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('scheduled_date', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as Inspection[]);
+    return ok((data ?? []) as unknown as Inspection[]);
   },
 
   async createInspection(input: CreateInspectionInput): Promise<Result<Inspection>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('inspections')
+    const { data, error } = await fromTable('inspections')
       .insert({
         project_id: input.project_id,
         title: input.title,
@@ -70,12 +68,12 @@ export const inspectionService = {
         location: input.location ?? null,
         checklist_items: input.checklist_items ?? null,
         created_by: userId,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as Inspection);
+    return ok(data as unknown as Inspection);
   },
 
   /**
@@ -88,23 +86,24 @@ export const inspectionService = {
     inspectionId: string,
     newStatus: InspectionStatus,
   ): Promise<Result> {
-    const { data: inspection, error: fetchError } = await supabase
-      .from('inspections')
+    const { data: inspection, error: fetchError } = await fromTable('inspections')
       .select('status, created_by, inspector_id, project_id')
-      .eq('id', inspectionId)
+      .eq('id' as never, inspectionId)
       .single();
 
     if (fetchError || !inspection) {
       return fail(notFoundError('Inspection', inspectionId));
     }
 
+    const inspectionRow = inspection as unknown as { status: string | null; created_by: string | null; inspector_id: string | null; project_id: string }
+
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(inspection.project_id, userId);
+    const role = await resolveProjectRole(inspectionRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = inspection.status as InspectionStatus;
+    const currentStatus = inspectionRow.status as InspectionStatus;
     const validTransitions = getValidInspectionTransitions(currentStatus, role);
     if (!validTransitions.includes(newStatus)) {
       return fail(
@@ -124,10 +123,9 @@ export const inspectionService = {
       updates.completed_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('inspections')
-      .update(updates)
-      .eq('id', inspectionId);
+    const { error } = await fromTable('inspections')
+      .update(updates as never)
+      .eq('id' as never, inspectionId);
 
     if (error) return fail(dbError(error.message, { inspectionId, newStatus }));
     return { data: null, error: null };
@@ -138,13 +136,12 @@ export const inspectionService = {
    */
   async updateInspection(inspectionId: string, updates: Partial<Inspection>): Promise<Result> {
     const userId = await getCurrentUserId();
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
     safeUpdates.updated_by = userId;
 
-    const { error } = await supabase
-      .from('inspections')
-      .update(safeUpdates)
-      .eq('id', inspectionId);
+    const { error } = await fromTable('inspections')
+      .update(safeUpdates as never)
+      .eq('id' as never, inspectionId);
 
     if (error) return fail(dbError(error.message, { inspectionId }));
     return { data: null, error: null };
@@ -153,27 +150,25 @@ export const inspectionService = {
   async deleteInspection(inspectionId: string): Promise<Result> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('inspections')
+    const { error } = await fromTable('inspections')
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as Record<string, unknown>)
-      .eq('id', inspectionId);
+      } as never)
+      .eq('id' as never, inspectionId);
 
     if (error) return fail(dbError(error.message, { inspectionId }));
     return { data: null, error: null };
   },
 
   async loadFindings(inspectionId: string): Promise<Result<InspectionFinding[]>> {
-    const { data, error } = await supabase
-      .from('inspection_findings')
+    const { data, error } = await fromTable('inspection_findings' as never)
       .select('*')
-      .eq('inspection_id', inspectionId)
+      .eq('inspection_id' as never, inspectionId)
       .order('created_at');
 
     if (error) return fail(dbError(error.message, { inspectionId }));
-    return ok((data ?? []) as InspectionFinding[]);
+    return ok((data ?? []) as unknown as InspectionFinding[]);
   },
 
   /**
@@ -191,13 +186,13 @@ export const inspectionService = {
   ): Promise<Result> {
     const userId = await getCurrentUserId();
 
-    const { error: insertError } = await supabase.from('inspection_findings').insert({
+    const { error: insertError } = await fromTable('inspection_findings' as never).insert({
       inspection_id: inspectionId,
       user_id: userId,
       description,
       severity,
       attachments: attachments ?? null,
-    });
+    } as never);
 
     if (insertError) {
       return fail(dbError(`Failed to insert finding: ${insertError.message}`, { inspectionId }));

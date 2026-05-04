@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Users, Plus, Search, Star, Sparkles, AlertTriangle, Shield, ShieldAlert, ClipboardCheck, Award, Mail, Send, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { Users, Plus, Search, Star, Sparkles, AlertTriangle, Shield, ShieldAlert, ClipboardCheck, Award, Mail, Send, CheckCircle, Clock } from 'lucide-react'
 import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -11,6 +11,7 @@ import {
   type Vendor,
 } from '../hooks/queries/vendors'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 
 const STATUS_COLORS: Record<Vendor['status'], { c: string; bg: string }> = {
   active: { c: colors.statusActive, bg: colors.statusActiveSubtle },
@@ -153,9 +154,16 @@ export const Vendors: React.FC = () => {
   const updateVendor = useUpdateVendor()
   const deleteVendor = useDeleteVendor()
 
-  const handleDelete = async (vendor: Vendor, e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!window.confirm(`Delete "${vendor.company_name}"? This cannot be undone.`)) return
+  const { confirm: confirmDeleteVendor, dialog: deleteVendorDialog } = useConfirm()
+
+  const handleDelete = async (vendor: Vendor, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    const ok = await confirmDeleteVendor({
+      title: 'Delete vendor?',
+      description: `"${vendor.company_name}" — historical contracts and POs referencing this vendor will be preserved as orphaned records.`,
+      destructiveLabel: 'Delete vendor',
+    })
+    if (!ok) return
     try {
       await deleteVendor.mutateAsync({ id: vendor.id })
       toast.success('Vendor deleted')
@@ -195,8 +203,8 @@ export const Vendors: React.FC = () => {
   const [bidLists, setBidLists] = useState<BidList[]>([])
   const [bidListForm, setBidListForm] = useState({ name: '', scope: '', selectedVendorIds: [] as string[] })
 
-  const openEditVendor = (v: Vendor, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const openEditVendor = (v: Vendor, e?: React.MouseEvent) => {
+    e?.stopPropagation()
     setEditVendorForm({
       company_name: v.company_name ?? '',
       contact_name: v.contact_name ?? '',
@@ -219,7 +227,7 @@ export const Vendors: React.FC = () => {
       await updateVendor.mutateAsync({
         id: editVendor.id,
         updates: {
-          company_name: editVendorForm.company_name || null,
+          company_name: editVendorForm.company_name || undefined,
           contact_name: editVendorForm.contact_name || null,
           email: editVendorForm.email || null,
           phone: editVendorForm.phone || null,
@@ -303,9 +311,6 @@ export const Vendors: React.FC = () => {
     // Since there is no diversity_certification column in the vendors table yet,
     // actual percentages are 0. When a certification_type field is added to
     // the vendors table, this computation will populate real numbers.
-    const _list = vendors ?? []
-    const _totalValue = _list.reduce((sum, v) => sum + (v.bonding_capacity ?? 0), 0)
-
     return DIVERSITY_GOAL_TARGETS.map((g) => ({
       category: g.category,
       targetPct: g.targetPct,
@@ -939,6 +944,7 @@ export const Vendors: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteVendorDialog}
     </PageContainer>
   )
 }

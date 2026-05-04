@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -39,10 +40,9 @@ export function usePMSchedules(projectId: string | undefined) {
   return useQuery({
     queryKey: ['pm_schedules', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('preventive_maintenance_schedules')
+      const { data, error } = await fromTable('preventive_maintenance_schedules')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('next_due_date', { ascending: true })
       if (error) throw error
       return data as unknown as PMSchedule[]
@@ -55,10 +55,9 @@ export function usePMSchedulesByEquipment(equipmentId: string | undefined) {
   return useQuery({
     queryKey: ['pm_schedules_by_equipment', equipmentId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('preventive_maintenance_schedules')
+      const { data, error } = await fromTable('preventive_maintenance_schedules')
         .select('*')
-        .eq('equipment_id', equipmentId!)
+        .eq('equipment_id' as never, equipmentId!)
         .order('next_due_date', { ascending: true })
       if (error) throw error
       return data as unknown as PMSchedule[]
@@ -73,9 +72,8 @@ export function useCreatePMSchedule() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase
-        .from('preventive_maintenance_schedules')
-        .insert(payload)
+      const { data, error } = await fromTable('preventive_maintenance_schedules')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -92,10 +90,9 @@ export function useUpdatePMSchedule() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; projectId: string; equipmentId: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await supabase
-        .from('preventive_maintenance_schedules')
-        .update({ ...payload.updates, updated_at: new Date().toISOString() })
-        .eq('id', payload.id)
+      const { data, error } = await fromTable('preventive_maintenance_schedules')
+        .update({ ...payload.updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, payload.id)
         .select()
         .single()
       if (error) throw error
@@ -112,10 +109,9 @@ export function useDeletePMSchedule() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; projectId: string; equipmentId: string }) => {
-      const { error } = await supabase
-        .from('preventive_maintenance_schedules')
+      const { error } = await fromTable('preventive_maintenance_schedules')
         .delete()
-        .eq('id', payload.id)
+        .eq('id' as never, payload.id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {

@@ -1,13 +1,12 @@
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from './createAuditedMutation'
 import { punchItemSchema,
 } from '../../components/forms/schemas'
 import { validatePunchItemStatusTransition } from './state-machine-validation-helpers'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -37,15 +36,15 @@ export function useCreatePunchItem() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'punch_list.create',
     schema: punchItemSchema,
-    action: 'create_punch_item',
+    action: 'create',
     entityType: 'punch_item',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const insertData = sanitizePunchData(params.data)
-      const { data, error } = await from('punch_items').insert(insertData).select().single()
+      const { data, error } = await from('punch_items').insert(insertData as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'punch_item_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -64,16 +63,16 @@ export function useUpdatePunchItem() {
     permission: 'punch_list.edit',
     schema: punchItemSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_punch_item',
+    action: 'update',
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       if (typeof updates.status === 'string') {
         await validatePunchItemStatusTransition(id, projectId, updates.status)
       }
-      const cleanUpdates = sanitizePunchData(updates as Record<string, unknown>)
-      const { error } = await from('punch_items').update(cleanUpdates).eq('id', id).eq('project_id', projectId)
+      const cleanUpdates = sanitizePunchData(updates as unknown as Record<string, unknown>)
+      const { error } = await from('punch_items').update(cleanUpdates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -92,11 +91,11 @@ export function useUpdatePunchItem() {
 export function useDeletePunchItem() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'punch_list.delete',
-    action: 'delete_punch_item',
+    action: 'delete',
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('punch_items').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('punch_items').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

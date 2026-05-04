@@ -1,20 +1,20 @@
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { ProjectMetrics } from '../../types/api'
 import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/healthScoring'
 
 export async function getProjectMetrics(projectId: string): Promise<ProjectMetrics | null> {
   try {
-    const { data, error } = await supabase
-      .from('project_metrics')
+    const { data, error } = await fromTable('project_metrics' as never)
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .maybeSingle()
     if (error) {
       if (import.meta.env.DEV) console.warn('[getProjectMetrics] error:', error)
       return null
     }
     if (!data) return null
-    const metrics = data as ProjectMetrics
+    const metrics = data as unknown as ProjectMetrics
     return {
       ...metrics,
       aiHealthScore: computeProjectHealthScore(metrics),
@@ -33,15 +33,14 @@ export async function getBulkProjectMetrics(
 ): Promise<Record<string, ProjectMetrics>> {
   if (projectIds.length === 0) return {}
   try {
-    const { data, error } = await supabase
-      .from('project_metrics')
+    const { data, error } = await fromTable('project_metrics' as never)
       .select('*')
-      .in('project_id', projectIds)
+      .in('project_id' as never, projectIds)
     if (error) {
       if (import.meta.env.DEV) console.warn('[getBulkProjectMetrics] error:', error)
       return {}
     }
-    const rows = (data ?? []) as ProjectMetrics[]
+    const rows = (data ?? []) as unknown as ProjectMetrics[]
     return Object.fromEntries(
       rows.map((metrics): [string, ProjectMetrics] => [
         metrics.project_id,
@@ -61,35 +60,33 @@ export async function getBulkProjectMetrics(
 type PortfolioMetricsRow = Pick<
   ProjectMetrics,
   | 'project_id'
-  | 'open_rfis'
-  | 'overdue_rfis'
-  | 'open_punch_items'
-  | 'budget_variance_pct'
+  | 'rfis_open'
+  | 'rfis_overdue'
+  | 'punch_open'
   | 'schedule_variance_days'
-  | 'safety_incident_rate'
+  | 'safety_incidents_this_month'
 >
 
 // Narrow select reduces payload ~80% vs SELECT *. Only columns required by
 // computeProjectHealthScore are fetched; count: 'exact' enables total-row reporting.
 export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetricsRow[]> {
   try {
-    const { data, error } = await supabase
-      .from('project_metrics')
+    const { data, error } = await fromTable('project_metrics' as never)
       .select(
-        'project_id, open_rfis, overdue_rfis, open_punch_items, budget_variance_pct, schedule_variance_days, safety_incident_rate, projects!inner(organization_id)',
+        'project_id, rfis_open, rfis_overdue, punch_open, schedule_variance_days, safety_incidents_this_month, projects!inner(organization_id)',
         { count: 'exact' }
       )
-      .eq('projects.organization_id', orgId)
+      .eq('projects.organization_id' as never, orgId)
       .limit(200)
     if (error) {
       if (import.meta.env.DEV) console.warn('[getPortfolioMetrics] error:', error)
       return []
     }
-    const rows = (data || []) as PortfolioMetricsRow[]
+    const rows = (data || []) as unknown as PortfolioMetricsRow[]
     return rows.map((metrics) => ({
       ...metrics,
-      aiHealthScore: computeProjectHealthScore(metrics as ProjectMetrics),
-      aiConfidenceLevel: computeAiConfidenceLevel(metrics as ProjectMetrics),
+      aiHealthScore: computeProjectHealthScore(metrics as unknown as ProjectMetrics),
+      aiConfidenceLevel: computeAiConfidenceLevel(metrics as unknown as ProjectMetrics),
     }))
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[getPortfolioMetrics] threw:', err)

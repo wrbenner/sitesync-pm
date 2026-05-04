@@ -454,7 +454,7 @@ const ConflictRow: React.FC<ConflictRowProps> = ({
           color: colors.textPrimary,
           wordBreak: 'break-word',
           cursor: showToggle ? 'pointer' : 'default',
-          outline: localChosen && showToggle ? `2px solid ${colors.primaryBlue ?? '#3B82F6'}` : 'none',
+          outline: localChosen && showToggle ? `2px solid ${colors.primaryOrange}` : 'none',
           outlineOffset: '-2px',
           transition: transitions.quick,
         }}

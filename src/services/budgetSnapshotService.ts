@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase'
+import { fromTable, asRows } from '../lib/db/queries'
 
 export interface BudgetSnapshotRow {
   id: string
@@ -31,26 +32,25 @@ export interface CreateSnapshotInput {
 
 export const budgetSnapshotService = {
   async loadSnapshots(projectId: string): Promise<BudgetSnapshotRow[]> {
-    const { data, error } = await supabase
-      .from('budget_snapshots')
+    const { data, error } = await fromTable('budget_snapshots')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('snapshot_date', { ascending: false })
 
     if (error) throw error
 
-    return (data ?? []).map(row => ({
+    const rows = asRows<Record<string, unknown> & { division_data: unknown }>(data)
+    return rows.map(row => ({
       ...row,
       division_data: Array.isArray(row.division_data) ? row.division_data : [],
-    })) as BudgetSnapshotRow[]
+    })) as unknown as BudgetSnapshotRow[]
   },
 
   async saveSnapshot(input: CreateSnapshotInput): Promise<BudgetSnapshotRow> {
     const { data: session } = await supabase.auth.getSession()
     const userId = session.session?.user?.id ?? null
 
-    const { data, error } = await supabase
-      .from('budget_snapshots')
+    const { data, error } = await fromTable('budget_snapshots')
       .insert({
         project_id: input.projectId,
         name: input.name,
@@ -59,20 +59,19 @@ export const budgetSnapshotService = {
         total_committed: input.totalCommitted,
         division_data: input.divisionData,
         created_by: userId,
-      })
+      } as never)
       .select()
       .single()
 
     if (error) throw error
 
-    return data as BudgetSnapshotRow
+    return data as unknown as BudgetSnapshotRow
   },
 
   async deleteSnapshot(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('budget_snapshots')
+    const { error } = await fromTable('budget_snapshots')
       .delete()
-      .eq('id', id)
+      .eq('id' as never, id)
 
     if (error) throw error
   },

@@ -1,0 +1,32 @@
+{
+  "logs": [
+    {
+      "id": "ee100001-0000-4000-8000-000000000001",
+      "log_date": "2026-04-29",
+      "summary": "Pour day. 165 CY placed at building B podium.",
+      "weather": "Clear",
+      "temperature_high": 84,
+      "temperature_low": 64,
+      "workers_onsite": 118,
+      "total_hours": 944,
+      "incidents": 1
+    },
+    {
+      "id": "ee100001-0000-4000-8000-000000000002",
+      "log_date": "2026-04-30",
+      "summary": "Building A floor 5 framing 100% complete.",
+      "weather": "Clear",
+      "temperature_high": 78,
+      "temperature_low": 58,
+      "workers_onsite": 102,
+      "total_hours": 816,
+      "incidents": 0
+    }
+  ],
+  "signerId": "e1000001-0000-4000-8000-000000000003",
+  "expectedChainHashShape": "^[0-9a-f]{64}$",
+  "tampered": {
+    "logIndex": 0,
+    "newSummary": "Tampered summary — should break chain"
+  }
+}

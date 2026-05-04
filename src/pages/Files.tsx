@@ -14,13 +14,16 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { useProjectId } from '../hooks/useProjectId';
 import { useFiles } from '../hooks/queries';
 import { useCreateFile, useDeleteFile } from '../hooks/mutations';
-import { supabase, fromTable } from '../lib/supabase';
+import { useConfirm } from '../components/ConfirmDialog';
+import { supabase} from '../lib/supabase';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { usePermissions } from '../hooks/usePermissions';
 import { useTableKeyboardNavigation } from '../hooks/useTableKeyboardNavigation';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
 import type { MappedFile } from '../types/api';
+
+import { fromTable } from '../lib/db/queries'
 
 type ViewMode = 'list' | 'grid';
 
@@ -179,7 +182,7 @@ const FilesPage: React.FC = () => {
     const source = files.find((f: FileItem) => f.id === sourceId);
     const target = files.find((f: FileItem) => f.id === targetFolderId);
     if (source && target) {
-      const { error } = await fromTable('files').update({ parent_folder_id: targetFolderId }).eq('id', sourceId);
+      const { error } = await fromTable('files').update({ parent_folder_id: targetFolderId } as never).eq('id' as never, sourceId);
       if (error) { addToast('error', `Failed to move "${source.name}"`); return; }
       addToast('success', `Moved "${source.name}" into "${target.name}"`);
       refetch();
@@ -248,7 +251,7 @@ const FilesPage: React.FC = () => {
             const targetFolderId = pickedIds[0];
             if (targetFolderId) {
               for (const fileId of ids) {
-                await fromTable('files').update({ parent_folder_id: targetFolderId } as Record<string, unknown>).eq('id', fileId);
+                await fromTable('files').update({ parent_folder_id: targetFolderId } as never).eq('id' as never, fileId);
               }
               refetch();
             }
@@ -279,8 +282,15 @@ const FilesPage: React.FC = () => {
       variant: 'secondary' as const,
       onClick: async (ids: string[]) => {
         const links = ids.map((id) => `${window.location.origin}/files/${id}`).join('\n');
-        await navigator.clipboard.writeText(links).catch(() => {});
-        addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        // Silent catch was lying to the user — the success toast fired
+        // even when the write failed (Safari without focus, missing
+        // permission, etc). Branch on the actual outcome.
+        try {
+          await navigator.clipboard.writeText(links);
+          addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        } catch {
+          addToast('error', 'Could not access clipboard. Tap a link to copy manually.');
+        }
       },
     },
   ], [files, rawFiles, addToast, hasPermission, deleteFile, projectId, refetch]);
@@ -371,8 +381,15 @@ const FilesPage: React.FC = () => {
     } catch { addToast('error', `Failed to upload ${fileName}`); setUploadAnnouncement('Upload failed. Please try again.'); }
   };
 
+  const { confirm: confirmDeleteFile, dialog: deleteFileDialog } = useConfirm();
+
   const handleDeleteFile = useCallback(async (file: FileItem) => {
-    if (!window.confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteFile({
+      title: 'Delete file?',
+      description: `"${file.name}" will be permanently removed. Linkages from RFIs, photos, or punch items will become orphaned.`,
+      destructiveLabel: 'Delete file',
+    });
+    if (!ok) return;
     try {
       await deleteFile.mutateAsync({ id: file.id, projectId: projectId! });
       addToast('success', `Deleted ${file.name}`);
@@ -888,7 +905,7 @@ const FilesPage: React.FC = () => {
                 >
                   <DataTable
                     data={displayFiles}
-                    columns={fileTableColumns}
+                    columns={fileTableColumns as never}
                     enableSorting
                     selectable
                     onSelectionChange={setSelectedIds}
@@ -924,6 +941,7 @@ const FilesPage: React.FC = () => {
         title="Move to Folder"
       />
       </main>
+      {deleteFileDialog}
     </PageContainer>
   );
 };

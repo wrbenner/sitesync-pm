@@ -1,15 +1,38 @@
-import React, { useState, useCallback, memo } from 'react'
+import { useState, useCallback, memo, useMemo } from 'react'
 import { toast } from 'sonner'
 import { FileText, AlertTriangle, Scale } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
 import { Card, Skeleton, EmptyState } from '../../components/Primitives'
 import { PermissionGate } from '../../components/auth/PermissionGate'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { usePayAppSOV } from '../../hooks/queries'
+import { useInsuranceCertificates } from '../../hooks/queries/insurance-certificates'
+import { supabase } from '../../lib/supabase'
+import { logAuditEntry } from '../../lib/auditLogger'
 import type { G702Data, G703LineItem } from '../../machines/paymentMachine'
 import type { LienWaiverRow, LienWaiverStatus } from '../../types/api'
 import { fmtCurrency, LIEN_WAIVER_STATUS_CONFIG } from './types'
 import { G702Preview } from './G702Preview'
 import { SOVEditorPanel } from './SOVEditor'
+import { PreSubmissionAudit } from './PreSubmissionAudit'
+import {
+  runAudit,
+  type AuditInput,
+  type AuditPayApp,
+  type AuditLineItem,
+  type AuditLienWaiver,
+  type AuditInsurance,
+  type AuditPeriodContractor,
+  type CheckId,
+} from './auditChecks'
+import {
+  type Cents,
+  addCents,
+  applyRateCents,
+  dollarsToCents,
+  fromCents,
+} from '../../types/money'
 
 interface PayAppDetailProps {
   app: Record<string, unknown>
@@ -53,6 +76,135 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
 
   const appStatus = app.status as string
 
+  // ─── Pre-submission audit wiring ───────────────────────────────────────
+  // Audit gate runs while the pay app is being prepared (draft) or queued
+  // for owner review (submitted). Once approved/paid, the audit's purpose
+  // is over so the panel hides.
+  const showAuditGate = appStatus === 'draft' || appStatus === 'submitted'
+  const { data: insuranceRows } = useInsuranceCertificates(projectId)
+
+  const auditInput = useMemo<AuditInput | null>(() => {
+    if (!sovData) return null
+
+    const payApp: AuditPayApp = {
+      id: (app.id as string),
+      application_number: (app.application_number as number) ?? 0,
+      period_to: (app.period_to as string) ?? sovData.periodTo ?? new Date().toISOString().slice(0, 10),
+      period_from: (app.period_from as string | null) ?? null,
+      original_contract_sum:
+        (app.original_contract_sum as number | undefined) ?? sovData.originalContractSum ?? 0,
+      net_change_orders:
+        (app.net_change_orders as number | undefined) ?? sovData.netChangeOrders ?? 0,
+      total_completed_and_stored: (app.total_completed_and_stored as number | undefined) ?? 0,
+      retainage_percent:
+        (app.retainage_percent as number | undefined) ??
+        (sovData.retainageRate ? sovData.retainageRate * 100 : 10),
+      retainage_amount: (app.retainage_amount as number | undefined) ?? 0,
+      less_previous_certificates:
+        (app.less_previous_certificates as number | undefined) ??
+        sovData.lessPreviousCertificates ??
+        0,
+      current_payment_due: (app.current_payment_due as number | undefined) ?? 0,
+    }
+
+    const lineItems: AuditLineItem[] = sovData.lineItems.map((row) => {
+      // Internal cents math so pct × dollars doesn't drift; back to dollars
+      // at the boundary for auditChecks.ts which still operates on number.
+      const svC: Cents = dollarsToCents(row.scheduled_value)
+      const prevAmtC: Cents = applyRateCents(svC, row.prev_pct_complete / 100)
+      const thisAmtC: Cents = applyRateCents(svC, row.current_pct_complete / 100)
+      return {
+        id: row.id,
+        item_number: row.item_number,
+        description: row.description,
+        scheduled_value: row.scheduled_value,
+        previous_completed: fromCents(prevAmtC) / 100,
+        this_period: fromCents(thisAmtC) / 100,
+        materials_stored: row.stored_materials ?? 0,
+        percent_complete: row.prev_pct_complete + row.current_pct_complete,
+      }
+    })
+
+    // Map LienWaiverRow → AuditLienWaiver via the contracts join already
+    // available in props. The audit lib only cares whether status !== 'pending';
+    // map received/executed/missing to plausible waiver-type labels.
+    const auditWaivers: AuditLienWaiver[] = appWaivers.map((w) => {
+      const sub = contracts.find((c) => c.id === w.subcontractor_id)
+      const contractor_name = ((sub?.counterparty as string | undefined) ?? w.subcontractor_id) || ''
+      const status: AuditLienWaiver['status'] =
+        w.status === 'received' ? 'conditional'
+        : w.status === 'executed' ? 'unconditional'
+        : 'pending'
+      return {
+        id: w.id,
+        contractor_name,
+        application_id: w.pay_application_id,
+        amount: w.amount,
+        status,
+        through_date: w.payment_period ?? '',
+      }
+    })
+
+    const insurance: AuditInsurance[] = (insuranceRows ?? []).map((c) => ({
+      id: c.id,
+      company: c.company,
+      policy_type: c.policy_type ?? null,
+      effective_date: c.effective_date,
+      expiration_date: c.expiration_date,
+      verified: !!c.verified,
+    }))
+
+    // One pay app = one contract in this app's data model. Roll up the
+    // billed-this-period total against the contract's counterparty as the
+    // single billing contractor; the audit lib then matches it against
+    // waivers + COIs by name.
+    // Sum on integer cents to prevent N-line accumulation drift.
+    const totalThisPeriodC: Cents = lineItems.reduce<Cents>(
+      (acc, li) =>
+        addCents(
+          acc,
+          addCents(dollarsToCents(li.this_period), dollarsToCents(li.materials_stored)),
+        ),
+      0 as Cents,
+    )
+    const totalThisPeriod = fromCents(totalThisPeriodC) / 100
+    const contractorsThisPeriod: AuditPeriodContractor[] =
+      totalThisPeriod > 0 && sovData.contractorName
+        ? [{
+            contractor_id: sovData.contractId ?? null,
+            contractor_name: sovData.contractorName,
+            billed_amount_this_period: totalThisPeriod,
+          }]
+        : []
+
+    return { payApp, lineItems, waivers: auditWaivers, insurance, contractorsThisPeriod }
+  }, [app, sovData, appWaivers, contracts, insuranceRows])
+
+  // Track override acceptance so the G702 print button re-enables once a
+  // documented override has been persisted.
+  const [overrideAccepted, setOverrideAccepted] = useState(false)
+
+  const insertOverride = useMutation({
+    mutationFn: async (args: { reason: string; check_ids: CheckId[] }) => {
+      const { data, error } = await supabase
+        .from('payapp_audit_overrides')
+        .insert({
+          project_id: projectId,
+          pay_app_id: app.id as string,
+          reason: args.reason,
+          check_ids: args.check_ids,
+        } as never)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+  })
+
+  // Computed gate for the existing "Generate AIA G702/G703" button.
+  const auditCanSubmit = auditInput ? runAudit(auditInput).canSubmit : true
+  const g702Allowed = auditCanSubmit || overrideAccepted
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -63,22 +215,49 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
           <PermissionGate permission="financials.edit">
             <button
               onClick={() => {
+                if (!g702Allowed) return
                 window.print()
                 toast.success('G702/G703 print view opened')
               }}
+              disabled={!g702Allowed}
+              title={!g702Allowed ? 'Pre-submission audit failed — accept overrides to proceed' : undefined}
+              data-testid="generate-g702-btn"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['4']}`,
                 border: 'none', borderRadius: borderRadius.md,
-                backgroundColor: colors.primaryOrange, color: colors.white,
+                backgroundColor: g702Allowed ? colors.primaryOrange : colors.surfaceInset,
+                color: g702Allowed ? colors.white : colors.textTertiary,
                 fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold,
-                cursor: 'pointer', fontFamily: typography.fontFamily,
+                cursor: g702Allowed ? 'pointer' : 'not-allowed', fontFamily: typography.fontFamily,
+                opacity: g702Allowed ? 1 : 0.7,
               }}
             >
               <FileText size={14} /> Generate AIA G702/G703
             </button>
           </PermissionGate>
         )}
+      </div>
+
+      {/* Workflow timeline — visual journey of pay-app status */}
+      <div
+        style={{
+          padding: spacing['4'],
+          backgroundColor: colors.surfaceRaised,
+          borderRadius: borderRadius.lg,
+          border: `1px solid ${colors.borderSubtle}`,
+        }}
+      >
+        <WorkflowTimeline
+          ariaLabel={`Pay application ${appNumber} workflow status`}
+          currentState={appStatus || 'draft'}
+          states={[
+            { key: 'draft', label: 'Draft' },
+            { key: 'submitted', label: 'Submitted' },
+            { key: 'approved', label: 'Approved' },
+            { key: 'paid', label: 'Paid' },
+          ]}
+        />
       </div>
 
       {showMissingWarning && (
@@ -97,6 +276,41 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
             </p>
           </div>
         </div>
+      )}
+
+      {/* Pre-submission audit gate — runs above the approve/submit area while
+          the pay app is in draft or submitted state. Hidden once approved/paid. */}
+      {showAuditGate && auditInput && (
+        <PreSubmissionAudit
+          input={auditInput}
+          isSubmitting={isApproving || insertOverride.isPending}
+          onSubmit={async (_summary, override) => {
+            try {
+              if (override) {
+                await insertOverride.mutateAsync(override)
+                logAuditEntry({
+                  projectId,
+                  entityType: 'pay_app',
+                  entityId: app.id as string,
+                  action: 'submit_with_override',
+                  metadata: {
+                    reason: override.reason,
+                    check_ids: override.check_ids,
+                    application_number: appNumber,
+                  },
+                }).catch(() => {
+                  // Audit logger swallows its own errors in dev; nothing to do here.
+                })
+                setOverrideAccepted(true)
+                toast.success('Override recorded — proceeding to submit')
+              }
+              onApprove()
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : 'Failed to record override'
+              toast.error(`Could not record override: ${msg}`)
+            }
+          }}
+        />
       )}
 
       <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['3'] }}>
@@ -244,34 +458,38 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
                     </span>
                     <div style={{ display: 'flex', gap: spacing['2'] }}>
                       {waiver.status === 'pending' && (
-                        <button
-                          onClick={() => onMarkReceived(waiver.id)}
-                          disabled={busy}
-                          style={{
-                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
-                            borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                            color: colors.textSecondary, fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {busy ? 'Saving...' : 'Mark Received'}
-                        </button>
+                        <PermissionGate permission="financials.edit">
+                          <button
+                            onClick={() => onMarkReceived(waiver.id)}
+                            disabled={busy}
+                            style={{
+                              padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                              borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                              color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                              fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                              cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {busy ? 'Saving...' : 'Mark Received'}
+                          </button>
+                        </PermissionGate>
                       )}
                       {waiver.status === 'received' && (
-                        <button
-                          onClick={() => onMarkExecuted(waiver.id)}
-                          disabled={busy}
-                          style={{
-                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
-                            borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
-                            color: colors.statusInfo, fontSize: typography.fontSize.caption,
-                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {busy ? 'Saving...' : 'Mark Executed'}
-                        </button>
+                        <PermissionGate permission="financials.edit">
+                          <button
+                            onClick={() => onMarkExecuted(waiver.id)}
+                            disabled={busy}
+                            style={{
+                              padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                              borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                              color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                              fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                              cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {busy ? 'Saving...' : 'Mark Executed'}
+                          </button>
+                        </PermissionGate>
                       )}
                     </div>
                   </div>

@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { PageContainer } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import {
   Play, Pause, SkipBack, SkipForward, Maximize2, Calendar,
   AlertTriangle, TrendingUp, Users, Clock,
@@ -549,7 +549,7 @@ const DigitalTwinPage: React.FC = () => {
 
   // Derive timeline bounds from the real schedule. Fall back to a 180d window
   // starting today when the project has no phases yet.
-  const { scheduleStart, scheduleEnd, totalDays } = useMemo(() => {
+  const { scheduleStart, totalDays } = useMemo(() => {
     if (twinPhases.length === 0) {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
@@ -822,7 +822,7 @@ const DigitalTwinPage: React.FC = () => {
                 backdropFilter: 'blur(8px)',
               }}
             >
-              {(Object.keys(STATUS_COLORS) as PhaseStatus[]).map((status) => (
+              {(Object.keys(STATUS_COLORS) as unknown as PhaseStatus[]).map((status) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                   <div
                     style={{

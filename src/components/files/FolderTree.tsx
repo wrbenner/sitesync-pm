@@ -11,6 +11,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+
   Folder,
   FolderOpen,
   ChevronRight,
@@ -101,7 +102,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     try {
       const { data } = await fromTable('files')
         .select('folder, name')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .limit(2000);
       setPaths((data as Array<{ folder: string | null; name?: string }>) ?? []);
     } catch {
@@ -137,7 +138,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       name: '.folder',
       type: 'folder_placeholder',
       size: 0,
-    });
+    } as never);
     setExpanded((p) => new Set(p).add(newPath));
     void refresh();
   };
@@ -152,9 +153,9 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     await Promise.all(
       affected.map((f) =>
         fromTable('files')
-          .update({ folder: f.folder!.replace(path, newPath) })
-          .eq('project_id', projectId)
-          .eq('folder', f.folder!),
+          .update({ folder: f.folder!.replace(path, newPath) } as never)
+          .eq('project_id' as never, projectId)
+          .eq('folder' as never, f.folder!),
       ),
     );
     void refresh();
@@ -167,7 +168,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     await Promise.all(
       affected.map((f) => {
         const newFolder = f.folder === path ? '' : f.folder!.replace(`${path}/`, '');
-        return fromTable('files').update({ folder: newFolder || null }).eq('project_id', projectId).eq('folder', f.folder!);
+        return fromTable('files').update({ folder: newFolder || null } as never).eq('project_id' as never, projectId).eq('folder' as never, f.folder!);
       }),
     );
     void refresh();

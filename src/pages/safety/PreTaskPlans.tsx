@@ -40,7 +40,7 @@ export const PreTaskPlansTab: React.FC = () => {
     hazards: [{ hazard: '', control_measure: '', ppe_required: '' }] as Hazard[],
   });
 
-  const list = (ptps ?? []) as PTP[];
+  const list = (ptps ?? []) as unknown as PTP[];
 
   const addHazardRow = () => {
     setForm({ ...form, hazards: [...form.hazards, { hazard: '', control_measure: '', ppe_required: '' }] });

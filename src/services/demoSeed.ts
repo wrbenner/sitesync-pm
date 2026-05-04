@@ -31,7 +31,8 @@
 // gracefully shows "Unassigned." A follow-up enhancement can use the
 // service-role path to seed phantom demo team members.
 
-import { supabase } from '../lib/supabase'
+
+import { fromTable } from '../lib/db/queries'
 import { DEMO_BUNDLE } from '../lib/demoData'
 
 export interface SeedResult {
@@ -77,8 +78,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
 
   // 1. Project (upsert by id).
   const projectId = await deriveId(orgId, DEMO_PROJECT_LOGICAL_ID)
-  const { error: projErr } = await supabase
-    .from('projects')
+  const { error: projErr } = await fromTable('projects')
     .upsert(
       {
         id: projectId,
@@ -96,8 +96,11 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
         square_footage: DEMO_BUNDLE.project.square_footage,
         number_of_floors: DEMO_BUNDLE.project.number_of_floors,
         description: DEMO_BUNDLE.project.description,
+        // Optional jurisdiction field. Only set when present on the seed row so
+        // we don't overwrite real data on tables where the column may differ.
+        ...('jurisdiction' in DEMO_BUNDLE.project ? { jurisdiction: (DEMO_BUNDLE.project as { jurisdiction: string }).jurisdiction } : {}),
         is_demo: true,
-      } as Record<string, unknown>,
+      } as never,
       { onConflict: 'id' },
     )
 
@@ -119,7 +122,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       percent_complete: p.pct,
     })),
   )
-  const phRes = await supabase.from('schedule_phases').upsert(phaseRows, { onConflict: 'id' })
+  const phRes = await fromTable('schedule_phases').upsert(phaseRows as never, { onConflict: 'id' })
   if (phRes.error) errors.push({ table: 'schedule_phases', error: phRes.error.message })
   else inserted += phaseRows.length
 
@@ -135,9 +138,12 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       discipline: r.discipline,
       due_date: r.due_date,
       closed_date: 'closed_date' in r ? (r as { closed_date: string }).closed_date : null,
+      // Optional code-grounding field. Only set when present on the seed row so
+      // we don't overwrite real data on tables where the column may differ.
+      ...('applicable_codes' in r ? { applicable_codes: (r as { applicable_codes: readonly string[] }).applicable_codes } : {}),
     })),
   )
-  const rfiRes = await supabase.from('rfis').upsert(rfiRows, { onConflict: 'id' })
+  const rfiRes = await fromTable('rfis').upsert(rfiRows as never, { onConflict: 'id' })
   if (rfiRes.error) errors.push({ table: 'rfis', error: rfiRes.error.message })
   else inserted += rfiRows.length
 
@@ -152,9 +158,13 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       status: s.status,
       submitted_date: s.submitted_date,
       approved_date: 'approved_date' in s ? (s as { approved_date: string }).approved_date : null,
+      // Optional procurement fields. Only set when present on the seed row so
+      // we don't overwrite real data on tables where the columns may differ.
+      ...('lead_time_weeks' in s ? { lead_time_weeks: (s as { lead_time_weeks: number }).lead_time_weeks } : {}),
+      ...('subcontractor' in s ? { subcontractor: (s as { subcontractor: string }).subcontractor } : {}),
     })),
   )
-  const subRes = await supabase.from('submittals').upsert(subRows, { onConflict: 'id' })
+  const subRes = await fromTable('submittals').upsert(subRows as never, { onConflict: 'id' })
   if (subRes.error) errors.push({ table: 'submittals', error: subRes.error.message })
   else inserted += subRows.length
 
@@ -172,7 +182,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       approved_date: 'approved_date' in c ? (c as { approved_date: string }).approved_date : null,
     })),
   )
-  const coRes = await supabase.from('change_orders').upsert(coRows, { onConflict: 'id' })
+  const coRes = await fromTable('change_orders').upsert(coRows as never, { onConflict: 'id' })
   if (coRes.error) errors.push({ table: 'change_orders', error: coRes.error.message })
   else inserted += coRows.length
 
@@ -189,7 +199,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       location: p.floor,
     })),
   )
-  const piRes = await supabase.from('punch_items').upsert(piRows, { onConflict: 'id' })
+  const piRes = await fromTable('punch_items').upsert(piRows as never, { onConflict: 'id' })
   if (piRes.error) errors.push({ table: 'punch_items', error: piRes.error.message })
   else inserted += piRows.length
 
@@ -209,7 +219,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       status: 'submitted',
     })),
   )
-  const dlRes = await supabase.from('daily_logs').upsert(dlRows, { onConflict: 'id' })
+  const dlRes = await fromTable('daily_logs').upsert(dlRows as never, { onConflict: 'id' })
   if (dlRes.error) errors.push({ table: 'daily_logs', error: dlRes.error.message })
   else inserted += dlRows.length
 
@@ -225,7 +235,7 @@ export async function seedDemoProject(orgId: string): Promise<SeedResult> {
       status: d.status,
     })),
   )
-  const dwgRes = await supabase.from('drawings').upsert(dwgRows, { onConflict: 'id' })
+  const dwgRes = await fromTable('drawings').upsert(dwgRows as never, { onConflict: 'id' })
   if (dwgRes.error) errors.push({ table: 'drawings', error: dwgRes.error.message })
   else inserted += dwgRows.length
 

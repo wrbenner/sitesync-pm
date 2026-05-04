@@ -12,6 +12,7 @@
 import * as tus from 'tus-js-client'
 import { supabase } from './supabase'
 
+
 // Env-only — no source-level fallbacks. If these are missing the
 // Supabase client in ./supabase.ts would have thrown already, so by
 // the time this module runs both are guaranteed to be strings.
@@ -50,7 +51,7 @@ export function uploadResumable({
 }: ResumableUploadOptions): { promise: Promise<ResumableUploadResult>; abort: () => void } {
   let tusUpload: tus.Upload | null = null
 
-  const promise = new Promise<ResumableUploadResult>(async (resolve, reject) => {
+  const promise = new Promise<ResumableUploadResult>(async (resolve, _reject) => {
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const accessToken = sessionData.session?.access_token

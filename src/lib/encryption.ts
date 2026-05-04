@@ -3,6 +3,7 @@
 // Encrypts: SSNs, financial amounts, contract terms.
 
 import { supabase } from './supabase'
+import { fromTable, asRow } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -31,24 +32,24 @@ export async function encryptField(
   plaintext: string
 ): Promise<string> {
   // Store the plaintext in Supabase Vault (encrypted at rest by Vault)
-  const { data, error } = await supabase.rpc('vault.create_secret', {
+  const { data, error } = await supabase.rpc('vault.create_secret' as never, {
     new_secret: plaintext,
     new_name: `${entityType}:${entityId}:${fieldName}`,
     new_description: `Encrypted field for ${entityType}.${fieldName}`,
-  })
+  } as never)
 
   if (error) throw new Error(`Encryption failed: ${error.message}`)
 
   const vaultSecretId = data as string
 
   // Store the reference (not the plaintext) in our tracking table
-  await supabase.from('encrypted_fields').upsert({
+  await fromTable('encrypted_fields').upsert({
     project_id: projectId,
     entity_type: entityType,
     entity_id: entityId,
     field_name: fieldName,
     vault_secret_id: vaultSecretId,
-  }, { onConflict: 'entity_type,entity_id,field_name' })
+  } as never, { onConflict: 'entity_type,entity_id,field_name' })
 
   // Return a masked placeholder for the UI
   return maskValue(plaintext)
@@ -60,20 +61,20 @@ export async function decryptField(
   fieldName: string
 ): Promise<string | null> {
   // Look up the vault reference
-  const { data: ref } = await supabase
-    .from('encrypted_fields')
+  const { data: refData } = await fromTable('encrypted_fields')
     .select('vault_secret_id')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .eq('field_name', fieldName)
+    .eq('entity_type' as never, entityType)
+    .eq('entity_id' as never, entityId)
+    .eq('field_name' as never, fieldName)
     .single()
+  const ref = asRow<{ vault_secret_id: string | null }>(refData)
 
   if (!ref?.vault_secret_id) return null
 
   // Retrieve from Vault
-  const { data, error } = await supabase.rpc('vault.read_secret', {
+  const { data, error } = await supabase.rpc('vault.read_secret' as never, {
     secret_id: ref.vault_secret_id,
-  })
+  } as never)
 
   if (error) throw new Error(`Decryption failed: ${error.message}`)
   return data as string

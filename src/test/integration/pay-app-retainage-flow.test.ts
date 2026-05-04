@@ -79,7 +79,7 @@ vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: true,
 }))
 
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 describe('Waiver type helpers', () => {
   it('maps 4-way types to schema enums', () => {
@@ -132,19 +132,18 @@ describe('Pay app → lien waiver → retainage flow', () => {
       status: 'draft',
     }
     seedInsert(payAppPayload)
-    const insertRes = await supabase.from('payment_applications').insert(payAppPayload).select().single()
+    const insertRes = await fromTable('payment_applications').insert(payAppPayload as never).select().single()
     expect(insertRes.data).toMatchObject({ id: PAY_APP, amount: 250000, status: 'draft' })
 
     // Submit
     seedRead(payAppPayload)
-    const submitRes = await supabase
-      .from('payment_applications')
-      .update({ status: 'submitted', submitted_at: new Date().toISOString() })
-      .eq('id', PAY_APP)
+    const submitRes = await fromTable('payment_applications')
+      .update({ status: 'submitted', submitted_at: new Date().toISOString() } as never)
+      .eq('id' as never, PAY_APP)
       .select()
       .single()
     expect(submitRes.data).toMatchObject({ status: 'submitted' })
-    expect((submitRes.data as Record<string, unknown>).submitted_at).toBeTruthy()
+    expect((submitRes.data as unknown as Record<string, unknown>).submitted_at).toBeTruthy()
 
     // ── 2. Generate a conditional partial waiver against the pay app ───
     const waiverPayload = {
@@ -158,11 +157,11 @@ describe('Pay app → lien waiver → retainage flow', () => {
       notes: '[waiver_type:conditional_partial] Partial release for April',
     }
     seedInsert(null)
-    const waiverRes = await supabase.from('lien_waivers').insert(waiverPayload).select().single()
+    const waiverRes = await fromTable('lien_waivers').insert(waiverPayload as never).select().single()
     expect(waiverRes.data).toMatchObject({ status: 'conditional', application_id: PAY_APP })
     expect(decodeWaiverType({
-      status: (waiverRes.data as Record<string, unknown>).status as string,
-      notes: (waiverRes.data as Record<string, unknown>).notes as string,
+      status: (waiverRes.data as unknown as Record<string, unknown>).status as string,
+      notes: (waiverRes.data as unknown as Record<string, unknown>).notes as string,
     }).type).toBe('conditional_partial')
 
     // ── 3. Create retainage entry (10% held) ─────────────
@@ -176,29 +175,27 @@ describe('Pay app → lien waiver → retainage flow', () => {
       released_amount: 0,
       notes: 'Held against pay app 4',
     }
-    const retRes = await supabase.from('retainage_entries').insert(retPayload).select().single()
+    const retRes = await fromTable('retainage_entries').insert(retPayload as never).select().single()
     expect(retRes.data).toMatchObject({ amount_held: retainageAmount, released_amount: 0 })
-    const retId = (retRes.data as Record<string, unknown>).id as string
+    const retId = (retRes.data as unknown as Record<string, unknown>).id as string
 
     // ── 4a. Partial release (10k of 25k) ─────────────────
     seedRead({ amount_held: retainageAmount, released_amount: 0, released_at: null })
     const partial = 10000
-    const partialRes = await supabase
-      .from('retainage_entries')
-      .update({ released_amount: partial })
-      .eq('id', retId)
+    const partialRes = await fromTable('retainage_entries')
+      .update({ released_amount: partial } as never)
+      .eq('id' as never, retId)
       .select()
       .single()
     expect(partialRes.data).toMatchObject({ released_amount: partial })
-    expect((partialRes.data as Record<string, unknown>).released_at).toBeFalsy()
+    expect((partialRes.data as unknown as Record<string, unknown>).released_at).toBeFalsy()
 
     // ── 4b. Final release (remaining 15k, stamps released_at) ─────
     seedRead({ amount_held: retainageAmount, released_amount: partial, released_at: null })
     const nowIso = new Date().toISOString()
-    const finalRes = await supabase
-      .from('retainage_entries')
-      .update({ released_amount: retainageAmount, released_at: nowIso, released_by: 'user-owner' })
-      .eq('id', retId)
+    const finalRes = await fromTable('retainage_entries')
+      .update({ released_amount: retainageAmount, released_at: nowIso, released_by: 'user-owner' } as never)
+      .eq('id' as never, retId)
       .select()
       .single()
     expect(finalRes.data).toMatchObject({

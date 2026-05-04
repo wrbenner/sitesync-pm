@@ -1,13 +1,15 @@
+import { fromTable } from '../../lib/db/queries'
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Lock, X } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
-import { supabase, fromTable } from '../../lib/supabase';
+import { supabase} from '../../lib/supabase';
 import { EntityPresence } from './PresenceBar';
 import { usePresenceStore } from '../../stores/presenceStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useUiStore } from '../../stores';
 import { Btn } from '../Primitives';
 import {
+
   acquireEditLock,
   renewEditLock,
   releaseEditLock,
@@ -62,9 +64,9 @@ export function useOptimisticLock(
       const selectFields =
         lockedStatuses && lockedStatuses.length > 0 ? 'updated_at, status' : 'updated_at';
       const runQuery = () =>
-        fromTable(table)
+        fromTable(table as never)
           .select(selectFields)
-          .eq('id', entityId)
+          .eq('id' as never, entityId)
           .single();
 
       let { data, error } = await runQuery();
@@ -93,8 +95,9 @@ export function useOptimisticLock(
       setCheckFailed(false);
 
       // Evaluate status lock before checking timestamp conflict
+      const row = data as { status?: string; updated_at?: string };
       if (lockedStatuses && lockedStatuses.length > 0) {
-        const status: string | undefined = data.status;
+        const status: string | undefined = row.status;
         if (status && lockedStatuses.includes(status)) {
           setIsStatusLocked(true);
           setLockedStatus(status);
@@ -104,7 +107,7 @@ export function useOptimisticLock(
         }
       }
 
-      const serverTime: string | undefined = data.updated_at;
+      const serverTime: string | undefined = row.updated_at;
       if (serverTime && serverTime !== lastKnownUpdatedAt) {
         setConflictDetected(true);
         setServerUpdatedAt(serverTime);

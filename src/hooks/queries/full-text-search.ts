@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
-import type { Database } from '../../types/database'
 
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+import { fromTable } from '../../lib/db/queries'
+
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Full-Text Search ────────────────────────────────────────
 
@@ -32,19 +32,21 @@ export function useFullTextSearch(
       const tsQuery = query.trim().split(/\s+/).join(' & ')
       const results: SearchResult[] = []
 
+      type DocRow = { id: string; name?: string; title?: string; description?: string | null; discipline?: string | null; project_id: string; created_at: string }
+
       if (searchTypes.includes('document')) {
         const { data } = await from('documents')
           .select('id, name, description, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name ?? '',
+              description: d.description ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -56,16 +58,16 @@ export function useFullTextSearch(
       if (searchTypes.includes('file')) {
         const { data } = await from('files')
           .select('id, name, description, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name ?? '',
+              description: d.description ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -77,16 +79,16 @@ export function useFullTextSearch(
       if (searchTypes.includes('drawing')) {
         const { data } = await from('drawings')
           .select('id, title, discipline, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
-              title: d.title,
-              description: d.discipline,
+              title: d.title ?? '',
+              description: d.discipline ?? null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -98,15 +100,15 @@ export function useFullTextSearch(
       if (searchTypes.includes('wiki')) {
         const { data } = await from('wiki_pages')
           .select('id, title, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as unknown as DocRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
-              title: d.title,
+              title: d.title ?? '',
               description: null,
               project_id: d.project_id,
               relevance: 1,

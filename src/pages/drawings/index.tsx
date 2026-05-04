@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { Upload, ScanSearch, FolderOpen } from 'lucide-react';
+import { Upload, ScanSearch, FolderOpen, MessageSquare, Ruler } from 'lucide-react';
 import { PageContainer, Btn, useToast } from '../../components/Primitives';
-import { colors, spacing } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 import { getDrawings, getDrawingRevisionHistory } from '../../api/endpoints/documents';
+import type { DrawingRevision } from '../../types/api';
 import { useQuery } from '../../hooks/useQuery';
 import { useProjectId } from '../../hooks/useProjectId';
 import { PdfViewer } from '../../components/drawings/PdfViewer';
@@ -12,6 +13,7 @@ import { DrawingTiledViewer } from '../../components/drawings/DrawingTiledViewer
 import { useSignedUrl } from '../../hooks/useSignedUrl';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { smartUpload } from '../../lib/resumableUpload';
 import { drawingService } from '../../services/drawingService';
 import { isPdf, splitPdfToPages } from '../../lib/pdfPageSplitter';
@@ -26,6 +28,8 @@ import { DrawingUpload, RevisionUpload } from './DrawingUpload';
 import { extractDrawingFilesFromZip } from '../../components/files/UploadZone';
 import {
   classifyPdfByFilename,
+  inferDisciplineFromFilename,
+  extractRevisionFromFilename,
   parseCoverMetadata,
   mergeCoverMetadata,
   looksLikeCoverText,
@@ -45,26 +49,17 @@ import {
 } from '../../hooks/useDrawingIntelligence';
 import { AnalysisProgress } from '../../components/drawings/AnalysisProgress';
 import { DrawingSetPanel, type DrawingSetItem, type SetType } from '../../components/drawings/DrawingSetPanel';
+import { ScaleAuditPanel } from '../../components/drawings/ScaleAuditPanel';
 import { TransmittalModal, type TransmittalData } from '../../components/drawings/TransmittalModal';
 import { DiscrepancyDetailModal } from '../../components/drawings/DiscrepancyDetailModal';
+import { IrisConflictScanButton } from '../../components/drawings/IrisConflictScanButton';
 import { useProjectDrawingPairs } from '../../hooks/useDrawingIntelligence';
 import type { DrawingDiscrepancy, DrawingPair } from '../../types/ai';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Parse a revision number out of a filename.
- * Matches "Rev 06", "Rev_05", "_R06_", "Revision 2", etc.
- * We normalize underscores to spaces first so `\b` boundaries actually
- * fire (underscore is a regex word-char, which was the bug).
- * Returns the raw revision string ("5", "06" → "6", "1.0") or null.
- */
-function extractRevisionFromFilename(name: string): string | null {
-  const normalized = name.replace(/_+/g, ' ');
-  const m = normalized.match(/\b(?:rev(?:ision)?|r)[\s-]?(\d{1,3}(?:\.\d{1,2})?)\b/i);
-  if (!m) return null;
-  return m[1].replace(/^0+(?=\d)/, '');
-}
+// extractRevisionFromFilename moved to src/lib/pdfClassifier.ts
+// (imported above) — single source of truth shared with the local tester.
 
 /**
  * Clean a source filename down to a readable title.
@@ -93,93 +88,8 @@ function cleanFilenameTitle(name: string): string {
   return s;
 }
 
-/**
- * Infer discipline from a filename.
- *
- * Two-pass strategy — the filename can be either a raw sheet number like
- * "A-101" OR a full source filename like
- * "25.04.02_Merritt Crossing_Mechanical_IFC_stamped_Rev 05.pdf".
- *
- *   Pass 1: search the filename for explicit discipline words. This handles
- *           descriptive filenames where the discipline is spelled out.
- *   Pass 2: fall back to the single-letter sheet prefix (A-101 → arch).
- *
- * WHY: Synthetic sheet numbers like "P001" (our fallback when a real sheet
- * number can't be parsed) used to hit the prefix map's `P: 'plumbing'` entry
- * and tag everything as plumbing. Word-based detection runs first now, so
- * a file whose name contains "Mechanical" returns 'mechanical' regardless
- * of any stray leading `P`.
- */
-function inferDisciplineFromFilename(name: string): string | null {
-  // Pass 1: discipline words
-  const normalized = name
-    .toLowerCase()
-    .replace(/\.[^.]+$/, '')
-    .replace(/[_\-/\\.]+/g, ' ')
-    .replace(/\s+/g, ' ');
-
-  // Ordering matters: more specific patterns first so "cover sheet" doesn't
-  // get swallowed by another partial match, and compound terms like
-  // "fire protection" are checked before anything shorter might win.
-  const wordPatterns: Array<{ re: RegExp; discipline: string }> = [
-    // Meta / pre-construction
-    { re: /\b(covers?|title\s*sheet|cover\s*sheets?|project\s*data|code\s*(summary|analysis)|general\s*(notes|info))\b/, discipline: 'cover' },
-    { re: /\b(hazmat|hazardous\s*materials?|asbestos|lead\s*paint|environmental|swppp|erosion\s*control)\b/, discipline: 'hazmat' },
-    { re: /\b(demo(lition)?|existing\s*conditions)\b/, discipline: 'demolition' },
-    { re: /\b(survey|topo(graphic)?|alta)\b/, discipline: 'survey' },
-    { re: /\b(geotechnical|geotech|soils?\s*report)\b/, discipline: 'geotechnical' },
-    // Site + envelope
-    { re: /\b(civil)\b/, discipline: 'civil' },
-    { re: /\b(landscape)\b/, discipline: 'landscape' },
-    // Building
-    { re: /\b(structural|struct)\b/, discipline: 'structural' },
-    { re: /\b(architectural|architecture|arch)\b/, discipline: 'architectural' },
-    { re: /\b(interior(\s+design)?)\b/, discipline: 'interior' },
-    { re: /\b(id)\b/, discipline: 'interior' },
-    // Systems (order matters: FP before electrical/plumbing so "fire alarm" is caught correctly)
-    { re: /\b(fire\s*protection|fire\s*alarm|fp)\b/, discipline: 'fire_protection' },
-    { re: /\b(plumbing|plumb)\b/, discipline: 'plumbing' },
-    { re: /\b(mechanical|mech|hvac)\b/, discipline: 'mechanical' },
-    { re: /\b(electrical|elec)\b/, discipline: 'electrical' },
-    { re: /\b(telecommunications?|telecom|low\s*voltage|lv|tele\b)\b/, discipline: 'telecommunications' },
-  ];
-  for (const { re, discipline } of wordPatterns) {
-    if (re.test(normalized)) return discipline;
-  }
-
-  // Pass 2: sheet-prefix fallback per AIA US National CAD Standard.
-  // We omit `D` (ambiguous: Process/Demolition) — demolition must come from
-  // a word match, not a single-letter prefix.
-  const prefixMap: Record<string, string> = {
-    G: 'cover',          // General (cover, index, code summary)
-    H: 'hazmat',         // Hazmat / Environmental
-    V: 'survey',
-    B: 'geotechnical',
-    C: 'civil',
-    L: 'landscape',
-    S: 'structural',
-    A: 'architectural',
-    I: 'interior',
-    Q: 'interior',       // Equipment / FF&E — no dedicated bucket yet, closest is interior
-    F: 'fire_protection',
-    P: 'plumbing',
-    M: 'mechanical',
-    E: 'electrical',
-    T: 'telecommunications',
-  };
-  const m = name.match(/^([A-Z]{1,2})-?\d/i);
-  if (m) {
-    const prefix = m[1].toUpperCase();
-    // Two-letter prefix special cases (AIA + common industry conventions)
-    if (prefix === 'CS') return 'cover';               // Cover Sheet
-    if (prefix === 'ID') return 'interior';            // Interior Design
-    if (prefix === 'PF') return 'plumbing';            // Plumbing Fixtures
-    if (prefix === 'FA') return 'fire_protection';     // Fire Alarm
-    if (prefix === 'LV') return 'telecommunications';  // Low Voltage
-    return prefixMap[prefix[0]] ?? null;
-  }
-  return null;
-}
+// inferDisciplineFromFilename now lives in src/lib/pdfClassifier.ts
+// (imported above) — single source of truth shared with tests.
 
 // ─── Drawing File Viewer — single path through OpenSeadragon ──────────────
 // Every drawing goes through DrawingTiledViewer (OpenSeadragon):
@@ -213,10 +123,10 @@ const DrawingFileViewer: React.FC<{
   // signedUrl may be null while loading — the viewer shows its own loading state
   return (
     <DrawingTiledViewer
-      drawing={drawing}
-      drawings={drawings}
+      drawing={drawing as never}
+      drawings={drawings as never}
       onClose={onClose}
-      onNavigate={onNavigate}
+      onNavigate={onNavigate as never}
       projectId={projectId}
       scaleRatioText={scaleRatioText}
       signedUrl={signedUrl}
@@ -229,6 +139,7 @@ const DrawingFileViewer: React.FC<{
 const DrawingsPage: React.FC = () => {
   const { addToast } = useToast();
   const projectId = useProjectId();
+  const navigate = useNavigate();
   const { data: drawings, loading, error, refetch } = useQuery(
     `drawings-${projectId}`,
     () => getDrawings(projectId!),
@@ -244,6 +155,59 @@ const DrawingsPage: React.FC = () => {
     }
     if (!error) errorToastShown.current = false;
   }, [error, addToast]);
+
+  // ── Revision-impact banner ────────────────────────────────
+  // Find RFIs that were flagged by a recent revision upload (within the last
+  // 14 days) by the drawing-revised cross-feature chain. Surfacing this on
+  // the drawings page is the right place because it answers "what did my
+  // revision break?" — the question someone asks when looking at drawings.
+  const [revisionImpact, setRevisionImpact] = useState<{
+    rfiCount: number;
+    sheetNumbers: string[];
+  } | null>(null);
+  const [revisionImpactDismissed, setRevisionImpactDismissed] = useState(false);
+  React.useEffect(() => {
+    if (!projectId || revisionImpactDismissed) return;
+    let cancelled = false;
+    (async () => {
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      // We can't index on jsonb keys we don't know, so query open RFIs whose
+      // metadata.last_revision_flagged_at is recent. Volume is low.
+      // The generated Database types lag behind the live schema (rfis.metadata
+      // is jsonb added in 20260428100000), so route through an `any`-typed
+      // client. Same pattern as src/lib/crossFeatureWorkflows.ts.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      // Status values per migration 00028_rfi_workflow.sql.
+      const { data, error: rfiErr } = await sb
+        .from('rfis')
+        .select('id, drawing_reference, metadata')
+        .eq('project_id' as never, projectId)
+        .in('status' as never, ['draft', 'open', 'under_review']);
+      if (cancelled || rfiErr || !data) return;
+      const recent = (data as Array<{ id: string; drawing_reference: string | null; metadata: Record<string, unknown> | null }>)
+        .filter((rfi) => {
+          const m = rfi.metadata ?? {};
+          const flaggedAt = m.last_revision_flagged_at as string | undefined;
+          if (!flaggedAt) return false;
+          return new Date(flaggedAt) >= fourteenDaysAgo;
+        });
+      if (recent.length === 0) {
+        setRevisionImpact(null);
+        return;
+      }
+      const sheetNumbers = Array.from(
+        new Set(
+          recent
+            .map((rfi) => rfi.drawing_reference)
+            .filter((s): s is string => !!s),
+        ),
+      );
+      setRevisionImpact({ rfiCount: recent.length, sheetNumbers });
+    })();
+    return () => { cancelled = true; };
+  }, [projectId, drawings, revisionImpactDismissed]);
 
   // ── View & filter state ─────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -262,6 +226,9 @@ const DrawingsPage: React.FC = () => {
 
   // ── Revision state ──────────────────────────────────────
   const [viewingRevisionNum, setViewingRevisionNum] = useState<number | null>(null);
+  // Side-by-side rev comparison: holds the prior revision the user
+  // wants to diff against the current sheet. Null = no compare modal.
+  const [compareRev, setCompareRev] = useState<DrawingRevision | null>(null);
   const [viewRevPdfUrl, setViewRevPdfUrl] = useState<string | null>(null);
 
   // ── Overlay (any two drawings) ──────────────────────────
@@ -311,11 +278,20 @@ const DrawingsPage: React.FC = () => {
   //    parameterless, so we surface deep-links via search params.
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkedId = searchParams.get('id');
+  // Set true by the close button. The deep-link auto-open effect skips one
+  // run after a user-initiated close so the panel can't immediately re-open
+  // while the URL update is still in flight (react-router v7 may commit
+  // the navigate in a transition, separate from the state batch).
+  const userJustClosedRef = useRef(false);
   React.useEffect(() => {
+    if (userJustClosedRef.current) {
+      userJustClosedRef.current = false;
+      return;
+    }
     if (!deepLinkedId || !drawings) return;
     if (selectedDrawing?.id === deepLinkedId) return;
     const target = drawings.find((d) => String(d.id) === deepLinkedId);
-    if (target) setSelectedDrawing(target);
+    if (target) setSelectedDrawing(target as unknown as DrawingItem);
   }, [deepLinkedId, drawings, selectedDrawing?.id]);
 
   // Keep URL in sync with the active detail panel so links are shareable.
@@ -331,21 +307,21 @@ const DrawingsPage: React.FC = () => {
 
   // ── Drawing Sets state ─────────────────────────────────
   const [showSetsPanel, setShowSetsPanel] = useState(false);
+  const [showScaleAuditPanel, setShowScaleAuditPanel] = useState(false);
   const { data: drawingSets, refetch: refetchSets } = useQuery(
     `drawing-sets-${projectId}`,
     async () => {
       try {
-        const { data, error: err } = await supabase
-          .from('drawing_sets')
+        const { data, error: err } = await fromTable('drawing_sets')
           .select('*')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .order('created_at', { ascending: false });
         if (err) {
           // Table may not exist yet if migration hasn't been applied
           console.warn('[DrawingSets] Query failed (table may not exist):', err.message);
           return [] as DrawingSetItem[];
         }
-        return (data || []) as DrawingSetItem[];
+        return (data || []) as unknown as DrawingSetItem[];
       } catch (e) {
         console.warn('[DrawingSets] Query error:', e);
         return [] as DrawingSetItem[];
@@ -356,23 +332,22 @@ const DrawingsPage: React.FC = () => {
 
   const handleCreateSet = useCallback(async (setData: { name: string; set_type: SetType; description?: string; drawing_ids: string[] }) => {
     if (!projectId) return;
-    const { error: err } = await supabase.from('drawing_sets').insert({
+    const { error: err } = await fromTable('drawing_sets').insert({
       project_id: projectId,
       name: setData.name,
       set_type: setData.set_type,
       description: setData.description || null,
       drawing_ids: setData.drawing_ids,
-    });
+    } as never);
     if (err) { addToast('error', `Failed to create set: ${err.message}`); return; }
     addToast('success', `Drawing set "${setData.name}" created.`);
     refetchSets();
   }, [projectId, addToast, refetchSets]);
 
   const handleUpdateSet = useCallback(async (setId: string, data: { drawing_ids: string[] }) => {
-    const { error: err } = await supabase
-      .from('drawing_sets')
-      .update({ drawing_ids: data.drawing_ids })
-      .eq('id', setId);
+    const { error: err } = await fromTable('drawing_sets')
+      .update({ drawing_ids: data.drawing_ids } as never)
+      .eq('id' as never, setId);
     if (err) { addToast('error', `Failed to update set: ${err.message}`); return; }
     refetchSets();
   }, [addToast, refetchSets]);
@@ -389,7 +364,7 @@ const DrawingsPage: React.FC = () => {
     setIsIssuingTransmittal(true);
     try {
       // Create the transmittal record (matches 00019_document_enhancements schema)
-      const { error: transmittalErr } = await supabase.from('transmittals').insert({
+      const { error: transmittalErr } = await fromTable('transmittals').insert({
         project_id: projectId,
         to_company: data.recipient_company,
         to_contact: data.recipient_name,
@@ -400,17 +375,16 @@ const DrawingsPage: React.FC = () => {
         document_ids: data.drawing_ids,
         status: 'sent',
         sent_at: new Date().toISOString(),
-      });
+      } as never);
       if (transmittalErr) { addToast('error', `Failed to create transmittal: ${transmittalErr.message}`); return; }
 
       // Update the set to issued
-      const { error: setErr } = await supabase
-        .from('drawing_sets')
+      const { error: setErr } = await fromTable('drawing_sets')
         .update({
           set_type: 'issued',
           issued_date: new Date().toISOString(),
-        })
-        .eq('id', data.set_id);
+        } as never)
+        .eq('id' as never, data.set_id);
       if (setErr) { addToast('error', `Failed to update set status: ${setErr.message}`); return; }
 
       addToast('success', `Transmittal issued to ${data.recipient_company}.`);
@@ -421,7 +395,7 @@ const DrawingsPage: React.FC = () => {
     }
   }, [projectId, addToast, refetchSets]);
 
-  const allDrawings: DrawingItem[] = drawings || [];
+  const allDrawings: DrawingItem[] = (drawings || []) as unknown as DrawingItem[];
 
   const handleOpenDrawingFromSet = useCallback((drawingId: string) => {
     const drawing = allDrawings.find((d) => d.id === drawingId);
@@ -456,7 +430,7 @@ const DrawingsPage: React.FC = () => {
       for (const d of missing) {
         const disc = inferDisciplineFromFilename(d.setNumber || d.title);
         if (disc) {
-          await drawingService.updateDrawing(String(d.id), { discipline: disc } as Record<string, unknown>);
+          await drawingService.updateDrawing(String(d.id), { discipline: disc } as unknown as Record<string, unknown>);
           updated++;
         }
       }
@@ -498,8 +472,8 @@ const DrawingsPage: React.FC = () => {
     }
 
     result = [...result].sort((a, b) => {
-      const aVal = (a as Record<string, unknown>)[sortField];
-      const bVal = (b as Record<string, unknown>)[sortField];
+      const aVal = (a as unknown as Record<string, unknown>)[sortField];
+      const bVal = (b as unknown as Record<string, unknown>)[sortField];
       if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1;
       if (bVal == null) return -1;
@@ -599,13 +573,17 @@ const DrawingsPage: React.FC = () => {
   const triggerClassification = useCallback(
     async (drawingId: string, pageImageUrl: string, fileName?: string, fullPageUrl?: string) => {
       if (!projectId) return;
-      // Must match the 18-value CHECK constraint on drawings.discipline
-      // (see migration 20260422200000_fix_drawing_constraints.sql).
+      // Must match the construction_discipline DOMAIN values.
+      // Source of truth: supabase/migrations/20260423000001_discipline_domain.sql
+      // + 20260428000000_extend_disciplines.sql (adds food_service, laundry,
+      // vertical_transportation). Keep aligned with src/pages/drawings/constants.ts
+      // and src/lib/pdfClassifier.ts:Discipline.
       const VALID_DISCIPLINES = new Set([
         'architectural', 'structural', 'mechanical', 'electrical', 'plumbing',
         'civil', 'fire_protection', 'landscape', 'interior', 'interior_design',
         'mep', 'unclassified', 'cover', 'demolition', 'survey', 'geotechnical',
         'hazmat', 'telecommunications',
+        'food_service', 'laundry', 'vertical_transportation',
       ]);
       const DISCIPLINE_REMAP: Record<string, string> = {
         hvac: 'mechanical',
@@ -632,11 +610,11 @@ const DrawingsPage: React.FC = () => {
         // Revision as read from the title block's REVISIONS table by Gemini.
         // Overwrites the filename-derived rev — the title block is authoritative
         // when it's readable.
-        if ((result as Record<string, unknown>).revision) {
-          updates.revision = String((result as Record<string, unknown>).revision);
+        if ((result as unknown as Record<string, unknown>).revision) {
+          updates.revision = String((result as unknown as Record<string, unknown>).revision);
         }
         updates.processing_status = 'completed';
-        await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+        await drawingService.updateDrawing(drawingId, updates as unknown as Record<string, unknown>);
 
         // Also update the drawing_pages row so both tables stay in sync
         if (result.sheet_number || result.drawing_title || updates.discipline) {
@@ -647,10 +625,9 @@ const DrawingsPage: React.FC = () => {
           if (result.sheet_number) pageUpdates.sheet_number = result.sheet_number;
           if (result.drawing_title) pageUpdates.drawing_title = result.drawing_title;
           if (updates.discipline) pageUpdates.discipline = updates.discipline;
-          await supabase
-            .from('drawing_pages')
-            .update(pageUpdates)
-            .eq('drawing_id', drawingId);
+          await fromTable('drawing_pages')
+            .update(pageUpdates as never)
+            .eq('drawing_id' as never, drawingId);
         }
         refetch();
       } catch (err) {
@@ -659,7 +636,7 @@ const DrawingsPage: React.FC = () => {
           const fallbackDiscipline = inferDisciplineFromFilename(fileName);
           if (fallbackDiscipline) updates.discipline = fallbackDiscipline;
         }
-        await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+        await drawingService.updateDrawing(drawingId, updates as unknown as Record<string, unknown>);
         refetch();
         if (updates.discipline) {
           addToast('info', 'AI unavailable — discipline set from sheet prefix.');
@@ -805,7 +782,7 @@ const DrawingsPage: React.FC = () => {
       setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" (${sizeMB} MB)...`);
       const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
         ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const path = `${projectId}/specifications/${storageKey}-${file.name}`;
       let fileUrl = path;
       try {
@@ -827,13 +804,13 @@ const DrawingsPage: React.FC = () => {
       const sectionMatch = titleNoExt.match(/\b(\d{2}[\s_-]?\d{2}[\s_-]?\d{0,2})\b/);
       const sectionNumber = sectionMatch ? sectionMatch[1].replace(/[\s_-]+/g, ' ').trim() : '—';
       const cleanedTitle = cleanFilenameTitle(file.name) || titleNoExt;
-      const { error: specErr } = await supabase.from('specifications').insert({
+      const { error: specErr } = await fromTable('specifications').insert({
         project_id: projectId,
         section_number: sectionNumber,
         title: cleanedTitle,
         status: 'active',
         file_url: fileUrl,
-      });
+      } as never);
       if (specErr) {
         addToast('warning', `Spec "${file.name}" uploaded to storage but the record couldn't be saved: ${specErr.message}`);
         return false;
@@ -934,7 +911,7 @@ const DrawingsPage: React.FC = () => {
         // across concurrent uploads from different users/tabs.
         const pageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
           ? globalThis.crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
         const pageImagePath = `${projectId}/drawings/pages/${pageKey}-p${page.pageNumber}.png`;
         const thumbPath = `${projectId}/drawings/thumbs/${pageKey}-p${page.pageNumber}-thumb.png`;
         let pageImageStoragePath: string | null = null;
@@ -956,7 +933,20 @@ const DrawingsPage: React.FC = () => {
           continue;
         }
 
-        const pageDiscipline = opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name);
+        // Infer discipline from filename, then clamp to DB-allowed values.
+        // The construction_discipline domain has a fixed set; values outside
+        // it (food_service, laundry, vertical_transportation) fall back to
+        // null — AI classification fills the real value later.
+        const ALLOWED_DISCIPLINES = new Set([
+          'architectural','structural','mechanical','electrical','plumbing',
+          'civil','fire_protection','landscape','interior','interior_design',
+          'mep','unclassified','cover','demolition','survey','geotechnical',
+          'hazmat','telecommunications',
+        ]);
+        const rawDiscipline = opts.isCover ? 'cover' : inferDisciplineFromFilename(file.name);
+        const pageDiscipline = rawDiscipline && ALLOWED_DISCIPLINES.has(rawDiscipline)
+          ? rawDiscipline
+          : (opts.isCover ? 'cover' : null);
 
         const created = await drawingService.createDrawing({
           project_id: projectId,
@@ -994,7 +984,7 @@ const DrawingsPage: React.FC = () => {
           // that aren't on drawings (scale_ratio, viewport_details,
           // pairing_tokens, design_description) and gives the classification
           // pipeline a stable per-page target.
-          const { error: pageErr } = await supabase.from('drawing_pages').insert({
+          const { error: pageErr } = await fromTable('drawing_pages').insert({
             drawing_id: createdId,
             project_id: projectId,
             page_number: page.pageNumber,
@@ -1007,7 +997,7 @@ const DrawingsPage: React.FC = () => {
             discipline: pageDiscipline,
             classification: opts.isCover ? 'completed' : 'pending',  // AI will update to 'completed'
             classification_confidence: titleBlock.confidence ?? null,
-          });
+          } as never);
           if (pageErr) {
             console.warn(`[drawing_pages] insert failed for page ${page.pageNumber}: ${pageErr.message}`);
           }
@@ -1046,7 +1036,7 @@ const DrawingsPage: React.FC = () => {
             );
             const cropKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
               ? globalThis.crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+              : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
             const cropPath = `${projectId}/drawings/crops/${cropKey}-strip-p${page.pageNumber}.png`;
             const cropFile = new window.File([cropBlob], `strip-${cropKey}.png`, { type: 'image/png' });
             const cropUploadResult = await smartUpload('project-files', cropPath, cropFile, () => {});
@@ -1105,7 +1095,7 @@ const DrawingsPage: React.FC = () => {
       const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
       const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
         ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        : `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const storagePath = `${projectId}/drawings/${storageKey}-${file.name}`;
       let fileUrl = storagePath;
       let publicUrl: string | null = null;
@@ -1147,7 +1137,10 @@ const DrawingsPage: React.FC = () => {
     for (let idx = 0; idx < queue.length; idx++) {
       const item = queue[idx];
       const displayName = item.kind === 'file' ? item.file.name : item.displayName;
-      const route = /\.pdf$/i.test(displayName) ? classifyPdfByFilename(displayName) : 'drawing';
+      // Pass the zip-internal path when available so /Specifications/ folders
+      // route as 'spec' even when their CSI-numbered filenames don't say "spec".
+      const fullPath = item.kind === 'zip-entry' ? item.entryName : displayName;
+      const route = /\.pdf$/i.test(displayName) ? classifyPdfByFilename(displayName, fullPath) : 'drawing';
 
       setUploadProgressText(`[${idx + 1}/${total}] Reading "${displayName}"...`);
       const file = await getFileForItem(item);
@@ -1234,7 +1227,7 @@ const DrawingsPage: React.FC = () => {
         // Flag without blocking — AI classification may still fix them later.
         await Promise.all(
           duplicateIds.map((id) =>
-            drawingService.updateDrawing(id, { processing_status: 'needs_review' } as Record<string, unknown>),
+            drawingService.updateDrawing(id, { processing_status: 'needs_review' } as unknown as Record<string, unknown>),
           ),
         );
         addToast(
@@ -1247,12 +1240,12 @@ const DrawingsPage: React.FC = () => {
     // Persist a drawing set if the user named one at upload time
     const trimmedSetName = uploadSetName.trim();
     if (trimmedSetName && createdDrawingIds.length > 0) {
-      const { error: setErr } = await supabase.from('drawing_sets').insert({
+      const { error: setErr } = await fromTable('drawing_sets').insert({
         project_id: projectId,
         name: trimmedSetName,
         set_type: uploadSetType,
         drawing_ids: createdDrawingIds,
-      });
+      } as never);
       if (setErr) {
         addToast('warning', `Drawings uploaded, but failed to create set "${trimmedSetName}": ${setErr.message}`);
       } else {
@@ -1294,10 +1287,9 @@ const DrawingsPage: React.FC = () => {
       console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
 
       // Fetch current project row to know which fields are already populated
-      const { data: currentProject } = await supabase
-        .from('projects')
+      const { data: currentProject } = await fromTable('projects')
         .select('name, address, city, state, zip, architect_name, owner_name, general_contractor, building_area_sqft, num_floors')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .single();
 
       const updates: Record<string, unknown> = {};
@@ -1305,7 +1297,7 @@ const DrawingsPage: React.FC = () => {
 
       const setIfEmpty = (field: string, value: string | number | undefined | null, label: string) => {
         if (value === undefined || value === null || value === '') return;
-        const cur = (currentProject as Record<string, unknown> | null)?.[field];
+        const cur = (currentProject as unknown as Record<string, unknown> | null)?.[field];
         if (cur === undefined || cur === null || cur === '' || cur === 0) {
           updates[field] = value;
           applied.push(label);
@@ -1323,10 +1315,9 @@ const DrawingsPage: React.FC = () => {
       setIfEmpty('num_floors', merged.numFloors, `${merged.numFloors} floors`);
 
       if (Object.keys(updates).length > 0) {
-        const { error: projErr } = await supabase
-          .from('projects')
-          .update(updates)
-          .eq('id', projectId);
+        const { error: projErr } = await fromTable('projects')
+          .update(updates as never)
+          .eq('id' as never, projectId);
         if (projErr) {
           console.error('[project-metadata] update failed', projErr);
           addToast('warning', `Extracted project metadata but couldn't save: ${projErr.message}. Details in console.`);
@@ -1369,7 +1360,7 @@ const DrawingsPage: React.FC = () => {
             if (fallback) {
               await drawingService.updateDrawing(
                 t.drawingId,
-                { discipline: fallback, processing_status: 'failed' } as Record<string, unknown>,
+                { discipline: fallback, processing_status: 'failed' } as unknown as Record<string, unknown>,
               );
             }
           }
@@ -1407,14 +1398,14 @@ const DrawingsPage: React.FC = () => {
         if (storageData?.path) fileUrl = storageData.path;
       } catch { addToast('error', 'Revision upload failed'); setIsRevUploading(false); return; }
     }
-    await supabase.from('drawing_revisions').update({ superseded_at: new Date().toISOString() }).eq('drawing_id', String(selectedDrawing.id)).is('superseded_at', null);
-    await supabase.from('drawing_revisions').insert({
+    await fromTable('drawing_revisions').update({ superseded_at: new Date().toISOString() } as never).eq('drawing_id' as never, String(selectedDrawing.id)).is('superseded_at' as never, null);
+    await fromTable('drawing_revisions').insert({
       drawing_id: String(selectedDrawing.id),
       revision_number: Number(revUploadNum),
       issued_date: new Date().toISOString().slice(0, 10),
       change_description: revUploadDesc || null,
       file_url: fileUrl,
-    });
+    } as never);
     setIsRevUploading(false);
     setShowRevUploadModal(false);
     setRevUploadFile(null);
@@ -1553,9 +1544,17 @@ const DrawingsPage: React.FC = () => {
           <Btn variant="ghost" size="md" icon={<FolderOpen size={16} />} onClick={() => setShowSetsPanel(true)}>
             Sets
           </Btn>
-          <Btn variant="ghost" size="md" onClick={() => setShowAnnotationPanel(true)}>
+          <Btn variant="ghost" size="md" icon={<MessageSquare size={16} />} onClick={() => setShowAnnotationPanel(true)}>
             Annotations
           </Btn>
+          <Btn variant="ghost" size="md" icon={<Ruler size={16} />} onClick={() => setShowScaleAuditPanel(true)}>
+            Scale Audit
+          </Btn>
+
+          {/* Iris AI conflict scan — calls ai-conflict-detection edge fn over
+              schedule + RFIs + submittals + drawings. */}
+          <IrisConflictScanButton projectId={projectId} />
+
           <PermissionGate permission="drawings.upload">
             <Btn
               variant="ghost" size="md"
@@ -1600,6 +1599,54 @@ const DrawingsPage: React.FC = () => {
             <Upload size={40} color={colors.primaryOrange} />
             <p style={{ fontSize: 17, fontWeight: 600, color: colors.primaryOrange, margin: 0 }}>Drop drawings here</p>
             <p style={{ fontSize: 12, color: colors.primaryOrange, margin: 0, opacity: 0.7 }}>.pdf, .dwg, .dxf, .zip files accepted</p>
+          </div>
+        )}
+
+        {/* Revision-impact banner — surfaces RFIs flagged by recent revisions */}
+        {revisionImpact && !revisionImpactDismissed && (
+          <div
+            role="status"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '12px 16px',
+              marginBottom: 12,
+              background: 'rgba(255, 152, 0, 0.08)',
+              border: `1px solid ${colors.primaryOrange}`,
+              borderRadius: 8,
+              color: 'inherit',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+              <ScanSearch size={18} color={colors.primaryOrange} style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  Revision impact: {revisionImpact.rfiCount} open{' '}
+                  {revisionImpact.rfiCount === 1 ? 'RFI references' : 'RFIs reference'} a recently revised sheet
+                </div>
+                {revisionImpact.sheetNumbers.length > 0 && (
+                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>
+                    Sheets: {revisionImpact.sheetNumbers.slice(0, 5).join(', ')}
+                    {revisionImpact.sheetNumbers.length > 5 ? ` +${revisionImpact.sheetNumbers.length - 5} more` : ''}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <Btn variant="primary" size="sm" onClick={() => navigate('/rfis')}>
+                Review RFIs
+              </Btn>
+              <Btn
+                variant="ghost"
+                size="sm"
+                onClick={() => setRevisionImpactDismissed(true)}
+                aria-label="Dismiss revision impact banner"
+              >
+                Dismiss
+              </Btn>
+            </div>
           </div>
         )}
 
@@ -1660,9 +1707,22 @@ const DrawingsPage: React.FC = () => {
       {selectedDrawing && (
         <DrawingDetail
           drawing={selectedDrawing}
-          revisionHistory={revisionHistory}
+          revisionHistory={revisionHistory ?? undefined}
           viewingRevisionNum={viewingRevisionNum}
-          onClose={() => setSelectedDrawing(null)}
+          onClose={() => {
+            // Two effects fight over selectedDrawing: a deep-link reader
+            // (URL → state) and a URL syncer (state → URL). On user close
+            // we set a ref so the deep-link reader skips one run while
+            // the URL clears, otherwise the panel re-opens mid-frame and
+            // looks like it's "glitching".
+            userJustClosedRef.current = true;
+            setSelectedDrawing(null);
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.delete('id');
+              return next;
+            }, { replace: true });
+          }}
           onOpenViewer={() => setViewerDrawing(selectedDrawing)}
           onUploadRevision={() => {
             const nextRev = revisionHistory && revisionHistory.length > 0
@@ -1681,7 +1741,7 @@ const DrawingsPage: React.FC = () => {
               if (!isCurrent) setViewerDrawing({ ...selectedDrawing, revision: `Rev ${rev.revision_number}` });
             }
           }}
-          onCompareVersions={() => {}}
+          onCompareVersions={(rev) => setCompareRev(rev)}
           setViewingRevisionNum={setViewingRevisionNum}
           classification={processing.byDrawing(String(selectedDrawing.id))}
           classificationStatus={processing.statusByDrawing(String(selectedDrawing.id))}
@@ -1726,7 +1786,11 @@ const DrawingsPage: React.FC = () => {
           onNavigate={(d) => setViewerDrawing(d)}
           onCreateRFI={handleCreateRFIFromAnnotation}
           projectId={projectId ?? undefined}
-          scaleRatioText={processing.byDrawing(String(viewerDrawing.id))?.scale_text ?? null}
+          scaleRatioText={
+            processing.byDrawing(String(viewerDrawing.id))?.scale_text
+            ?? viewerDrawing.scale_text
+            ?? null
+          }
         />
       )}
 
@@ -1763,6 +1827,26 @@ const DrawingsPage: React.FC = () => {
         loading={annotationsStore.isLoading}
         error={annotationsStore.error}
       />
+
+      {showScaleAuditPanel && projectId && (
+        <div
+          role="dialog"
+          aria-label="Scale audit"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowScaleAuditPanel(false); }}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000, padding: 24,
+          }}
+        >
+          <div style={{ width: 'min(900px, 100%)', maxHeight: '90vh', overflow: 'auto' }}>
+            <ScaleAuditPanel projectId={projectId} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <Btn variant="ghost" onClick={() => setShowScaleAuditPanel(false)}>Close</Btn>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showSetsPanel && projectId && (
         <DrawingSetPanel
@@ -1812,6 +1896,84 @@ const DrawingsPage: React.FC = () => {
           title={`${selectedDrawing?.title ?? 'Drawing'} — Rev ${viewingRevisionNum ?? 'Current'}`}
           onClose={() => setViewRevPdfUrl(null)}
         />
+      )}
+
+      {/* Side-by-side revision compare. Two iframes scroll independently;
+          users can pan one against the other to spot differences. This
+          is the MVP — a future pass might overlay them with a diff
+          highlight layer. */}
+      {compareRev && selectedDrawing && (
+        <div
+          role="dialog"
+          aria-label="Compare drawing revisions"
+          onClick={(e) => { if (e.target === e.currentTarget) setCompareRev(null) }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(26, 22, 19, 0.65)',
+            display: 'flex', flexDirection: 'column',
+            padding: 24,
+          }}
+        >
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            color: '#fff', marginBottom: 12, fontFamily: typography.fontFamily,
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>
+                Comparing Rev {compareRev.revision_number} → Current
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>
+                {selectedDrawing.title}{selectedDrawing.sheet_number ? ` · Sheet ${selectedDrawing.sheet_number}` : ''}
+              </div>
+            </div>
+            <button
+              onClick={() => setCompareRev(null)}
+              style={{
+                background: 'rgba(255,255,255,0.12)', color: '#fff', border: 'none',
+                padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, minHeight: 0 }}>
+            {[
+              { label: `Rev ${compareRev.revision_number}`, url: compareRev.file_url },
+              { label: 'Current', url: (selectedDrawing as { file_url?: string }).file_url ?? null },
+            ].map((side, i) => (
+              <div key={i} style={{
+                background: '#fff', borderRadius: 6, overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+              }}>
+                <div style={{
+                  padding: '8px 12px',
+                  borderBottom: '1px solid var(--hairline)',
+                  fontFamily: typography.fontFamily, fontSize: 11,
+                  fontWeight: 500, letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: colors.textTertiary,
+                }}>
+                  {side.label}
+                </div>
+                {side.url ? (
+                  <iframe
+                    src={side.url}
+                    title={side.label}
+                    style={{ flex: 1, border: 'none', minHeight: 0 }}
+                  />
+                ) : (
+                  <div style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: colors.textTertiary, fontSize: 13,
+                  }}>
+                    No file attached to this revision.
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {showUploadModal && (

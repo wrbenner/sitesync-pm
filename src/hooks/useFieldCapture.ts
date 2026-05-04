@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 
 // ── IndexedDB queue for pending photo captures ─────────────────────────────
 // Lives in a separate DB from src/lib/offlineQueue.ts to avoid the IDB
@@ -119,12 +120,12 @@ async function uploadAndAttach(blob: Blob, meta: CaptureMetadata): Promise<strin
     accuracy: meta.accuracy,
   };
 
-  const { error: insertErr } = await supabase.from('daily_log_entries').insert({
+  const { error: insertErr } = await fromTable('daily_log_entries').insert({
     daily_log_id: meta.dailyLogId,
     type: 'photo',
     description: meta.caption || meta.filename,
     photos: [photoEntry],
-  });
+  } as never);
   if (insertErr) throw insertErr;
 
   return photoUrl;
@@ -139,7 +140,7 @@ export interface FieldCaptureState {
   cameraError: string | null;
   starting: boolean;
   uploading: boolean;
-  pendingCount: number;
+  pendingCaptures: number;
   isOnline: boolean;
 }
 
@@ -165,14 +166,14 @@ export function useFieldCapture(): UseFieldCapture {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCaptures, setPendingCaptures] = useState(0);
   const [isOnline, setIsOnline] = useState<boolean>(getIsOnline());
 
   // Maintain an up-to-date pending-count badge.
   const refreshPendingCount = useCallback(async () => {
     try {
       const n = await countCaptures();
-      setPendingCount(n);
+      setPendingCaptures(n);
     } catch {
       // IDB unavailable — leave at last known value.
     }
@@ -223,16 +224,26 @@ export function useFieldCapture(): UseFieldCapture {
   const startCamera = useCallback(async () => {
     if (streamRef.current) return;
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Camera API not supported on this device');
+      setCameraError('This device or browser does not support camera capture. Use the Upload button to attach a photo from your library instead.');
       return;
     }
     setStarting(true);
     setCameraError(null);
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
+      // Race getUserMedia against a 6s timeout. In some headless / locked-down
+      // contexts the prompt never resolves, leaving the modal stuck on
+      // "Starting camera…" indefinitely. A bounded timeout converts that
+      // into a recoverable inline error.
+      const cameraPromise = navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       });
+      const s = await Promise.race([
+        cameraPromise,
+        new Promise<MediaStream>((_, reject) =>
+          setTimeout(() => reject(Object.assign(new Error('Camera did not respond. Tap "Try again" or use Upload to pick a photo from your library.'), { name: 'TimeoutError' })), 6000),
+        ),
+      ]);
       streamRef.current = s;
       setStream(s);
       if (videoRef.current) {
@@ -240,8 +251,27 @@ export function useFieldCapture(): UseFieldCapture {
         await videoRef.current.play().catch(() => { /* autoplay can fail; <video> still shows frames */ });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Camera unavailable';
-      setCameraError(msg);
+      // Translate the raw DOMException name into actionable user copy.
+      // The browser default ("Permission denied") leaves users staring at
+      // a black box without knowing how to recover.
+      const name = (err as { name?: string })?.name ?? '';
+      let friendly: string;
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        friendly = 'Camera access was blocked. Open your browser site settings and allow camera, then tap "Try again".';
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        friendly = 'No camera was found on this device. Try a different device or upload a photo from your library.';
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        friendly = 'The camera is in use by another app. Close other apps using the camera and try again.';
+      } else if (name === 'OverconstrainedError') {
+        friendly = 'The requested camera resolution is not available. Try again — we will pick a fallback resolution.';
+      } else if (name === 'SecurityError') {
+        friendly = 'The camera can only run on a secure connection (HTTPS). Open SiteSync from its secure URL.';
+      } else if (name === 'TimeoutError') {
+        friendly = err instanceof Error ? err.message : 'Camera did not respond. Try again or use Upload.';
+      } else {
+        friendly = err instanceof Error ? err.message : 'Camera unavailable';
+      }
+      setCameraError(friendly);
     } finally {
       setStarting(false);
     }
@@ -339,7 +369,7 @@ export function useFieldCapture(): UseFieldCapture {
       }
     }
     const remaining = await countCaptures();
-    setPendingCount(remaining);
+    setPendingCaptures(remaining);
     return { synced, remaining };
   }, []);
 
@@ -350,7 +380,7 @@ export function useFieldCapture(): UseFieldCapture {
     cameraError,
     starting,
     uploading,
-    pendingCount,
+    pendingCaptures,
     isOnline,
     videoRef,
     startCamera,

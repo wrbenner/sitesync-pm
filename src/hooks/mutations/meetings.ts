@@ -1,14 +1,11 @@
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuditedMutation } from './createAuditedMutation'
 import { meetingSchema,
 } from '../../components/forms/schemas'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-// Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: string) => fromTable(table as never)
 
 // ── Meetings ──────────────────────────────────────────────
 
@@ -16,14 +13,14 @@ export function useCreateMeeting() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'meetings.create',
     schema: meetingSchema,
-    action: 'create_meeting',
+    action: 'create',
     entityType: 'meeting',
-    getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getEntityTitle: (p: { data: Record<string, unknown>; projectId: string }) => (p.data.title as string) || undefined,
+    getAfterState: (p: { data: Record<string, unknown>; projectId: string }) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('meetings').insert(params.data).select().single()
+      const { data, error } = await from('meetings').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'meeting_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -36,12 +33,12 @@ export function useUpdateMeeting() {
     permission: 'meetings.create',
     schema: meetingSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_meeting',
+    action: 'update',
     entityType: 'meeting',
-    getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getEntityId: (p: { id: string; updates: Record<string, unknown>; projectId: string }) => p.id,
+    getAfterState: (p: { id: string; updates: Record<string, unknown>; projectId: string }) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
-      const { error } = await from('meetings').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('meetings').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -72,7 +69,7 @@ export function useAddAttendee() {
         company: input.company ?? null,
         attended: input.attended ?? false,
       }
-      const { data, error } = await from('meeting_attendees').insert(payload).select().single()
+      const { data, error } = await from('meeting_attendees').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -89,7 +86,7 @@ export function useRemoveAttendee() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, meeting_id }: { id: string; meeting_id: string }) => {
-      const { error } = await from('meeting_attendees').delete().eq('id', id)
+      const { error } = await from('meeting_attendees').delete().eq('id' as never, id)
       if (error) throw error
       return { meeting_id }
     },
@@ -106,7 +103,7 @@ export function useUpdateAttendee() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, meeting_id, updates }: { id: string; meeting_id: string; updates: Partial<Omit<AddAttendeeInput, 'meeting_id'>> }) => {
-      const { error } = await from('meeting_attendees').update(updates).eq('id', id)
+      const { error } = await from('meeting_attendees').update(updates as never).eq('id' as never, id)
       if (error) throw error
       return { meeting_id }
     },
@@ -120,11 +117,11 @@ export function useUpdateAttendee() {
 export function useDeleteMeeting() {
   return useAuditedMutation<{ id: string; projectId: string }, { projectId: string }>({
     permission: 'meetings.delete',
-    action: 'delete_meeting',
+    action: 'delete',
     entityType: 'meeting',
-    getEntityId: (p) => p.id,
+    getEntityId: (p: { id: string; projectId: string }) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('meetings').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('meetings').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

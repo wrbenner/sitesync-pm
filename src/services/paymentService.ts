@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { PaymentStatus } from '../machines/paymentMachine';
 import {
   type Result,
@@ -19,13 +20,12 @@ async function resolveProjectRole(
   userId: string | null,
 ): Promise<string | null> {
   if (!userId) return null;
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 /**
@@ -97,23 +97,23 @@ export const paymentService = {
     payApplicationId: string,
     newStatus: PaymentStatus,
   ): Promise<Result> {
-    const { data: app, error: fetchError } = await supabase
-      .from('pay_applications')
+    const { data: app, error: fetchError } = await fromTable('pay_applications')
       .select('status, project_id')
-      .eq('id', payApplicationId)
+      .eq('id' as never, payApplicationId)
       .single();
 
     if (fetchError || !app) {
       return fail(notFoundError('PayApplication', payApplicationId));
     }
+    const appRow = app as unknown as { status: string | null; project_id: string };
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(app.project_id, userId);
+    const role = await resolveProjectRole(appRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = (app.status ?? 'draft') as PaymentStatus;
+    const currentStatus = (appRow.status ?? 'draft') as PaymentStatus;
     const valid = getValidPaymentTransitions(currentStatus, role);
     if (!valid.includes(newStatus)) {
       return fail(
@@ -135,10 +135,9 @@ export const paymentService = {
     }
     if (newStatus === 'paid') updates.paid_date = new Date().toISOString();
 
-    const { error } = await supabase
-      .from('pay_applications')
-      .update(updates)
-      .eq('id', payApplicationId);
+    const { error } = await fromTable('pay_applications')
+      .update(updates as never)
+      .eq('id' as never, payApplicationId);
 
     if (error) return fail(dbError(error.message, { payApplicationId, newStatus }));
     return { data: null, error: null };
@@ -155,10 +154,9 @@ export const paymentService = {
      
     const { status: _status, ...safeUpdates } = updates;
 
-    const { error } = await supabase
-      .from('pay_applications')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', payApplicationId);
+    const { error } = await fromTable('pay_applications')
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, payApplicationId);
 
     if (error) return fail(dbError(error.message, { payApplicationId }));
     return { data: null, error: null };

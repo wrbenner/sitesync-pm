@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { EntityType, LinkedItem } from '../components/shared/LinkedEntities'
 
 // ── Entity Links Service ─────────────────────────────────────────────────────
@@ -38,31 +39,30 @@ export async function getLinkedEntities(
 ): Promise<LinkedItem[]> {
   // Query both directions: where this entity is source OR target
   const [asSourceRes, asTargetRes] = await Promise.all([
-    supabase
-      .from('entity_links')
+    fromTable('entity_links')
       .select('*')
-      .eq('project_id', projectId)
-      .eq('source_type', entityType)
-      .eq('source_id', entityId),
-    supabase
-      .from('entity_links')
+      .eq('project_id' as never, projectId)
+      .eq('source_type' as never, entityType)
+      .eq('source_id' as never, entityId),
+    fromTable('entity_links')
       .select('*')
-      .eq('project_id', projectId)
-      .eq('target_type', entityType)
-      .eq('target_id', entityId),
+      .eq('project_id' as never, projectId)
+      .eq('target_type' as never, entityType)
+      .eq('target_id' as never, entityId),
   ])
 
   // Collect the "other side" of each link
+  type LinkRow = { source_type: string; source_id: string; target_type: string; target_id: string }
   const linkedRefs: Array<{ type: EntityType; id: string }> = []
 
   if (asSourceRes.data) {
-    for (const row of asSourceRes.data) {
-      linkedRefs.push({ type: row.target_type as EntityType, id: row.target_id as string })
+    for (const row of (asSourceRes.data as unknown as LinkRow[])) {
+      linkedRefs.push({ type: row.target_type as EntityType, id: row.target_id })
     }
   }
   if (asTargetRes.data) {
-    for (const row of asTargetRes.data) {
-      linkedRefs.push({ type: row.source_type as EntityType, id: row.source_id as string })
+    for (const row of (asTargetRes.data as unknown as LinkRow[])) {
+      linkedRefs.push({ type: row.source_type as EntityType, id: row.source_id })
     }
   }
 
@@ -86,10 +86,9 @@ export async function createEntityLink(payload: CreateLinkPayload): Promise<Enti
   const userId = session?.session?.user?.id ?? null
 
   // Check for existing link (either direction) to prevent duplicates
-  const { data: existing } = await supabase
-    .from('entity_links')
+  const { data: existing } = await fromTable('entity_links')
     .select('id')
-    .eq('project_id', payload.project_id)
+    .eq('project_id' as never, payload.project_id)
     .or(
       `and(source_type.eq.${payload.source_type},source_id.eq.${payload.source_id},target_type.eq.${payload.target_type},target_id.eq.${payload.target_id}),` +
       `and(source_type.eq.${payload.target_type},source_id.eq.${payload.target_id},target_type.eq.${payload.source_type},target_id.eq.${payload.source_id})`
@@ -101,8 +100,7 @@ export async function createEntityLink(payload: CreateLinkPayload): Promise<Enti
     return existing[0] as unknown as EntityLink
   }
 
-  const { data, error } = await supabase
-    .from('entity_links')
+  const { data, error } = await fromTable('entity_links')
     .insert({
       project_id: payload.project_id,
       source_type: payload.source_type,
@@ -111,7 +109,7 @@ export async function createEntityLink(payload: CreateLinkPayload): Promise<Enti
       target_id: payload.target_id,
       created_by: userId,
       note: payload.note ?? null,
-    })
+    } as never)
     .select()
     .single()
 
@@ -126,10 +124,9 @@ export async function createEntityLink(payload: CreateLinkPayload): Promise<Enti
  * Remove a link between two entities.
  */
 export async function removeEntityLink(linkId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('entity_links')
+  const { error } = await fromTable('entity_links')
     .delete()
-    .eq('id', linkId)
+    .eq('id' as never, linkId)
   return !error
 }
 
@@ -142,18 +139,16 @@ export async function removeAllLinksForEntity(
   entityId: string,
 ): Promise<void> {
   await Promise.all([
-    supabase
-      .from('entity_links')
+    fromTable('entity_links')
       .delete()
-      .eq('project_id', projectId)
-      .eq('source_type', entityType)
-      .eq('source_id', entityId),
-    supabase
-      .from('entity_links')
+      .eq('project_id' as never, projectId)
+      .eq('source_type' as never, entityType)
+      .eq('source_id' as never, entityId),
+    fromTable('entity_links')
       .delete()
-      .eq('project_id', projectId)
-      .eq('target_type', entityType)
-      .eq('target_id', entityId),
+      .eq('project_id' as never, projectId)
+      .eq('target_type' as never, entityType)
+      .eq('target_id' as never, entityId),
   ])
 }
 
@@ -176,15 +171,14 @@ async function resolveEntity(type: EntityType, id: string): Promise<LinkedItem |
   const table = TABLE_MAP[type]
   if (!table) return null
 
-  const { data, error } = await supabase
-    .from(table)
+  const { data, error } = await fromTable(table as never)
     .select('*')
-    .eq('id', id)
+    .eq('id' as never, id)
     .single()
 
   if (error || !data) return null
 
-  const row = data as Record<string, unknown>
+  const row = data as unknown as Record<string, unknown>
 
   switch (type) {
     case 'rfi':

@@ -5,10 +5,12 @@ import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { toast } from 'sonner';
 import { CHECKLIST_TEMPLATES, type TemplateKey } from './safetyTypes';
-import { supabase } from '../../lib/supabase';
+
 import { useProjectId } from '../../hooks/useProjectId';
 
 // ── Inspection columns ────────────────────────────────────────
+
+import { fromTable } from '../../lib/db/queries'
 
 const inspectionCol = createColumnHelper<Record<string, unknown>>();
 const inspectionColumns = [
@@ -143,7 +145,7 @@ export const caColumns = [
 // ── Inspections Tab ───────────────────────────────────────────
 
 interface InspectionsTabProps {
-  inspections: unknown[];
+  inspections: Record<string, unknown>[];
   passCount: number;
   failCount: number;
 }
@@ -168,14 +170,14 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
       const findings = tmpl.items.map((item, idx) => ({
         item, result: checklistResults[idx] ?? null, note: checklistNotes[idx] ?? '',
       }));
-      const { error } = await supabase.from('safety_inspections').insert({
+      const { error } = await fromTable('safety_inspections').insert({
         project_id: projectId,
         date: new Date().toISOString().slice(0, 10),
         type: tmpl.label,
         status,
         score,
         findings,
-      });
+      } as never);
       if (error) throw error;
       toast.success('Inspection saved');
       setActiveTemplate(null); setChecklistResults({}); setChecklistNotes({});
@@ -192,7 +194,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
       <Card style={{ marginBottom: spacing['4'] }}>
         <p style={{ margin: `0 0 ${spacing['3']} 0`, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>Run Inspection Checklist</p>
         <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', marginBottom: activeTemplate ? spacing['5'] : 0 }}>
-          {(Object.keys(CHECKLIST_TEMPLATES) as TemplateKey[]).map((key) => {
+          {(Object.keys(CHECKLIST_TEMPLATES) as unknown as TemplateKey[]).map((key) => {
             const isActive = activeTemplate === key;
             return (
               <button
@@ -278,7 +280,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
 // ── Certifications Tab ────────────────────────────────────────
 
 interface CertificationsTabProps {
-  certifications: unknown[];
+  certifications: Record<string, unknown>[];
 }
 
 export const CertificationsTab: React.FC<CertificationsTabProps> = ({ certifications }) => {
@@ -304,7 +306,7 @@ export const CertificationsTab: React.FC<CertificationsTabProps> = ({ certificat
 // ── Corrective Actions Tab ────────────────────────────────────
 
 interface CorrectiveActionsTabProps {
-  correctiveActions: unknown[];
+  correctiveActions: Record<string, unknown>[];
 }
 
 export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ correctiveActions }) => {
@@ -322,7 +324,7 @@ export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ corr
     <>
       <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], flexWrap: 'wrap' }}>
         {(['open', 'in_progress', 'closed'] as const).map((s) => {
-          const count = correctiveActions.filter((ca: unknown) => (ca as Record<string, unknown>).status === s || (s === 'closed' && (ca as Record<string, unknown>).status === 'verified')).length;
+          const count = correctiveActions.filter((ca: unknown) => (ca as unknown as Record<string, unknown>).status === s || (s === 'closed' && (ca as unknown as Record<string, unknown>).status === 'verified')).length;
           const colorMap = {
             open: { fg: colors.statusPending, bg: colors.statusPendingSubtle },
             in_progress: { fg: colors.statusInfo, bg: colors.statusInfoSubtle },
@@ -334,7 +336,7 @@ export const CorrectiveActionsTab: React.FC<CorrectiveActionsTabProps> = ({ corr
         })}
         {(() => {
           const overdueCount = correctiveActions.filter((ca: unknown) => {
-            const c = ca as Record<string, unknown>;
+            const c = ca as unknown as Record<string, unknown>;
             if (!c.due_date) return false;
             if (c.status === 'closed' || c.status === 'verified') return false;
             return new Date(c.due_date as string) < new Date();

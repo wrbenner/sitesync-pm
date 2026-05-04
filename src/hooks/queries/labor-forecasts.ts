@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { isSupabaseConfigured } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface LaborForecastRow {
   id: string
@@ -21,13 +22,12 @@ export function useLaborForecasts(
     queryKey: ['labor_forecasts', projectId, opts?.from ?? null, opts?.to ?? null],
     queryFn: async (): Promise<LaborForecastRow[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      let q = supabase
-        .from('labor_forecasts')
+      let q = fromTable('labor_forecasts')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('week_start', { ascending: true })
-      if (opts?.from) q = q.gte('week_start', opts.from)
-      if (opts?.to) q = q.lte('week_start', opts.to)
+      if (opts?.from) q = q.gte('week_start' as never, opts.from)
+      if (opts?.to) q = q.lte('week_start' as never, opts.to)
       const { data, error } = await q
       if (error) throw error
       return (data ?? []).map((r: Record<string, unknown>) => ({

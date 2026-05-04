@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { PriorityTag } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { KanbanBoard } from '../../components/shared/KanbanBoard';
 import type { KanbanColumn } from '../../components/shared/KanbanBoard';
 import { Calendar, Clock, User } from 'lucide-react';
@@ -23,9 +23,9 @@ export const SubmittalsKanban: React.FC<SubmittalsKanbanProps> = ({ allSubmittal
     <>
     <KanbanBoard
       columns={kanbanColumns}
-      getKey={(sub) => (sub as Record<string, unknown>).id as string | number}
+      getKey={(sub) => (sub as unknown as Record<string, unknown>).id as string | number}
       renderCard={(sub) => {
-        const s = sub as Record<string, unknown>;
+        const s = sub as unknown as Record<string, unknown>;
         const subId = s.id as string;
         const subNumber = s.submittalNumber as string;
         const title = s.title as string;

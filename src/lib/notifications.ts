@@ -7,7 +7,8 @@
 // Slack outage must not block an in-app notification.
 
 import { supabase, fromTable } from './supabase'
-import { useNotificationStore } from '../stores/notificationStore'
+import { useUiStore } from '../stores/uiStore'
+
 
 export type NotificationEvent =
   | 'new_discrepancy'
@@ -72,9 +73,9 @@ async function loadPrefs(userId: string): Promise<UserPrefs | null> {
       .select(
         'slack_enabled, mention_channel, assignment_channel, overdue_channel, approval_needed_channel, ai_insight_channel, system_channel, muted_projects',
       )
-      .eq('user_id', userId)
+      .eq('user_id' as never, userId)
       .maybeSingle()
-    return (data as UserPrefs) ?? null
+    return (data as unknown as UserPrefs) ?? null
   } catch {
     return null
   }
@@ -102,13 +103,13 @@ function resolveChannels(
   // - slack: on when user has slack_enabled and pref is 'all' or 'slack' (treat 'all' as include slack)
   const in_app = override.in_app ?? channelPref !== 'off'
   const email = override.email ?? (channelPref === 'all' || channelPref === 'email')
-  const slack = override.slack ?? Boolean(prefs?.slack_enabled) && (channelPref === 'all' || channelPref === 'slack' || channelPref === undefined)
+  const slack = override.slack ?? (Boolean(prefs?.slack_enabled) && (channelPref === 'all' || channelPref === 'slack' || channelPref === undefined))
   return { in_app, email, slack }
 }
 
 async function invokeFn(name: string, body: unknown): Promise<void> {
   try {
-    const { error } = await supabase.functions.invoke(name, { body })
+    const { error } = await supabase.functions.invoke(name, { body: body as Record<string, unknown> })
     if (error) console.warn(`[notifications] ${name} failed`, error)
   } catch (e) {
     console.warn(`[notifications] ${name} threw`, e)
@@ -125,7 +126,7 @@ export async function dispatchNotification(payload: DispatchPayload): Promise<vo
   // In-app toast — synchronous, no network round-trip.
   if (channels.in_app) {
     try {
-      useNotificationStore.getState().addNotification({
+      useUiStore.getState().addNotification({
         type: payload.toastType ?? typeFromSeverity(payload.severity),
         title: payload.title,
         message: payload.message,

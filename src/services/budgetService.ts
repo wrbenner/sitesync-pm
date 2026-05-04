@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import type { BudgetItem, ChangeOrder } from '../types/database';
 import type { BudgetLineItemRow } from '../types/api';
 import { type Result, ok, fail, dbError } from './errors';
@@ -30,57 +31,52 @@ export type BudgetItemUpdate = Partial<Omit<BudgetItemInsert, 'project_id'>>;
 
 export const budgetService = {
   async loadBudgetItems(projectId: string): Promise<Result<BudgetItem[]>> {
-    const { data, error } = await supabase
-      .from('budget_items')
+    const { data, error } = await fromTable('budget_items')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('csi_division');
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as BudgetItem[]);
+    return ok((data ?? []) as unknown as BudgetItem[]);
   },
 
   async importItems(projectId: string, items: BudgetItemInsert[]): Promise<Result<BudgetItem[]>> {
     const rows = items.map((i) => ({ ...i, project_id: projectId }));
-    const { data, error } = await supabase
-      .from('budget_items')
-      .insert(rows)
+    const { data, error } = await fromTable('budget_items')
+      .insert(rows as never)
       .select();
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as BudgetItem[]);
+    return ok((data ?? []) as unknown as BudgetItem[]);
   },
 
   async addItem(item: BudgetItemInsert): Promise<Result<BudgetItem>> {
-    const { data, error } = await supabase
-      .from('budget_items')
-      .insert(item)
+    const { data, error } = await fromTable('budget_items')
+      .insert(item as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: item.project_id }));
-    return ok(data as BudgetItem);
+    return ok(data as unknown as BudgetItem);
   },
 
   async updateItem(id: string, updates: BudgetItemUpdate): Promise<Result> {
-    const { error } = await supabase
-      .from('budget_items')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id);
+    const { error } = await fromTable('budget_items')
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, id);
 
     if (error) return fail(dbError(error.message, { id }));
     return { data: null, error: null };
   },
 
   async loadChangeOrders(projectId: string): Promise<Result<ChangeOrder[]>> {
-    const { data, error } = await supabase
-      .from('change_orders')
+    const { data, error } = await fromTable('change_orders')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('number');
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as ChangeOrder[]);
+    return ok((data ?? []) as unknown as ChangeOrder[]);
   },
 
   async addChangeOrder(co: {
@@ -93,14 +89,13 @@ export const budgetService = {
     cost_code?: string | null;
   }): Promise<Result<ChangeOrder>> {
     const userId = await getCurrentUserId();
-    const { data, error } = await supabase
-      .from('change_orders')
-      .insert({ ...co, requested_by: userId })
+    const { data, error } = await fromTable('change_orders')
+      .insert({ ...co, requested_by: userId } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: co.project_id }));
-    return ok(data as ChangeOrder);
+    return ok(data as unknown as ChangeOrder);
   },
 
   async updateChangeOrderStatus(id: string, status: string, approvedBy?: string): Promise<Result> {
@@ -112,24 +107,22 @@ export const budgetService = {
       updates.approved_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('change_orders')
-      .update(updates)
-      .eq('id', id);
+    const { error } = await fromTable('change_orders')
+      .update(updates as never)
+      .eq('id' as never, id);
 
     if (error) return fail(dbError(error.message, { id, status }));
     return { data: null, error: null };
   },
 
   async loadLineItems(projectId: string): Promise<Result<BudgetLineItemRow[]>> {
-    const { data, error } = await supabase
-      .from('budget_line_items')
+    const { data, error } = await fromTable('budget_line_items')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('csi_code');
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as BudgetLineItemRow[]);
+    return ok((data ?? []) as unknown as BudgetLineItemRow[]);
   },
 
   async addLineItem(item: {
@@ -140,14 +133,13 @@ export const budgetService = {
     committed_cost?: number | null;
     actual_cost?: number | null;
   }): Promise<Result<BudgetLineItemRow>> {
-    const { data, error } = await supabase
-      .from('budget_line_items')
-      .insert(item)
+    const { data, error } = await fromTable('budget_line_items')
+      .insert(item as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: item.project_id }));
-    return ok(data as BudgetLineItemRow);
+    return ok(data as unknown as BudgetLineItemRow);
   },
 
   // ── Division-layer helpers (map to budget_items) ─────────────────────────────
@@ -174,12 +166,11 @@ export const budgetService = {
       committed_amount: r.committed ?? null,
     }));
 
-    const { data, error } = await supabase
-      .from('budget_items')
-      .insert(items)
+    const { data, error } = await fromTable('budget_items')
+      .insert(items as never)
       .select();
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as BudgetItem[]);
+    return ok((data ?? []) as unknown as BudgetItem[]);
   },
 };

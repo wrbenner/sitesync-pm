@@ -1,36 +1,78 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// RFIs — enterprise inbox view (Tab P-RFIs, Wave 1)
+// ─────────────────────────────────────────────────────────────────────────────
+// Full-viewport. Sticky page header with count badge + filter chips +
+// "+ New RFI". Dense sortable table beneath. No parchment, no Garamond,
+// no centered max-width. Iris woven in as a per-row "Draft ready" pill.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import {
+  AlertCircle, AlertTriangle, ChevronRight, Download, Flag, Loader2,
+  MessageSquare, Plus, RefreshCw, Search, Send, Sparkles, UserCheck,
+  Wand2, X, XCircle,
+} from 'lucide-react';
+
+import { ProjectGate } from '../components/ProjectGate';
 import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
-import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, EmptyState } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
-import { RFIKPIs } from './rfis/RFIKPIs';
-import { RFITabBar, type RFIStatusFilter } from './rfis/RFITabBar';
-import { useRFIs, useRFI, useProject } from '../hooks/queries';
-import { exportRFILogXlsx } from '../lib/exportXlsx';
-import { ExportButton } from '../components/shared/ExportButton';
-import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, TrendingUp, CircleDot, Timer, CheckCircle2, AlertCircle, ArrowUpRight, ChevronRight, DollarSign } from 'lucide-react';
-import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
-import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
-import { useProjectId } from '../hooks/useProjectId';
-import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
-import { useNavigate } from 'react-router-dom';
-import { useCopilotStore } from '../stores/copilotStore';
+import {
+  Avatar, Btn, DetailPanel, RelatedItems, useToast,
+} from '../components/Primitives';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { PermissionGate } from '../components/auth/PermissionGate';
-import { AIAnnotationIndicator } from '../components/ai/AIAnnotation';
-import { PredictiveAlertBanner, PageInsightBanners } from '../components/ai/PredictiveAlert';
-import { getAnnotationsForEntity, getPredictiveAlertsForPage } from '../data/aiAnnotations';
-import { KanbanBoard } from '../components/shared/KanbanBoard';
-import type { KanbanColumn } from '../components/shared/KanbanBoard';
-import RFICreateWizard from '../components/rfis/RFICreateWizard';
+import { useConfirm } from '../components/ConfirmDialog';
+import { ExportButton } from '../components/shared/ExportButton';
+import { PresenceAvatars } from '../components/shared/PresenceAvatars';
+import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 import { EditableDetailField } from '../components/forms/EditableField';
-import { toast } from 'sonner';
+import RFICreateWizard from '../components/rfis/RFICreateWizard';
+import { RFIKPIs } from './rfis/RFIKPIs';
+
+import { useRFIs, useRFI, useProject } from '../hooks/queries';
+import { useProfileNames, displayName, type ProfileMap } from '../hooks/queries/profiles';
+import { useIrisDrafts } from '../hooks/useIrisDrafts';
+import {
+  useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse,
+} from '../hooks/mutations';
+import { useProjectId } from '../hooks/useProjectId';
+import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
+import { useCopilotStore } from '../stores/copilotStore';
+
+import { exportRFILogXlsx } from '../lib/exportXlsx';
+import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
+import { spacing, typography, borderRadius, zIndex } from '../styles/theme';
 import type { RFI } from '../types/entities';
 
-/** RFI row enriched with computed display fields. */
+const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
+
+// ── Constants — DESIGN-RESET enterprise palette ─────────────────────────────
+// True off-white surface: NOT parchment. Parchment is reserved for brand surfaces.
+const SURFACE_PAGE = '#FCFCFA';
+const SURFACE_INSET = '#F5F4F1';
+const BORDER = '#E8E5DF';
+const BORDER_STRONG = '#D9D5CD';
+const INK = '#1A1613';
+const INK_2 = '#5C5550';
+const INK_3 = '#8C857E';
+
+const STATUS = {
+  critical: '#C93B3B',  // overdue
+  high: '#B8472E',      // at risk
+  medium: '#C4850C',    // pending / under review
+  onTrack: '#2D8A6E',   // resolved / closed
+  brandAction: '#F47820',
+  iris: '#4F46E5',
+  irisSubtle: '#4F46E512',
+} as const;
+
+// ── Local types ─────────────────────────────────────────────────────────────
+
 type RFIRow = RFI & {
   rfiNumber: string;
   from: string;
@@ -38,40 +80,29 @@ type RFIRow = RFI & {
   submitDate: string;
   dueDate: string;
 };
-import { PresenceAvatars } from '../components/shared/PresenceAvatars';
-import { EditingLockBanner } from '../components/ui/EditingLockBanner';
-import { useReducedMotion } from '../hooks/useReducedMotion';
 
-const QuickRFIButton = lazy(() => import('../components/field/QuickRFIButton'));
+type FilterChip = 'all' | 'open' | 'overdue' | 'awaiting_response' | 'closed';
+
+interface ChipDef {
+  id: FilterChip;
+  label: string;
+  isAlert?: boolean;
+}
+
+const CHIPS: ChipDef[] = [
+  { id: 'all', label: 'All' },
+  { id: 'open', label: 'Open' },
+  { id: 'overdue', label: 'Overdue', isAlert: true },
+  { id: 'awaiting_response', label: 'Awaiting response' },
+  { id: 'closed', label: 'Closed' },
+];
+
+// ── Date helpers ────────────────────────────────────────────────────────────
 
 const isOverdue = (dateStr: string | null | undefined): boolean => {
   if (!dateStr) return false;
   const d = new Date(dateStr);
   return !isNaN(d.getTime()) && d < new Date();
-};
-
-const BIC_COLORS: Record<string, string> = {
-  GC: colors.statusInfo,
-  Architect: colors.statusReview,
-  Engineer: '#4EC896',
-  Owner: colors.brand400,
-  Subcontractor: colors.gray500,
-  Sub: colors.gray500,
-};
-
-const getBicColor = (party: string): string => {
-  if (BIC_COLORS[party]) return BIC_COLORS[party];
-  const key = Object.keys(BIC_COLORS).find(k => party.toLowerCase().includes(k.toLowerCase()));
-  return key ? BIC_COLORS[key] : colors.gray500;
-};
-
-const deriveBic = (rfi: RFIRow): string => {
-  const assigned = rfi.assigned_to || rfi.to || '';
-  if (assigned) return assigned;
-  const status = String(rfi.status ?? '').toLowerCase();
-  if (status === 'closed' || status === 'answered') return 'Resolved';
-  if (status === 'in_review' || status === 'under_review' || status === 'submitted') return 'Architect';
-  return 'GC';
 };
 
 const formatDate = (dateStr: string | null | undefined): string => {
@@ -88,53 +119,312 @@ const formatShortDate = (dateStr: string | null | undefined): string => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-const rfiColHelper = createColumnHelper<RFIRow>();
+const daysSince = (iso: string | null | undefined, end: string | null | undefined = null): number => {
+  if (!iso) return 0;
+  const start = new Date(iso).getTime();
+  const finish = end ? new Date(end).getTime() : Date.now();
+  if (!Number.isFinite(start) || !Number.isFinite(finish)) return 0;
+  return Math.max(0, Math.floor((finish - start) / 86400000));
+};
 
-// MetricCard replaced by RFIKPIs component
+// ── Status pill — colored dot + label, DESIGN-RESET palette ─────────────────
 
-// ─── Ball In Court Badge ─────────────────────────────────
+function statusToTone(status: string | null | undefined, dueDate: string | null | undefined): {
+  color: string;
+  label: string;
+} {
+  const s = String(status ?? '').toLowerCase();
+  if (s === 'closed' || s === 'answered') return { color: STATUS.onTrack, label: s === 'closed' ? 'Closed' : 'Answered' };
+  if (isOverdue(dueDate) && s !== 'closed' && s !== 'answered') return { color: STATUS.critical, label: 'Overdue' };
+  if (s === 'under_review' || s === 'submitted' || s === 'in_review') return { color: STATUS.medium, label: 'Under review' };
+  if (s === 'open' || s === 'draft' || s === '') return { color: STATUS.high, label: 'Open' };
+  return { color: INK_3, label: s.charAt(0).toUpperCase() + s.slice(1) };
+}
 
-const BicBadge: React.FC<{ party: string }> = React.memo(({ party }) => {
-  const color = getBicColor(party);
+const StatusPill: React.FC<{ status: string | null | undefined; dueDate: string | null | undefined }> = React.memo(
+  ({ status, dueDate }) => {
+    const { color, label } = statusToTone(status, dueDate);
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '2px 8px', borderRadius: 999,
+        backgroundColor: `${color}10`,
+        color, fontSize: 12, fontWeight: 500, lineHeight: 1.4,
+        whiteSpace: 'nowrap',
+      }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%',
+          backgroundColor: color, flexShrink: 0,
+        }} />
+        {label}
+      </span>
+    );
+  },
+);
+
+// ── Ball-in-Court cell ──────────────────────────────────────────────────────
+
+// `assigned` is typically a uuid FK to auth.users; the resolved display name
+// comes from the profileMap keyed by that uuid. We render the name (with
+// initials as the avatar fallback) — never the raw uuid.
+const BicCell: React.FC<{
+  assigned: string | null | undefined;
+  profileMap?: ProfileMap;
+}> = React.memo(({ assigned, profileMap }) => {
+  if (!assigned) {
+    return <span style={{ fontSize: 12, color: INK_3 }}>—</span>;
+  }
+  const resolved = displayName(profileMap, assigned, assigned);
+  const initials = resolved
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '').join('');
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '4px',
-      padding: '2px 8px', borderRadius: '9999px',
-      backgroundColor: `${color}12`, fontSize: '11px',
-      fontWeight: 500, color,
-      letterSpacing: '0.01em',
-    }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: color, flexShrink: 0, display: 'inline-block', opacity: 0.8 }} />
-      {party}
-    </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <span style={{
+        width: 22, height: 22, borderRadius: '50%',
+        backgroundColor: SURFACE_INSET, color: INK_2,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 10, fontWeight: 600, flexShrink: 0,
+        border: `1px solid ${BORDER}`,
+      }}>
+        {initials || '·'}
+      </span>
+      <span style={{
+        fontSize: 13, color: INK_2,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {resolved}
+      </span>
+    </div>
   );
 });
 
-const BallInCourtCell: React.FC<{ rfi: RFIRow }> = React.memo(({ rfi }) => {
-  const party = rfi.assigned_to || null;
-  if (!party) {
-    return (
-      <span style={{ fontSize: '11px', color: colors.textTertiary, fontStyle: 'normal', opacity: 0.5 }}>
-        —
-      </span>
-    );
-  }
-  return <BicBadge party={party} />;
-});
+// ── Iris pill ───────────────────────────────────────────────────────────────
 
-// ─── Main Page Component ─────────────────────────────────
+const IrisDraftPill: React.FC<{ onClick?: (e: React.MouseEvent) => void }> = ({ onClick }) => (
+  <button
+    onClick={(e) => { e.stopPropagation(); onClick?.(e); }}
+    aria-label="Iris drafted a response — review before sending"
+    style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '2px 8px', borderRadius: 999,
+      backgroundColor: STATUS.irisSubtle, color: STATUS.iris,
+      border: 'none', cursor: onClick ? 'pointer' : 'default',
+      fontSize: 11, fontWeight: 600,
+      whiteSpace: 'nowrap',
+    }}
+  >
+    <Sparkles size={10} />
+    Draft ready
+  </button>
+);
+
+// ── Filter chip ─────────────────────────────────────────────────────────────
+
+const Chip: React.FC<{
+  active: boolean;
+  alert?: boolean;
+  count: number;
+  label: string;
+  onClick: () => void;
+}> = ({ active, alert, count, label, onClick }) => (
+  <button
+    type="button"
+    role="tab"
+    aria-selected={active}
+    onClick={onClick}
+    style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '6px 11px', borderRadius: 6,
+      backgroundColor: active ? INK : 'transparent',
+      color: active ? '#FFFFFF' : alert && count > 0 ? STATUS.critical : INK_2,
+      border: active ? '1px solid transparent' : `1px solid ${BORDER}`,
+      fontSize: 13,
+      fontWeight: active ? 600 : 500,
+      lineHeight: 1.2,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+      fontFamily: typography.fontFamily,
+      transition: 'all 120ms ease',
+    }}
+  >
+    {label}
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      minWidth: 18, height: 18, padding: '0 5px',
+      borderRadius: 999, backgroundColor: active ? '#FFFFFF22' : SURFACE_INSET,
+      color: active ? '#FFFFFFCC' : alert && count > 0 ? STATUS.critical : INK_3,
+      fontSize: 11, fontWeight: 600,
+      fontVariantNumeric: 'tabular-nums',
+    }}>
+      {count}
+    </span>
+  </button>
+);
+
+const colHelper = createColumnHelper<RFIRow>();
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const RFIsPage: React.FC = () => {
-  const reducedMotion = useReducedMotion();
   const projectId = useProjectId();
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
+
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
-  const rfisRaw = rfisResult?.data ?? [];
   const { data: project } = useProject(projectId);
+  const { data: drafts } = useIrisDrafts(projectId, { status: ['pending'] });
   useRealtimeInvalidation(projectId);
 
-  const handleExportXlsx = React.useCallback(() => {
+  const rfisRaw = rfisResult?.data ?? [];
+
+  const navigate = useNavigate();
+  const appNavigate = useAppNavigate();
+  const createRFI = useCreateRFI();
+  const updateRFI = useUpdateRFI();
+  const deleteRFI = useDeleteRFI();
+  const createRFIResponse = useCreateRFIResponse();
+  const { addToast } = useToast();
+  const { confirm: confirmDeleteRfi, dialog: deleteRfiDialog } = useConfirm();
+
+  const rfis: RFIRow[] = useMemo(() => rfisRaw.map((r) => ({
+    ...r,
+    rfiNumber: r.number ? `RFI-${String(r.number).padStart(3, '0')}` : String(r.id ?? '').slice(0, 8),
+    from: r.created_by || '',
+    to: r.assigned_to || '',
+    submitDate: typeof r.created_at === 'string' ? r.created_at.slice(0, 10) : '',
+    dueDate: r.due_date || '',
+  })), [rfisRaw]);
+
+  // Resolve every user-id surfaced on the page to a display name. Without
+  // this, BicCell renders the raw `assigned_to` uuid instead of the name.
+  const allUserIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const r of rfisRaw) {
+      if (r.assigned_to) ids.push(r.assigned_to as string);
+      if (r.ball_in_court) ids.push(r.ball_in_court as string);
+      if (r.created_by) ids.push(r.created_by as string);
+    }
+    return ids;
+  }, [rfisRaw]);
+  const { data: profileMap } = useProfileNames(allUserIds);
+
+  // Pending Iris draft index keyed by RFI id (action_type === 'rfi.draft').
+  const draftRfiIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of drafts ?? []) {
+      if (d.action_type !== 'rfi.draft') continue;
+      if (d.related_resource_type === 'rfi' && d.related_resource_id) {
+        set.add(d.related_resource_id);
+      }
+    }
+    return set;
+  }, [drafts]);
+
+  // ── KPI metrics ───────────────────────────────────────────────────────────
+  const totalOpen = useMemo(() => rfis.filter((r) => r.status !== 'closed').length, [rfis]);
+  const openCount = useMemo(() => rfis.filter((r) => r.status === 'open').length, [rfis]);
+  const overdueCount = useMemo(() =>
+    rfis.filter((r) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate)).length,
+  [rfis]);
+  const closedCount = useMemo(() => rfis.filter((r) => r.status === 'closed').length, [rfis]);
+  const closedThisWeek = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    return rfis.filter((r) =>
+      r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo,
+    ).length;
+  }, [rfis]);
+  const avgDaysToClose = useMemo(() => {
+    const closed = rfis.filter((r) => r.status === 'closed' && r.closed_date && r.created_at);
+    if (!closed.length) return 0;
+    const total = closed.reduce((sum, r) =>
+      sum + daysSince(r.created_at as string, r.closed_date as string), 0);
+    return Math.round(total / closed.length);
+  }, [rfis]);
+  const totalCostImpact = useMemo(() =>
+    rfis.reduce((sum, r) => sum + Number(r.cost_impact ?? 0), 0),
+  [rfis]);
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [activeChip, setActiveChip] = useState<FilterChip>('all');
+  const [search, setSearch] = useState('');
+  const [selectedRfi, setSelectedRfi] = useState<RFIRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingDetail, setEditingDetail] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+  const announcedLoadRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // AI Draft modal
+  const [showAIDraftModal, setShowAIDraftModal] = useState(false);
+  const [aiDraftInput, setAiDraftInput] = useState('');
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [aiPrefillKey, setAiPrefillKey] = useState(0);
+
+  // Detail-panel response state
+  const [responseText, setResponseText] = useState('');
+  const [responseSubmitting, setResponseSubmitting] = useState(false);
+  const [, setAiSuggestion] = useState<string | null>(null);
+  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
+  const [aiSuggestionError, setAiSuggestionError] = useState(false);
+
+  // Reset response state when detail panel switches
+  useEffect(() => {
+    setAiSuggestion(null);
+    setAiSuggestionLoading(false);
+    setAiSuggestionError(false);
+    setResponseText('');
+    setResponseSubmitting(false);
+  }, [selectedRfi?.id]);
+
+  useEffect(() => {
+    if (!rfisLoading && !announcedLoadRef.current) {
+      announcedLoadRef.current = true;
+      setAnnouncement(`${rfisRaw.length} RFIs loaded`);
+    }
+  }, [rfisLoading, rfisRaw.length]);
+
+  // Detail data for selected RFI
+  const selectedRfiId = selectedRfi ? String(selectedRfi.id) : undefined;
+  const { data: rfiDetail } = useRFI(selectedRfiId);
+  const rfiResponses = useMemo(() => rfiDetail?.responses ?? [], [rfiDetail]);
+
+  // ── Filters + counts ─────────────────────────────────────────────────────
+  const chipCounts = useMemo<Record<FilterChip, number>>(() => ({
+    all: rfis.length,
+    open: rfis.filter((r) => r.status === 'open').length,
+    overdue: rfis.filter((r) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate)).length,
+    awaiting_response: rfis.filter((r) => r.status === 'under_review' || r.status === 'submitted').length,
+    closed: rfis.filter((r) => r.status === 'closed').length,
+  }), [rfis]);
+
+  const filteredRfis = useMemo(() => {
+    let out = rfis;
+    if (activeChip === 'open') out = out.filter((r) => r.status === 'open');
+    else if (activeChip === 'closed') out = out.filter((r) => r.status === 'closed');
+    else if (activeChip === 'overdue') out = out.filter((r) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate));
+    else if (activeChip === 'awaiting_response') out = out.filter((r) => r.status === 'under_review' || r.status === 'submitted');
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      out = out.filter((r) => {
+        const title = (r.title ?? '').toLowerCase();
+        const num = r.rfiNumber.toLowerCase();
+        const assigned = (r.assigned_to ?? '').toLowerCase();
+        return title.includes(q) || num.includes(q) || assigned.includes(q);
+      });
+    }
+    return out;
+  }, [rfis, activeChip, search]);
+
+  useEffect(() => {
+    if (!announcedLoadRef.current) return;
+    setAnnouncement(`Showing ${filteredRfis.length} of ${rfis.length} RFIs`);
+  }, [filteredRfis.length, rfis.length]);
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+  const handleExportXlsx = useCallback(() => {
     const projectName = project?.name ?? 'Project';
     const rows = rfisRaw.map((r) => ({
       number: r.number ? `RFI-${String(r.number).padStart(3, '0')}` : String(r.id ?? '').slice(0, 8),
@@ -149,102 +439,8 @@ const RFIsPage: React.FC = () => {
     exportRFILogXlsx(projectName, rows);
   }, [project?.name, rfisRaw]);
 
-  // Map API data to component shape
-  const rfis: RFIRow[] = useMemo(() => rfisRaw.map((r) => ({
-    ...r,
-    rfiNumber: r.number ? `RFI-${String(r.number).padStart(3, '0')}` : String(r.id ?? '').slice(0, 8),
-    from: r.created_by || '',
-    to: r.assigned_to || '',
-    submitDate: typeof r.created_at === 'string' ? r.created_at.slice(0, 10) : '',
-    dueDate: r.due_date || '',
-  })), [rfisRaw]);
-
-  // Derive metrics from data
-  const openCount = useMemo(() => rfis.filter((r) => r.status === 'open').length, [rfis]);
-  const totalOpen = useMemo(() => rfis.filter((r) => r.status !== 'closed').length, [rfis]);
-  const overdueCount = useMemo(() => rfis.filter((r) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate)).length, [rfis]);
-  const avgDaysToClose = useMemo(() => {
-    const closed = rfis.filter((r) => r.status === 'closed' && r.closed_date && r.created_at);
-    if (!closed.length) return 0;
-    const total = closed.reduce((sum, r) => sum + Math.floor((new Date(r.closed_date!).getTime() - new Date(r.created_at!).getTime()) / 86400000), 0);
-    return Math.round(total / closed.length);
-  }, [rfis]);
-  const closedThisWeek = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86400000;
-    return rfis.filter((r) => r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo).length;
-  }, [rfis]);
-  const totalCostImpact = useMemo(() => rfis.reduce((sum, r) => sum + Number(r.cost_impact ?? 0), 0), [rfis]);
-
-  const [selectedRfi, setSelectedRfi] = useState<RFIRow | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingDetail, setEditingDetail] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<RFIStatusFilter>('all');
-  const [announcement, setAnnouncement] = useState('');
-  const announcedLoadRef = useRef(false);
-  const { addToast } = useToast();
-
-  // AI Draft modal state
-  const [showAIDraftModal, setShowAIDraftModal] = useState(false);
-  const [aiDraftInput, setAiDraftInput] = useState('');
-  const [aiDraftLoading, setAiDraftLoading] = useState(false);
-  const [aiPrefill, setAiPrefill] = useState<Record<string, unknown> | null>(null);
-  const [aiPrefillKey, setAiPrefillKey] = useState(0);
-
-  // Response text state (shared between manual entry and AI suggestion)
-  const [responseText, setResponseText] = useState('');
-  const [responseSubmitting, setResponseSubmitting] = useState(false);
-
-  // AI Suggest Response state (detail panel)
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
-  const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
-  const [aiSuggestionError, setAiSuggestionError] = useState(false);
-
-  useEffect(() => {
-    if (!rfisLoading && !announcedLoadRef.current) {
-      announcedLoadRef.current = true;
-      setAnnouncement(`${rfisRaw.length} RFIs loaded`);
-    }
-  }, [rfisLoading, rfisRaw.length]);
-
-  useEffect(() => {
-    if (!announcedLoadRef.current) return;
-    const count = statusFilter === 'all' ? rfis.length : rfis.filter((r) => r.status === statusFilter).length;
-    setAnnouncement(`Showing ${count} of ${rfis.length} RFIs`);
-  }, [statusFilter, rfis]);
-
-  const appNavigate = useAppNavigate();
-  const navigate = useNavigate();
-  const createRFI = useCreateRFI();
-  const updateRFI = useUpdateRFI();
-  const deleteRFI = useDeleteRFI();
-  const createRFIResponse = useCreateRFIResponse();
-
-  const handleDeleteRFI = useCallback(async () => {
-    if (!selectedRfi || !projectId) return;
-    const rfiId = String(selectedRfi.id);
-    const rfiLabel = (selectedRfi.title as string) || `RFI ${rfiId.slice(0, 8)}`;
-    if (!window.confirm(`Delete "${rfiLabel}"? This cannot be undone.`)) return;
-    try {
-      await deleteRFI.mutateAsync({ id: rfiId, projectId });
-      toast.success('RFI deleted');
-      setSelectedRfi(null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete RFI');
-    }
-  }, [selectedRfi, projectId, deleteRFI]);
-
-  // Fetch full detail (with responses) when an RFI is selected in the side panel
-  const selectedRfiId = selectedRfi ? String(selectedRfi.id) : undefined;
-  const { data: rfiDetail } = useRFI(selectedRfiId);
-  const rfiResponses = useMemo(() => rfiDetail?.responses ?? [], [rfiDetail]);
-
   const handleStatusChange = useCallback(async (rfiId: string, newStatus: string) => {
-    if (!projectId) {
-      addToast('error', 'No project selected');
-      return;
-    }
+    if (!projectId) { addToast('error', 'No project selected'); return; }
     try {
       await updateRFI.mutateAsync({ id: rfiId, updates: { status: newStatus }, projectId });
       addToast('success', 'Status updated');
@@ -253,18 +449,25 @@ const RFIsPage: React.FC = () => {
     }
   }, [updateRFI, projectId, addToast]);
 
-  const handleKanbanMove = useCallback(async (itemId: string | number, _fromColumn: string, toColumn: string) => {
-    await handleStatusChange(String(itemId), toColumn);
-  }, [handleStatusChange]);
-
-  // Reset response state when detail panel switches to a different RFI
-  useEffect(() => {
-    setAiSuggestion(null);
-    setAiSuggestionLoading(false);
-    setAiSuggestionError(false);
-    setResponseText('');
-    setResponseSubmitting(false);
-  }, [selectedRfi?.id]);
+  const handleDeleteRFI = useCallback(async () => {
+    if (!selectedRfi || !projectId) return;
+    const rfiId = String(selectedRfi.id);
+    const rfiLabel = (selectedRfi.title as string) || `RFI ${rfiId.slice(0, 8)}`;
+    const ok = await confirmDeleteRfi({
+      title: 'Delete RFI?',
+      description: `"${rfiLabel}" — this is a contractual artifact. Deleting it removes it from the dispute record. Consider voiding instead.`,
+      destructiveLabel: 'Delete RFI',
+      typeToConfirm: 'DELETE',
+    });
+    if (!ok) return;
+    try {
+      await deleteRFI.mutateAsync({ id: rfiId, projectId });
+      toast.success('RFI deleted');
+      setSelectedRfi(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete RFI');
+    }
+  }, [selectedRfi, projectId, deleteRFI, confirmDeleteRfi]);
 
   const handleAIDraft = useCallback(async () => {
     if (!aiDraftInput.trim()) return;
@@ -274,7 +477,6 @@ const RFIsPage: React.FC = () => {
         body: { projectId, description: aiDraftInput },
       });
       if (error || !data) throw new Error('AI draft failed');
-      setAiPrefill({ title: data.title ?? '', description: data.description ?? '' });
       setAiPrefillKey((k) => k + 1);
       setShowAIDraftModal(false);
       setAiDraftInput('');
@@ -309,465 +511,375 @@ const RFIsPage: React.FC = () => {
     }
   }, [selectedRfi, projectId]);
 
-  const pageAlerts = getPredictiveAlertsForPage('rfis');
+  // ── Page-level keyboard shortcuts: / focuses search, e acts on selected ──
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const isField = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      if (e.key === '/' && !isField) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (e.key === 'e' && !isField) {
+        // Open the selected RFI's detail (act = open, where the user can act).
+        if (selectedIds.size === 1) {
+          const id = Array.from(selectedIds)[0];
+          const rfi = rfis.find((r) => String(r.id) === id);
+          if (rfi) {
+            e.preventDefault();
+            navigate(`/rfis/${rfi.id}`);
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navigate, rfis, selectedIds]);
 
-  // ─── Table Columns ─────────────────────────────────────
-
-  const rfiColumns = useMemo(() => [
-    rfiColHelper.accessor('rfiNumber', {
+  // ── Columns ──────────────────────────────────────────────────────────────
+  const columns = useMemo(() => ([
+    colHelper.display({
+      id: 'select',
+      size: 40,
+      header: () => (
+        <input
+          type="checkbox"
+          checked={selectedIds.size > 0 && selectedIds.size === filteredRfis.length}
+          ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < filteredRfis.length; }}
+          onChange={(e) => {
+            if (e.target.checked) setSelectedIds(new Set(filteredRfis.map((r) => String(r.id))));
+            else setSelectedIds(new Set());
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Select all visible RFIs"
+          style={{ cursor: 'pointer', width: 14, height: 14, accentColor: STATUS.brandAction }}
+        />
+      ),
+      cell: (info) => {
+        const id = String(info.row.original.id);
+        return (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(id)}
+            onChange={() => {
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+              });
+            }}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Select RFI ${id}`}
+            style={{ cursor: 'pointer', width: 14, height: 14, accentColor: STATUS.brandAction }}
+          />
+        );
+      },
+    }),
+    colHelper.accessor('rfiNumber', {
       header: '#',
-      size: 90,
+      size: 96,
       cell: (info) => (
         <span style={{
-          fontSize: '11px', fontWeight: 600, color: colors.primaryOrange,
+          fontSize: 12, fontWeight: 600, color: INK_2,
           fontFamily: typography.fontFamilyMono,
-          letterSpacing: '0.02em',
+          fontVariantNumeric: 'tabular-nums',
         }}>
           {info.getValue()}
         </span>
       ),
     }),
-    rfiColHelper.accessor('title', {
-      header: 'Subject',
+    colHelper.accessor('title', {
+      header: 'Title',
       size: 380,
       cell: (info) => {
-        const rfi = info.row.original;
-        const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
+        const r = info.row.original;
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: '13px', color: colors.textPrimary,
-                fontWeight: 500, lineHeight: 1.4,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {info.getValue()}
-              </div>
-              {(rfi.drawing_reference || rfi.spec_section) && (
-                <div style={{
-                  fontSize: '11px', color: colors.textTertiary, marginTop: '2px',
-                  display: 'flex', gap: '8px', alignItems: 'center',
-                }}>
-                  {rfi.drawing_reference && (
-                    <span style={{ color: colors.primaryOrange }}>{rfi.drawing_reference as string}</span>
-                  )}
-                  {rfi.spec_section && (
-                    <span>{rfi.spec_section as string}</span>
-                  )}
-                </div>
-              )}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontSize: 13, color: INK, fontWeight: 500, lineHeight: 1.4,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {info.getValue()}
             </div>
-            {overdue && (
-              <span style={{
-                width: 7, height: 7, borderRadius: '50%',
-                backgroundColor: colors.statusCritical,
-                flexShrink: 0, animation: 'rfi-pulse 2s ease-in-out infinite',
-              }} />
-            )}
-            {(rfi.ai_generated || getAnnotationsForEntity('rfi', rfi.id).length > 0) && (
-              <Sparkles size={12} color="#8B5CF6" style={{ flexShrink: 0, opacity: 0.6 }} />
+            {(r.drawing_reference || r.spec_section) && (
+              <div style={{
+                fontSize: 11, color: INK_3, marginTop: 2,
+                display: 'flex', gap: 8,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {r.drawing_reference && <span>{r.drawing_reference as string}</span>}
+                {r.spec_section && <span>{r.spec_section as string}</span>}
+              </div>
             )}
           </div>
         );
       },
     }),
-    rfiColHelper.accessor('priority', {
-      header: 'Priority',
-      size: 90,
-      cell: (info) => <PriorityTag priority={info.getValue() as 'low' | 'medium' | 'high' | 'critical'} />,
+    colHelper.accessor('assigned_to', {
+      header: 'Ball-in-Court',
+      size: 180,
+      cell: (info) => <BicCell assigned={info.getValue() as string | null} profileMap={profileMap} />,
     }),
-    rfiColHelper.accessor('status', {
+    colHelper.accessor('status', {
       header: 'Status',
       size: 130,
       cell: (info) => (
-        <StatusTag status={info.getValue() as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />
+        <StatusPill
+          status={info.getValue() as string | null}
+          dueDate={info.row.original.dueDate}
+        />
       ),
     }),
-    rfiColHelper.display({
-      id: 'ball_in_court',
-      header: 'Ball In Court',
-      size: 150,
-      cell: (info) => <BallInCourtCell rfi={info.row.original} />,
-    }),
-    rfiColHelper.display({
-      id: 'days_open',
-      header: 'Age',
-      size: 70,
+    colHelper.accessor('dueDate', {
+      header: 'Due',
+      size: 96,
       cell: (info) => {
-        const rfi = info.row.original;
-        let days: number;
-        if (rfi.status === 'closed') {
-          days = Math.floor((new Date((rfi.closed_date || rfi.updated_at) as string).getTime() - new Date(rfi.created_at as string).getTime()) / 86400000);
-        } else {
-          days = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
-        }
-        const dColor = days > 10 ? colors.statusCritical : days > 5 ? colors.statusPending : colors.textTertiary;
+        const r = info.row.original;
+        const overdue = !!info.getValue() && isOverdue(info.getValue() as string) && r.status !== 'closed';
         return (
           <span style={{
-            fontSize: '11px', fontWeight: 600, color: dColor,
+            fontSize: 12,
+            color: overdue ? STATUS.critical : INK_2,
+            fontWeight: overdue ? 600 : 400,
             fontVariantNumeric: 'tabular-nums',
-            fontFamily: typography.fontFamilyMono,
+          }}>
+            {formatShortDate(info.getValue() as string)}
+          </span>
+        );
+      },
+    }),
+    colHelper.display({
+      id: 'days_open',
+      header: 'Days Open',
+      size: 90,
+      cell: (info) => {
+        const r = info.row.original;
+        const days = r.status === 'closed'
+          ? daysSince(r.created_at as string, (r.closed_date || r.updated_at) as string)
+          : daysSince(r.created_at as string);
+        const c = days > 10 ? STATUS.critical : days > 5 ? STATUS.medium : INK_3;
+        return (
+          <span style={{
+            fontSize: 12, fontWeight: 500, color: c,
+            fontVariantNumeric: 'tabular-nums',
           }}>
             {days}d
           </span>
         );
       },
     }),
-    rfiColHelper.accessor('dueDate', {
-      header: 'Due',
-      size: 100,
-      cell: (info) => {
-        const rfi = info.row.original;
-        const overdue = !!info.getValue() && new Date(info.getValue()) < new Date() && rfi.status !== 'closed';
-        return (
-          <span style={{
-            fontSize: '11px',
-            color: overdue ? colors.statusCritical : colors.textTertiary,
-            fontWeight: overdue ? 600 : 400,
-            fontVariantNumeric: 'tabular-nums',
-            fontFamily: typography.fontFamilyMono,
-          }}>
-            {formatShortDate(info.getValue())}
-          </span>
-        );
-      },
-    }),
-    rfiColHelper.accessor('cost_impact', {
-      header: '$',
-      size: 85,
+    colHelper.accessor('cost_impact', {
+      header: '$ Impact',
+      size: 110,
       cell: (info) => {
         const val = Number(info.getValue() ?? 0);
-        if (!val) return <span style={{ color: colors.textTertiary, fontSize: '12px' }}>—</span>;
+        if (!val) return <span style={{ color: INK_3, fontSize: 12 }}>—</span>;
         return (
           <span style={{
-            fontSize: '11px', fontWeight: 600,
-            color: val > 0 ? colors.statusCritical : colors.statusActive,
+            fontSize: 12, fontWeight: 600,
+            color: val > 0 ? STATUS.critical : STATUS.onTrack,
             fontVariantNumeric: 'tabular-nums',
-            fontFamily: typography.fontFamilyMono,
           }}>
-            {val > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, notation: 'compact' }).format(val)}
+            {val > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', {
+              style: 'currency', currency: 'USD', minimumFractionDigits: 0, notation: 'compact',
+            }).format(val)}
           </span>
         );
       },
     }),
-  ], []);
+    colHelper.accessor('schedule_impact', {
+      header: 'Sched',
+      size: 96,
+      cell: (info) => {
+        const raw = (info.getValue() as string | number | null) ?? '';
+        if (raw === '' || raw == null) return <span style={{ color: INK_3, fontSize: 12 }}>—</span>;
+        const txt = typeof raw === 'number' ? `${raw}d` : String(raw);
+        return (
+          <span style={{
+            fontSize: 12, fontWeight: 500, color: INK_2,
+            fontVariantNumeric: 'tabular-nums',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {txt}
+          </span>
+        );
+      },
+    }),
+    colHelper.display({
+      id: 'iris',
+      header: 'Iris',
+      size: 110,
+      cell: (info) => {
+        const id = String(info.row.original.id);
+        if (!draftRfiIds.has(id)) return <span style={{ color: INK_3, fontSize: 12 }}>—</span>;
+        return (
+          <IrisDraftPill
+            onClick={() => navigate(`/rfis/${id}`)}
+          />
+        );
+      },
+    }),
+  ] as ColumnDef<RFIRow, unknown>[]), [selectedIds, filteredRfis, draftRfiIds, navigate, profileMap]);
 
-  const checkboxColumn = useMemo(() => rfiColHelper.display({
-    id: 'select',
-    size: 40,
-    header: () => (
-      <input
-        type="checkbox"
-        checked={selectedIds.size > 0 && selectedIds.size === rfis.length}
-        ref={(el) => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < rfis.length; }}
-        onChange={(e) => {
-          if (e.target.checked) setSelectedIds(new Set(rfis.map((r) => String(r.id))));
-          else setSelectedIds(new Set());
-        }}
-        onClick={(e) => e.stopPropagation()}
-        aria-label="Select all RFIs"
-        style={{ cursor: 'pointer', width: 16, height: 16, accentColor: colors.primaryOrange }}
-      />
-    ),
-    cell: (info) => {
-      const id = String(info.row.original.id);
-      return (
-        <input
-          type="checkbox"
-          checked={selectedIds.has(id)}
-          onChange={() => {
-            setSelectedIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            });
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Select RFI ${id}`}
-          style={{ cursor: 'pointer', width: 16, height: 16, accentColor: colors.primaryOrange }}
-        />
-      );
-    },
-  }), [selectedIds, rfis]);
-
-  const allRfiColumns = useMemo(() => [checkboxColumn, ...rfiColumns], [checkboxColumn, rfiColumns]);
-
-  const allRfis = rfis || [];
-
-  // Tab counts for the sliding tab bar
-  const tabCounts = useMemo(() => ({
-    all: allRfis.length,
-    open: allRfis.filter((r) => r.status === 'open').length,
-    under_review: allRfis.filter((r) => r.status === 'under_review').length,
-    answered: allRfis.filter((r) => r.status === 'answered').length,
-    overdue: allRfis.filter((r) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date()).length,
-    closed: allRfis.filter((r) => r.status === 'closed').length,
-  }), [allRfis]);
-
-  const filteredRfis = useMemo(() => {
-    if (statusFilter === 'all') return allRfis;
-    if (statusFilter === 'overdue') return allRfis.filter((r) => r.status !== 'closed' && r.dueDate && new Date(r.dueDate) < new Date());
-    return allRfis.filter((r) => r.status === statusFilter);
-  }, [allRfis, statusFilter]);
-
-  const kanbanColumns: KanbanColumn<RFIRow>[] = useMemo(() => [
-    { id: 'draft', label: 'Draft', color: colors.textTertiary, items: allRfis.filter((r) => r.status === 'draft') },
-    { id: 'open', label: 'Open', color: colors.statusInfo, items: allRfis.filter((r) => r.status === 'open') },
-    { id: 'under_review', label: 'Under Review', color: colors.statusPending, items: allRfis.filter((r) => r.status === 'under_review') },
-    { id: 'answered', label: 'Answered', color: colors.statusActive, items: allRfis.filter((r) => r.status === 'answered') },
-    { id: 'closed', label: 'Closed', color: colors.statusNeutral, items: allRfis.filter((r) => r.status === 'closed') },
-  ], [allRfis]);
-
-  // ─── Early returns ─────────────────────────────────────
-
-  if (!projectId) {
-    return (
-      <PageContainer title="RFIs">
-        <EmptyState
-          icon={<FileQuestion size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view and manage RFIs."
-        />
-      </PageContainer>
-    );
-  }
-
-  if (rfisLoading) {
-    return (
-      <PageContainer title="RFIs" subtitle="Loading...">
-        <style>{`
-          @keyframes rfi-skeleton-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
-          @keyframes rfi-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-          .rfi-skeleton-shimmer {
-            background: linear-gradient(90deg, ${colors.surfaceInset} 25%, ${colors.surfaceHover} 50%, ${colors.surfaceInset} 75%);
-            background-size: 200% 100%;
-            animation: rfi-shimmer 1.8s ease-in-out infinite;
-          }
-        `}</style>
-        {/* KPI Skeleton */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} style={{
-              backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
-              border: `1px solid ${colors.borderSubtle}`, padding: '18px 20px',
-              display: 'flex', alignItems: 'flex-start', gap: '14px',
-              animation: 'rfi-skeleton-pulse 1.5s ease-in-out infinite',
-              animationDelay: `${i * 0.12}s`,
-            }}>
-              <div className="rfi-skeleton-shimmer" style={{ width: 40, height: 40, borderRadius: borderRadius.lg, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div className="rfi-skeleton-shimmer" style={{ width: '50%', height: 10, borderRadius: 4, marginBottom: 8 }} />
-                <div className="rfi-skeleton-shimmer" style={{ width: '70%', height: 20, borderRadius: 4, marginBottom: 6 }} />
-                <div className="rfi-skeleton-shimmer" style={{ width: '60%', height: 10, borderRadius: 4 }} />
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Section header skeleton */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing['3'] }}>
-          <div className="rfi-skeleton-shimmer" style={{ width: 140, height: 18, borderRadius: 4 }} />
-          <div className="rfi-skeleton-shimmer" style={{ width: 120, height: 16, borderRadius: 4 }} />
-        </div>
-        {/* Table Skeleton */}
-        <div style={{
-          backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
-          border: `1px solid ${colors.borderSubtle}`, overflow: 'hidden',
-        }}>
-          {/* Tab bar skeleton */}
-          <div style={{ padding: '10px 16px', borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', gap: 8 }}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rfi-skeleton-shimmer" style={{ width: 60 + i * 8, height: 28, borderRadius: borderRadius.md }} />
-            ))}
-          </div>
-          {/* Row skeletons */}
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} style={{
-              height: 52, borderBottom: `1px solid ${colors.borderSubtle}`,
-              display: 'flex', alignItems: 'center', gap: 16, padding: '0 16px',
-            }}>
-              <div className="rfi-skeleton-shimmer" style={{ width: 16, height: 16, borderRadius: 3 }} />
-              <div className="rfi-skeleton-shimmer" style={{ width: 60, height: 12, borderRadius: 4 }} />
-              <div className="rfi-skeleton-shimmer" style={{ width: 180 + (i % 3) * 40, height: 12, borderRadius: 4, flex: 1 }} />
-              <div className="rfi-skeleton-shimmer" style={{ width: 50, height: 18, borderRadius: 10 }} />
-              <div className="rfi-skeleton-shimmer" style={{ width: 60, height: 18, borderRadius: 10 }} />
-              <div className="rfi-skeleton-shimmer" style={{ width: 80, height: 12, borderRadius: 4 }} />
-            </div>
-          ))}
-        </div>
-      </PageContainer>
-    );
-  }
+  // ── Early returns ────────────────────────────────────────────────────────
+  if (!projectId) return <ProjectGate />;
 
   if (rfisError) {
     return (
-      <PageContainer title="RFIs">
+      <PageShell>
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          gap: '12px', padding: '60px 20px', textAlign: 'center',
+          gap: 12, padding: '60px 20px', textAlign: 'center',
         }}>
           <div style={{
-            width: 56, height: 56, borderRadius: '16px',
-            backgroundColor: `${colors.statusCritical}08`,
+            width: 56, height: 56, borderRadius: 12,
+            backgroundColor: `${STATUS.critical}10`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <AlertTriangle size={24} color={colors.statusCritical} />
+            <AlertTriangle size={24} color={STATUS.critical} />
           </div>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>
-            Unable to load RFIs
-          </h3>
-          <p style={{ margin: 0, fontSize: '14px', color: colors.textTertiary, maxWidth: 360 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: INK }}>Unable to load RFIs</h3>
+          <p style={{ margin: 0, fontSize: 14, color: INK_3, maxWidth: 360 }}>
             {(rfisError as Error)?.message || 'Check your connection and try again.'}
           </p>
           <Btn variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => refetch()}>
             Retry
           </Btn>
         </div>
-      </PageContainer>
+      </PageShell>
     );
   }
 
-  if (!rfis.length) {
-    return (
-      <PageContainer title="RFIs">
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', padding: '80px 24px', gap: '16px', textAlign: 'center',
-        }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '20px',
-            backgroundColor: colors.surfaceInset,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: '8px',
-          }}>
-            <FileQuestion size={32} color={colors.textTertiary} />
-          </div>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: colors.textPrimary }}>
-            No RFIs yet
-          </h3>
-          <p style={{ margin: 0, fontSize: '14px', color: colors.textTertiary, maxWidth: 400, lineHeight: 1.6 }}>
-            No RFIs have been created on this project yet. When questions arise in the field, create an RFI to get a documented answer from the design team.
-          </p>
-          <PermissionGate permission="rfis.create">
-            <Btn onClick={() => setShowCreateModal(true)} data-testid="create-rfi-button-empty">
-              <Plus size={16} style={{ marginRight: '6px' }} />
-              Create First RFI
-            </Btn>
-          </PermissionGate>
-        </div>
-        <RFICreateWizard
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSubmit={async (data) => {
-            if (!projectId) { toast.error('No project selected'); return; }
-            try {
-              await createRFI.mutateAsync({ projectId, data: { ...data, project_id: projectId } });
-              toast.success('RFI created successfully');
-            } catch (err) {
-              toast.error('Failed to create RFI. Please try again.');
-              throw err;
-            }
-          }}
-        />
-      </PageContainer>
-    );
-  }
-
-  // ─── Main Render ───────────────────────────────────────
-
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <PageContainer
-      title="RFIs"
-      subtitle={`${totalOpen} active · ${overdueCount > 0 ? `${overdueCount} overdue` : 'none overdue'}`}
-      actions={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* View Toggle */}
-          <div style={{
-            display: 'flex', backgroundColor: colors.surfaceInset,
-            borderRadius: '10px', padding: '3px', gap: '2px',
-          }}>
-            <button
-              aria-pressed={viewMode === 'table'}
-              onClick={() => setViewMode('table')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
-                padding: '6px 12px', border: 'none', borderRadius: '8px',
-                backgroundColor: viewMode === 'table' ? colors.surfaceRaised : 'transparent',
-                color: viewMode === 'table' ? colors.textPrimary : colors.textTertiary,
-                fontSize: '12px', fontWeight: 500, fontFamily: typography.fontFamily,
-                cursor: 'pointer', boxShadow: viewMode === 'table' ? shadows.sm : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              <List size={13} /> List
-            </button>
-            <button
-              aria-label="Kanban view"
-              aria-pressed={viewMode === 'kanban'}
-              onClick={() => setViewMode('kanban')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
-                padding: '6px 12px', border: 'none', borderRadius: '8px',
-                backgroundColor: viewMode === 'kanban' ? colors.surfaceRaised : 'transparent',
-                color: viewMode === 'kanban' ? colors.textPrimary : colors.textTertiary,
-                fontSize: '12px', fontWeight: 500, fontFamily: typography.fontFamily,
-                cursor: 'pointer', boxShadow: viewMode === 'kanban' ? shadows.sm : 'none',
-                transition: 'all 0.15s',
-              }}
-            >
-              <LayoutGrid size={13} /> Board
-            </button>
-          </div>
-
-          <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_RFI_Log" />
-
-          <PermissionGate permission="rfis.create">
-            <button
-              onClick={() => setShowAIDraftModal(true)}
-              aria-label="Draft an RFI with AI assistance"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                padding: '7px 14px', border: 'none', borderRadius: '10px',
-                backgroundColor: colors.indigoSubtle, color: colors.indigo,
-                fontSize: '13px', fontWeight: 500, fontFamily: typography.fontFamily,
-                cursor: 'pointer', whiteSpace: 'nowrap',
-                transition: 'all 0.15s',
-              }}
-            >
-              <Wand2 size={13} />
-              AI Draft
-            </button>
-            <Btn onClick={() => setShowCreateModal(true)} aria-label="Create new Request for Information" data-testid="create-rfi-button">
-              <Plus size={15} style={{ marginRight: '4px' }} />
-              New RFI
-            </Btn>
-          </PermissionGate>
-        </div>
-      }
-    >
-      <style>{`
-        @keyframes rfi-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        .rfi-interactive:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-        .rfi-table-row:hover .rfi-row-accent { opacity: 1 !important; }
-        .rfi-table-row:hover .rfi-row-action { opacity: 1 !important; }
-        .rfi-kanban-card:hover { box-shadow: ${shadows.cardHover}; transform: translateY(-1px); }
-      `}</style>
-
-      {pageAlerts.map((alert) => (
-        <PredictiveAlertBanner key={alert.id} alert={alert} />
-      ))}
-      <PageInsightBanners page="rfis" />
-
-      <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+    <PageShell>
+      {/* SR-only live region */}
+      <div aria-live="polite" aria-atomic="true" style={{
+        position: 'absolute', width: 1, height: 1, overflow: 'hidden',
+        clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap',
+      }}>
         {announcement}
       </div>
 
-      {/* ─── Premium KPI Dashboard ─────────────────────── */}
-      <motion.div
-        initial={reducedMotion ? undefined : { opacity: 0, y: 8 }}
-        animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
+      {/* ── Sticky page header ─────────────────────────────────────────── */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 20,
+          backgroundColor: SURFACE_PAGE,
+          borderBottom: `1px solid ${BORDER}`,
+          padding: '14px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}
       >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h1 style={{
+            margin: 0,
+            fontFamily: typography.fontFamily,
+            fontSize: 18, fontWeight: 600,
+            color: INK, letterSpacing: '-0.01em',
+            lineHeight: 1.2,
+          }}>
+            RFIs
+          </h1>
+          <span aria-label={`${rfis.length} total`} style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            minWidth: 24, height: 22, padding: '0 7px',
+            borderRadius: 999,
+            backgroundColor: SURFACE_INSET, color: INK_2,
+            fontSize: 12, fontWeight: 600,
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {rfis.length}
+          </span>
+        </div>
+
+        <div role="tablist" aria-label="Filter RFIs by status" style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          {CHIPS.map((c) => (
+            <Chip
+              key={c.id}
+              label={c.label}
+              count={chipCounts[c.id] ?? 0}
+              active={activeChip === c.id}
+              alert={c.isAlert}
+              onClick={() => setActiveChip(c.id)}
+            />
+          ))}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 240, maxWidth: 380 }}>
+          <label style={{ position: 'relative', display: 'block' }}>
+            <Search size={14} color={INK_3} style={{
+              position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+              pointerEvents: 'none',
+            }} />
+            <input
+              ref={searchInputRef}
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search RFIs… (press / to focus)"
+              aria-label="Search RFIs"
+              style={{
+                width: '100%', height: 32, padding: '0 10px 0 30px',
+                border: `1px solid ${BORDER}`,
+                borderRadius: 6,
+                backgroundColor: '#FFFFFF',
+                fontFamily: typography.fontFamily, fontSize: 13,
+                color: INK, outline: 'none',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = BORDER_STRONG)}
+              onBlur={(e) => (e.currentTarget.style.borderColor = BORDER)}
+            />
+          </label>
+        </div>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_RFI_Log" />
+          <PermissionGate permission="rfis.create">
+            <button
+              onClick={() => setShowAIDraftModal(true)}
+              aria-label="Draft an RFI with Iris"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', border: `1px solid ${STATUS.iris}33`,
+                borderRadius: 6, backgroundColor: STATUS.irisSubtle,
+                color: STATUS.iris, fontSize: 13, fontWeight: 600,
+                fontFamily: typography.fontFamily, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              <Wand2 size={13} />
+              Iris draft
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              aria-label="Create new RFI"
+              data-testid="create-rfi-button"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', border: 'none', borderRadius: 6,
+                backgroundColor: STATUS.brandAction, color: '#FFFFFF',
+                fontSize: 13, fontWeight: 600,
+                fontFamily: typography.fontFamily, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              <Plus size={14} />
+              New RFI
+            </button>
+          </PermissionGate>
+        </div>
+      </header>
+
+      {/* ── KPI strip ──────────────────────────────────────────────────── */}
+      <div style={{ padding: '16px 24px 0 24px' }}>
         <RFIKPIs
           totalOpen={totalOpen}
           openCount={openCount}
@@ -776,239 +888,65 @@ const RFIsPage: React.FC = () => {
           closedThisWeek={closedThisWeek}
           totalCostImpact={totalCostImpact}
           totalRfis={rfis.length}
-          closedCount={rfis.filter((r) => r.status === 'closed').length}
+          closedCount={closedCount}
         />
-      </motion.div>
+      </div>
 
-      {/* ─── Section Header ─────────────────────────────── */}
-      <motion.div
-        initial={reducedMotion ? undefined : { opacity: 0, y: 6 }}
-        animate={reducedMotion ? undefined : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1, ease: 'easeOut' }}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: spacing['3'],
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-          <h2 style={{
-            margin: 0, fontSize: typography.fontSize.title, fontWeight: 600,
-            color: colors.textPrimary, letterSpacing: typography.letterSpacing.tight,
-          }}>
-            RFI Register
-          </h2>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            minWidth: 22, height: 22, padding: '0 6px',
-            borderRadius: borderRadius.full,
-            backgroundColor: colors.surfaceInset,
-            color: colors.textTertiary,
-            fontSize: 12, fontWeight: 600,
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            {rfis.length}
-          </span>
-        </div>
-        <span style={{
-          fontSize: 11, color: colors.textTertiary, fontWeight: 500,
-          padding: `2px ${spacing['2']}`, backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.sm,
-          fontFamily: typography.fontFamily,
-        }}>
-          ↑/↓ navigate · Enter open
-        </span>
-      </motion.div>
-
-      {/* ─── Table / Kanban ────────────────────────────── */}
-      <AnimatePresence mode="wait" initial={false}>
-      {viewMode === 'table' ? (
-        <motion.div
-          key="table-view"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
+      {/* ── Table ─────────────────────────────────────────────────────── */}
+      <main style={{ padding: '16px 24px 32px 24px' }}>
         <div style={{
-          backgroundColor: colors.surfaceRaised,
-          border: `1px solid ${colors.borderSubtle}`,
-          borderRadius: borderRadius.xl,
+          backgroundColor: '#FFFFFF',
+          border: `1px solid ${BORDER}`,
+          borderRadius: 8,
           overflow: 'hidden',
         }}>
-          {/* Premium Status Filter Tabs */}
-          <div style={{
-            padding: '10px 16px',
-            borderBottom: `1px solid ${colors.borderSubtle}`,
-            overflowX: 'auto',
-          }}>
-            <RFITabBar
-              activeTab={statusFilter}
-              onTabChange={setStatusFilter}
-              counts={tabCounts}
-            />
-          </div>
-
-          {/* Table Content */}
-          {filteredRfis.length === 0 ? (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '60px 20px', gap: '12px', textAlign: 'center',
-            }}>
-              <FilterX size={36} color={colors.textTertiary} style={{ opacity: 0.5 }} />
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: colors.textPrimary }}>
-                No RFIs match this filter
-              </h3>
-              <p style={{ margin: 0, fontSize: '13px', color: colors.textTertiary }}>
-                Try a different status filter
-              </p>
-              <Btn variant="secondary" size="sm" onClick={() => setStatusFilter('all')}>
-                Show All
-              </Btn>
+          {rfisLoading && rfis.length === 0 ? (
+            <div style={{ padding: 24 }}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} style={{
+                  height: 44, marginBottom: 6, borderRadius: 4,
+                  background: `linear-gradient(90deg, ${SURFACE_INSET} 0%, #FFFFFF 50%, ${SURFACE_INSET} 100%)`,
+                  backgroundSize: '200% 100%',
+                  animation: 'rfi-shimmer 1.6s ease-in-out infinite',
+                }} />
+              ))}
+              <style>{`@keyframes rfi-shimmer { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }`}</style>
             </div>
           ) : (
             <VirtualDataTable
               aria-label="RFI Register"
               data={filteredRfis}
-              columns={allRfiColumns}
-              rowHeight={52}
-              containerHeight={Math.min(600, filteredRfis.length * 52 + 48)}
+              columns={columns}
+              rowHeight={44}
+              containerHeight={Math.max(220, Math.min(720, filteredRfis.length * 44 + 48))}
               onRowClick={(rfi) => navigate(`/rfis/${rfi.id}`)}
               selectedRowId={null}
               getRowId={(row) => String(row.id)}
               getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
               getRowStyle={(rfi) => {
-                const overdue = rfi.dueDate && new Date(rfi.dueDate) < new Date() && rfi.status !== 'closed';
-                return overdue ? { backgroundColor: `${colors.statusCritical}04` } : {};
+                const overdue = rfi.dueDate && isOverdue(rfi.dueDate) && rfi.status !== 'closed';
+                if (!overdue) return {};
+                return { boxShadow: `inset 3px 0 0 0 ${STATUS.critical}` };
               }}
               loading={rfisLoading}
-              emptyMessage="No RFIs match your filters"
+              emptyMessage={
+                rfis.length === 0 ? 'No RFIs yet on this project' : 'No RFIs match the current filters'
+              }
               onRowToggleSelectByIndex={(i) => {
-                const id = String(allRfis[i]?.id);
+                const id = String(filteredRfis[i]?.id);
                 if (!id) return;
                 setSelectedIds((prev) => {
                   const next = new Set(prev);
-                  if (next.has(id)) next.delete(id);
-                  else next.add(id);
+                  if (next.has(id)) next.delete(id); else next.add(id);
                   return next;
                 });
               }}
             />
           )}
         </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          key="kanban-view"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-        <KanbanBoard
-          columns={kanbanColumns}
-          getKey={(rfi) => rfi.id}
-          onMoveItem={handleKanbanMove}
-          renderCard={(rfi) => {
-            const cardOverdue = isOverdue(rfi.dueDate) && rfi.status !== 'closed';
-            const daysOpen = Math.floor((Date.now() - new Date(rfi.created_at as string).getTime()) / 86400000);
-            return (
-              <div
-                className="rfi-kanban-card"
-                style={{
-                  padding: '16px', cursor: 'pointer',
-                  borderRadius: borderRadius.lg,
-                  position: 'relative',
-                  transition: `all 200ms cubic-bezier(0.16, 1, 0.3, 1)`,
-                  borderLeft: cardOverdue ? `3px solid ${colors.statusCritical}` : '3px solid transparent',
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label={`Open RFI ${rfi.rfiNumber}: ${rfi.title}`}
-                onClick={() => setSelectedRfi(rfi)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRfi(rfi); } }}
-              >
-                {/* Card Header */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  marginBottom: '8px',
-                }}>
-                  <span style={{
-                    fontSize: '11px', fontWeight: 700, color: colors.primaryOrange,
-                    fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em',
-                  }}>
-                    {rfi.rfiNumber}
-                  </span>
-                  <PriorityTag priority={rfi.priority} />
-                  {rfi.is_auto_generated && (
-                    <Sparkles size={10} color={colors.primaryOrange} style={{ opacity: 0.7 }} />
-                  )}
-                  <span style={{
-                    marginLeft: 'auto',
-                    fontSize: '10px', fontWeight: 600,
-                    color: daysOpen > 10 ? colors.statusCritical : daysOpen > 5 ? colors.statusPending : colors.textTertiary,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {daysOpen}d
-                  </span>
-                </div>
+      </main>
 
-                {/* Card Title */}
-                <p style={{
-                  fontSize: '13px', fontWeight: 500, color: colors.textPrimary,
-                  margin: '0 0 12px', lineHeight: 1.4,
-                  display: '-webkit-box', WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                } as React.CSSProperties}>
-                  {rfi.title}
-                </p>
-
-                {/* Card Footer */}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                }}>
-                  <BicBadge party={deriveBic(rfi)} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Calendar size={10} color={cardOverdue ? colors.statusCritical : colors.textTertiary} />
-                    <span style={{
-                      fontSize: '11px',
-                      color: cardOverdue ? colors.statusCritical : colors.textTertiary,
-                      fontWeight: cardOverdue ? 600 : 400,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      {formatShortDate(rfi.dueDate)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cost impact micro-badge */}
-                {rfi.cost_impact != null && Number(rfi.cost_impact) > 0 && (
-                  <div style={{
-                    marginTop: '8px', paddingTop: '8px',
-                    borderTop: `1px solid ${colors.borderSubtle}`,
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                  }}>
-                    <DollarSign size={10} color={colors.statusCritical} />
-                    <span style={{
-                      fontSize: '11px', fontWeight: 600, color: colors.statusCritical,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}>
-                      +{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, notation: 'compact' }).format(Number(rfi.cost_impact))}
-                    </span>
-                  </div>
-                )}
-
-                {getAnnotationsForEntity('rfi', rfi.id).map((ann) => (
-                  <AIAnnotationIndicator key={ann.id} annotation={ann} inline />
-                ))}
-              </div>
-            );
-          }}
-        />
-        </motion.div>
-      )}
-      </AnimatePresence>
-
-      {/* ─── Bulk Actions ─────────────────────────────── */}
+      {/* ── Bulk actions ──────────────────────────────────────────────── */}
       <BulkActionBar
         selectedIds={Array.from(selectedIds)}
         onClearSelection={() => setSelectedIds(new Set())}
@@ -1056,7 +994,7 @@ const RFIsPage: React.FC = () => {
             icon: <Download size={14} />,
             variant: 'secondary',
             onClick: async (ids) => {
-              const selected = allRfis.filter((r) => ids.includes(String(r.id)));
+              const selected = rfis.filter((r) => ids.includes(String(r.id)));
               const csv = ['RFI #,Title,From,Priority,Status,Due Date',
                 ...selected.map((r) => `${r.rfiNumber},"${String(r.title ?? '')}",${r.from},${r.priority},${r.status},${r.dueDate}`),
               ].join('\n');
@@ -1086,7 +1024,7 @@ const RFIsPage: React.FC = () => {
         ]}
       />
 
-      {/* ─── Detail Panel (Kanban selection) ──────────── */}
+      {/* ── Detail Panel (preserved) ─────────────────────────────────── */}
       <DetailPanel
         open={!!selectedRfi}
         onClose={() => { setSelectedRfi(null); setEditingDetail(false); }}
@@ -1094,23 +1032,20 @@ const RFIsPage: React.FC = () => {
         width="560px"
       >
         {selectedRfi && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Premium Header */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {/* Header */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{
-                    fontSize: '12px', fontWeight: 700, color: colors.primaryOrange,
-                    fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em',
-                    padding: '2px 8px', backgroundColor: `${colors.primaryOrange}08`,
-                    borderRadius: borderRadius.sm, border: `1px solid ${colors.primaryOrange}15`,
-                  }}>
-                    {selectedRfi.rfiNumber}
-                  </span>
-                  <StatusTag status={selectedRfi.status as 'pending' | 'approved' | 'under_review' | 'revise_resubmit' | 'complete' | 'active' | 'closed' | 'pending_approval'} />
-                  <PriorityTag priority={selectedRfi.priority as 'low' | 'medium' | 'high' | 'critical'} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{
+                  fontSize: 12, fontWeight: 700, color: STATUS.brandAction,
+                  fontFamily: typography.fontFamilyMono, letterSpacing: '0.02em',
+                  padding: '2px 8px', backgroundColor: `${STATUS.brandAction}10`,
+                  borderRadius: 4,
+                }}>
+                  {selectedRfi.rfiNumber}
+                </span>
+                <StatusPill status={selectedRfi.status as string | null} dueDate={selectedRfi.dueDate} />
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <PresenceAvatars entityId={String(selectedRfi.id)} size={22} />
                   <PermissionGate permission="rfis.edit">
                     <Btn variant={editingDetail ? 'primary' : 'secondary'} size="sm" onClick={() => setEditingDetail(!editingDetail)}>
@@ -1120,34 +1055,33 @@ const RFIsPage: React.FC = () => {
                 </div>
               </div>
               <h3 style={{
-                margin: 0, fontSize: '18px', fontWeight: 600,
-                color: colors.textPrimary, lineHeight: 1.35,
-                letterSpacing: typography.letterSpacing.tight,
+                margin: 0, fontFamily: typography.fontFamily,
+                fontSize: 18, fontWeight: 600, color: INK, lineHeight: 1.35,
+                letterSpacing: '-0.01em',
               }}>
                 {selectedRfi.title}
               </h3>
-              {/* Days open indicator */}
               {(() => {
-                const daysOpen = Math.floor((Date.now() - new Date(selectedRfi.created_at as string).getTime()) / 86400000);
+                const days = daysSince(selectedRfi.created_at as string);
                 const overdue = isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed';
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
                     <span style={{
-                      fontSize: '11px', fontWeight: 600,
-                      color: daysOpen > 10 ? colors.statusCritical : daysOpen > 5 ? colors.statusPending : colors.textTertiary,
+                      fontSize: 11, fontWeight: 600,
+                      color: days > 10 ? STATUS.critical : days > 5 ? STATUS.medium : INK_3,
                     }}>
-                      {daysOpen}d open
+                      {days}d open
                     </span>
                     {overdue && (
                       <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '4px',
-                        fontSize: '11px', fontWeight: 600, color: colors.statusCritical,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        fontSize: 11, fontWeight: 600, color: STATUS.critical,
                       }}>
                         <AlertCircle size={10} /> Overdue
                       </span>
                     )}
                     {selectedRfi.dueDate && !overdue && selectedRfi.status !== 'closed' && (
-                      <span style={{ fontSize: '11px', color: colors.textTertiary }}>
+                      <span style={{ fontSize: 11, color: INK_3 }}>
                         Due {formatShortDate(selectedRfi.dueDate)}
                       </span>
                     )}
@@ -1158,11 +1092,11 @@ const RFIsPage: React.FC = () => {
 
             <EditingLockBanner entityType="RFI" entityId={String(selectedRfi.id)} isEditing={editingDetail} />
 
-            {/* Metadata — Clean 2-col grid */}
+            {/* Metadata */}
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px',
-              padding: '16px', backgroundColor: colors.surfaceInset,
-              borderRadius: '12px', border: `1px solid ${colors.borderSubtle}`,
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
+              padding: 14, backgroundColor: SURFACE_INSET, borderRadius: 8,
+              border: `1px solid ${BORDER}`,
             }}>
               <EditableDetailField
                 label="Assigned To"
@@ -1177,9 +1111,9 @@ const RFIsPage: React.FC = () => {
                 }}
                 displayContent={
                   selectedRfi.to ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Avatar initials={selectedRfi.to.split(' ').map((w: string) => w[0]).join('').slice(0, 2)} size={20} />
-                      <span style={{ fontSize: '13px' }}>{selectedRfi.to}</span>
+                      <span style={{ fontSize: 13 }}>{selectedRfi.to}</span>
                     </div>
                   ) : undefined
                 }
@@ -1197,8 +1131,8 @@ const RFIsPage: React.FC = () => {
                 }}
                 displayContent={
                   <span style={{
-                    fontSize: '13px',
-                    color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed' ? colors.statusCritical : colors.textPrimary,
+                    fontSize: 13,
+                    color: isOverdue(selectedRfi.dueDate) && selectedRfi.status !== 'closed' ? STATUS.critical : INK,
                     fontWeight: isOverdue(selectedRfi.dueDate) ? 600 : 400,
                   }}>
                     {formatDate(selectedRfi.dueDate)}
@@ -1216,7 +1150,9 @@ const RFIsPage: React.FC = () => {
                   setSelectedRfi((prev) => prev ? { ...prev, ball_in_court: val } : prev);
                   toast.success('Updated');
                 }}
-                displayContent={selectedRfi.ball_in_court ? <BicBadge party={selectedRfi.ball_in_court as string} /> : undefined}
+                displayContent={selectedRfi.ball_in_court ? (
+                  <BicCell assigned={selectedRfi.ball_in_court as string} profileMap={profileMap} />
+                ) : undefined}
               />
               <EditableDetailField
                 label="Cost Impact"
@@ -1232,35 +1168,27 @@ const RFIsPage: React.FC = () => {
                 }}
                 displayContent={
                   selectedRfi.cost_impact != null && Number(selectedRfi.cost_impact) !== 0 ? (
-                    <span style={{ color: Number(selectedRfi.cost_impact) > 0 ? colors.statusCritical : colors.statusActive, fontWeight: 600, fontSize: '13px' }}>
-                      {Number(selectedRfi.cost_impact) > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(Number(selectedRfi.cost_impact))}
+                    <span style={{
+                      color: Number(selectedRfi.cost_impact) > 0 ? STATUS.critical : STATUS.onTrack,
+                      fontWeight: 600, fontSize: 13,
+                    }}>
+                      {Number(selectedRfi.cost_impact) > 0 ? '+' : ''}
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })
+                        .format(Number(selectedRfi.cost_impact))}
                     </span>
                   ) : undefined
                 }
               />
-              {selectedRfi.spec_section && (
-                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Spec</div>
-                  <span style={{ fontSize: '13px', color: colors.textPrimary }}>{selectedRfi.spec_section as string}</span>
-                </div>
-              )}
-              {selectedRfi.drawing_reference && (
-                <div>
-                  <div style={{ fontSize: '10px', fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Drawing</div>
-                  <span style={{ fontSize: '13px', color: colors.primaryOrange }}>{selectedRfi.drawing_reference as string}</span>
-                </div>
-              )}
             </div>
 
             {/* Description */}
             {selectedRfi.description && (
               <div style={{
-                padding: '14px 16px', backgroundColor: colors.surfaceInset,
-                borderRadius: '12px', border: `1px solid ${colors.borderSubtle}`,
+                padding: 14, backgroundColor: SURFACE_INSET, borderRadius: 8,
+                border: `1px solid ${BORDER}`,
               }}>
                 <p style={{
-                  margin: 0, fontSize: '13px', color: colors.textSecondary,
-                  lineHeight: 1.65, whiteSpace: 'pre-wrap',
+                  margin: 0, fontSize: 13, color: INK_2, lineHeight: 1.6, whiteSpace: 'pre-wrap',
                 }}>
                   {selectedRfi.description as string}
                 </p>
@@ -1269,23 +1197,18 @@ const RFIsPage: React.FC = () => {
 
             {/* Responses */}
             <div>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px',
-              }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: INK_3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {rfiResponses.length} {rfiResponses.length === 1 ? 'Response' : 'Responses'}
                 </span>
                 <button
                   onClick={() => navigate(`/rfis/${selectedRfi.id}`)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '4px',
+                    display: 'flex', alignItems: 'center', gap: 4,
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '12px', color: colors.primaryOrange, fontWeight: 500,
-                    padding: '4px 8px', borderRadius: '6px',
-                    transition: 'background 0.1s',
+                    fontSize: 12, color: STATUS.brandAction, fontWeight: 500,
+                    padding: '4px 6px', borderRadius: 4,
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.orangeSubtle)}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   Full view <ChevronRight size={12} />
                 </button>
@@ -1293,40 +1216,38 @@ const RFIsPage: React.FC = () => {
 
               {rfiResponses.length === 0 ? (
                 <div style={{
-                  padding: '24px', textAlign: 'center',
-                  backgroundColor: colors.surfaceInset, borderRadius: '12px',
-                  border: `1px dashed ${colors.borderSubtle}`,
+                  padding: 18, textAlign: 'center',
+                  backgroundColor: SURFACE_INSET, borderRadius: 8,
+                  border: `1px dashed ${BORDER}`,
                 }}>
-                  <MessageSquare size={20} color={colors.textTertiary} style={{ opacity: 0.4, marginBottom: '6px' }} />
-                  <p style={{ margin: 0, fontSize: '13px', color: colors.textTertiary }}>
-                    No responses yet
-                  </p>
+                  <MessageSquare size={20} color={INK_3} style={{ opacity: 0.5, marginBottom: 6 }} />
+                  <p style={{ margin: 0, fontSize: 13, color: INK_3 }}>No responses yet</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {rfiResponses.slice(0, 3).map((response, idx) => (
                     <div
                       key={response.id ?? idx}
                       style={{
-                        padding: '12px 14px', backgroundColor: colors.surfaceInset,
-                        borderRadius: '10px', border: `1px solid ${colors.borderSubtle}`,
+                        padding: 12, backgroundColor: SURFACE_INSET,
+                        borderRadius: 6, border: `1px solid ${BORDER}`,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                         <Avatar initials={(response.author_id ?? 'U').slice(0, 2).toUpperCase()} size={20} />
-                        <span style={{ fontSize: '12px', fontWeight: 500, color: colors.textSecondary }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: INK_2 }}>
                           {response.author_id ? response.author_id.slice(0, 8) : 'Unknown'}
                         </span>
-                        <span style={{ fontSize: '11px', color: colors.textTertiary, marginLeft: 'auto' }}>
+                        <span style={{ fontSize: 11, color: INK_3, marginLeft: 'auto' }}>
                           {response.created_at ? formatShortDate(response.created_at) : ''}
                         </span>
                       </div>
                       <p style={{
-                        margin: 0, fontSize: '13px', color: colors.textPrimary, lineHeight: 1.5,
+                        margin: 0, fontSize: 13, color: INK, lineHeight: 1.5,
                         display: '-webkit-box', WebkitLineClamp: 3,
                         WebkitBoxOrient: 'vertical', overflow: 'hidden',
                       } as React.CSSProperties}>
-                        {response.content ?? (response as Record<string, unknown>).response_text as string ?? ''}
+                        {response.content ?? (response as unknown as Record<string, unknown>).response_text as string ?? ''}
                       </p>
                     </div>
                   ))}
@@ -1335,8 +1256,8 @@ const RFIsPage: React.FC = () => {
                       onClick={() => navigate(`/rfis/${selectedRfi.id}`)}
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
-                        fontSize: '12px', color: colors.primaryOrange, fontWeight: 500,
-                        padding: '8px', textAlign: 'center',
+                        fontSize: 12, color: STATUS.brandAction, fontWeight: 500,
+                        padding: 8, textAlign: 'center',
                       }}
                     >
                       View all {rfiResponses.length} responses →
@@ -1346,34 +1267,31 @@ const RFIsPage: React.FC = () => {
               )}
             </div>
 
-            {/* Quick Response Input */}
+            {/* Quick response */}
             <PermissionGate permission="rfis.respond">
-              <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: colors.textSecondary }}>
-                    Quick Response
-                  </span>
+              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: INK_2 }}>Quick response</span>
                   <button
                     onClick={fetchAISuggestion}
                     disabled={aiSuggestionLoading}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                      background: 'none', border: `1px solid ${colors.borderSubtle}`,
-                      padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-                      fontSize: '11px', color: colors.indigo, fontWeight: 500,
-                      transition: 'all 0.12s',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      background: 'none', border: `1px solid ${BORDER}`,
+                      padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+                      fontSize: 11, color: STATUS.iris, fontWeight: 500,
                     }}
                   >
                     {aiSuggestionLoading ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Wand2 size={11} />}
-                    AI Suggest
+                    Iris suggest
                   </button>
                 </div>
                 {aiSuggestionError && (
-                  <div style={{ marginBottom: '6px', fontSize: '11px', color: colors.textTertiary }}>
-                    AI unavailable — type manually
+                  <div style={{ marginBottom: 6, fontSize: 11, color: INK_3 }}>
+                    Iris unavailable — type manually
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <textarea
                     value={responseText}
                     onChange={(e) => setResponseText(e.target.value)}
@@ -1382,15 +1300,12 @@ const RFIsPage: React.FC = () => {
                     disabled={responseSubmitting}
                     style={{
                       flex: 1, padding: '10px 12px',
-                      border: `1px solid ${colors.borderSubtle}`, borderRadius: '10px',
-                      fontSize: '13px', color: colors.textPrimary,
-                      backgroundColor: colors.surfacePage, resize: 'none',
+                      border: `1px solid ${BORDER}`, borderRadius: 6,
+                      fontSize: 13, color: INK,
+                      backgroundColor: '#FFFFFF', resize: 'none',
                       fontFamily: typography.fontFamily, lineHeight: 1.5,
                       boxSizing: 'border-box', outline: 'none',
-                      transition: 'border-color 0.15s',
                     }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = colors.primaryOrange)}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = colors.borderSubtle)}
                   />
                   <button
                     disabled={!responseText.trim() || responseSubmitting}
@@ -1412,13 +1327,14 @@ const RFIsPage: React.FC = () => {
                         setResponseSubmitting(false);
                       }
                     }}
+                    aria-label="Send response"
                     style={{
-                      width: 40, height: 40, borderRadius: '10px', border: 'none',
-                      backgroundColor: responseText.trim() && !responseSubmitting ? colors.primaryOrange : colors.surfaceInset,
-                      color: responseText.trim() && !responseSubmitting ? colors.white : colors.textTertiary,
+                      width: 36, height: 36, borderRadius: 6, border: 'none',
+                      backgroundColor: responseText.trim() && !responseSubmitting ? STATUS.brandAction : SURFACE_INSET,
+                      color: responseText.trim() && !responseSubmitting ? '#FFFFFF' : INK_3,
                       cursor: responseText.trim() && !responseSubmitting ? 'pointer' : 'not-allowed',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, transition: 'all 0.15s', alignSelf: 'flex-end',
+                      flexShrink: 0, alignSelf: 'flex-end',
                     }}
                   >
                     {responseSubmitting ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={15} />}
@@ -1427,35 +1343,54 @@ const RFIsPage: React.FC = () => {
               </div>
             </PermissionGate>
 
-            {/* Delete */}
+            {/* Status quick-actions */}
+            <PermissionGate permission="rfis.edit">
+              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {selectedRfi.status !== 'closed' && (
+                  <Btn
+                    variant="secondary" size="sm"
+                    onClick={() => handleStatusChange(String(selectedRfi.id), 'closed')}
+                  >
+                    Close RFI
+                  </Btn>
+                )}
+                {selectedRfi.status !== 'under_review' && selectedRfi.status !== 'closed' && (
+                  <Btn
+                    variant="secondary" size="sm"
+                    onClick={() => handleStatusChange(String(selectedRfi.id), 'under_review')}
+                  >
+                    Send for review
+                  </Btn>
+                )}
+              </div>
+            </PermissionGate>
+
             <PermissionGate permission="rfis.delete">
-              <div style={{ borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: '14px' }}>
+              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
                 <button
                   onClick={handleDeleteRFI}
                   disabled={deleteRFI.isPending}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '12px', color: colors.statusCritical, fontWeight: 500,
-                    padding: '6px 0', opacity: 0.7, transition: 'opacity 0.15s',
+                    fontSize: 12, color: STATUS.critical, fontWeight: 500,
+                    padding: '6px 0',
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
                 >
                   {deleteRFI.isPending ? 'Deleting…' : 'Delete this RFI'}
                 </button>
               </div>
             </PermissionGate>
 
-            <RelatedItems items={getRelatedItemsForRfi(selectedRfi.id)} onNavigate={appNavigate} />
+            <RelatedItems items={getRelatedItemsForRfi(selectedRfi.id as unknown as number)} onNavigate={appNavigate} />
           </div>
         )}
       </DetailPanel>
 
-      {/* ─── Create Modal ─────────────────────────────── */}
+      {/* Create modal */}
       <RFICreateWizard
         key={aiPrefillKey}
         open={showCreateModal}
-        onClose={() => { setShowCreateModal(false); setAiPrefill(null); }}
+        onClose={() => setShowCreateModal(false)}
         onSubmit={async (data) => {
           if (!projectId) { toast.error('No project selected'); return; }
           try {
@@ -1468,13 +1403,13 @@ const RFIsPage: React.FC = () => {
         }}
       />
 
-      {/* ─── AI Draft Modal ───────────────────────────── */}
+      {/* AI Draft Modal */}
       <AnimatePresence>
         {showAIDraftModal && (
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="AI Draft RFI"
+            aria-label="Iris Draft RFI"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1485,7 +1420,7 @@ const RFIsPage: React.FC = () => {
               backdropFilter: 'blur(4px)',
               zIndex: zIndex.popover, display: 'flex',
               alignItems: 'center', justifyContent: 'center',
-              padding: '16px',
+              padding: 16,
             }}
             onClick={(e) => { if (e.target === e.currentTarget) { setShowAIDraftModal(false); setAiDraftInput(''); } }}
           >
@@ -1495,40 +1430,36 @@ const RFIsPage: React.FC = () => {
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               style={{
-                backgroundColor: colors.surfaceRaised, borderRadius: '16px',
-                padding: '24px', width: '100%', maxWidth: 480,
-                boxShadow: '0 24px 80px -12px rgba(0,0,0,0.2)',
+                backgroundColor: '#FFFFFF', borderRadius: 12,
+                padding: 24, width: '100%', maxWidth: 480,
+                border: `1px solid ${BORDER}`,
               }}
             >
-              {/* Modal Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: '10px',
-                    backgroundColor: colors.indigoSubtle,
+                    width: 30, height: 30, borderRadius: 8,
+                    backgroundColor: STATUS.irisSubtle,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Wand2 size={16} color={colors.indigo} />
+                    <Wand2 size={16} color={STATUS.iris} />
                   </div>
-                  <span style={{ fontSize: '16px', fontWeight: 600, color: colors.textPrimary }}>AI Draft RFI</span>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: INK }}>Iris Draft RFI</span>
                 </div>
                 <button
                   onClick={() => { setShowAIDraftModal(false); setAiDraftInput(''); }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '6px', color: colors.textTertiary, display: 'flex',
-                    borderRadius: '8px', transition: 'background 0.1s',
+                    padding: 6, color: INK_3, display: 'flex',
+                    borderRadius: 6,
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceInset)}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   aria-label="Close"
                 >
                   <X size={18} />
                 </button>
               </div>
 
-              {/* Input */}
-              <label style={{ fontSize: '13px', fontWeight: 500, color: colors.textSecondary, display: 'block', marginBottom: '8px' }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: INK_2, display: 'block', marginBottom: 8 }}>
                 Describe the issue in your own words
               </label>
               <textarea
@@ -1545,68 +1476,89 @@ const RFIsPage: React.FC = () => {
                 }}
                 style={{
                   width: '100%', padding: '12px 14px',
-                  border: `1.5px solid ${colors.borderSubtle}`, borderRadius: '12px',
-                  fontSize: '14px', color: colors.textPrimary,
-                  backgroundColor: colors.surfacePage, resize: 'none',
+                  border: `1px solid ${BORDER}`, borderRadius: 8,
+                  fontSize: 14, color: INK,
+                  backgroundColor: '#FFFFFF', resize: 'none',
                   fontFamily: typography.fontFamily, boxSizing: 'border-box',
                   outline: 'none', lineHeight: 1.6,
-                  transition: 'border-color 0.15s',
                 }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = colors.indigo)}
-                onBlur={(e) => (e.currentTarget.style.borderColor = colors.borderSubtle)}
               />
               {aiDraftLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', color: colors.indigo, fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, color: STATUS.iris, fontSize: 13 }}>
                   <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                   Generating draft…
                 </div>
               )}
 
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '18px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 10, marginTop: 18, justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => { setShowAIDraftModal(false); setAiDraftInput(''); }}
                   disabled={aiDraftLoading}
                   style={{
-                    padding: '8px 16px', border: `1px solid ${colors.borderSubtle}`,
-                    borderRadius: '10px', backgroundColor: 'transparent',
-                    cursor: 'pointer', fontSize: '13px', color: colors.textSecondary,
+                    padding: '8px 16px', border: `1px solid ${BORDER}`,
+                    borderRadius: 6, backgroundColor: 'transparent',
+                    cursor: 'pointer', fontSize: 13, color: INK_2,
                     fontWeight: 500, fontFamily: typography.fontFamily,
-                    transition: 'all 0.12s',
                   }}
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleAIDraft}
-                  disabled={!aiDraftInput.trim() || aiDraftLoading}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '8px 18px', border: 'none', borderRadius: '10px',
-                    backgroundColor: aiDraftInput.trim() && !aiDraftLoading ? colors.indigo : colors.surfaceInset,
-                    color: aiDraftInput.trim() && !aiDraftLoading ? colors.white : colors.textTertiary,
-                    cursor: aiDraftInput.trim() && !aiDraftLoading ? 'pointer' : 'not-allowed',
-                    fontSize: '13px', fontWeight: 600, fontFamily: typography.fontFamily,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <Wand2 size={13} />
-                  Generate
-                </button>
+                <PermissionGate permission="ai.use">
+                  <button
+                    onClick={handleAIDraft}
+                    disabled={!aiDraftInput.trim() || aiDraftLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '8px 18px', border: 'none', borderRadius: 6,
+                      backgroundColor: aiDraftInput.trim() && !aiDraftLoading ? STATUS.iris : SURFACE_INSET,
+                      color: aiDraftInput.trim() && !aiDraftLoading ? '#FFFFFF' : INK_3,
+                      cursor: aiDraftInput.trim() && !aiDraftLoading ? 'pointer' : 'not-allowed',
+                      fontSize: 13, fontWeight: 600, fontFamily: typography.fontFamily,
+                    }}
+                  >
+                    <Wand2 size={13} />
+                    Generate
+                  </button>
+                </PermissionGate>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
 
       <Suspense fallback={null}>
         <QuickRFIButton />
       </Suspense>
-    </PageContainer>
+      {deleteRfiDialog}
+    </PageShell>
   );
 };
+
+// ── Page shell — full-viewport, no max-width, #FCFCFA surface ──────────────
+
+const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div
+    role="region"
+    aria-label="RFIs"
+    style={{
+      flex: 1,
+      minHeight: 0,
+      overflow: 'auto',
+      backgroundColor: SURFACE_PAGE,
+      fontFamily: typography.fontFamily,
+      color: INK,
+    }}
+  >
+    {children}
+  </div>
+);
+
+// Suppress unused-import warnings for primitives kept for re-export elsewhere.
+void spacing; void borderRadius;
 
 const RFIs: React.FC = () => (
   <ErrorBoundary message="RFIs could not be displayed. Check your connection and try again.">

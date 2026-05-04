@@ -11,7 +11,8 @@ interface VoiceRecorderProps {
 const transcriptionSegments: Array<{ time: number; text: string }> = [];
 
 // AI extraction result populated after voice processing completes
-const aiExtraction: { type: string; title: string; location: string; priority: string; assignee: string } | null = null;
+type AiExtraction = { type: string; title: string; location: string; priority: string; assignee: string }
+const aiExtraction = null as AiExtraction | null;
 
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave }) => {
   const [recording, setRecording] = useState(false);
@@ -180,7 +181,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onClose, onSave })
               {Object.entries(aiExtraction).filter(([k]) => k !== 'type' && k !== 'title').map(([key, val]) => (
                 <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDarkMuted, textTransform: 'capitalize' }}>{key}</span>
-                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDark, fontWeight: typography.fontWeight.medium }}>{val}</span>
+                  <span style={{ fontSize: typography.fontSize.sm, color: colors.textOnDark, fontWeight: typography.fontWeight.medium }}>{String(val ?? '')}</span>
                 </div>
               ))}
             </div>

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fromTable, supabase } from '../lib/supabase'
 import { useProjectId } from './useProjectId'
 
+
 export type ApprovalEntityType = 'submittal' | 'rfi' | 'change_order' | 'pay_application' | 'daily_log' | 'safety_inspection'
 export type ApprovalActionType = 'approve' | 'review' | 'acknowledge'
 export type ApprovalAction = 'approved' | 'rejected' | 'returned' | 'acknowledged'
@@ -64,7 +65,7 @@ export function useApprovalTemplates(entityType?: ApprovalEntityType) {
       if (entityType) q = q.eq('entity_type', entityType)
       const { data, error } = await q.order('created_at', { ascending: false })
       if (error) throw error
-      return (data as ApprovalWorkflowTemplate[]) ?? []
+      return (data as unknown as ApprovalWorkflowTemplate[]) ?? []
     },
   })
 }
@@ -94,7 +95,7 @@ export function useApprovalStatus(entityType: string | undefined, entityId: stri
       return {
         instance,
         template: (tplRes.data as ApprovalWorkflowTemplate | null) ?? null,
-        actions: (actionsRes.data as ApprovalStepAction[] | null) ?? [],
+        actions: (actionsRes.data as unknown as ApprovalStepAction[] | null) ?? [],
       }
     },
   })
@@ -129,7 +130,7 @@ export function useSaveApprovalTemplate() {
           .select()
           .single()
         if (error) throw error
-        return data as ApprovalWorkflowTemplate
+        return data as unknown as ApprovalWorkflowTemplate
       }
       const { data, error } = await fromTable('approval_workflow_templates')
         .insert({
@@ -143,7 +144,7 @@ export function useSaveApprovalTemplate() {
         .select()
         .single()
       if (error) throw error
-      return data as ApprovalWorkflowTemplate
+      return data as unknown as ApprovalWorkflowTemplate
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['approval-templates', projectId] }),
   })
@@ -162,7 +163,7 @@ export function useStartApproval() {
         .eq('is_default', true)
         .limit(1)
       if (te) throw te
-      const template = ((tpls as ApprovalWorkflowTemplate[] | null) ?? [])[0]
+      const template = ((tpls as unknown as ApprovalWorkflowTemplate[] | null) ?? [])[0]
       if (!template) throw new Error('No default approval workflow configured for ' + entityType)
 
       const { data: inst, error: ie } = await fromTable('approval_instances')

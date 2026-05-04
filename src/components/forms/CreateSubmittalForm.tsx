@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { X, Send, ClipboardList } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, zIndex } from '../../styles/theme';
 import { UppyUploader } from '../files/UppyUploader';
-import { useSubmittalStore } from '../../stores/submittalStore';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { submittalService } from '../../services/submittalService';
+import { useEntityStoreRoot } from '../../stores/entityStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import type { Priority } from '../../types/database';
 
@@ -21,8 +22,8 @@ const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
 ];
 
 export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmittalFormProps) {
-  const { createSubmittal } = useSubmittalStore();
-  const { activeProject } = useProjectContext();
+  // ─── Migrated from submittalStore to submittalService + entityStore on Day 9 ───
+  const { activeProject } = useProjectStore();
   const { profile } = useAuthStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -44,7 +45,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
     setSaving(true);
     setError('');
 
-    const { error: createError, submittal } = await createSubmittal({
+    const createResult = await submittalService.createSubmittal({
       project_id: activeProject.id,
       title: title.trim(),
       description: description.trim() || undefined,
@@ -54,15 +55,30 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
       created_by: profile.id,
     });
 
-    if (createError) {
-      setError(createError);
+    if (createResult.error) {
+      setError(createResult.error.userMessage);
       setSaving(false);
       return;
     }
 
+    const submittal = createResult.data;
+
+    // Sync the entityStore so list views see the new row immediately
+    if (submittal) {
+      useEntityStoreRoot.setState((s) => ({
+        slices: {
+          ...s.slices,
+          submittals: {
+            ...s.slices['submittals'],
+            items: [submittal, ...(s.slices['submittals']?.items ?? [])],
+          },
+        },
+      }));
+    }
+
     // If not draft, immediately submit
     if (!asDraft && submittal) {
-      await useSubmittalStore.getState().updateSubmittalStatus(submittal.id, 'submitted');
+      await submittalService.transitionStatus(submittal.id, 'submitted');
     }
 
     setSaving(false);

@@ -20,8 +20,15 @@ import { saveSOVProgress } from '../../api/endpoints/budget'
 import type { PayApplicationData } from '../../api/endpoints/budget'
 import { upsertPayApplication } from '../../api/endpoints/payApplications'
 import type { UpsertPayAppPayload } from '../../api/endpoints/payApplications'
-import { G702ApplicationPDF } from '../../components/export/G702ApplicationPDF'
-import { G703ContinuationPDF } from '../../components/export/G703ContinuationPDF'
+// Lazy-loaded so vendor-pdf-gen (~1.8MB; @react-pdf/renderer) stays out of
+// the SOVEditor chunk and only loads when the user opens the PDF preview /
+// download link. Day 27 — bundle attack.
+const G702ApplicationPDF = lazy(() =>
+  import('../../components/export/G702ApplicationPDF').then((m) => ({ default: m.G702ApplicationPDF })),
+)
+const G703ContinuationPDF = lazy(() =>
+  import('../../components/export/G703ContinuationPDF').then((m) => ({ default: m.G703ContinuationPDF })),
+)
 import {
   fmtCurrency,
   newBlankRow,
@@ -219,7 +226,7 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
   })
 
   return (
-    <Card padding={0} style={{ overflow: 'hidden' }}>
+    <Card padding="0" style={{ overflow: 'hidden' }}>
       <div style={{ padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
         <Receipt size={16} color={colors.primaryOrange} />
         <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
@@ -345,7 +352,7 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
         <div style={{ flex: 1 }} />
         <div style={{ textAlign: 'right' }}>
           <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.5)' }}>Current Payment Due</p>
-          <p style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>{fmtCurrency(liveG702.currentPaymentDue)}</p>
+          <p style={{ margin: 0, fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>{fmtCurrency(liveG702.currentPaymentDue)}</p>
         </div>
         <div style={{ display: 'flex', gap: spacing['2'] }}>
           <Btn
@@ -619,7 +626,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
           position: 'fixed', top: 0, right: 0, bottom: 0,
           width: DRAWER_WIDTH,
           backgroundColor: colors.white,
-          boxShadow: shadows.xl,
+          boxShadow: shadows.lg,
           zIndex: 1001,
           display: 'flex',
           flexDirection: 'column',
@@ -635,7 +642,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
         }}>
           <Receipt size={18} color={colors.primaryOrange} />
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            <h2 style={{ margin: 0, fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               {isEdit ? `Edit Pay Application #${editApp?.application_number as number}` : 'New Pay Application'}
             </h2>
             <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
@@ -755,7 +762,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
             </div>
           </Card>
 
-          <Card padding={0} style={{ overflow: 'hidden' }}>
+          <Card padding="0" style={{ overflow: 'hidden' }}>
             <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
               <Receipt size={14} color={colors.primaryOrange} />
               <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
@@ -858,13 +865,15 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
                           {fmtCurrency(calc.netPayment)}
                         </span>
                         <div style={tdStyle(36, 'center')}>
-                          <button
-                            onClick={() => removeRow(row.key)}
-                            aria-label="Remove row"
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
-                          >
-                            <X size={12} />
-                          </button>
+                          <PermissionGate permission="financials.edit">
+                            <button
+                              onClick={() => removeRow(row.key)}
+                              aria-label="Remove row"
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: touchTarget.field, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base, backgroundColor: 'transparent', cursor: 'pointer', color: colors.textTertiary }}
+                            >
+                              <X size={12} />
+                            </button>
+                          </PermissionGate>
                         </div>
                       </div>
                       {row.error && (
@@ -887,19 +896,21 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
             </div>
 
             <div style={{ padding: `${spacing['2']} ${spacing['4']}`, borderTop: `1px solid ${colors.borderSubtle}` }}>
-              <button
-                onClick={addRow}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
-                  padding: `${spacing['1.5']} ${spacing['3']}`,
-                  border: `1px dashed ${colors.borderDefault}`,
-                  borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                  color: colors.textSecondary, fontSize: typography.fontSize.sm,
-                  fontFamily: typography.fontFamily, cursor: 'pointer',
-                }}
-              >
-                <Plus size={13} /> Add Line Item
-              </button>
+              <PermissionGate permission="financials.edit">
+                <button
+                  onClick={addRow}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+                    padding: `${spacing['1.5']} ${spacing['3']}`,
+                    border: `1px dashed ${colors.borderDefault}`,
+                    borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                    color: colors.textSecondary, fontSize: typography.fontSize.sm,
+                    fontFamily: typography.fontFamily, cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={13} /> Add Line Item
+                </button>
+              </PermissionGate>
             </div>
           </Card>
 
@@ -972,7 +983,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
         }}>
           <div>
             <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Current Payment Due</p>
-            <p style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>
               {fmtCurrency(g702.currentPaymentDue)}
             </p>
           </div>

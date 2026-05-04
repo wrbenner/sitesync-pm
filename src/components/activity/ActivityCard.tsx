@@ -97,6 +97,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = React.memo(({ item, onC
       role="article"
       tabIndex={0}
       aria-label={`Activity: ${item.user} ${item.action} ${item.target}`}
+      data-demo-step={item.type === 'procurement_suggestion' ? 'procurement-suggestion' : undefined}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
       onFocus={() => { if (onClick) setFocused(true); }}
       onBlur={() => setFocused(false)}

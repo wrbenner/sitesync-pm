@@ -23,7 +23,7 @@ interface RealtimeFlashProps {
 
 export const RealtimeFlash: React.FC<RealtimeFlashProps> = React.memo(({ entityId, table, children }) => {
   const [flash, setFlash] = useState<FlashType>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectId = useProjectId()
   const { user } = useAuth()
 
@@ -39,7 +39,7 @@ export const RealtimeFlash: React.FC<RealtimeFlashProps> = React.memo(({ entityI
         filter: `id=eq.${entityId}`,
       }, (payload) => {
         // Skip changes made by current user
-        const record = (payload.new || payload.old) as Record<string, unknown> | null
+        const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
         const changedBy = record?.created_by || record?.submitted_by || record?.updated_by
         if (changedBy === user?.id) return
 
@@ -95,7 +95,7 @@ export const RealtimeFlash: React.FC<RealtimeFlashProps> = React.memo(({ entityI
 
 export function useRealtimeFlash(table: string, entityId: string): FlashType {
   const [flash, setFlash] = useState<FlashType>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const projectId = useProjectId()
   const { user } = useAuth()
 
@@ -110,7 +110,7 @@ export function useRealtimeFlash(table: string, entityId: string): FlashType {
         table,
         filter: `id=eq.${entityId}`,
       }, (payload) => {
-        const record = (payload.new || payload.old) as Record<string, unknown> | null
+        const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
         const changedBy = record?.created_by || record?.submitted_by || record?.updated_by
         if (changedBy === user?.id) return
 

@@ -19,6 +19,7 @@ function makeChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {
     select: vi.fn(),
     eq: vi.fn(),
+    in: vi.fn(),
     neq: vi.fn(),
     is: vi.fn(),
     limit: vi.fn(),
@@ -29,12 +30,15 @@ function makeChain() {
     order: vi.fn(),
     single: mockSingle,
   }
-  for (const key of ['select', 'eq', 'neq', 'is', 'insert', 'update', 'delete', 'order', 'limit']) {
+  for (const key of ['select', 'eq', 'in', 'neq', 'is', 'insert', 'update', 'delete', 'order', 'limit']) {
     chain[key].mockReturnValue(chain)
   }
   // maybeSingle resolves to the same shape mockSingle does — used by
   // ensureOrganizationMembership which probes for an existing org.
   chain.maybeSingle.mockResolvedValue({ data: null, error: null })
+  // .in() is the terminator for the second-query (profiles batch) path;
+  // default to empty profiles so tests not exercising loadMembers still work.
+  chain.in.mockResolvedValue({ data: [], error: null })
   return chain
 }
 
@@ -132,8 +136,9 @@ describe('projectService.createProject', () => {
 
     await projectService.createProject({ name: 'Test', organization_id: 'co-1' })
 
-    expect(projectsInsertArg?.status).toBe('active')
-    expect(projectsInsertArg?.name).toBe('Test')
+    const captured = projectsInsertArg as Record<string, unknown> | null
+    expect(captured?.status).toBe('active')
+    expect(captured?.name).toBe('Test')
   })
 
   it('returns DatabaseError on insert failure', async () => {

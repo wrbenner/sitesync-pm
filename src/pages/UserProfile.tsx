@@ -3,8 +3,7 @@ import { motion } from 'framer-motion';
 import {
   User, Mail, Phone, Building2, Briefcase, Shield, Camera,
   Bell, BellOff, ChevronRight, LogOut, Check, Pencil,
-  Moon, Sun, Lock, KeyRound, Palette,
-} from 'lucide-react';
+  Moon, Sun, KeyRound, Palette, Trash2} from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores';
 import { supabase } from '../lib/supabase';
@@ -12,6 +11,7 @@ import { toast } from 'sonner';
 import { colors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { useNavigate } from 'react-router-dom';
 import { MfaEnrollment } from '../components/auth/MfaEnrollment';
+import { DeleteAccountDialog } from '../components/auth/DeleteAccountDialog';
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -170,8 +170,24 @@ const SettingsRow: React.FC<{
   trailing?: React.ReactNode;
   last?: boolean;
 }> = ({ label, description, icon, onClick, trailing, last }) => (
-  <button
+  // Render as div, not button: rows whose `trailing` slot is a toggle
+  // or other interactive element would create a nested-button hydration
+  // error otherwise. Keyboard semantics are preserved via role/tabindex
+  // when onClick is provided.
+  <div
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
     onClick={onClick}
+    onKeyDown={
+      onClick
+        ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onClick()
+            }
+          }
+        : undefined
+    }
     style={{
       display: 'flex', alignItems: 'center', gap: spacing['3'],
       padding: `${spacing['3']} 0`, width: '100%',
@@ -207,7 +223,7 @@ const SettingsRow: React.FC<{
       )}
     </div>
     {trailing ?? (onClick ? <ChevronRight size={16} color={colors.textTertiary} /> : null)}
-  </button>
+  </div>
 );
 
 /* ─────────────────────── Toggle Component ─────────────────────── */
@@ -251,9 +267,10 @@ export default function UserProfile() {
 
   // Edit states
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -279,8 +296,8 @@ export default function UserProfile() {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('user_id', user.id);
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('user_id' as never, user.id);
 
     setSaving(false);
     setEditingField(null);
@@ -298,7 +315,21 @@ export default function UserProfile() {
   }, [signOut, navigate]);
 
   const roleInfo = getRoleInfo(profile?.role || '');
-  const displayInitials = `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase() || '?';
+  // Initials fallback: first+last → first letter of email local-part → "Y".
+  // Never render the literal "?" — it reads as a missing value, not a person.
+  const emailLocal = (user?.email ?? '').split('@')[0] ?? '';
+  const fallbackFromEmail = emailLocal
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? '')
+    .join('');
+  const displayInitials =
+    `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase()
+    || fallbackFromEmail
+    || (emailLocal[0]?.toUpperCase() ?? '')
+    || 'Y';
 
   return (
     <div style={{
@@ -324,15 +355,26 @@ export default function UserProfile() {
             style={{
               width: 96, height: 96,
               borderRadius: borderRadius.full,
-              background: `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`,
+              // For unset profiles use a soft parchment chip rather than
+              // a saturated orange disc — the prior treatment read as a
+              // bright unstyled placeholder rather than a person.
+              background: profile?.avatar_url
+                ? `linear-gradient(135deg, ${colors.primaryOrange} 0%, #FF9C42 100%)`
+                : colors.surfaceInset,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 8px 32px rgba(244,120,32,0.25)`,
+              boxShadow: profile?.avatar_url
+                ? `0 8px 32px rgba(244,120,32,0.25)`
+                : `inset 0 0 0 1px ${colors.borderSubtle}`,
             }}
           >
             {profile?.avatar_url ? (
               <img
                 src={profile.avatar_url}
                 alt="Profile"
+                // If the avatar URL 404s, swap to the initials fallback by
+                // hiding the <img>. The gradient background + initials below
+                // become visible in its place.
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                 style={{
                   width: 96, height: 96, borderRadius: borderRadius.full,
                   objectFit: 'cover',
@@ -340,8 +382,9 @@ export default function UserProfile() {
               />
             ) : (
               <span style={{
-                fontSize: 36, fontWeight: typography.fontWeight.bold,
-                color: colors.white, letterSpacing: '-0.02em',
+                fontSize: 36, fontWeight: typography.fontWeight.semibold,
+                color: colors.textSecondary, letterSpacing: '-0.02em',
+                fontFamily: typography.fontFamilySerif,
               }}>
                 {displayInitials}
               </span>
@@ -543,6 +586,7 @@ export default function UserProfile() {
                 fontWeight: typography.fontWeight.semibold,
                 fontFamily: typography.fontFamily,
                 transition: 'all 120ms ease',
+                minHeight: 56,
               }}
             >
               <LogOut size={16} />
@@ -550,7 +594,47 @@ export default function UserProfile() {
             </motion.button>
           </div>
         </SectionCard>
+
+        {/* Danger Zone — required by App Store Guideline 5.1.1(v) */}
+        <SectionCard title="Danger Zone" icon={<Trash2 size={16} />} delay={0.28}>
+          <div style={{ padding: spacing['4'] }}>
+            <p style={{
+              margin: 0,
+              marginBottom: spacing['3'],
+              fontSize: typography.fontSize.sm,
+              color: colors.textSecondary,
+              lineHeight: 1.5,
+            }}>
+              Permanently delete your account and personal data. This cannot be undone.
+            </p>
+            <button
+              onClick={() => setDeleteAccountOpen(true)}
+              style={{
+                width: '100%', padding: `${spacing['3']} ${spacing['4']}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: spacing['2'],
+                backgroundColor: colors.statusCritical,
+                border: 'none',
+                borderRadius: borderRadius.lg, cursor: 'pointer',
+                color: colors.white,
+                fontSize: typography.fontSize.sm,
+                fontWeight: typography.fontWeight.semibold,
+                fontFamily: typography.fontFamily,
+                transition: 'all 120ms ease',
+                minHeight: 56,
+              }}
+            >
+              <Trash2 size={16} />
+              Delete Account
+            </button>
+          </div>
+        </SectionCard>
       </div>
+
+      <DeleteAccountDialog
+        open={deleteAccountOpen}
+        onClose={() => setDeleteAccountOpen(false)}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { supabase } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { transformSupabaseError } from '../errors'
 import { assertOrganizationAccess } from '../middleware/organizationScope'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
@@ -14,14 +15,13 @@ export async function getUserOrganizations(): Promise<Organization[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data, error } = await supabase
-    .from('organization_members')
+  const { data, error } = await fromTable('organization_members')
     .select('organization:organizations(*)')
-    .eq('user_id', user.id)
+    .eq('user_id' as never, user.id)
 
   if (error) throw transformSupabaseError(error)
 
-  const members = (data ?? []) as OrgMemberWithOrg[]
+  const members = (data ?? []) as unknown as OrgMemberWithOrg[]
   return members
     .map((row) => row.organization)
     .filter((org): org is Organization => org !== null)
@@ -30,14 +30,13 @@ export async function getUserOrganizations(): Promise<Organization[]> {
 // Fetch all projects belonging to an organization
 export async function getOrganizationProjects(orgId: string): Promise<ProjectRow[]> {
   await assertOrganizationAccess(orgId)
-  const { data, error } = await supabase
-    .from('projects')
+  const { data, error } = await fromTable('projects')
     .select('id, name, status, contract_value, start_date, target_completion, created_at')
-    .eq('organization_id', orgId)
+    .eq('organization_id' as never, orgId)
     .order('created_at', { ascending: false })
 
   if (error) throw transformSupabaseError(error)
-  return (data ?? []) as ProjectRow[]
+  return (data ?? []) as unknown as ProjectRow[]
 }
 
 // Fetch a lightweight summary of all projects in an org — only the columns
@@ -45,14 +44,13 @@ export async function getOrganizationProjects(orgId: string): Promise<ProjectRow
 // whenever full project detail is not needed (e.g. metrics, counts, status lists).
 export async function getOrganizationProjectSummaries(orgId: string): Promise<ProjectSummaryRow[]> {
   await assertOrganizationAccess(orgId)
-  const { data, error } = await supabase
-    .from('projects')
+  const { data, error } = await fromTable('projects')
     .select('id, status, contract_value, target_completion')
-    .eq('organization_id', orgId)
+    .eq('organization_id' as never, orgId)
     .order('created_at', { ascending: false })
 
   if (error) throw transformSupabaseError(error)
-  return (data ?? []) as ProjectSummaryRow[]
+  return (data ?? []) as unknown as ProjectSummaryRow[]
 }
 
 // Aggregate portfolio metrics across all projects in the org.
@@ -95,50 +93,48 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
         // Fall back to manual aggregation using direct table queries scoped to the org's project IDs.
         // This handles missing RPC (42883), permission errors, and any other RPC failure.
         try {
-          const { data: projectRows, error: projectsError } = await supabase
-            .from('projects')
+          const { data: projectRows, error: projectsError } = await fromTable('projects')
             .select('id, status, contract_value')
-            .eq('organization_id', orgId)
+            .eq('organization_id' as never, orgId)
 
           if (projectsError || !projectRows) {
             return ZERO_METRICS
           }
 
-          if (projectRows.length === 0) {
+          type ProjectAggRow = { id: string; status: string | null; contract_value: number | null }
+          const projectAggRows = projectRows as unknown as ProjectAggRow[]
+          if (projectAggRows.length === 0) {
             return ZERO_METRICS
           }
 
-          const projectIds = projectRows.map((p) => p.id)
-          const totalContractValue = projectRows.reduce(
+          const projectIds = projectAggRows.map((p) => p.id)
+          const totalContractValue = projectAggRows.reduce(
             (sum, p) => sum + (p.contract_value ?? 0),
             0
           )
-          const activeProjects = projectRows.filter(
+          const activeProjects = projectAggRows.filter(
             (p) => p.status === 'active' || p.status === 'in_progress'
           ).length
 
           const now = new Date().toISOString()
           const [openRfiResult, overdueRfiResult, openPunchResult] = await Promise.all([
-            supabase
-              .from('rfis')
+            fromTable('rfis')
               .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .not('status', 'in', '("closed","answered")'),
-            supabase
-              .from('rfis')
+              .in('project_id' as never, projectIds as never[])
+              .not('status' as never, 'in', '("closed","answered")'),
+            fromTable('rfis')
               .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .neq('status', 'closed')
-              .lt('due_date', now),
-            supabase
-              .from('punch_items')
+              .in('project_id' as never, projectIds as never[])
+              .neq('status' as never, 'closed')
+              .lt('due_date' as never, now),
+            fromTable('punch_items')
               .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .not('status', 'in', '("complete","closed")'),
+              .in('project_id' as never, projectIds as never[])
+              .not('status' as never, 'in', '("complete","closed")'),
           ])
 
           return {
-            total_projects: projectRows.length,
+            total_projects: projectAggRows.length,
             active_projects: activeProjects,
             total_contract_value: totalContractValue,
             total_budget_spent: 0,
@@ -154,7 +150,8 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
         }
       }
 
-      const row = rpcRows?.[0]
+      type RpcMetricsRow = { total_projects: number | string; active_projects: number | string; total_contract_value: number | string; avg_completion_percentage: number | string; projects_on_schedule: number | string; projects_at_risk: number | string }
+      const row = (rpcRows as unknown as RpcMetricsRow[] | null)?.[0]
       if (!row || Number(row.total_projects) === 0) {
         return ZERO_METRICS
       }
@@ -164,22 +161,19 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
       // Round-trip 2: RFI and punch counts run in parallel, scoped to the org via
       // projects!inner join (no project ID fetch needed, O(1) round-trips regardless of count).
       const [openRfiResult, overdueRfiResult, openPunchResult] = await Promise.all([
-        supabase
-          .from('rfis')
+        fromTable('rfis')
           .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
-          .eq('projects.organization_id', orgId)
-          .not('status', 'in', '("closed","answered")'),
-        supabase
-          .from('rfis')
+          .eq('projects.organization_id' as never, orgId)
+          .not('status' as never, 'in', '("closed","answered")'),
+        fromTable('rfis')
           .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
-          .eq('projects.organization_id', orgId)
-          .neq('status', 'closed')
-          .lt('due_date', now),
-        supabase
-          .from('punch_items')
+          .eq('projects.organization_id' as never, orgId)
+          .neq('status' as never, 'closed')
+          .lt('due_date' as never, now),
+        fromTable('punch_items')
           .select('id, projects!inner(organization_id)', { count: 'exact', head: true })
-          .eq('projects.organization_id', orgId)
-          .not('status', 'in', '("complete","closed")'),
+          .eq('projects.organization_id' as never, orgId)
+          .not('status' as never, 'in', '("complete","closed")'),
       ])
 
       // Partial failure mode: group RFI queries together and punch separately.

@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { fromTable } from '../../lib/db/queries'
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+
   UserPlus, Mail, Search, Check, Shield, Users,
-  ChevronDown, X, Copy, Clock, AlertCircle, MoreHorizontal,
-} from 'lucide-react';
+  X, AlertCircle} from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { supabase, fromTable } from '../../lib/supabase';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { supabase} from '../../lib/supabase';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import type { Profile } from '../../types/database';
-import type { UserRole } from '../../types/enums';
+
 import { PermissionGate } from '../../components/auth/PermissionGate';
 
 /* ─────────────────────── Constants ─────────────────────── */
@@ -40,13 +41,13 @@ function getRoleConfig(role: string) {
 }
 
 function getInitials(first?: string | null, last?: string | null): string {
-  return `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase() || '?';
+  return `${(first || '')[0] || ''}${(last || '')[0] || ''}`.toUpperCase() || 'U';
 }
 
 /* ─────────────────────── Main Component ─────────────────────── */
 
 export function UserManagement() {
-  const { company, profile } = useAuthStore();
+  const { organization, profile } = useAuthStore();
   const [search, setSearch] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const [members, setMembers] = useState<Profile[]>([]);
@@ -63,36 +64,43 @@ export function UserManagement() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   const loadMembers = async () => {
-    if (!company?.id) return;
+    // Without an organization, there's nothing to fetch — but we still
+    // need to exit the loading state so the page renders the empty state
+    // instead of pulsing skeleton cards forever.
+    if (!organization?.id) {
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data } = await supabase
       .from('profiles')
       .select('*')
-      .eq('organization_id', company.id)
+      .eq('organization_id' as never, organization.id)
       .order('created_at');
-    if (data) setMembers(data as Profile[]);
+    if (data) setMembers(data as unknown as Profile[]);
     setLoading(false);
   };
 
   useEffect(() => {
     loadMembers();
-  }, [company?.id]);
+  }, [organization?.id]);
 
   const handleInvite = async () => {
-    if (!inviteEmail || !company?.id) return;
+    if (!inviteEmail || !organization?.id) return;
     setInviteLoading(true);
     setInviteError(null);
 
     try {
-      const { error } = await fromTable('invitations').insert({
-        company_id: company.id,
+      const { error } = await fromTable('user_invitations').insert({
+        organization_id: organization.id,
         email: inviteEmail,
         role: inviteRole,
         invited_by: profile!.id,
         status: 'pending',
         token: crypto.randomUUID(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
+      } as never);
       if (error) {
         setInviteError(error.message ?? 'Failed to send invitation');
         setInviteLoading(false);
@@ -170,7 +178,7 @@ export function UserManagement() {
             margin: 0, marginTop: spacing['1'],
             marginLeft: 48,
           }}>
-            {company?.name} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
+            {organization?.name} &middot; {members.length} member{members.length !== 1 ? 's' : ''}
           </p>
         </div>
 

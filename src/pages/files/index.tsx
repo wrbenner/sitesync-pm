@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive } from 'lucide-react';
-import { Btn, useToast, PageContainer, EmptyState, TabBar } from '../../components/Primitives';
+import { Btn, useToast, PageContainer, TabBar } from '../../components/Primitives';
+import { ProjectGate } from '../../components/ProjectGate';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useFiles } from '../../hooks/queries';
 import { useCreateFile, useDeleteFile } from '../../hooks/mutations';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { type FileItem, formatBytes } from './fileTypes';
 import { FileGrid } from './FileGrid';
 import { FileUpload } from './FileUpload';
@@ -140,14 +143,14 @@ const FilesPage: React.FC = () => {
   const metrics = useMemo(() => {
     const all = rawFiles || [];
     const totalFiles = all.length;
-    const drawings = all.filter((f: unknown) => (f as Record<string, unknown>).category === 'drawing' || ((f as Record<string, unknown>).file_type && String((f as Record<string, unknown>).file_type).includes('pdf'))).length;
+    const drawings = all.filter((f: unknown) => (f as unknown as Record<string, unknown>).category === 'drawing' || ((f as unknown as Record<string, unknown>).file_type && String((f as unknown as Record<string, unknown>).file_type).includes('pdf'))).length;
     const weekAgo = nowMs - 7 * 86400000;
     const recentUploads = all.filter((f: unknown) => {
-      const rf = f as Record<string, unknown>;
+      const rf = f as unknown as Record<string, unknown>;
       const ts = rf.uploaded_at || rf.created_at;
       return ts && new Date(ts as string).getTime() > weekAgo;
     }).length;
-    const totalBytes = all.reduce((sum: number, f: unknown) => sum + ((f as Record<string, unknown>).file_size_bytes as number || 0), 0);
+    const totalBytes = all.reduce((sum: number, f: unknown) => sum + ((f as unknown as Record<string, unknown>).file_size_bytes as number || 0), 0);
     return { totalFiles, drawings, recentUploads, totalBytes };
   }, [rawFiles, nowMs]);
 
@@ -209,7 +212,7 @@ const FilesPage: React.FC = () => {
     const source = files.find((f: FileItem) => f.id === sourceId);
     const target = files.find((f: FileItem) => f.id === targetFolderId);
     if (source && target) {
-      const { error } = await supabase.from('files').update({ parent_folder_id: targetFolderId }).eq('id', sourceId);
+      const { error } = await fromTable('files').update({ parent_folder_id: targetFolderId } as never).eq('id' as never, sourceId);
       if (error) { addToast('error', `Failed to move "${source.name}"`); return; }
       addToast('success', `Moved "${source.name}" into "${target.name}"`);
       refetch();
@@ -274,8 +277,15 @@ const FilesPage: React.FC = () => {
     }
   };
 
+  const { confirm: confirmDeleteFile, dialog: deleteFileDialog } = useConfirm();
+
   const handleDeleteFile = useCallback(async (file: FileItem) => {
-    if (!window.confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteFile({
+      title: 'Delete file?',
+      description: `"${file.name}" will be permanently removed. Linkages from RFIs, photos, or punch items become orphaned.`,
+      destructiveLabel: 'Delete file',
+    });
+    if (!ok) return;
     if (!projectId) {
       addToast('error', 'No project selected');
       return;
@@ -304,15 +314,7 @@ const FilesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FilesTabId>('files');
 
   if (!projectId) {
-    return (
-      <PageContainer title="Files">
-        <EmptyState
-          icon={<FilesIcon size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view project files."
-        />
-      </PageContainer>
-    );
+    return <ProjectGate />;
   }
 
   const renderFilesTab = () => {
@@ -380,7 +382,7 @@ const FilesPage: React.FC = () => {
           navigateToBreadcrumb={navigateToBreadcrumb}
           handleFileClick={handleFileClick}
           handleDeleteFile={handleDeleteFile}
-          addToast={addToast}
+          addToast={addToast as never}
           showUpload={showUpload}
           setShowUpload={setShowUpload}
           handleInternalDragStart={handleInternalDragStart}
@@ -419,6 +421,7 @@ const FilesPage: React.FC = () => {
       {activeTab === 'transmittals' && <TransmittalsPanel />}
       {activeTab === 'specs' && <SpecificationsPanel />}
       {activeTab === 'wiki' && <WikiPanel />}
+      {deleteFileDialog}
     </PageContainer>
   );
 };

@@ -4,7 +4,8 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 export interface ClassificationRow {
   sheetNumber: string
@@ -156,11 +157,11 @@ export const DrawingAnalysisReport: React.FC<{ data: DrawingAnalysisReportData }
         <View
           fixed
           style={styles.footer}
-          render={({ pageNumber, totalPages }) => (
+          render={({ pageNumber, ...rest }) => (
             <>
               <Text>SiteSync PM — {data.projectName}</Text>
               <Text>
-                Page {pageNumber} of {totalPages}
+                Page {pageNumber} of {(rest as { totalPages?: number }).totalPages ?? '?'}
               </Text>
             </>
           )}
@@ -209,16 +210,16 @@ export async function generateDrawingAnalysisReport(
   opts: DrawingAnalysisReportOptions = {},
 ): Promise<{ blob: Blob; filename: string; data: DrawingAnalysisReportData }> {
   const [projectRes, drawingsRes, classificationsRes, pairsRes] = await Promise.all([
-    supabase.from('projects').select('name').eq('id', projectId).maybeSingle(),
-    supabase.from('drawings').select('id, sheet_number, title, discipline').eq('project_id', projectId).order('sheet_number', { ascending: true }),
-    supabase.from('drawing_classifications').select('drawing_id, discipline, plan_type, floor_level, scale_text, classification_confidence, drawing_title, sheet_number').eq('project_id', projectId),
-    supabase.from('drawing_pairs').select('drawing_a_id, drawing_b_id').eq('project_id', projectId),
+    fromTable('projects').select('name').eq('id' as never, projectId).maybeSingle(),
+    fromTable('drawings').select('id, sheet_number, title, discipline').eq('project_id' as never, projectId).order('sheet_number', { ascending: true }),
+    fromTable('drawing_classifications').select('drawing_id, discipline, plan_type, floor_level, scale_text, classification_confidence, drawing_title, sheet_number').eq('project_id' as never, projectId),
+    fromTable('drawing_pairs').select('drawing_a_id, drawing_b_id').eq('project_id' as never, projectId),
   ])
 
   const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
-  const drawings: DrawingLite[] = (drawingsRes.data ?? []) as DrawingLite[]
-  const classifications: ClassificationLite[] = (classificationsRes.data ?? []) as ClassificationLite[]
-  const pairs: PairLite[] = (pairsRes.data ?? []) as PairLite[]
+  const drawings: DrawingLite[] = (drawingsRes.data ?? []) as unknown as DrawingLite[]
+  const classifications: ClassificationLite[] = (classificationsRes.data ?? []) as unknown as ClassificationLite[]
+  const pairs: PairLite[] = (pairsRes.data ?? []) as unknown as PairLite[]
 
   const classByDrawing = new Map<string, ClassificationLite>()
   for (const c of classifications) {

@@ -81,7 +81,7 @@ const CUSTOM_PROPS = ['_annotationType', '_annotationColor', '_annotationId'] as
 // ── Helpers ──────────────────────────────────────────────
 
 function uid(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -268,7 +268,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
   const saveHistory = useCallback(() => {
     const canvas = fabricRef.current
     if (!canvas || isRestoringRef.current) return
-    const json = JSON.stringify(canvas.toJSON([...CUSTOM_PROPS]))
+    const json = JSON.stringify((canvas.toJSON as (props?: string[]) => unknown)([...CUSTOM_PROPS]))
     const idx = historyIndexRef.current
     // Trim future history if we've undone
     historyRef.current = historyRef.current.slice(0, idx + 1)
@@ -317,7 +317,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
       .map((obj) => ({
         id: getAnnotationId(obj),
         type: getAnnotationType(obj),
-        data: obj.toObject([...CUSTOM_PROPS]) as Record<string, unknown>,
+        data: obj.toObject([...CUSTOM_PROPS]) as unknown as Record<string, unknown>,
         color: getAnnotationColor(obj),
         createdAt: new Date().toISOString(),
       }))
@@ -422,12 +422,13 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
       if (annotations?.length) {
         annotations.forEach((ann) => {
           FabricObject.fromObject(ann.data).then((obj) => {
-            tagObject(obj, ann.type, ann.color, ann.id)
+            const o = obj as never as import('fabric').FabricObject & { selectable: boolean; evented: boolean }
+            tagObject(o, ann.type, ann.color, ann.id)
             if (readOnly) {
-              obj.selectable = false
-              obj.evented = false
+              o.selectable = false
+              o.evented = false
             }
-            canvas.add(obj)
+            canvas.add(o)
             canvas.renderAll()
           }).catch(() => {
             // Skip malformed annotations silently

@@ -100,7 +100,7 @@ export class AIService {
 
     const data = await response.json()
     if (data.error) throw new Error(data.error)
-    return data as AIMessage
+    return data as unknown as AIMessage
   }
 
   // Stream chat and invoke onChunk for each text chunk; resolves to the complete AIMessage
@@ -289,7 +289,7 @@ export class AIService {
           ? 'Review cost-to-complete estimate and identify value engineering opportunities.'
           : 'Monitor remaining work scope and flag any additions to the owner immediately.',
       confidence: 1,
-      source: 'budget-anomaly-detector',
+      source: 'computed',
       createdAt: new Date().toISOString(),
       dismissed: false,
     }))

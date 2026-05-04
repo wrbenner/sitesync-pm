@@ -1,8 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
+import { fromTable, asRow } from '../lib/db/queries'
 import { detectConflicts } from './conflictResolver'
-import type { Database } from '../types/database'
-
 // ── Configuration ────────────────────────────────────────
 
 const MAX_PENDING_MUTATIONS = 500
@@ -145,7 +144,7 @@ export const offlineDb = new SiteSyncOfflineDB()
 
 /** Type-safe dynamic table access for Dexie. Returns the Table or null if the name is unknown. */
 function getDexieTable(name: string): Table | null {
-  const db = offlineDb as Record<string, unknown>
+  const db = offlineDb as unknown as Record<string, unknown>
   const table = db[name]
   if (table && typeof table === 'object' && 'toArray' in table) {
     return table as Table
@@ -431,18 +430,20 @@ export async function processSyncQueue(
 
     try {
       await offlineDb.pendingMutations.update(m.id!, { status: 'syncing' })
-      // Dynamic table name requires casting; the table name is validated against validTableNames on enqueue
-      const from = supabase.from(m.table as keyof Database['public']['Tables'])
+      // Dynamic table name requires casting; the table name is validated against validTableNames on enqueue.
+      // `as never` collapses the union so .select('*') doesn't trigger TS2589 on every table's row type.
+      const from = fromTable(m.table as never)
 
       if (m.operation === 'insert') {
-        const { error } = await from.insert(m.data)
+        const { error } = await from.insert(m.data as never)
         if (error) throw error
       } else if (m.operation === 'update' && m.data.id) {
         // Fetch current server version to check for conflicts
-        const { data: serverRow } = await from
+        const { data } = await from
           .select('*')
-          .eq('id', m.data.id)
+          .eq('id' as never, m.data.id)
           .single()
+        const serverRow = asRow<Record<string, unknown> & { updated_at: string | null }>(data)
 
         if (serverRow && serverRow.updated_at) {
           const serverUpdated = new Date(serverRow.updated_at).getTime()
@@ -452,7 +453,7 @@ export async function processSyncQueue(
             if (isStatusOnlyChange(m.data)) {
               // Status-only fields use last-write-wins: always apply local
               const { id, ...updates } = m.data
-              const { error } = await from.update(updates).eq('id', id)
+              const { error } = await from.update(updates as never).eq('id' as never, id)
               if (error) throw error
             } else {
               // Attempt three-way merge using the cached base version
@@ -465,12 +466,12 @@ export async function processSyncQueue(
                 )
                 if (canAutoMerge) {
                   // Non-conflicting changes on both sides: apply merged result silently
-                  const mergedRecord = merged as Record<string, unknown>
+                  const mergedRecord = merged as unknown as Record<string, unknown>
                   const mergedId = mergedRecord.id
                   const mergedUpdates = Object.fromEntries(
                     Object.entries(mergedRecord).filter(([k]) => k !== 'id' && k !== 'updated_at')
                   )
-                  const { error } = await from.update(mergedUpdates).eq('id', mergedId as string)
+                  const { error } = await from.update(mergedUpdates as never).eq('id' as never, mergedId as string)
                   if (error) throw error
                   // Keep local cache in sync with the merged record
                   const dexieTableName = getDexieTableName(m.table)
@@ -503,16 +504,16 @@ export async function processSyncQueue(
             }
           } else {
             const { id, ...updates } = m.data
-            const { error } = await from.update(updates).eq('id', id)
+            const { error } = await from.update(updates as never).eq('id' as never, id)
             if (error) throw error
           }
         } else {
           const { id, ...updates } = m.data
-          const { error } = await from.update(updates).eq('id', id)
+          const { error } = await from.update(updates as never).eq('id' as never, id)
           if (error) throw error
         }
       } else if (m.operation === 'delete' && m.data.id) {
-        const { error } = await from.delete().eq('id', m.data.id)
+        const { error } = await from.delete().eq('id' as never, m.data.id)
         if (error) throw error
       }
 
@@ -570,7 +571,7 @@ export async function queueFileUpload(fileName: string, bucket: string, path: st
 function classifyUploadError(error: unknown): { permanent: boolean; statusCode: number } {
   // Extract HTTP status from Supabase storage error
   if (error && typeof error === 'object') {
-    const e = error as Record<string, unknown>
+    const e = error as unknown as Record<string, unknown>
     const statusCode = (e.statusCode ?? e.status ?? e.httpStatus ?? 0) as number
 
     if (typeof statusCode === 'number' && PERMANENT_UPLOAD_ERRORS.has(statusCode)) {
@@ -578,7 +579,7 @@ function classifyUploadError(error: unknown): { permanent: boolean; statusCode: 
     }
 
     // Check error message for known permanent failures
-    const msg = String((e as Record<string, unknown>).message ?? '').toLowerCase()
+    const msg = String((e as unknown as Record<string, unknown>).message ?? '').toLowerCase()
     if (msg.includes('payload too large') || msg.includes('entity too large')) {
       return { permanent: true, statusCode: 413 }
     }
@@ -695,7 +696,7 @@ export async function cacheProjectData(
   // Cache the project record
   onProgress?.({ total, completed: 0, currentTable: 'projects' })
   try {
-    const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single()
+    const { data, error } = await fromTable('projects').select('*').eq('id' as never, projectId).single()
     if (error) throw error
     if (data) {
       await offlineDb.projects.put(data)
@@ -715,10 +716,10 @@ export async function cacheProjectData(
     onProgress?.({ total, completed: tablesCompleted, currentTable: supaTable })
 
     try {
-      const { data, error } = await supabase
-        .from(supaTable as keyof Database['public']['Tables'])
+      // `as never` collapses the dynamic-table union so .select('*') doesn't trigger TS2589.
+      const { data, error } = await fromTable(supaTable as never)
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .limit(clampedLimit)
       if (error) throw error
 

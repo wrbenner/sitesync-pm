@@ -1,0 +1,99 @@
+{
+  "generated_at": "2026-04-29T14:30:00Z",
+  "project": {
+    "id": "hypxrmcppjfbtlwuoafc",
+    "name": "ss pm",
+    "region": "us-west-2",
+    "tier_assumed": "pro_or_above"
+  },
+  "edge_functions": {
+    "deployed_count": 54,
+    "in_repo_count": 101,
+    "missing_count": 47,
+    "zombie_count": 0,
+    "missing": [
+      "audit-posture-snapshot",
+      "auto-link-media",
+      "closeout-package-generator",
+      "coi-expiration-watcher",
+      "compliance-pack",
+      "cross-project-search",
+      "customer-s3-export",
+      "digest-flusher",
+      "draft-change-order",
+      "draft-daily-log",
+      "entity-magic-link",
+      "extract-floor-outline",
+      "extract-inspection-report",
+      "extract-quote-pdf",
+      "extract-spec-pdf",
+      "inbound-email",
+      "insurance-bond-watcher",
+      "iris-rfi-response-draft",
+      "iris-suggest",
+      "lien-waiver-generator",
+      "meeting-minutes-generator",
+      "monthly-report-generator",
+      "notification-queue-worker",
+      "osha300-csv-export",
+      "owner-payapp-preview",
+      "owner-weekly-digest",
+      "p6-export",
+      "p6-import",
+      "parse-walkthrough-capture",
+      "payapp-audit",
+      "payapp-reconciliation",
+      "portfolio-summary-refresh",
+      "preliminary-notice-watcher",
+      "prevailing-wage-sync",
+      "procore-import-extended",
+      "refresh-materialized-views",
+      "scim-v2",
+      "sealed-entity-export",
+      "sla-escalator",
+      "sso-oidc-handler",
+      "sso-saml-handler",
+      "transcribe-walkthrough",
+      "vision-verify-link",
+      "walkthrough-pdf",
+      "weather-multi-source",
+      "webhook-dispatch",
+      "wh347-generator"
+    ]
+  },
+  "migrations": {
+    "applied_count": 160,
+    "in_repo_count": 214,
+    "missing_count": 54,
+    "manual_sql_count": 0,
+    "out_of_order_count": 0,
+    "earliest_missing": "20260429000001",
+    "latest_missing": "20260503120004"
+  },
+  "extensions": {
+    "installed": ["pg_stat_statements", "supabase_vault", "uuid-ossp", "pg_trgm", "vector", "plpgsql", "pgcrypto"],
+    "missing_required_for_cron": ["pg_cron", "pg_net"],
+    "missing_optional": ["postgis"]
+  },
+  "cron_status": "extension_not_enabled",
+  "secrets": {
+    "distinct_keys_referenced": 40,
+    "undocumented": [],
+    "consolidation_candidates": [
+      ["APP_URL", "APP_ORIGIN", "SHARE_BASE_URL", "ALLOWED_ORIGIN"],
+      ["SENDER_EMAIL", "RESEND_FROM_ADDRESS"]
+    ]
+  },
+  "overall_status": "degraded",
+  "blocking_issues": [
+    "pg_cron + pg_net extensions not installed — every nightly job is silent",
+    "47 edge functions in repo but not deployed — recent session work pending push",
+    "54 migrations in repo but not applied — schema is behind code"
+  ],
+  "next_actions": [
+    "Apply 54 missing migrations: supabase db push --project-ref hypxrmcppjfbtlwuoafc",
+    "Deploy 47 missing edge functions",
+    "Enable pg_cron + pg_net (requires Pro+ tier)",
+    "Schedule cron-driven functions once extensions are live"
+  ]
+}

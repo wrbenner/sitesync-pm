@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '../../lib/supabase'
-import type { Database } from '../../types/database'
+import { fromTable } from '../../lib/db/queries'
 import {
   integrationConnectionsKey,
   integrationSyncJobsKey,
@@ -14,8 +13,7 @@ import {
 
 // Dynamic table access helper — mirrors the pattern used across the
 // mutations layer for tables whose generated types may lag the schema.
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: string) => fromTable(table as never)
 
 // ── Integration Connections ────────────────────────────────────
 //
@@ -43,11 +41,11 @@ export function useCreateConnection() {
           account_name: input.accountName ?? null,
           scope: input.scope ?? null,
           status: 'pending_auth',
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
-      return data as IntegrationConnection
+      return data as unknown as IntegrationConnection
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: integrationConnectionsKey(vars.organizationId) })
@@ -71,13 +69,13 @@ export function useConfirmConnection() {
       const updates: Record<string, unknown> = { status: 'connected' }
       if (input.accountName !== undefined) updates.account_name = input.accountName ?? null
       const { data, error } = await from('integration_connections')
-        .update(updates)
-        .eq('id', input.id)
-        .eq('organization_id', input.organizationId)
+        .update(updates as never)
+        .eq('id' as never, input.id)
+        .eq('organization_id' as never, input.organizationId)
         .select()
         .single()
       if (error) throw error
-      return data as IntegrationConnection
+      return data as unknown as IntegrationConnection
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: integrationConnectionsKey(vars.organizationId) })
@@ -103,13 +101,13 @@ export function useDisconnectConnection() {
           oauth_token_encrypted: null,
           oauth_refresh_token_encrypted: null,
           expires_at: null,
-        })
-        .eq('id', input.id)
-        .eq('organization_id', input.organizationId)
+        } as never)
+        .eq('id' as never, input.id)
+        .eq('organization_id' as never, input.organizationId)
         .select()
         .single()
       if (error) throw error
-      return data as IntegrationConnection
+      return data as unknown as IntegrationConnection
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: integrationConnectionsKey(vars.organizationId) })
@@ -129,13 +127,13 @@ export function useRevokeConnection() {
   return useMutation({
     mutationFn: async (input: DisconnectConnectionInput) => {
       const { data, error } = await from('integration_connections')
-        .update({ status: 'revoked' })
-        .eq('id', input.id)
-        .eq('organization_id', input.organizationId)
+        .update({ status: 'revoked' } as never)
+        .eq('id' as never, input.id)
+        .eq('organization_id' as never, input.organizationId)
         .select()
         .single()
       if (error) throw error
-      return data as IntegrationConnection
+      return data as unknown as IntegrationConnection
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: integrationConnectionsKey(vars.organizationId) })
@@ -156,8 +154,8 @@ export function useDeleteConnection() {
     mutationFn: async (input: DeleteConnectionInput) => {
       const { error } = await from('integration_connections')
         .delete()
-        .eq('id', input.id)
-        .eq('organization_id', input.organizationId)
+        .eq('id' as never, input.id)
+        .eq('organization_id' as never, input.organizationId)
       if (error) throw error
       return input
     },
@@ -193,11 +191,11 @@ export function useTriggerSyncJob() {
           entity_type: input.entityType,
           direction: input.direction ?? 'bidirectional',
           status: 'queued',
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
-      return data as IntegrationSyncJob
+      return data as unknown as IntegrationSyncJob
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: integrationSyncJobsKey(vars.connectionId) })
@@ -228,9 +226,9 @@ export function useUpdateBudgetItem() {
       updates: { actual_amount?: number; percent_complete?: number }
     }) => {
       const { data, error } = await from('budget_items')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('project_id', projectId)
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
+        .eq('project_id' as never, projectId)
         .select()
         .single()
       if (error) throw error

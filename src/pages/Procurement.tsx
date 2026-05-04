@@ -12,6 +12,7 @@ import { useCreateDelivery, useDeleteDelivery, useCreateMaterialItem } from '../
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 
 type TabKey = 'orders' | 'deliveries' | 'inventory' | 'matching' | 'requisitions'
 
@@ -32,8 +33,8 @@ function formatCurrency(value: number | null | undefined): string {
 
 function statusBadge(value: string | null | undefined) {
   const v = (value || '').toLowerCase()
-  let color = colors.statusInfo
-  let bg = colors.statusInfoSubtle
+  let color: string = colors.statusInfo
+  let bg: string = colors.statusInfoSubtle
   if (v === 'approved' || v === 'received' || v === 'complete' || v === 'delivered') {
     color = colors.statusActive
     bg = colors.statusActiveSubtle
@@ -351,14 +352,16 @@ export const Procurement: React.FC = () => {
 
   const vendorScores: Record<string, VendorScore> = useMemo(() => {
     if (!deliveries || !pos) return {}
+    const posTyped = pos as unknown as Array<Record<string, unknown>>
+    const deliveriesTyped = deliveries as unknown as Array<Record<string, unknown>>
     // Build a map of PO id -> vendor name
     const poVendorMap: Record<string, string> = {}
-    for (const po of pos) {
+    for (const po of posTyped) {
       poVendorMap[po.id as string] = (po.vendor_name as string) || 'Unknown'
     }
     // Group deliveries by vendor
     const vendorDeliveries: Record<string, { total: number; delivered: number; onTime: number }> = {}
-    for (const d of deliveries) {
+    for (const d of deliveriesTyped) {
       const vendorName = poVendorMap[(d.purchase_order_id as string) || ''] || 'Unknown'
       if (!vendorDeliveries[vendorName]) {
         vendorDeliveries[vendorName] = { total: 0, delivered: 0, onTime: 0 }
@@ -490,9 +493,16 @@ export const Procurement: React.FC = () => {
     }
   }
 
+  const { confirm: confirmDeleteProcurement, dialog: deleteProcurementDialog } = useConfirm()
+
   const handleDeletePO = async (po: Record<string, unknown>) => {
     if (!projectId) return
-    if (!window.confirm(`Delete PO #${po.po_number || ''}? This cannot be undone.`)) return
+    const ok = await confirmDeleteProcurement({
+      title: 'Delete purchase order?',
+      description: `PO #${po.po_number || ''} — committed-cost rollups will adjust on the next budget recalculation.`,
+      destructiveLabel: 'Delete PO',
+    })
+    if (!ok) return
     try {
       await deletePO.mutateAsync({ id: po.id as string, projectId })
       toast.success('Purchase order deleted')
@@ -513,7 +523,7 @@ export const Procurement: React.FC = () => {
       return
     }
     try {
-      const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === deliveryForm.purchase_order_id) as Record<string, unknown> | undefined
+      const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === deliveryForm.purchase_order_id) as unknown as Record<string, unknown> | undefined
       await createDelivery.mutateAsync({
         project_id: projectId,
         purchase_order_id: deliveryForm.purchase_order_id || null,
@@ -534,7 +544,12 @@ export const Procurement: React.FC = () => {
 
   const handleDeleteDelivery = async (d: Record<string, unknown>) => {
     if (!projectId) return
-    if (!window.confirm('Delete this delivery? This cannot be undone.')) return
+    const ok = await confirmDeleteProcurement({
+      title: 'Delete delivery?',
+      description: `${d.vendor ?? 'This delivery'} on ${d.expected_date ?? 'unscheduled'} will be removed from the receiving log.`,
+      destructiveLabel: 'Delete delivery',
+    })
+    if (!ok) return
     try {
       await deleteDelivery.mutateAsync({ id: d.id as string, projectId })
       toast.success('Delivery deleted')
@@ -582,11 +597,11 @@ export const Procurement: React.FC = () => {
   }, [pos])
 
   const pendingDeliveries = useMemo(() => {
-    return deliveries?.filter((d: Record<string, unknown>) => d.status !== 'delivered' && d.status !== 'received').length || 0
+    return (deliveries as unknown as Array<Record<string, unknown>> | undefined)?.filter((d) => d.status !== 'delivered' && d.status !== 'received').length || 0
   }, [deliveries])
 
   const lowStockItems = useMemo(() => {
-    return inventory?.filter((item: Record<string, unknown>) => item.quantity_on_hand != null && item.minimum_quantity != null && (item.quantity_on_hand as number) < (item.minimum_quantity as number)).length || 0
+    return (inventory as unknown as Array<Record<string, unknown>> | undefined)?.filter((item) => item.quantity_on_hand != null && item.minimum_quantity != null && (item.quantity_on_hand as number) < (item.minimum_quantity as number)).length || 0
   }, [inventory])
 
   // ── Tab actions ─────────────────────────────────────────────
@@ -903,8 +918,8 @@ export const Procurement: React.FC = () => {
           <SectionHeader title="Deliveries" />
           <div style={{ marginTop: spacing['3'] }}>
             <DataTable
-              columns={deliveryColumns}
-              data={deliveries || []}
+              columns={deliveryColumns as never}
+              data={(deliveries || []) as unknown as Array<Record<string, unknown>>}
               emptyMessage="No deliveries logged yet. Deliveries appear here once purchase orders are fulfilled."
             />
           </div>
@@ -917,8 +932,8 @@ export const Procurement: React.FC = () => {
           <SectionHeader title="Material Inventory" />
           <div style={{ marginTop: spacing['3'] }}>
             <DataTable
-              columns={inventoryColumns}
-              data={inventory || []}
+              columns={inventoryColumns as never}
+              data={(inventory || []) as unknown as Array<Record<string, unknown>>}
               emptyMessage="No inventory items tracked. Add materials to monitor stock levels and flag low quantities."
             />
           </div>
@@ -1138,7 +1153,7 @@ export const Procurement: React.FC = () => {
                   <div style={{ display: 'flex', gap: spacing['1'], justifyContent: 'flex-end' }}>
                     {req.status === 'open' && (
                       <Btn size="sm" variant="primary" onClick={() => {
-                        setRequisitions(prev => prev.map(r => r.id === req.id ? { ...r, status: 'converted' as ReqStatus, converted_po: `PO-${2045 + Math.floor(Math.random() * 10)}` } : r))
+                        setRequisitions(prev => prev.map(r => r.id === req.id ? { ...r, status: 'converted' as ReqStatus, converted_po: `PO-${String(req.id).slice(0, 8).toUpperCase()}` } : r))
                         toast.success(`${req.id} converted to PO — items pre-filled`)
                       }}>Convert to PO</Btn>
                     )}
@@ -1250,7 +1265,7 @@ export const Procurement: React.FC = () => {
               value={deliveryForm.purchase_order_id}
               onChange={(e) => {
                 const poId = e.target.value
-                const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === poId) as Record<string, unknown> | undefined
+                const selectedPO = (pos || []).find((po: Record<string, unknown>) => po.id === poId) as unknown as Record<string, unknown> | undefined
                 setDeliveryForm({
                   ...deliveryForm,
                   purchase_order_id: poId,
@@ -1263,7 +1278,7 @@ export const Procurement: React.FC = () => {
               <option value="">No PO — ad-hoc delivery</option>
               {(pos || []).map((po: Record<string, unknown>) => (
                 <option key={po.id as string} value={po.id as string}>
-                  PO #{po.po_number} - {po.vendor_name as string}
+                  PO #{String(po.po_number)} - {po.vendor_name as string}
                 </option>
               ))}
             </select>
@@ -1313,6 +1328,7 @@ export const Procurement: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteProcurementDialog}
     </PageContainer>
   )
 }

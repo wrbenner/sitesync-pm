@@ -7,9 +7,9 @@
 // `traceLLM` and we record model, tokens, cost, latency, and success.
 
 import { supabase, fromTable } from './supabase'
-
 // Model cost reference, USD per 1K tokens. Update when Anthropic/OpenAI/Google
 // publish new pricing. Values are input → output.
+
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
   'claude-opus-4-7': { input: 0.015, output: 0.075 },
   'claude-sonnet-4-6': { input: 0.003, output: 0.015 },
@@ -72,7 +72,7 @@ async function recordTrace(
           prompt_preview: input.promptPreview?.slice(0, 240) ?? null,
           ...input.metadata,
         },
-      })
+      } as never)
       .select('id')
       .single()
     if (error) {
@@ -141,7 +141,7 @@ export async function recordCorrection(params: {
   corrected?: string
 }): Promise<void> {
   try {
-    await fromTable('training_corrections').insert({
+    await fromTable('training_corrections' as never).insert({
       trace_id: params.traceId ?? null,
       project_id: params.projectId ?? null,
       feature: params.feature,
@@ -150,7 +150,7 @@ export async function recordCorrection(params: {
       rating: params.rating ?? null,
       original: params.original?.slice(0, 4000) ?? null,
       corrected: params.corrected?.slice(0, 4000) ?? null,
-    })
+    } as never)
   } catch (e) {
     console.warn('[aiObservability] recordCorrection failed', e)
   }
@@ -175,9 +175,9 @@ export async function getUsageRollup(
   const since = new Date(Date.now() - sinceDays * 24 * 3600 * 1000).toISOString()
   let query = fromTable('ai_cost_tracking')
     .select('model, operation, input_tokens, output_tokens, total_cost_cents, metadata, created_at')
-    .gte('created_at', since)
+    .gte('created_at' as never, since)
     .limit(5000)
-  if (projectId) query = query.eq('project_id', projectId)
+  if (projectId) query = query.eq('project_id' as never, projectId)
   const { data, error } = await query
   if (error) {
     console.warn('[aiObservability] getUsageRollup failed', error)

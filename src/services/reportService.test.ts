@@ -61,7 +61,12 @@ const PHASES = [
   {
     id: 'ph-1',
     name: 'Foundation',
-    status: 'complete',
+    // Status values match the schedule_phases CHECK constraint:
+    // ('completed', 'active', 'upcoming', 'at_risk', 'delayed').
+    // Older fixtures used 'complete'/'in_progress' which silently never
+    // matched, masking the production bug where Reports showed 0 / total
+    // Remaining for any project.
+    status: 'completed',
     percent_complete: 100,
     start_date: '2026-01-01',
     end_date: '2026-02-28',
@@ -69,7 +74,7 @@ const PHASES = [
   {
     id: 'ph-2',
     name: 'Structural Steel',
-    status: 'in_progress',
+    status: 'active',
     percent_complete: 60,
     start_date: '2026-03-01',
     end_date: '2026-05-30',
@@ -139,7 +144,10 @@ describe('generateOwnerReport', () => {
     expect(report.budgetSummary.approvedChanges).toBe(25_000) // only approved
     expect(report.budgetSummary.currentContract).toBe(725_000)
     expect(report.progressPhotos).toHaveLength(1)
-    expect(report.narrative).toBe('AI generated narrative')
+    // generate-narrative edge function isn't shipped yet, so the
+    // narrative is always the template — no longer the mocked
+    // 'AI generated narrative' string.
+    expect(report.narrative).toMatch(/% complete/)
   })
 
   it('returns empty sections when project has no data', async () => {
@@ -255,7 +263,11 @@ describe('generateOwnerReport', () => {
 describe('generateNarrative', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('returns AI narrative when edge function succeeds', async () => {
+  it('returns the template narrative (AI edge function is not shipped yet)', async () => {
+    // Even when the mocked invoke would return an "AI" response, the
+    // current implementation skips the call entirely. Once the
+    // generate-narrative function is deployed, restore the AI path
+    // in reportService.generateNarrative and update this test back.
     mockFunctionsInvoke.mockResolvedValue({ data: { narrative: 'AI says: project is on track' }, error: null })
 
     const result = await generateNarrative({
@@ -271,7 +283,8 @@ describe('generateNarrative', () => {
       riskFlags: [],
     })
 
-    expect(result).toBe('AI says: project is on track')
+    expect(result).toContain('Test Project is 50% complete')
+    expect(mockFunctionsInvoke).not.toHaveBeenCalled()
   })
 
   it('falls back to template when AI function returns error', async () => {

@@ -7,13 +7,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Cloud, Sun, CloudRain, CloudSnow, Wind, Droplets,
+  Cloud, Sun, CloudRain, CloudSnow,
   Users, ShieldCheck, AlertTriangle, Camera,
-  Clock, Check, RefreshCw, Loader2, Send,
-  Plus, ChevronDown, X, Thermometer,
-  FileText, Wrench, Truck, HardHat, Mic,
-} from 'lucide-react';
-import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme';
+  Clock, Check, RefreshCw, Loader2, Send, X,
+  FileText, Wrench, Truck, HardHat, Mic} from 'lucide-react';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import { dailyLogService } from '../../services/dailyLogService';
 import type { CompiledLog } from '../../services/dailyLogService';
 import { useProjectId } from '../../hooks/useProjectId';
@@ -30,18 +28,6 @@ interface AutoDailyLogProps {
 }
 
 // ── Helpers ─────────────────────────────────────────────────
-
-function timeAgo(iso: string): string {
-  try {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  } catch { return ''; }
-}
 
 function formatTime(iso: string): string {
   try {
@@ -209,8 +195,8 @@ export function AutoDailyLog({ projectLat, projectLon, projectAddress }: AutoDai
 
   // Expose refresh for external capture components
   useEffect(() => {
-    (window as Record<string, unknown>).__refreshDailyLogEntries = refresh;
-    return () => { delete (window as Record<string, unknown>).__refreshDailyLogEntries; };
+    (window as unknown as Record<string, unknown>).__refreshDailyLogEntries = refresh;
+    return () => { delete (window as unknown as Record<string, unknown>).__refreshDailyLogEntries; };
   }, [refresh]);
 
   // ── Loading skeleton ──

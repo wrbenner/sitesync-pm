@@ -133,7 +133,7 @@ describe('scheduleService.loadMilestones', () => {
 
     expect(result.error).toBeNull()
     expect(result.data).toHaveLength(1)
-    expect((result.data![0] as Record<string, unknown>)['id']).toBe('ph-m')
+    expect((result.data![0] as unknown as Record<string, unknown>)['id']).toBe('ph-m')
   })
 
   it('returns empty array when no milestones exist in the project', async () => {
@@ -325,7 +325,7 @@ describe('scheduleService.transitionStatus', () => {
 
     await scheduleService.transitionStatus('ph-1', 'delayed')
 
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload['percent_complete']).toBeUndefined()
   })
 
@@ -418,7 +418,7 @@ describe('scheduleService.transitionStatus', () => {
 
     await scheduleService.transitionStatus('ph-1', 'active')
 
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload['updated_by']).toBe('pm-1')
   })
 })

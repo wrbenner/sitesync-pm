@@ -1,10 +1,11 @@
 import { createClient } from '@liveblocks/client'
 import { createRoomContext } from '@liveblocks/react'
 
-const client = createClient({
-  authEndpoint: import.meta.env.VITE_LIVEBLOCKS_AUTH_ENDPOINT || undefined,
-  publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY || 'pk_dev_placeholder_not_active',
-})
+const authEndpoint: string | undefined = import.meta.env.VITE_LIVEBLOCKS_AUTH_ENDPOINT || undefined
+const client = createClient(authEndpoint
+  ? { authEndpoint }
+  : { publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_KEY || 'pk_dev_placeholder_not_active' }
+)
 
 type Presence = {
   cursor: { x: number; y: number } | null

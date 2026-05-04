@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react'
-import { Truck, Plus, Sparkles, Calendar as CalendarIcon, AlertCircle, CheckCircle2, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Upload, Loader2, X } from 'lucide-react'
+import { Truck, Plus, Sparkles, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Loader2, X } from 'lucide-react'
 import { PageContainer, Card, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { uploadProjectFile } from '../lib/storage'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import {
   useDeliveries,
   useCreateDelivery,
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<Delivery['status'], { c: string; bg: string; label: 
   delivered: { c: colors.statusActive, bg: colors.statusActiveSubtle, label: 'Delivered' },
   delayed: { c: colors.statusCritical, bg: colors.statusCriticalSubtle, label: 'Delayed' },
   cancelled: { c: colors.textTertiary, bg: colors.surfaceInset, label: 'Cancelled' },
+  partial: { c: colors.statusPending, bg: colors.statusPendingSubtle, label: 'Partial' },
 }
 
 function isLate(d: Delivery): boolean {
@@ -205,10 +207,10 @@ const Deliveries: React.FC = () => {
       }
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
-        <MetricBox label="Total" value={String(stats.total)} icon={Truck} />
-        <MetricBox label="Scheduled" value={String(stats.scheduled)} icon={CalendarIcon} />
-        <MetricBox label="On Time" value={String(stats.onTime)} icon={CheckCircle2} />
-        <MetricBox label="Late" value={String(stats.late)} icon={AlertCircle} />
+        <MetricBox label="Total" value={String(stats.total)} />
+        <MetricBox label="Scheduled" value={String(stats.scheduled)} />
+        <MetricBox label="On Time" value={String(stats.onTime)} />
+        <MetricBox label="Late" value={String(stats.late)} />
       </div>
 
       {/* Schedule Impact Summary */}
@@ -249,7 +251,7 @@ const Deliveries: React.FC = () => {
         calendar.map(([date, list]) => (
           <Card key={date} padding={spacing['4']}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{date}</div>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{date}</div>
               <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{list.length} delivery{list.length === 1 ? '' : 's'}</div>
             </div>
             {list.map((d) => {
@@ -462,10 +464,10 @@ const Deliveries: React.FC = () => {
                     if (!selected) return
                     try {
                       // Persist inspection to the delivery record
-                      const { error } = await supabase.from('deliveries').update({
+                      const { error } = await fromTable('deliveries').update({
                         receiving_notes: `Inspection by ${inspectorName}: ${RESULT_OPTIONS.find(o => o.value === inspectionResult)?.label ?? inspectionResult}`.trim(),
                         status: inspectionResult === 'rejected' ? 'rejected' : inspectionResult === 'accepted_with_exceptions' ? 'partial' : 'delivered',
-                      }).eq('id', selected.id)
+                      } as never).eq('id' as never, selected.id)
                       if (error) throw error
                       toast.success(`Inspection recorded: ${RESULT_OPTIONS.find(o => o.value === inspectionResult)?.label}`)
                     } catch (err) {
@@ -566,7 +568,7 @@ const Deliveries: React.FC = () => {
                         const userId = session?.session?.user?.id
                         if (!userId || !projectId) { toast.error('No active session'); return }
                         // Insert real notification for PM
-                        const { error } = await supabase.from('notifications').insert({
+                        const { error } = await fromTable('notifications').insert({
                           user_id: userId,
                           title: `Late Delivery: ${selected.vendor}`,
                           body: `${selected.vendor} delivery is ${daysLate} day(s) late.${delayNotes ? ` Mitigation: ${delayNotes}` : ''} Affected activities flagged for review.`,
@@ -574,14 +576,14 @@ const Deliveries: React.FC = () => {
                           entity_type: 'delivery',
                           entity_id: selected.id,
                           project_id: projectId,
-                        })
+                        } as never)
                         if (error) throw error
                         // Also update the delivery record with the delay note
                         if (delayNotes) {
-                          await supabase.from('deliveries').update({
+                          await fromTable('deliveries').update({
                             notes: delayNotes,
                             updated_at: new Date().toISOString(),
-                          }).eq('id', selected.id)
+                          } as never).eq('id' as never, selected.id)
                         }
                         toast.success(`PM notified: ${selected.vendor} delivery is ${daysLate} day(s) late.`)
                       } catch (err) {
@@ -675,18 +677,18 @@ const Deliveries: React.FC = () => {
             // Persist damage report to the delivery record
             try {
               const existingReports = Array.isArray(selected.damage_reports) ? selected.damage_reports : []
-              const { error: dmgErr } = await supabase.from('deliveries')
+              const { error: dmgErr } = await fromTable('deliveries')
                 .update({
                   damage_reports: [...existingReports, newReport],
                   status: 'partial',
-                })
-                .eq('id', selected.id)
+                } as never)
+                .eq('id' as never, selected.id)
               if (dmgErr) throw dmgErr
               // Also create a notification for the PM
               const { data: session } = await supabase.auth.getSession()
               const userId = session?.session?.user?.id
               if (userId) {
-                await supabase.from('notifications').insert({
+                await fromTable('notifications').insert({
                   user_id: userId,
                   title: `Damage Report: ${selected.vendor}`,
                   body: `${damageForm.severity} damage reported on delivery from ${selected.vendor}. ${damageForm.affectedQty} units affected. Back-charge initiated.`,
@@ -694,7 +696,7 @@ const Deliveries: React.FC = () => {
                   entity_type: 'delivery',
                   entity_id: selected.id,
                   project_id: projectId,
-                })
+                } as never)
               }
             } catch (err) {
               toast.error(`Failed to save damage report: ${(err as Error).message}`)

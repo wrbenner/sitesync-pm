@@ -43,7 +43,5 @@ export function renderPageWithProviders(ui: ReactElement, options: PageRenderOpt
       ),
     )
   const { route: _r, queryClient: _q, ...renderOpts } = options
-  void _r
-  void _q
   return render(ui, { ...renderOpts, wrapper: Wrapper })
 }

@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useRealtimeQuery } from '../useRealtimeQuery'
 import { queryKeys } from '../../api/queryKeys'
 import { useToast } from '../../components/Primitives'
@@ -23,9 +24,9 @@ export function useRealtimeRFIs(projectId: string | undefined) {
     ['rfis', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).order('number', { ascending: false })
+      const { data, error } = await fromTable('rfis').select('*').eq('project_id' as never, projectId).order('number', { ascending: false })
       if (error) throw error
-      return (data ?? []) as RFI[]
+      return (data ?? []) as unknown as RFI[]
     },
     { table: 'rfis', relatedTables: ['rfi_responses'] }
   )
@@ -38,9 +39,9 @@ export function useRealtimeSubmittals(projectId: string | undefined) {
     ['submittals', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('submittals').select('*').eq('project_id', projectId).order('number', { ascending: false })
+      const { data, error } = await fromTable('submittals').select('*').eq('project_id' as never, projectId).order('number', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Submittal[]
+      return (data ?? []) as unknown as Submittal[]
     },
     { table: 'submittals', relatedTables: ['submittal_approvals'] }
   )
@@ -53,9 +54,9 @@ export function useRealtimePunchItems(projectId: string | undefined) {
     ['punch_items', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('punch_items').select('*').eq('project_id', projectId).order('item_number', { ascending: false })
+      const { data, error } = await fromTable('punch_items').select('*').eq('project_id' as never, projectId).order('item_number', { ascending: false })
       if (error) throw error
-      return (data ?? []) as PunchItem[]
+      return (data ?? []) as unknown as PunchItem[]
     },
     { table: 'punch_items' }
   )
@@ -68,9 +69,9 @@ export function useRealtimeTasks(projectId: string | undefined) {
     ['tasks', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('tasks').select('*').eq('project_id', projectId).order('sort_order', { ascending: true })
+      const { data, error } = await fromTable('tasks').select('*').eq('project_id' as never, projectId).order('sort_order', { ascending: true })
       if (error) throw error
-      return (data ?? []) as Task[]
+      return (data ?? []) as unknown as Task[]
     },
     { table: 'tasks' }
   )
@@ -83,9 +84,9 @@ export function useRealtimeDailyLogs(projectId: string | undefined) {
     ['daily_logs', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('daily_logs').select('*').eq('project_id', projectId).order('log_date', { ascending: false })
+      const { data, error } = await fromTable('daily_logs').select('*').eq('project_id' as never, projectId).order('log_date', { ascending: false })
       if (error) throw error
-      return (data ?? []) as DailyLog[]
+      return (data ?? []) as unknown as DailyLog[]
     },
     { table: 'daily_logs', relatedTables: ['daily_log_entries'] }
   )
@@ -98,9 +99,9 @@ export function useRealtimeBudgetItems(projectId: string | undefined) {
     ['budget_items', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('budget_items').select('*').eq('project_id', projectId).order('division')
+      const { data, error } = await fromTable('budget_items').select('*').eq('project_id' as never, projectId).order('division')
       if (error) throw error
-      return (data ?? []) as BudgetItem[]
+      return (data ?? []) as unknown as BudgetItem[]
     },
     { table: 'budget_items' }
   )
@@ -113,9 +114,9 @@ export function useRealtimeChangeOrders(projectId: string | undefined) {
     ['change_orders', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('change_orders').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
+      const { data, error } = await fromTable('change_orders').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as ChangeOrder[]
+      return (data ?? []) as unknown as ChangeOrder[]
     },
     { table: 'change_orders' }
   )
@@ -128,9 +129,9 @@ export function useRealtimeMeetings(projectId: string | undefined) {
     ['meetings', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('meetings').select('*').eq('project_id', projectId).order('date', { ascending: false })
+      const { data, error } = await fromTable('meetings').select('*').eq('project_id' as never, projectId).order('date', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Meeting[]
+      return (data ?? []) as unknown as Meeting[]
     },
     { table: 'meetings' }
   )
@@ -143,9 +144,9 @@ export function useRealtimeDrawings(projectId: string | undefined) {
     ['drawings', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('drawings').select('*').eq('project_id', projectId).order('sheet_number')
+      const { data, error } = await fromTable('drawings').select('*').eq('project_id' as never, projectId).order('sheet_number')
       if (error) throw error
-      return (data ?? []) as Drawing[]
+      return (data ?? []) as unknown as Drawing[]
     },
     { table: 'drawings' }
   )
@@ -159,11 +160,11 @@ export function useRealtimeFiles(projectId: string | undefined, folder?: string 
     queryKey,
     async () => {
       if (!projectId) return []
-      let query = supabase.from('files').select('*').eq('project_id', projectId)
-      if (folder) query = query.eq('folder', folder)
+      let query = fromTable('files').select('*').eq('project_id' as never, projectId)
+      if (folder) query = query.eq('folder' as never, folder)
       const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as FileRecord[]
+      return (data ?? []) as unknown as FileRecord[]
     },
     { table: 'files' }
   )
@@ -176,9 +177,9 @@ export function useRealtimeDirectoryContacts(projectId: string | undefined) {
     ['directory_contacts', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('directory_contacts').select('*').eq('project_id', projectId).order('name')
+      const { data, error } = await fromTable('directory_contacts').select('*').eq('project_id' as never, projectId).order('name')
       if (error) throw error
-      return (data ?? []) as DirectoryContact[]
+      return (data ?? []) as unknown as DirectoryContact[]
     },
     { table: 'directory_contacts' }
   )
@@ -191,9 +192,9 @@ export function useRealtimeCrews(projectId: string | undefined) {
     ['crews', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('crews').select('*').eq('project_id', projectId).order('name')
+      const { data, error } = await fromTable('crews').select('*').eq('project_id' as never, projectId).order('name')
       if (error) throw error
-      return (data ?? []) as Crew[]
+      return (data ?? []) as unknown as Crew[]
     },
     { table: 'crews' }
   )
@@ -272,9 +273,9 @@ export function useRealtimeFieldCaptures(projectId: string | undefined) {
     ['field_captures', projectId],
     async () => {
       if (!projectId) return []
-      const { data, error } = await supabase.from('field_captures').select('*').eq('project_id', projectId).order('created_at', { ascending: false })
+      const { data, error } = await fromTable('field_captures').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as FieldCapture[]
+      return (data ?? []) as unknown as FieldCapture[]
     },
     { table: 'field_captures' }
   )

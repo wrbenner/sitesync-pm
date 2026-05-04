@@ -82,7 +82,7 @@ export const ApprovalRequestEvent = BaseEvent.extend({
     action_id: z.string(),
     action_title: z.string(),
     action_description: z.string(),
-    proposed_data: z.record(z.unknown()),
+    proposed_data: z.record(z.string(), z.unknown()),
     allowed_responses: z.array(z.enum(['approve', 'reject', 'modify'])).default(['approve', 'reject']),
     timeout_seconds: z.number().optional(),
   }),

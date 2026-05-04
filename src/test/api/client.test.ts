@@ -43,11 +43,11 @@ describe('createScopedClient', () => {
     const { supabase } = await import('../../lib/supabase')
 
     const builder = getMockBuilder()
-    vi.mocked(supabase.from).mockReturnValue(builder as unknown)
+    vi.mocked(supabase.from).mockReturnValue(builder as never)
 
-    const scoped = createScopedClient(supabase as unknown, PROJECT_A)
+    const scoped = createScopedClient(supabase as never, PROJECT_A)
     // .eq() is injected after the terminal call so the QueryBuilder chain is not broken
-    scoped.from('rfis' as unknown).select('*' as unknown)
+    scoped.from('rfis' as never).select('*' as never)
 
     expect(supabase.from).toHaveBeenCalledWith('rfis')
     expect(builder.eq).toHaveBeenCalledWith('project_id', PROJECT_A)
@@ -57,7 +57,7 @@ describe('createScopedClient', () => {
     const { createScopedClient } = await import('../../api/client')
     const { supabase } = await import('../../lib/supabase')
 
-    const scoped = createScopedClient(supabase as unknown, PROJECT_A)
+    const scoped = createScopedClient(supabase as never, PROJECT_A)
     // auth should pass through unchanged
     expect(scoped.auth).toBe(supabase.auth)
   })
@@ -67,7 +67,7 @@ describe('projectScopedQuery tenant isolation', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     const dedup = await import('../../lib/requestDedup')
-    vi.mocked(dedup.dedup).mockImplementation((_key, fn) => fn() as unknown)
+    vi.mocked(dedup.dedup).mockImplementation((_key, fn) => fn() as never)
   })
 
   it('enforces project_id filter even when the query callback omits it', async () => {
@@ -80,17 +80,17 @@ describe('projectScopedQuery tenant isolation', () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       is: vi.fn().mockReturnThis(),
-      then: undefined as unknown,
+      then: undefined as never,
     }
     // Make the builder thenable so await works
     const resolvedValue = { data: [{ id: 'row-1', project_id: PROJECT_A }], error: null }
-    builder.then = (resolve: (v: typeof resolvedValue) => void) => resolve(resolvedValue)
+    builder.then = ((resolve: (v: typeof resolvedValue) => void) => resolve(resolvedValue)) as never
 
-    vi.mocked(supabase.from).mockReturnValue(builder as unknown)
+    vi.mocked(supabase.from).mockReturnValue(builder as never)
 
     await projectScopedQuery('rfis', PROJECT_A, (client) => {
       // Deliberately omit .eq('project_id', ...) to simulate a naive caller
-      return client.from('rfis' as unknown).select('*') as unknown
+      return client.from('rfis' as never).select('*') as never
     })
 
     // The scoped client must have injected the filter before the callback could chain further
@@ -109,10 +109,10 @@ describe('projectScopedQuery tenant isolation', () => {
         resolve({ data: [], error: null }),
     }
 
-    vi.mocked(supabase.from).mockReturnValue(builder as unknown)
+    vi.mocked(supabase.from).mockReturnValue(builder as never)
 
     await projectScopedQuery('rfis', PROJECT_A, (client) =>
-      client.from('rfis' as unknown).select('*') as unknown
+      client.from('rfis' as never).select('*') as never
     )
 
     const eqCalls = vi.mocked(builder.eq).mock.calls

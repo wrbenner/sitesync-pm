@@ -115,58 +115,64 @@ export const PayAppList: React.FC<PayAppListProps> = ({
           return (
             <div style={{ display: 'flex', gap: spacing['1'] }}>
               {(status === 'draft') && (
-                <button
-                  aria-label="Edit Schedule of Values"
-                  title="Edit Schedule of Values"
-                  onClick={(e) => { e.stopPropagation(); onEditApp(info.row.original) }}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                    padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base,
-                    backgroundColor: 'transparent', color: colors.textSecondary,
-                    fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
-                    cursor: 'pointer', fontFamily: typography.fontFamily,
-                  }}
-                >
-                  Edit SOV
-                </button>
+                <PermissionGate permission="financials.edit">
+                  <button
+                    aria-label="Edit Schedule of Values"
+                    title="Edit Schedule of Values"
+                    onClick={(e) => { e.stopPropagation(); onEditApp(info.row.original) }}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                      padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base,
+                      backgroundColor: 'transparent', color: colors.textSecondary,
+                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
+                      cursor: 'pointer', fontFamily: typography.fontFamily,
+                    }}
+                  >
+                    Edit SOV
+                  </button>
+                </PermissionGate>
               )}
               {status === 'approved' && (
-                <button
-                  aria-label="Pay subcontractor"
-                  title="Pay subcontractor"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const appId = info.row.original.id as string
-                    markPaidMutation.mutate(appId)
-                  }}
-                  disabled={markPaidMutation.isPending}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                    padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
-                    backgroundColor: colors.primaryOrange, color: colors.white,
-                    fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                    cursor: 'pointer', fontFamily: typography.fontFamily,
-                  }}
-                >
-                  <CreditCard size={11} /> Pay Sub
-                </button>
+                <PermissionGate permission="financials.edit">
+                  <button
+                    aria-label="Pay subcontractor"
+                    title="Pay subcontractor"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const appId = info.row.original.id as string
+                      markPaidMutation.mutate(appId)
+                    }}
+                    disabled={markPaidMutation.isPending}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                      padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
+                      backgroundColor: colors.primaryOrange, color: colors.white,
+                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                      cursor: 'pointer', fontFamily: typography.fontFamily,
+                    }}
+                  >
+                    <CreditCard size={11} /> Pay Sub
+                  </button>
+                </PermissionGate>
               )}
               {status === 'draft' && (
-                <button
-                  aria-label="Submit application for review"
-                  title="Submit application for review"
-                  onClick={(e) => { e.stopPropagation(); submitMutation.mutate(info.row.original.id as string) }}
-                  disabled={submitMutation.isPending}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                    padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
-                    backgroundColor: colors.statusInfoSubtle, color: colors.statusInfo,
-                    fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
-                    cursor: 'pointer', fontFamily: typography.fontFamily,
-                  }}
-                >
-                  <Send size={11} /> Submit
-                </button>
+                <PermissionGate permission="financials.edit">
+                  <button
+                    aria-label="Submit application for review"
+                    title="Submit application for review"
+                    onClick={(e) => { e.stopPropagation(); submitMutation.mutate(info.row.original.id as string) }}
+                    disabled={submitMutation.isPending}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                      padding: `0 ${spacing['3']}`, minHeight: touchTarget.field, border: 'none', borderRadius: borderRadius.base,
+                      backgroundColor: colors.statusInfoSubtle, color: colors.statusInfo,
+                      fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold,
+                      cursor: 'pointer', fontFamily: typography.fontFamily,
+                    }}
+                  >
+                    <Send size={11} /> Submit
+                  </button>
+                </PermissionGate>
               )}
             </div>
           )
@@ -195,8 +201,8 @@ export const PayAppList: React.FC<PayAppListProps> = ({
         {apps.length > 0 ? (
           <div style={{ marginTop: spacing['3'] }}>
             <DataTable
-              columns={columns}
-              data={apps}
+              columns={columns as never}
+              data={apps as Record<string, unknown>[]}
               onRowClick={(row) => onSelectApp(
                 selectedAppId === (row.id as string) ? null : (row.id as string),
               )}

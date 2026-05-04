@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import type {
   Submittal,
@@ -14,14 +15,13 @@ export function useSubmittals(projectId: string | undefined, pagination?: Pagina
     queryFn: async (): Promise<PaginatedResult<Submittal>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      const { data, error, count } = await supabase
-        .from('submittals')
+      const { data, error, count } = await fromTable('submittals')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('number', { ascending: false })
         .range(from, to)
       if (error) throw error
-      return { data: (data ?? []) as Submittal[], total: count ?? 0, page, pageSize }
+      return { data: (data ?? []) as unknown as Submittal[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -31,13 +31,12 @@ export function useSubmittal(id: string | undefined) {
   return useQuery({
     queryKey: ['submittals', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('submittals')
+      const { data, error } = await fromTable('submittals')
         .select('*')
-        .eq('id', id!)
+        .eq('id' as never, id!)
         .single()
       if (error) throw error
-      return data as Submittal
+      return data as unknown as Submittal
     },
     enabled: !!id,
   })
@@ -47,10 +46,9 @@ export function useSubmittalReviewers(submittalId: string | undefined) {
   return useQuery({
     queryKey: ['submittal_approvals', submittalId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('submittal_approvals')
+      const { data, error } = await fromTable('submittal_approvals')
         .select('*')
-        .eq('submittal_id', submittalId!)
+        .eq('submittal_id' as never, submittalId!)
         .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []) as Array<{

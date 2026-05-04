@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { Notification } from '../../types/database'
 
 // ── Notifications ─────────────────────────────────────────
@@ -30,16 +31,15 @@ export function useNotifications(
     queryFn: async (): Promise<NotificationsPaginated> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      const { data, error, count } = await supabase
-        .from('notifications')
+      const { data, error, count } = await fromTable('notifications')
         .select('*', { count: 'exact' })
-        .eq('user_id', userId!)
+        .eq('user_id' as never, userId!)
         .order('created_at', { ascending: false })
         .range(from, to)
       if (error) throw error
       const total = count ?? 0
       return {
-        data: (data ?? []) as Notification[],
+        data: (data ?? []) as unknown as Notification[],
         total,
         page,
         pageSize,
@@ -60,11 +60,10 @@ export function useUnreadCount(userId: string | undefined) {
   return useQuery({
     queryKey: ['notifications', 'unread_count', userId],
     queryFn: async (): Promise<number> => {
-      const { count, error } = await supabase
-        .from('notifications')
+      const { count, error } = await fromTable('notifications')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId!)
-        .eq('read', false)
+        .eq('user_id' as never, userId!)
+        .eq('read' as never, false)
       if (error) throw error
       return count ?? 0
     },

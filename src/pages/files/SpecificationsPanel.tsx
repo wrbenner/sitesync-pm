@@ -38,7 +38,7 @@ export const SpecificationsPanel: React.FC = () => {
   const [searchText, setSearchText] = useState('')
   const [selectedDivision, setSelectedDivision] = useState<number | null>(null)
 
-  const list = (data ?? []) as SpecRow[]
+  const list = (data ?? []) as unknown as SpecRow[]
 
   const filtered = useMemo(() => {
     let result = list

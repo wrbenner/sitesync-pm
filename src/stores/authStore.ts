@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { userService } from '../services/userService';
 import type { Profile, Organization } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
+import type { OrgRole } from '../types/tenant';
 
 // BUG-H11 FIX: Keep a module-level reference to the auth subscription so we can
 // unsubscribe on teardown (e.g. signOut / HMR) and avoid leaked listeners.
@@ -12,7 +13,13 @@ interface AuthState {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  // Primary org from user's profile (loaded on sign-in)
   organization: Organization | null;
+  // ── Absorbed from organizationStore (Day 7 consolidation) ──
+  // All orgs the user belongs to (populated by OrganizationProvider via React Query)
+  organizations: Organization[];
+  // Role of the current user in the active org
+  currentOrgRole: OrgRole | null;
   loading: boolean;
   initialized: boolean;
   error: Error | null;
@@ -30,6 +37,11 @@ interface AuthState {
   createOrganization: (name: string) => Promise<{ error: string | null; organization: Organization | null }>;
   createCompany: (name: string) => Promise<{ error: string | null; organization: Organization | null }>;
   clearError: () => void;
+  // ── Org management actions (absorbed from organizationStore) ──
+  setCurrentOrg: (org: Organization) => void;
+  setOrganizations: (orgs: Organization[]) => void;
+  setCurrentOrgRole: (role: OrgRole | null) => void;
+  clearOrganization: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -37,6 +49,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   profile: null,
   organization: null,
+  organizations: [],
+  currentOrgRole: null,
   loading: true,
   initialized: false,
   error: null,
@@ -63,7 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           await get().loadProfile();
           await get().loadOrganization();
         } else {
-          set({ profile: null, organization: null });
+          set({ profile: null, organization: null, organizations: [], currentOrgRole: null });
         }
       });
       authSubscription = data.subscription;
@@ -122,7 +136,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
     try {
       await supabase.auth.signOut();
-      set({ session: null, user: null, profile: null, organization: null, loading: false });
+      set({
+        session: null,
+        user: null,
+        profile: null,
+        organization: null,
+        organizations: [],
+        currentOrgRole: null,
+        loading: false,
+      });
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       set({ error, loading: false });
@@ -204,6 +226,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  // ── Org management (absorbed from organizationStore, Day 7) ──
+
+  setCurrentOrg: (org) => {
+    // Mirror the organizationStore behaviour: clear role when switching orgs
+    const prev = get().organization;
+    const roleReset = prev?.id !== org.id ? { currentOrgRole: null } : {};
+    set({ organization: org, ...roleReset });
+  },
+
+  setOrganizations: (orgs) => {
+    set((s) => {
+      // Auto-select the first org if none is selected yet, or the previously
+      // selected org is no longer in the list (e.g. user was removed).
+      const stillValid = s.organization && orgs.some((o) => o.id === s.organization!.id);
+      const organization = stillValid ? s.organization : (orgs[0] ?? null);
+      return { organizations: orgs, organization };
+    });
+  },
+
+  setCurrentOrgRole: (role) => set({ currentOrgRole: role }),
+
+  clearOrganization: () => set({
+    organization: null,
+    organizations: [],
+    currentOrgRole: null,
+  }),
 
   teardown: () => {
     // BUG-H11 FIX: Allow callers to explicitly release the Supabase auth

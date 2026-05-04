@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type {
   ClassifyDrawingResult,
   DrawingClassification,
@@ -18,10 +19,9 @@ export function useDrawingClassification(drawingId: string | undefined) {
     queryKey: classificationKey(drawingId ?? ''),
     enabled: !!drawingId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_classifications')
+      const { data, error } = await fromTable('drawing_classifications')
         .select('*')
-        .eq('drawing_id', drawingId!)
+        .eq('drawing_id' as never, drawingId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingClassification[]
@@ -35,10 +35,9 @@ export function useProjectClassifications(projectId: string | undefined) {
     queryKey: projectClassificationsKey(projectId ?? ''),
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_classifications')
+      const { data, error } = await fromTable('drawing_classifications')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingClassification[]
@@ -79,7 +78,7 @@ export function useClassifyDrawing() {
       if (!data || typeof data !== 'object') {
         throw new Error('Classification edge function returned no data')
       }
-      return data as ClassifyDrawingResult
+      return data as unknown as ClassifyDrawingResult
     },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: classificationKey(variables.drawingId) })
@@ -119,7 +118,7 @@ export function useRevisionDiff() {
       if (!data || typeof data !== 'object') {
         throw new Error('Revision diff edge function returned no data')
       }
-      return data as RevisionDiffResult
+      return data as unknown as RevisionDiffResult
     },
   })
 }

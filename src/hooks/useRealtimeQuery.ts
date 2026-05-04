@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────
 
+
 const TABLE_LABELS: Record<string, string> = {
   rfis: 'RFI', submittals: 'Submittal', tasks: 'Task',
   punch_items: 'Punch Item', daily_logs: 'Daily Log',
@@ -94,7 +95,7 @@ export function useRealtimeQuery<T>(
 
           // Toast for changes by OTHER users
           if (options.showToasts !== false) {
-            const record = (payload.new || payload.old) as Record<string, unknown> | null
+            const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
             const changedBy = record?.updated_by ?? record?.created_by ?? record?.submitted_by
             if (changedBy && changedBy !== currentUserId) {
               const label = TABLE_LABELS[table] ?? table
@@ -128,7 +129,7 @@ export function useRealtimeQuery<T>(
 import { updatePresencePage } from '../lib/realtime'
 
 export function useEntityPresence(page: string, entityId?: string) {
-  const prevEntityRef = useRef<string | undefined>()
+  const prevEntityRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
@@ -152,12 +153,12 @@ export function useOptimisticLock(
     queryKey: ['optimistic_lock', table, entityId],
     queryFn: async () => {
       if (!entityId) return null
-      const { data, error } = await fromTable(table)
+      const { data, error } = await fromTable(table as never)
         .select('updated_at')
-        .eq('id', entityId)
+        .eq('id' as never, entityId)
         .single()
       if (error) return null
-      return (data as Record<string, unknown>)?.updated_at as string | null
+      return (data as unknown as Record<string, unknown>)?.updated_at as string | null
     },
     enabled: !!entityId && !!loadedUpdatedAt,
     refetchInterval: 10_000, // Check every 10 seconds while editing

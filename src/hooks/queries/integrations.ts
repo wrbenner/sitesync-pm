@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 export type IntegrationProvider =
   | 'procore'
@@ -74,14 +75,13 @@ export function useIntegrationConnections(organizationId: string | undefined) {
     queryKey: integrationConnectionsKey(organizationId),
     enabled: !!organizationId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('integration_connections')
+      const { data, error } = await fromTable('integration_connections')
         .select('*')
-        .eq('organization_id', organizationId!)
+        .eq('organization_id' as never, organizationId!)
         .order('provider', { ascending: true })
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as IntegrationConnection[]
+      return (data ?? []) as unknown as IntegrationConnection[]
     },
   })
 }
@@ -95,14 +95,13 @@ export function useIntegrationSyncJobs(connectionId: string | undefined) {
     queryKey: integrationSyncJobsKey(connectionId),
     enabled: !!connectionId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('integration_sync_jobs')
+      const { data, error } = await fromTable('integration_sync_jobs')
         .select('*')
-        .eq('connection_id', connectionId!)
+        .eq('connection_id' as never, connectionId!)
         .order('created_at', { ascending: false })
         .limit(20)
       if (error) throw error
-      return (data ?? []) as IntegrationSyncJob[]
+      return (data ?? []) as unknown as IntegrationSyncJob[]
     },
   })
 }

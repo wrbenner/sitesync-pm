@@ -48,8 +48,8 @@ export const Safety: React.FC = () => {
   const { data: dailyLogsResult } = useDailyLogs(projectId);
   const dailyLogs = dailyLogsResult?.data;
 
-  const displayIncidents: unknown[] = incidents ?? [];
-  const displayCAs: unknown[] = correctiveActions ?? [];
+  const displayIncidents: Record<string, unknown>[] = (incidents ?? []) as Record<string, unknown>[];
+  const displayCAs: Record<string, unknown>[] = (correctiveActions ?? []) as Record<string, unknown>[];
 
   // ── Real-time subscriptions ───────────────────────────────────
   useEffect(() => {
@@ -75,31 +75,31 @@ export const Safety: React.FC = () => {
 
   // ── KPI calculations ──────────────────────────────────────────
   const lastRecordableIncident = displayIncidents
-    .filter((i: unknown) => recordableSeverities.includes((i as Record<string, unknown>).severity as string))
-    .sort((a: unknown, b: unknown) => new Date((b as Record<string, unknown>).date as string).getTime() - new Date((a as Record<string, unknown>).date as string).getTime())[0] ?? null;
+    .filter((i: unknown) => recordableSeverities.includes((i as unknown as Record<string, unknown>).severity as string))
+    .sort((a: unknown, b: unknown) => new Date((b as unknown as Record<string, unknown>).date as string).getTime() - new Date((a as unknown as Record<string, unknown>).date as string).getTime())[0] ?? null;
 
   const daysSinceIncident = lastRecordableIncident
-    ? Math.floor((nowMs - new Date((lastRecordableIncident as Record<string, unknown>).date as string).getTime()) / 86400000)
+    ? Math.floor((nowMs - new Date((lastRecordableIncident as unknown as Record<string, unknown>).date as string).getTime()) / 86400000)
     : null;
 
-  const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + ((l as Record<string, unknown>).total_hours as number || 0), 0) ?? 0;
+  const computedHours = dailyLogs?.reduce((s: number, l: unknown) => s + ((l as unknown as Record<string, unknown>).total_hours as number || 0), 0) ?? 0;
   const totalHoursWorked = computedHours > 0 ? computedHours : null;
-  const recordableCount = displayIncidents.filter((i: unknown) => recordableSeverities.includes((i as Record<string, unknown>).severity as string)).length;
+  const recordableCount = displayIncidents.filter((i: unknown) => recordableSeverities.includes((i as unknown as Record<string, unknown>).severity as string)).length;
   const trirRaw = totalHoursWorked !== null && totalHoursWorked > 0 ? (recordableCount * 200000) / totalHoursWorked : null;
   const trir = trirRaw !== null ? trirRaw.toFixed(2) : null;
 
-  const openCorrectiveActions = correctiveActions?.filter((ca: unknown) => (ca as Record<string, unknown>).status !== 'closed' && (ca as Record<string, unknown>).status !== 'verified').length ?? 0;
+  const openCorrectiveActions = correctiveActions?.filter((ca: unknown) => (ca as unknown as Record<string, unknown>).status !== 'closed' && (ca as unknown as Record<string, unknown>).status !== 'verified').length ?? 0;
 
   const now = new Date();
   const expiringCerts = certifications?.filter((c: unknown) => {
-    const cert = c as Record<string, unknown>;
+    const cert = c as unknown as Record<string, unknown>;
     if (!cert.expiration_date) return false;
     const daysUntil = (new Date(cert.expiration_date as string).getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
     return daysUntil > 0 && daysUntil <= 30;
   }).length ?? 0;
 
-  const passCount = inspections?.filter((i: unknown) => (i as Record<string, unknown>).status === 'passed').length ?? 0;
-  const failCount = inspections?.filter((i: unknown) => (i as Record<string, unknown>).status === 'failed').length ?? 0;
+  const passCount = inspections?.filter((i: unknown) => (i as unknown as Record<string, unknown>).status === 'passed').length ?? 0;
+  const failCount = inspections?.filter((i: unknown) => (i as unknown as Record<string, unknown>).status === 'failed').length ?? 0;
 
   const weekStart = new Date(now);
   weekStart.setHours(0, 0, 0, 0);
@@ -107,7 +107,7 @@ export const Safety: React.FC = () => {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 7);
   const inspectionsThisWeek = inspections?.filter((insp: unknown) => {
-    const i = insp as Record<string, unknown>;
+    const i = insp as unknown as Record<string, unknown>;
     if (!i.date) return false;
     const d = new Date(i.date as string);
     return d >= weekStart && d < weekEnd;
@@ -133,7 +133,7 @@ export const Safety: React.FC = () => {
             pdfFilename="SiteSync_Safety_Report"
             onExportXLSX={() => {
               const incidentRows = displayIncidents.map((i) => {
-                const rec = i as Record<string, unknown>;
+                const rec = i as unknown as Record<string, unknown>;
                 return [
                   (rec.date as string) ?? '',
                   (rec.description as string) ?? '',
@@ -143,7 +143,7 @@ export const Safety: React.FC = () => {
                 ];
               });
               const inspectionRows = (inspections ?? []).map((i) => {
-                const rec = i as Record<string, unknown>;
+                const rec = i as unknown as Record<string, unknown>;
                 return [
                   (rec.inspection_date as string) ?? '',
                   (rec.inspection_type as string) ?? '',
@@ -153,7 +153,7 @@ export const Safety: React.FC = () => {
                 ];
               });
               const talkRows = (talks ?? []).map((t) => {
-                const rec = t as Record<string, unknown>;
+                const rec = t as unknown as Record<string, unknown>;
                 return [
                   (rec.date as string) ?? '',
                   (rec.topic as string) ?? '',
@@ -162,7 +162,7 @@ export const Safety: React.FC = () => {
                 ];
               });
               const certRows = (certifications ?? []).map((c) => {
-                const rec = c as Record<string, unknown>;
+                const rec = c as unknown as Record<string, unknown>;
                 return [
                   (rec.worker_name as string) ?? '',
                   (rec.certification_name as string) ?? '',
@@ -232,7 +232,7 @@ export const Safety: React.FC = () => {
               key={tab.key}
               aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
-              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px', flexShrink: 0 }}
             >
               {React.createElement(Icon, { size: 14 })}
               {tab.label}
@@ -271,7 +271,7 @@ export const Safety: React.FC = () => {
       {!isLoading && !hasError && (
         <>
           {activeTab === 'incidents' && <IncidentList incidents={displayIncidents} onReportIncident={() => setShowIncidentModal(true)} />}
-          {activeTab === 'inspections' && <InspectionsTab inspections={inspections || []} passCount={passCount} failCount={failCount} />}
+          {activeTab === 'inspections' && <InspectionsTab inspections={(inspections || []) as Record<string, unknown>[]} passCount={passCount} failCount={failCount} />}
           {activeTab === 'toolbox' && <ToolboxTalksList talks={talks || []} onNewTalk={() => setShowTalkModal(true)} />}
           {activeTab === 'certifications' && <CertificationsTab certifications={certifications || []} />}
           {activeTab === 'corrective_actions' && <CorrectiveActionsTab correctiveActions={displayCAs} />}

@@ -56,7 +56,7 @@ export const TransmittalsPanel: React.FC = () => {
     status: 'draft',
   })
 
-  const list = (data ?? []) as TransmittalRow[]
+  const list = (data ?? []) as unknown as TransmittalRow[]
 
   const stats = useMemo(() => {
     const total = list.length

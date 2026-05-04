@@ -100,57 +100,57 @@ export async function triggerNotificationsForMutation(
     switch (entityType) {
       case 'rfi':
         if (action === 'create' && entityData.assigned_to) {
-          await queueNotification(projectId, 'rfi_assigned', entityData.assigned_to, {
-            rfiNumber: entityData.number || '',
-            rfiTitle: entityData.title || '',
-            dueDate: entityData.due_date || 'No due date',
-            projectName: entityData.project_name || 'Project',
-            link: '/rfis/' + (entityData.id || ''),
+          await queueNotification(projectId, 'rfi_assigned', String(entityData.assigned_to), {
+            rfiNumber: String(entityData.number ?? ''),
+            rfiTitle: String(entityData.title ?? ''),
+            dueDate: String(entityData.due_date ?? 'No due date'),
+            projectName: String(entityData.project_name ?? 'Project'),
+            link: '/rfis/' + String(entityData.id ?? ''),
           })
         } else if (action === 'update' && entityData.status === 'answered') {
-          await queueNotification(projectId, 'rfi_response', entityData.created_by, {
-            rfiNumber: entityData.number || '',
-            rfiTitle: entityData.title || '',
-            dueDate: entityData.due_date || 'No due date',
-            projectName: entityData.project_name || 'Project',
-            link: '/rfis/' + (entityData.id || ''),
+          await queueNotification(projectId, 'rfi_response', String(entityData.created_by ?? ''), {
+            rfiNumber: String(entityData.number ?? ''),
+            rfiTitle: String(entityData.title ?? ''),
+            dueDate: String(entityData.due_date ?? 'No due date'),
+            projectName: String(entityData.project_name ?? 'Project'),
+            link: '/rfis/' + String(entityData.id ?? ''),
           })
         }
         break
       case 'submittal':
         if (action === 'update' && entityData.status === 'approved') {
-          await queueNotification(projectId, 'submittal_approved', entityData.submitted_by, {
-            submittalNumber: entityData.number || '',
-            submittalTitle: entityData.title || '',
-            projectName: entityData.project_name || 'Project',
-            link: '/submittals/' + (entityData.id || ''),
+          await queueNotification(projectId, 'submittal_approved', String(entityData.submitted_by ?? ''), {
+            submittalNumber: String(entityData.number ?? ''),
+            submittalTitle: String(entityData.title ?? ''),
+            projectName: String(entityData.project_name ?? 'Project'),
+            link: '/submittals/' + String(entityData.id ?? ''),
           })
         } else if (action === 'update' && (entityData.status === 'rejected' || entityData.status === 'resubmit')) {
-          await queueNotification(projectId, 'submittal_revision', entityData.submitted_by, {
-            submittalNumber: entityData.number || '',
-            submittalTitle: entityData.title || '',
-            projectName: entityData.project_name || 'Project',
-            link: '/submittals/' + (entityData.id || ''),
+          await queueNotification(projectId, 'submittal_revision', String(entityData.submitted_by ?? ''), {
+            submittalNumber: String(entityData.number ?? ''),
+            submittalTitle: String(entityData.title ?? ''),
+            projectName: String(entityData.project_name ?? 'Project'),
+            link: '/submittals/' + String(entityData.id ?? ''),
           })
         }
         break
       case 'change_order':
         if (action === 'update' && entityData.status === 'pending_approval') {
-          await queueNotification(projectId, 'change_order_pending', entityData.approved_by, {
-            changeOrderNumber: entityData.number || '',
-            changeOrderTitle: entityData.title || '',
-            projectName: entityData.project_name || 'Project',
-            link: '/change-orders/' + (entityData.id || ''),
+          await queueNotification(projectId, 'change_order_pending', String(entityData.approved_by ?? ''), {
+            changeOrderNumber: String(entityData.number ?? ''),
+            changeOrderTitle: String(entityData.title ?? ''),
+            projectName: String(entityData.project_name ?? 'Project'),
+            link: '/change-orders/' + String(entityData.id ?? ''),
           })
         }
         break
       case 'punch_item':
         if (action === 'create' && entityData.assigned_to) {
-          await queueNotification(projectId, 'punch_item_assigned', entityData.assigned_to, {
-            punchItemTitle: entityData.title || '',
-            location: entityData.location || '',
-            projectName: entityData.project_name || 'Project',
-            link: '/punch-list/' + (entityData.id || ''),
+          await queueNotification(projectId, 'punch_item_assigned', String(entityData.assigned_to), {
+            punchItemTitle: String(entityData.title ?? ''),
+            location: String(entityData.location ?? ''),
+            projectName: String(entityData.project_name ?? 'Project'),
+            link: '/punch-list/' + String(entityData.id ?? ''),
           })
         }
         break

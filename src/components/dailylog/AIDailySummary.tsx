@@ -15,9 +15,27 @@ interface AIDailySummaryProps {
 
 type UIState = 'idle' | 'loading' | 'success' | 'error';
 
-const SpeechRecognitionAPI =
+type SpeechRecognitionLike = {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  maxAlternatives: number
+  start(): void
+  stop(): void
+  abort(): void
+  onstart: (() => void) | null
+  onresult: ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
+  onerror: ((event: unknown) => void) | null
+  onend: (() => void) | null
+}
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike
+type SpeechRecognitionEvent = Parameters<NonNullable<SpeechRecognitionLike['onresult']>>[0]
+
+const SpeechRecognitionAPI: SpeechRecognitionCtor | null =
   typeof window !== 'undefined'
-    ? (window.SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition ?? null)
+    ? ((window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }).SpeechRecognition
+        ?? (window as unknown as { webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition
+        ?? null)
     : null;
 
 export const AIDailySummary: React.FC<AIDailySummaryProps> = ({
@@ -33,7 +51,7 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = ({
   const [summary, setSummary] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<InstanceType<typeof window.SpeechRecognition> | null>(null);
+  const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -84,7 +102,13 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = ({
     navigator.clipboard.writeText(summary).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {});
+    }).catch(() => {
+      // Clipboard can fail in iframes, in private browsing, or without
+      // page focus. The previous silent catch left the user thinking the
+      // copy worked. Surface the failure as a transient state the UI can
+      // render as a "select-to-copy" hint.
+      setCopied(false);
+    });
   };
 
   const handleInsert = () => {

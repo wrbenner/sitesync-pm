@@ -6,6 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 export type CorrectionType = 'classification' | 'discrepancy' | 'edge_detection' | 'entity'
 
@@ -45,8 +46,7 @@ export function useLogCorrection() {
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData.user?.id ?? null
 
-      const { data, error } = await supabase
-        .from('ai_training_corrections')
+      const { data, error } = await fromTable('ai_training_corrections')
         .insert({
           correction_type: input.correctionType,
           project_id: input.projectId,
@@ -58,12 +58,12 @@ export function useLogCorrection() {
           drawing_id: input.drawingId ?? null,
           page_image_url: input.pageImageUrl ?? null,
           annotation_coordinates: input.annotationCoordinates ?? null,
-        })
+        } as never)
         .select('*')
         .single()
 
       if (error) throw error
-      return data as CorrectionRow
+      return data as unknown as CorrectionRow
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['ai-training-corrections', vars.projectId] })
@@ -76,14 +76,13 @@ export function useCorrectionHistory(projectId: string | null | undefined) {
     queryKey: ['ai-training-corrections', projectId ?? null],
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ai_training_corrections')
+      const { data, error } = await fromTable('ai_training_corrections')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
         .limit(200)
       if (error) throw error
-      return (data ?? []) as CorrectionRow[]
+      return (data ?? []) as unknown as CorrectionRow[]
     },
     staleTime: 30_000,
   })

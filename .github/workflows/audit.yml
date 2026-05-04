@@ -1,0 +1,80 @@
+# =============================================================================
+# audit.yml — Static dead-click + handler-binding detectors
+# =============================================================================
+#
+# Runs the AST scans on every PR. Fast (~30s); no browser needed. The
+# runtime Playwright audits live in a separate workflow because they
+# need a dev server + auth fixtures.
+#
+# Security notes:
+#   • This workflow does NOT consume any untrusted github.event fields
+#     (issue title, PR description, commit message, etc.). Only static
+#     repo files are read; only `git diff` and `tsx` scripts are run.
+#   • No `${{ github.* }}` interpolations inside `run:` blocks — script
+#     inputs come from committed source files.
+# =============================================================================
+
+name: "Audit - static detectors"
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/detect-dead-clicks.ts'
+      - 'scripts/check-handler-bindings.ts'
+      - 'audit/dead-clicks.json'
+      - '.github/workflows/audit.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  static-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run dead-click detector
+        run: npx tsx scripts/detect-dead-clicks.ts
+
+      - name: Run handler-binding checker
+        run: npx tsx scripts/check-handler-bindings.ts
+
+      - name: Diff against committed baseline
+        id: diff
+        run: |
+          if ! git diff --quiet -- audit/dead-clicks.json; then
+            echo "Dead-click findings have changed since the committed baseline."
+            echo "Review the diff below; commit the updated audit/dead-clicks.json"
+            echo "if every NEW finding is intentional + documented in docs/AUDIT_COVERAGE.md."
+            git diff -- audit/dead-clicks.json
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No new findings."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dead-clicks-json
+          path: audit/dead-clicks.json
+          retention-days: 30
+
+      - name: Fail if new findings
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          echo "::error::audit/dead-clicks.json has new findings. Document or fix before merging."
+          exit 1

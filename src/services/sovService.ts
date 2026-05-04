@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import {
   type Result,
   ok,
@@ -72,22 +73,21 @@ async function resolveRoleByContract(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data: contract } = await supabase
-    .from('contracts')
+  const { data: contract } = await fromTable('contracts')
     .select('project_id')
-    .eq('id', contractId)
+    .eq('id' as never, contractId)
     .single();
 
-  if (!contract?.project_id) return null;
+  const contractRow = contract as unknown as { project_id?: string } | null
+  if (!contractRow?.project_id) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', contract.project_id)
-    .eq('user_id', userId)
+    .eq('project_id' as never, contractRow.project_id)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 async function resolveRoleByItemId(
@@ -96,16 +96,16 @@ async function resolveRoleByItemId(
 ): Promise<{ role: string | null; contractId: string | null }> {
   if (!userId) return { role: null, contractId: null };
 
-  const { data: item } = await supabase
-    .from('schedule_of_values')
+  const { data: item } = await fromTable('schedule_of_values')
     .select('contract_id')
-    .eq('id', itemId)
+    .eq('id' as never, itemId)
     .single();
 
-  if (!item?.contract_id) return { role: null, contractId: null };
+  const itemRow = item as unknown as { contract_id?: string } | null
+  if (!itemRow?.contract_id) return { role: null, contractId: null };
 
-  const role = await resolveRoleByContract(item.contract_id, userId);
-  return { role, contractId: item.contract_id };
+  const role = await resolveRoleByContract(itemRow.contract_id, userId);
+  return { role, contractId: itemRow.contract_id };
 }
 
 // ── Service ──────────────────────────────────────────────────────────────────
@@ -115,14 +115,13 @@ export const sovService = {
    * Load all SOV line items for a contract, ordered by sort_order.
    */
   async loadItems(contractId: string): Promise<Result<SovItem[]>> {
-    const { data, error } = await supabase
-      .from('schedule_of_values')
+    const { data, error } = await fromTable('schedule_of_values')
       .select('*')
-      .eq('contract_id', contractId)
+      .eq('contract_id' as never, contractId)
       .order('sort_order', { ascending: true, nullsFirst: false });
 
     if (error) return fail(dbError(error.message, { contractId }));
-    return ok((data ?? []) as SovItem[]);
+    return ok((data ?? []) as unknown as SovItem[]);
   },
 
   /**
@@ -140,8 +139,7 @@ export const sovService = {
       return fail(permissionError('Only project managers, GCs, admins, and owners can create SOV items'));
     }
 
-    const { data, error } = await supabase
-      .from('schedule_of_values')
+    const { data, error } = await fromTable('schedule_of_values')
       .insert({
         contract_id: input.contract_id,
         description: input.description,
@@ -149,12 +147,12 @@ export const sovService = {
         item_number: input.item_number ?? null,
         cost_code: input.cost_code ?? null,
         sort_order: input.sort_order ?? null,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { contract_id: input.contract_id }));
-    return ok(data as SovItem);
+    return ok(data as unknown as SovItem);
   },
 
   /**
@@ -173,10 +171,9 @@ export const sovService = {
       return fail(permissionError('Insufficient role to update SOV items'));
     }
 
-    const { error } = await supabase
-      .from('schedule_of_values')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', itemId);
+    const { error } = await fromTable('schedule_of_values')
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, itemId);
 
     if (error) return fail(dbError(error.message, { itemId }));
     return { data: null, error: null };
@@ -198,10 +195,9 @@ export const sovService = {
       return fail(permissionError('Only admins and owners can delete SOV items'));
     }
 
-    const { error } = await supabase
-      .from('schedule_of_values')
+    const { error } = await fromTable('schedule_of_values')
       .delete()
-      .eq('id', itemId);
+      .eq('id' as never, itemId);
 
     if (error) return fail(dbError(error.message, { itemId }));
     return { data: null, error: null };
@@ -226,29 +222,27 @@ export const sovService = {
       return fail(permissionError('Insufficient role to replace SOV items'));
     }
 
-    const { error: deleteError } = await supabase
-      .from('schedule_of_values')
+    const { error: deleteError } = await fromTable('schedule_of_values')
       .delete()
-      .eq('contract_id', contractId);
+      .eq('contract_id' as never, contractId);
 
     if (deleteError) return fail(dbError(deleteError.message, { contractId, op: 'delete' }));
 
     if (items.length === 0) return ok([]);
 
     const now = new Date().toISOString();
-    const { data, error: insertError } = await supabase
-      .from('schedule_of_values')
+    const { data, error: insertError } = await fromTable('schedule_of_values')
       .insert(
         items.map((item, i) => ({
           ...item,
           contract_id: contractId,
           sort_order: item.sort_order ?? i,
           updated_at: now,
-        })),
+        })) as never,
       )
       .select();
 
     if (insertError) return fail(dbError(insertError.message, { contractId, op: 'insert' }));
-    return ok((data ?? []) as SovItem[]);
+    return ok((data ?? []) as unknown as SovItem[]);
   },
 };

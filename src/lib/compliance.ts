@@ -2,6 +2,7 @@
 // Generates evidence from audit trail, access logs, and system configuration.
 
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 import { exportAuditTrailCSV, type AuditEntry } from '../hooks/useAuditTrail'
 
 // ── Types ────────────────────────────────────────────────
@@ -49,22 +50,21 @@ export async function generateComplianceReport(
     const from = page * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
 
-    let query = supabase
-      .from('audit_trail')
+    let query = fromTable('audit_trail')
       .select('*')
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
+      .gte('created_at' as never, startDate)
+      .lte('created_at' as never, endDate)
       .order('created_at', { ascending: true })
       .range(from, to)
 
     if (projectId) {
-      query = query.eq('project_id', projectId)
+      query = query.eq('project_id' as never, projectId)
     }
 
     const { data, error } = await query
     if (error) throw new Error(`Failed to fetch audit data: ${error.message}`)
 
-    const batch = (data ?? []) as AuditEntry[]
+    const batch = (data ?? []) as unknown as AuditEntry[]
     entries.push(...batch)
     onProgress?.(entries.length)
 
@@ -94,7 +94,7 @@ export async function generateComplianceReport(
   }
 
   // Save report record
-  const { data: report } = await supabase.from('compliance_reports').insert({
+  const { data: report } = await fromTable('compliance_reports').insert({
     organization_id: organizationId,
     project_id: projectId,
     report_type: reportType,
@@ -102,7 +102,7 @@ export async function generateComplianceReport(
     date_range_start: startDate,
     date_range_end: endDate,
     metadata: metrics,
-  }).select().single()
+  } as never).select().single()
 
   return {
     id: report?.id ?? crypto.randomUUID(),

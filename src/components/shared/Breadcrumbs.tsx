@@ -1,4 +1,4 @@
-import React, { type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { colors, typography, spacing } from '../../styles/theme';
 
 interface BreadcrumbItem {

@@ -46,11 +46,11 @@ async function semanticSearch(query: string): Promise<SearchResult[]> {
   if (embedding) {
     // Query via cosine similarity against document_embeddings table
     try {
-      const { data } = await supabase.rpc('match_documents', {
+      const { data } = await supabase.rpc('match_documents' as never, {
         query_embedding: embedding,
         match_threshold: 0.6,
         match_count: 10,
-      }) as { data: Array<{ id: number; name: string; category: string; similarity: number }> | null }
+      } as never) as { data: Array<{ id: number; name: string; category: string; similarity: number }> | null }
 
       if (data && data.length > 0) {
         return data.map((row) => ({

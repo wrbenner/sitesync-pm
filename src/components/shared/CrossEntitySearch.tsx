@@ -178,7 +178,7 @@ export const CrossEntitySearch: React.FC<CrossEntitySearchProps> = ({ onSelect, 
         style={{
           position: 'relative', width: '100%', maxWidth: '560px',
           background: colors.surfaceRaised ?? '#fff',
-          borderRadius: '12px', boxShadow: shadows.xl ?? '0 20px 60px rgba(0,0,0,0.2)',
+          borderRadius: '12px', boxShadow: shadows.lg ?? '0 20px 60px rgba(0,0,0,0.2)',
           overflow: 'hidden', display: 'flex', flexDirection: 'column',
           maxHeight: '70vh',
         }}

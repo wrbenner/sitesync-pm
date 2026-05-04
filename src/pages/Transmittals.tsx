@@ -117,7 +117,7 @@ export const Transmittals: React.FC = () => {
     items: [{ name: '', description: '', copies: 1 }] as TransmittalItem[],
   })
 
-  const list = (transmittals ?? []) as Transmittal[]
+  const list = (transmittals ?? []) as unknown as Transmittal[]
 
   const filtered = useMemo(() => {
     let result = list
@@ -195,8 +195,8 @@ export const Transmittals: React.FC = () => {
 
       const { error } = await supabase
         .from('transmittals')
-        .update(updatePayload)
-        .eq('id', transmittal.id)
+        .update(updatePayload as never)
+        .eq('id' as never, transmittal.id)
       if (error) throw error
       queryClient.invalidateQueries({ queryKey: ['transmittals', projectId] })
       toast.success(`Status updated to ${STATUS_LABELS[nextStatus]}`)
@@ -255,7 +255,7 @@ export const Transmittals: React.FC = () => {
             {filtered.length > 0 ? (
               <div style={{ marginTop: spacing['3'] }}>
                 <DataTable
-                  columns={columns}
+                  columns={columns as never}
                   data={filtered}
                   onRowClick={(row) => setDetailId(row.id)}
                 />

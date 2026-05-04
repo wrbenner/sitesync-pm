@@ -100,24 +100,35 @@ export const MetricCard: React.FC<MetricCardProps> = React.memo(({ icon, label, 
           {sub}
         </p>
       )}
-      {trend !== undefined && trendLabel && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['2'] }}>
-          {trend >= 0 ? (
-            <TrendingUp size={11} color={colors.statusActive} />
-          ) : (
-            <TrendingDown size={11} color={colors.statusCritical} />
-          )}
-          <span
-            style={{
-              fontSize: typography.fontSize.caption,
-              fontWeight: typography.fontWeight.medium,
-              color: trend >= 0 ? colors.statusActive : colors.statusCritical,
-            }}
-          >
-            {trend >= 0 ? '+' : ''}{trend}% {trendLabel}
-          </span>
-        </div>
-      )}
+      {/* Trend delta: hide when the value is zero or empty. A "+1% from 0"
+          read-out is meaningless and was flagged in the polish punch list as
+          "you can't be +1% from 0". Also hide a 0% trend — no movement to show. */}
+      {(() => {
+        if (trend === undefined || !trendLabel || trend === 0) return null;
+        const numericValue = typeof value === 'string'
+          ? parseFloat(value.replace(/[^0-9.\-]/g, ''))
+          : Number(value);
+        if (!Number.isFinite(numericValue) || numericValue === 0) return null;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing['1'], marginTop: spacing['2'] }}>
+            {trend >= 0 ? (
+              <TrendingUp size={11} color={colors.statusActive} />
+            ) : (
+              <TrendingDown size={11} color={colors.statusCritical} />
+            )}
+            <span
+              style={{
+                fontSize: typography.fontSize.caption,
+                fontWeight: typography.fontWeight.medium,
+                color: trend >= 0 ? colors.statusActive : colors.statusCritical,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {trend >= 0 ? '+' : ''}{trend}% {trendLabel}
+            </span>
+          </div>
+        );
+      })()}
     </motion.div>
   );
 });

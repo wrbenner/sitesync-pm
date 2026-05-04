@@ -5,6 +5,45 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getPendingMutations, retryMutation, type PendingMutation } from '../../lib/offlineDb';
 
+// Plural human labels for the raw Postgres table names that appear in the
+// caching progress banner ("Loading project — submittals (3/16)…"). The
+// other TABLE_LABELS lower in this file is singular and used for queued
+// mutation rows ("RFI created"). Don't merge them.
+const CACHE_LABELS: Record<string, string> = {
+  projects:                   'projects',
+  project_members:            'team members',
+  profiles:                   'profiles',
+  daily_logs:                 'daily logs',
+  daily_log_entries:          'daily log entries',
+  rfis:                       'RFIs',
+  rfi_responses:              'RFI responses',
+  submittals:                 'submittals',
+  submittal_approvals:        'submittal approvals',
+  punch_items:                'punch list items',
+  tasks:                      'tasks',
+  drawings:                   'drawings',
+  schedule_phases:            'schedule phases',
+  crews:                      'crews',
+  budget_items:               'budget items',
+  change_orders:              'change orders',
+  meetings:                   'meetings',
+  meeting_attendees:          'meeting attendees',
+  meeting_action_items:       'action items',
+  directory_contacts:         'contacts',
+  files:                      'files',
+  field_captures:             'field captures',
+  notifications:              'notifications',
+  activity_feed:              'activity feed',
+  ai_insights:                'AI insights',
+}
+
+function humanizeTable(table: string): string {
+  if (CACHE_LABELS[table]) return CACHE_LABELS[table]
+  // Fallback: replace underscores, lower-case the rest. Don't shout
+  // "SCHEDULE_PHASES (14/16)" at someone reading their phone in the dirt.
+  return table.replace(/_/g, ' ').toLowerCase()
+}
+
 export const OfflineBanner: React.FC = () => {
   const {
     isOnline,
@@ -55,6 +94,44 @@ export const OfflineBanner: React.FC = () => {
   // Don't show banner when online, idle, with nothing pending and no just-synced flash
   if (isOnline && !isSyncing && !isCaching && !hasPending && !hasConflicts && !justSynced) return null;
 
+  // Cache priming once at least one table has landed: collapse the full
+  // banner into a compact pill anchored top-right. The full multi-line
+  // "Loading project — submittals (3/16)… · Never synced" bar across the
+  // top of every page during the first 30s read as ominous in audit
+  // captures. The pill keeps users informed without dominating the page.
+  const cacheCompletedCount = cacheProgress?.completed ?? 0;
+  const cacheTotalCount = cacheProgress?.total ?? 0;
+  if (isCaching && !hasConflicts && !hasPending && cacheCompletedCount > 0 && cacheTotalCount > 0) {
+    const pct = Math.round((cacheCompletedCount / cacheTotalCount) * 100);
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: 'fixed',
+          top: spacing['2'],
+          right: spacing['3'],
+          zIndex: 40,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: spacing['2'],
+          padding: `${spacing['1']} ${spacing['3']}`,
+          backgroundColor: colors.surfaceRaised,
+          color: colors.textSecondary,
+          border: `1px solid ${colors.borderSubtle}`,
+          borderRadius: borderRadius.full,
+          boxShadow: shadows.sm,
+          fontSize: typography.fontSize.caption,
+          fontWeight: typography.fontWeight.medium,
+          fontFamily: typography.fontFamily,
+        }}
+      >
+        <Cloud size={12} style={{ animation: 'spin 1s linear infinite', color: colors.statusInfo }} />
+        <span>Syncing project · {pct}%</span>
+      </div>
+    );
+  }
+
   // Determine banner state
   let config: { bg: string; border: string; icon: React.ReactNode; text: string; iconColor: string };
 
@@ -90,12 +167,14 @@ export const OfflineBanner: React.FC = () => {
     };
   } else if (isCaching) {
     const progress = cacheProgress;
-    const progressText = progress ? ` ${progress.currentTable} (${progress.completed}/${progress.total})` : '';
+    const progressText = progress
+      ? ` — ${humanizeTable(progress.currentTable)} (${progress.completed}/${progress.total})`
+      : '';
     config = {
       bg: colors.statusInfoSubtle,
       border: colors.statusInfo,
       icon: <Cloud size={14} style={{ animation: 'spin 1s linear infinite' }} />,
-      text: `Caching project data${progressText}...`,
+      text: `Loading project${progressText}…`,
       iconColor: colors.statusInfo,
     };
   } else if (hasPending) {
@@ -116,9 +195,14 @@ export const OfflineBanner: React.FC = () => {
     };
   }
 
-  const lastSyncedLabel = lastSynced
-    ? `Last synced ${formatTimeAgo(lastSynced)}`
-    : 'Never synced';
+  // Suppress the timestamp during the initial caching window — "Loading
+  // project — submittals (3/16)…" alongside "Never synced" reads as a
+  // contradiction. Once the cache is built, the timestamp resumes.
+  const lastSyncedLabel = isCaching
+    ? ''
+    : lastSynced
+      ? `Last synced ${formatTimeAgo(lastSynced)}`
+      : 'Setting up your workspace…';
 
   return (
     <div
@@ -168,9 +252,11 @@ export const OfflineBanner: React.FC = () => {
         )}
 
         {/* Last synced timestamp */}
-        <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' }}>
-          {lastSyncedLabel}
-        </span>
+        {lastSyncedLabel && (
+          <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, whiteSpace: 'nowrap' }}>
+            {lastSyncedLabel}
+          </span>
+        )}
 
         {/* Sync Now button (visible when pending and online) */}
         {isOnline && hasPending && !isSyncing && (
@@ -470,7 +556,7 @@ const QueuedItemsSheet: React.FC<{
           position: 'fixed', left: 0, right: 0, bottom: 0,
           backgroundColor: colors.surfaceRaised,
           borderRadius: `${borderRadius.xl} ${borderRadius.xl} 0 0`,
-          boxShadow: shadows.elevated,
+          boxShadow: shadows.panel,
           zIndex: 1001,
           maxHeight: '70vh',
           display: 'flex', flexDirection: 'column',

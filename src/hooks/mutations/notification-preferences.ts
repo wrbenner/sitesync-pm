@@ -1,14 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
 
+import { fromTable } from '../../lib/db/queries'
 
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Notification Preferences ─────────────────────────────
 
@@ -16,7 +15,7 @@ export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await from('notification_preferences').upsert({ user_id: userId, ...updates }).select().single()
+      const { data, error } = await from('notification_preferences').upsert({ user_id: userId, ...updates } as never).select().single()
       if (error) throw error
       return { data, userId }
     },

@@ -32,7 +32,7 @@ vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getUser: mockGetUser },
     from: vi.fn().mockImplementation(() => {
-      const chain: unknown = {}
+      const chain: Record<string, unknown> = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
       chain.maybeSingle = mockMaybySingle
@@ -59,7 +59,7 @@ const mockRfiRow = {
 
 vi.mock('../../api/client', () => {
   const makeChain = (resolvedRow: unknown = mockRfiRow) => {
-    const chain: unknown = {}
+    const chain: Record<string, unknown> = {}
     chain.select = vi.fn().mockReturnValue(chain)
     chain.eq = vi.fn().mockReturnValue(chain)
     chain.in = vi.fn().mockReturnValue(chain)
@@ -76,11 +76,11 @@ vi.mock('../../api/client', () => {
     supabase: {
       from: vi.fn().mockImplementation(() => makeChain()),
     },
-    supabaseMutation: vi.fn().mockImplementation(async (fn: unknown) => {
+    supabaseMutation: vi.fn().mockImplementation(async (fn: (client: unknown) => unknown) => {
       const result = await fn({
         from: () => makeChain(),
       })
-      const resolved = await result
+      const resolved = (await result) as { data?: unknown; error?: unknown } | undefined
       const { data, error } = resolved ?? { data: mockRfiRow, error: null }
       if (error) throw error
       return data
@@ -90,8 +90,8 @@ vi.mock('../../api/client', () => {
   }
 })
 
-vi.mock('../../stores/organizationStore', () => ({
-  useOrganizationStore: { getState: mockOrgGetState },
+vi.mock('../../stores/authStore', () => ({
+  useAuthStore: { getState: mockOrgGetState },
 }))
 
 describe('RFI Lifecycle Integration', () => {
@@ -305,15 +305,15 @@ describe('Daily Log Lifecycle Integration', () => {
 })
 
 describe('Punch Item Lifecycle Integration', () => {
-  it('full lifecycle: open → work → resolve → verify', () => {
+  it('full lifecycle: open → work → sub-complete → verify', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
 
     expect(actor.getSnapshot().value).toBe('open')
     actor.send({ type: 'START_WORK' })
     expect(actor.getSnapshot().value).toBe('in_progress')
-    actor.send({ type: 'RESOLVE' })
-    expect(actor.getSnapshot().value).toBe('resolved')
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
+    expect(actor.getSnapshot().value).toBe('sub_complete')
     actor.send({ type: 'VERIFY' })
     expect(actor.getSnapshot().value).toBe('verified')
     // Verified is no longer final (can be rejected back to in_progress)
@@ -325,18 +325,18 @@ describe('Punch Item Lifecycle Integration', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
     actor.send({ type: 'START_WORK' })
-    actor.send({ type: 'RESOLVE' })
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
     actor.send({ type: 'VERIFY' })
-    actor.send({ type: 'REJECT_VERIFICATION' })
+    actor.send({ type: 'REJECT' })
     expect(actor.getSnapshot().value).toBe('in_progress')
     actor.stop()
   })
 
-  it('failed verification reopens', () => {
+  it('reopen from sub_complete returns to open', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
     actor.send({ type: 'START_WORK' })
-    actor.send({ type: 'RESOLVE' })
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
     actor.send({ type: 'REOPEN' })
     expect(actor.getSnapshot().value).toBe('open')
     actor.stop()
@@ -438,7 +438,7 @@ describe('Cross-Org Document Access Control', () => {
   beforeEach(() => {
     mockMaybySingle.mockReset()
     mockGetUser.mockResolvedValue({ data: { user: { id: 'test-user-id' } }, error: null })
-    mockOrgGetState.mockReturnValue({ currentOrg: { id: ORG_A_ID } })
+    mockOrgGetState.mockReturnValue({ organization: { id: ORG_A_ID } })
     clearTtlCache()
   })
 
@@ -473,18 +473,30 @@ describe('Cross-Org Document Access Control', () => {
   // -------------------------------------------------------------------------
   describe('getDrawings cross-org access', () => {
     it('returns 403 when project belongs to a different org (criterion 1)', async () => {
-      // assertProjectAccess: project_members membership check passes
+      // Updated contract (src/api/middleware/projectScope.ts:32-38):
+      // `assertProjectBelongsToActiveOrg` only rejects when it OBSERVES a
+      // different org_id; null observation defers to RLS. So the test must
+      // make `observeProjectOrg` return a different org via the projects
+      // path (the first probe).
       mockMaybySingle
+        // 1) project_members membership check → found
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        // assertProjectBelongsToOrg: project not found under active org
-        .mockResolvedValueOnce({ data: null, error: null })
+        // 2) observeProjectOrg projects path → DIFFERENT org_id (real cross-org leak)
+        .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
       await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
     })
 
-    it('returns 403 when there is no active organization context', async () => {
-      mockOrgGetState.mockReturnValue({ currentOrg: null })
-      mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    it('defers to RLS when there is no active organization context (membership proven)', async () => {
+      // Behavior change: with proven membership but unhydrated org context,
+      // `assertProjectAccess` defers to RLS rather than rejecting outright,
+      // so legitimate users on first load aren't punished by a transient
+      // client-state race. RLS still enforces org isolation at the DB layer.
+      mockOrgGetState.mockReturnValue({ organization: null })
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        .mockResolvedValue({ data: null, error: null })
+      const result = await getDrawings(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
     })
 
     it('returns drawings array when project belongs to the active org (criterion 3)', async () => {
@@ -501,9 +513,12 @@ describe('Cross-Org Document Access Control', () => {
   // -------------------------------------------------------------------------
   describe('getFiles cross-org access', () => {
     it('returns 403 when project belongs to a different org (criterion 1)', async () => {
+      // Same updated contract as getDrawings — observe a DIFFERENT org_id
+      // to trigger the cross-org-leak 403 path. Null observation defers
+      // to RLS at the DB layer.
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
       await expect(getFiles(PROJ_ID)).rejects.toMatchObject({ status: 403 })
     })
 
@@ -549,7 +564,7 @@ const PROJ_UUID = '00000000-0000-4000-8000-000000000001'
 describe('RFI DB Persistence Lifecycle', () => {
   beforeEach(() => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
-    mockOrgGetState.mockReturnValue({ currentOrg: { id: '00000000-0000-4000-9000-000000000001' } })
+    mockOrgGetState.mockReturnValue({ organization: { id: '00000000-0000-4000-9000-000000000001' } })
   })
 
   it('createRfi returns a mapped RFI with rfiNumber formatted as RFI-001', async () => {
@@ -571,7 +586,7 @@ describe('RFI DB Persistence Lifecycle', () => {
       actors: createRfiActors(createFn, updateFn),
     })
     const actor = createActor(configuredMachine, {
-      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as unknown,
+      input: { rfiId: 'rfi-test-id', projectId: PROJ_UUID } as never,
     })
     actor.start()
 

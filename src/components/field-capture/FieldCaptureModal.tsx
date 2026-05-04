@@ -30,7 +30,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
     cameraError,
     starting,
     uploading,
-    pendingCount,
+    pendingCaptures,
     isOnline,
     startCamera,
     stopCamera,
@@ -83,7 +83,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
         dailyLogId,
       });
       if (result.queued) {
-        toast.info(`Saved offline — will sync when connected (${pendingCount + 1} queued)`);
+        toast.info(`Saved offline — will sync when connected (${pendingCaptures + 1} queued)`);
       } else {
         toast.success('Photo captured and attached to today\'s log');
       }
@@ -168,13 +168,13 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                     </span>
                   </>
                 )}
-                {pendingCount > 0 && (
+                {pendingCaptures > 0 && (
                   <span style={{
                     backgroundColor: colors.statusPending, color: colors.white,
                     padding: `1px ${spacing['2']}`, borderRadius: borderRadius.full,
                     fontSize: 10, fontWeight: typography.fontWeight.bold,
                   }}>
-                    {pendingCount} queued
+                    {pendingCaptures} queued
                   </span>
                 )}
               </div>
@@ -222,15 +222,33 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
             ) : cameraError ? (
               <div style={{
                 color: colors.white, display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: spacing['2'], padding: spacing['6'], textAlign: 'center',
+                alignItems: 'center', gap: spacing['3'], padding: spacing['6'], textAlign: 'center',
               }}>
                 <AlertTriangle size={32} color={colors.statusCritical} />
                 <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium }}>
                   Camera unavailable
                 </div>
-                <div style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteMedium }}>
+                <div style={{ fontSize: typography.fontSize.sm, color: colors.overlayWhiteMedium, maxWidth: 320, lineHeight: 1.5 }}>
                   {cameraError}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => startCamera()}
+                  style={{
+                    marginTop: spacing['1'],
+                    padding: `${spacing['2']} ${spacing['4']}`,
+                    backgroundColor: colors.primaryOrange,
+                    color: colors.white,
+                    border: 'none',
+                    borderRadius: borderRadius.md,
+                    fontSize: typography.fontSize.sm,
+                    fontWeight: typography.fontWeight.semibold,
+                    fontFamily: typography.fontFamily,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Try again
+                </button>
               </div>
             ) : (
               <>

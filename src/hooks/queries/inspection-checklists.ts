@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 // ── Inspection Checklists ──────────────────────────────────
 
@@ -49,23 +50,22 @@ export function useInspectionChecklists(
   return useQuery({
     queryKey: ['inspection_checklists', projectId, filters],
     queryFn: async () => {
-      let query = supabase
-        .from('inspection_checklists')
+      let query = fromTable('inspection_checklists')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('is_template', false)
+        .eq('project_id' as never, projectId!)
+        .eq('is_template' as never, false)
         .order('created_at', { ascending: false })
 
       if (filters?.category) {
-        query = query.eq('category', filters.category)
+        query = query.eq('category' as never, filters.category)
       }
       if (filters?.status) {
-        query = query.eq('status', filters.status)
+        query = query.eq('status' as never, filters.status)
       }
 
       const { data, error } = await query
       if (error) throw error
-      return data as InspectionChecklist[]
+      return data as unknown as InspectionChecklist[]
     },
     enabled: !!projectId,
   })
@@ -75,15 +75,14 @@ export function useChecklistTemplates(projectId: string | undefined) {
   return useQuery({
     queryKey: ['checklist_templates', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('inspection_checklists')
+      const { data, error } = await fromTable('inspection_checklists')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('is_template', true)
+        .eq('project_id' as never, projectId!)
+        .eq('is_template' as never, true)
         .order('name')
 
       if (error) throw error
-      return data as InspectionChecklist[]
+      return data as unknown as InspectionChecklist[]
     },
     enabled: !!projectId,
   })
@@ -93,14 +92,13 @@ export function useChecklistItems(checklistId: string | undefined) {
   return useQuery({
     queryKey: ['checklist_items', checklistId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('inspection_checklist_items')
+      const { data, error } = await fromTable('inspection_checklist_items')
         .select('*')
-        .eq('checklist_id', checklistId!)
+        .eq('checklist_id' as never, checklistId!)
         .order('sort_order', { ascending: true })
 
       if (error) throw error
-      return data as InspectionChecklistItem[]
+      return data as unknown as InspectionChecklistItem[]
     },
     enabled: !!checklistId,
   })

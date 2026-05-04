@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable, asRow } from '../lib/db/queries'
 import type { PunchItem } from '../types/database';
 import type { PunchItemState } from '../machines/punchItemMachine';
 import { getValidPunchTransitions, getNextPunchStatus } from '../machines/punchItemMachine';
@@ -20,14 +21,13 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -59,14 +59,13 @@ export const punchItemService = {
    * Soft-delete filtering is applied when the column exists via RLS policy.
    */
   async loadPunchItems(projectId: string): Promise<PunchItemServiceResult<PunchItem[]>> {
-    const { data, error } = await supabase
-      .from('punch_items')
+    const { data, error } = await fromTable('punch_items')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('number', { ascending: false });
 
     if (error) return { data: null, error: error.message };
-    return { data: (data ?? []) as PunchItem[], error: null };
+    return { data: (data ?? []) as unknown as PunchItem[], error: null };
   },
 
   /**
@@ -76,8 +75,7 @@ export const punchItemService = {
   async createPunchItem(input: CreatePunchItemInput): Promise<PunchItemServiceResult<PunchItem>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('punch_items')
+    const { data, error } = await fromTable('punch_items')
       .insert({
         project_id: input.project_id,
         title: input.title,
@@ -92,12 +90,12 @@ export const punchItemService = {
         due_date: input.due_date ?? null,
         photos: input.photos ? (input.photos as unknown as import('../types/database').Json) : null,
         reported_by: userId,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return { data: null, error: error.message };
-    return { data: data as PunchItem, error: null };
+    return { data: data as unknown as PunchItem, error: null };
   },
 
   /**
@@ -116,11 +114,11 @@ export const punchItemService = {
     action: string,
   ): Promise<PunchItemServiceResult> {
     // 1. Fetch current item
-    const { data: item, error: fetchError } = await supabase
-      .from('punch_items')
+    const { data: itemData, error: fetchError } = await fromTable('punch_items')
       .select('status, reported_by, assigned_to, project_id')
-      .eq('id', punchItemId)
+      .eq('id' as never, punchItemId)
       .single();
+    const item = asRow<{ status: string | null; reported_by: string | null; assigned_to: string | null; project_id: string }>(itemData)
 
     if (fetchError || !item) {
       return { data: null, error: fetchError?.message ?? 'Punch item not found' };
@@ -134,7 +132,7 @@ export const punchItemService = {
     }
 
     // 3. Validate action against lifecycle machine
-    const currentStatus = (item.status ?? 'open') as PunchItemState;
+    const currentStatus = ((item.status ?? 'open') as PunchItemState);
     const validActions = getValidPunchTransitions(currentStatus);
     if (!validActions.includes(action)) {
       return {
@@ -154,19 +152,29 @@ export const punchItemService = {
       updated_at: new Date().toISOString(),
     };
 
-    if (newStatus === 'resolved') {
-      updates.resolved_date = new Date().toISOString();
-    }
     if (newStatus === 'verified') {
       updates.verified_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('punch_items')
-      .update(updates)
-      .eq('id', punchItemId);
+    const { error } = await fromTable('punch_items')
+      .update(updates as never)
+      .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };
+
+    // Cross-feature: when a punch is verified (terminal state), check
+    // whether it was the last in its area. If so, post a closeout-coverage
+    // advance to activity_feed. Fire-and-forget.
+    if (newStatus === 'verified') {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runPunchVerifiedChain }) => runPunchVerifiedChain(punchItemId))
+        .then((result) => {
+          if (result.error) console.warn('[punch_verified chain]', result.error);
+          else if (result.created) console.info('[punch_verified chain] created', result.created);
+        })
+        .catch((err) => console.warn('[punch_verified chain] dispatch failed:', err));
+    }
+
     return { data: null, error: null };
   },
 
@@ -180,12 +188,11 @@ export const punchItemService = {
   ): Promise<PunchItemServiceResult> {
     // Strip status to prevent bypassing lifecycle machine
      
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
 
-    const { error } = await supabase
-      .from('punch_items')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', punchItemId);
+    const { error } = await fromTable('punch_items')
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };
@@ -197,10 +204,9 @@ export const punchItemService = {
    * A migration adding those columns would enable soft-delete here.
    */
   async deletePunchItem(punchItemId: string): Promise<PunchItemServiceResult> {
-    const { error } = await supabase
-      .from('punch_items')
+    const { error } = await fromTable('punch_items')
       .delete()
-      .eq('id', punchItemId);
+      .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };
     return { data: null, error: null };

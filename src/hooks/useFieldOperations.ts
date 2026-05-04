@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { Database } from '../types/database'
 
 type Tables = Database['public']['Tables']
@@ -33,13 +34,12 @@ export function useDailyLogs(projectId: string) {
     if (!projectId) return
     try {
       setIsLoading(true)
-      const { data, error: queryError } = await supabase
-        .from('daily_logs')
+      const { data, error: queryError } = await fromTable('daily_logs')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('log_date', { ascending: false })
       if (queryError) throw queryError
-      setLogs(data ?? [])
+      setLogs((data ?? []) as unknown as DailyLogRow[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -89,14 +89,13 @@ export function useDailyLogs(projectId: string) {
       setLogs((prev) => [optimisticItem, ...prev])
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        const { data, error: insertError } = await supabase
-          .from('daily_logs')
-          .insert([{ ...fields, project_id: projectId, created_by: fields.created_by ?? user?.id ?? null }])
+        const { data, error: insertError } = await fromTable('daily_logs')
+          .insert([{ ...fields, project_id: projectId, created_by: fields.created_by ?? user?.id ?? null }] as never)
           .select()
           .single()
         if (insertError) throw insertError
-        setLogs((prev) => prev.map((l) => (l.id === optimisticItem.id ? (data as DailyLogRow) : l)))
-        return data as DailyLogRow
+        setLogs((prev) => prev.map((l) => (l.id === optimisticItem.id ? (data as unknown as DailyLogRow) : l)))
+        return data as unknown as DailyLogRow
       } catch (err) {
         setLogs((prev) => prev.filter((l) => l.id !== optimisticItem.id))
         if (import.meta.env.DEV) console.error('createLog failed:', err)
@@ -111,15 +110,14 @@ export function useDailyLogs(projectId: string) {
       const previous = logsRef.current.find((l) => l.id === id)
       setLogs((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)))
       try {
-        const { data, error: updateError } = await supabase
-          .from('daily_logs')
-          .update(updates)
-          .eq('id', id)
+        const { data, error: updateError } = await fromTable('daily_logs')
+          .update(updates as never)
+          .eq('id' as never, id)
           .select()
           .single()
         if (updateError) throw updateError
-        setLogs((prev) => prev.map((l) => (l.id === id ? (data as DailyLogRow) : l)))
-        return data as DailyLogRow
+        setLogs((prev) => prev.map((l) => (l.id === id ? (data as unknown as DailyLogRow) : l)))
+        return data as unknown as DailyLogRow
       } catch (err) {
         if (previous) setLogs((prev) => prev.map((l) => (l.id === id ? previous : l)))
         if (import.meta.env.DEV) console.error('updateLog failed:', err)
@@ -147,13 +145,12 @@ export function useIncidents(projectId: string) {
     if (!projectId) return
     try {
       setIsLoading(true)
-      const { data, error: queryError } = await supabase
-        .from('incidents')
+      const { data, error: queryError } = await fromTable('incidents')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('date', { ascending: false })
       if (queryError) throw queryError
-      setIncidents(data ?? [])
+      setIncidents((data ?? []) as unknown as IncidentRow[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -192,14 +189,13 @@ export function useIncidents(projectId: string) {
       } as IncidentRow
       setIncidents((prev) => [optimisticItem, ...prev])
       try {
-        const { data, error: insertError } = await supabase
-          .from('incidents')
-          .insert([{ ...fields, project_id: projectId }])
+        const { data, error: insertError } = await fromTable('incidents')
+          .insert([{ ...fields, project_id: projectId }] as never)
           .select()
           .single()
         if (insertError) throw insertError
-        setIncidents((prev) => prev.map((i) => (i.id === optimisticItem.id ? (data as IncidentRow) : i)))
-        return data as IncidentRow
+        setIncidents((prev) => prev.map((i) => (i.id === optimisticItem.id ? (data as unknown as IncidentRow) : i)))
+        return data as unknown as IncidentRow
       } catch (err) {
         setIncidents((prev) => prev.filter((i) => i.id !== optimisticItem.id))
         if (import.meta.env.DEV) console.error('createIncident failed:', err)
@@ -214,15 +210,14 @@ export function useIncidents(projectId: string) {
       const previous = incidentsRef.current.find((i) => i.id === id)
       setIncidents((prev) => prev.map((i) => (i.id === id ? { ...i, ...updates } : i)))
       try {
-        const { data, error: updateError } = await supabase
-          .from('incidents')
-          .update(updates)
-          .eq('id', id)
+        const { data, error: updateError } = await fromTable('incidents')
+          .update(updates as never)
+          .eq('id' as never, id)
           .select()
           .single()
         if (updateError) throw updateError
-        setIncidents((prev) => prev.map((i) => (i.id === id ? (data as IncidentRow) : i)))
-        return data as IncidentRow
+        setIncidents((prev) => prev.map((i) => (i.id === id ? (data as unknown as IncidentRow) : i)))
+        return data as unknown as IncidentRow
       } catch (err) {
         if (previous) setIncidents((prev) => prev.map((i) => (i.id === id ? previous : i)))
         if (import.meta.env.DEV) console.error('updateIncident failed:', err)
@@ -247,13 +242,12 @@ export function useSafetyInspections(projectId: string) {
     if (!projectId) return
     try {
       setIsLoading(true)
-      const { data, error: queryError } = await supabase
-        .from('safety_inspections')
+      const { data, error: queryError } = await fromTable('safety_inspections')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('date', { ascending: false })
       if (queryError) throw queryError
-      setInspections(data ?? [])
+      setInspections((data ?? []) as unknown as SafetyInspectionRow[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -296,13 +290,12 @@ export function useToolboxTalks(projectId: string) {
     if (!projectId) return
     try {
       setIsLoading(true)
-      const { data, error: queryError } = await supabase
-        .from('toolbox_talks')
+      const { data, error: queryError } = await fromTable('toolbox_talks')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('date', { ascending: false })
       if (queryError) throw queryError
-      setTalks(data ?? [])
+      setTalks((data ?? []) as unknown as ToolboxTalkRow[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -340,14 +333,13 @@ export function useToolboxTalks(projectId: string) {
       } as ToolboxTalkRow
       setTalks((prev) => [optimisticItem, ...prev])
       try {
-        const { data, error: insertError } = await supabase
-          .from('toolbox_talks')
-          .insert([{ ...fields, project_id: projectId }])
+        const { data, error: insertError } = await fromTable('toolbox_talks')
+          .insert([{ ...fields, project_id: projectId }] as never)
           .select()
           .single()
         if (insertError) throw insertError
-        setTalks((prev) => prev.map((t) => (t.id === optimisticItem.id ? (data as ToolboxTalkRow) : t)))
-        return data as ToolboxTalkRow
+        setTalks((prev) => prev.map((t) => (t.id === optimisticItem.id ? (data as unknown as ToolboxTalkRow) : t)))
+        return data as unknown as ToolboxTalkRow
       } catch (err) {
         setTalks((prev) => prev.filter((t) => t.id !== optimisticItem.id))
         if (import.meta.env.DEV) console.error('createTalk failed:', err)
@@ -375,13 +367,12 @@ export function useCorrectiveActions(projectId: string) {
     if (!projectId) return
     try {
       setIsLoading(true)
-      const { data, error: queryError } = await supabase
-        .from('corrective_actions')
+      const { data, error: queryError } = await fromTable('corrective_actions')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('created_at', { ascending: false })
       if (queryError) throw queryError
-      setActions(data ?? [])
+      setActions((data ?? []) as unknown as CorrectiveActionRow[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -421,14 +412,13 @@ export function useCorrectiveActions(projectId: string) {
       setActions((prev) => [optimisticItem, ...prev])
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        const { data, error: insertError } = await supabase
-          .from('corrective_actions')
-          .insert([{ ...fields, project_id: projectId, created_by: fields.created_by ?? user?.id ?? null }])
+        const { data, error: insertError } = await fromTable('corrective_actions')
+          .insert([{ ...fields, project_id: projectId, created_by: fields.created_by ?? user?.id ?? null }] as never)
           .select()
           .single()
         if (insertError) throw insertError
-        setActions((prev) => prev.map((a) => (a.id === optimisticItem.id ? (data as CorrectiveActionRow) : a)))
-        return data as CorrectiveActionRow
+        setActions((prev) => prev.map((a) => (a.id === optimisticItem.id ? (data as unknown as CorrectiveActionRow) : a)))
+        return data as unknown as CorrectiveActionRow
       } catch (err) {
         setActions((prev) => prev.filter((a) => a.id !== optimisticItem.id))
         if (import.meta.env.DEV) console.error('createAction failed:', err)
@@ -443,15 +433,14 @@ export function useCorrectiveActions(projectId: string) {
       const previous = actionsRef.current.find((a) => a.id === id)
       setActions((prev) => prev.map((a) => (a.id === id ? { ...a, ...updates } : a)))
       try {
-        const { data, error: updateError } = await supabase
-          .from('corrective_actions')
-          .update(updates)
-          .eq('id', id)
+        const { data, error: updateError } = await fromTable('corrective_actions')
+          .update(updates as never)
+          .eq('id' as never, id)
           .select()
           .single()
         if (updateError) throw updateError
-        setActions((prev) => prev.map((a) => (a.id === id ? (data as CorrectiveActionRow) : a)))
-        return data as CorrectiveActionRow
+        setActions((prev) => prev.map((a) => (a.id === id ? (data as unknown as CorrectiveActionRow) : a)))
+        return data as unknown as CorrectiveActionRow
       } catch (err) {
         if (previous) setActions((prev) => prev.map((a) => (a.id === id ? previous : a)))
         if (import.meta.env.DEV) console.error('updateAction failed:', err)
@@ -478,16 +467,15 @@ export function useWeatherCache(projectId: string) {
     async function fetchWeather() {
       try {
         setIsLoading(true)
-        const { data, error: queryError } = await supabase
-          .from('weather_records')
+        const { data, error: queryError } = await fromTable('weather_records')
           .select('*')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('date', { ascending: false })
           .limit(1)
           .maybeSingle()
         if (queryError) throw queryError
         if (!cancelled) {
-          setWeather(data ?? null)
+          setWeather((data ?? null) as unknown as WeatherRecordRow | null)
           setError(null)
         }
       } catch (err) {
@@ -516,13 +504,12 @@ export function useSafetyCertifications(projectId: string) {
     if (!projectId) return
     try {
       setIsLoading(true)
-      const { data, error: queryError } = await supabase
-        .from('safety_certifications')
+      const { data, error: queryError } = await fromTable('safety_certifications')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('expiration_date', { ascending: true })
       if (queryError) throw queryError
-      setCertifications(data ?? [])
+      setCertifications((data ?? []) as unknown as SafetyCertificationRow[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))

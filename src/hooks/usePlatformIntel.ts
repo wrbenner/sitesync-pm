@@ -5,7 +5,8 @@
 // data is NEVER shared across organizations.
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
+import { fromTable, selectScoped } from '../lib/db/queries'
 import { useProjectId } from './useProjectId'
 import type {
   BenchmarkData,
@@ -29,19 +30,19 @@ export function useBenchmarks(
     queryKey: ['benchmarks', projectType, region, period],
     queryFn: async (): Promise<BenchmarkData[]> => {
       if (!isSupabaseConfigured) return []
-      let query = supabase
-        .from('benchmarks')
+      let query = fromTable('benchmarks')
         .select('*')
         .order('calculated_at', { ascending: false })
 
-      if (projectType) query = query.eq('project_type', projectType)
-      if (region) query = query.eq('region', region)
-      if (period) query = query.eq('period', period)
+      if (projectType) query = query.eq('project_type' as never, projectType) as typeof query
+      if (region) query = query.eq('region' as never, region) as typeof query
+      if (period) query = query.eq('period' as never, period) as typeof query
 
       const { data, error } = await query.limit(100)
       if (error) throw error
 
-      return (data ?? []).map((row) => ({
+      type BenchmarkRow = { id: string; metric_type: string; project_type: string; region: string | null; value: number | null; p25: number | null; p50: number | null; p75: number | null; p90: number | null; sample_size: number | null; period: string | null; calculated_at: string | null }
+      return ((data ?? []) as unknown as BenchmarkRow[]).map((row) => ({
         id: row.id,
         metricType: row.metric_type as BenchmarkMetric,
         projectType: row.project_type as ProjectType,
@@ -71,24 +72,27 @@ export function useBenchmarkComparisons(projectType?: ProjectType, region?: stri
       if (!projectId || !isSupabaseConfigured) return []
 
       // Fetch benchmark data
-      let bmQuery = supabase
-        .from('benchmarks')
+      let bmQuery = fromTable('benchmarks')
         .select('*')
         .order('calculated_at', { ascending: false })
-      if (projectType) bmQuery = bmQuery.eq('project_type', projectType)
-      if (region) bmQuery = bmQuery.eq('region', region)
+      if (projectType) bmQuery = bmQuery.eq('project_type' as never, projectType) as typeof bmQuery
+      if (region) bmQuery = bmQuery.eq('region' as never, region) as typeof bmQuery
       const { data: benchmarks } = await bmQuery.limit(50)
 
       // Fetch your project's metrics
       const [rfiResult, , budgetResult] = await Promise.all([
-        supabase.from('rfis').select('created_at, closed_date, status').eq('project_id', projectId),
-        supabase.from('tasks').select('end_date, status, percent_complete').eq('project_id', projectId),
-        supabase.from('budget_items').select('original_amount, actual_amount').eq('project_id', projectId),
+        selectScoped('rfis', projectId, 'created_at, closed_date, status'),
+        selectScoped('tasks', projectId, 'end_date, status, percent_complete'),
+        selectScoped('budget_items', projectId, 'original_amount, actual_amount'),
       ])
 
-      const rfis = rfiResult.data ?? []
+      type RfiSlim = { created_at: string | null; closed_date: string | null; status: string | null }
+      type BudgetSlim = { original_amount: number | null; actual_amount: number | null }
+      type BmRow = { id: string; metric_type: string; project_type: string; region: string | null; value: number | null; p25: number | null; p50: number | null; p75: number | null; p90: number | null; sample_size: number | null; period: string | null; calculated_at: string | null }
 
-      const budget = budgetResult.data ?? []
+      const rfis = (rfiResult.data ?? []) as unknown as RfiSlim[]
+
+      const budget = (budgetResult.data ?? []) as unknown as BudgetSlim[]
 
       // Calculate your RFI turnaround
       const answeredRfis = rfis.filter((r) => r.closed_date && r.created_at)
@@ -107,7 +111,7 @@ export function useBenchmarkComparisons(projectType?: ProjectType, region?: stri
       // Build comparisons
       const comparisons: BenchmarkComparison[] = []
       const benchmarkMap = new Map<string, BenchmarkData>()
-      for (const bm of (benchmarks ?? [])) {
+      for (const bm of (benchmarks ?? []) as unknown as BmRow[]) {
         const key = bm.metric_type as string
         if (!benchmarkMap.has(key)) {
           benchmarkMap.set(key, {
@@ -174,13 +178,15 @@ export function useSubcontractorProfiles(trade?: string, region?: string) {
     queryFn: async (): Promise<SubcontractorProfile[]> => {
       if (!isSupabaseConfigured) return []
 
-      const query = supabase
-        .from('subcontractor_ratings')
+      const query = fromTable('subcontractor_ratings')
         .select('company_id, metrics, period')
         .order('created_at', { ascending: false })
 
       const { data: ratings, error } = await query.limit(500)
       if (error) throw error
+
+      type RatingRow = { company_id: string | null; metrics: Record<string, number> | null; period: string | null }
+      type CompanyRow = { id: string; company: string | null; trade: string | null }
 
       // Aggregate ratings by company
       const companyMap = new Map<string, {
@@ -188,14 +194,15 @@ export function useSubcontractorProfiles(trade?: string, region?: string) {
         metrics: Array<Record<string, number>>
       }>()
 
-      for (const rating of ratings ?? []) {
-        const cid = rating.company_id as string
+      for (const rating of (ratings ?? []) as unknown as RatingRow[]) {
+        const cid = rating.company_id ?? ''
+        if (!cid) continue
         if (!companyMap.has(cid)) {
           companyMap.set(cid, { ratings: [], metrics: [] })
         }
-        companyMap.get(cid)!.ratings.push(rating as Record<string, unknown>)
+        companyMap.get(cid)!.ratings.push(rating as unknown as Record<string, unknown>)
         if (rating.metrics) {
-          companyMap.get(cid)!.metrics.push(rating.metrics as Record<string, number>)
+          companyMap.get(cid)!.metrics.push(rating.metrics)
         }
       }
 
@@ -203,15 +210,14 @@ export function useSubcontractorProfiles(trade?: string, region?: string) {
       const companyIds = Array.from(companyMap.keys())
       if (companyIds.length === 0) return []
 
-      const { data: companies } = await supabase
-        .from('directory_contacts')
+      const { data: companies } = await fromTable('directory_contacts')
         .select('id, company, trade')
-        .in('id', companyIds)
+        .in('id' as never, companyIds as never[])
         .limit(100)
 
       const profiles: SubcontractorProfile[] = []
       for (const [companyId, data] of companyMap) {
-        const company = (companies ?? []).find((c) => c.id === companyId)
+        const company = ((companies ?? []) as unknown as CompanyRow[]).find((c) => c.id === companyId)
         if (!company) continue
 
         const avgMetrics = averageMetrics(data.metrics)
@@ -255,19 +261,20 @@ export function useMaterialPriceTrends(region?: string) {
     queryFn: async (): Promise<MaterialPriceTrend[]> => {
       if (!isSupabaseConfigured) return []
 
-      let query = supabase
-        .from('material_prices')
+      let query = fromTable('material_prices')
         .select('material_type, unit, price, region, recorded_at')
         .order('recorded_at', { ascending: true })
 
-      if (region) query = query.eq('region', region)
+      if (region) query = query.eq('region' as never, region) as typeof query
       const { data, error } = await query.limit(1000)
       if (error) throw error
 
+      type MaterialPriceRow = { material_type: string; unit: string | null; price: number | null; region: string | null; recorded_at: string | null }
+
       // Group by material type
       const grouped = new Map<string, Array<{ date: string; price: number }>>()
-      for (const row of data ?? []) {
-        const key = row.material_type as string
+      for (const row of (data ?? []) as unknown as MaterialPriceRow[]) {
+        const key = row.material_type
         if (!grouped.has(key)) grouped.set(key, [])
         grouped.get(key)!.push({
           date: row.recorded_at ?? '',
@@ -312,20 +319,18 @@ export function useRiskPredictions() {
     queryFn: async (): Promise<RiskPrediction[]> => {
       if (!projectId || !isSupabaseConfigured) return []
 
-      const { data, error } = await supabase
-        .from('risk_predictions')
-        .select('*')
-        .eq('project_id', projectId)
+      const { data, error } = await selectScoped('risk_predictions', projectId, '*')
         .order('probability', { ascending: false })
         .limit(20)
 
       if (error) throw error
-      return (data ?? []).map((r) => ({
+      type RiskRow = { id: string; project_id: string; risk_type: string; probability: number; impact: string; description: string; factors: string[] | null; recommendation: string | null; predicted_at: string | null; created_at: string | null }
+      return ((data ?? []) as unknown as RiskRow[]).map((r) => ({
         id: r.id,
         projectId: r.project_id,
-        riskType: r.risk_type,
+        riskType: r.risk_type as RiskPrediction['riskType'],
         probability: r.probability,
-        impact: r.impact,
+        impact: r.impact as RiskPrediction['impact'],
         description: r.description,
         factors: r.factors ?? [],
         recommendation: r.recommendation ?? '',

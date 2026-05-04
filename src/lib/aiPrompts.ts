@@ -8,13 +8,13 @@ import { getDailyLogs } from '../api/endpoints/field'
 import { getSubmittals } from '../api/endpoints/submittals'
 import { getActivityFeed } from '../api/endpoints/activity'
 import { usePresenceStore } from '../stores/presenceStore'
-import { useNotificationStore } from '../stores/notificationStore'
+import { useUiStore } from '../stores/uiStore'
 
 const IDLE_THRESHOLD_MS = 48 * 60 * 60 * 1000
 
 export async function buildCollaborationContext(projectId: string): Promise<CollaborationContext> {
   const presenceState = usePresenceStore.getState()
-  const notifState = useNotificationStore.getState()
+  const notifState = useUiStore.getState()
 
   const onlineUsers = presenceState.onlineUsers.map(u => ({
     id: u.userId || '',
@@ -39,7 +39,7 @@ export async function buildCollaborationContext(projectId: string): Promise<Coll
   if (activityRes.status === 'fulfilled') {
     for (const entry of activityRes.value) {
       const uid = (entry as { user_id?: string | null }).user_id
-      const ts = entry.created_at ? new Date(entry.created_at).getTime() : 0
+      const ts = entry.createdAt ? new Date(entry.createdAt).getTime() : 0
       if (uid && ts) {
         const prev = lastActivityByUser.get(uid) ?? 0
         if (ts > prev) lastActivityByUser.set(uid, ts)

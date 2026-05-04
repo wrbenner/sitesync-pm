@@ -25,6 +25,23 @@ import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { PageInsightBanners } from '../../components/ai/PredictiveAlert'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { fmtCurrency, type TabKey, type PayAppProject } from './types'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
+
+// Local helper: sum a dollar field across rows on integer cents to prevent
+// float drift, return the result as dollars to keep the existing display API.
+function sumDollarsViaCents<T>(items: T[], pick: (item: T) => number): number {
+  const totalC: Cents = items.reduce<Cents>(
+    (acc, item) => addCents(acc, dollarsToCents(pick(item) || 0)),
+    0 as Cents,
+  )
+  return fromCents(totalC) / 100
+}
 import { PayAppList } from './PayAppList'
 import { PayAppDetail } from './PayAppDetail'
 import { LienWaiverPanel, CashFlowPanel } from './LienWaiverPanel'
@@ -108,24 +125,6 @@ const PaymentApplicationsPage: React.FC = () => {
     setG702ModalOpen(true)
   }, [])
 
-  const handleRetainageRelease = useCallback(async (itemId: string) => {
-    setRetainageItems((prev) => prev.map((item) =>
-      item.id === itemId
-        ? { ...item, stage: 'requested' as RetainageStage }
-        : item
-    ))
-    const { error } = await supabase
-      .from('retainage_ledger')
-      .update({ stage: 'requested', updated_at: new Date().toISOString() })
-      .eq('id', itemId)
-    if (error) {
-      toast.error('Failed to save retainage release request')
-    } else {
-      toast.success('Retainage release requested')
-      queryClient.invalidateQueries({ queryKey: ['retainage_ledger', projectId] })
-    }
-  }, [projectId, queryClient])
-
   const handleRetainageStageAdvance = useCallback(async (itemId: string) => {
     let nextStage: RetainageStage | null = null
     let released = 0
@@ -145,8 +144,8 @@ const PaymentApplicationsPage: React.FC = () => {
       }
       const { error } = await supabase
         .from('retainage_ledger')
-        .update(updatePayload)
-        .eq('id', itemId)
+        .update(updatePayload as never)
+        .eq('id' as never, itemId)
       if (error) {
         toast.error('Failed to advance retainage stage')
       } else {
@@ -219,9 +218,9 @@ const PaymentApplicationsPage: React.FC = () => {
     [retainageEntries],
   )
 
-  const apps = (payApps ?? []) as Array<Record<string, unknown>>
-  const contractList = (contracts ?? []) as Array<Record<string, unknown>>
-  const waivers = (lienWaivers ?? []) as LienWaiverRow[]
+  const apps = (payApps ?? []) as unknown as Array<Record<string, unknown>>
+  const contractList = (contracts ?? []) as unknown as Array<Record<string, unknown>>
+  const waivers = (lienWaivers ?? []) as unknown as LienWaiverRow[]
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
   const isLoading = loadingApps || loadingContracts || loadingRetainage
@@ -243,7 +242,7 @@ const PaymentApplicationsPage: React.FC = () => {
     const contract = contractList.find((c) => c.id === g702ModalApp.contract_id)
     return {
       projectName: (project?.name as string) ?? '',
-      ownerName: (project as Record<string, unknown>)?.owner_name as string ?? '',
+      ownerName: (project as unknown as Record<string, unknown>)?.owner_name as string ?? '',
       architectName: '',
       contractorName: (contract?.counterparty as string) ?? '',
       contractDate: '',
@@ -266,7 +265,7 @@ const PaymentApplicationsPage: React.FC = () => {
   const g703Lines = useMemo((): G703Line[] => {
     if (!g702ModalApp) return []
     // Use retainage ledger data scoped to this pay app if available
-    const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
+    const retainageArr = (retainage ?? []) as unknown as Array<Record<string, unknown>>
     return retainageArr
       .filter((r) => (r.pay_application_id as string) === g702ModalAppId || !r.pay_application_id)
       .map((r, i) => {
@@ -293,10 +292,10 @@ const PaymentApplicationsPage: React.FC = () => {
 
   // Populate retainageItems from the retainage ledger when data arrives
   useEffect(() => {
-    const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
+    const retainageArr = (retainage ?? []) as unknown as Array<Record<string, unknown>>
     if (retainageArr.length > 0 && retainageItems.length === 0) {
       setRetainageItems(retainageArr.map((r) => ({
-        id: (r.id as string) || String(Math.random()),
+        id: (r.id as string) || crypto.randomUUID(),
         description: (r.description as string) || 'SOV Item',
         scheduledValue: (r.scheduled_value as number) || (r.amount as number) || 0,
         retainageHeld: ((r.amount as number) || 0) - ((r.released_amount as number) || 0),
@@ -387,10 +386,13 @@ const PaymentApplicationsPage: React.FC = () => {
 
   const kpis = useMemo(() => {
     const total = apps.length
-    const totalDue = apps.reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
-    const totalPaid = apps.filter((a) => a.status === 'paid').reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
+    const totalDue = sumDollarsViaCents(apps, (a) => (a.current_payment_due as number) || 0)
+    const totalPaid = sumDollarsViaCents(
+      apps.filter((a) => a.status === 'paid'),
+      (a) => (a.current_payment_due as number) || 0,
+    )
     const pending = apps.filter((a) => a.status !== 'paid' && a.status !== 'void' && a.status !== 'draft').length
-    const totalRetainage = apps.reduce((s, a) => s + ((a.retainage as number) || 0), 0)
+    const totalRetainage = sumDollarsViaCents(apps, (a) => (a.retainage as number) || 0)
     return { total, totalDue, totalPaid, pending, totalRetainage }
   }, [apps])
 
@@ -399,33 +401,51 @@ const PaymentApplicationsPage: React.FC = () => {
       title="Payment Applications"
       subtitle="AIA G702/G703 payment applications, lien waivers, and cash flow management"
     >
-      <div style={{
-        display: 'flex', gap: spacing['1'],
-        backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
-        padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
-      }}>
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
-                border: 'none', borderRadius: borderRadius.base, cursor: 'pointer',
-                fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.orangeText : colors.textSecondary,
-                backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
-              }}
-            >
-              {React.createElement(tab.icon, { size: 14 })}
-              {tab.label}
-            </button>
-          )
-        })}
+      <div style={{ position: 'relative', marginBottom: spacing['2xl'] }}>
+        <div style={{
+          display: 'flex', gap: spacing['2'],
+          backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg,
+          padding: spacing['1'], overflowX: 'auto',
+          scrollbarWidth: 'none', msOverflowStyle: 'none',
+        }}>
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['4']}`,
+                  border: 'none', borderRadius: borderRadius.base, cursor: 'pointer',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                {React.createElement(tab.icon, { size: 14 })}
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        <div aria-hidden style={{
+          position: 'absolute', top: 0, left: 0, bottom: 0, width: 28,
+          background: `linear-gradient(to right, ${colors.surfaceInset}, transparent)`,
+          borderTopLeftRadius: borderRadius.lg,
+          borderBottomLeftRadius: borderRadius.lg,
+          pointerEvents: 'none',
+        }} />
+        <div aria-hidden style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
+          background: `linear-gradient(to left, ${colors.surfaceInset}, transparent)`,
+          borderTopRightRadius: borderRadius.lg,
+          borderBottomRightRadius: borderRadius.lg,
+          pointerEvents: 'none',
+        }} />
       </div>
 
       {isLoading && (
@@ -570,7 +590,7 @@ const PaymentApplicationsPage: React.FC = () => {
       )}
 
       {activeTab === 'cash_flow' && !isLoading && (
-        <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as Array<Record<string, unknown>>} />
+        <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as unknown as Array<Record<string, unknown>>} />
       )}
 
       {/* ── Retainage Ledger (retainage_entries) ────────────── */}
@@ -604,7 +624,7 @@ const PaymentApplicationsPage: React.FC = () => {
                   ))}
                 </div>
                 {(retainageEntries ?? []).map((e, i) => {
-                  const contract = contractList.find((c) => c.id === e.contract_id) as Record<string, unknown> | undefined
+                  const contract = contractList.find((c) => c.id === e.contract_id) as unknown as Record<string, unknown> | undefined
                   const label = (contract?.counterparty as string) || (contract?.description as string) || `Contract ${String(e.contract_id).slice(0, 8)}`
                   const outstanding = (e.amount_held ?? 0) - (e.released_amount ?? 0)
                   const fullyReleased = !!e.released_at || outstanding <= 0.005
@@ -676,12 +696,20 @@ const PaymentApplicationsPage: React.FC = () => {
 
       {/* ── Retainage Release Workflow Tab (legacy ledger pipeline) ── */}
       {activeTab === 'retainage' && !isLoading && (() => {
-        const totalHeld = retainageItems.reduce((s, i) => s + i.retainageHeld, 0)
-        const totalReleased = retainageItems.reduce((s, i) => s + i.retainageReleased, 0)
-        const totalUnreleased = totalHeld - totalReleased
+        const totalHeld = sumDollarsViaCents(retainageItems, (i) => i.retainageHeld)
+        const totalReleased = sumDollarsViaCents(retainageItems, (i) => i.retainageReleased)
+        const totalUnreleased = fromCents(
+          subtractCents(dollarsToCents(totalHeld), dollarsToCents(totalReleased)),
+        ) / 100
         const releasedPct = totalHeld > 0 ? (totalReleased / totalHeld) * 100 : 0
-        const originalSubtotal = retainageItems.filter((i) => !i.isCO).reduce((s, i) => s + i.retainageHeld, 0)
-        const coSubtotal = retainageItems.filter((i) => i.isCO).reduce((s, i) => s + i.retainageHeld, 0)
+        const originalSubtotal = sumDollarsViaCents(
+          retainageItems.filter((i) => !i.isCO),
+          (i) => i.retainageHeld,
+        )
+        const coSubtotal = sumDollarsViaCents(
+          retainageItems.filter((i) => i.isCO),
+          (i) => i.retainageHeld,
+        )
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
@@ -818,32 +846,36 @@ const PaymentApplicationsPage: React.FC = () => {
                           ) : (
                             <>
                               {item.stage !== 'requested' && (
-                                <button
-                                  onClick={() => handleRetainageStageAdvance(item.id)}
-                                  style={{
-                                    padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
-                                    borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
-                                    color: colors.statusInfo, fontSize: typography.fontSize.caption,
-                                    fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                                    cursor: 'pointer', whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  Advance
-                                </button>
+                                <PermissionGate permission="financials.edit">
+                                  <button
+                                    onClick={() => handleRetainageStageAdvance(item.id)}
+                                    style={{
+                                      padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                                      borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                                      color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                                      fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Advance
+                                  </button>
+                                </PermissionGate>
                               )}
                               {item.stage === 'requested' && (
-                                <button
-                                  onClick={() => handleRetainageStageAdvance(item.id)}
-                                  style={{
-                                    padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
-                                    borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                                    color: colors.textSecondary, fontSize: typography.fontSize.caption,
-                                    fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                                    cursor: 'pointer', whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  Mark Punch Done
-                                </button>
+                                <PermissionGate permission="financials.edit">
+                                  <button
+                                    onClick={() => handleRetainageStageAdvance(item.id)}
+                                    style={{
+                                      padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                                      borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                                      color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                                      fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                                      cursor: 'pointer', whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Mark Punch Done
+                                  </button>
+                                </PermissionGate>
                               )}
                             </>
                           )}
@@ -998,17 +1030,23 @@ const PaymentApplicationsPage: React.FC = () => {
                   })}
                   {/* Totals row */}
                   {(() => {
-                    const totals = g703Lines.reduce((acc, l) => ({
-                      scheduled: acc.scheduled + l.scheduled,
-                      prevComplete: acc.prevComplete + l.prevComplete,
-                      thisPeriod: acc.thisPeriod + l.thisPeriod,
-                      materialsStored: acc.materialsStored + l.materialsStored,
-                      totalCompleted: acc.totalCompleted + l.totalCompleted,
-                      balanceToFinish: acc.balanceToFinish + l.balanceToFinish,
-                      retainage: acc.retainage + l.retainage,
-                    }), { scheduled: 0, prevComplete: 0, thisPeriod: 0, materialsStored: 0, totalCompleted: 0, balanceToFinish: 0, retainage: 0 })
-                    const origTotal = g703Lines.filter((l) => !l.item.startsWith('CO#')).reduce((s, l) => s + l.scheduled, 0)
-                    const coTotal = g703Lines.filter((l) => l.item.startsWith('CO#')).reduce((s, l) => s + l.scheduled, 0)
+                    const totals = {
+                      scheduled: sumDollarsViaCents(g703Lines, (l) => l.scheduled),
+                      prevComplete: sumDollarsViaCents(g703Lines, (l) => l.prevComplete),
+                      thisPeriod: sumDollarsViaCents(g703Lines, (l) => l.thisPeriod),
+                      materialsStored: sumDollarsViaCents(g703Lines, (l) => l.materialsStored),
+                      totalCompleted: sumDollarsViaCents(g703Lines, (l) => l.totalCompleted),
+                      balanceToFinish: sumDollarsViaCents(g703Lines, (l) => l.balanceToFinish),
+                      retainage: sumDollarsViaCents(g703Lines, (l) => l.retainage),
+                    }
+                    const origTotal = sumDollarsViaCents(
+                      g703Lines.filter((l) => !l.item.startsWith('CO#')),
+                      (l) => l.scheduled,
+                    )
+                    const coTotal = sumDollarsViaCents(
+                      g703Lines.filter((l) => l.item.startsWith('CO#')),
+                      (l) => l.scheduled,
+                    )
                     return (
                       <>
                         <div style={{
@@ -1091,7 +1129,7 @@ const PaymentApplicationsPage: React.FC = () => {
               onChange={(e) => setGenWaiverForm((f) => ({ ...f, type: e.target.value as WaiverType }))}
               style={{ width: '100%', padding: spacing['2'], borderRadius: borderRadius.base, border: `1px solid ${colors.borderDefault}`, backgroundColor: colors.surfaceRaised, color: colors.textPrimary, fontSize: typography.fontSize.sm }}
             >
-              {(Object.keys(WAIVER_TYPE_LABELS) as WaiverType[]).map((t) => (
+              {(Object.keys(WAIVER_TYPE_LABELS) as unknown as WaiverType[]).map((t) => (
                 <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
               ))}
             </select>

@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronUp, Eye,
 } from 'lucide-react';
 import { Btn } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { DISCIPLINE_COLORS, STATUS_CONFIG } from './constants';
 import type { DrawingRevision } from '../../types/api';
 import { formatRevDate } from './types';
@@ -31,6 +31,18 @@ export interface DrawingItem {
   tile_format?: string;
   currentRevision?: { revision_number: number; issued_date: string | null; issued_by?: string };
   revisions: DrawingRevision[];
+  /** Markup count for this sheet — wired by the page when annotation
+   *  counts are available; defaults to 0 in the UI. */
+  markupCount?: number;
+  /** Linked RFI count — populated by `getDrawings` once the FK migration
+   *  lands; the UI shows the badge whenever the value is > 0. */
+  linkedRfiCount?: number;
+  /** Server-side last-modified timestamp for the drawing row. */
+  updated_at?: string | null;
+  /** Scale text extracted from the drawing's title block. */
+  scale_text?: string | null;
+  /** Raw sheet number from the drawing record. */
+  sheet_number?: string | null;
 }
 
 interface DrawingListProps {
@@ -140,7 +152,7 @@ export const DrawingList: React.FC<DrawingListProps> = ({
   onToggleSelect,
   onSelectAll,
   focusedId,
-  onSelectDrawing,
+  onSelectDrawing: _onSelectDrawing,
   onViewDrawing,
   onUploadClick,
   searchQuery,
@@ -304,8 +316,8 @@ export const DrawingList: React.FC<DrawingListProps> = ({
               role="listitem"
               tabIndex={0}
               aria-label={`${drawing.setNumber} ${drawing.title}`}
-              onClick={() => onSelectDrawing(drawing)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectDrawing(drawing); } }}
+              onClick={() => onViewDrawing(drawing)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewDrawing(drawing); } }}
               style={{
                 display: 'grid', gridTemplateColumns: GRID_TEMPLATE,
                 padding: '10px 16px',

@@ -169,12 +169,6 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return { miles: Math.round(miles * 100) / 100, feet: Math.round(miles * 5280) };
 }
 
-function driveTimeEstimate(miles: number): string {
-  if (miles < 0.3) return `${Math.round(miles * 5280 / 260)} min walk`;
-  const minutes = Math.max(1, Math.round(miles * 2.5)); // ~24mph avg city speed
-  return `${minutes} min`;
-}
-
 // ── 1. Geocoding (Nominatim) ──────────────────────────────────
 
 export async function geocodeAddress(query: string): Promise<GeocodingResult[]> {
@@ -724,7 +718,7 @@ async function fetchEPASuperfund(lat: number, lng: number): Promise<EPAFacility[
 
 // ── 8. Sun Exposure Calculation ───────────────────────────────
 
-function calculateSunData(lat: number, lng: number): SunData {
+function calculateSunData(lat: number, _lng: number): SunData {
   const now = new Date();
   const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
 

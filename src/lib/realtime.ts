@@ -82,7 +82,7 @@ export function subscribeToProject(projectId: string, currentUserId?: string) {
         }
 
         // Show toast for changes made by other users
-        const record = (payload.new || payload.old) as Record<string, unknown> | null
+        const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
         const friendlyName = TABLE_LABELS[table]
         const eventLabel = EVENT_LABELS[payload.eventType]
 
@@ -122,7 +122,7 @@ export function subscribeToNotifications(userId: string) {
     }, (payload) => {
       queryClient.invalidateQueries({ queryKey: ['notifications', userId] })
 
-      const notification = payload.new as Record<string, unknown>
+      const notification = payload.new as unknown as Record<string, unknown>
 
       // Show desktop notification if permission granted
       if (notification && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -209,7 +209,20 @@ export function subscribeToPresence(
 
       for (const [key, presences] of Object.entries(state)) {
         if (key === userId) continue // Skip self
-        const latest = (presences as Array<{ editingSince?: number; action?: string; name?: string; displayName?: string; role?: string; initials?: string; page?: string; editingEntity?: string }>)[0]
+        const latest = (presences as Array<{
+          editingSince?: number
+          action?: string
+          name?: string
+          displayName?: string
+          role?: string
+          initials?: string
+          page?: string
+          entityId?: string
+          editingEntity?: string
+          editingEntityType?: string
+          editingEntityId?: string
+          lastSeen?: number
+        }>)[0]
         if (latest) {
           // Release stale editing locks (30 second timeout)
           const editingSince = latest.editingSince as number | undefined

@@ -50,11 +50,11 @@ async function countRows(
   filters: Record<string, unknown> = {},
 ): Promise<number> {
   try {
-    let query = fromTable(table)
+    let query = fromTable(table as never)
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
     for (const [k, v] of Object.entries(filters)) {
-      query = query.eq(k, v as never)
+      query = query.eq(k as never, v as never)
     }
     const { count } = await query
     return count ?? 0
@@ -68,9 +68,9 @@ async function drawingsContext(projectId: string): Promise<Partial<RouteContext>
   const [byDisc, pairs, discrepancies, critical] = await Promise.all([
     fromTable('drawing_classifications')
       .select('discipline')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .limit(500)
-      .then((r) => {
+      .then((r: { data: unknown }) => {
         const rows = (r.data as Array<{ discipline: string }> | null) ?? []
         return rows.reduce<Record<string, number>>((acc, row) => {
           acc[row.discipline] = (acc[row.discipline] ?? 0) + 1
@@ -95,7 +95,7 @@ async function drawingsContext(projectId: string): Promise<Partial<RouteContext>
   }
 
   return {
-    summary: `${Object.values(byDisc).reduce((a, b) => a + b, 0)} drawings classified (${disciplines}). ${pairs} arch/struct pairs, ${discrepancies} discrepancies.`,
+    summary: `${Object.values(byDisc).reduce((a: number, b: number) => a + b, 0)} drawings classified (${disciplines}). ${pairs} arch/struct pairs, ${discrepancies} discrepancies.`,
     facts: {
       pairs,
       discrepancies,
@@ -118,16 +118,16 @@ async function rfisContext(projectId: string): Promise<Partial<RouteContext>> {
     countRows('rfis', projectId, { status: 'open' }),
     fromTable('rfis')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('status', 'open')
-      .lt('due_date', now)
-      .then((r) => r.count ?? 0),
+      .eq('project_id' as never, projectId)
+      .eq('status' as never, 'open')
+      .lt('due_date' as never, now)
+      .then((r: { count: number | null }) => r.count ?? 0),
     fromTable('rfis')
       .select('created_at, closed_date')
-      .eq('project_id', projectId)
-      .not('closed_date', 'is', null)
+      .eq('project_id' as never, projectId)
+      .not('closed_date' as never, 'is', null)
       .limit(200)
-      .then((r) => {
+      .then((r: { data: unknown }) => {
         const rows = (r.data as Array<{ created_at: string; closed_date: string }> | null) ?? []
         if (rows.length === 0) return null
         const avgMs =
@@ -167,17 +167,17 @@ async function dashboardContext(projectId: string): Promise<Partial<RouteContext
     countRows('rfis', projectId, { status: 'open' }).catch(() => 0),
     fromTable('tasks')
       .select('id, title, due_date')
-      .eq('project_id', projectId)
-      .eq('is_critical_path', true)
-      .gte('due_date', new Date().toISOString())
+      .eq('project_id' as never, projectId)
+      .eq('is_critical_path' as never, true)
+      .gte('due_date' as never, new Date().toISOString())
       .order('due_date')
       .limit(3)
-      .then((r) => ((r.data as Array<{ id: string; title: string; due_date: string }> | null) ?? [])),
+      .then((r: { data: unknown }) => ((r.data as Array<{ id: string; title: string; due_date: string }> | null) ?? [])),
     countRows('safety_incidents', projectId).catch(() => 0),
   ])
 
   return {
-    summary: `${tasks} tasks in progress, ${openRfis} open RFIs. Next milestones: ${upcomingMilestones.map((m) => m.title).join(', ') || 'none'}.`,
+    summary: `${tasks} tasks in progress, ${openRfis} open RFIs. Next milestones: ${upcomingMilestones.map((m: { title: string }) => m.title).join(', ') || 'none'}.`,
     facts: {
       tasks_in_progress: tasks,
       open_rfis: openRfis,
@@ -199,10 +199,10 @@ async function scheduleContext(projectId: string): Promise<Partial<RouteContext>
     countRows('tasks', projectId),
     fromTable('tasks')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .neq('status', 'done')
-      .lt('due_date', new Date().toISOString())
-      .then((r) => r.count ?? 0),
+      .eq('project_id' as never, projectId)
+      .neq('status' as never, 'done')
+      .lt('due_date' as never, new Date().toISOString())
+      .then((r: { count: number | null }) => r.count ?? 0),
     countRows('tasks', projectId, { is_critical_path: true }).catch(() => 0),
   ])
 

@@ -169,7 +169,7 @@ export function initVitals() {
   // TTFB from Navigation Timing API (more reliable)
   if (typeof performance !== 'undefined' && performance.getEntriesByType) {
     try {
-      const [nav] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[]
+      const [nav] = performance.getEntriesByType('navigation') as unknown as PerformanceNavigationTiming[]
       if (nav) {
         reportMetric({ name: 'TTFB', value: nav.responseStart - nav.requestStart })
       }

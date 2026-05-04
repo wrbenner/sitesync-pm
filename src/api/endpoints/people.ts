@@ -7,7 +7,8 @@ export const getCrews = async (projectId: string) => {
   const scoped = createScopedClient(supabase, projectId)
   const { data, error } = await scoped.from('crews').select('*')
   if (error) throw transformSupabaseError(error)
-  return (data || []).map((c: CrewRow) => ({
+  const rows = (data || []) as unknown as CrewRow[]
+  return rows.map((c) => ({
     ...c,
     productivity: c.productivity_score ?? 0,
     task: c.current_task || '',
@@ -34,7 +35,7 @@ export const getDirectory = async (
       return q
         .order('company', { ascending: true, nullsFirst: false })
         .order('name', { ascending: true })
-        .range(from, to)
+        .range(from, to) as never
     },
     pagination,
     (d) => ({ ...d, contactName: d.name ?? null, companyGroup: d.company ?? 'Unaffiliated' })
@@ -53,7 +54,7 @@ export const getMeetings = async (
         .from('meetings')
         .select('*', { count: 'exact' })
         .order('date', { ascending: false })
-        .range(from, to),
+        .range(from, to) as never,
     pagination,
     (m) => ({
       ...m,
@@ -68,7 +69,7 @@ export const getMeetings = async (
 export const getUpcomingMeetings = async (projectId: string) => {
   await assertProjectAccess(projectId)
   const scoped = createScopedClient(supabase, projectId)
-  const { data, error } = await scoped.from('meetings').select('*').gte('date', new Date().toISOString()).order('date')
+  const { data, error } = await scoped.from('meetings').select('*').gte('date' as never, new Date().toISOString()).order('date')
   if (error) throw transformSupabaseError(error)
   return data || []
 }

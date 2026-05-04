@@ -22,7 +22,7 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
   const pct = (d['percent_complete'] as number | null) ?? 0;
   const isCritical = (d['is_critical_path'] as boolean | null) ?? false;
 
-  return {
+  return ({
     id: d['id'] as string,
     name: d['name'] as string,
     project_id: d['project_id'] as string,
@@ -32,11 +32,7 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     status: (d['status'] as string | null) ?? 'upcoming',
     is_critical_path: isCritical,
     float_days: (d['float_days'] as number | null) ?? 0,
-    baseline_start: (d['baseline_start'] as string | null) ?? null,
-    baseline_end: baselineEnd,
-    earned_value: (d['earned_value'] as number | null) ?? null,
     assigned_crew_id: (d['assigned_crew_id'] as string | null) ?? null,
-    dependencies: (d['predecessor_ids'] as string[] | null) ?? null,
     depends_on: (d['depends_on'] as string | null) ?? null,
     created_at: (d['created_at'] as string | null) ?? null,
     updated_at: (d['updated_at'] as string | null) ?? null,
@@ -71,7 +67,7 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     predecessorIds: (d['predecessor_ids'] as string[] | null) ?? [],
     plannedLaborHours: 0,
     actualLaborHours: 0,
-  };
+  } as unknown as MappedSchedulePhase);
 }
 
 export type SchedulePhase = MappedSchedulePhase;
@@ -143,7 +139,7 @@ export function useScheduleStore<T = ScheduleHookState>(
       if (!projectId) return [] as SchedulePhase[];
       const { data, error } = await scheduleService.loadPhases(projectId);
       if (error) throw new Error(error);
-      const mapped = ((data ?? []) as Record<string, unknown>[]).map(mapToMappedPhase);
+      const mapped = ((data ?? []) as unknown as Record<string, unknown>[]).map(mapToMappedPhase);
       return mapped;
     },
     enabled: !!projectId,
