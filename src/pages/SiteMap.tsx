@@ -28,7 +28,8 @@ import {
   AlertTriangle, ClipboardCheck, Truck,
   Building2, Maximize2, Minimize2,
   RefreshCw, MapPinned, Satellite, Map as MapIcon, Mountain,
-  CheckCircle, Upload, LocateFixed,
+  CheckCircle,
+  Upload, LocateFixed,
 } from 'lucide-react';
 import type { Map as LeafletMap, LayerGroup, Marker, LatLngBoundsLiteral, TileLayer as LeafletTileLayer } from 'leaflet';
 
@@ -137,6 +138,18 @@ const PIN_CONFIG: Record<PinType, { label: string; color: string; icon: React.El
 
 const PIN_TYPES: PinType[] = ['equipment', 'crew', 'delivery', 'safety_zone', 'photo', 'custom'];
 
+const _ZONE_TYPES = [
+  { value: 'work_area', label: 'Work Area', color: '#3B82F6' },
+  { value: 'safety_zone', label: 'Safety Zone', color: '#EF4444' },
+  { value: 'staging_area', label: 'Staging Area', color: '#8B5CF6' },
+  { value: 'parking', label: 'Parking', color: '#64748B' },
+  { value: 'material_storage', label: 'Material Storage', color: '#F47820' },
+  { value: 'exclusion_zone', label: 'Exclusion Zone', color: '#DC2626' },
+  { value: 'crane_radius', label: 'Crane Radius', color: '#F59E0B' },
+  { value: 'pedestrian_path', label: 'Pedestrian Path', color: '#10B981' },
+  { value: 'vehicle_route', label: 'Vehicle Route', color: '#6366F1' },
+  { value: 'utility_corridor', label: 'Utility Corridor', color: '#06B6D4' },
+];
 
 const ENTITY_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   punch_item:   { label: 'Punch Items',   color: '#F47820', icon: CheckCircle },

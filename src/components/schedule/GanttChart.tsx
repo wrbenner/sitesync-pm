@@ -1339,7 +1339,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             ))}
 
             {/* Weekend shading (day zoom only) */}
-            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h, _i) => {
+            {zoom === 'day' && cellHeaders.filter(h => h.isWeekend).map((h) => {
               const idx = cellHeaders.indexOf(h);
               return (
                 <div key={`we-${h.key}`} style={{

@@ -359,6 +359,7 @@ const PipelineArrow: React.FC = () => (
   </div>
 );
 
+// ── KPI Card ─────────────────────
 
 const ChangeOrdersPage: React.FC = () => {
   const projectId = useProjectId();

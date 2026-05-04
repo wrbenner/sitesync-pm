@@ -50,7 +50,7 @@ interface RawRect {
 // Sheet-number regex — loose enough for anything that looks like an AIA
 // sheet number. The parser has a stricter version; this is just for
 // "is there a plausible sheet number inside this rectangle?"
-const PLAUSIBLE_SHEET_RE = /\b[A-Z]{1,2}\s*[-.]?\s*\d{1,3}(?:\s*[-.]?\s*\d{1,3})?\b/;
+const PLAUSIBLE_SHEET_RE = /\b[A-Z]{1,2}\s*[-.]?\s*\d{1,3}(?:\s*[.-]\s*\d{1,3})?\b/;
 
 /**
  * Extract raw rectangles from the page content stream. Handles the

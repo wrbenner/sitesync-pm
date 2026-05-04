@@ -228,7 +228,7 @@ const ArchDimensionLine: React.FC<{
         >
           {label}
         </text>
-        {/* Sublabel (metric) reserved for a future metric-toggle feature. */}
+        {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
       </g>
     </g>
   );

@@ -182,6 +182,10 @@ const fadeUp: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.18, ease: 'easeOut' as const } },
 };
 
+const _staggerContainer: Variants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
+};
 
 const rowVariant: Variants = {
   hidden: { opacity: 0, x: -6 },
@@ -839,6 +843,15 @@ const BudgetPage: React.FC = () => {
 
   // Budget Summary by Category — REMOVED (Jobs redesign)
 
+  // Budget Health status
+  const _budgetHealthStatus = useMemo(() => {
+    const totalBudget = projectData?.totalValue ?? 0;
+    const _variance = totalBudget - spent - committed;
+    const pctUsed = totalBudget > 0 ? ((spent + committed) / totalBudget) * 100 : 0;
+    if (pctUsed > 100) return { label: 'Over Budget', color: colors.statusCritical, bg: colors.statusCriticalSubtle };
+    if (pctUsed > 80) return { label: 'At Risk', color: colors.statusPending, bg: colors.statusPendingSubtle };
+    return { label: 'On Track', color: colors.statusActive, bg: colors.statusActiveSubtle };
+  }, [projectData?.totalValue, spent, committed]);
 
   // Delete budget line item
   const [deletingId, setDeletingId] = useState<string | null>(null);

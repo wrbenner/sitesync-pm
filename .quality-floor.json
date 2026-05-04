@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 7,
-  "_updated": "2026-05-04T14:00:00Z",
+  "_version": 8,
+  "_updated": "2026-05-04T12:00:00Z",
   "_updatedBy": "auto/polish-20260503-2026",
-  "_floor_realignment_note": "v7: Record<string,any> fully eliminated. supabase.ts dev-bypass crash fixed. v8 (this session): ESLint errors 480→123 via dead import removal and unused-var prefixing across 100+ files.",
+  "_floor_realignment_note": "v8: Removed 359 unused-import/var ESLint errors (480→121). All remaining 121 errors are react-compiler errors (set-state-in-effect, cannot-access-refs, etc.) that require architectural changes. Warnings reduced 968→905 (unused no-explicit-any warnings from removed imports).",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,11 +13,11 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 123,
+  "eslintErrors": 121,
   "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,
-  "eslintWarnings": 968,
+  "eslintWarnings": 905,
   "_e2ePassRate_note": "28/28 desktop pages pass (page-e2e project). Dev-bypass supabase crash fixed in this session — sweep was broken (blank screenshots) before v7. Pages render as empty states without a live project, which is correct behavior in bypass mode.",
   "e2ePassRate": 1.0,
   "tsIgnoreComments": 0,

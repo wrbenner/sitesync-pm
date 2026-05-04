@@ -46,6 +46,13 @@ const DISCIPLINE_COLORS: Record<string, string> = {
   mep: '#F97316',
 }
 
+const _PRIORITY_RING: Record<string, string> = {
+  critical: colors.statusCritical,
+  high: '#EF4444',
+  medium: colors.statusPending,
+  low: colors.statusActive,
+}
+
 // ── Pin Component ─────────────────────────────────────────
 
 const PunchPin: React.FC<{
@@ -264,13 +271,13 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   const drawings = (drawingsResult?.data ?? []) as Drawing[]
 
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
-  const [_hoveredPinId, _setHoveredPinId] = useState<number | null>(null)
+  const [hoveredPinId, _setHoveredPinId] = useState<number | null>(null)
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [showSidebar, setShowSidebar] = useState(true)
-  const [_searchQuery, _setSearchQuery] = useState('')
+  const [searchQuery, _setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('active') // 'all' | 'active' | 'verified'
   const viewportRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
-import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
+import { useSubmittals, useSubmittalReviewers, useProject } from '../../hooks/queries';
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
 import { ExportButton } from '../../components/shared/ExportButton';
 import { AlertTriangle, ClipboardList, LayoutGrid, List, RefreshCw, Search, Upload } from 'lucide-react';
@@ -11,7 +11,6 @@ import { useCreateSubmittal, useUpdateSubmittal, useDeleteSubmittal } from '../.
 import { useProjectId } from '../../hooks/useProjectId';
 import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { PredictiveAlertBanner } from '../../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
@@ -49,10 +48,8 @@ const SubmittalsPage: React.FC = () => {
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
   const deleteSubmittal = useDeleteSubmittal();
-  const _queryClient = useQueryClient();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
   const { data: project } = useProject(projectId);
-  const { data: _aiInsights } = useAIInsights(projectId, 'submittals');
   const specFileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time subscription for all project tables (submittals + adjacent entities).
