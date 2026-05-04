@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'
 import { queryClient } from '../lib/queryClient'
 import { setSentryUser, clearSentryUser } from '../lib/sentry'
+import { isDevBypassActive } from '../lib/devBypass'
 
 // ── Shared auth state (module-level singleton) ──────────────
 // All callers of useAuth() share this exact state.
@@ -149,7 +150,11 @@ async function initAuth() {
       // Clear the named greeting but keep the returning flag so
       // next visit shows "Welcome back." instead of "Welcome."
       try { localStorage.removeItem('ss:last-name') } catch { /* noop */ }
-      navigateFn?.('/login')
+      // In acceptance-mode builds (Lap 1 gate) the placeholder Supabase
+      // client fires SIGNED_OUT immediately on its initial session check;
+      // honoring the redirect would route the gate away from /day. Skip
+      // the redirect when the bypass is active.
+      if (!isDevBypassActive()) navigateFn?.('/login')
     } else if (_event === 'INITIAL_SESSION') {
       setState({ session: s, user: s?.user ?? null, loading: false })
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)

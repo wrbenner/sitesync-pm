@@ -51,50 +51,53 @@ export default defineConfig(({ mode }) => {
       // route's dynamic import fires. Lap-1 acceptance gate at
       // docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md.
       modulePreload: {
+        // Only preload the always-eager core. Heavy libs (pdf, charts, three,
+        // ifc, editor, xlsx, jszip) are no longer named-split — they ride along
+        // with their lazy-route chunks and load only when the route mounts.
+        // We still defensively filter any remaining route-shape chunks that
+        // shouldn't preload before their route renders.
         resolveDependencies: (_filename, deps) => {
-          const SKIP = [
-            'vendor-pdf-gen',     // @react-pdf/renderer + pdf-lib (ExportCenter, payApp PDF, wh347)
-            'vendor-pdf-viewer',  // pdfjs-dist + react-pdf (drawing viewer)
-            'vendor-three',       // three.js + react-three-fiber (BIM viewer)
-            'vendor-ifc',         // web-ifc WASM loader (BIM)
-            'vendor-charts',      // recharts + d3 (dashboard widgets)
-            'vendor-editor',      // tiptap + prosemirror (rich text)
-            'vendor-xlsx',        // xlsx (export center)
-            'vendor-jszip',       // jszip (drawings bulk upload)
+          const ROUTE_LAZY = [
+            'drawings-',
+            'BIMViewerPage-',
+            'OwnerReportPage-',
+            'ExportCenter-',
+            'TimeTracking-',
+            'compliance-',
+            'payment-applications-',
+            'daily-log-',
+            'submittals-',
           ]
-          return deps.filter((dep) => !SKIP.some((s) => dep.includes(s)))
+          return deps.filter((dep) => !ROUTE_LAZY.some((s) => dep.includes(s)))
         },
       },
       rollupOptions: {
         output: {
+          // Manual chunks for the always-eager core only. Heavy route-specific
+          // libs (recharts, @react-pdf, pdf-lib, pdfjs-dist, react-pdf, three,
+          // web-ifc, xlsx, jszip, tiptap, dnd-kit, liveblocks, sentry, posthog)
+          // are deliberately NOT split here — letting Rollup co-locate them
+          // with their lazy-route consumers prevents chunk-graph entanglement
+          // (e.g., vendor-react ending up with a static `import` from
+          // vendor-charts because of d3/recharts shared internals). Day-30
+          // bundle gate proved that named-chunk splitting was pulling all
+          // four heavy vendors into the cold path even when no eager call
+          // site touched them. Receipt: docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md.
           manualChunks(id: string) {
             if (!id.includes('node_modules')) return
             // Core framework (always loaded)
-            if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/react-router')) return 'vendor-react'
-            // Animation (loaded with app shell)
+            if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/react-router') || id.includes('/scheduler/')) return 'vendor-react'
+            // Animation (used by app shell; opt-in could remove later)
             if (id.includes('/framer-motion/')) return 'vendor-motion'
-            // Data layer
+            // Data layer (used in entry — auth + queries)
             if (id.includes('/@tanstack/')) return 'vendor-tanstack'
             if (id.includes('/@supabase/')) return 'vendor-supabase'
-            // Heavy libs (lazy loaded per page)
-            if (id.includes('/three/') || id.includes('/@react-three/')) return 'vendor-three'
-            // BIM / IFC WASM loader — only needed on /bim
-            if (id.includes('/web-ifc/') || id.includes('/web-ifc-three/')) return 'vendor-ifc'
-            // Zip handling (drawings bulk upload) — only pulled on drawings/upload paths
-            if (id.includes('/jszip/')) return 'vendor-jszip'
-            // Split the PDF stack: generator (@react-pdf/renderer + pdf-lib) vs viewer (pdfjs-dist + react-pdf)
-            if (id.includes('/@react-pdf/') || id.includes('/pdf-lib/')) return 'vendor-pdf-gen'
-            if (id.includes('/pdfjs-dist/') || id.includes('/react-pdf/')) return 'vendor-pdf-viewer'
-            if (id.includes('/@tiptap/') || id.includes('/prosemirror') || id.includes('/yjs/')) return 'vendor-editor'
-            if (id.includes('/recharts/') || id.includes('/d3-')) return 'vendor-charts'
-            if (id.includes('/@dnd-kit/')) return 'vendor-dndkit'
-            if (id.includes('/@liveblocks/')) return 'vendor-liveblocks'
-            if (id.includes('/@sentry/')) return 'vendor-sentry'
-            if (id.includes('/xlsx/')) return 'vendor-xlsx'
-            if (id.includes('/posthog/')) return 'vendor-posthog'
-            if (id.includes('/xstate/') || id.includes('/@xstate/')) return 'vendor-xstate'
+            // Toast UI used app-wide
             if (id.includes('/sonner/')) return 'vendor-sonner'
+            // i18n loaded eagerly
             if (id.includes('/i18next/') || id.includes('/react-i18next/')) return 'vendor-i18n'
+            // xstate is tiny and used by many machines — keep it grouped
+            if (id.includes('/xstate/') || id.includes('/@xstate/')) return 'vendor-xstate'
           },
         },
       },

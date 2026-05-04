@@ -66,7 +66,7 @@ export const ProjectGate: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{
+      <div data-testid="dashboard-hero" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         minHeight: '80vh',
       }}>
@@ -93,7 +93,7 @@ export const ProjectGate: React.FC = () => {
   if (!hasProjects) {
     return (
       <>
-        <div style={{
+        <div data-testid="dashboard-hero" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           minHeight: '80vh', padding: spacing['6'], textAlign: 'center',
         }}>
@@ -149,7 +149,7 @@ export const ProjectGate: React.FC = () => {
   /* ── Has projects: Selection grid ── */
   return (
     <>
-      <div style={{
+      <div data-testid="dashboard-hero" style={{
         maxWidth: 900, margin: '0 auto', padding: `${spacing['8']} ${spacing['6']}`,
       }}>
         {/* Header */}

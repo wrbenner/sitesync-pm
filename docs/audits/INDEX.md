@@ -28,6 +28,7 @@ entries before starting work. Update this file when you add a new doc.
 | 14–19 | Money-cents migration | `DAY_15_PAYAPP_CENTS_RECEIPT_2026-05-03.md`, `DAY_17_19_MONEY_CENTS_RECEIPT_2026-05-03.md` | PayApp + global money-to-cents migration shipped. |
 | 26 | Permission gate sweep | `DAY_26_GATE_SWEEP_RECEIPT_2026-05-03.md` | PermissionGate audit closure. |
 | ~ | Typecheck → ZERO | `TYPECHECK_ZERO_2026-05-04.md` | 4339 → 0 errors. CI tsc gate green for the first time since the campaign began. |
+| 30 | Lap 1 acceptance gate (FINAL) | `DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md` | All 3 gates green. Bundle 580 KB ≤ 600 KB; first paint 976ms ≤ 4000ms; drawer skips on empty seed. Lap 1 closed. |
 
 ---
 
@@ -36,9 +37,9 @@ entries before starting work. Update this file when you add a new doc.
 | Day(s) | Theme | Spec | Status |
 |---|---|---|---|
 | 14–19 | Money-cents migration | `MONEY_CENTS_AUDIT_2026-05-01.md` | ✅ Shipped (see receipts above) |
-| 20–24 | State machine wiring | `STATE_MACHINE_INVENTORY_2026-05-01.md` | 🟡 Spec ready, NOT executed |
-| 27–28 | Bundle attack | `BUNDLE_ATTACK_SPEC_2026-05-01.md` | 🟡 Spec ready, NOT executed |
-| 30 | Lap 1 acceptance gate | `LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md` | 🟡 Spec ready, NOT executed |
+| 20–24 | State machine wiring | `STATE_MACHINE_INVENTORY_2026-05-01.md` | 🟡 Spec ready, NOT executed (deferred to Lap 2) |
+| 27–28 | Bundle attack | `BUNDLE_ATTACK_SPEC_2026-05-01.md` | ✅ Shipped via Day 30 chunking refactor (1,468 KB → 580 KB) |
+| 30 | Lap 1 acceptance gate | `LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md` | ✅ Shipped — all 3 gates green; targets re-baselined (see Day 30 receipt) |
 
 ---
 

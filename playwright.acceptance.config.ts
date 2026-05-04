@@ -40,10 +40,13 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,            // 3 min — build + preview cold-start on CI
     env: {
+      // VITE_ACCEPTANCE_MODE activates the production-build auth bypass in
+      // src/lib/devBypass.ts. Combined with the empty Supabase env vars
+      // (which devBypass requires to be absent), this lets the gate render
+      // /#/day without an auth wall in vite preview. The flag is baked into
+      // the build by `npm run build` — never set this in production env.
+      VITE_ACCEPTANCE_MODE: 'true',
       VITE_DEV_BYPASS: 'true',
-      // Force isDevBypassActive() in src/lib/devBypass.ts to return true.
-      // Without these clears, `/#/day` is auth-walled and the gate can't
-      // measure first paint on a cold session.
       VITE_SUPABASE_URL: '',
       VITE_SUPABASE_ANON_KEY: '',
     },
