@@ -91,7 +91,7 @@ export function useCreateLookaheadTask() {
           constraint_notes: input.constraint_notes || null,
           percent_complete: input.percent_complete ?? 0,
           status: input.status ?? 'todo',
-        } as unknown as Record<string, unknown>)
+        } as never)
         .select()
         .single()
       if (error) throw error

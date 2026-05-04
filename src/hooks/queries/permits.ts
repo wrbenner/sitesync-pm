@@ -54,7 +54,7 @@ export function useUpdatePermit() {
     getAfterState: (p) => p.updates,
     mutationFn: async (params) => {
       const { error } = await fromTable('permits')
-        .update(params.updates)
+        .update(params.updates as never)
         .eq('id' as never, params.id)
       if (error) throw error
       return { projectId: params.projectId, id: params.id }

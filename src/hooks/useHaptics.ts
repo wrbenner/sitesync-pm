@@ -45,7 +45,7 @@ async function getHaptics() {
     if (!isNative) return null
 
     const mod = await import('@capacitor/haptics')
-    hapticsPlugin = mod.Haptics
+    hapticsPlugin = mod.Haptics as unknown as typeof hapticsPlugin
     return hapticsPlugin
   } catch {
     // @capacitor/haptics not available (web build)

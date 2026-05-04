@@ -26,7 +26,7 @@ export function useUpdateContract() {
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: ContractPayload }) => {
       const { data, error } = await fromTable('contracts')
-        .update(params.updates)
+        .update(params.updates as never)
         .eq('id' as never, params.id)
         .select()
         .single()

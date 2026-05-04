@@ -15,7 +15,7 @@ export function useUpdateNotificationPreferences() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await from('notification_preferences').upsert({ user_id: userId, ...updates }).select().single()
+      const { data, error } = await from('notification_preferences').upsert({ user_id: userId, ...updates } as never).select().single()
       if (error) throw error
       return { data, userId }
     },

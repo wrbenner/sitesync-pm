@@ -33,7 +33,8 @@ export default function BulkInvitePage() {
       });
       return obj;
     });
-    setParsed(validateInviteRows(rows));
+    const v = validateInviteRows(rows);
+    setParsed({ rows: v.ok, errors: v.errors });
   };
 
   const onSubmit = async () => {

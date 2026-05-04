@@ -44,7 +44,7 @@ export function useMfa(): MfaState {
       if (factorsRes.error) throw factorsRes.error
       if (aalRes.error) throw aalRes.error
 
-      const all = (factorsRes.data?.totp ?? []).concat(factorsRes.data?.phone ?? [])
+      const all = [...(factorsRes.data?.totp ?? []), ...(factorsRes.data?.phone ?? [])]
       setVerifiedFactors(
         all
           .filter((f) => f.status === 'verified')

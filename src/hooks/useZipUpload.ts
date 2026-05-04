@@ -66,11 +66,11 @@ export function useZipUpload() {
   const [currentJobId, setCurrentJobId] = useState<string | null>(null)
   const [job, setJob] = useState<ZipUploadJob | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const pollTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const clearPoll = () => {
     if (pollTimerRef.current) {
-      window.clearInterval(pollTimerRef.current)
+      clearInterval(pollTimerRef.current)
       pollTimerRef.current = null
     }
   }
@@ -79,7 +79,7 @@ export function useZipUpload() {
 
   const startPolling = useCallback((jobId: string) => {
     clearPoll()
-    pollTimerRef.current = window.setInterval(async () => {
+    pollTimerRef.current = setInterval(async () => {
       try {
         const { data, error } = await fromTable('zip_upload_jobs')
           .select(

@@ -99,20 +99,21 @@ export function useApproveAgentTask() {
       }
 
       const completedAt = new Date().toISOString()
+      const updates = execError
+        ? {
+            status: 'failed',
+            error_message: execError.message,
+            completed_at: completedAt,
+          }
+        : {
+            status: 'succeeded',
+            tool_output: orchestratorResult,
+            approved_by: approverId,
+            approved_at: completedAt,
+            completed_at: completedAt,
+          }
       const { error: updateError } = await fromTable('agent_tasks')
-        .update(execError
-          ? {
-              status: 'failed',
-              error_message: execError.message,
-              completed_at: completedAt,
-            }
-          : {
-              status: 'succeeded',
-              tool_output: orchestratorResult,
-              approved_by: approverId,
-              approved_at: completedAt,
-              completed_at: completedAt,
-            })
+        .update(updates as never)
         .eq('id' as never, task.id)
       if (updateError) throw updateError
       if (execError) throw execError

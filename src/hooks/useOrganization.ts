@@ -45,7 +45,7 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
 
   // Sync fetched orgs into the store (handles auto-selection too)
   useEffect(() => {
-    if (orgs) setOrganizations(orgs)
+    if (orgs) setOrganizations(orgs as never)
   }, [orgs, setOrganizations])
 
   // Fetch current user's role in the active org

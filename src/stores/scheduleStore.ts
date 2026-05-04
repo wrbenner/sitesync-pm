@@ -22,7 +22,7 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
   const pct = (d['percent_complete'] as number | null) ?? 0;
   const isCritical = (d['is_critical_path'] as boolean | null) ?? false;
 
-  return {
+  return ({
     id: d['id'] as string,
     name: d['name'] as string,
     project_id: d['project_id'] as string,
@@ -67,7 +67,7 @@ function mapToMappedPhase(d: Record<string, unknown>): MappedSchedulePhase {
     predecessorIds: (d['predecessor_ids'] as string[] | null) ?? [],
     plannedLaborHours: 0,
     actualLaborHours: 0,
-  };
+  } as unknown as MappedSchedulePhase);
 }
 
 export type SchedulePhase = MappedSchedulePhase;

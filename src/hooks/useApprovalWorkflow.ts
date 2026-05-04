@@ -144,7 +144,7 @@ export function useSaveApprovalTemplate() {
         .select()
         .single()
       if (error) throw error
-      return data as ApprovalWorkflowTemplate
+      return data as unknown as ApprovalWorkflowTemplate
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['approval-templates', projectId] }),
   })
