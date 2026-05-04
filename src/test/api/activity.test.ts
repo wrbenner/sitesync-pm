@@ -40,12 +40,12 @@ describe('fetchEntityLabel project_id isolation', () => {
     vi.mocked(supabase.from).mockReturnValue(chain as never)
 
     await enrichActivityItem(
-      { id: 'act-1', type: 'rfi', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A },
+      { id: 'act-1', type: 'rfi', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A } as never,
       PROJECT_A,
     )
 
     expect(supabase.from).toHaveBeenCalledWith('rfis')
-    const eqCalls: [string, string][] = chain.eq.mock.calls
+    const eqCalls = chain.eq.mock.calls as unknown as [string, string][]
     expect(eqCalls).toContainEqual(['id', ENTITY_ID])
     expect(eqCalls).toContainEqual(['project_id', PROJECT_A])
   })
@@ -55,12 +55,12 @@ describe('fetchEntityLabel project_id isolation', () => {
     vi.mocked(supabase.from).mockReturnValue(chain as never)
 
     await enrichActivityItem(
-      { id: 'act-2', type: 'submittal', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A },
+      { id: 'act-2', type: 'submittal', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A } as never,
       PROJECT_A,
     )
 
     expect(supabase.from).toHaveBeenCalledWith('submittals')
-    const eqCalls: [string, string][] = chain.eq.mock.calls
+    const eqCalls = chain.eq.mock.calls as unknown as [string, string][]
     expect(eqCalls).toContainEqual(['id', ENTITY_ID])
     expect(eqCalls).toContainEqual(['project_id', PROJECT_A])
   })
@@ -70,12 +70,12 @@ describe('fetchEntityLabel project_id isolation', () => {
     vi.mocked(supabase.from).mockReturnValue(chain as never)
 
     await enrichActivityItem(
-      { id: 'act-3', type: 'change_order', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A },
+      { id: 'act-3', type: 'change_order', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A } as never,
       PROJECT_A,
     )
 
     expect(supabase.from).toHaveBeenCalledWith('change_orders')
-    const eqCalls: [string, string][] = chain.eq.mock.calls
+    const eqCalls = chain.eq.mock.calls as unknown as [string, string][]
     expect(eqCalls).toContainEqual(['id', ENTITY_ID])
     expect(eqCalls).toContainEqual(['project_id', PROJECT_A])
   })
@@ -86,7 +86,7 @@ describe('fetchEntityLabel project_id isolation', () => {
     vi.mocked(supabase.from).mockReturnValue(chain as never)
 
     const result = await enrichActivityItem(
-      { id: 'act-4', type: 'rfi', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A, title: '' },
+      { id: 'act-4', type: 'rfi', metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_A, title: '' } as never,
       PROJECT_A,
     )
 
@@ -101,11 +101,11 @@ describe('fetchEntityLabel project_id isolation', () => {
       vi.mocked(supabase.from).mockReturnValue(chain as never)
 
       await enrichActivityItem(
-        { id: 'act-5', type: entityType, metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_B },
+        { id: 'act-5', type: entityType, metadata: { entity_id: ENTITY_ID }, project_id: PROJECT_B } as never,
         PROJECT_B,
       )
 
-      const eqCalls: [string, string][] = chain.eq.mock.calls
+      const eqCalls = chain.eq.mock.calls as unknown as [string, string][]
       const projectIdFiltered = eqCalls.some(([col]) => col === 'project_id')
       expect(projectIdFiltered, `${entityType} query missing project_id filter`).toBe(true)
     }
