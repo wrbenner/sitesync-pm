@@ -161,7 +161,7 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
 
 interface CardProps {
   children: React.ReactNode;
-  padding?: string;
+  padding?: string | number;
   onClick?: () => void;
   'aria-label'?: string;
   role?: string;

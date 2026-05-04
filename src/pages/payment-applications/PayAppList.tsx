@@ -201,8 +201,8 @@ export const PayAppList: React.FC<PayAppListProps> = ({
         {apps.length > 0 ? (
           <div style={{ marginTop: spacing['3'] }}>
             <DataTable
-              columns={columns}
-              data={apps}
+              columns={columns as never}
+              data={apps as Record<string, unknown>[]}
               onRowClick={(row) => onSelectApp(
                 selectedAppId === (row.id as string) ? null : (row.id as string),
               )}
