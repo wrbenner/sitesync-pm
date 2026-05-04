@@ -1,7 +1,7 @@
 // Procore Integration: Import projects, RFIs, and submittals
 
 import { supabase } from '../../lib/supabase'
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -90,10 +90,11 @@ export const procoreProvider: IntegrationProvider = {
 
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await fromTable('integrations')
+    const { data } = await fromTable('integrations')
       .select('config')
       .eq('id' as never, integrationId)
       .single()
+    const integration = asRow<{ config: Record<string, string> | null }>(data)
 
     if (!integration?.config) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Integration config not found'] }
@@ -175,10 +176,11 @@ export const procoreProvider: IntegrationProvider = {
 
   async getStatus(integrationId) {
     const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

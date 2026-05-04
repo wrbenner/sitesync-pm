@@ -3,7 +3,7 @@
 // Supports: card payments, ACH bank transfers, retainage hold/release.
 
 import { supabase } from '../../lib/supabase'
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRows } from '../../lib/db/queries'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -202,7 +202,17 @@ export async function getPaymentHistory(projectId: string): Promise<Array<{
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []).map((t) => ({
+  const rows = asRows<{
+    id: string
+    amount: number
+    platform_fee: number | null
+    payment_method: string | null
+    status: string | null
+    recipient_name: string | null
+    application_number: number | null
+    created_at: string
+  }>(data)
+  return rows.map((t) => ({
     id: t.id,
     amount: t.amount,
     fee: t.platform_fee ?? 0,

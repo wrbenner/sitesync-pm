@@ -2,7 +2,7 @@
 // OAuth2 via Autodesk Forge. Syncs model versions, issues, and markups.
 
 
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -46,8 +46,9 @@ export const autodeskBIMProvider: IntegrationProvider = {
       return { integrationId: '', error: 'Integration ID required (OAuth flow must complete first)' }
     }
 
-    const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = asRow<{ config: Record<string, string> | null }>(data)
+    const config = integration?.config ?? null
 
     if (!config?.accessToken) {
       return { integrationId: '', error: 'No access token. Complete OAuth flow first.' }
@@ -87,8 +88,9 @@ export const autodeskBIMProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = asRow<{ config: Record<string, string> | null }>(data)
+    const config = integration?.config ?? null
 
     if (!config?.accessToken || !config?.accProjectId) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Not configured. Select an Autodesk project.'] }
@@ -163,10 +165,11 @@ export const autodeskBIMProvider: IntegrationProvider = {
 
   async getStatus(integrationId) {
     const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

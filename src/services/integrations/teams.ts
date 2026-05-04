@@ -2,7 +2,7 @@
 // Same notification types as Slack: RFI responses, submittal reviews, daily log approvals, schedule changes.
 
 import { supabase } from '../../lib/supabase'
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -133,10 +133,11 @@ export const teamsProvider: IntegrationProvider = {
 
   async getStatus(integrationId) {
     const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 
@@ -152,7 +153,8 @@ export async function sendTeamsRFINotification(
   rfi: { number: string; title: string; respondedBy: string; status: string },
 ): Promise<{ success: boolean; error?: string }> {
   const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
-  const config = data?.config as Record<string, string> | null
+  const integration = asRow<{ config: Record<string, string> | null }>(data)
+  const config = integration?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Teams not configured' }
 
   const card = createCard([
@@ -173,7 +175,8 @@ export async function sendTeamsSubmittalNotification(
   sub: { number: string; title: string; reviewedBy: string; status: string; specSection: string },
 ): Promise<{ success: boolean; error?: string }> {
   const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
-  const config = data?.config as Record<string, string> | null
+  const integration = asRow<{ config: Record<string, string> | null }>(data)
+  const config = integration?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Teams not configured' }
 
   const statusColor = sub.status === 'approved' ? 'Good' : sub.status === 'rejected' ? 'Attention' : 'Warning'

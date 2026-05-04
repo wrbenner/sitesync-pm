@@ -43,8 +43,6 @@ import type { Database } from '../../types/database'
 
 // ── Type primitives ──────────────────────────────────────────────────────────
 
-import { fromTable } from './queries'
-
 export type TableName = keyof Database['public']['Tables']
 export type Row<T extends TableName> = Database['public']['Tables'][T]['Row']
 export type InsertRow<T extends TableName> = Database['public']['Tables'][T]['Insert']
@@ -176,6 +174,43 @@ export function deleteScoped<T extends ProjectScopedTable>(
  */
 export function inIds(ids: readonly string[]): never[] {
   return ids as unknown as never[]
+}
+
+// ── Result-narrowing helpers ─────────────────────────────────────────────────
+//
+// PostgrestBuilder<S>'s row type S can be a `SelectQueryError<…>` union when
+// the strict-generic overload for .select() can't fully resolve the column
+// list against Row<T>. At runtime this is fine — Supabase returns the actual
+// row data — but the compile-time union forces every property access to
+// fail TS2339. Per the typecheck migration recipe (section 9), the contained
+// fix is a named boundary cast. These helpers give that cast a single named
+// site instead of inlining `as unknown as Foo` at every call.
+//
+// Use at the immediate boundary where you know the column shape from your
+// own .select() string. The shape is the caller's responsibility.
+
+/**
+ * Narrow a single-row `data` field to the shape `T` you selected. Returns
+ * null if the response had no row (data was null).
+ *
+ *   const { data } = await fromTable('rfis').select('id, title').eq(...).single()
+ *   const row = asRow<{ id: string; title: string }>(data)
+ *   row?.title // typed
+ */
+export function asRow<T>(data: unknown): T | null {
+  return (data ?? null) as T | null
+}
+
+/**
+ * Narrow a multi-row `data` field to the shape `T[]` you selected. Returns
+ * an empty array if data was null/undefined.
+ *
+ *   const { data } = await fromTable('rfis').select('id, title').eq(...)
+ *   const rows = asRows<{ id: string; title: string }>(data)
+ *   rows.map(r => r.title) // typed
+ */
+export function asRows<T>(data: unknown): T[] {
+  return (data ?? []) as T[]
 }
 
 // ── Documentation note for future maintainers ───────────────────────────────
