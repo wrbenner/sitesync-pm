@@ -317,7 +317,7 @@ const ChangeOrdersPage: React.FC = () => {
     [cos],
   )
   const { data: coProfileMap } = useProfileNames(coUserIds)
-  const _originatorName = (_co: { requested_by?: string | null; created_by?: string | null }): string =>
+  const originatorName = (co: { requested_by?: string | null; created_by?: string | null }): string =>
     displayName(coProfileMap, co.requested_by ?? co.created_by ?? null, '—')
   const { data: project } = useProject(projectId)
   const { data: activePeriod } = useActivePeriod(projectId)
@@ -663,6 +663,7 @@ const ChangeOrdersPage: React.FC = () => {
                 isFocused={focusIndex === idx}
                 isSelected={selectedId === co.id}
                 rowIndex={idx}
+                originatorName={originatorName}
                 onClick={() => {
                   setFocusIndex(idx)
                   setSelectedId(co.id)
@@ -693,6 +694,7 @@ const ChangeOrdersPage: React.FC = () => {
           onSubmit={() => handleSubmit(selected)}
           onOpenRfi={(rfiId) => navigate(`/rfis/${rfiId}`)}
           isRoleSubcontractor={projectRole === 'subcontractor'}
+          originatorName={originatorName}
         />
       )}
     </Shell>
@@ -707,7 +709,8 @@ const CORow: React.FC<{
   isSelected: boolean
   rowIndex: number
   onClick: () => void
-}> = ({ co, isFocused, isSelected, rowIndex, onClick }) => {
+  originatorName: (co: { requested_by?: string | null; created_by?: string | null }) => string
+}> = ({ co, isFocused, isSelected, rowIndex, onClick, originatorName }) => {
   const amount = (co.submitted_cost as number | null)
     ?? ((co as unknown as { approved_amount?: number | null }).approved_amount as number | null)
     ?? (co.amount as number | null)
@@ -848,6 +851,7 @@ interface DetailPanelProps {
   onSubmit: () => Promise<void>
   onOpenRfi: (rfiId: string) => void
   isRoleSubcontractor: boolean
+  originatorName: (co: { requested_by?: string | null; created_by?: string | null }) => string
 }
 
 const DetailPanel: React.FC<DetailPanelProps> = ({
@@ -857,6 +861,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
   onClose,
   onApprove,
   onReject,
+  originatorName,
   onSubmit,
 }) => {
   const submittedAmount = (co.submitted_cost as number | null) ?? (co.amount as number | null) ?? 0
