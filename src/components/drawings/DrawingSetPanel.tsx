@@ -12,7 +12,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   X, Plus, FolderOpen, FileText, Send, Calendar,
-  ChevronRight, ChevronDown, Check, _GripVertical,
+  ChevronRight, ChevronDown, Check,
 } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
@@ -278,7 +278,7 @@ const S = {
 export const DrawingSetPanel: React.FC<DrawingSetPanelProps> = ({
   sets,
   availableDrawings,
-  projectId,
+  projectId: _projectId,
   onClose,
   onCreateSet,
   // onUpdateSet is accepted for a future "edit drawings in this set" UI;

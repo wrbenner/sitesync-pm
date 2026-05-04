@@ -384,6 +384,28 @@ export const typography = {
     wider: '0.04em',
     widest: '0.08em',
   },
+  // Text style presets — spread these into element styles for consistent type.
+  heading: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '20px',
+    fontWeight: 600,
+    lineHeight: 1.35,
+    letterSpacing: '-0.011em',
+  },
+  subheading: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '14px',
+    fontWeight: 500,
+    lineHeight: 1.55,
+    letterSpacing: '-0.011em',
+  },
+  caption: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '11px',
+    fontWeight: 500,
+    lineHeight: 1.4,
+    letterSpacing: '0.01em',
+  },
 } as const;
 
 // ── Shadows ──────────────────────────────────────────────

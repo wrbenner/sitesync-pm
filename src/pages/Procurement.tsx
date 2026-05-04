@@ -33,8 +33,8 @@ function formatCurrency(value: number | null | undefined): string {
 
 function statusBadge(value: string | null | undefined) {
   const v = (value || '').toLowerCase()
-  let color = colors.statusInfo
-  let bg = colors.statusInfoSubtle
+  let color: string = colors.statusInfo
+  let bg: string = colors.statusInfoSubtle
   if (v === 'approved' || v === 'received' || v === 'complete' || v === 'delivered') {
     color = colors.statusActive
     bg = colors.statusActiveSubtle
@@ -352,14 +352,16 @@ export const Procurement: React.FC = () => {
 
   const vendorScores: Record<string, VendorScore> = useMemo(() => {
     if (!deliveries || !pos) return {}
+    const posTyped = pos as unknown as Array<Record<string, unknown>>
+    const deliveriesTyped = deliveries as unknown as Array<Record<string, unknown>>
     // Build a map of PO id -> vendor name
     const poVendorMap: Record<string, string> = {}
-    for (const po of pos) {
+    for (const po of posTyped) {
       poVendorMap[po.id as string] = (po.vendor_name as string) || 'Unknown'
     }
     // Group deliveries by vendor
     const vendorDeliveries: Record<string, { total: number; delivered: number; onTime: number }> = {}
-    for (const d of deliveries) {
+    for (const d of deliveriesTyped) {
       const vendorName = poVendorMap[(d.purchase_order_id as string) || ''] || 'Unknown'
       if (!vendorDeliveries[vendorName]) {
         vendorDeliveries[vendorName] = { total: 0, delivered: 0, onTime: 0 }
@@ -595,11 +597,11 @@ export const Procurement: React.FC = () => {
   }, [pos])
 
   const pendingDeliveries = useMemo(() => {
-    return deliveries?.filter((d: Record<string, unknown>) => d.status !== 'delivered' && d.status !== 'received').length || 0
+    return (deliveries as unknown as Array<Record<string, unknown>> | undefined)?.filter((d) => d.status !== 'delivered' && d.status !== 'received').length || 0
   }, [deliveries])
 
   const lowStockItems = useMemo(() => {
-    return inventory?.filter((item: Record<string, unknown>) => item.quantity_on_hand != null && item.minimum_quantity != null && (item.quantity_on_hand as number) < (item.minimum_quantity as number)).length || 0
+    return (inventory as unknown as Array<Record<string, unknown>> | undefined)?.filter((item) => item.quantity_on_hand != null && item.minimum_quantity != null && (item.quantity_on_hand as number) < (item.minimum_quantity as number)).length || 0
   }, [inventory])
 
   // ── Tab actions ─────────────────────────────────────────────
@@ -916,8 +918,8 @@ export const Procurement: React.FC = () => {
           <SectionHeader title="Deliveries" />
           <div style={{ marginTop: spacing['3'] }}>
             <DataTable
-              columns={deliveryColumns}
-              data={deliveries || []}
+              columns={deliveryColumns as never}
+              data={(deliveries || []) as unknown as Array<Record<string, unknown>>}
               emptyMessage="No deliveries logged yet. Deliveries appear here once purchase orders are fulfilled."
             />
           </div>
@@ -930,8 +932,8 @@ export const Procurement: React.FC = () => {
           <SectionHeader title="Material Inventory" />
           <div style={{ marginTop: spacing['3'] }}>
             <DataTable
-              columns={inventoryColumns}
-              data={inventory || []}
+              columns={inventoryColumns as never}
+              data={(inventory || []) as unknown as Array<Record<string, unknown>>}
               emptyMessage="No inventory items tracked. Add materials to monitor stock levels and flag low quantities."
             />
           </div>
@@ -1276,7 +1278,7 @@ export const Procurement: React.FC = () => {
               <option value="">No PO — ad-hoc delivery</option>
               {(pos || []).map((po: Record<string, unknown>) => (
                 <option key={po.id as string} value={po.id as string}>
-                  PO #{po.po_number} - {po.vendor_name as string}
+                  PO #{String(po.po_number)} - {po.vendor_name as string}
                 </option>
               ))}
             </select>
