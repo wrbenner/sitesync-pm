@@ -2,7 +2,7 @@
 // Parses Oracle Primavera P6 .xer files (tab-delimited format) into schedule data.
 
 import { supabase } from '../../lib/supabase'
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -163,8 +163,9 @@ export const primaveraP6Provider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
-    const config = (integration?.config ?? {}) as unknown as Record<string, unknown>
+    const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = asRow<{ config: Record<string, unknown> | null }>(data)
+    const config = (integration?.config ?? {}) as Record<string, unknown>
     const projectId = config.projectId as string
 
     if (direction === 'export') {
@@ -240,9 +241,10 @@ export const primaveraP6Provider: IntegrationProvider = {
 
   async getStatus(integrationId) {
     const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
     }
   },
 

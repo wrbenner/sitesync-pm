@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId } from 'react'
 import { supabase } from '../../lib/supabase'
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow, asRows } from '../../lib/db/queries'
 import { getAiInsights } from '../../api/endpoints/ai'
 import type {
   AIInsight,
@@ -104,9 +104,14 @@ export function useEarnedValueData(projectId: string | undefined) {
         fromTable('projects').select('start_date, target_completion').eq('id' as never, projectId!).single(),
       ])
       if (budgetRes.error) throw budgetRes.error
-      const items = budgetRes.data || []
-      const phases = phasesRes.data || []
-      const project = projectRes.data
+      const items = asRows<{
+        original_amount: number | null
+        actual_amount: number | null
+        committed_amount: number | null
+        percent_complete: number | null
+      }>(budgetRes.data)
+      const phases = asRows<{ percent_complete: number | null; status: string | null }>(phasesRes.data)
+      const project = asRow<{ start_date: string | null; target_completion: string | null }>(projectRes.data)
 
       const avgProgress = phases.length > 0
         ? phases.reduce((s, p) => s + (p.percent_complete || 0), 0) / phases.length

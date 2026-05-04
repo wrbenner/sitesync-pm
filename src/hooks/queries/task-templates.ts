@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRows } from '../../lib/db/queries'
 
 
 
@@ -30,7 +30,15 @@ export function useTaskCriticalPath(projectId: string | undefined) {
       if (error) throw error
 
       const { tasksToCPM, calculateCriticalPath } = await import('../../lib/criticalPath')
-      const cpmTasks = tasksToCPM((data || []).map((t) => ({
+      const rows = asRows<{
+        id: string
+        title: string
+        start_date: string | null
+        end_date: string | null
+        predecessor_ids: string[] | null
+        estimated_hours: number | null
+      }>(data)
+      const cpmTasks = tasksToCPM(rows.map((t) => ({
         id: t.id,
         title: t.title,
         start_date: t.start_date,
@@ -67,14 +75,14 @@ export function useTaskDependencies(taskId: string | undefined) {
         const { data } = await fromTable('tasks')
           .select('id, title, status, due_date')
           .in('id' as never, predecessorIds)
-        predecessors = data || []
+        predecessors = asRows<{ id: string; title: string; status: string; due_date: string | null }>(data)
       }
 
       if (successorIds.length > 0) {
         const { data } = await fromTable('tasks')
           .select('id, title, status, due_date')
           .in('id' as never, successorIds)
-        successors = data || []
+        successors = asRows<{ id: string; title: string; status: string; due_date: string | null }>(data)
       }
 
       return { predecessors, successors }
