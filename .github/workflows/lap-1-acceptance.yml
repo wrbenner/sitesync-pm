@@ -1,0 +1,55 @@
+name: Lap 1 Acceptance Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Spec: docs/audits/LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md
+# Receipt: docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md
+#
+# Three programmatic gates:
+#   1. Cold open to /#/day <= 1.4s first paint on simulated 4G iPhone
+#   2. Audit-row drawer opens <= 800ms after click
+#   3. Demo-path JS+CSS bundle <= 500 KB gzipped
+#
+# Runs against `vite preview` (production build), with dev-bypass forced
+# active so /day is reachable without auth in CI.
+#
+# Note: this workflow does NOT consume any untrusted GitHub event payload
+# (no commit messages, PR titles, branch refs, comments, etc.) — so the
+# command-injection class of risks does not apply here.
+
+jobs:
+  acceptance-gate:
+    name: Lap 1 acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Lap 1 acceptance gate
+        run: npx playwright test --config=playwright.acceptance.config.ts --reporter=line
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lap-1-acceptance-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -22,6 +22,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
+    "test:acceptance": "playwright test --config=playwright.acceptance.config.ts",
     "test:coverage": "vitest run --coverage",
     "audit": "npm run audit:gen && npm run audit:static && playwright test audit/generated audit/harness/route-audit.ts",
     "audit:static": "tsx scripts/audit.ts",
