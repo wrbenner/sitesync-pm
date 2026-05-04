@@ -30,12 +30,36 @@ export interface ResumableUploadResult {
   error: string | null
 }
 
+interface TusUploadInstance {
+  start(): void
+  abort(): void
+  findPreviousUploads(): Promise<unknown[]>
+  resumeFromPreviousUpload(prev: unknown): void
+}
+
+interface TusModule {
+  Upload: new (
+    file: File,
+    options: {
+      endpoint: string
+      retryDelays: number[]
+      chunkSize: number
+      headers: Record<string, string>
+      uploadDataDuringCreation: boolean
+      removeFingerprintOnSuccess: boolean
+      metadata: Record<string, string>
+      onError: (error: Error) => void
+      onProgress: (bytesUploaded: number, bytesTotal: number) => void
+      onSuccess: () => void
+    },
+  ) => TusUploadInstance
+}
+
 // Dynamically load tus-js-client so this module compiles even when the
 // package is only reachable as a transitive dep (pnpm strict hoisting).
 async function tryLoadTus() {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await import('tus-js-client') as any
+    return await import('tus-js-client') as unknown as TusModule
   } catch {
     return null
   }
