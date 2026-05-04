@@ -186,7 +186,7 @@ export function useCreateSignatureRequest() {
       if (error) throw error
       return data as unknown as SignatureRequest
     },
-    onSuccess: (_data: unknown, variables: CreateSignatureRequestInput) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['signature_requests', variables.project_id] })
     },
   })

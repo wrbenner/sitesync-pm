@@ -53,8 +53,13 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Local row shape (API endpoint maps columns to different names)
-  type WaiverRow = Record<string, unknown>;
+  // Local row shape (API endpoint maps columns to different names — DB has
+  // both contractor_name/subcontractor_id, waiver_type/waiver_state, etc.)
+  type WaiverRow = {
+    id: string;
+    amount: number | null;
+    [key: string]: unknown;
+  };
   const waivers = (rawWaivers ?? []) as unknown as WaiverRow[];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
@@ -487,7 +492,7 @@ export function LienWaivers() {
                             size="sm"
                             variant="secondary"
                             icon={<Send size={12} />}
-                            onClick={(e) => { e.stopPropagation(); handleSendForSignature(w); }}
+                            onClick={(e) => { e?.stopPropagation(); handleSendForSignature(w); }}
                             loading={sendingSignatureId === w.id}
                             disabled={sendingSignatureId != null}
                             aria-label="Send for signature"
@@ -498,7 +503,7 @@ export function LienWaivers() {
                         <Btn
                           size="sm"
                           variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(w); }}
+                          onClick={(e) => { e?.stopPropagation(); handleDelete(w); }}
                           disabled={deleteWaiver.isPending}
                           aria-label="Delete waiver"
                         >
