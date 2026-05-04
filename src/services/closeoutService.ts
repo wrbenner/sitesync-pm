@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import type { CloseoutItemStatus } from '../machines/closeoutMachine';
 import {
   type Result,
@@ -25,7 +25,7 @@ async function resolveProjectRole(
     .eq('project_id' as never, projectId)
     .eq('user_id' as never, userId)
     .single();
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 /**
@@ -75,10 +75,11 @@ export const closeoutService = {
     closeoutItemId: string,
     newStatus: CloseoutItemStatus,
   ): Promise<Result> {
-    const { data: item, error: fetchError } = await fromTable('closeout_items')
+    const { data: itemData, error: fetchError } = await fromTable('closeout_items')
       .select('status, project_id')
       .eq('id' as never, closeoutItemId)
       .single();
+    const item = asRow<{ status: string | null; project_id: string }>(itemData)
 
     if (fetchError || !item) {
       return fail(notFoundError('CloseoutItem', closeoutItemId));

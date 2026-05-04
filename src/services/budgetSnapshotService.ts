@@ -6,7 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase'
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRows } from '../lib/db/queries'
 
 export interface BudgetSnapshotRow {
   id: string
@@ -39,7 +39,8 @@ export const budgetSnapshotService = {
 
     if (error) throw error
 
-    return (data ?? []).map(row => ({
+    const rows = asRows<Record<string, unknown> & { division_data: unknown }>(data)
+    return rows.map(row => ({
       ...row,
       division_data: Array.isArray(row.division_data) ? row.division_data : [],
     })) as unknown as BudgetSnapshotRow[]

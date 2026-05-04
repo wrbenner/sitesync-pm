@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow } from '../../lib/db/queries'
 import { toast } from 'sonner'
 
 export function useInvitations(projectId: string | undefined) {
@@ -58,7 +58,8 @@ export function useRevokeInvitation() {
         .select()
         .single()
       if (error) throw error
-      return { ...data, projectId }
+      const row = asRow<Record<string, unknown>>(data) ?? {}
+      return { ...row, projectId }
     },
     onSuccess: (_d, v) => {
       if (v.projectId) {
@@ -81,10 +82,10 @@ export function useAcceptInvitation() {
         .select()
         .single()
       if (error) throw error
-      return data
+      return asRow<{ project_id: string | null }>(data)
     },
     onSuccess: (data) => {
-      if (data.project_id) {
+      if (data?.project_id) {
         queryClient.invalidateQueries({ queryKey: ['invitations', data.project_id] })
       }
       toast.success('Invitation accepted')

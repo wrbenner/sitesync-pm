@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { colors } from '../styles/theme'
 import { useEffect, useId } from 'react'
 import { supabase } from '../lib/supabase'
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 import { isDevBypassActive } from '../lib/devBypass'
@@ -235,13 +235,15 @@ export function usePermissions(): PermissionsResult {
         .eq('project_id' as never, projectId)
         .eq('user_id' as never, user.id)
         .maybeSingle()
-      if (!error && data?.role) return data.role as ProjectRole
+      const member = asRow<{ role: string | null }>(data)
+      if (!error && member?.role) return member.role as ProjectRole
 
       // 2. Fallback: check if user is the project owner
-      const { data: proj } = await fromTable('projects')
+      const { data: projData } = await fromTable('projects')
         .select('owner_id')
         .eq('id' as never, projectId)
         .maybeSingle()
+      const proj = asRow<{ owner_id: string | null }>(projData)
       if (proj?.owner_id === user.id) {
         // Auto-insert membership row for the owner (best-effort, may fail due to RLS)
         await fromTable('project_members').upsert({
@@ -254,10 +256,11 @@ export function usePermissions(): PermissionsResult {
       }
 
       // 3. Fallback: check if user created the project (created_by field)
-      const { data: projCreator } = await fromTable('projects')
+      const { data: projCreatorData } = await fromTable('projects')
         .select('created_by')
         .eq('id' as never, projectId)
         .maybeSingle()
+      const projCreator = asRow<{ created_by: string | null }>(projCreatorData)
       if (projCreator?.created_by === user.id) {
         await fromTable('project_members').upsert({
           project_id: projectId,
