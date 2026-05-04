@@ -111,21 +111,21 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose, initi
   const pdfDocument = useMemo(() => {
     switch (selectedReport) {
       case 'executive_summary':
-        return execData.data ? <ExecutiveSummary {...execData.data} /> : null;
+        return execData.data ? <ExecutiveSummary {...(execData.data as unknown as React.ComponentProps<typeof ExecutiveSummary>)} /> : null;
       case 'monthly_progress':
         return monthlyData.data ? <MonthlyProgressReport {...monthlyData.data} /> : null;
       case 'rfi_log':
         return rfiData.data ? <RFIReport {...rfiData.data} /> : null;
       case 'submittal_log':
-        return submittalData.data ? <SubmittalLog {...submittalData.data} /> : null;
+        return submittalData.data ? <SubmittalLog {...(submittalData.data as unknown as React.ComponentProps<typeof SubmittalLog>)} /> : null;
       case 'punch_list':
-        return punchData.data ? <PunchListReport projectName={punchData.data.projectName} items={punchData.data.items} /> : null;
+        return punchData.data ? <PunchListReport projectName={punchData.data.projectName} items={punchData.data.items as unknown as React.ComponentProps<typeof PunchListReport>['items']} /> : null;
       case 'budget_report':
-        return budgetData.data ? <BudgetReport {...budgetData.data} /> : null;
+        return budgetData.data ? <BudgetReport {...(budgetData.data as unknown as React.ComponentProps<typeof BudgetReport>)} /> : null;
       case 'daily_log_summary':
-        return dailyLogData.data ? <DailyLogReport projectName={dailyLogData.data.projectName} entries={dailyLogData.data.entries} totalManHours={dailyLogData.data.totalManHours} avgWorkers={dailyLogData.data.avgWorkers} totalIncidents={dailyLogData.data.totalIncidents} /> : null;
+        return dailyLogData.data ? <DailyLogReport {...(dailyLogData.data as unknown as React.ComponentProps<typeof DailyLogReport>)} /> : null;
       case 'safety_report':
-        return <SafetyReport projectName="Project" periodStart="" periodEnd="" daysWithoutIncident={30} trir={0} emr={0.85} openCorrectiveActions={0} incidents={[]} inspections={[]} />;
+        return <SafetyReport {...({ projectName: 'Project', periodStart: '', periodEnd: '', daysWithoutIncident: 30, trir: 0, emr: 0.85, openCorrectiveActions: 0, incidents: [], inspections: [] } as unknown as React.ComponentProps<typeof SafetyReport>)} />;
       case 'cost_report':
         return costData.data ? <CostReport data={costData.data} /> : null;
       case 'schedule_report':
@@ -380,7 +380,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose, initi
                   <Suspense fallback={
                     <Btn disabled>Preparing PDF...</Btn>
                   }>
-                    <PDFDownloadLink document={pdfDocument as React.ReactElement} fileName={`${pdfFilename}.pdf`}>
+                    <PDFDownloadLink document={pdfDocument as never} fileName={`${pdfFilename}.pdf`}>
                       {({ loading }: { loading: boolean }) => (
                         <Btn
                           onClick={() => { if (!loading) { setStep('generate'); setDone(true); toast.success('PDF downloaded'); } }}
