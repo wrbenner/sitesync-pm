@@ -137,7 +137,6 @@ export function detectBudgetSheets(workbook: XLSX.WorkBook): SheetCandidate[] {
       if (nameLower.includes(term)) {
         score += bonus;
         reasons.push(`name contains "${term}"`);
-        nameMatched = true;
         break;
       }
     }

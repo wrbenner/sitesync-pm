@@ -96,7 +96,7 @@ export const VersionCompareModal: React.FC<VersionCompareModalProps> = ({
                         {rev.issued_by && <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>{rev.issued_by}</span>}
                         {!rev.superseded_at && <Tag label="Current" color={colors.statusActive} backgroundColor={`${colors.statusActive}18`} />}
                       </div>
-                      <iframe src={rev.file_url} title={`Revision ${rev.revision_number} — ${drawing.title}`} style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }} />
+                      <iframe src={rev.file_url ?? undefined} title={`Revision ${rev.revision_number} — ${drawing.title}`} style={{ flex: 1, border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md, width: '100%' }} />
                     </div>
                   ))}
                 </div>

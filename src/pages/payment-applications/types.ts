@@ -142,6 +142,7 @@ export const LIEN_WAIVER_STATUS_CONFIG: Record<LienWaiverStatus | 'overdue', { l
   pending:  { label: 'Pending',  color: colors.statusPending,  bg: colors.statusPendingSubtle },
   received: { label: 'Received', color: colors.statusActive,   bg: colors.statusActiveSubtle },
   executed: { label: 'Executed', color: colors.statusInfo,     bg: colors.statusInfoSubtle },
+  missing:  { label: 'Missing',  color: colors.statusCritical, bg: colors.statusCriticalSubtle },
   overdue:  { label: 'Overdue',  color: colors.statusCritical, bg: colors.statusCriticalSubtle },
 }
 

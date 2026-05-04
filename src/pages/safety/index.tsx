@@ -271,7 +271,7 @@ export const Safety: React.FC = () => {
       {!isLoading && !hasError && (
         <>
           {activeTab === 'incidents' && <IncidentList incidents={displayIncidents} onReportIncident={() => setShowIncidentModal(true)} />}
-          {activeTab === 'inspections' && <InspectionsTab inspections={inspections || []} passCount={passCount} failCount={failCount} />}
+          {activeTab === 'inspections' && <InspectionsTab inspections={(inspections || []) as Record<string, unknown>[]} passCount={passCount} failCount={failCount} />}
           {activeTab === 'toolbox' && <ToolboxTalksList talks={talks || []} onNewTalk={() => setShowTalkModal(true)} />}
           {activeTab === 'certifications' && <CertificationsTab certifications={certifications || []} />}
           {activeTab === 'corrective_actions' && <CorrectiveActionsTab correctiveActions={displayCAs} />}

@@ -141,7 +141,7 @@ export async function recordCorrection(params: {
   corrected?: string
 }): Promise<void> {
   try {
-    await fromTable('training_corrections').insert({
+    await fromTable('training_corrections' as never).insert({
       trace_id: params.traceId ?? null,
       project_id: params.projectId ?? null,
       feature: params.feature,

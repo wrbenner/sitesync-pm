@@ -498,7 +498,7 @@ function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase
   const arrows = useMemo(() => {
     const result: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
     for (const phase of phases) {
-      const deps = phase.dependencies || (phase.depends_on ? [phase.depends_on] : []);
+      const deps = phase.predecessor_ids || (phase.depends_on ? [phase.depends_on] : []);
       for (const depId of deps) {
         const source = phaseMap.get(depId);
         const target = phaseMap.get(phase.id);

@@ -882,6 +882,7 @@ function SundialDesktop({ data }: { data: SundialData }) {
 // ── Mobile Dashboard ───────────────────────────────────────
 
 function SundialMobile({ data }: { data: SundialData }) {
+  const navigate = useNavigate();
   const {
     projectName,
     dayNumber,

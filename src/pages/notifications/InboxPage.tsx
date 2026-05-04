@@ -50,7 +50,7 @@ export const InboxPage: React.FC = () => {
   }, {})
 
   return (
-    <div style={{ padding: spacing['8'], maxWidth: 960, minHeight: '100vh', backgroundColor: colors.surface }}>
+    <div style={{ padding: spacing['8'], maxWidth: 960, minHeight: '100vh', backgroundColor: colors.surfaceRaised }}>
       <Eyebrow>Inbox</Eyebrow>
       <PageQuestion size="medium" style={{ marginTop: spacing['2'] }}>
         What needs my attention?

@@ -811,7 +811,7 @@ export function SubmittalDetailPage() {
       <PageContainer>
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center', padding: '80px 0' }}>
           <AlertTriangle size={40} style={{ color: colors.statusCritical, margin: '0 auto 12px' }} />
-          <h2 style={{ color: colors.textPrimary, margin: '0 0 8px', fontSize: typography.fontSize.subheading }}>
+          <h2 style={{ color: colors.textPrimary, margin: '0 0 8px', fontSize: typography.fontSize.heading }}>
             Submittal not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: typography.fontSize.body }}>
