@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { PriorityTag } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { KanbanBoard } from '../../components/shared/KanbanBoard';
 import type { KanbanColumn } from '../../components/shared/KanbanBoard';
 import { Calendar, Clock, User } from 'lucide-react';

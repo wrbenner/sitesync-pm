@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
-  Package, Plus, Award, Sparkles, AlertTriangle, FileText, BarChart2,
-  Users, Send, CheckCircle, XCircle, Clock, ChevronRight, Search,
-  Filter, Calendar, DollarSign, TrendingUp, Eye, Trash2, Edit3,
-  UserPlus, Building2, Phone, Mail, Star, Shield, ArrowUpDown,
-  Layers, Target, HelpCircle, ChevronDown, Check, X, Minus,
-  AlertCircle, Hash, Timer, Activity
+  Package, Plus, Award, Sparkles, AlertTriangle, FileText,
+  Users, Send, CheckCircle, XCircle, Clock, Search,
+  Eye, Trash2, Edit3,
+  UserPlus, Building2, Phone, Mail, Star, Shield,
+  Layers, Target, HelpCircle, Check, X, Minus,
+  AlertCircle, Activity
 } from 'lucide-react'
-import { PageContainer, Card, SectionHeader, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
+import { PageContainer, Card, SectionHeader, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { useAuth } from '../hooks/useAuth'
@@ -29,14 +29,11 @@ import {
   useUpdatePreconSubcontractor,
   usePreconBidInvitations,
   useCreatePreconBidInvitation,
-  useUpdatePreconBidInvitation,
   usePreconScopeItems,
   useCreatePreconScopeItem,
   useDeletePreconScopeItem,
   usePreconBidScopeResponses,
   useUpsertPreconBidScopeResponse,
-  useDeletePreconBidPackage,
-  useUpdatePreconBidSubmission,
   type PreconSubcontractor,
   type PreconBidInvitation,
   type PreconScopeItem,
@@ -213,14 +210,12 @@ export const Preconstruction: React.FC = () => {
 
   const createPackage = useCreatePreconBidPackage()
   const updatePackage = useUpdatePreconBidPackage()
-  const deletePackage = useDeletePreconBidPackage()
   const createSubmission = useCreatePreconBidSubmission()
   const updateSubmission = useUpdatePreconBidSubmission()
   const createContract = useCreateContract()
   const createSubcontractor = useCreatePreconSubcontractor()
   const updateSubcontractor = useUpdatePreconSubcontractor()
   const createInvitation = useCreatePreconBidInvitation()
-  const updateInvitation = useUpdatePreconBidInvitation()
   const createScopeItem = useCreatePreconScopeItem()
   const deleteScopeItem = useDeletePreconScopeItem()
   const upsertScopeResponse = useUpsertPreconBidScopeResponse()
@@ -517,7 +512,7 @@ export const Preconstruction: React.FC = () => {
         bid_submission_id: bidSubmissionId,
         response,
       })
-    } catch (err) {
+    } catch {
       toast.error('Failed to update scope response')
     }
   }
@@ -980,7 +975,7 @@ function PackagesView({
   packages, allSubmissions, selectedPackage, selectedPackageId, selectedSubmissions,
   invitationList, searchQuery, statusFilter, aiAnalysis,
   onSearch, onFilterStatus, onSelectPackage, onStatusChange, onAward,
-  onAddBid, onInviteSub, onAddScope, onNavigateToLeveling,
+  onAddBid, onInviteSub, onAddScope: _onAddScope, onNavigateToLeveling,
 }: {
   packages: PreconBidPackage[]
   allSubmissions: PreconBidSubmission[]
@@ -1278,7 +1273,7 @@ function PackagesView({
 
 function LevelingView({
   packageList, selectedPackageId, selectedPackage, selectedSubmissions,
-  scopeItemList, scopeResponseList, aiAnalysis,
+  scopeItemList, scopeResponseList, aiAnalysis: _aiAnalysis,
   onSelectPackage, onScopeResponse, onAddScope, onDeleteScope, onAward,
 }: {
   packageList: PreconBidPackage[]

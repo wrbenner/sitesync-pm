@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion';
 import { PageContainer, Card, Btn, EmptyState } from '../../components/Primitives';
 import { PresenceAvatars } from '../../components/shared/PresenceAvatars';
-import { colors, spacing, typography, borderRadius, shadows, transitions, layout } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useSubmittals, useSubmittalReviewers, useProject, useAIInsights } from '../../hooks/queries';
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx';
 import { ExportButton } from '../../components/shared/ExportButton';
@@ -15,7 +15,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { PredictiveAlertBanner } from '../../components/ai/PredictiveAlert';
 import { getPredictiveAlertsForPage } from '../../data/aiAnnotations';
-import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal';
 import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard';
 import { toast } from 'sonner';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
@@ -50,10 +49,10 @@ const SubmittalsPage: React.FC = () => {
   const createSubmittal = useCreateSubmittal();
   const updateSubmittal = useUpdateSubmittal();
   const deleteSubmittal = useDeleteSubmittal();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { data: submittalsResult, isPending: loading, error: submittalsError, refetch } = useSubmittals(projectId);
   const { data: project } = useProject(projectId);
-  const { data: aiInsights } = useAIInsights(projectId, 'submittals');
+  const { data: _aiInsights } = useAIInsights(projectId, 'submittals');
   const specFileInputRef = useRef<HTMLInputElement>(null);
 
   // Real-time subscription for all project tables (submittals + adjacent entities).

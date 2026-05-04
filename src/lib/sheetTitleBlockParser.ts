@@ -259,7 +259,7 @@ function titleBlockLocationScore(
  * region. pdfjs coordinates are bottom-up: an item at y=0 is at the
  * bottom of the page; region.y is the rectangle's lower edge.
  */
-function itemInsideRegion(it: PageTextItem, region: TitleBlockRegion): boolean {
+function _itemInsideRegion(it: PageTextItem, region: TitleBlockRegion): boolean {
   return (
     it.x >= region.x &&
     it.x <= region.x + region.w &&

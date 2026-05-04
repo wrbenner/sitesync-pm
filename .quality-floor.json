@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 5,
-  "_updated": "2026-05-04T19:00:00Z",
+  "_version": 6,
+  "_updated": "2026-05-04T21:00:00Z",
   "_updatedBy": "auto/polish-20260504-1800",
-  "_floor_realignment_note": "v5: WorkflowTimeline component (P0-6) + 68 ESLint errors eliminated across RFIDetail, RFIs, Budget, Sidebar, HUDCompliance, RFICreateWizard, sheetTitleBlockParser. Floor was 473, now 405.",
+  "_floor_realignment_note": "v6: 280 additional ESLint no-unused-vars errors eliminated across 60+ files. All @typescript-eslint/no-unused-vars errors are now zero. Remaining 125 errors are structural react-hooks React Compiler errors requiring architectural changes. Floor was 405, now 125.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,7 +13,7 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 405,
+  "eslintErrors": 125,
   "anyCount": 0,
   "mockCount": 1,
   "a11yViolations": 0,
