@@ -264,13 +264,13 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   const drawings = (drawingsResult?.data ?? []) as Drawing[]
 
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
-  const [_hoveredPinId, setHoveredPinId] = useState<number | null>(null)
+  const [_hoveredPinId, _setHoveredPinId] = useState<number | null>(null)
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [showSidebar, setShowSidebar] = useState(true)
-  const [_searchQuery, setSearchQuery] = useState('')
+  const [_searchQuery, _setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('active') // 'all' | 'active' | 'verified'
   const viewportRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)

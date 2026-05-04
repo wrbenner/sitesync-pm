@@ -20,8 +20,7 @@ import {
   CheckCircle2, XCircle, Play, Eye, AlertTriangle,
   User, Shield, Send, Pencil, ChevronLeft,
 } from 'lucide-react'
-import { colors, spacing, typography } from '../../styles/theme'
-import { Avatar } from '../../components/Primitives'
+import { colors, typography } from '../../styles/theme'
 import { usePunchItems } from '../../hooks/queries'
 import { useUpdatePunchItem } from '../../hooks/mutations'
 import { useProjectId } from '../../hooks/useProjectId'
@@ -149,7 +148,7 @@ const PhotoHero: React.FC<{
   afterUrl: string | null
   onAnnotate?: (imageUrl: string) => void
 }> = ({ beforeUrl, afterUrl, onAnnotate }) => {
-  const [_showAfter, setShowAfter] = useState(false)
+  const [_showAfter, _setShowAfter] = useState(false)
   const [sliderPos, setSliderPos] = useState(50) // For before/after slider
   const [isSliding, setIsSliding] = useState(false)
   const [_fullscreen, _setFullscreen] = useState(false)
