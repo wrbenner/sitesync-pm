@@ -31,9 +31,9 @@ function useProactiveAlerts(projectId: string | undefined) {
       const inSevenDays = new Date(now.getTime() + 7 * 86400000);
       const inThirtyDays = new Date(now.getTime() + 30 * 86400000);
 
-      const safeRun = async <T,>(fn: () => PromiseLike<{ data: T | null; error: unknown }>): Promise<T[]> => {
+      const safeRun = async <T,>(fn: () => PromiseLike<unknown>): Promise<T[]> => {
         try {
-          const res = await fn();
+          const res = (await fn()) as { data: unknown; error: unknown };
           if (res.error) {
             if (import.meta.env.DEV) console.warn('[ProactiveAlerts] query error:', res.error);
             return [];

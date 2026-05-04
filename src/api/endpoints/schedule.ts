@@ -1,7 +1,7 @@
 import { supabaseMutation, transformSupabaseError } from '../client'
 import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess } from '../middleware/projectScope'
-import type { ScheduleActivity, SchedulePhaseRow, SchedulePhaseUpdate } from '../../types/api'
+import type { ScheduleActivity, SchedulePhaseUpdate } from '../../types/api'
 import { calculateCriticalPath, tasksToCPM } from '../../lib/criticalPath'
 
 // Base columns always present in schedule_phases.

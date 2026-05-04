@@ -262,8 +262,8 @@ class SyncEngine {
     try {
       switch (record.syncStatus) {
         case 'pending_create': {
-          const { error } = await fromTable(table)
-            .insert(record.data)
+          const { error } = await fromTable(table as never)
+            .insert(record.data as never)
           if (error) {
             // Check if it already exists (conflict)
             if (error.code === '23505') {
@@ -282,8 +282,8 @@ class SyncEngine {
             return await this.handleConflict(record)
           }
 
-          const { error } = await fromTable(table)
-            .update(record.data)
+          const { error } = await fromTable(table as never)
+            .update(record.data as never)
             .eq('id' as never, record.id)
           if (error) throw error
           await markSynced(table, record.id)
@@ -320,7 +320,7 @@ class SyncEngine {
 
       if (!data) return false
 
-      const serverUpdatedAt = new Date(data.updated_at as string).getTime()
+      const serverUpdatedAt = new Date((data as { updated_at?: string }).updated_at as string).getTime()
       // If the server was updated after our local modification, that's a conflict
       return serverUpdatedAt > record.lastModified
     } catch {

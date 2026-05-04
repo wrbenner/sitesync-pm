@@ -50,10 +50,11 @@ export function useReorderTasks() {
     onMutate: async ({ updates, projectId }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks', projectId] })
       const previousTasks = queryClient.getQueryData(['tasks', projectId])
-      queryClient.setQueryData(['tasks', projectId], (old: unknown[]) => {
+      queryClient.setQueryData(['tasks', projectId], (old: unknown) => {
         if (!Array.isArray(old)) return old
         const orderMap = new Map(updates.map((u) => [u.id, u.sort_order]))
-        return old.map((t) => orderMap.has(t.id) ? { ...t, sort_order: orderMap.get(t.id) } : t)
+        const rows = old as Array<{ id: string; sort_order?: number | null }>
+        return rows.map((t) => orderMap.has(t.id) ? { ...t, sort_order: orderMap.get(t.id) } : t)
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       })
       return { previousTasks }

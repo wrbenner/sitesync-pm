@@ -90,7 +90,8 @@ vi.mock('../../components/shared/VirtualDataTable', () => ({
 }))
 
 // Capture onMoveItem so tests can trigger kanban drag-and-drop
-let _capturedOnMoveItem: ((id: string | number, from: string, to: string) => void) | undefined
+let capturedOnMoveItem: ((id: string | number, from: string, to: string) => void) | undefined
+void capturedOnMoveItem;
 
 vi.mock('../../components/shared/KanbanBoard', () => ({
   KanbanBoard: (props: { onMoveItem?: (id: string | number, from: string, to: string) => void }) => {

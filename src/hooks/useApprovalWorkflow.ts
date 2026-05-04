@@ -130,7 +130,7 @@ export function useSaveApprovalTemplate() {
           .select()
           .single()
         if (error) throw error
-        return data as ApprovalWorkflowTemplate
+        return data as unknown as ApprovalWorkflowTemplate
       }
       const { data, error } = await fromTable('approval_workflow_templates')
         .insert({
@@ -163,7 +163,7 @@ export function useStartApproval() {
         .eq('is_default', true)
         .limit(1)
       if (te) throw te
-      const template = ((tpls as ApprovalWorkflowTemplate[] | null) ?? [])[0]
+      const template = ((tpls as unknown as ApprovalWorkflowTemplate[] | null) ?? [])[0]
       if (!template) throw new Error('No default approval workflow configured for ' + entityType)
 
       const { data: inst, error: ie } = await fromTable('approval_instances')

@@ -63,7 +63,7 @@ export async function updateIntegrationStatus(integrationId: string, status: Int
 
 export async function createIntegrationRecord(
   type: string,
-  projectId: string,
+  _projectId: string,
   config: Record<string, unknown>,
   userId: string
 ): Promise<string> {

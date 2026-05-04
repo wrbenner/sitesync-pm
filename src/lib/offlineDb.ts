@@ -2,8 +2,6 @@ import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
 import { fromTable, asRow } from '../lib/db/queries'
 import { detectConflicts } from './conflictResolver'
-import type { Database } from '../types/database'
-
 // ── Configuration ────────────────────────────────────────
 
 const MAX_PENDING_MUTATIONS = 500

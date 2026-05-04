@@ -1065,7 +1065,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onAddActivity,
   onPhaseClick,
   onPhaseUpdate,
-  baselinePhases,
+  baselinePhases: _baselinePhases,
   showBaseline: showBaselineProp,
   zoomLevel: zoomLevelProp,
   whatIfMode = false,

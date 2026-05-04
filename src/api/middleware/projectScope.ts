@@ -260,5 +260,5 @@ export const ROLE_RANK: Record<string, number> = {
 
 export function createProjectScopedQuery(table: TableName, projectId: string) {
   validateProjectId(projectId)
-  return fromTable(table).select('*').eq('project_id' as never, projectId)
+  return fromTable(table as never).select('*').eq('project_id' as never, projectId)
 }

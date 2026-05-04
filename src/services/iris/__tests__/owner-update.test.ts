@@ -167,7 +167,6 @@ describe('generateIrisDraft — owner_update path', () => {
     const draft = await generateIrisDraft(triggerItem, richContext, {
       generate: generate as unknown as typeof import('ai').generateText,
     } as never)
-    })
     expect(draft.content.length).toBeGreaterThan(0)
     expect(draft.status).toBe('pending')
     expect(draft.confidence).toBe(0.5)
@@ -184,7 +183,6 @@ describe('generateIrisDraft — owner_update path', () => {
     await generateIrisDraft(triggerItem, richContext, {
       generate: generate as unknown as typeof import('ai').generateText,
     } as never)
-    })
     expect(capturedPrompt).toContain('Schedule status:')
     expect(capturedPrompt).toContain('Budget status:')
     expect(capturedPrompt).toContain('Top risks')
@@ -196,7 +194,6 @@ describe('generateIrisDraft — owner_update path', () => {
     const draft = await generateIrisDraft(triggerItem, richContext, {
       generate: generate as unknown as typeof import('ai').generateText,
     } as never)
-    })
     expect(draft.sources).toContain('Schedule activity #142')
     expect(draft.sources).toContain('Cost Codes — committed vs approved')
     expect(draft.sources).toContain('Risk card: storefront-submittal')
@@ -210,7 +207,6 @@ describe('generateIrisDraft — owner_update path', () => {
     const draft = await generateIrisDraft(triggerItem, sparseContext, {
       generate: generate as unknown as typeof import('ai').generateText,
     } as never)
-    })
     expect(draft.content.length).toBeGreaterThan(0)
     expect(draft.status).toBe('pending')
   })

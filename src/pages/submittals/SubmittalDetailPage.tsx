@@ -617,7 +617,7 @@ export function SubmittalDetailPage() {
   const navigate = useNavigate()
   const projectId = useProjectId()
   const { addToast } = useToast()
-  const { user } = useAuth()
+  useAuth()
 
   const { data: submittal, isLoading, error } = useSubmittal(submittalId)
   const { data: reviewers = [] } = useSubmittalReviewers(submittalId)

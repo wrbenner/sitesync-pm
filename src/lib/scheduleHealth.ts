@@ -392,7 +392,7 @@ function scoreToGrade(score: number): string {
 
 function buildSummary(
   score: number,
-  grade: string,
+  _grade: string,
   findings: HealthFinding[],
   metrics: HealthMetrics
 ): string {

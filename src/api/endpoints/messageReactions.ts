@@ -12,7 +12,8 @@ export async function fetchReactions(messageId: string): Promise<MessageReaction
     .select('emoji, user_id')
     .eq('message_id' as never, messageId)
   if (error || !data) return []
-  return data.map((r: { emoji: string; user_id: string }) => ({ emoji: r.emoji, userId: r.user_id }))
+  return (data as Array<{ emoji: string; user_id: string | null }>)
+    .map((r) => ({ emoji: r.emoji, userId: r.user_id ?? '' }))
 }
 
 export async function addReaction(messageId: string, userId: string, emoji: string): Promise<void> {

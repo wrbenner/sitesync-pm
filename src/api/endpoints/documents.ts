@@ -89,7 +89,7 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
     // Log but don't crash — table may not exist yet (migration pending).
     console.warn('[getDrawings] drawing_revisions query failed:', revisionError.message)
   } else {
-    revisionData = revData as DrawingRevision[] | null
+    revisionData = revData as unknown as DrawingRevision[] | null
   }
 
   // Group revisions by drawing_id (already sorted descending by revision_number)

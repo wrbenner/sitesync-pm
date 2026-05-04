@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { magicLinkSchema, loginSchema } from '../../schemas/auth'

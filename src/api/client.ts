@@ -91,7 +91,7 @@ export function createScopedClient(client: DbClient, projectId: string): DbClien
               }
               return Reflect.get(qbTarget, qbProp, qbReceiver)
             },
-          }) as ReturnType<typeof supabase.from>
+          }) as unknown as ReturnType<typeof supabase.from>
         }
       }
       return Reflect.get(target, prop, receiver)
@@ -227,7 +227,7 @@ export async function buildCursorPaginatedQuery<TRow, TMapped = TRow>(
   } = options
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = fromTable(tableName as TableName)
+  let query: any = fromTable(tableName as never)
     .select('*')
     .eq('project_id' as never, projectId)
 

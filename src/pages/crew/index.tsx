@@ -269,7 +269,7 @@ const CrewPage: React.FC = () => {
   useEffect(() => { setPageContext('crew'); }, [setPageContext]);
 
   // ── Data ─────────────────────────────────────────────
-  const { data: metrics } = useProjectMetrics(projectId);
+  useProjectMetrics(projectId);
   const { data: workforceData, isPending: workforceLoading } = useWorkforceMembers(projectId);
   const { data: crewData, isPending: crewsLoading } = useCrews(projectId);
   const { data: incidentData } = useIncidents(projectId);

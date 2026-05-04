@@ -152,7 +152,7 @@ export const DrawingList: React.FC<DrawingListProps> = ({
   onToggleSelect,
   onSelectAll,
   focusedId,
-  onSelectDrawing,
+  onSelectDrawing: _onSelectDrawing,
   onViewDrawing,
   onUploadClick,
   searchQuery,

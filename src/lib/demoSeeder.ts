@@ -69,7 +69,7 @@ const isoDaysFromNow = (days: number) => {
   return d.toISOString()
 }
 
-function pick<T>(arr: T[], i: number): T {
+function pick<T>(arr: readonly T[], i: number): T {
   return arr[i % arr.length]
 }
 

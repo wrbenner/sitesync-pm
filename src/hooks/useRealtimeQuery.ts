@@ -129,7 +129,7 @@ export function useRealtimeQuery<T>(
 import { updatePresencePage } from '../lib/realtime'
 
 export function useEntityPresence(page: string, entityId?: string) {
-  const prevEntityRef = useRef<string | undefined>()
+  const prevEntityRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
@@ -153,7 +153,7 @@ export function useOptimisticLock(
     queryKey: ['optimistic_lock', table, entityId],
     queryFn: async () => {
       if (!entityId) return null
-      const { data, error } = await fromTable(table)
+      const { data, error } = await fromTable(table as never)
         .select('updated_at')
         .eq('id' as never, entityId)
         .single()
