@@ -17,7 +17,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { colors, typography } from '../../../styles/theme';
 
 export default function CostCodeLibraryPage() {
-  const { company } = useAuthStore();
+  const { organization } = useAuthStore();
   const [systemId, setSystemId] = useState<string>(IMPORTERS[0].id);
   const [csv, setCsv] = useState<{ name: string; content: string } | null>(null);
   const [mapping, setMapping] = useState<ColumnMap | null>(null);
@@ -36,7 +36,7 @@ export default function CostCodeLibraryPage() {
   const headers = csv ? (parseCsvRows(csv.content)[0] ?? []) : [];
 
   const onConfirm = async () => {
-    if (!csv || !company?.id || !mapping) return;
+    if (!csv || !organization?.id || !mapping) return;
     setShowMap(false);
     const result = importer.parse(csv.content, mapping);
     if (result.error) {
@@ -44,7 +44,7 @@ export default function CostCodeLibraryPage() {
       return;
     }
     const rows = (result.data ?? []).map((c) => ({
-      organization_id: company.id,
+      organization_id: organization.id,
       code: c.code,
       name: c.name,
       division: c.division,
@@ -83,7 +83,7 @@ export default function CostCodeLibraryPage() {
               background: 'transparent',
               border: 'none',
               borderBottom: '1px solid var(--hairline)',
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 14,
               padding: '8px 0',
               minHeight: 56,
@@ -103,7 +103,7 @@ export default function CostCodeLibraryPage() {
           <p
             style={{
               marginTop: 24,
-              fontFamily: typography.fontFamily.serif,
+              fontFamily: typography.fontFamily,
               fontStyle: 'italic',
               color: colors.statusActive,
             }}
@@ -115,7 +115,7 @@ export default function CostCodeLibraryPage() {
           <p
             style={{
               marginTop: 24,
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               color: colors.statusOverdue ?? colors.primaryOrange,
             }}
           >

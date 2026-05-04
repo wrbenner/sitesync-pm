@@ -42,7 +42,7 @@ export const ColumnMapper: React.FC<ColumnMapperProps> = ({ headers, value, onCh
           >
             <span
               style={{
-                fontFamily: typography.fontFamily.sans,
+                fontFamily: typography.fontFamily,
                 fontSize: 13,
                 color: colors.textSecondary,
               }}
@@ -58,7 +58,7 @@ export const ColumnMapper: React.FC<ColumnMapperProps> = ({ headers, value, onCh
                 background: 'transparent',
                 border: 'none',
                 borderBottom: '1px solid var(--hairline)',
-                fontFamily: typography.fontFamily.sans,
+                fontFamily: typography.fontFamily,
                 fontSize: 14,
                 padding: '8px 0',
               }}

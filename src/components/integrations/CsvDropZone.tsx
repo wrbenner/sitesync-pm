@@ -41,7 +41,7 @@ export const CsvDropZone: React.FC<CsvDropZoneProps> = ({ onFile }) => {
         minHeight: 160,
         border: `1px dashed ${hovering ? colors.primaryOrange : 'var(--hairline)'}`,
         cursor: 'pointer',
-        fontFamily: typography.fontFamily.serif,
+        fontFamily: typography.fontFamily,
         fontStyle: 'italic',
         color: colors.textSecondary,
         padding: 32,

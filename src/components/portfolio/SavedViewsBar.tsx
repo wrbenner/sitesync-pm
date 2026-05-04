@@ -44,7 +44,7 @@ export const SavedViewsBar: React.FC<SavedViewsBarProps> = ({
               border: 'none',
               padding: '4px 0',
               cursor: 'pointer',
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 12,
               textTransform: 'uppercase',
               letterSpacing: 0.6,

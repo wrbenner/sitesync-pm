@@ -33,7 +33,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
       <Eyebrow>{label}</Eyebrow>
       <div
         style={{
-          fontFamily: typography.fontFamily.serif,
+          fontFamily: typography.fontFamily,
           fontSize: 36,
           lineHeight: 1.05,
           color: emphasis === 'attention' ? colors.primaryOrange : colors.textPrimary,
@@ -45,7 +45,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
       {hint && (
         <div
           style={{
-            fontFamily: typography.fontFamily.sans,
+            fontFamily: typography.fontFamily,
             fontSize: 12,
             color: colors.textTertiary,
           }}

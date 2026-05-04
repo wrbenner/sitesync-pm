@@ -58,7 +58,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
             style={{
               background: 'none',
               border: 'none',
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 12,
               textTransform: 'uppercase',
               letterSpacing: 0.6,
@@ -75,7 +75,7 @@ export const ColumnMappingModal: React.FC<ColumnMappingModalProps> = ({
             style={{
               background: 'transparent',
               border: '1px solid var(--color-primary)',
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 12,
               textTransform: 'uppercase',
               letterSpacing: 0.6,

@@ -19,7 +19,7 @@ export const RiskTable: React.FC<RiskTableProps> = ({ projects, onProjectClick }
       <div
         style={{
           padding: '32px 0',
-          fontFamily: typography.fontFamily.serif,
+          fontFamily: typography.fontFamily,
           fontStyle: 'italic',
           color: colors.textTertiary,
         }}
@@ -64,12 +64,12 @@ export const RiskTable: React.FC<RiskTableProps> = ({ projects, onProjectClick }
           <span style={{ display: 'flex', alignItems: 'center' }}>
             {p.riskLevel === 'red' && <OrangeDot size={8} haloSpread={3} />}
           </span>
-          <span style={{ fontFamily: typography.fontFamily.sans, fontSize: 14 }}>
+          <span style={{ fontFamily: typography.fontFamily, fontSize: 14 }}>
             {p.project_name}
           </span>
           <span
             style={{
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 12,
               textTransform: 'uppercase',
               letterSpacing: 0.4,
@@ -83,12 +83,12 @@ export const RiskTable: React.FC<RiskTableProps> = ({ projects, onProjectClick }
           >
             {p.riskLevel}
           </span>
-          <span style={{ fontFamily: typography.fontFamily.serif, fontSize: 16 }}>
+          <span style={{ fontFamily: typography.fontFamily, fontSize: 16 }}>
             {p.riskScore}
           </span>
           <span
             style={{
-              fontFamily: typography.fontFamily.serif,
+              fontFamily: typography.fontFamily,
               fontStyle: 'italic',
               fontSize: 14,
               color: colors.textSecondary,

@@ -76,7 +76,7 @@ export default function BulkInvitePage() {
               background: 'transparent',
               border: `1px solid ${colors.primaryOrange}`,
               color: colors.primaryOrange,
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 12,
               textTransform: 'uppercase',
               letterSpacing: 0.6,
@@ -89,7 +89,7 @@ export default function BulkInvitePage() {
           </button>
         )}
         {result && (
-          <p style={{ marginTop: 16, fontFamily: typography.fontFamily.serif, fontStyle: 'italic' }}>
+          <p style={{ marginTop: 16, fontFamily: typography.fontFamily, fontStyle: 'italic' }}>
             {result}
           </p>
         )}

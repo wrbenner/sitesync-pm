@@ -16,7 +16,7 @@ const ENTITIES = [
 ] as const;
 
 export default function ProcoreImportPage() {
-  const { company } = useAuthStore();
+  const { organization } = useAuthStore();
   const [token, setToken] = useState('');
   const [projectIds, setProjectIds] = useState('');
   const [region, setRegion] = useState<'us' | 'eu' | 'au'>('us');
@@ -25,7 +25,7 @@ export default function ProcoreImportPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const onStart = async () => {
-    if (!company?.id || !token || !projectIds.trim()) return;
+    if (!organization?.id || !token || !projectIds.trim()) return;
     setRunning(true);
     setMessage(null);
     try {
@@ -37,7 +37,7 @@ export default function ProcoreImportPage() {
         .filter((n) => Number.isFinite(n));
       const { data, error } = await supabase.functions.invoke('procore-import-extended', {
         body: {
-          organization_id: company.id,
+          organization_id: organization.id,
           procore_token: token,
           project_ids: ids,
           entity_types: selected,
@@ -103,7 +103,7 @@ export default function ProcoreImportPage() {
                     alignItems: 'center',
                     gap: 6,
                     minHeight: 56,
-                    fontFamily: typography.fontFamily.sans,
+                    fontFamily: typography.fontFamily,
                     fontSize: 13,
                     color: colors.textSecondary,
                   }}
@@ -133,7 +133,7 @@ export default function ProcoreImportPage() {
           {message && (
             <p
               style={{
-                fontFamily: typography.fontFamily.serif,
+                fontFamily: typography.fontFamily,
                 fontStyle: 'italic',
                 color: colors.textSecondary,
               }}

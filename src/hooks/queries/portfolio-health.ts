@@ -14,16 +14,16 @@ import { useAuthStore } from '../../stores/authStore';
 import type { PortfolioProjectInput } from '../../types/portfolio';
 
 export function usePortfolioHealth() {
-  const { company } = useAuthStore();
+  const { organization } = useAuthStore();
   return useQuery({
-    queryKey: ['portfolio-health', company?.id ?? null],
-    enabled: Boolean(company?.id),
+    queryKey: ['portfolio-health', organization?.id ?? null],
+    enabled: Boolean(organization?.id),
     staleTime: 60_000,
     queryFn: async (): Promise<PortfolioProjectInput[]> => {
-      if (!company?.id) return [];
+      if (!organization?.id) return [];
       const { data, error } = await fromTable('project_health_summary')
         .select('*')
-        .eq('organization_id' as never, company.id);
+        .eq('organization_id' as never, organization.id);
       if (error) {
         // Materialized view may not exist yet in older deploys —
         // graceful degradation.

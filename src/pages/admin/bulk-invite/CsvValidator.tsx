@@ -38,7 +38,7 @@ export const CsvValidator: React.FC<CsvValidatorProps> = ({ rows, errors }) => {
             <li
               key={i}
               style={{
-                fontFamily: typography.fontFamily.sans,
+                fontFamily: typography.fontFamily,
                 fontSize: 13,
                 color: colors.statusOverdue ?? colors.primaryOrange,
               }}

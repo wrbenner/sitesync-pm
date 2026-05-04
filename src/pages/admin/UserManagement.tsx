@@ -47,7 +47,7 @@ function getInitials(first?: string | null, last?: string | null): string {
 /* ─────────────────────── Main Component ─────────────────────── */
 
 export function UserManagement() {
-  const { company, profile } = useAuthStore();
+  const { organization, profile } = useAuthStore();
   const [search, setSearch] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const [members, setMembers] = useState<Profile[]>([]);
@@ -64,10 +64,10 @@ export function UserManagement() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   const loadMembers = async () => {
-    // Without a company, there's nothing to fetch — but we still need to
-    // exit the loading state so the page renders the empty state instead
-    // of pulsing skeleton cards forever.
-    if (!company?.id) {
+    // Without an organization, there's nothing to fetch — but we still
+    // need to exit the loading state so the page renders the empty state
+    // instead of pulsing skeleton cards forever.
+    if (!organization?.id) {
       setMembers([]);
       setLoading(false);
       return;
@@ -76,7 +76,7 @@ export function UserManagement() {
     const { data } = await supabase
       .from('profiles')
       .select('*')
-      .eq('organization_id', company.id)
+      .eq('organization_id' as never, organization.id)
       .order('created_at');
     if (data) setMembers(data as unknown as Profile[]);
     setLoading(false);
@@ -84,16 +84,16 @@ export function UserManagement() {
 
   useEffect(() => {
     loadMembers();
-  }, [company?.id]);
+  }, [organization?.id]);
 
   const handleInvite = async () => {
-    if (!inviteEmail || !company?.id) return;
+    if (!inviteEmail || !organization?.id) return;
     setInviteLoading(true);
     setInviteError(null);
 
     try {
-      const { error } = await fromTable('invitations').insert({
-        company_id: company.id,
+      const { error } = await fromTable('user_invitations').insert({
+        organization_id: organization.id,
         email: inviteEmail,
         role: inviteRole,
         invited_by: profile!.id,

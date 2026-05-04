@@ -17,14 +17,14 @@ interface TemplateRow extends ProjectTemplate {
 }
 
 export default function ProjectTemplatesPage() {
-  const { company } = useAuthStore();
+  const { organization } = useAuthStore();
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!company?.id) {
+      if (!organization?.id) {
         setTemplates([]);
         setLoading(false);
         return;
@@ -32,7 +32,7 @@ export default function ProjectTemplatesPage() {
       const { data, error } = await supabase
         .from('project_templates')
         .select('id, name, description, structural_payload, created_at')
-        .eq('organization_id', company.id)
+        .eq('organization_id' as never, organization.id)
         .order('created_at', { ascending: false });
       if (cancelled) return;
       if (!error && data) setTemplates(data as unknown as TemplateRow[]);
@@ -42,7 +42,7 @@ export default function ProjectTemplatesPage() {
     return () => {
       cancelled = true;
     };
-  }, [company?.id]);
+  }, [organization?.id]);
 
   return (
     <PermissionGate permission="org.settings">
@@ -54,7 +54,7 @@ export default function ProjectTemplatesPage() {
         {loading && (
           <p
             style={{
-              fontFamily: typography.fontFamily.serif,
+              fontFamily: typography.fontFamily,
               fontStyle: 'italic',
               color: colors.textTertiary,
             }}
@@ -65,7 +65,7 @@ export default function ProjectTemplatesPage() {
         {!loading && templates.length === 0 && (
           <p
             style={{
-              fontFamily: typography.fontFamily.serif,
+              fontFamily: typography.fontFamily,
               fontStyle: 'italic',
               color: colors.textTertiary,
             }}
@@ -85,7 +85,7 @@ export default function ProjectTemplatesPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <h3
                   style={{
-                    fontFamily: typography.fontFamily.serif,
+                    fontFamily: typography.fontFamily,
                     fontStyle: 'italic',
                     fontSize: 18,
                     fontWeight: 400,
@@ -94,14 +94,14 @@ export default function ProjectTemplatesPage() {
                 >
                   {t.name}
                 </h3>
-                <span style={{ fontFamily: typography.fontFamily.sans, fontSize: 11, color: colors.textTertiary }}>
+                <span style={{ fontFamily: typography.fontFamily, fontSize: 11, color: colors.textTertiary }}>
                   {new Date(t.created_at).toLocaleDateString()}
                 </span>
               </div>
               {t.description && (
                 <p
                   style={{
-                    fontFamily: typography.fontFamily.sans,
+                    fontFamily: typography.fontFamily,
                     fontSize: 14,
                     color: colors.textSecondary,
                     marginTop: 8,
@@ -113,7 +113,7 @@ export default function ProjectTemplatesPage() {
               <p
                 style={{
                   marginTop: 6,
-                  fontFamily: typography.fontFamily.sans,
+                  fontFamily: typography.fontFamily,
                   fontSize: 12,
                   color: colors.textTertiary,
                 }}

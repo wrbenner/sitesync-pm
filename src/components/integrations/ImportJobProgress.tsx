@@ -34,7 +34,7 @@ export const ImportJobProgress: React.FC<ImportJobProgressProps> = ({ job }) => 
         <Eyebrow>Job · {job.id.slice(0, 8)}</Eyebrow>
         <span
           style={{
-            fontFamily: typography.fontFamily.sans,
+            fontFamily: typography.fontFamily,
             fontSize: 12,
             textTransform: 'uppercase',
             letterSpacing: 0.6,
@@ -68,7 +68,7 @@ export const ImportJobProgress: React.FC<ImportJobProgressProps> = ({ job }) => 
       <div
         style={{
           marginTop: 8,
-          fontFamily: typography.fontFamily.sans,
+          fontFamily: typography.fontFamily,
           fontSize: 12,
           color: colors.textTertiary,
         }}
@@ -79,7 +79,7 @@ export const ImportJobProgress: React.FC<ImportJobProgressProps> = ({ job }) => 
         <details style={{ marginTop: 12 }}>
           <summary
             style={{
-              fontFamily: typography.fontFamily.sans,
+              fontFamily: typography.fontFamily,
               fontSize: 12,
               color: colors.statusReview,
               cursor: 'pointer',
@@ -89,7 +89,7 @@ export const ImportJobProgress: React.FC<ImportJobProgressProps> = ({ job }) => 
           </summary>
           <ul style={{ marginTop: 8, paddingLeft: 20, fontSize: 12 }}>
             {job.error_log.slice(0, 20).map((e, i) => (
-              <li key={i} style={{ color: colors.textSecondary, fontFamily: typography.fontFamily.sans }}>
+              <li key={i} style={{ color: colors.textSecondary, fontFamily: typography.fontFamily }}>
                 {e.project_id ?? '?'} · {e.entity ?? '?'} · {e.error ?? ''}
               </li>
             ))}
