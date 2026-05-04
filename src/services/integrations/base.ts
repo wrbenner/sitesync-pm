@@ -47,7 +47,7 @@ export async function logSyncResult(integrationId: string, result: SyncResult, d
     error_details: result.errors.length > 0 ? result.errors : null,
     started_at: new Date().toISOString(),
     completed_at: new Date().toISOString(),
-  })
+  } as never)
 }
 
 export async function updateIntegrationStatus(integrationId: string, status: IntegrationStatus, errorLog?: string): Promise<void> {
@@ -73,7 +73,7 @@ export async function createIntegrationRecord(
     config,
     created_by: userId,
     last_sync: new Date().toISOString(),
-  }).select('id').single()
+  } as never).select('id').single()
   if (error) throw error
   return data.id
 }

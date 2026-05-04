@@ -64,7 +64,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
         // Store available projects for user to select
         await fromTable('integrations').update({
           config: { ...config, hubId, availableProjects: projects.data?.map((p: Record<string, unknown>) => ({ id: p.id, name: (p.attributes as Record<string, unknown>)?.name ?? '' })) ?? [] },
-        }).eq('id' as never, integrationId)
+        } as never).eq('id' as never, integrationId)
 
         return { integrationId }
       }
@@ -72,7 +72,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
       // Project selected, store it
       await fromTable('integrations').update({
         config: { ...config, accProjectId },
-      }).eq('id' as never, integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -124,7 +124,7 @@ export const autodeskBIMProvider: IntegrationProvider = {
                 status: mapACCIssueStatus(attrs.status ?? ''),
                 external_id: issue.id,
                 external_source: 'autodesk_bim360',
-              }, { onConflict: 'external_id,external_source' })
+              } as never, { onConflict: 'external_id,external_source' })
               synced++
             } catch {
               failed++

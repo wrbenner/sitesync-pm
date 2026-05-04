@@ -71,7 +71,7 @@ export const procoreProvider: IntegrationProvider = {
       // Store the actual key securely (in production, use edge function + Supabase Vault)
       await fromTable('integrations').update({
         config: { companyId, apiKeyPrefix: apiKey.slice(0, 8) + '...' },
-      }).eq('id' as never, integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -122,7 +122,7 @@ export const procoreProvider: IntegrationProvider = {
               assigned_to: rfi.assignee?.name || null,
               due_date: rfi.due_date || null,
               created_at: rfi.created_at,
-            }, { onConflict: 'number,project_id' })
+            } as never, { onConflict: 'number,project_id' })
             synced++
           } catch {
             failed++
@@ -144,7 +144,7 @@ export const procoreProvider: IntegrationProvider = {
               number: sub.number,
               due_date: sub.due_date || null,
               created_at: sub.created_at,
-            }, { onConflict: 'number,project_id' })
+            } as never, { onConflict: 'number,project_id' })
             synced++
           } catch {
             failed++

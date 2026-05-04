@@ -193,7 +193,7 @@ export const PayAppDetail = memo<PayAppDetailProps>(({
           pay_app_id: app.id as string,
           reason: args.reason,
           check_ids: args.check_ids,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

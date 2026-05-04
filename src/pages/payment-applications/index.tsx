@@ -126,7 +126,6 @@ const PaymentApplicationsPage: React.FC = () => {
   }, [])
 
   const _handleRetainageRelease = useCallback(async (itemId: string) => {
-        void _handleRetainageRelease;
     setRetainageItems((prev) => prev.map((item) =>
       item.id === itemId
         ? { ...item, stage: 'requested' as RetainageStage }
@@ -134,7 +133,7 @@ const PaymentApplicationsPage: React.FC = () => {
     ))
     const { error } = await supabase
       .from('retainage_ledger')
-      .update({ stage: 'requested', updated_at: new Date().toISOString() })
+      .update({ stage: 'requested', updated_at: new Date().toISOString() } as never)
       .eq('id', itemId)
     if (error) {
       toast.error('Failed to save retainage release request')

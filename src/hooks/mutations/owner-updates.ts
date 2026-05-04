@@ -58,7 +58,7 @@ export function useCreateOwnerUpdate() {
  * with:
  *   supabase.from('owner_update_acknowledgements').upsert({
  *     owner_update_id, user_id, acknowledged_at: new Date().toISOString(),
- *   }, { onConflict: 'owner_update_id,user_id' })
+ *   } as never, { onConflict: 'owner_update_id,user_id' })
  * and invalidate ownerUpdatesKeys.acknowledgements(updateId, userId).
  *
  * For now it no-ops client-side so the button exists, gives feedback, and

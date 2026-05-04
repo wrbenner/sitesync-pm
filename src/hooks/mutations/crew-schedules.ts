@@ -24,7 +24,7 @@ export function useCreateCrewSchedule() {
           start_date: input.start_date,
           end_date: input.end_date,
           headcount: input.headcount,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

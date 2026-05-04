@@ -137,7 +137,7 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
  */
 function persistCoordinates(projectId: string, lat: number, lon: number): void {
   fromTable('projects')
-    .update({ latitude: lat, longitude: lon })
+    .update({ latitude: lat, longitude: lon } as never)
     .eq('id' as never, projectId)
     .then(({ error }) => {
       if (error && import.meta.env.DEV) {

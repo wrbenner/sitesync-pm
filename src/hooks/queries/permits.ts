@@ -30,7 +30,7 @@ export function useCreatePermit() {
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
       const { data, error } = await fromTable('permits')
-        .insert({ ...params.data, project_id: params.projectId })
+        .insert({ ...params.data, project_id: params.projectId } as never)
         .select()
         .single()
       if (error) throw error

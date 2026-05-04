@@ -60,7 +60,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
       description: draft.description.trim() || null,
       inherits_from: draft.inherits_from,
       permissions: draft.permissions,
-    });
+    } as never);
     if (error) { toast.error(error.message); return; }
     toast.success('Custom role created');
     setDraft({ name: '', description: '', inherits_from: null, permissions: [] });

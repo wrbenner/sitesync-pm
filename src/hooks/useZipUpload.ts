@@ -50,7 +50,7 @@ async function uploadZipToStorage(args: StartUploadArgs): Promise<StartUploadRes
         progress_pct: 0,
         storage_path: storagePath,
         original_name: args.file.name,
-      })
+      } as never)
       .select('id')
       .single()
     if (!error && data) jobId = (data as { id: string }).id

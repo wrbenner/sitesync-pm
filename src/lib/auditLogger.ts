@@ -46,7 +46,7 @@ export async function logAuditEntry(entry: AuditEntry): Promise<void> {
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
     },
-  })
+  } as never)
 
   if (error) {
     // Never block the user's action due to audit logging failures

@@ -159,7 +159,7 @@ export function useConfirmDiscrepancy() {
   return useMutation<DrawingDiscrepancy, Error, { id: string; projectId: string; drawingId?: string }>({
     mutationFn: async ({ id }) => {
       const { data, error } = await fromTable('drawing_discrepancies')
-        .update({ user_confirmed: true, is_false_positive: false })
+        .update({ user_confirmed: true, is_false_positive: false } as never)
         .eq('id' as never, id)
         .select('*')
         .single()
@@ -180,7 +180,7 @@ export function useDismissDiscrepancy() {
   return useMutation<DrawingDiscrepancy, Error, { id: string; projectId: string; drawingId?: string }>({
     mutationFn: async ({ id }) => {
       const { data, error } = await fromTable('drawing_discrepancies')
-        .update({ is_false_positive: true, user_confirmed: false })
+        .update({ is_false_positive: true, user_confirmed: false } as never)
         .eq('id' as never, id)
         .select('*')
         .single()

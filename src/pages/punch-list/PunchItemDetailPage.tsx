@@ -36,8 +36,7 @@ import type { PunchItem } from './types'
 
 // ─── Helpers ──────────────────────────────────────────────
 
-const _getInitials = (s: string) =>
-      void _getInitials;
+const _getInitials = (_s: string) =>
   ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const relativeTime = (dateStr: string) => {

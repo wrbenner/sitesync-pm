@@ -73,7 +73,7 @@ export function useReorderTasks() {
       } catch {
         // Fallback: individual updates (non-atomic, last resort)
         for (const { id, sort_order } of updates) {
-          const { error } = await from('tasks').update({ sort_order }).eq('id' as never, id).eq('project_id' as never, projectId)
+          const { error } = await from('tasks').update({ sort_order } as never).eq('id' as never, id).eq('project_id' as never, projectId)
           if (error) throw error
         }
       }
@@ -97,7 +97,7 @@ export function useUpdateTaskDependencies() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ taskId, predecessorIds, projectId }: { taskId: string; predecessorIds: string[]; projectId: string }) => {
-      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds }).eq('id' as never, taskId).eq('project_id' as never, projectId)
+      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds } as never).eq('id' as never, taskId).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -154,7 +154,7 @@ export function useApplyTaskTemplate() {
           const createdId = idMap.get(String(task.id || task.title))
           const predIds = preds.map((p: string) => idMap.get(p)).filter(Boolean)
           if (createdId && predIds.length) {
-            await from('tasks').update({ predecessor_ids: predIds }).eq('id' as never, createdId)
+            await from('tasks').update({ predecessor_ids: predIds } as never).eq('id' as never, createdId)
           }
         }
       }

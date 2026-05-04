@@ -246,7 +246,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
     }));
 
   if (durations.length > 3) {
-    const _sorted = [...durations].sort((a, b) => a.days - b.days);
+
 
     const anomalies: string[] = [];
 

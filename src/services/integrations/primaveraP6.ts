@@ -216,7 +216,7 @@ export const primaveraP6Provider: IntegrationProvider = {
             end_date: activity.finishDate ? activity.finishDate.slice(0, 10) : null,
             percent_complete: activity.percentComplete,
             status: activity.status,
-          }, { onConflict: 'name,project_id' })
+          } as never, { onConflict: 'name,project_id' })
           synced++
         } catch {
           failed++
@@ -226,7 +226,7 @@ export const primaveraP6Provider: IntegrationProvider = {
       // Clear pending import
       await fromTable('integrations').update({
         config: { ...config, pendingImportXer: null, lastImportFile: new Date().toISOString() },
-      }).eq('id' as never, integrationId)
+      } as never).eq('id' as never, integrationId)
 
     } catch (err) {
       errors.push(`XER parse error: ${(err as Error).message}`)

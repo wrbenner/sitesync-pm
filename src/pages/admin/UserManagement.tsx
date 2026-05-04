@@ -101,7 +101,7 @@ export function UserManagement() {
         status: 'pending',
         token: crypto.randomUUID(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
+      } as never);
       if (error) {
         setInviteError(error.message ?? 'Failed to send invitation');
         setInviteLoading(false);

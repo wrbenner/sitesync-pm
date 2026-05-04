@@ -72,7 +72,7 @@ async function recordTrace(
           prompt_preview: input.promptPreview?.slice(0, 240) ?? null,
           ...input.metadata,
         },
-      })
+      } as never)
       .select('id')
       .single()
     if (error) {
@@ -150,7 +150,7 @@ export async function recordCorrection(params: {
       rating: params.rating ?? null,
       original: params.original?.slice(0, 4000) ?? null,
       corrected: params.corrected?.slice(0, 4000) ?? null,
-    })
+    } as never)
   } catch (e) {
     console.warn('[aiObservability] recordCorrection failed', e)
   }

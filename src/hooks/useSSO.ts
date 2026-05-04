@@ -125,7 +125,7 @@ export function useSSOAdmin(organizationId: string | undefined) {
           organization_id: organizationId,
           ...config,
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'organization_id' })
+        } as never, { onConflict: 'organization_id' })
 
       if (error) throw error
       toast.success('SSO configuration saved')

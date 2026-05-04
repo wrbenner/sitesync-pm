@@ -345,7 +345,6 @@ const CheckInbox: React.FC<{ email: string; onBack: () => void }> = ({ email, on
 
 export const Login: React.FC = () => {
   const _navigate = useNavigate()
-        void _navigate;
   const [searchParams] = useSearchParams()
   const { signIn } = useAuth()
 

@@ -206,7 +206,6 @@ export function forkLogVersion<T extends {
   superintendent_signature_url?: string | null
 }>(original: T): Omit<T, 'id'> & { version: number; is_submitted: false; submitted_at: null; status: 'draft' } {
   const { id: _id, ...rest } = original as Record<string, unknown>
-  void _id
   return {
     ...(rest as Omit<T, 'id'>),
     version: ((original.version ?? 1) as number) + 1,

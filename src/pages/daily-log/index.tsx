@@ -873,7 +873,7 @@ const DailyLogPage: React.FC = () => {
         await insertBuilder.insert({
           daily_log_id: logId, type: 'photo', description: file.name,
           photos: [{ id: crypto.randomUUID(), url: photoUrl, caption: '', category: 'progress', timestamp: new Date().toISOString() }],
-        });
+        } as never);
         refetch();
         addToast('success', 'Photo uploaded');
       } catch {

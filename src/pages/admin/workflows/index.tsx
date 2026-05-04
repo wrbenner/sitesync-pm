@@ -75,7 +75,7 @@ export const AdminWorkflowsPage: React.FC = () => {
       name: def.name,
       start_step: def.start_step,
       definition: { steps: def.steps },
-    })
+    } as never)
     setDefinition({ ...def, version: next })
   }
 

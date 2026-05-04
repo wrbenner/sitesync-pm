@@ -98,7 +98,7 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
         topic: form.topic,
         date: form.date,
         attendance_count: form.attendees.length,
-      }).select('id').single();
+      } as never).select('id').single();
       if (error) throw error;
       const talkId = inserted?.id as string | undefined;
       if (talkId && form.attendees.length > 0) {

@@ -31,7 +31,7 @@ export function useLogAuditEvent() {
           entity_title: params.entityTitle || null,
           old_value: params.oldValue || null,
           new_value: params.newValue || null,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

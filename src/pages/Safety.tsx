@@ -848,7 +848,6 @@ export const Safety: React.FC = () => {
 
   const dartValue = dart !== null ? parseFloat(dart) : null
   const _dartColor: 'success' | 'warning' | 'danger' | undefined =
-        void _dartColor;
     dartValue === null ? undefined
     : dartValue <= 1.5 ? 'success'
     : dartValue <= 2.5 ? 'warning'
@@ -993,7 +992,7 @@ export const Safety: React.FC = () => {
           .from('safety-photos')
           .upload(filePath, incidentForm.photo, { contentType: incidentForm.photo.type, upsert: true })
         if (!uploadError) {
-          await fromTable('incidents').update({ photos: [filePath] }).eq('id' as never, incidentId)
+          await fromTable('incidents').update({ photos: [filePath] } as never).eq('id' as never, incidentId)
         }
       }
       if (incidentForm.ca_description.trim()) {
@@ -1057,7 +1056,7 @@ export const Safety: React.FC = () => {
         topic: talkForm.topic.trim(),
         date: talkForm.date,
         attendance_count: talkForm.attendees.length,
-      }).select('id').single()
+      } as never).select('id').single()
       if (insertError) throw insertError
       const talkId = insertedTalk?.id as string | undefined
       if (talkId && talkForm.attendees.length > 0) {

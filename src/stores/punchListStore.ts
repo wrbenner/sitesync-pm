@@ -82,7 +82,7 @@ export const usePunchListStore = create<PunchListState>()((set, get) => ({
         initials,
         text,
         content: text, // keep legacy `content` column populated
-      })
+      } as never)
       .select()
       .single();
     if (error) {

@@ -1506,7 +1506,7 @@ const AddLineModal: React.FC<{
         division: form.division || form.csi_division || 'General',
         cost_code: form.cost_code || null,
         original_amount: amt,
-      })
+      } as never)
       if (error) throw error
       onCreated()
     } catch (e) {

@@ -466,7 +466,7 @@ const Deliveries: React.FC = () => {
                       const { error } = await fromTable('deliveries').update({
                         receiving_notes: `Inspection by ${inspectorName}: ${RESULT_OPTIONS.find(o => o.value === inspectionResult)?.label ?? inspectionResult}`.trim(),
                         status: inspectionResult === 'rejected' ? 'rejected' : inspectionResult === 'accepted_with_exceptions' ? 'partial' : 'delivered',
-                      }).eq('id' as never, selected.id)
+                      } as never).eq('id' as never, selected.id)
                       if (error) throw error
                       toast.success(`Inspection recorded: ${RESULT_OPTIONS.find(o => o.value === inspectionResult)?.label}`)
                     } catch (err) {
@@ -575,14 +575,14 @@ const Deliveries: React.FC = () => {
                           entity_type: 'delivery',
                           entity_id: selected.id,
                           project_id: projectId,
-                        })
+                        } as never)
                         if (error) throw error
                         // Also update the delivery record with the delay note
                         if (delayNotes) {
                           await fromTable('deliveries').update({
                             notes: delayNotes,
                             updated_at: new Date().toISOString(),
-                          }).eq('id' as never, selected.id)
+                          } as never).eq('id' as never, selected.id)
                         }
                         toast.success(`PM notified: ${selected.vendor} delivery is ${daysLate} day(s) late.`)
                       } catch (err) {
@@ -680,7 +680,7 @@ const Deliveries: React.FC = () => {
                 .update({
                   damage_reports: [...existingReports, newReport],
                   status: 'partial',
-                })
+                } as never)
                 .eq('id' as never, selected.id)
               if (dmgErr) throw dmgErr
               // Also create a notification for the PM
@@ -695,7 +695,7 @@ const Deliveries: React.FC = () => {
                   entity_type: 'delivery',
                   entity_id: selected.id,
                   project_id: projectId,
-                })
+                } as never)
               }
             } catch (err) {
               toast.error(`Failed to save damage report: ${(err as Error).message}`)

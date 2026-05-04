@@ -109,7 +109,7 @@ describe('RFI end-to-end flow', () => {
     expect(getRfiNext('draft', 'Submit')).toBe('open')
 
     // Persist the status move
-    const openRes = await supabase.from('rfis').update({ status: 'open' }).eq('id', createdId).select().single()
+    const openRes = await supabase.from('rfis').update({ status: 'open' } as never).eq('id', createdId).select().single()
     expect(openRes.data).toMatchObject({ status: 'open' })
 
     // Step 5: Add a response — assign to reviewer, then respond
@@ -120,7 +120,7 @@ describe('RFI end-to-end flow', () => {
 
     const respondRes = await supabase
       .from('rfis')
-      .update({ status: 'answered', response: 'Use W14x22 per spec 5.2' })
+      .update({ status: 'answered', response: 'Use W14x22 per spec 5.2' } as never)
       .eq('id', createdId)
       .select()
       .single()
@@ -129,7 +129,7 @@ describe('RFI end-to-end flow', () => {
     // Step 6: Close
     actor.send({ type: 'CLOSE', userId: 'user-1' })
     expect(actor.getSnapshot().value).toBe('closed')
-    const closeRes = await supabase.from('rfis').update({ status: 'closed' }).eq('id', createdId).select().single()
+    const closeRes = await supabase.from('rfis').update({ status: 'closed' } as never).eq('id', createdId).select().single()
     expect(closeRes.data).toMatchObject({ status: 'closed' })
     actor.stop()
   })

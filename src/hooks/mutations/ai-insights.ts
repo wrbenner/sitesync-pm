@@ -18,7 +18,7 @@ export function useDismissInsight() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await from('ai_insights').update({ dismissed: true }).eq('id' as never, id).eq('project_id' as never, projectId)
+      const { error } = await from('ai_insights').update({ dismissed: true } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -37,7 +37,7 @@ export function useActOnInsight() {
       const { error } = await from('ai_insights').update({
         acted_on_at: new Date().toISOString(),
         acted_on_action: action,
-      }).eq('id' as never, id).eq('project_id' as never, projectId)
+      } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

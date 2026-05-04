@@ -694,7 +694,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         const logData: Record<string, unknown> = { ...form as unknown as Record<string, unknown>, id: createdId }
         summarizeDailyLog(logData).then((summary) => {
           if (summary) {
-            fromTable('daily_logs').update({ ai_summary: summary }).eq('id' as never, createdId).then(() => {})
+            fromTable('daily_logs').update({ ai_summary: summary } as never).eq('id' as never, createdId).then(() => {})
           }
         }).catch(() => {})
       }

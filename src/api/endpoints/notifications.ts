@@ -28,14 +28,14 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
   const { error } = await fromTable('notifications')
-    .update({ read: true })
+    .update({ read: true } as never)
     .eq('id' as never, notificationId)
   if (error) throw transformSupabaseError(error)
 }
 
 export async function markAllRead(userId: string): Promise<void> {
   const { error } = await fromTable('notifications')
-    .update({ read: true })
+    .update({ read: true } as never)
     .eq('user_id' as never, userId)
     .eq('read' as never, false)
   if (error) throw transformSupabaseError(error)

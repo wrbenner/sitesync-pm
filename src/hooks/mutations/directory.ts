@@ -91,7 +91,7 @@ export function useCreateCommunicationLog() {
           summary: input.summary ?? '',
           occurred_at: input.occurredAt ?? new Date().toISOString(),
           logged_by: userId,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

@@ -22,7 +22,7 @@ export function useCreateTimesheet() {
           work_date: input.work_date,
           hours: input.hours,
           activity: input.activity ?? '',
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

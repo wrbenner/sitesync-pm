@@ -397,7 +397,7 @@ export async function runDrawingRevisedChain(
         last_revision_flagged_at: new Date().toISOString(),
       };
       const { error: updateError } = await from('rfis')
-        .update({ metadata: newMeta })
+        .update({ metadata: newMeta } as never)
         .eq('id', rfi.id);
       if (!updateError) flagged.push(rfi.id as string);
     }
@@ -794,7 +794,7 @@ export async function runMeetingActionItemTaskSweep(
       // To prevent that, double-check the action item still has no link
       // (cheap defense against a concurrent run).
       await from('meeting_action_items')
-        .update({ linked_task_id: insertedTask.id })
+        .update({ linked_task_id: insertedTask.id } as never)
         .eq('id', item.id)
         .is('linked_task_id', null);
 
@@ -1108,7 +1108,7 @@ export async function runCrewNoShowChain(input: {
       const nowIso = new Date().toISOString();
       if (attendance) {
         await from('crew_attendance')
-          .update({ no_show_flagged_at: nowIso })
+          .update({ no_show_flagged_at: nowIso } as never)
           .eq('id', attendance.id);
       } else {
         await from('crew_attendance').insert({
@@ -1117,7 +1117,7 @@ export async function runCrewNoShowChain(input: {
           attendance_date: date,
           planned_arrival_time: crew.planned_arrival_time,
           no_show_flagged_at: nowIso,
-        });
+        } as never);
       }
       return { workflow: 'crew_no_show', skipped: { reason: 'no meeting exists yet — flagged on attendance row only' } };
     }
@@ -1147,7 +1147,7 @@ export async function runCrewNoShowChain(input: {
         .update({
           no_show_flagged_at: nowIso,
           meeting_action_item_id: insertedItem.id,
-        })
+        } as never)
         .eq('id', attendance.id);
     } else {
       await from('crew_attendance').insert({
@@ -1157,7 +1157,7 @@ export async function runCrewNoShowChain(input: {
         planned_arrival_time: crew.planned_arrival_time,
         no_show_flagged_at: nowIso,
         meeting_action_item_id: insertedItem.id,
-      });
+      } as never);
     }
 
     return {

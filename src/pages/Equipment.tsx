@@ -646,7 +646,7 @@ function AddEquipmentModal({ projectId, onClose, onCreated }: AddEquipmentModalP
         type: form.type || null,
         serial_number: form.serial_number || null,
         status: form.status,
-      });
+      } as never);
       if (error) throw error;
       toast.success('Equipment added');
       onCreated();

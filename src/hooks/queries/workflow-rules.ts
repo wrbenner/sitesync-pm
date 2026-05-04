@@ -90,7 +90,7 @@ export function useUpdateWorkflowRule() {
   return useMutation({
     mutationFn: async ({ id, updates }: UpdateWorkflowRuleInput) => {
       const { data, error } = await from('workflow_rules')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
         .eq('id' as never, id)
         .select()
         .single()
@@ -108,7 +108,7 @@ export function useToggleWorkflowRule() {
   return useMutation({
     mutationFn: async ({ id, is_active, projectId }: { id: string; is_active: boolean; projectId: string }) => {
       const { data, error } = await from('workflow_rules')
-        .update({ is_active, updated_at: new Date().toISOString() })
+        .update({ is_active, updated_at: new Date().toISOString() } as never)
         .eq('id' as never, id)
         .select()
         .single()

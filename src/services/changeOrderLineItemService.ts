@@ -84,7 +84,7 @@ export async function createCOLineItem(payload: CreateCOLineItemPayload): Promis
       unit_cost: payload.unit_cost ?? null,
       budget_item_id: payload.budget_item_id ?? null,
       sort_order: payload.sort_order ?? 0,
-    })
+    } as never)
     .select()
     .single()
 
@@ -107,7 +107,7 @@ export async function updateCOLineItem(
   updates: UpdateCOLineItemPayload,
 ): Promise<COLineItem | null> {
   const { data, error } = await fromTable('change_order_line_items')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...updates, updated_at: new Date().toISOString() } as never)
     .eq('id' as never, lineItemId)
     .select()
     .single()
@@ -161,6 +161,6 @@ async function syncCOAmountFromLineItems(changeOrderId: string): Promise<void> {
   const total = fromCents(totalC) / 100
 
   await fromTable('change_orders')
-    .update({ amount: total, updated_at: new Date().toISOString() })
+    .update({ amount: total, updated_at: new Date().toISOString() } as never)
     .eq('id' as never, changeOrderId)
 }

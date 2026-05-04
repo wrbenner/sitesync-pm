@@ -470,7 +470,6 @@ export async function generateDiscrepancyReport(
              (item._structDrawingId && selected.has(item._structDrawingId))
     })
     .map(({ _archDrawingId: _a, _structDrawingId: _b, ...rest }) => {
-      void _a; void _b
       return rest
     })
 

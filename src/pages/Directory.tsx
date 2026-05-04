@@ -107,7 +107,7 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({ projectId, onClose 
         trade: form.trade.trim() || null,
         insurance_status: form.insurance_status,
         insurance_expiry: form.insurance_expiry || null,
-      });
+      } as never);
       if (error) throw error;
       toast.success('Company added');
       qc.invalidateQueries({ queryKey: ['companies'] });
@@ -249,7 +249,6 @@ const DEFAULT_PREQUAL: PrequalInfo = {
 };
 
 function _getDefaultPrequal(): PrequalInfo {
-         void _getDefaultPrequal;
   return { ...DEFAULT_PREQUAL };
 }
 
@@ -375,7 +374,7 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
         company: companyName,
         document_url: publicUrl,
         policy_type: 'GL',
-      });
+      } as never);
       if (insertError) throw insertError;
       toast.success('COI uploaded successfully');
     } catch (err) {

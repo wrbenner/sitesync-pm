@@ -568,7 +568,6 @@ function _detectSectionContext(
   headerRow: number,
   columns: DetectedColumn[],
 ): SectionContext | null {
-  void _detectSectionContext;
   // Scan backward from this row to find the nearest section total or section header
   const descCol = columns.find(c => c.role === 'description');
 

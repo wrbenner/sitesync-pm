@@ -102,7 +102,7 @@ export async function generateComplianceReport(
     date_range_start: startDate,
     date_range_end: endDate,
     metadata: metrics,
-  }).select().single()
+  } as never).select().single()
 
   return {
     id: report?.id ?? crypto.randomUUID(),

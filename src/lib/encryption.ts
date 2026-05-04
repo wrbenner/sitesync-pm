@@ -49,7 +49,7 @@ export async function encryptField(
     entity_id: entityId,
     field_name: fieldName,
     vault_secret_id: vaultSecretId,
-  }, { onConflict: 'entity_type,entity_id,field_name' })
+  } as never, { onConflict: 'entity_type,entity_id,field_name' })
 
   // Return a masked placeholder for the UI
   return maskValue(plaintext)

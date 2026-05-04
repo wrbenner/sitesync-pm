@@ -28,7 +28,7 @@ export function useCreateWarranty() {
   return useMutation({
     mutationFn: async (input: CreateWarrantyInput) => {
       const { data, error } = await fromTable('warranties')
-        .insert({ status: 'active', ...input })
+        .insert({ status: 'active', ...input } as never)
         .select()
         .single()
       if (error) throw error
@@ -51,7 +51,7 @@ export function useUpdateWarranty() {
   return useMutation({
     mutationFn: async ({ id, updates }: UpdateWarrantyInput) => {
       const { data, error } = await fromTable('warranties')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
         .eq('id' as never, id)
         .select()
         .single()

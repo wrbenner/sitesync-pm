@@ -24,7 +24,7 @@ export function useApproveAgentAction() {
         reviewed_at: new Date().toISOString(),
         applied: true,
         applied_at: new Date().toISOString(),
-      }).eq('id' as never, id).eq('project_id' as never, projectId)
+      } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -44,7 +44,7 @@ export function useRejectAgentAction() {
         status: 'rejected',
         reviewed_by: userId,
         reviewed_at: new Date().toISOString(),
-      }).eq('id' as never, id).eq('project_id' as never, projectId)
+      } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

@@ -53,7 +53,7 @@ export function useRevokeInvitation() {
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId?: string }) => {
       const { data, error } = await fromTable('user_invitations')
-        .update({ status: 'revoked' })
+        .update({ status: 'revoked' } as never)
         .eq('id' as never, id)
         .select()
         .single()
@@ -75,7 +75,7 @@ export function useAcceptInvitation() {
   return useMutation({
     mutationFn: async ({ token, acceptedBy }: { token: string; acceptedBy: string }) => {
       const { data, error } = await fromTable('user_invitations')
-        .update({ status: 'accepted', accepted_by: acceptedBy, accepted_at: new Date().toISOString() })
+        .update({ status: 'accepted', accepted_by: acceptedBy, accepted_at: new Date().toISOString() } as never)
         .eq('token' as never, token)
         .eq('status' as never, 'pending')
         .select()

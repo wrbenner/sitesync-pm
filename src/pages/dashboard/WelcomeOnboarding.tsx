@@ -48,7 +48,7 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
         description: (data.description as string) || null,
         status: 'active',
         owner_id: user?.id ?? null,
-      })
+      } as never)
       .select()
       .single();
 
@@ -64,7 +64,7 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
         user_id: user.id,
         role: 'project_manager',
         accepted_at: new Date().toISOString(),
-      });
+      } as never);
       if (memberError) {
         console.error('Failed to add project member:', memberError);
         toast.error('Project created but failed to set you as project manager. Please contact support.');

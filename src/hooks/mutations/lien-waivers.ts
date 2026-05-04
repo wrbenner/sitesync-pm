@@ -146,7 +146,7 @@ export function useMarkLienWaiverSigned() {
           signed_at: new Date().toISOString(),
           signed_by: params.signed_by,
           document_url: params.document_url ?? null,
-        })
+        } as never)
         .eq('id' as never, params.id)
         .select()
         .single()

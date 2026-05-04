@@ -136,7 +136,7 @@ export function useUpdateCloseoutStatus() {
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { data, error } = await fromTable('closeout_items')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update({ status, updated_at: new Date().toISOString() } as never)
         .eq('id' as never, id)
         .select()
         .single()

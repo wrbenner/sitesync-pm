@@ -125,7 +125,7 @@ async function uploadAndAttach(blob: Blob, meta: CaptureMetadata): Promise<strin
     type: 'photo',
     description: meta.caption || meta.filename,
     photos: [photoEntry],
-  });
+  } as never);
   if (insertErr) throw insertErr;
 
   return photoUrl;

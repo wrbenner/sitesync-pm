@@ -148,7 +148,6 @@ const PersonPicker: React.FC<{
   placeholder?: string
   filterTrade?: boolean
 }> = ({ label, projectId, value, onChange, placeholder = 'Select...', _filterTrade }) => {
-                                                                      void _filterTrade;
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)

@@ -77,7 +77,7 @@ describe('Punch item end-to-end flow', () => {
     const input = punchItemFactory.build({ title: 'Sealant missing at window W-07' })
     const createRes = await supabase
       .from('punch_items')
-      .insert({ project_id: input.project_id, title: input.title, location: input.location, trade: input.trade })
+      .insert({ project_id: input.project_id, title: input.title, location: input.location, trade: input.trade } as never)
       .select()
       .single()
     const createdId = (createRes.data as Record<string, unknown>).id as string
@@ -93,7 +93,7 @@ describe('Punch item end-to-end flow', () => {
 
     const inProgressRes = await supabase
       .from('punch_items')
-      .update({ status: 'in_progress' })
+      .update({ status: 'in_progress' } as never)
       .eq('id', createdId)
       .select()
       .single()
@@ -104,7 +104,7 @@ describe('Punch item end-to-end flow', () => {
     expect(actor.getSnapshot().value).toBe('sub_complete')
     const resolvedRes = await supabase
       .from('punch_items')
-      .update({ status: 'resolved', resolved_date: new Date().toISOString().slice(0, 10) })
+      .update({ status: 'resolved', resolved_date: new Date().toISOString().slice(0, 10) } as never)
       .eq('id', createdId)
       .select()
       .single()
@@ -116,7 +116,7 @@ describe('Punch item end-to-end flow', () => {
     expect(actor.getSnapshot().value).toBe('verified')
     const verifyRes = await supabase
       .from('punch_items')
-      .update({ status: 'verified', verified_date: new Date().toISOString().slice(0, 10) })
+      .update({ status: 'verified', verified_date: new Date().toISOString().slice(0, 10) } as never)
       .eq('id', createdId)
       .select()
       .single()

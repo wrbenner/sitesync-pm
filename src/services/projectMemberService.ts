@@ -477,7 +477,6 @@ export const projectMemberService = {
     }
 
     const { role: _role, ...safeUpdates } = updates as Record<string, unknown>;
-    void _role;
 
     const { error } = await fromTable('project_members')
       .update(safeUpdates as never)

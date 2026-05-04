@@ -79,7 +79,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
       url: newUrl.trim(),
       event_types: events.length ? events : ['*'],
       secret_hint: 'managed',
-    });
+    } as never);
     if (error) { toast.error(error.message); return; }
     toast.success('Webhook created');
     setNewName(''); setNewUrl('');
@@ -87,7 +87,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
   };
 
   const togglePause = async (sub: SubRow) => {
-    await (supabase as any).from('outbound_webhooks').update({ paused: !sub.paused }).eq('id', sub.id);
+    await (supabase as any).from('outbound_webhooks').update({ paused: !sub.paused } as never).eq('id', sub.id);
     qc.invalidateQueries({ queryKey: ['outbound_webhooks', organizationId] });
   };
 

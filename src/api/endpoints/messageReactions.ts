@@ -17,7 +17,7 @@ export async function fetchReactions(messageId: string): Promise<MessageReaction
 
 export async function addReaction(messageId: string, userId: string, emoji: string): Promise<void> {
   await fromTable('message_reactions')
-    .upsert({ message_id: messageId, user_id: userId, emoji }, { onConflict: 'message_id,user_id,emoji' })
+    .upsert({ message_id: messageId, user_id: userId, emoji } as never, { onConflict: 'message_id,user_id,emoji' })
 }
 
 export async function removeReaction(messageId: string, userId: string, emoji: string): Promise<void> {

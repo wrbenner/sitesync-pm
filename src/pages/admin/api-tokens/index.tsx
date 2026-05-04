@@ -67,7 +67,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
       prefix: minted.prefix,
       token_hash: minted.hash,
       scopes,
-    });
+    } as never);
     if (error) { toast.error(error.message); return; }
     setRevealedToken(minted.token);
     setName('');
@@ -85,7 +85,7 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
     if (!ok) return;
     const { error } = await (supabase as any)
       .from('org_api_tokens')
-      .update({ revoked_at: new Date().toISOString(), revoked_reason: 'admin_revoked' })
+      .update({ revoked_at: new Date().toISOString(), revoked_reason: 'admin_revoked' } as never)
       .eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('Token revoked');

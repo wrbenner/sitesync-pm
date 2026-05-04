@@ -1160,7 +1160,7 @@ const TimeTracking: React.FC = () => {
                 markup_pct: tmMarkup,
                 status: 'draft',
                 created_by: user?.id ?? null,
-              })
+              } as never)
               if (error) throw error
               toast.success('T&M ticket created')
               setTmModalOpen(false)

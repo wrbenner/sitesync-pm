@@ -66,7 +66,7 @@ export function useCreateChecklistFromTemplate() {
           linked_entity_type: params.linkedEntityType || null,
           linked_entity_id: params.linkedEntityId || null,
           status: 'pending',
-        })
+        } as never)
         .select()
         .single()
       if (cErr) throw cErr

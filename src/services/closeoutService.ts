@@ -128,7 +128,7 @@ export const closeoutService = {
     const { status: _status, ...safeUpdates } = updates;
 
     const { error } = await fromTable('closeout_items')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
       .eq('id' as never, closeoutItemId);
 
     if (error) return fail(dbError(error.message, { closeoutItemId }));

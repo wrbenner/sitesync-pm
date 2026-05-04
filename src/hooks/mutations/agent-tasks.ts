@@ -44,7 +44,7 @@ export function useCreateAgentTask() {
           error_message: input.error_message ?? null,
           started_at: input.started_at ?? null,
           completed_at: input.completed_at ?? null,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
@@ -75,7 +75,7 @@ export function useApproveAgentTask() {
 
       const startedAt = new Date().toISOString()
       await fromTable('agent_tasks')
-        .update({ status: 'running', started_at: startedAt })
+        .update({ status: 'running', started_at: startedAt } as never)
         .eq('id' as never, task.id)
 
       let orchestratorResult: Record<string, unknown> | null = null
@@ -137,7 +137,7 @@ export function useRejectAgentTask() {
   return useMutation({
     mutationFn: async (task: AgentTask) => {
       const { error } = await fromTable('agent_tasks')
-        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+        .update({ status: 'cancelled', completed_at: new Date().toISOString() } as never)
         .eq('id' as never, task.id)
       if (error) throw error
       return task

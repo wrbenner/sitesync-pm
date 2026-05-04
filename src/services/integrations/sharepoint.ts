@@ -98,7 +98,7 @@ export const sharePointProvider: IntegrationProvider = {
 
       await fromTable('integrations').update({
         config: { ...config, driveId, folderId, siteUrl: siteUrl ?? 'onedrive' },
-      }).eq('id' as never, integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -148,7 +148,7 @@ export const sharePointProvider: IntegrationProvider = {
               external_source: 'sharepoint',
               file_size: item.size ?? 0,
               updated_at: item.lastModifiedDateTime,
-            }, { onConflict: 'external_id,external_source' })
+            } as never, { onConflict: 'external_id,external_source' })
             synced++
           } catch {
             failed++
@@ -159,7 +159,7 @@ export const sharePointProvider: IntegrationProvider = {
         if (delta['@odata.deltaLink']) {
           await fromTable('integrations').update({
             config: { ...config, deltaLink: delta['@odata.deltaLink'] },
-          }).eq('id' as never, integrationId)
+          } as never).eq('id' as never, integrationId)
         }
       }
 

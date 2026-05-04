@@ -118,7 +118,7 @@ export function useCreateTaskRelation() {
           to_task_id: params.to_task_id,
           relation_type: params.relation_type,
           lag_days: params.lag_days ?? 0,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

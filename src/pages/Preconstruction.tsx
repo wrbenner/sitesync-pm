@@ -204,7 +204,6 @@ export const Preconstruction: React.FC = () => {
   const createPackage = useCreatePreconBidPackage()
   const updatePackage = useUpdatePreconBidPackage()
   const _deletePackage = useDeletePreconBidPackage()
-        void _deletePackage;
   const createSubmission = useCreatePreconBidSubmission()
   const updateSubmission = useUpdatePreconBidSubmission()
   const createContract = useCreateContract()
@@ -212,7 +211,6 @@ export const Preconstruction: React.FC = () => {
   const updateSubcontractor = useUpdatePreconSubcontractor()
   const createInvitation = useCreatePreconBidInvitation()
   const _updateInvitation = useUpdatePreconBidInvitation()
-        void _updateInvitation;
   const createScopeItem = useCreatePreconScopeItem()
   const deleteScopeItem = useDeletePreconScopeItem()
   const upsertScopeResponse = useUpsertPreconBidScopeResponse()
@@ -1294,7 +1292,6 @@ function LevelingView({
     [selectedSubmissions]
   )
 
-  void _aiAnalysis;
   // Build lookup for scope responses
   const responseLookup = useMemo(() => {
     const map: Record<string, PreconBidScopeResponse> = {}

@@ -182,7 +182,7 @@ const FilesPage: React.FC = () => {
     const source = files.find((f: FileItem) => f.id === sourceId);
     const target = files.find((f: FileItem) => f.id === targetFolderId);
     if (source && target) {
-      const { error } = await fromTable('files').update({ parent_folder_id: targetFolderId }).eq('id', sourceId);
+      const { error } = await fromTable('files').update({ parent_folder_id: targetFolderId } as never).eq('id', sourceId);
       if (error) { addToast('error', `Failed to move "${source.name}"`); return; }
       addToast('success', `Moved "${source.name}" into "${target.name}"`);
       refetch();

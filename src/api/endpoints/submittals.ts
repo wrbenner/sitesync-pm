@@ -107,7 +107,7 @@ export const createSubmittalRevision = async (
       review_comments: null,
       reviewed_at: null,
       file_urls: payload.file_urls ?? [],
-    })
+    } as never)
     .select()
     .single()
   if (error) throw transformSupabaseError(error)
@@ -124,7 +124,7 @@ export const updateRevisionReview = async (
       review_status: status,
       review_comments: comments,
       reviewed_at: new Date().toISOString(),
-    })
+    } as never)
     .eq('id' as never, revisionId)
     .select()
     .single()

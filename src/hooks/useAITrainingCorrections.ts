@@ -58,7 +58,7 @@ export function useLogCorrection() {
           drawing_id: input.drawingId ?? null,
           page_image_url: input.pageImageUrl ?? null,
           annotation_coordinates: input.annotationCoordinates ?? null,
-        })
+        } as never)
         .select('*')
         .single()
 

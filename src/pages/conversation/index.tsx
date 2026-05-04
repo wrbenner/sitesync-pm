@@ -637,7 +637,6 @@ function displayAssignee(raw: string | undefined): string {
 }
 
 function _formatShortDate(dateStr: string): string {
-         void _formatShortDate;
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr.split('T')[0] + 'T12:00:00');

@@ -131,7 +131,7 @@ export const taskService = {
     }
 
     const { error } = await fromTable('tasks')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
       .eq('id' as never, taskId);
 
     if (error) return fail(dbError(error.message, { taskId }));

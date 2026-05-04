@@ -90,7 +90,7 @@ export const punchItemService = {
         due_date: input.due_date ?? null,
         photos: input.photos ? (input.photos as unknown as import('../types/database').Json) : null,
         reported_by: userId,
-      })
+      } as never)
       .select()
       .single();
 
@@ -193,7 +193,7 @@ export const punchItemService = {
     const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
 
     const { error } = await fromTable('punch_items')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
       .eq('id' as never, punchItemId);
 
     if (error) return { data: null, error: error.message };

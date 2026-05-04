@@ -85,7 +85,7 @@ function AddCrewModal({ open, onClose, projectId, onCreated }: AddCrewModalProps
         lead_id: null,
         size: form.size ? parseInt(form.size, 10) : 0,
         status: 'active',
-      });
+      } as never);
       if (error) throw error;
       toast.success('Crew added');
       onCreated();

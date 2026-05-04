@@ -324,7 +324,7 @@ const CaptureOverlay: React.FC<CaptureOverlayProps> = ({ open, onClose, projectI
               eq: (col: string, val: string) => Promise<{ error: unknown }>;
             };
           };
-          await builder.update({ ai_category: category, ai_tags: tags }).eq('id' as never, newId);
+          await builder.update({ ai_category: category, ai_tags: tags } as never).eq('id' as never, newId);
         }
       }
 
@@ -920,7 +920,7 @@ const PhotosPage: React.FC = () => {
         }).insert({
           project_id: projectId, log_date: today, status: 'draft',
           workers_onsite: 0, total_hours: 0, incidents: 0,
-        }).select().single();
+        } as never).select().single();
         if (createErr) throw createErr;
         dailyLogId = (created as { id?: string } | null)?.id;
       }
@@ -941,7 +941,7 @@ const PhotosPage: React.FC = () => {
         type: 'photo',
         description: photo.content ?? 'Photo',
         photos: [photoEntry],
-      });
+      } as never);
       if (insertErr) throw insertErr;
 
       addToast('success', 'Added to today\'s daily log');

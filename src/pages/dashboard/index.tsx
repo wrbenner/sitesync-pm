@@ -221,7 +221,6 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
 // ════════════════════════════════════════════════════════════════
 
 const _DashboardInner: React.FC = () => {
-      void _DashboardInner;
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();

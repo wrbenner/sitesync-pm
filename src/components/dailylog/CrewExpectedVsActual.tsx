@@ -104,7 +104,7 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
     if (existing) {
       const { error } = await sb
         .from('crew_attendance')
-        .update({ actual_check_in_at: new Date().toISOString() })
+        .update({ actual_check_in_at: new Date().toISOString() } as never)
         .eq('id', existing.id);
       if (error) toast.error(error.message);
     } else {
@@ -114,7 +114,7 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
         attendance_date: date,
         planned_arrival_time: crew.planned_arrival_time,
         actual_check_in_at: new Date().toISOString(),
-      });
+      } as never);
       if (error) toast.error(error.message);
     }
     setBusyCrew(null);

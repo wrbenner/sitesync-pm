@@ -129,7 +129,7 @@ export const Signup: React.FC = () => {
       // Insert organization row
       const slug = company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
       const { data: orgData, error: orgError } = await fromTable('organizations')
-        .insert({ name: company.trim(), slug })
+        .insert({ name: company.trim(), slug } as never)
         .select('id')
         .single()
 
@@ -141,7 +141,7 @@ export const Signup: React.FC = () => {
           organization_id: organizationId,
           user_id: userId,
           role: 'owner',
-        })
+        } as never)
       }
 
       // Create user profile
@@ -152,7 +152,7 @@ export const Signup: React.FC = () => {
         last_name: lastName.trim(),
         job_title: jobTitle.trim() || null,
         organization_id: organizationId,
-      })
+      } as never)
 
       setSuccess(true)
     } finally {

@@ -624,7 +624,7 @@ export const PermitsTab: React.FC = () => {
         issued_by: userId,
         issued_date: new Date().toISOString().slice(0, 10),
         expiry_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      });
+      } as never);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['permits'] });
       toast.success(`${permitForm.type} permit created`);

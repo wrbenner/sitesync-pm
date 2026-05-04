@@ -158,7 +158,7 @@ async function importSchedule(integrationId: string, projectId: string, xmlData:
           end_date: task.finish ? task.finish.slice(0, 10) : null,
           percent_complete: task.percentComplete,
           status: task.percentComplete >= 100 ? 'completed' : task.percentComplete > 0 ? 'active' : 'upcoming',
-        }, { onConflict: 'name,project_id' })
+        } as never, { onConflict: 'name,project_id' })
         synced++
       } catch {
         failed++
@@ -169,7 +169,7 @@ async function importSchedule(integrationId: string, projectId: string, xmlData:
   }
 
   // Clear the pending import
-  await fromTable('integrations').update({ config: { projectId, pendingImportXml: null } }).eq('id' as never, integrationId)
+  await fromTable('integrations').update({ config: { projectId, pendingImportXml: null } } as never).eq('id' as never, integrationId)
 
   const result: SyncResult = { success: errors.length === 0, recordsSynced: synced, recordsFailed: failed, errors, details: { phases: synced } }
   await logSyncResult(integrationId, result, 'import')

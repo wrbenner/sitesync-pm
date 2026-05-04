@@ -315,7 +315,7 @@ export function useAuth(): AuthState {
         first_name,
         last_name,
         organization_id: null,
-      })
+      } as never)
     }
     if (data.session) {
       setState({ session: data.session, user: data.session.user })

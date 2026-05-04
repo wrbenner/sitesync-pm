@@ -5,7 +5,6 @@ import type { ProjectRow, ProjectSummaryRow } from '../../types/api'
 // If ProjectRow ever drops one of these fields the error surfaces here, not at runtime.
 type _SummaryKeysSubsetOfProject = keyof ProjectSummaryRow extends keyof ProjectRow ? true : never
 const _check: _SummaryKeysSubsetOfProject = true
-void _check
 
 // Verify the summary shape is narrower than the full row.
 describe('ProjectSummaryRow', () => {

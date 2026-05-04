@@ -2288,7 +2288,7 @@ export const Contracts: React.FC = () => {
                 clause_category: clause.category,
                 clause_text: clause.text,
                 clause_version: clause.version,
-              })
+              } as never)
               if (error) {
                 console.warn('[ClauseLibrary] Insert failed (table may not exist):', error.message)
               }

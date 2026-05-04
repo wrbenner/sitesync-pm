@@ -106,7 +106,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
         injured_party_name: form.injured_party_name,
         root_cause: form.root_cause || null,
         photos: photoUrl ? [photoUrl] : null,
-      });
+      } as never);
       if (error) throw error;
 
       if (form.ca_description.trim()) {
@@ -116,7 +116,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
           assigned_to: form.ca_assignee || null,
           due_date: form.ca_due_date || null,
           status: 'open',
-        });
+        } as never);
       }
       onSubmitSuccess();
       handleClose();

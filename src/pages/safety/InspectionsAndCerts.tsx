@@ -177,7 +177,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
         status,
         score,
         findings,
-      });
+      } as never);
       if (error) throw error;
       toast.success('Inspection saved');
       setActiveTemplate(null); setChecklistResults({}); setChecklistNotes({});

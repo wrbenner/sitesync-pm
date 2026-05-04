@@ -249,7 +249,7 @@ export function usePermissions(): PermissionsResult {
           user_id: user.id,
           role: 'owner',
           accepted_at: new Date().toISOString(),
-        }, { onConflict: 'project_id,user_id' }).select().maybeSingle()
+        } as never, { onConflict: 'project_id,user_id' }).select().maybeSingle()
         return 'owner' as ProjectRole
       }
 
@@ -264,7 +264,7 @@ export function usePermissions(): PermissionsResult {
           user_id: user.id,
           role: 'project_manager',
           accepted_at: new Date().toISOString(),
-        }, { onConflict: 'project_id,user_id' }).select().maybeSingle()
+        } as never, { onConflict: 'project_id,user_id' }).select().maybeSingle()
         return 'project_manager' as ProjectRole
       }
 

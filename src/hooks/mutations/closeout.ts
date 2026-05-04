@@ -81,7 +81,7 @@ export function useUploadOMManual() {
           assigned_to: subcontractor || null,
           document_url: url,
           status: 'submitted',
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
@@ -149,7 +149,7 @@ export function useRecordSignOff() {
             notes: notesBlob,
             status: 'approved',
             completed_date: new Date().toISOString(),
-          })
+          } as never)
           .select()
           .single()
         if (createErr) throw createErr
@@ -161,7 +161,7 @@ export function useRecordSignOff() {
             completed_date: new Date().toISOString(),
             notes: notesBlob,
             updated_at: new Date().toISOString(),
-          })
+          } as never)
           .eq('id' as never, itemId)
         if (updErr) throw updErr
       }

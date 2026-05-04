@@ -181,7 +181,7 @@ export function useWriteAudit() {
         old_value: oldValue || null,
         new_value: newValue || null,
         user_agent: navigator.userAgent,
-      })
+      } as never)
       if (error) throw transformSupabaseError(error)
     },
   })

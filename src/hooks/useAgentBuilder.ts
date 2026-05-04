@@ -166,7 +166,7 @@ export function useAgentBuilder() {
           auto_execute_threshold: 999, // Never auto-execute (human approval required)
         },
         created_by: user?.id,
-      })
+      } as never)
 
       if (insertError) throw insertError
       toast.success(`Agent "${definition.name}" created`)

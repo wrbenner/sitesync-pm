@@ -109,7 +109,7 @@ export const googleDriveProvider: IntegrationProvider = {
       // Store folder ID in config
       await fromTable('integrations').update({
         config: { ...config, folderId },
-      }).eq('id' as never, integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -156,7 +156,7 @@ export const googleDriveProvider: IntegrationProvider = {
               external_source: 'google_drive',
               file_size: parseInt(file.size ?? '0', 10),
               updated_at: file.modifiedTime,
-            }, { onConflict: 'external_id,external_source' })
+            } as never, { onConflict: 'external_id,external_source' })
             synced++
           } catch {
             failed++

@@ -64,7 +64,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
         layer: ann.layer,
         visibility: ann.visibility,
         markup_status: 'active',
-      });
+      } as never);
 
     if (error) throw error;
   }, []);

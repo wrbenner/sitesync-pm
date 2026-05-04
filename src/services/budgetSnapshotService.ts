@@ -58,7 +58,7 @@ export const budgetSnapshotService = {
         total_committed: input.totalCommitted,
         division_data: input.divisionData,
         created_by: userId,
-      })
+      } as never)
       .select()
       .single()
 

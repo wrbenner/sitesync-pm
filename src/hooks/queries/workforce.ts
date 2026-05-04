@@ -82,7 +82,7 @@ export function useApproveTimeEntry() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; project_id: string; approved_by: string }) => {
-      const { error } = await fromTable('time_entries').update({ approved: true, approved_by: payload.approved_by }).eq('id' as never, payload.id)
+      const { error } = await fromTable('time_entries').update({ approved: true, approved_by: payload.approved_by } as never).eq('id' as never, payload.id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {

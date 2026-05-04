@@ -82,7 +82,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
         sla_paused_at: new Date().toISOString(),
         sla_paused_reason: reason.trim(),
         sla_paused_by: userId,
-      })
+      } as never)
       .eq('id', rfiId);
     setBusy(false);
     if (error) {
@@ -97,7 +97,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       channel: 'none',
       triggered_by: userId,
       metadata: { reason: reason.trim() },
-    });
+    } as never);
     toast.success('SLA clock paused');
     setShowPauseInput(false);
     setReason('');
@@ -126,7 +126,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
         // any project that doesn't track it will simply unfreeze with the
         // same nominal due_date (acceptable approximation).
         sla_total_pause_seconds: pauseSeconds,
-      })
+      } as never)
       .eq('id', rfiId);
     setBusy(false);
     if (error) {
@@ -140,7 +140,7 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       channel: 'none',
       triggered_by: userId,
       metadata: { paused_for_seconds: pauseSeconds },
-    });
+    } as never);
     toast.success('SLA clock resumed');
     qc.invalidateQueries({ queryKey: ['rfi', rfiId] });
     qc.invalidateQueries({ queryKey: ['rfi-escalation-latest', rfiId] });

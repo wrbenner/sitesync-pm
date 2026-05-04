@@ -551,7 +551,6 @@ function DependencyArrows({ phases, chartStart, pxPerDay }: { phases: GanttPhase
 
 // ── Today marker ────────────────────────────────────────
 function TodayMarker({ chartStart, pxPerDay, _totalHeight }: { chartStart: Date; pxPerDay: number; totalHeight: number }) {
-                                             void _totalHeight;
   const today = startOfDay(new Date());
   const offset = (today.getTime() - chartStart.getTime()) / DAY_MS;
   const left = offset * pxPerDay;

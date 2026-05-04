@@ -108,7 +108,7 @@ async function ensureContractId(projectId: string): Promise<string> {
       type: 'prime',
       counterparty: 'Draw Report Auto-created',
       original_value: 0,
-    })
+    } as never)
     .select('id')
     .single()
   if (error) throw new Error(`Could not create contract: ${error.message}`)
@@ -141,7 +141,7 @@ export function useExtractDrawReport() {
           file_url: up.url || path,
           file_size: file.size,
           file_type: file.type || null,
-        })
+        } as never)
         .select('id, name')
         .single()
       if (docErr) throw new Error(`Document record failed: ${docErr.message}`)
@@ -436,7 +436,7 @@ export function useCommitDrawReport() {
             ? Math.round(rawShare * 100) / 100
             : 0
           const { error: updErr } = await fromAny('budget_line_items')
-            .update({ actual_cost: actualShare })
+            .update({ actual_cost: actualShare } as never)
             .eq('id', row.id)
           if (!updErr) budgetRowsUpdated++
         }
@@ -456,7 +456,7 @@ export function useCommitDrawReport() {
         if (!matches || matches.length === 0) continue
         for (const row of matches as Array<{ id: string }>) {
           const { error: updErr } = await fromAny('budget_line_items')
-            .update({ actual_cost: actual })
+            .update({ actual_cost: actual } as never)
             .eq('id', row.id)
           if (!updErr) budgetRowsUpdated++
         }

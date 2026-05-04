@@ -139,7 +139,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       name: '.folder',
       type: 'folder_placeholder',
       size: 0,
-    });
+    } as never);
     setExpanded((p) => new Set(p).add(newPath));
     void refresh();
   };
@@ -154,7 +154,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     await Promise.all(
       affected.map((f) =>
         fromTable('files')
-          .update({ folder: f.folder!.replace(path, newPath) })
+          .update({ folder: f.folder!.replace(path, newPath) } as never)
           .eq('project_id', projectId)
           .eq('folder', f.folder!),
       ),
@@ -169,7 +169,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     await Promise.all(
       affected.map((f) => {
         const newFolder = f.folder === path ? '' : f.folder!.replace(`${path}/`, '');
-        return fromTable('files').update({ folder: newFolder || null }).eq('project_id', projectId).eq('folder', f.folder!);
+        return fromTable('files').update({ folder: newFolder || null } as never).eq('project_id', projectId).eq('folder', f.folder!);
       }),
     );
     void refresh();

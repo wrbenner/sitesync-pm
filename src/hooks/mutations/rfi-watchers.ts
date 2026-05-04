@@ -17,7 +17,7 @@ export function useAddRFIWatcher() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ rfiId, userId }: { rfiId: string; userId: string }) => {
-      const { error } = await from('rfi_watchers').insert({ rfi_id: rfiId, user_id: userId })
+      const { error } = await from('rfi_watchers').insert({ rfi_id: rfiId, user_id: userId } as never)
       if (error) throw error
       return { rfiId }
     },

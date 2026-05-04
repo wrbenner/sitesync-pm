@@ -85,7 +85,7 @@ export function useUpdateSpecification() {
   return useMutation({
     mutationFn: async ({ id, updates }: UpdateSpecificationInput) => {
       const { data, error } = await from('specifications')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
         .eq('id' as never, id)
         .select()
         .single()

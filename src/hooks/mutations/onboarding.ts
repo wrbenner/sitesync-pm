@@ -59,7 +59,7 @@ export function useMarkOnboardingComplete() {
           onboarded_at: now,
           dashboard_preferences: prefs,
           updated_at: now,
-        })
+        } as never)
         .eq('user_id' as never, input.user_id)
         .select('id, onboarded_at, dashboard_preferences')
         .single()

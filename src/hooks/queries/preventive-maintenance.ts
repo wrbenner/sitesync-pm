@@ -91,7 +91,7 @@ export function useUpdatePMSchedule() {
   return useMutation({
     mutationFn: async (payload: { id: string; projectId: string; equipmentId: string; updates: Record<string, unknown> }) => {
       const { data, error } = await fromTable('preventive_maintenance_schedules')
-        .update({ ...payload.updates, updated_at: new Date().toISOString() })
+        .update({ ...payload.updates, updated_at: new Date().toISOString() } as never)
         .eq('id' as never, payload.id)
         .select()
         .single()

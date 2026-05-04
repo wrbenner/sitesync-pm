@@ -139,7 +139,7 @@ describe('Pay app → lien waiver → retainage flow', () => {
     seedRead(payAppPayload)
     const submitRes = await supabase
       .from('payment_applications')
-      .update({ status: 'submitted', submitted_at: new Date().toISOString() })
+      .update({ status: 'submitted', submitted_at: new Date().toISOString() } as never)
       .eq('id', PAY_APP)
       .select()
       .single()
@@ -185,7 +185,7 @@ describe('Pay app → lien waiver → retainage flow', () => {
     const partial = 10000
     const partialRes = await supabase
       .from('retainage_entries')
-      .update({ released_amount: partial })
+      .update({ released_amount: partial } as never)
       .eq('id', retId)
       .select()
       .single()
@@ -197,7 +197,7 @@ describe('Pay app → lien waiver → retainage flow', () => {
     const nowIso = new Date().toISOString()
     const finalRes = await supabase
       .from('retainage_entries')
-      .update({ released_amount: retainageAmount, released_at: nowIso, released_by: 'user-owner' })
+      .update({ released_amount: retainageAmount, released_at: nowIso, released_by: 'user-owner' } as never)
       .eq('id', retId)
       .select()
       .single()

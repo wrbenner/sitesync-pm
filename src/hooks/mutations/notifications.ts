@@ -18,7 +18,7 @@ export function useMarkNotificationRead() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
-      const { error } = await from('notifications').update({ read: true }).eq('id' as never, id)
+      const { error } = await from('notifications').update({ read: true } as never).eq('id' as never, id)
       if (error) throw error
       return { userId }
     },
@@ -35,7 +35,7 @@ export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await from('notifications').update({ read: true }).eq('user_id' as never, userId).eq('read' as never, false)
+      const { error } = await from('notifications').update({ read: true } as never).eq('user_id' as never, userId).eq('read' as never, false)
       if (error) throw error
       return { userId }
     },

@@ -76,7 +76,7 @@ export function useReopenPeriod() {
           reopened_at: new Date().toISOString(),
           reopened_by: userId,
           notes: input.notes,
-        })
+        } as never)
         .eq('id' as never, input.id)
         .eq('project_id' as never, input.projectId)
         .select()
@@ -113,7 +113,7 @@ export function useCreatePeriod() {
           project_id: input.projectId,
           period_month: input.periodMonth,
           status: 'open',
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error

@@ -58,7 +58,7 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
   // 2. Still no org — create one for this user (first-time onboarding path).
   if (!activeOrgId) {
     const { data: newOrg, error: orgErr } = await fromTable('organizations')
-      .insert({ name: 'My Organization' })
+      .insert({ name: 'My Organization' } as never)
       .select()
       .single()
 
@@ -79,7 +79,7 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
       organization_id: activeOrgId,
       user_id: userId,
       role: 'owner',
-    })
+    } as never)
   }
 
   return activeOrgId
