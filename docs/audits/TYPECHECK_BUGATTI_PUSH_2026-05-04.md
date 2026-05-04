@@ -1,9 +1,39 @@
 # Typecheck → Zero — Bugatti Push (Session 2026-05-04)
 
-**Status:** in progress — 869 → 712 errors (-157, ~18%) across 7 commits.
+**Status:** in progress — 869 → 433 errors (-436, ~50%) across 34 commits.
 **Next session goal:** continue per-file sweep at the same Bugatti standard.
 
 ---
+
+## Halfway milestone reached (2026-05-04)
+
+The campaign crossed 50% reduction at commit 9f67d35 (433 errors remaining).
+
+**Bulk patterns identified + swept this push:**
+- `asRow<T>` / `asRows<T>` boundary helpers (batch 2) — handles ~150 of the 297 SelectQueryError errors uniformly
+- `as never` cast on `.eq('column', val)` column args (batch 27 — 26 sites in 12 files via python script)
+- `typography.fontFamily.serif/sans` (was a non-existent accessor; fontFamily is a string) — bulk sed across 10 files (batch 12)
+- `AuthState.company` → `organization` schema rename + `'invitations'` → `'user_invitations'` table rename (batches 10, 12)
+- Audit mutation `action` enum (batch 15) — 5 mutation files passing entity-suffixed action names (`'create_rfi'`) when type expects bare verbs
+- Test mutation `pending.data` widening to `Record<string, unknown> & { id: string }` — batch sed across 13 test files (batch 26)
+- JSDoc-injected import bug — auto-fix script left `import { fromTable }` lines INSIDE `/** ... */` blocks; broke 2 files at compile time (batch 23)
+- Underscore-prefixed dead code with self-referencing `void _foo;` initializers — 7 files, deleted entirely (batch 20)
+- Helper-scoping mismatches (originatorName declared in page scope but called from row+detail components) — pass as prop, not module-hoist (batch 34)
+
+**Remaining error distribution at 433:**
+```
+TS2339 missing prop:    112
+TS2322 type mismatch:    75
+TS2345 arg mismatch:     67
+TS2769 no overload:      39
+TS2352 conversion:       20
+TS2353 unknown prop:     15
+TS2739 missing props:    14
+TS7006 implicit any:     12
+TS2554 wrong arity:      11
+TS6133 unused ident:      9
+SelectQueryError-pattern: ~147 (still the largest single cluster)
+```
 
 ## What landed this session
 
