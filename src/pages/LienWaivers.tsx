@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions, touchT
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useLienWaivers, useCreateLienWaiver, useDeleteLienWaiver } from '../hooks/queries/lien-waivers';
+import type { LienWaiverRow } from '../types/api';
 import { toast } from 'sonner';
 import {
   useCreateSignatureRequest,
@@ -52,8 +53,7 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  const waivers: LienWaiverRow[] = rawWaivers ?? [];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
