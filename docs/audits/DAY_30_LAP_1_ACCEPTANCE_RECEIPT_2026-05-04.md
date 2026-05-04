@@ -42,15 +42,61 @@ Running 3 tests using 3 workers
 Result: 1 failed, 1 skipped, 1 passed (32.7s)
 ```
 
+### Run 2 — against `npm run build && vite preview` (playwright.acceptance.config.ts) ← THE REAL GATE
+
+```
+[1/3] cold open ≤ 1.4s         ❌ Timeout — auth wall (still — see fix)
+[2/3] audit drawer ≤ 800ms     ⏭️ Skipped — empty seed
+[3/3] bundle ≤ 500 KB          ❌ 1,503 KB gzipped (3x over budget)
+```
+
+**Top 10 chunks from production build:**
+
+| Chunk | Size | Notes |
+|---|---|---|
+| `vendor-pdf-gen` | **531.6 KB** | @react-pdf/renderer + jspdf — alone exceeds entire budget |
+| `vendor-pdf-viewer` | 219.8 KB | pdfjs-dist — only used on drawing-upload path |
+| `vendor-react` | 203.9 KB | React + ReactDOM — can't split |
+| `vendor-charts` | 119.2 KB | recharts — lazy-loadable per widget |
+| `index` (main) | 95.1 KB | App entry — already minimal |
+| `vendor-supabase` | 54.5 KB | @supabase/supabase-js — needed early |
+| `analytics` | 52.0 KB | Custom analytics |
+| `vendor-motion` | 36.6 KB | framer-motion |
+| `syncManager` | 32.1 KB | Custom |
+| `vendor-tanstack` | 29.7 KB | react-query |
+
+**This is the data Day 27–28 (Bundle Attack) needs.** No more speculation about what to lazy-load. The receipt for Day 27–28 should target the top three: lazy-load `@react-pdf/renderer`/`jspdf` behind PDF-export buttons, lazy-load `pdfjs-dist` behind drawing-upload, lazy-load `recharts` per widget. That alone removes ~870 KB.
+
+### Run 3 — after vite.config modulePreload fix + bundle-test cutoff fix
+
+Two improvements landed:
+1. `vite.config.ts` `build.modulePreload.resolveDependencies` filters out heavy route-specific chunks (`vendor-pdf-gen`, `vendor-pdf-viewer`, `vendor-three`, `vendor-charts`, etc.) from the eager `<link rel="modulepreload">` list.
+2. `e2e/lap-1-acceptance.spec.ts` now stops counting JS responses when `dashboard-hero` is visible, not at `load` event. This excludes prefetched route chunks fired by `usePrefetchRoutes` (App.tsx:165).
+
+**Result: 1,503 KB still.** That means the JS dep graph itself imports the heavy chunks at boot, not just via modulepreload. Verified by `grep`:
+
+| Eager static import | Source | Pulls into entry path |
+|---|---|---|
+| `from '@react-pdf/renderer'` (top-level) in `src/pages/daily-log/DailyLogPDFExport.tsx` | lazy-imported, OK | none directly |
+| `from '../../services/pdf/paymentAppPdf'` in `src/pages/payment-applications/G702Preview.tsx:17` | G702Preview is *eagerly* imported by `PayAppDetail.tsx:16`, which is itself in the lazy `payment-applications` chunk | vendor-pdf-gen |
+| `from '../lib/reports/wh347Pdf'` in `src/pages/TimeTracking.tsx:4` | TimeTracking is lazy, BUT manualChunks groups all pdf-lib code into vendor-pdf-gen, making the lazy chunk `import` it statically | vendor-pdf-gen |
+| `from '../../../lib/compliance/wh347/render'` in `src/pages/admin/compliance/Wh347Panel.tsx:16` | Same pattern | vendor-pdf-gen |
+
+**That's the actual Day 27–28 work.** Three call-site refactors, each ~5 lines: replace each top-level `import` with a call-time `await import()` so the route page itself doesn't pull pdf-lib, only the button click does. Expected delta: vendor-pdf-gen leaves the demo path → -532 KB.
+
+Plus two ancillary fixes:
+- `vendor-pdf-viewer` (220 KB) is loaded by drawing-page imports. Same refactor pattern.
+- `vendor-charts` (119 KB) is loaded by dashboard widget imports. Convert each widget to `lazy()`.
+
+Combined target after refactor: ~630 KB → still over 500, but close enough that further chunk inspection (vendor-react 204 KB?) would close the gap. Or accept 600 KB as the realistic Lap 1 target and update the spec.
+
 ---
 
 ## Honest measurements — what each result actually means
 
-### Bundle gate: 6.4 KB ✅ (but artificially low)
+### Bundle gate: 1,503 KB ❌ (real, actionable)
 
-The bundle gate ran against the **dev server**, which serves un-minified, un-bundled individual JS modules via Vite's HMR pipeline. The 6.4 KB number is meaningless — it counts a small initial chunk, not the actual app code. Modules load lazily as routes resolve.
-
-**To make this gate load-bearing:** add a separate `playwright.acceptance.config.ts` that does `npm run build && vite preview` instead of `npm run dev` for the webServer. The bundle measurement against the production-built artifact is what the spec actually requires.
+The production-build measurement is the load-bearing one. The dev-server run produced 6.4 KB (un-bundled HMR chunks) — meaningless. Run 2 against `vite preview` is the truth.
 
 ### First-paint gate: 30s timeout ❌
 

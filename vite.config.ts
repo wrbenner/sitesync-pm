@@ -43,6 +43,28 @@ export default defineConfig(({ mode }) => {
     build: {
       chunkSizeWarningLimit: 250,
       sourcemap: mode === 'production' ? 'hidden' : true,
+      // Don't auto-preload heavy route-specific chunks. The default Vite
+      // behavior emits <link rel="modulepreload"> for every transitive
+      // dependency of the entry — which pulls vendor-pdf-gen (532 KB) and
+      // vendor-pdf-viewer (220 KB) into the demo-path even though /day
+      // doesn't use them. Filter these so they only load when their
+      // route's dynamic import fires. Lap-1 acceptance gate at
+      // docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md.
+      modulePreload: {
+        resolveDependencies: (_filename, deps) => {
+          const SKIP = [
+            'vendor-pdf-gen',     // @react-pdf/renderer + pdf-lib (ExportCenter, payApp PDF, wh347)
+            'vendor-pdf-viewer',  // pdfjs-dist + react-pdf (drawing viewer)
+            'vendor-three',       // three.js + react-three-fiber (BIM viewer)
+            'vendor-ifc',         // web-ifc WASM loader (BIM)
+            'vendor-charts',      // recharts + d3 (dashboard widgets)
+            'vendor-editor',      // tiptap + prosemirror (rich text)
+            'vendor-xlsx',        // xlsx (export center)
+            'vendor-jszip',       // jszip (drawings bulk upload)
+          ]
+          return deps.filter((dep) => !SKIP.some((s) => dep.includes(s)))
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks(id: string) {
