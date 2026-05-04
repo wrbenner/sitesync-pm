@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import type { PunchItem } from '../types/database';
 import type { PunchItemState } from '../machines/punchItemMachine';
 import { getValidPunchTransitions, getNextPunchStatus } from '../machines/punchItemMachine';
@@ -27,7 +27,7 @@ async function resolveProjectRole(
     .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export const punchItemService = {
       .single();
 
     if (error) return { data: null, error: error.message };
-    return { data: data as PunchItem, error: null };
+    return { data: data as unknown as PunchItem, error: null };
   },
 
   /**
@@ -114,10 +114,11 @@ export const punchItemService = {
     action: string,
   ): Promise<PunchItemServiceResult> {
     // 1. Fetch current item
-    const { data: item, error: fetchError } = await fromTable('punch_items')
+    const { data: itemData, error: fetchError } = await fromTable('punch_items')
       .select('status, reported_by, assigned_to, project_id')
       .eq('id' as never, punchItemId)
       .single();
+    const item = asRow<{ status: string | null; reported_by: string | null; assigned_to: string | null; project_id: string }>(itemData)
 
     if (fetchError || !item) {
       return { data: null, error: fetchError?.message ?? 'Punch item not found' };
@@ -131,7 +132,7 @@ export const punchItemService = {
     }
 
     // 3. Validate action against lifecycle machine
-    const currentStatus = (item.status ?? 'open') as PunchItemState;
+    const currentStatus = ((item.status ?? 'open') as PunchItemState);
     const validActions = getValidPunchTransitions(currentStatus);
     if (!validActions.includes(action)) {
       return {
@@ -151,9 +152,6 @@ export const punchItemService = {
       updated_at: new Date().toISOString(),
     };
 
-    if (newStatus === 'resolved') {
-      updates.resolved_date = new Date().toISOString();
-    }
     if (newStatus === 'verified') {
       updates.verified_date = new Date().toISOString();
     }

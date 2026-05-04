@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import type { SchedulePhaseInsert, SchedulePhaseUpdate } from '../types/api';
 import type { ScheduleStatus } from '../machines/scheduleMachine';
 import { getValidScheduleTransitions } from '../machines/scheduleMachine';
@@ -23,7 +23,7 @@ async function resolveProjectRole(
     .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ export const scheduleService = {
     } as AugmentedInsert;
 
     const { data, error } = await fromTable('schedule_phases')
-      .insert(payload as unknown as SchedulePhaseInsert)
+      .insert(payload as never)
       .select()
       .single();
 
@@ -149,10 +149,11 @@ export const scheduleService = {
     newStatus: ScheduleStatus,
   ): Promise<ScheduleServiceResult> {
     // 1. Fetch current phase
-    const { data: phase, error: fetchError } = await fromTable('schedule_phases')
+    const { data: phaseData, error: fetchError } = await fromTable('schedule_phases')
       .select('status, project_id')
       .eq('id' as never, phaseId)
       .single();
+    const phase = asRow<{ status: string | null; project_id: string }>(phaseData)
 
     if (fetchError || !phase) {
       return { data: null, error: fetchError?.message ?? 'Phase not found' };
@@ -183,7 +184,7 @@ export const scheduleService = {
     } as AugmentedUpdate;
 
     const { error } = await fromTable('schedule_phases')
-      .update(updates as unknown as SchedulePhaseUpdate)
+      .update(updates as never)
       .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
@@ -206,7 +207,7 @@ export const scheduleService = {
     });
 
     const { error } = await fromTable('schedule_phases')
-      .update(payload as unknown as SchedulePhaseUpdate)
+      .update(payload as never)
       .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
@@ -223,7 +224,7 @@ export const scheduleService = {
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as unknown as SchedulePhaseUpdate)
+      } as never)
       .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };
@@ -246,7 +247,7 @@ export const scheduleService = {
     } as AugmentedUpdate;
 
     const { error } = await fromTable('schedule_phases')
-      .update(payload as unknown as SchedulePhaseUpdate)
+      .update(payload as never)
       .eq('id' as never, phaseId);
 
     if (error) return { data: null, error: error.message };

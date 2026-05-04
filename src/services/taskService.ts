@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import type { TaskState } from '../machines/taskMachine';
 import {
   type Result,
@@ -25,7 +25,7 @@ async function resolveProjectRole(
     .eq('project_id' as never, projectId)
     .eq('user_id' as never, userId)
     .single();
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 /**
@@ -62,10 +62,11 @@ export const taskService = {
     taskId: string,
     newStatus: TaskState,
   ): Promise<Result> {
-    const { data: task, error: fetchError } = await fromTable('tasks')
+    const { data: taskData, error: fetchError } = await fromTable('tasks')
       .select('status, project_id')
       .eq('id' as never, taskId)
       .single();
+    const task = asRow<{ status: string | null; project_id: string }>(taskData)
 
     if (fetchError || !task) {
       return fail(notFoundError('Task', taskId));
