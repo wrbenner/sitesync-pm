@@ -1250,13 +1250,14 @@ export const InputField: React.FC<InputFieldProps> = ({
 // Centered, quiet, helpful.
 
 interface EmptyStateProps {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
+  action?: React.ReactNode;
 }
 
 // ─── RelatedItems ───────────────────────────────────────────────────────────
@@ -1833,9 +1834,9 @@ if (typeof document !== 'undefined' && !document.getElementById('skeleton-shimme
 }
 
 interface SkeletonProps {
-  width?: string;
-  height?: string;
-  borderRadius?: string;
+  width?: string | number;
+  height?: string | number;
+  borderRadius?: string | number;
   variant?: 'text' | 'rect' | 'circle';
   style?: React.CSSProperties;
 }
@@ -1873,6 +1874,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
   secondaryActionLabel,
   onSecondaryAction,
+  action,
 }) => (
   // Tier-2 empty-state pattern, matched against the bespoke RFI/Submittal/
   // Meeting versions: a 72×72 surfaceInset tile with a muted icon, title at
@@ -1920,7 +1922,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     <p style={{ margin: 0, fontSize: '14px', fontWeight: 400, color: colors.textSecondary, lineHeight: 1.6 }}>
       {description}
     </p>
-    {(actionLabel || secondaryActionLabel) && (
+    {(actionLabel || secondaryActionLabel || action) && (
       <div style={{ marginTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
         {actionLabel && onAction && (
           <Btn variant="primary" onClick={onAction}>{actionLabel}</Btn>
@@ -1928,6 +1930,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {secondaryActionLabel && onSecondaryAction && (
           <Btn variant="ghost" onClick={onSecondaryAction}>{secondaryActionLabel}</Btn>
         )}
+        {action}
       </div>
     )}
   </div>

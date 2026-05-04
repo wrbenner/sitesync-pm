@@ -211,13 +211,13 @@ export const Estimating: React.FC = () => {
           projectId={projectId ?? undefined}
           items={lineItems}
           loading={liPending}
-          vendors={vendors}
-          bidPackages={bidPackages}
+          vendors={vendors as unknown as Array<{ id: string; company_name: string }>}
+          bidPackages={bidPackages as unknown as Array<Record<string, unknown>>}
         />
       )}
       {tab === 'bid_packages' && (
         <BidPackagesTab
-          packages={bidPackages}
+          packages={bidPackages as unknown as Array<Record<string, unknown>>}
           loading={bpPending}
           allSubmissions={allSubmissions}
           onDrillDown={() => setTab('submissions')}
@@ -226,8 +226,8 @@ export const Estimating: React.FC = () => {
       {tab === 'submissions' && (
         <SubmissionsTab
           projectId={projectId ?? undefined}
-          packages={bidPackages}
-          vendors={vendors}
+          packages={bidPackages as unknown as Array<Record<string, unknown>>}
+          vendors={vendors as unknown as Array<{ id: string; company_name: string }>}
         />
       )}
       {tab === 'rollups' && (

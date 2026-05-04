@@ -39,6 +39,10 @@ export interface DrawingItem {
   linkedRfiCount?: number;
   /** Server-side last-modified timestamp for the drawing row. */
   updated_at?: string | null;
+  /** Scale text extracted from the drawing's title block. */
+  scale_text?: string | null;
+  /** Raw sheet number from the drawing record. */
+  sheet_number?: string | null;
 }
 
 interface DrawingListProps {

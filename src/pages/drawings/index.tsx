@@ -3,8 +3,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Upload, ScanSearch, FolderOpen, MessageSquare, Ruler } from 'lucide-react';
 import { PageContainer, Btn, useToast } from '../../components/Primitives';
-import { colors, spacing } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 import { getDrawings, getDrawingRevisionHistory } from '../../api/endpoints/documents';
+import type { DrawingRevision } from '../../types/api';
 import { useQuery } from '../../hooks/useQuery';
 import { useProjectId } from '../../hooks/useProjectId';
 import { PdfViewer } from '../../components/drawings/PdfViewer';
@@ -122,10 +123,10 @@ const DrawingFileViewer: React.FC<{
   // signedUrl may be null while loading — the viewer shows its own loading state
   return (
     <DrawingTiledViewer
-      drawing={drawing}
-      drawings={drawings}
+      drawing={drawing as never}
+      drawings={drawings as never}
       onClose={onClose}
-      onNavigate={onNavigate}
+      onNavigate={onNavigate as never}
       projectId={projectId}
       scaleRatioText={scaleRatioText}
       signedUrl={signedUrl}
@@ -290,7 +291,7 @@ const DrawingsPage: React.FC = () => {
     if (!deepLinkedId || !drawings) return;
     if (selectedDrawing?.id === deepLinkedId) return;
     const target = drawings.find((d) => String(d.id) === deepLinkedId);
-    if (target) setSelectedDrawing(target);
+    if (target) setSelectedDrawing(target as unknown as DrawingItem);
   }, [deepLinkedId, drawings, selectedDrawing?.id]);
 
   // Keep URL in sync with the active detail panel so links are shareable.
@@ -320,7 +321,7 @@ const DrawingsPage: React.FC = () => {
           console.warn('[DrawingSets] Query failed (table may not exist):', err.message);
           return [] as DrawingSetItem[];
         }
-        return (data || []) as DrawingSetItem[];
+        return (data || []) as unknown as DrawingSetItem[];
       } catch (e) {
         console.warn('[DrawingSets] Query error:', e);
         return [] as DrawingSetItem[];
@@ -337,7 +338,7 @@ const DrawingsPage: React.FC = () => {
       set_type: setData.set_type,
       description: setData.description || null,
       drawing_ids: setData.drawing_ids,
-    });
+    } as never);
     if (err) { addToast('error', `Failed to create set: ${err.message}`); return; }
     addToast('success', `Drawing set "${setData.name}" created.`);
     refetchSets();
@@ -345,7 +346,7 @@ const DrawingsPage: React.FC = () => {
 
   const handleUpdateSet = useCallback(async (setId: string, data: { drawing_ids: string[] }) => {
     const { error: err } = await fromTable('drawing_sets')
-      .update({ drawing_ids: data.drawing_ids })
+      .update({ drawing_ids: data.drawing_ids } as never)
       .eq('id' as never, setId);
     if (err) { addToast('error', `Failed to update set: ${err.message}`); return; }
     refetchSets();
@@ -374,7 +375,7 @@ const DrawingsPage: React.FC = () => {
         document_ids: data.drawing_ids,
         status: 'sent',
         sent_at: new Date().toISOString(),
-      });
+      } as never);
       if (transmittalErr) { addToast('error', `Failed to create transmittal: ${transmittalErr.message}`); return; }
 
       // Update the set to issued
@@ -382,7 +383,7 @@ const DrawingsPage: React.FC = () => {
         .update({
           set_type: 'issued',
           issued_date: new Date().toISOString(),
-        })
+        } as never)
         .eq('id' as never, data.set_id);
       if (setErr) { addToast('error', `Failed to update set status: ${setErr.message}`); return; }
 
@@ -394,7 +395,7 @@ const DrawingsPage: React.FC = () => {
     }
   }, [projectId, addToast, refetchSets]);
 
-  const allDrawings: DrawingItem[] = drawings || [];
+  const allDrawings: DrawingItem[] = (drawings || []) as unknown as DrawingItem[];
 
   const handleOpenDrawingFromSet = useCallback((drawingId: string) => {
     const drawing = allDrawings.find((d) => d.id === drawingId);
@@ -471,8 +472,8 @@ const DrawingsPage: React.FC = () => {
     }
 
     result = [...result].sort((a, b) => {
-      const aVal = (a as Record<string, unknown>)[sortField];
-      const bVal = (b as Record<string, unknown>)[sortField];
+      const aVal = (a as unknown as Record<string, unknown>)[sortField];
+      const bVal = (b as unknown as Record<string, unknown>)[sortField];
       if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1;
       if (bVal == null) return -1;
@@ -609,11 +610,11 @@ const DrawingsPage: React.FC = () => {
         // Revision as read from the title block's REVISIONS table by Gemini.
         // Overwrites the filename-derived rev — the title block is authoritative
         // when it's readable.
-        if ((result as Record<string, unknown>).revision) {
-          updates.revision = String((result as Record<string, unknown>).revision);
+        if ((result as unknown as Record<string, unknown>).revision) {
+          updates.revision = String((result as unknown as Record<string, unknown>).revision);
         }
         updates.processing_status = 'completed';
-        await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+        await drawingService.updateDrawing(drawingId, updates as unknown as Record<string, unknown>);
 
         // Also update the drawing_pages row so both tables stay in sync
         if (result.sheet_number || result.drawing_title || updates.discipline) {
@@ -635,7 +636,7 @@ const DrawingsPage: React.FC = () => {
           const fallbackDiscipline = inferDisciplineFromFilename(fileName);
           if (fallbackDiscipline) updates.discipline = fallbackDiscipline;
         }
-        await drawingService.updateDrawing(drawingId, updates as Record<string, unknown>);
+        await drawingService.updateDrawing(drawingId, updates as unknown as Record<string, unknown>);
         refetch();
         if (updates.discipline) {
           addToast('info', 'AI unavailable — discipline set from sheet prefix.');
@@ -809,7 +810,7 @@ const DrawingsPage: React.FC = () => {
         title: cleanedTitle,
         status: 'active',
         file_url: fileUrl,
-      });
+      } as never);
       if (specErr) {
         addToast('warning', `Spec "${file.name}" uploaded to storage but the record couldn't be saved: ${specErr.message}`);
         return false;
@@ -996,7 +997,7 @@ const DrawingsPage: React.FC = () => {
             discipline: pageDiscipline,
             classification: opts.isCover ? 'completed' : 'pending',  // AI will update to 'completed'
             classification_confidence: titleBlock.confidence ?? null,
-          });
+          } as never);
           if (pageErr) {
             console.warn(`[drawing_pages] insert failed for page ${page.pageNumber}: ${pageErr.message}`);
           }
@@ -1244,7 +1245,7 @@ const DrawingsPage: React.FC = () => {
         name: trimmedSetName,
         set_type: uploadSetType,
         drawing_ids: createdDrawingIds,
-      });
+      } as never);
       if (setErr) {
         addToast('warning', `Drawings uploaded, but failed to create set "${trimmedSetName}": ${setErr.message}`);
       } else {
@@ -1296,7 +1297,7 @@ const DrawingsPage: React.FC = () => {
 
       const setIfEmpty = (field: string, value: string | number | undefined | null, label: string) => {
         if (value === undefined || value === null || value === '') return;
-        const cur = (currentProject as Record<string, unknown> | null)?.[field];
+        const cur = (currentProject as unknown as Record<string, unknown> | null)?.[field];
         if (cur === undefined || cur === null || cur === '' || cur === 0) {
           updates[field] = value;
           applied.push(label);
@@ -1397,14 +1398,14 @@ const DrawingsPage: React.FC = () => {
         if (storageData?.path) fileUrl = storageData.path;
       } catch { addToast('error', 'Revision upload failed'); setIsRevUploading(false); return; }
     }
-    await fromTable('drawing_revisions').update({ superseded_at: new Date().toISOString() }).eq('drawing_id' as never, String(selectedDrawing.id)).is('superseded_at' as never, null);
+    await fromTable('drawing_revisions').update({ superseded_at: new Date().toISOString() } as never).eq('drawing_id' as never, String(selectedDrawing.id)).is('superseded_at' as never, null);
     await fromTable('drawing_revisions').insert({
       drawing_id: String(selectedDrawing.id),
       revision_number: Number(revUploadNum),
       issued_date: new Date().toISOString().slice(0, 10),
       change_description: revUploadDesc || null,
       file_url: fileUrl,
-    });
+    } as never);
     setIsRevUploading(false);
     setShowRevUploadModal(false);
     setRevUploadFile(null);
@@ -1706,7 +1707,7 @@ const DrawingsPage: React.FC = () => {
       {selectedDrawing && (
         <DrawingDetail
           drawing={selectedDrawing}
-          revisionHistory={revisionHistory}
+          revisionHistory={revisionHistory ?? undefined}
           viewingRevisionNum={viewingRevisionNum}
           onClose={() => {
             // Two effects fight over selectedDrawing: a deep-link reader
