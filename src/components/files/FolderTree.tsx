@@ -1,4 +1,3 @@
-import { fromTable } from '../../lib/db/queries'
 // Phase 7 — FolderTree
 // Virtualized folder hierarchy for the Files page. Folders are derived from
 // distinct `folder` paths on `files` (e.g. "Drawings/Architectural").
@@ -103,7 +102,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     try {
       const { data } = await fromTable('files')
         .select('folder, name')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .limit(2000);
       setPaths((data as Array<{ folder: string | null; name?: string }>) ?? []);
     } catch {
@@ -155,8 +154,8 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       affected.map((f) =>
         fromTable('files')
           .update({ folder: f.folder!.replace(path, newPath) } as never)
-          .eq('project_id', projectId)
-          .eq('folder', f.folder!),
+          .eq('project_id' as never, projectId)
+          .eq('folder' as never, f.folder!),
       ),
     );
     void refresh();
@@ -169,7 +168,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     await Promise.all(
       affected.map((f) => {
         const newFolder = f.folder === path ? '' : f.folder!.replace(`${path}/`, '');
-        return fromTable('files').update({ folder: newFolder || null } as never).eq('project_id', projectId).eq('folder', f.folder!);
+        return fromTable('files').update({ folder: newFolder || null } as never).eq('project_id' as never, projectId).eq('folder' as never, f.folder!);
       }),
     );
     void refresh();
