@@ -14,8 +14,6 @@ import { supabase, fromTable } from './supabase';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-import { fromTable } from './db/queries'
-
 interface TextItem {
   text: string;
   x: number;

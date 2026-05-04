@@ -7,7 +7,6 @@
  */
 
 import { supabase, isSupabaseConfigured, fromTable } from './supabase';
-import { fromTable } from '../lib/db/queries'
 
 // ---------------------------------------------------------------------------
 // PermissionError
