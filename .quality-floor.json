@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors — these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 5,
-  "_updated": "2026-05-03T21:00:00Z",
+  "_version": 6,
+  "_updated": "2026-05-04T07:00:00Z",
   "_updatedBy": "auto/polish-20260503-2026",
-  "_floor_realignment_note": "v5: Math.random fully eliminated (28→0, IntelligenceGraph physics jitter now deterministic), as-any further reduced (41→11), SubmittalDetailPage casts eliminated. Floors updated.",
+  "_floor_realignment_note": "v6: as-any fully eliminated (11→0). WorkflowTimeline component created + wired to RFI detail. BidAnalysis type added to Preconstruction, LienWaiverRow typed in LienWaivers, Record<string,unknown> replaces as-any in PhotoAnnotation/DrawingTiledViewer/SiteIntelligence/lien-waivers/draw-reports.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -14,7 +14,7 @@
   },
   "tsErrors": 0,
   "eslintErrors": 480,
-  "anyCount": 11,
+  "anyCount": 0,
   "mockCount": 0,
   "a11yViolations": 0,
   "eslintWarnings": 968,

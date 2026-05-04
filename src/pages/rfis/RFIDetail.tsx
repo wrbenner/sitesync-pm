@@ -38,6 +38,10 @@ import {
   type RFIState
 } from '../../machines/rfiMachine'
 import type { RFI, RFIResponse } from '../../types/database'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
+
+// RFI states in progression order (void is a terminal off-track state, omitted from the timeline)
+const RFI_ORDERED_STATES: RFIState[] = ['draft', 'open', 'under_review', 'answered', 'closed']
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -774,6 +778,23 @@ export function RFIDetail() {
             </div>
           )}
         </div>
+
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: '12px',
+            padding: `${spacing['3']} ${spacing['4']}`,
+            marginBottom: '16px',
+          }}>
+            <WorkflowTimeline
+              states={RFI_ORDERED_STATES}
+              currentState={currentStatus}
+              completedStates={RFI_ORDERED_STATES.slice(0, RFI_ORDERED_STATES.indexOf(currentStatus))}
+            />
+          </div>
+        )}
 
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
