@@ -8,7 +8,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions } from 
 import { Btn } from '../Primitives';
 import { useProjectId } from '../../hooks/useProjectId';
 import { supabase } from '../../lib/supabase';
-import { fromTable } from '../../lib/db/queries'
+import { fromTable, asRow, asRows } from '../../lib/db/queries'
 import { toast } from 'sonner';
 
 // ── Types ─────────────────────────────────────────────────────
@@ -498,7 +498,8 @@ export const ProjectBrain: React.FC = () => {
       fromTable('document_chunks').select('document_id', { count: 'exact', head: false }).eq('project_id' as never, projectId),
       fromTable('files').select('id', { count: 'exact', head: true }).eq('project_id' as never, projectId),
     ]);
-    const uniqueDocs = new Set((chunksRes.data || []).map((r: { document_id: string | null }) => r.document_id).filter(Boolean));
+    const chunks = asRows<{ document_id: string | null }>(chunksRes.data);
+    const uniqueDocs = new Set(chunks.map((r) => r.document_id).filter(Boolean));
     setIndexedCount(uniqueDocs.size);
     setFileCount(filesRes.count || 0);
   }, [projectId]);
@@ -509,11 +510,13 @@ export const ProjectBrain: React.FC = () => {
       fromTable('files').select('id, name, content_type, created_at').eq('project_id' as never, projectId).order('created_at', { ascending: false }),
       fromTable('document_chunks').select('document_id').eq('project_id' as never, projectId),
     ]);
+    const chunks = asRows<{ document_id: string | null }>(chunksRes.data);
     const chunkCounts: Record<string, number> = {};
-    (chunksRes.data || []).forEach((r: { document_id: string | null }) => {
+    chunks.forEach((r) => {
       if (r.document_id) chunkCounts[r.document_id] = (chunkCounts[r.document_id] || 0) + 1;
     });
-    const docs: IndexedDocument[] = (filesRes.data || []).map((f: { id: string; name: string; content_type: string | null; created_at: string }) => ({
+    const files = asRows<{ id: string; name: string; content_type: string | null; created_at: string }>(filesRes.data);
+    const docs: IndexedDocument[] = files.map((f) => ({
       id: f.id,
       name: f.name,
       contentType: f.content_type,
@@ -644,9 +647,11 @@ export const ProjectBrain: React.FC = () => {
       const { data: existingChunks } = await fromTable('document_chunks')
         .select('document_id')
         .eq('project_id' as never, projectId);
-      const indexed = new Set((existingChunks || []).map((r: { document_id: string | null }) => r.document_id).filter(Boolean));
+      const chunkRows = asRows<{ document_id: string | null }>(existingChunks);
+      const indexed = new Set(chunkRows.map((r) => r.document_id).filter(Boolean));
 
-      const pending = (files || []).filter((f: ProjectFile) => !indexed.has(f.id));
+      const fileRows = asRows<ProjectFile>(files);
+      const pending = fileRows.filter((f) => !indexed.has(f.id));
       if (pending.length === 0) {
         toast.info('All documents already indexed');
         return;
@@ -706,7 +711,8 @@ export const ProjectBrain: React.FC = () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       // Get file content
-      const { data: fileData } = await fromTable('files').select('file_url, content_type').eq('id' as never, fileId).single();
+      const { data: rawFile } = await fromTable('files').select('file_url, content_type').eq('id' as never, fileId).single();
+      const fileData = asRow<{ file_url: string; content_type: string | null }>(rawFile);
       if (!fileData) throw new Error('File not found');
 
       let text = '';
