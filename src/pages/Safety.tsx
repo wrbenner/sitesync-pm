@@ -12,7 +12,7 @@ import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifica
 import { useCreateIncident, useCreateSafetyInspection, useCreateCorrectiveAction, useUpdateCorrectiveAction, useCreateChecklist, useCreateChecklistFromTemplate, useUpdateChecklistItem, useDeleteChecklist } from '../hooks/mutations'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
-import { fromTable } from '../lib/db/queries'
+import { fromTable, asRow } from '../lib/db/queries'
 import type { InspectionChecklist, InspectionChecklistItem } from '../hooks/queries/inspection-checklists'
 
 type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions' | 'checklists'
@@ -847,11 +847,7 @@ export const Safety: React.FC = () => {
     expiringCerts === 0 ? 'success' : 'warning'
 
   const dartValue = dart !== null ? parseFloat(dart) : null
-  const _dartColor: 'success' | 'warning' | 'danger' | undefined =
-    dartValue === null ? undefined
-    : dartValue <= 1.5 ? 'success'
-    : dartValue <= 2.5 ? 'warning'
-    : 'danger'
+  void dartValue;
 
   // ── Incident form state ────────────────────────────────────
 
@@ -1058,13 +1054,13 @@ export const Safety: React.FC = () => {
         attendance_count: talkForm.attendees.length,
       } as never).select('id').single()
       if (insertError) throw insertError
-      const talkId = insertedTalk?.id as string | undefined
+      const talkId = asRow<{ id: string }>(insertedTalk)?.id
       if (talkId && talkForm.attendees.length > 0) {
         await fromTable('toolbox_talk_attendees').insert(
           talkForm.attendees.map((name) => ({
             toolbox_talk_id: talkId,
             worker_name: name,
-          }))
+          })) as never
         )
       }
       toast.success('Toolbox talk saved')
@@ -1522,7 +1518,7 @@ export const Safety: React.FC = () => {
                 <Card>
                   <DataTable
                     columns={inspectionColumns}
-                    data={inspections || []}
+                    data={(inspections || []) as unknown as Record<string, unknown>[]}
                     enableSorting
                   />
                 </Card>
@@ -1545,7 +1541,7 @@ export const Safety: React.FC = () => {
             <Card>
               <DataTable
                 columns={talkColumns}
-                data={talks || []}
+                data={(talks || []) as unknown as Record<string, unknown>[]}
                 enableSorting
               />
             </Card>
@@ -1566,7 +1562,7 @@ export const Safety: React.FC = () => {
             <Card>
               <DataTable
                 columns={certColumns}
-                data={certifications || []}
+                data={(certifications || []) as unknown as Record<string, unknown>[]}
                 enableSorting
               />
             </Card>
@@ -1609,7 +1605,7 @@ export const Safety: React.FC = () => {
                 const overdueCount = displayCAs.filter((ca) => {
                   if (!ca.due_date) return false
                   if (ca.status === 'closed' || ca.status === 'verified') return false
-                  return new Date(ca.due_date) < new Date()
+                  return new Date(ca.due_date as string).getTime() < Date.now()
                 }).length
                 if (overdueCount === 0) return null
                 return (

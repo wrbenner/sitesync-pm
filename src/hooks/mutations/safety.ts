@@ -18,11 +18,11 @@ export function useCreateCorrectiveAction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
-      const { data, error } = await from('corrective_actions').insert(params.data).select().single()
+      const { data, error } = await from('corrective_actions').insert(params.data as never).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7: cross-invalidate
       queryClient.invalidateQueries({ queryKey: ['project_snapshots', result.projectId] })
@@ -40,7 +40,7 @@ export function useUpdateCorrectiveAction() {
       if (error) throw error
       return { projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
       posthog.capture('corrective_action_updated', { project_id: result.projectId })
     },
@@ -52,11 +52,11 @@ export function useCreateSafetyInspection() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
-      const { data, error } = await from('safety_inspections').insert(params.data).select().single()
+      const { data, error } = await from('safety_inspections').insert(params.data as never).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['safety_inspections', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['corrective_actions', result.projectId] })
@@ -70,11 +70,11 @@ export function useCreateIncident() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
-      const { data, error } = await from('incidents').insert(params.data).select().single()
+      const { data, error } = await from('incidents').insert(params.data as never).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['incidents', result.projectId] })
       queryClient.invalidateQueries({ queryKey: ['safety_overview', result.projectId] }) // FIX #7
       queryClient.invalidateQueries({ queryKey: ['daily_logs', result.projectId] }) // Incidents affect daily logs
