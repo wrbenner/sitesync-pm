@@ -5,7 +5,7 @@ import { computeProjectHealthScore, computeAiConfidenceLevel } from '../../lib/h
 
 export async function getProjectMetrics(projectId: string): Promise<ProjectMetrics | null> {
   try {
-    const { data, error } = await fromTable('project_metrics')
+    const { data, error } = await fromTable('project_metrics' as never)
       .select('*')
       .eq('project_id' as never, projectId)
       .maybeSingle()
@@ -14,7 +14,7 @@ export async function getProjectMetrics(projectId: string): Promise<ProjectMetri
       return null
     }
     if (!data) return null
-    const metrics = data as ProjectMetrics
+    const metrics = data as unknown as ProjectMetrics
     return {
       ...metrics,
       aiHealthScore: computeProjectHealthScore(metrics),
@@ -33,7 +33,7 @@ export async function getBulkProjectMetrics(
 ): Promise<Record<string, ProjectMetrics>> {
   if (projectIds.length === 0) return {}
   try {
-    const { data, error } = await fromTable('project_metrics')
+    const { data, error } = await fromTable('project_metrics' as never)
       .select('*')
       .in('project_id' as never, projectIds)
     if (error) {
@@ -60,21 +60,20 @@ export async function getBulkProjectMetrics(
 type PortfolioMetricsRow = Pick<
   ProjectMetrics,
   | 'project_id'
-  | 'open_rfis'
-  | 'overdue_rfis'
-  | 'open_punch_items'
-  | 'budget_variance_pct'
+  | 'rfis_open'
+  | 'rfis_overdue'
+  | 'punch_open'
   | 'schedule_variance_days'
-  | 'safety_incident_rate'
+  | 'safety_incidents_this_month'
 >
 
 // Narrow select reduces payload ~80% vs SELECT *. Only columns required by
 // computeProjectHealthScore are fetched; count: 'exact' enables total-row reporting.
 export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetricsRow[]> {
   try {
-    const { data, error } = await fromTable('project_metrics')
+    const { data, error } = await fromTable('project_metrics' as never)
       .select(
-        'project_id, open_rfis, overdue_rfis, open_punch_items, budget_variance_pct, schedule_variance_days, safety_incident_rate, projects!inner(organization_id)',
+        'project_id, rfis_open, rfis_overdue, punch_open, schedule_variance_days, safety_incidents_this_month, projects!inner(organization_id)',
         { count: 'exact' }
       )
       .eq('projects.organization_id' as never, orgId)
@@ -86,8 +85,8 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
     const rows = (data || []) as unknown as PortfolioMetricsRow[]
     return rows.map((metrics) => ({
       ...metrics,
-      aiHealthScore: computeProjectHealthScore(metrics as ProjectMetrics),
-      aiConfidenceLevel: computeAiConfidenceLevel(metrics as ProjectMetrics),
+      aiHealthScore: computeProjectHealthScore(metrics as unknown as ProjectMetrics),
+      aiConfidenceLevel: computeAiConfidenceLevel(metrics as unknown as ProjectMetrics),
     }))
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[getPortfolioMetrics] threw:', err)
