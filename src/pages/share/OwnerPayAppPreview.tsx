@@ -167,18 +167,18 @@ export const OwnerPayAppPreview: React.FC = () => {
 
   if (loading) {
     return (
-      <main style={{ padding: spacing['32'], maxWidth: 960, margin: '0 auto' }}>
-        <Eyebrow muted>Loading…</Eyebrow>
+      <main style={{ padding: spacing['8'], maxWidth: 960, margin: '0 auto' }}>
+        <Eyebrow color="muted">Loading…</Eyebrow>
       </main>
     );
   }
 
   if (error || !data || !data.pay_app) {
     return (
-      <main style={{ padding: spacing['32'], maxWidth: 720, margin: '0 auto' }}>
+      <main style={{ padding: spacing['8'], maxWidth: 720, margin: '0 auto' }}>
         <Eyebrow color="orange">Pay App Preview</Eyebrow>
         <PageQuestion size="medium">This preview link can't be opened.</PageQuestion>
-        <p style={{ ...typography.body, color: colors.textSecondary }}>
+        <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary }}>
           {error ?? 'The token may be expired or invalid. Ask the GC to resend.'}
         </p>
       </main>
@@ -189,7 +189,7 @@ export const OwnerPayAppPreview: React.FC = () => {
   const projectName = pa.project?.name ?? 'Project';
 
   return (
-    <main style={{ padding: spacing['32'], maxWidth: 1080, margin: '0 auto' }}>
+    <main style={{ padding: spacing['8'], maxWidth: 1080, margin: '0 auto' }}>
       <Sliver
         left={projectName}
         right={`Pay App #${pa.application_number} · Through ${pa.period_to.slice(0, 10)}`}
@@ -259,7 +259,7 @@ export const OwnerPayAppPreview: React.FC = () => {
           </li>
         ))}
         {data.comments.length === 0 && (
-          <li style={{ ...typography.body, color: colors.textTertiary, padding: '12px 0' }}>
+          <li style={{ fontSize: typography.fontSize.body, color: colors.textTertiary, padding: '12px 0' }}>
             No comments yet.
           </li>
         )}

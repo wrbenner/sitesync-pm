@@ -226,7 +226,7 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
   })
 
   return (
-    <Card padding={0} style={{ overflow: 'hidden' }}>
+    <Card padding="0" style={{ overflow: 'hidden' }}>
       <div style={{ padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
         <Receipt size={16} color={colors.primaryOrange} />
         <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
@@ -352,7 +352,7 @@ export const SOVEditorPanel = memo<SOVEditorPanelProps>(({ sovData, appStatus, p
         <div style={{ flex: 1 }} />
         <div style={{ textAlign: 'right' }}>
           <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: 'rgba(255,255,255,0.5)' }}>Current Payment Due</p>
-          <p style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>{fmtCurrency(liveG702.currentPaymentDue)}</p>
+          <p style={{ margin: 0, fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>{fmtCurrency(liveG702.currentPaymentDue)}</p>
         </div>
         <div style={{ display: 'flex', gap: spacing['2'] }}>
           <Btn
@@ -626,7 +626,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
           position: 'fixed', top: 0, right: 0, bottom: 0,
           width: DRAWER_WIDTH,
           backgroundColor: colors.white,
-          boxShadow: shadows.xl,
+          boxShadow: shadows.lg,
           zIndex: 1001,
           display: 'flex',
           flexDirection: 'column',
@@ -642,7 +642,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
         }}>
           <Receipt size={18} color={colors.primaryOrange} />
           <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
+            <h2 style={{ margin: 0, fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
               {isEdit ? `Edit Pay Application #${editApp?.application_number as number}` : 'New Pay Application'}
             </h2>
             <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
@@ -762,7 +762,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
             </div>
           </Card>
 
-          <Card padding={0} style={{ overflow: 'hidden' }}>
+          <Card padding="0" style={{ overflow: 'hidden' }}>
             <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
               <Receipt size={14} color={colors.primaryOrange} />
               <span style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
@@ -983,7 +983,7 @@ export const CreateEditPayAppDrawer = memo<CreateEditPayAppDrawerProps>(({
         }}>
           <div>
             <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Current Payment Due</p>
-            <p style={{ margin: 0, fontSize: typography.fontSize.h3, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>
+            <p style={{ margin: 0, fontSize: typography.fontSize.large, fontWeight: typography.fontWeight.bold, color: colors.primaryOrange, fontFamily: typography.fontFamilyMono }}>
               {fmtCurrency(g702.currentPaymentDue)}
             </p>
           </div>
