@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 4,
-  "_updated": "2026-05-04T00:00:00Z",
-  "_updatedBy": "auto/polish-20260504",
-  "_floor_realignment_note": "v4: eliminated all 28 Math.random() calls (P0-1) and all 41 as-any casts. anyCount now 0, mockCount now 1 (IntelligenceGraph physics exception only).",
+  "_version": 5,
+  "_updated": "2026-05-04T19:00:00Z",
+  "_updatedBy": "auto/polish-20260504-1800",
+  "_floor_realignment_note": "v5: WorkflowTimeline component (P0-6) + 68 ESLint errors eliminated across RFIDetail, RFIs, Budget, Sidebar, HUDCompliance, RFICreateWizard, sheetTitleBlockParser. Floor was 473, now 405.",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -13,11 +13,11 @@
     "lines": 43.2
   },
   "tsErrors": 0,
-  "eslintErrors": 473,
+  "eslintErrors": 405,
   "anyCount": 0,
   "mockCount": 1,
   "a11yViolations": 0,
-  "eslintWarnings": 968,
+  "eslintWarnings": 919,
   "_e2ePassRate_note": "Set to 0 \u2014 no Playwright spec files exist in e2e/ yet; previous 0.7 was fictional.",
   "e2ePassRate": 0,
   "tsIgnoreComments": 0,
