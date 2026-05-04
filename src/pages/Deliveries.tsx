@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react'
-import { Truck, Plus, Sparkles, Calendar as CalendarIcon, AlertCircle, CheckCircle2, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Loader2, X } from 'lucide-react'
+import { Truck, Plus, Sparkles, Camera, ShieldAlert, Clock, FileText, Package, ClipboardCheck, Bell, Loader2, X } from 'lucide-react'
 import { PageContainer, Card, MetricBox, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -21,6 +21,7 @@ const STATUS_COLORS: Record<Delivery['status'], { c: string; bg: string; label: 
   delivered: { c: colors.statusActive, bg: colors.statusActiveSubtle, label: 'Delivered' },
   delayed: { c: colors.statusCritical, bg: colors.statusCriticalSubtle, label: 'Delayed' },
   cancelled: { c: colors.textTertiary, bg: colors.surfaceInset, label: 'Cancelled' },
+  partial: { c: colors.statusPending, bg: colors.statusPendingSubtle, label: 'Partial' },
 }
 
 function isLate(d: Delivery): boolean {
@@ -206,10 +207,10 @@ const Deliveries: React.FC = () => {
       }
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
-        <MetricBox label="Total" value={String(stats.total)} icon={Truck} />
-        <MetricBox label="Scheduled" value={String(stats.scheduled)} icon={CalendarIcon} />
-        <MetricBox label="On Time" value={String(stats.onTime)} icon={CheckCircle2} />
-        <MetricBox label="Late" value={String(stats.late)} icon={AlertCircle} />
+        <MetricBox label="Total" value={String(stats.total)} />
+        <MetricBox label="Scheduled" value={String(stats.scheduled)} />
+        <MetricBox label="On Time" value={String(stats.onTime)} />
+        <MetricBox label="Late" value={String(stats.late)} />
       </div>
 
       {/* Schedule Impact Summary */}
@@ -250,7 +251,7 @@ const Deliveries: React.FC = () => {
         calendar.map(([date, list]) => (
           <Card key={date} padding={spacing['4']}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
-              <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{date}</div>
+              <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{date}</div>
               <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{list.length} delivery{list.length === 1 ? '' : 's'}</div>
             </div>
             {list.map((d) => {

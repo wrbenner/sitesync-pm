@@ -166,13 +166,14 @@ export type Delivery = {
   description: string | null
   expected_date: string
   actual_date: string | null
-  status: 'scheduled' | 'in_transit' | 'delivered' | 'delayed' | 'cancelled'
+  status: 'scheduled' | 'in_transit' | 'delivered' | 'delayed' | 'cancelled' | 'partial'
   location: string | null
   po_number: string | null
   notes: string | null
   created_by: string | null
   created_at: string
   updated_at: string
+  damage_reports: unknown[] | null
 }
 
 export function useDeliveries(projectId: string | undefined) {
