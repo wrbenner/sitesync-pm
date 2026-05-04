@@ -17,6 +17,11 @@ export interface SearchResult {
   created_at: string
 }
 
+// Narrower types for each query's selected columns — avoids as-any on Supabase results.
+type DocFileRow = { id: string; name: string; description: string | null; project_id: string; created_at: string | null }
+type DrawingRow = { id: string; title: string; discipline: string | null; project_id: string; created_at: string | null }
+type WikiRow = { id: string; title: string; project_id: string; created_at: string | null }
+
 export function useFullTextSearch(
   projectId: string | undefined,
   query: string,
@@ -40,14 +45,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DocFileRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
               title: d.name,
               description: d.description,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? new Date().toISOString(),
             }))
           )
         }
@@ -61,14 +66,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DocFileRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
               title: d.name,
               description: d.description,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? new Date().toISOString(),
             }))
           )
         }
@@ -82,14 +87,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as DrawingRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
               title: d.title,
               description: d.discipline,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? new Date().toISOString(),
             }))
           )
         }
@@ -103,14 +108,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as WikiRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
               title: d.title,
               description: null,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? new Date().toISOString(),
             }))
           )
         }
