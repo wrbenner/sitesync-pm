@@ -319,17 +319,20 @@ export const Workforce: React.FC = () => {
   const createTimeEntry = useCreateTimeEntry()
   const approveEntry = useApproveTimeEntry()
 
+  type MemberRow = { id: string; name: string; status?: string | null; trade: string; [key: string]: unknown }
+  type TimeRow = { id: string; approved?: boolean; regular_hours?: number; overtime_hours?: number; workforce_member_id?: string; worker_name?: string; [key: string]: unknown }
+
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0
+  const activeToday = (members as MemberRow[] | undefined)?.filter((m) => m.status === 'active').length || 0
+  const totalRegularHrs = (timeEntries as TimeRow[] | undefined)?.reduce((s, e) => s + (e.regular_hours || 0), 0) || 0
+  const totalOTHrs = (timeEntries as TimeRow[] | undefined)?.reduce((s, e) => s + (e.overtime_hours || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned'
+  ;(members as MemberRow[] | undefined)?.forEach((m) => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +343,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as MemberRow
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +366,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any
+        const row = info.row.original as TimeRow
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">

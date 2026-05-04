@@ -37,13 +37,13 @@ export function useTimeEntries(projectId: string | undefined) {
 export function useCreateWorkforceMember() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
+    mutationFn: async (payload: { project_id: string } & Record<string, unknown>) => {
       const { data, error } = await supabase.from('workforce_members').insert(payload).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['workforce_members', (vars as any).project_id] })
+      qc.invalidateQueries({ queryKey: ['workforce_members', vars.project_id] })
     },
   })
 }
@@ -64,13 +64,13 @@ export function useDeleteWorkforceMember() {
 export function useCreateTimeEntry() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
+    mutationFn: async (payload: { project_id: string } & Record<string, unknown>) => {
       const { data, error } = await supabase.from('time_entries').insert(payload).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['time_entries', (vars as any).project_id] })
+      qc.invalidateQueries({ queryKey: ['time_entries', vars.project_id] })
     },
   })
 }

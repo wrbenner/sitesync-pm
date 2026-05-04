@@ -6,6 +6,7 @@ import type { AIDailySummaryProps } from '../../components/ai/AIDailySummary';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useDailyLogs, useDailyLogEntries, useProject } from '../../hooks/queries';
+import type { DailyLog } from '../../types/entities';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -46,9 +47,8 @@ const DailySummaryPage: React.FC = () => {
   // Find the log for the selected date
   const dailyLog = useMemo(() => {
     if (!dailyLogData?.data) return null;
-    return dailyLogData.data.find((log: any) => {
-      const logDate = (log as any).log_date ?? (log as any).date ?? '';
-      return logDate === selectedDate;
+    return (dailyLogData.data as DailyLog[]).find((log) => {
+      return log.log_date === selectedDate;
     }) ?? null;
   }, [dailyLogData, selectedDate]);
 
@@ -57,16 +57,16 @@ const DailySummaryPage: React.FC = () => {
 
   // Map data into AIDailySummaryProps shape
   const summaryProps: AIDailySummaryProps = useMemo(() => {
-    const log = dailyLog as Record<string, any> | null;
+    const log = dailyLog as (DailyLog & Record<string, unknown>) | null;
 
     // Weather
     let weather: AIDailySummaryProps['weather'] | undefined;
     if (log?.weather_condition || log?.weather) {
       weather = {
-        condition: log.weather_condition ?? log.weather ?? 'Clear',
+        condition: (log.weather_condition ?? log.weather ?? 'Clear') as string,
         highTemp: Number(log.high_temp ?? log.temperature_high ?? 75),
         lowTemp: Number(log.low_temp ?? log.temperature_low ?? 55),
-        precipitation: log.precipitation ?? undefined,
+        precipitation: log.precipitation as string | undefined,
       };
     }
 
@@ -78,8 +78,9 @@ const DailySummaryPage: React.FC = () => {
       const byTrade: Record<string, number> = {};
       if (log?.manpower && Array.isArray(log.manpower)) {
         for (const m of log.manpower) {
-          const trade = (m as any).trade ?? (m as any).category ?? 'General';
-          byTrade[trade] = (byTrade[trade] ?? 0) + Number((m as any).count ?? (m as any).workers ?? 1);
+          const member = m as Record<string, unknown>;
+          const trade = (member.trade ?? member.category ?? 'General') as string;
+          byTrade[trade] = (byTrade[trade] ?? 0) + Number(member.count ?? member.workers ?? 1);
         }
       }
       if (Object.keys(byTrade).length === 0) {
