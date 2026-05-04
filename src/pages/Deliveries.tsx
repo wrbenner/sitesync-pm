@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { uploadProjectFile } from '../lib/storage'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import {
   useDeliveries,
   useCreateDelivery,
@@ -462,10 +463,10 @@ const Deliveries: React.FC = () => {
                     if (!selected) return
                     try {
                       // Persist inspection to the delivery record
-                      const { error } = await supabase.from('deliveries').update({
+                      const { error } = await fromTable('deliveries').update({
                         receiving_notes: `Inspection by ${inspectorName}: ${RESULT_OPTIONS.find(o => o.value === inspectionResult)?.label ?? inspectionResult}`.trim(),
                         status: inspectionResult === 'rejected' ? 'rejected' : inspectionResult === 'accepted_with_exceptions' ? 'partial' : 'delivered',
-                      }).eq('id', selected.id)
+                      }).eq('id' as never, selected.id)
                       if (error) throw error
                       toast.success(`Inspection recorded: ${RESULT_OPTIONS.find(o => o.value === inspectionResult)?.label}`)
                     } catch (err) {
@@ -566,7 +567,7 @@ const Deliveries: React.FC = () => {
                         const userId = session?.session?.user?.id
                         if (!userId || !projectId) { toast.error('No active session'); return }
                         // Insert real notification for PM
-                        const { error } = await supabase.from('notifications').insert({
+                        const { error } = await fromTable('notifications').insert({
                           user_id: userId,
                           title: `Late Delivery: ${selected.vendor}`,
                           body: `${selected.vendor} delivery is ${daysLate} day(s) late.${delayNotes ? ` Mitigation: ${delayNotes}` : ''} Affected activities flagged for review.`,
@@ -578,10 +579,10 @@ const Deliveries: React.FC = () => {
                         if (error) throw error
                         // Also update the delivery record with the delay note
                         if (delayNotes) {
-                          await supabase.from('deliveries').update({
+                          await fromTable('deliveries').update({
                             notes: delayNotes,
                             updated_at: new Date().toISOString(),
-                          }).eq('id', selected.id)
+                          }).eq('id' as never, selected.id)
                         }
                         toast.success(`PM notified: ${selected.vendor} delivery is ${daysLate} day(s) late.`)
                       } catch (err) {
@@ -675,18 +676,18 @@ const Deliveries: React.FC = () => {
             // Persist damage report to the delivery record
             try {
               const existingReports = Array.isArray(selected.damage_reports) ? selected.damage_reports : []
-              const { error: dmgErr } = await supabase.from('deliveries')
+              const { error: dmgErr } = await fromTable('deliveries')
                 .update({
                   damage_reports: [...existingReports, newReport],
                   status: 'partial',
                 })
-                .eq('id', selected.id)
+                .eq('id' as never, selected.id)
               if (dmgErr) throw dmgErr
               // Also create a notification for the PM
               const { data: session } = await supabase.auth.getSession()
               const userId = session?.session?.user?.id
               if (userId) {
-                await supabase.from('notifications').insert({
+                await fromTable('notifications').insert({
                   user_id: userId,
                   title: `Damage Report: ${selected.vendor}`,
                   body: `${damageForm.severity} damage reported on delivery from ${selected.vendor}. ${damageForm.affectedQty} units affected. Back-charge initiated.`,

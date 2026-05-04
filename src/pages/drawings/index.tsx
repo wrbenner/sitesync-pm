@@ -12,6 +12,7 @@ import { DrawingTiledViewer } from '../../components/drawings/DrawingTiledViewer
 import { useSignedUrl } from '../../hooks/useSignedUrl';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { smartUpload } from '../../lib/resumableUpload';
 import { drawingService } from '../../services/drawingService';
 import { isPdf, splitPdfToPages } from '../../lib/pdfPageSplitter';
@@ -181,8 +182,8 @@ const DrawingsPage: React.FC = () => {
       const { data, error: rfiErr } = await sb
         .from('rfis')
         .select('id, drawing_reference, metadata')
-        .eq('project_id', projectId)
-        .in('status', ['draft', 'open', 'under_review']);
+        .eq('project_id' as never, projectId)
+        .in('status' as never, ['draft', 'open', 'under_review']);
       if (cancelled || rfiErr || !data) return;
       const recent = (data as Array<{ id: string; drawing_reference: string | null; metadata: Record<string, unknown> | null }>)
         .filter((rfi) => {
@@ -310,10 +311,9 @@ const DrawingsPage: React.FC = () => {
     `drawing-sets-${projectId}`,
     async () => {
       try {
-        const { data, error: err } = await supabase
-          .from('drawing_sets')
+        const { data, error: err } = await fromTable('drawing_sets')
           .select('*')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .order('created_at', { ascending: false });
         if (err) {
           // Table may not exist yet if migration hasn't been applied
@@ -331,7 +331,7 @@ const DrawingsPage: React.FC = () => {
 
   const handleCreateSet = useCallback(async (setData: { name: string; set_type: SetType; description?: string; drawing_ids: string[] }) => {
     if (!projectId) return;
-    const { error: err } = await supabase.from('drawing_sets').insert({
+    const { error: err } = await fromTable('drawing_sets').insert({
       project_id: projectId,
       name: setData.name,
       set_type: setData.set_type,
@@ -344,10 +344,9 @@ const DrawingsPage: React.FC = () => {
   }, [projectId, addToast, refetchSets]);
 
   const handleUpdateSet = useCallback(async (setId: string, data: { drawing_ids: string[] }) => {
-    const { error: err } = await supabase
-      .from('drawing_sets')
+    const { error: err } = await fromTable('drawing_sets')
       .update({ drawing_ids: data.drawing_ids })
-      .eq('id', setId);
+      .eq('id' as never, setId);
     if (err) { addToast('error', `Failed to update set: ${err.message}`); return; }
     refetchSets();
   }, [addToast, refetchSets]);
@@ -364,7 +363,7 @@ const DrawingsPage: React.FC = () => {
     setIsIssuingTransmittal(true);
     try {
       // Create the transmittal record (matches 00019_document_enhancements schema)
-      const { error: transmittalErr } = await supabase.from('transmittals').insert({
+      const { error: transmittalErr } = await fromTable('transmittals').insert({
         project_id: projectId,
         to_company: data.recipient_company,
         to_contact: data.recipient_name,
@@ -379,13 +378,12 @@ const DrawingsPage: React.FC = () => {
       if (transmittalErr) { addToast('error', `Failed to create transmittal: ${transmittalErr.message}`); return; }
 
       // Update the set to issued
-      const { error: setErr } = await supabase
-        .from('drawing_sets')
+      const { error: setErr } = await fromTable('drawing_sets')
         .update({
           set_type: 'issued',
           issued_date: new Date().toISOString(),
         })
-        .eq('id', data.set_id);
+        .eq('id' as never, data.set_id);
       if (setErr) { addToast('error', `Failed to update set status: ${setErr.message}`); return; }
 
       addToast('success', `Transmittal issued to ${data.recipient_company}.`);
@@ -626,10 +624,9 @@ const DrawingsPage: React.FC = () => {
           if (result.sheet_number) pageUpdates.sheet_number = result.sheet_number;
           if (result.drawing_title) pageUpdates.drawing_title = result.drawing_title;
           if (updates.discipline) pageUpdates.discipline = updates.discipline;
-          await supabase
-            .from('drawing_pages')
-            .update(pageUpdates)
-            .eq('drawing_id', drawingId);
+          await fromTable('drawing_pages')
+            .update(pageUpdates as never)
+            .eq('drawing_id' as never, drawingId);
         }
         refetch();
       } catch (err) {
@@ -806,7 +803,7 @@ const DrawingsPage: React.FC = () => {
       const sectionMatch = titleNoExt.match(/\b(\d{2}[\s_-]?\d{2}[\s_-]?\d{0,2})\b/);
       const sectionNumber = sectionMatch ? sectionMatch[1].replace(/[\s_-]+/g, ' ').trim() : '—';
       const cleanedTitle = cleanFilenameTitle(file.name) || titleNoExt;
-      const { error: specErr } = await supabase.from('specifications').insert({
+      const { error: specErr } = await fromTable('specifications').insert({
         project_id: projectId,
         section_number: sectionNumber,
         title: cleanedTitle,
@@ -986,7 +983,7 @@ const DrawingsPage: React.FC = () => {
           // that aren't on drawings (scale_ratio, viewport_details,
           // pairing_tokens, design_description) and gives the classification
           // pipeline a stable per-page target.
-          const { error: pageErr } = await supabase.from('drawing_pages').insert({
+          const { error: pageErr } = await fromTable('drawing_pages').insert({
             drawing_id: createdId,
             project_id: projectId,
             page_number: page.pageNumber,
@@ -1242,7 +1239,7 @@ const DrawingsPage: React.FC = () => {
     // Persist a drawing set if the user named one at upload time
     const trimmedSetName = uploadSetName.trim();
     if (trimmedSetName && createdDrawingIds.length > 0) {
-      const { error: setErr } = await supabase.from('drawing_sets').insert({
+      const { error: setErr } = await fromTable('drawing_sets').insert({
         project_id: projectId,
         name: trimmedSetName,
         set_type: uploadSetType,
@@ -1289,10 +1286,9 @@ const DrawingsPage: React.FC = () => {
       console.info('[project-metadata] merged findings across', coverFindings.length, 'source(s):', merged);
 
       // Fetch current project row to know which fields are already populated
-      const { data: currentProject } = await supabase
-        .from('projects')
+      const { data: currentProject } = await fromTable('projects')
         .select('name, address, city, state, zip, architect_name, owner_name, general_contractor, building_area_sqft, num_floors')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .single();
 
       const updates: Record<string, unknown> = {};
@@ -1318,10 +1314,9 @@ const DrawingsPage: React.FC = () => {
       setIfEmpty('num_floors', merged.numFloors, `${merged.numFloors} floors`);
 
       if (Object.keys(updates).length > 0) {
-        const { error: projErr } = await supabase
-          .from('projects')
-          .update(updates)
-          .eq('id', projectId);
+        const { error: projErr } = await fromTable('projects')
+          .update(updates as never)
+          .eq('id' as never, projectId);
         if (projErr) {
           console.error('[project-metadata] update failed', projErr);
           addToast('warning', `Extracted project metadata but couldn't save: ${projErr.message}. Details in console.`);
@@ -1402,8 +1397,8 @@ const DrawingsPage: React.FC = () => {
         if (storageData?.path) fileUrl = storageData.path;
       } catch { addToast('error', 'Revision upload failed'); setIsRevUploading(false); return; }
     }
-    await supabase.from('drawing_revisions').update({ superseded_at: new Date().toISOString() }).eq('drawing_id', String(selectedDrawing.id)).is('superseded_at', null);
-    await supabase.from('drawing_revisions').insert({
+    await fromTable('drawing_revisions').update({ superseded_at: new Date().toISOString() }).eq('drawing_id' as never, String(selectedDrawing.id)).is('superseded_at' as never, null);
+    await fromTable('drawing_revisions').insert({
       drawing_id: String(selectedDrawing.id),
       revision_number: Number(revUploadNum),
       issued_date: new Date().toISOString().slice(0, 10),

@@ -20,6 +20,7 @@ import {
 } from '../hooks/mutations/directory';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { DirectoryContact } from '../types/database';
@@ -49,10 +50,10 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose,
     try {
       const payload = { ...form, project_id: projectId };
       if (editing) {
-        const { error } = await supabase.from('directory_contacts').update(payload).eq('id', initial!.id!);
+        const { error } = await fromTable('directory_contacts').update(payload as never).eq('id' as never, initial!.id!);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('directory_contacts').insert(payload);
+        const { error } = await fromTable('directory_contacts').insert(payload as never);
         if (error) throw error;
       }
       toast.success(editing ? 'Contact updated' : 'Contact added');
@@ -100,7 +101,7 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({ projectId, onClose 
     if (!form.name.trim()) { setErr('Company name required'); return; }
     setSaving(true); setErr(null);
     try {
-      const { error } = await supabase.from('companies').insert({
+      const { error } = await fromTable('companies').insert({
         project_id: projectId,
         name: form.name.trim(),
         trade: form.trade.trim() || null,
@@ -338,11 +339,10 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
   // Load COI records from insurance_certificates table
   React.useEffect(() => {
     if (!projectId || !companyName) return;
-    supabase
-      .from('insurance_certificates')
+    fromTable('insurance_certificates')
       .select('*')
-      .eq('project_id', projectId)
-      .eq('company', companyName)
+      .eq('project_id' as never, projectId)
+      .eq('company' as never, companyName)
       .then(({ data }) => {
         if (data && data.length > 0) {
           setRecords(data.map(r => ({
@@ -369,7 +369,7 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
-      const { error: insertError } = await supabase.from('insurance_certificates').insert({
+      const { error: insertError } = await fromTable('insurance_certificates').insert({
         project_id: projectId,
         company: companyName,
         document_url: publicUrl,
@@ -676,7 +676,7 @@ export const Directory: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this contact?')) return;
-    const { error } = await supabase.from('directory_contacts').delete().eq('id', id);
+    const { error } = await fromTable('directory_contacts').delete().eq('id' as never, id);
     if (error) toast.error(error.message); else { toast.success('Deleted'); qc.invalidateQueries({ queryKey: ['directory_contacts'] }); }
   };
 

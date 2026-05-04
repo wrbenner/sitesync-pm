@@ -19,6 +19,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PageContainer, Btn, Card, Modal } from '../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { useProjectId } from '../hooks/useProjectId';
 import { toast } from 'sonner';
 import {
@@ -514,10 +515,9 @@ export default function SiteMap() {
   useEffect(() => {
     if (!projectId) return;
     (async () => {
-      const { data } = await supabase
-        .from('projects')
+      const { data } = await fromTable('projects')
         .select('latitude, longitude, address, city, state')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .single();
       if (data?.latitude && data?.longitude) {
         setProjectCoords({ lat: Number(data.latitude), lng: Number(data.longitude) });
@@ -531,9 +531,9 @@ export default function SiteMap() {
             const coords = { lat: parseFloat(results[0].lat), lng: parseFloat(results[0].lon) };
             setProjectCoords(coords);
             // Persist the geocoded coordinates back to the project
-            await supabase.from('projects').update({
+            await fromTable('projects').update({
               latitude: coords.lat, longitude: coords.lng,
-            }).eq('id', projectId);
+            }).eq('id' as never, projectId);
           }
         } catch { /* geocoding failed, user can set manually */ }
       }
@@ -598,7 +598,7 @@ export default function SiteMap() {
   const loadPins = useCallback(async () => {
     if (!projectId) return;
     const data = await safeQuery(
-      () => supabase.from('site_map_pins').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      () => fromTable('site_map_pins').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }),
       [] as Pin[],
     );
     setPins(data as Pin[]);
@@ -608,7 +608,7 @@ export default function SiteMap() {
   const loadZones = useCallback(async () => {
     if (!projectId) return;
     const data = await safeQuery(
-      () => supabase.from('site_map_zones').select('*').eq('project_id', projectId).eq('is_active', true),
+      () => fromTable('site_map_zones').select('*').eq('project_id' as never, projectId).eq('is_active' as never, true),
       [] as Zone[],
     );
     setZones(data as Zone[]);
@@ -618,7 +618,7 @@ export default function SiteMap() {
   const loadSitePlans = useCallback(async () => {
     if (!projectId) return;
     const data = await safeQuery(
-      () => supabase.from('site_plans').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+      () => fromTable('site_plans').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }),
       [] as SitePlan[],
     );
     setSitePlans(data as SitePlan[]);
@@ -631,7 +631,7 @@ export default function SiteMap() {
 
     // Punch items
     const punchItems = await safeQuery(
-      () => supabase.from('punch_items').select('id, title, status, priority, location, floor').eq('project_id', projectId).neq('status', 'verified').limit(200),
+      () => fromTable('punch_items').select('id, title, status, priority, location, floor').eq('project_id' as never, projectId).neq('status' as never, 'verified').limit(200),
       [],
     );
     if (punchItems) {
@@ -647,7 +647,7 @@ export default function SiteMap() {
 
     // Incidents
     const incidentData = await safeQuery(
-      () => supabase.from('incidents').select('id, type, investigation_status, location, floor, date').eq('project_id', projectId).limit(100),
+      () => fromTable('incidents').select('id, type, investigation_status, location, floor, date').eq('project_id' as never, projectId).limit(100),
       [],
     );
     if (incidentData) {
@@ -664,7 +664,7 @@ export default function SiteMap() {
 
     // Safety inspections
     const inspectionData = await safeQuery(
-      () => supabase.from('safety_inspections').select('id, type, status, area, floor, date').eq('project_id', projectId).limit(100),
+      () => fromTable('safety_inspections').select('id, type, status, area, floor, date').eq('project_id' as never, projectId).limit(100),
       [],
     );
     if (inspectionData) {
@@ -681,7 +681,7 @@ export default function SiteMap() {
 
     // Deliveries — columns from 00009_procurement_equipment migration
     const deliveryData = await safeQuery(
-      () => supabase.from('deliveries').select('id, carrier, tracking_number, status, delivery_date').eq('project_id', projectId).limit(100),
+      () => fromTable('deliveries').select('id, carrier, tracking_number, status, delivery_date').eq('project_id' as never, projectId).limit(100),
       [],
     );
     if (deliveryData) {
@@ -700,7 +700,7 @@ export default function SiteMap() {
 
     // Safety observations
     const observationData = await safeQuery(
-      () => supabase.from('safety_observations').select('id, type, description, location, date').eq('project_id', projectId).limit(100),
+      () => fromTable('safety_observations').select('id, type, description, location, date').eq('project_id' as never, projectId).limit(100),
       [],
     );
     if (observationData) {
@@ -997,7 +997,7 @@ export default function SiteMap() {
       icon_color: cfg.color,
       floor: floorFilter || null,
     };
-    const { error } = await supabase.from('site_map_pins').insert(row);
+    const { error } = await fromTable('site_map_pins').insert(row as never);
     if (error) { toast.error(error.message); return; }
     toast.success(`${cfg.label} pin placed`);
     setPending(null);
@@ -1005,7 +1005,7 @@ export default function SiteMap() {
 
   // ── Delete pin ──
   const deletePin = useCallback(async (id: string) => {
-    const { error } = await supabase.from('site_map_pins').delete().eq('id', id);
+    const { error } = await fromTable('site_map_pins').delete().eq('id' as never, id);
     if (error) { toast.error(error.message); return; }
     toast.success('Pin removed');
     setSelectedPin(null);
@@ -1027,7 +1027,7 @@ export default function SiteMap() {
       if (signErr || !signed?.signedUrl) throw signErr || new Error('Signing failed');
 
       // Save to site_plans table
-      const { error: dbErr } = await supabase.from('site_plans').insert({
+      const { error: dbErr } = await fromTable('site_plans').insert({
         project_id: projectId,
         name: f.name.replace(/\.[^.]+$/, ''),
         file_path: path,

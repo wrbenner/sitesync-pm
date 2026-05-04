@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 import { generateWh347 } from '../../../lib/compliance/wh347'
 import { renderText, renderPdf } from '../../../lib/compliance/wh347/render'
 import type { Wh347WorkerWeek, Wh347Generated } from '../../../lib/compliance/wh347/types'
@@ -45,14 +46,14 @@ export const Wh347Panel: React.FC<{ projectId: string | undefined }> = ({ projec
     staleTime: 60_000,
     queryFn: async () => {
       const [proj, members, entries, decisions] = await Promise.all([
-        supabase.from('projects').select('id, name, address, city, state').eq('id', projectId!).maybeSingle(),
-        supabase.from('workforce_members').select('id, name, trade, role, hourly_rate').eq('project_id', projectId!).limit(200),
-        supabase.from('time_entries').select('workforce_member_id, date, regular_hours, overtime_hours, double_time_hours, cost_code')
-          .eq('project_id', projectId!)
-          .gte('date', periodFrom)
-          .lte('date', weekEnding)
+        fromTable('projects').select('id, name, address, city, state').eq('id' as never, projectId!).maybeSingle(),
+        fromTable('workforce_members').select('id, name, trade, role, hourly_rate').eq('project_id' as never, projectId!).limit(200),
+        fromTable('time_entries').select('workforce_member_id, date, regular_hours, overtime_hours, double_time_hours, cost_code')
+          .eq('project_id' as never, projectId!)
+          .gte('date' as never, periodFrom)
+          .lte('date' as never, weekEnding)
           .limit(2000),
-        supabase.from('prevailing_wage_decisions').select('*').limit(500),
+        fromTable('prevailing_wage_decisions').select('*').limit(500),
       ])
       return {
         project: proj.data,

@@ -24,6 +24,7 @@ import {
 import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
@@ -101,10 +102,9 @@ function useRFIWatchers(rfiId: string | undefined) {
   return useQuery({
     queryKey: ['rfi_watchers', rfiId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rfi_watchers')
+      const { data, error } = await fromTable('rfi_watchers')
         .select('*')
-        .eq('rfi_id', rfiId!)
+        .eq('rfi_id' as never, rfiId!)
       if (error) throw error
       return data ?? []
     },
@@ -117,15 +117,13 @@ function useToggleWatch(rfiId: string, userId: string | undefined) {
   return useMutation({
     mutationFn: async (watching: boolean) => {
       if (watching) {
-        const { error } = await supabase
-          .from('rfi_watchers')
+        const { error } = await fromTable('rfi_watchers')
           .delete()
-          .eq('rfi_id', rfiId)
-          .eq('user_id', userId!)
+          .eq('rfi_id' as never, rfiId)
+          .eq('user_id' as never, userId!)
         if (error) throw error
       } else {
-        const { error } = await supabase
-          .from('rfi_watchers')
+        const { error } = await fromTable('rfi_watchers')
           .insert({ rfi_id: rfiId, user_id: userId! })
         if (error) throw error
       }

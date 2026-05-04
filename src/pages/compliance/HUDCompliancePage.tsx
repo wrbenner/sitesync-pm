@@ -202,7 +202,7 @@ const HUDCompliancePage: React.FC = () => {
         // Fetch compliance reports (these are org-level, so we try with project_id)
         const { data: reports } = await fromTable('compliance_reports')
           .select('*')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('created_at', { ascending: false });
 
         if (!cancelled && reports && reports.length > 0) {
@@ -252,7 +252,7 @@ const HUDCompliancePage: React.FC = () => {
       try {
         const { data: payrolls } = await fromTable('certified_payroll_reports')
           .select('*')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('week_ending_date', { ascending: false })
           .limit(20);
 
@@ -261,7 +261,7 @@ const HUDCompliancePage: React.FC = () => {
           const reportIds = payrolls.map((p: Record<string, unknown>) => String(p.id));
           const { data: employees } = await fromTable('certified_payroll_employees')
             .select('*')
-            .in('payroll_report_id', reportIds);
+            .in('payroll_report_id' as never, reportIds);
 
           const employeesByReport = new Map<string, Record<string, unknown>[]>();
           (employees || []).forEach((emp: Record<string, unknown>) => {
@@ -332,8 +332,8 @@ const HUDCompliancePage: React.FC = () => {
       try {
         const { data: workers } = await fromTable('workforce_members')
           .select('*')
-          .eq('project_id', projectId)
-          .eq('status', 'active')
+          .eq('project_id' as never, projectId)
+          .eq('status' as never, 'active')
           .order('name', { ascending: true });
 
         if (!cancelled && workers && workers.length > 0) {
@@ -341,8 +341,8 @@ const HUDCompliancePage: React.FC = () => {
           const workerIds = workers.map((w: Record<string, unknown>) => String(w.id));
           const { data: timeEntries } = await fromTable('time_entries')
             .select('workforce_member_id, regular_hours, overtime_hours')
-            .eq('project_id', projectId)
-            .in('workforce_member_id', workerIds);
+            .eq('project_id' as never, projectId)
+            .in('workforce_member_id' as never, workerIds);
 
           const hoursByWorker = new Map<string, number>();
           (timeEntries || []).forEach((te: Record<string, unknown>) => {
@@ -372,7 +372,7 @@ const HUDCompliancePage: React.FC = () => {
       try {
         const { data: vendors } = await fromTable('vendors')
           .select('*')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('company_name', { ascending: true });
 
         if (!cancelled && vendors && vendors.length > 0) {
