@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, CheckCircle, Search, Loader2 } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, zIndex } from '../../styles/theme';
+import { colors, spacing, typography, zIndex } from '../../styles/theme';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuth } from '../../hooks/useAuth';
 import { useOrganization } from '../../hooks/useOrganization';

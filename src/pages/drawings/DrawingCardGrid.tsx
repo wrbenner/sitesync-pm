@@ -116,7 +116,7 @@ const S = {
   } as React.CSSProperties),
 
   // Status badge overlay — subtle, frosted glass
-  statusBadge: (bg: string, color: string) => ({
+  statusBadge: (_bg: string, _color: string) => ({
     position: 'absolute' as const,
     top: '8px',
     right: '8px',
@@ -462,7 +462,7 @@ const SheetCard: React.FC<{
   onSelect: (d: DrawingItem) => void;
   onView: (d: DrawingItem) => void;
   onToggleSelect: (id: string) => void;
-}> = ({ drawing, isSelected, isFocused, onSelect, onView, onToggleSelect }) => {
+}> = ({ drawing, isSelected, isFocused, _onSelect, onView, onToggleSelect }) => {
   const [hovered, setHovered] = React.useState(false);
   const discColor = DISCIPLINE_COLORS[drawing.discipline] || DISCIPLINE_COLORS.unclassified;
   const statusKey = drawing.status || 'current';

@@ -1,4 +1,4 @@
-import { supabase, supabaseMutation, transformSupabaseError } from '../client'
+import { supabaseMutation, transformSupabaseError } from '../client'
 import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { ScheduleActivity, SchedulePhaseRow, SchedulePhaseUpdate } from '../../types/api'

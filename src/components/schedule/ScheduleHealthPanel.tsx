@@ -3,7 +3,7 @@
 // Animated score ring, clickable findings with severity indicators,
 // and metrics dashboard. Steve Jobs would approve of the clarity.
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight, X, Activity, Link2, Zap, Target } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { HealthReport, HealthFinding, Severity } from '../../lib/scheduleHealth';

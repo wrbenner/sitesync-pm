@@ -22,7 +22,7 @@ import { useProject, useDailyLogs, usePunchItems, useFieldCaptures, useIncidents
 import { useAuthStore } from '../../stores/authStore';
 import { useIsOnline } from '../../hooks/useOfflineStatus';
 import { useIsMobile } from '../../hooks/useWindowSize';
-import { colors, typography, spacing, borderRadius, transitions } from '../../styles/theme';
+import { colors, typography, transitions } from '../../styles/theme';
 import {
   OrangeDot,
   Eyebrow,
@@ -78,7 +78,7 @@ const FieldPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   const isMobile = useIsMobile();
   const isOnline = useIsOnline();
-  const user = useAuthStore((s) => s.user);
+  const _user = useAuthStore((s) => s.user);
 
   useEffect(() => { setPageContext('field'); }, [setPageContext]);
 

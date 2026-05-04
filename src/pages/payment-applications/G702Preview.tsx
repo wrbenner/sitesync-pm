@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, lazy, Suspense } from 'react'
+import { useState, useCallback, memo, lazy, Suspense } from 'react'
 import { FileText, CheckCircle, CreditCard, Download, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, Btn } from '../../components/Primitives'

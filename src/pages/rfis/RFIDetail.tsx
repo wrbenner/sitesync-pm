@@ -16,21 +16,18 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
+  AlertTriangle, MessageSquare, FileText,
+  Image, ChevronDown, User, Eye, EyeOff,
+  Paperclip, Flag, Timer, Zap,
 } from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
-import { supabase } from '../../lib/supabase'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors, spacing, borderRadius } from '../../styles/theme'
 import { fromTable } from '../../lib/db/queries'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
@@ -90,12 +87,6 @@ const relativeTime = (d: string | null) => {
 
 // ─── Types ────────────────────────────────────────────────
 
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
-}
-
 // ─── Watchers Hook ────────────────────────────────────────
 
 function useRFIWatchers(rfiId: string | undefined) {
@@ -106,7 +97,7 @@ function useRFIWatchers(rfiId: string | undefined) {
         .select('*')
         .eq('rfi_id' as never, rfiId!)
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as unknown as Array<{ user_id: string; id: string; rfi_id: string; created_at: string | null }>
     },
     enabled: !!rfiId,
   })
@@ -124,7 +115,7 @@ function useToggleWatch(rfiId: string, userId: string | undefined) {
         if (error) throw error
       } else {
         const { error } = await fromTable('rfi_watchers')
-          .insert({ rfi_id: rfiId, user_id: userId! })
+          .insert({ rfi_id: rfiId, user_id: userId! } as never)
         if (error) throw error
       }
     },
@@ -261,7 +252,7 @@ const ResponseBubble: React.FC<{
   isNew?: boolean
   profileMap?: ProfileMap
 }> = ({ response, index, isNew, profileMap }) => {
-  const authorName = displayName(profileMap, response.created_by)
+  const authorName = displayName(profileMap, response.author_id)
   return (
   <motion.div
     initial={{ opacity: 0, y: 8 }}
@@ -608,7 +599,7 @@ export function RFIDetail() {
   const responses = rfi?.responses ?? []
 
   const userIdsToResolve = useMemo(
-    () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.created_by)],
+    () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.author_id)],
     [rfi?.created_by, rfi?.assigned_to, responses],
   )
   const { data: profileMap } = useProfileNames(userIdsToResolve)
@@ -871,7 +862,7 @@ export function RFIDetail() {
               </div>
               {rfi.priority && rfi.priority !== 'medium' && (
                 <div style={{ marginLeft: 'auto' }}>
-                  <PriorityTag priority={rfi.priority} />
+                  <PriorityTag priority={rfi.priority as 'critical' | 'high' | 'medium' | 'low'} />
                 </div>
               )}
             </div>

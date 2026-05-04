@@ -317,7 +317,7 @@ const ChangeOrdersPage: React.FC = () => {
     [cos],
   )
   const { data: coProfileMap } = useProfileNames(coUserIds)
-  const originatorName = (co: { requested_by?: string | null; created_by?: string | null }): string =>
+  const _originatorName = (co: { requested_by?: string | null; created_by?: string | null }): string =>
     displayName(coProfileMap, co.requested_by ?? co.created_by ?? null, '—')
   const { data: project } = useProject(projectId)
   const { data: activePeriod } = useActivePeriod(projectId)

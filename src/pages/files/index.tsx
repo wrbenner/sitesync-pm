@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Upload as UploadIcon, FilesIcon, FileImage, HardDrive } from 'lucide-react';
-import { Btn, useToast, PageContainer, EmptyState, TabBar } from '../../components/Primitives';
+import { Btn, useToast, PageContainer, TabBar } from '../../components/Primitives';
 import { ProjectGate } from '../../components/ProjectGate';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { PermissionGate } from '../../components/auth/PermissionGate';

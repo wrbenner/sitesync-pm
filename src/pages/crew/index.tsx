@@ -24,7 +24,7 @@ import {
   OrangeDot,
   Eyebrow,
 } from '../../components/atoms';
-import { WifiOff, ChevronRight, Users, Layers } from 'lucide-react';
+import { ChevronRight, Users, Layers } from 'lucide-react';
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
 import CreateCrewModal from '../../components/forms/CreateCrewModal';
 import { useCreateCrew } from '../../hooks/mutations/crews';
@@ -255,7 +255,7 @@ const TradeRow: React.FC<{ trade: string; count: number }> = ({ trade, count }) 
 
 // ── Quick Link ───────────────────────────────────────────
 
-const QuickLink: React.FC<{ href: string; label: string; sub?: string }> = ({ href, label, sub }) => (
+const _QuickLink: React.FC<{ href: string; label: string; sub?: string }> = ({ href, label, sub }) => (
   <a
     href={href}
     style={{

@@ -40,7 +40,7 @@ async function accApi(accessToken: string, path: string, options?: RequestInit) 
 export const autodeskBIMProvider: IntegrationProvider = {
   type: 'autodesk_bim360',
 
-  async connect(projectId, credentials) {
+  async connect(_projectId, credentials) {
     const { integrationId, accProjectId } = credentials as { integrationId: string; accProjectId?: string }
     if (!integrationId) {
       return { integrationId: '', error: 'Integration ID required (OAuth flow must complete first)' }

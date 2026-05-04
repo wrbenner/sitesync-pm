@@ -125,7 +125,7 @@ const PaymentApplicationsPage: React.FC = () => {
     setG702ModalOpen(true)
   }, [])
 
-  const handleRetainageRelease = useCallback(async (itemId: string) => {
+  const _handleRetainageRelease = useCallback(async (itemId: string) => {
     setRetainageItems((prev) => prev.map((item) =>
       item.id === itemId
         ? { ...item, stage: 'requested' as RetainageStage }

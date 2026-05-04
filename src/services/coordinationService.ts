@@ -62,7 +62,7 @@ function dateRangeOverlap(
   };
 }
 
-function computeUrgency(overlapDays: number, daysUntilStart: number, isCriticalPath: boolean): ConflictUrgency {
+function computeUrgency(_overlapDays: number, daysUntilStart: number, isCriticalPath: boolean): ConflictUrgency {
   if (isCriticalPath && daysUntilStart <= 2) return 'critical';
   if (daysUntilStart <= 3) return 'high';
   if (daysUntilStart <= 7) return 'medium';

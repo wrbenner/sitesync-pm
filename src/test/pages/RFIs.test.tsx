@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -90,7 +90,7 @@ vi.mock('../../components/shared/VirtualDataTable', () => ({
 }))
 
 // Capture onMoveItem so tests can trigger kanban drag-and-drop
-let capturedOnMoveItem: ((id: string | number, from: string, to: string) => void) | undefined
+let _capturedOnMoveItem: ((id: string | number, from: string, to: string) => void) | undefined
 
 vi.mock('../../components/shared/KanbanBoard', () => ({
   KanbanBoard: (props: { onMoveItem?: (id: string | number, from: string, to: string) => void }) => {

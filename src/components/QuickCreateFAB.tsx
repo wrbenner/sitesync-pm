@@ -17,7 +17,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, HelpCircle, Send, CheckSquare, DollarSign, Users, FileText, ListTodo } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { colors, typography, transitions } from '../styles/theme';
 import { useIsMobile } from '../hooks/useWindowSize';
 

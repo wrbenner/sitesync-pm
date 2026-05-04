@@ -208,7 +208,7 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
     },
 
     // ── onError: Rollback + toast + Sentry ───────────
-    onError: (error, params, context) => {
+    onError: (error, _params, context) => {
       // Rollback optimistic update
       if (context && typeof context === 'object' && 'previousData' in context) {
         const ctx = context as { previousData: unknown; queryKey: unknown[] }

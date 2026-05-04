@@ -847,7 +847,7 @@ export const Safety: React.FC = () => {
     expiringCerts === 0 ? 'success' : 'warning'
 
   const dartValue = dart !== null ? parseFloat(dart) : null
-  const dartColor: 'success' | 'warning' | 'danger' | undefined =
+  const _dartColor: 'success' | 'warning' | 'danger' | undefined =
     dartValue === null ? undefined
     : dartValue <= 1.5 ? 'success'
     : dartValue <= 2.5 ? 'warning'

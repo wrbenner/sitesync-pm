@@ -220,7 +220,7 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
 // ══  without noise. Every element earns its place.           ══
 // ════════════════════════════════════════════════════════════════
 
-const DashboardInner: React.FC = () => {
+const _DashboardInner: React.FC = () => {
   const projectId = useProjectId();
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();

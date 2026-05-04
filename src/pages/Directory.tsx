@@ -248,7 +248,7 @@ const DEFAULT_PREQUAL: PrequalInfo = {
   lastUpdated: '',
 };
 
-function getDefaultPrequal(): PrequalInfo {
+function _getDefaultPrequal(): PrequalInfo {
   return { ...DEFAULT_PREQUAL };
 }
 

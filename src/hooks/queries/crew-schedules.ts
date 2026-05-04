@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { isSupabaseConfigured } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 
 export interface CrewScheduleRow {

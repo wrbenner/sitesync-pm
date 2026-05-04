@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Send, Mail, Eye, Clock, CheckCircle, Users, Plus, X,
-  Search, Bell, ExternalLink, Copy, Check
+  Send, Mail, Eye, Clock, CheckCircle, _Users, Plus, X,
+  Search, Bell, _ExternalLink, Copy, Check
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
@@ -123,7 +123,7 @@ const RecipientRow: React.FC<{
 // ─── Main Component ───────────────────────────────────────
 
 const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
-  rfiId, projectId, rfiTitle, rfiNumber, recipients: initialRecipients = [], onDistribute,
+  rfiId, projectId, _rfiTitle, _rfiNumber, recipients: initialRecipients = [], onDistribute,
 }) => {
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [recipients, setRecipients] = useState<DistributionRecipient[]>(initialRecipients)

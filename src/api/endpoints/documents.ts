@@ -1,4 +1,4 @@
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../client'
 import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { DrawingRow, FileRow, DrawingRevision, MappedDrawing, MappedFile } from '../../types/api'

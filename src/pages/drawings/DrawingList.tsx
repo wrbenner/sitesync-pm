@@ -4,7 +4,7 @@ import {
   ChevronDown, ChevronUp, Eye,
 } from 'lucide-react';
 import { Btn } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { DISCIPLINE_COLORS, STATUS_CONFIG } from './constants';
 import type { DrawingRevision } from '../../types/api';
 import { formatRevDate } from './types';

@@ -15,7 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { colors, spacing, typography, shadows } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────
 

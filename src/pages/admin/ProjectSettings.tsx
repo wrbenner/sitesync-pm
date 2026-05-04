@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Save, Users, Building2, MapPin, Calendar, DollarSign,
-  FileText, HardHat, CheckCircle, Settings, ChevronDown, Shield,
+  FileText, HardHat, CheckCircle, Settings, _ChevronDown, Shield,
   UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,10 +10,10 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { PermissionGate } from '../../components/auth/PermissionGate';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { supabase, fromTable } from '../../lib/supabase';
+import { fromTable } from '../../lib/supabase';
 import { resetDemoProject } from '../../services/demoSeed';
 import { DemoSeedButton } from '../../components/admin/DemoSeedButton';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -350,7 +350,7 @@ export function ProjectSettings() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const inputStyle = (focused?: boolean): React.CSSProperties => ({
+  const inputStyle = (_focused?: boolean): React.CSSProperties => ({
     width: '100%',
     height: 40,
     padding: `0 ${spacing['3']}`,
@@ -399,7 +399,7 @@ export function ProjectSettings() {
     );
   }
 
-  const selectedType = PROJECT_TYPES.find((t) => t.value === projectType);
+  const _selectedType = PROJECT_TYPES.find((t) => t.value === projectType);
 
   return (
     <div style={{

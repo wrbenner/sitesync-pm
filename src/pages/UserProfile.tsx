@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   User, Mail, Phone, Building2, Briefcase, Shield, Camera,
   Bell, BellOff, ChevronRight, LogOut, Check, Pencil,
-  Moon, Sun, Lock, KeyRound, Palette, Trash2,
+  Moon, Sun, _Lock, KeyRound, Palette, Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores';
@@ -268,7 +268,7 @@ export default function UserProfile() {
 
   // Edit states
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(true);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);

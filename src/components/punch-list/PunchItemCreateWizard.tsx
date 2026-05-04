@@ -17,7 +17,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Camera, X, Plus, MapPin, Wrench, User, AlertTriangle,
-  Send, Image, ChevronDown, Calendar, Clock, Zap, Shield
+  Send, Image, ChevronDown, Calendar, _Clock, Zap, Shield
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'

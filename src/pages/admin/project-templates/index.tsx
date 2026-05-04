@@ -3,7 +3,7 @@
  * materialize project templates.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Eyebrow, Hairline, PageQuestion } from '../../../components/atoms';
 import { PermissionGate } from '../../../components/auth/PermissionGate';
 import { supabase } from '../../../lib/supabase';

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import DOMPurify from 'dompurify'
-import { BookOpen, Plus, Search, Sparkles, Trash2, ChevronRight, ChevronDown, FileText, History, RotateCcw, Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Link, Code, Quote, Minus, Table, Paperclip, Image, Users, Save, Eye, EyeOff } from 'lucide-react'
+import { BookOpen, Plus, Search, Sparkles, Trash2, ChevronRight, ChevronDown, FileText, History, Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Link, Code, Quote, Minus, Table, Paperclip, Image, Users, Save, Eye, EyeOff } from 'lucide-react'
 import { PageContainer, Card, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'

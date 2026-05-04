@@ -79,7 +79,7 @@ const LogoSymbol: React.FC<{ size: number }> = ({ size }) => (
 
 // ── Arrow Icon ──────────────────────────────────────────
 
-const ArrowRightIcon: React.FC<{ size: number; color: string }> = ({ size, color }) => (
+const _ArrowRightIcon: React.FC<{ size: number; color: string }> = ({ size, color }) => (
   <svg
     width={size}
     height={size}
@@ -363,7 +363,7 @@ const CheckInbox: React.FC<{ email: string; onBack: () => void }> = ({ email, on
 // ── Main Login Component ────────────────────────────────
 
 export const Login: React.FC = () => {
-  const navigate = useNavigate()
+  const _navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { signIn } = useAuth()
 

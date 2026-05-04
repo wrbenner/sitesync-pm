@@ -47,7 +47,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
   const appNavigate = useAppNavigate();
   const queryClient = useQueryClient();
   const [editingDetail, setEditingDetail] = useState(false);
-  const [actionPending, setActionPending] = useState(false);
+  const [_actionPending, setActionPending] = useState(false);
 
   // Iris approval gate — drafts targeting THIS submittal go below IrisSuggests.
   const submittalIdForDrafts = selected?.id ? String(selected.id) : null;

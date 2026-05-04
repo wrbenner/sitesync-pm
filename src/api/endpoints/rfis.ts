@@ -1,4 +1,4 @@
-import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
+import { transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
 import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { RfiRow, PaginationParams, PaginatedResult, CreateRfiPayload } from '../../types/api'

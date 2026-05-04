@@ -10,7 +10,7 @@
  * is the orange surveyor's dot — it marks NOW on the day's horizon.
  */
 
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useIsMobile } from '../../hooks/useWindowSize';
@@ -103,7 +103,7 @@ function dayFrac(m: number, sunrise: number, sunset: number): number {
   return Math.max(0, Math.min(1, (m - sunrise) / (sunset - sunrise)));
 }
 
-function fmtTime(m: number): string {
+function _fmtTime(m: number): string {
   const h = Math.floor(m / 60);
   const mm = m % 60;
   const h12 = ((h + 11) % 12) + 1;
@@ -1223,7 +1223,7 @@ export function SundialDashboard() {
   const isMobile = useIsMobile();
 
   // Update nowMinutes every 60 seconds
-  const [tick, setTick] = useState(0);
+  const [_tick, setTick] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(interval);

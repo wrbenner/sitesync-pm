@@ -12,7 +12,7 @@ import { Sparkles, X, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { colors, typography, spacing } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 
 const IRIS_INDIGO = '#4F46E5';
 const IRIS_INDIGO_BG = 'rgba(79, 70, 229, 0.04)';

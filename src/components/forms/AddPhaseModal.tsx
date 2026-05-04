@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, Link2, AlertTriangle, Users, Clock } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, zIndex, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 import { supabase } from '../../lib/supabase';
 import { fromTable } from '../../lib/db/queries'

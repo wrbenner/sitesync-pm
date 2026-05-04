@@ -201,7 +201,7 @@ function BudgetBar({
 
 // ── Quick Link Button ───────────────────────────────────────
 
-function QuickLink({ href, label }: { href: string; label: string }) {
+function _QuickLink({ href, label }: { href: string; label: string }) {
   return (
     <a
       href={href}
@@ -283,7 +283,7 @@ const LedgerPage: React.FC = () => {
     [contractData]
   );
 
-  const payApps = useMemo(
+  const _payApps = useMemo(
     () => (payAppData ?? []) as Array<{
       id: string; app_number: number; period_to: string;
       current_payment_due: number; status: string;

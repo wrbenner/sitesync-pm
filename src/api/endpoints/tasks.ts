@@ -1,4 +1,4 @@
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../client'
 import { fromTable } from '../../lib/db/queries'
 import { validateProjectId } from '../middleware/projectScope'
 import type { TaskRow } from '../../types/api'

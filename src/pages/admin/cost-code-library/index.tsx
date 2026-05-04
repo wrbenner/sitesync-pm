@@ -4,7 +4,7 @@
  * `cost_codes`.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Eyebrow, Hairline, PageQuestion } from '../../../components/atoms';
 import { PermissionGate } from '../../../components/auth/PermissionGate';
 import { CsvDropZone } from '../../../components/integrations/CsvDropZone';
