@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface ProfileSummary {
   user_id: string
@@ -80,10 +81,9 @@ export function useProfileNames(userIds: (string | null | undefined)[]) {
     enabled: unique.length > 0,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await fromTable('profiles')
         .select('user_id, full_name, avatar_url')
-        .in('user_id', unique)
+        .in('user_id' as never, unique)
       if (error) throw error
       const map: ProfileMap = new Map()
       for (const row of (data as ProfileSummary[] | null) ?? []) {

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import type { CloseoutItemStatus } from '../machines/closeoutMachine';
 import {
   type Result,
@@ -19,11 +20,10 @@ async function resolveProjectRole(
   userId: string | null,
 ): Promise<string | null> {
   if (!userId) return null;
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
   return data?.role ?? null;
 }
@@ -75,10 +75,9 @@ export const closeoutService = {
     closeoutItemId: string,
     newStatus: CloseoutItemStatus,
   ): Promise<Result> {
-    const { data: item, error: fetchError } = await supabase
-      .from('closeout_items')
+    const { data: item, error: fetchError } = await fromTable('closeout_items')
       .select('status, project_id')
-      .eq('id', closeoutItemId)
+      .eq('id' as never, closeoutItemId)
       .single();
 
     if (fetchError || !item) {
@@ -110,10 +109,9 @@ export const closeoutService = {
       updates.completed_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('closeout_items')
-      .update(updates)
-      .eq('id', closeoutItemId);
+    const { error } = await fromTable('closeout_items')
+      .update(updates as never)
+      .eq('id' as never, closeoutItemId);
 
     if (error) return fail(dbError(error.message, { closeoutItemId, newStatus }));
     return { data: null, error: null };
@@ -129,10 +127,9 @@ export const closeoutService = {
      
     const { status: _status, ...safeUpdates } = updates;
 
-    const { error } = await supabase
-      .from('closeout_items')
+    const { error } = await fromTable('closeout_items')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', closeoutItemId);
+      .eq('id' as never, closeoutItemId);
 
     if (error) return fail(dbError(error.message, { closeoutItemId }));
     return { data: null, error: null };

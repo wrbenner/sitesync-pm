@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export type InsuranceCertificate = {
   id: string
@@ -46,13 +47,12 @@ export function useInsuranceCertificates(projectId: string | undefined) {
   return useQuery({
     queryKey: ['insurance_certificates', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('insurance_certificates')
+      const { data, error } = await fromTable('insurance_certificates')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('expiration_date', { ascending: true, nullsFirst: false })
       if (error) throw error
-      return (data ?? []) as InsuranceCertificate[]
+      return (data ?? []) as unknown as InsuranceCertificate[]
     },
     enabled: !!projectId,
   })
@@ -63,14 +63,13 @@ export function useInsuranceCertificatesByCompany(projectId: string | undefined,
     queryKey: ['insurance_certificates', projectId, 'company', company],
     queryFn: async () => {
       if (!company) return [] as InsuranceCertificate[]
-      const { data, error } = await supabase
-        .from('insurance_certificates')
+      const { data, error } = await fromTable('insurance_certificates')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('company', company)
+        .eq('project_id' as never, projectId!)
+        .eq('company' as never, company)
         .order('expiration_date', { ascending: true, nullsFirst: false })
       if (error) throw error
-      return (data ?? []) as InsuranceCertificate[]
+      return (data ?? []) as unknown as InsuranceCertificate[]
     },
     enabled: !!projectId && !!company,
   })

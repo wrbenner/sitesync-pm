@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 import { useAuthStore } from '../stores/authStore'
 import type { Organization } from '../types/database'
 
@@ -41,10 +42,9 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
 
   // 1. If no active org in store, try to find any org the user belongs to.
   if (!activeOrgId) {
-    const { data: existingMember } = await supabase
-      .from('organization_members')
+    const { data: existingMember } = await fromTable('organization_members')
       .select('organization_id, organizations:organizations(*)')
-      .eq('user_id', userId)
+      .eq('user_id' as never, userId)
       .limit(1)
       .maybeSingle()
 
@@ -57,8 +57,7 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
 
   // 2. Still no org — create one for this user (first-time onboarding path).
   if (!activeOrgId) {
-    const { data: newOrg, error: orgErr } = await supabase
-      .from('organizations')
+    const { data: newOrg, error: orgErr } = await fromTable('organizations')
       .insert({ name: 'My Organization' })
       .select()
       .single()
@@ -69,15 +68,14 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
   }
 
   // 3. Ensure organization_members row exists (idempotent).
-  const { data: memberRow } = await supabase
-    .from('organization_members')
+  const { data: memberRow } = await fromTable('organization_members')
     .select('id')
-    .eq('organization_id', activeOrgId)
-    .eq('user_id', userId)
+    .eq('organization_id' as never, activeOrgId)
+    .eq('user_id' as never, userId)
     .maybeSingle()
 
   if (!memberRow) {
-    await supabase.from('organization_members').insert({
+    await fromTable('organization_members').insert({
       organization_id: activeOrgId,
       user_id: userId,
       role: 'owner',

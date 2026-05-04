@@ -11,6 +11,7 @@
  */
 import * as tus from 'tus-js-client'
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 
 // Env-only — no source-level fallbacks. If these are missing the
 // Supabase client in ./supabase.ts would have thrown already, so by

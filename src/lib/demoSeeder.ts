@@ -156,7 +156,7 @@ async function tryInsert<T extends Record<string, unknown>>(
     }
   })
     .from(table)
-    .insert(rows)
+    .insert(rows as never)
     .select('id')
   if (error) return { ids: [], error: error.message }
   const inserted = (data ?? []) as Array<{ id?: string }>
@@ -387,7 +387,7 @@ export async function wipeDemoData(projectId: string): Promise<WipeResult> {
       })
         .from(t.table)
         .delete({ count: 'exact' })
-        .in('id', t.ids)
+        .in('id' as never, t.ids)
       if (error) {
         failed.push({ table: t.table, reason: error.message })
       } else {
@@ -421,7 +421,7 @@ export async function wipeDemoData(projectId: string): Promise<WipeResult> {
       })
         .from(table)
         .delete({ count: 'exact' })
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .like(col, `%${DEMO_SEED_MARKER}%`)
       if (error) {
         failed.push({ table: `${table} (marker)`, reason: error.message })
@@ -448,8 +448,8 @@ export async function wipeDemoData(projectId: string): Promise<WipeResult> {
     })
       .from('submittals')
       .delete({ count: 'exact' })
-      .eq('project_id', projectId)
-      .in('title', titles as unknown as string[])
+      .eq('project_id' as never, projectId)
+      .in('title' as never, titles as unknown as string[])
     if (error) {
       failed.push({ table: 'submittals (title)', reason: error.message })
     } else if ((count ?? 0) > 0) {

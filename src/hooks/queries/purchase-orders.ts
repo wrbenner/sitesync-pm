@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export type PurchaseOrder = {
   id: string
@@ -47,13 +48,12 @@ export function usePurchaseOrders(projectId: string | undefined) {
   return useQuery({
     queryKey: ['purchase_orders', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('purchase_orders')
+      const { data, error } = await fromTable('purchase_orders')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('po_number', { ascending: false })
       if (error) throw error
-      return (data ?? []) as PurchaseOrder[]
+      return (data ?? []) as unknown as PurchaseOrder[]
     },
     enabled: !!projectId,
   })
@@ -63,13 +63,12 @@ export function usePurchaseOrder(id: string | undefined) {
   return useQuery({
     queryKey: ['purchase_orders', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('purchase_orders')
+      const { data, error } = await fromTable('purchase_orders')
         .select('*')
-        .eq('id', id!)
+        .eq('id' as never, id!)
         .single()
       if (error) throw error
-      return data as PurchaseOrder
+      return data as unknown as PurchaseOrder
     },
     enabled: !!id,
   })
@@ -79,20 +78,18 @@ export function usePOLineItems(projectId: string | undefined) {
   return useQuery({
     queryKey: ['po_line_items', projectId],
     queryFn: async () => {
-      const { data: poData, error: poError } = await supabase
-        .from('purchase_orders')
+      const { data: poData, error: poError } = await fromTable('purchase_orders')
         .select('id')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (poError) throw poError
       if (!poData || poData.length === 0) return [] as POLineItem[]
       const poIds = poData.map((po) => po.id as string)
-      const { data, error } = await supabase
-        .from('po_line_items')
+      const { data, error } = await fromTable('po_line_items')
         .select('*')
-        .in('purchase_order_id', poIds)
+        .in('purchase_order_id' as never, poIds)
         .order('sort_order', { ascending: true })
       if (error) throw error
-      return (data ?? []) as POLineItem[]
+      return (data ?? []) as unknown as POLineItem[]
     },
     enabled: !!projectId,
   })
@@ -102,13 +99,12 @@ export function usePOLineItemsByPO(purchaseOrderId: string | undefined) {
   return useQuery({
     queryKey: ['po_line_items', 'by_po', purchaseOrderId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('po_line_items')
+      const { data, error } = await fromTable('po_line_items')
         .select('*')
-        .eq('purchase_order_id', purchaseOrderId!)
+        .eq('purchase_order_id' as never, purchaseOrderId!)
         .order('sort_order', { ascending: true })
       if (error) throw error
-      return (data ?? []) as POLineItem[]
+      return (data ?? []) as unknown as POLineItem[]
     },
     enabled: !!purchaseOrderId,
   })

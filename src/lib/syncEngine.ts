@@ -11,6 +11,7 @@ import {
   type TableName,
 } from './offlineStore'
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -261,8 +262,7 @@ class SyncEngine {
     try {
       switch (record.syncStatus) {
         case 'pending_create': {
-          const { error } = await supabase
-            .from(table)
+          const { error } = await fromTable(table)
             .insert(record.data)
           if (error) {
             // Check if it already exists (conflict)
@@ -282,20 +282,18 @@ class SyncEngine {
             return await this.handleConflict(record)
           }
 
-          const { error } = await supabase
-            .from(table)
+          const { error } = await fromTable(table)
             .update(record.data)
-            .eq('id', record.id)
+            .eq('id' as never, record.id)
           if (error) throw error
           await markSynced(table, record.id)
           return 'synced'
         }
 
         case 'pending_delete': {
-          const { error } = await supabase
-            .from(table)
+          const { error } = await fromTable(table)
             .delete()
-            .eq('id', record.id)
+            .eq('id' as never, record.id)
           // Ignore "not found" errors — server already deleted
           if (error && error.code !== 'PGRST116') throw error
           await markSynced(table, record.id)
@@ -315,10 +313,9 @@ class SyncEngine {
    */
   private async detectConflict(record: OfflineRecord): Promise<boolean> {
     try {
-      const { data } = await supabase
-        .from(record.table)
+      const { data } = await fromTable(record.table)
         .select('updated_at')
-        .eq('id', record.id)
+        .eq('id' as never, record.id)
         .single()
 
       if (!data) return false
@@ -339,10 +336,9 @@ class SyncEngine {
     record: OfflineRecord,
   ): Promise<'conflict'> {
     try {
-      const { data } = await supabase
-        .from(record.table)
+      const { data } = await fromTable(record.table)
         .select('*')
-        .eq('id', record.id)
+        .eq('id' as never, record.id)
         .single()
 
       if (data) {

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -58,13 +59,12 @@ export function useEstimatingItems(projectId: string | undefined) {
     queryKey: ['estimating_items', projectId],
     enabled: !!projectId,
     queryFn: async (): Promise<EstimatingItem[]> => {
-      const { data, error } = await supabase
-        .from('estimating_items')
+      const { data, error } = await fromTable('estimating_items')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as EstimatingItem[]
+      return (data ?? []) as unknown as EstimatingItem[]
     },
   })
 }
@@ -76,13 +76,12 @@ export function useEstimateRollups(projectId: string | undefined) {
     queryKey: ['estimate_rollups', projectId],
     enabled: !!projectId,
     queryFn: async (): Promise<EstimateRollup[]> => {
-      const { data, error } = await supabase
-        .from('estimate_rollups')
+      const { data, error } = await fromTable('estimate_rollups')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('as_of', { ascending: false })
       if (error) throw error
-      return (data ?? []) as EstimateRollup[]
+      return (data ?? []) as unknown as EstimateRollup[]
     },
   })
 }
@@ -94,13 +93,12 @@ export function useLatestRollupsByDivision(projectId: string | undefined) {
     queryKey: ['estimate_rollups', 'latest_by_division', projectId],
     enabled: !!projectId,
     queryFn: async (): Promise<EstimateRollup[]> => {
-      const { data, error } = await supabase
-        .from('estimate_rollups')
+      const { data, error } = await fromTable('estimate_rollups')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('as_of', { ascending: false })
       if (error) throw error
-      const rows = (data ?? []) as EstimateRollup[]
+      const rows = (data ?? []) as unknown as EstimateRollup[]
       const byDivision = new Map<string, EstimateRollup>()
       for (const r of rows) {
         if (!byDivision.has(r.division)) byDivision.set(r.division, r)
@@ -117,13 +115,12 @@ export function useBidSubmissions(bidPackageId: string | undefined) {
     queryKey: ['bid_submissions', bidPackageId],
     enabled: !!bidPackageId,
     queryFn: async (): Promise<BidSubmission[]> => {
-      const { data, error } = await supabase
-        .from('bid_submissions')
+      const { data, error } = await fromTable('bid_submissions')
         .select('*')
-        .eq('bid_package_id', bidPackageId!)
+        .eq('bid_package_id' as never, bidPackageId!)
         .order('amount', { ascending: true })
       if (error) throw error
-      return (data ?? []) as BidSubmission[]
+      return (data ?? []) as unknown as BidSubmission[]
     },
   })
 }
@@ -134,20 +131,18 @@ export function useAllBidSubmissions(projectId: string | undefined) {
     queryKey: ['bid_submissions', 'all', projectId],
     enabled: !!projectId,
     queryFn: async (): Promise<BidSubmission[]> => {
-      const { data: pkgs, error: pErr } = await supabase
-        .from('bid_packages')
+      const { data: pkgs, error: pErr } = await fromTable('bid_packages')
         .select('id')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (pErr) throw pErr
       const ids = (pkgs ?? []).map((p: { id: string }) => p.id)
       if (ids.length === 0) return []
-      const { data, error } = await supabase
-        .from('bid_submissions')
+      const { data, error } = await fromTable('bid_submissions')
         .select('*')
-        .in('bid_package_id', ids)
+        .in('bid_package_id' as never, ids)
         .order('amount', { ascending: true })
       if (error) throw error
-      return (data ?? []) as BidSubmission[]
+      return (data ?? []) as unknown as BidSubmission[]
     },
   })
 }

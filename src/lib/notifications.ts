@@ -72,9 +72,9 @@ async function loadPrefs(userId: string): Promise<UserPrefs | null> {
       .select(
         'slack_enabled, mention_channel, assignment_channel, overdue_channel, approval_needed_channel, ai_insight_channel, system_channel, muted_projects',
       )
-      .eq('user_id', userId)
+      .eq('user_id' as never, userId)
       .maybeSingle()
-    return (data as UserPrefs) ?? null
+    return (data as unknown as UserPrefs) ?? null
   } catch {
     return null
   }

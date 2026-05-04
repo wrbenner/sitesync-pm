@@ -100,7 +100,7 @@ export class AIService {
 
     const data = await response.json()
     if (data.error) throw new Error(data.error)
-    return data as AIMessage
+    return data as unknown as AIMessage
   }
 
   // Stream chat and invoke onChunk for each text chunk; resolves to the complete AIMessage

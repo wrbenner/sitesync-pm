@@ -3,6 +3,7 @@
 // Supports: card payments, ACH bank transfers, retainage hold/release.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ───────────────────────────────────────────────
 
@@ -195,10 +196,9 @@ export async function getPaymentHistory(projectId: string): Promise<Array<{
   applicationNumber: number
   createdAt: string
 }>> {
-  const { data, error } = await supabase
-    .from('payment_transactions')
+  const { data, error } = await fromTable('payment_transactions')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

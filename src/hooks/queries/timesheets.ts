@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface TimesheetRow {
   id: string
@@ -20,14 +21,13 @@ export function useTimesheets(projectId: string | undefined, opts?: { from?: str
     queryFn: async (): Promise<TimesheetRow[]> => {
       if (!projectId || !isSupabaseConfigured) return []
 
-      let q = supabase
-        .from('timesheets')
+      let q = fromTable('timesheets')
         .select('*, workforce_members(name, trade)')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('work_date', { ascending: false })
 
-      if (opts?.from) q = q.gte('work_date', opts.from)
-      if (opts?.to) q = q.lte('work_date', opts.to)
+      if (opts?.from) q = q.gte('work_date' as never, opts.from)
+      if (opts?.to) q = q.lte('work_date' as never, opts.to)
 
       const { data, error } = await q
       if (error) throw error
@@ -63,10 +63,9 @@ export function useTimesheetHoursByActivity(projectId: string | undefined) {
     queryKey: ['timesheets', 'by_activity', projectId],
     queryFn: async (): Promise<ActivityHoursRollup[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('timesheets')
+      const { data, error } = await fromTable('timesheets')
         .select('activity, hours')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
       if (error) throw error
 
       const map = new Map<string, { hours: number; entries: number }>()

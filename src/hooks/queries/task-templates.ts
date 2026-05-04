@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 
 
@@ -9,8 +10,7 @@ export function useTaskTemplates() {
   return useQuery({
     queryKey: ['task_templates'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('task_templates')
+      const { data, error } = await fromTable('task_templates')
         .select('*')
         .order('phase', { ascending: true })
       if (error) throw error
@@ -23,11 +23,10 @@ export function useTaskCriticalPath(projectId: string | undefined) {
   return useQuery({
     queryKey: ['task_critical_path', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
+      const { data, error } = await fromTable('tasks')
         .select('id, title, start_date, end_date, predecessor_ids, estimated_hours')
-        .eq('project_id', projectId!)
-        .not('status', 'eq', 'done')
+        .eq('project_id' as never, projectId!)
+        .not('status' as never, 'eq', 'done')
       if (error) throw error
 
       const { tasksToCPM, calculateCriticalPath } = await import('../../lib/criticalPath')
@@ -51,10 +50,9 @@ export function useTaskDependencies(taskId: string | undefined) {
     queryKey: ['task_dependencies', taskId],
     queryFn: async () => {
       // Get the task's predecessor_ids
-      const { data: task, error: taskError } = await supabase
-        .from('tasks')
+      const { data: task, error: taskError } = await fromTable('tasks')
         .select('predecessor_ids, successor_ids')
-        .eq('id', taskId!)
+        .eq('id' as never, taskId!)
         .single()
       if (taskError) throw taskError
 
@@ -66,18 +64,16 @@ export function useTaskDependencies(taskId: string | undefined) {
       let successors: Array<{ id: string; title: string; status: string; due_date: string | null }> = []
 
       if (predecessorIds.length > 0) {
-        const { data } = await supabase
-          .from('tasks')
+        const { data } = await fromTable('tasks')
           .select('id, title, status, due_date')
-          .in('id', predecessorIds)
+          .in('id' as never, predecessorIds)
         predecessors = data || []
       }
 
       if (successorIds.length > 0) {
-        const { data } = await supabase
-          .from('tasks')
+        const { data } = await fromTable('tasks')
           .select('id, title, status, due_date')
-          .in('id', successorIds)
+          .in('id' as never, successorIds)
         successors = data || []
       }
 

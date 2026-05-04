@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import type { Database } from '../../types/database'
 
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Full-Text Search ────────────────────────────────────────
 
@@ -37,7 +37,7 @@ export function useFullTextSearch(
       if (searchTypes.includes('document')) {
         const { data } = await from('documents')
           .select('id, name, description, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
@@ -58,7 +58,7 @@ export function useFullTextSearch(
       if (searchTypes.includes('file')) {
         const { data } = await from('files')
           .select('id, name, description, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
@@ -79,7 +79,7 @@ export function useFullTextSearch(
       if (searchTypes.includes('drawing')) {
         const { data } = await from('drawings')
           .select('id, title, discipline, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
@@ -100,7 +100,7 @@ export function useFullTextSearch(
       if (searchTypes.includes('wiki')) {
         const { data } = await from('wiki_pages')
           .select('id, title, project_id, created_at')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {

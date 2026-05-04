@@ -5,6 +5,7 @@
  */
 
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 
 // Common US city coordinates for instant lookup (no API call needed)
 const CITY_COORDS: Record<string, { lat: number; lon: number }> = {
@@ -135,10 +136,9 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
  * Persist geocoded coordinates to the project record (fire-and-forget).
  */
 function persistCoordinates(projectId: string, lat: number, lon: number): void {
-  supabase
-    .from('projects')
+  fromTable('projects')
     .update({ latitude: lat, longitude: lon })
-    .eq('id', projectId)
+    .eq('id' as never, projectId)
     .then(({ error }) => {
       if (error && import.meta.env.DEV) {
         console.warn('[Geocoding] Failed to persist coordinates:', error.message)

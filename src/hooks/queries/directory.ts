@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -53,13 +54,12 @@ export function usePrequalifications(projectId: string | undefined) {
     queryKey: ['prequalifications', projectId],
     enabled: !!projectId,
     queryFn: async (): Promise<PrequalificationRow[]> => {
-      const { data, error } = await supabase
-        .from('prequalifications')
+      const { data, error } = await fromTable('prequalifications')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('updated_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as PrequalificationRow[]
+      return (data ?? []) as unknown as PrequalificationRow[]
     },
   })
 }
@@ -74,15 +74,14 @@ export function useCommunicationLogs(
     queryKey: ['communication_logs', projectId, contactId ?? 'all'],
     enabled: !!projectId,
     queryFn: async (): Promise<CommunicationLogRow[]> => {
-      let q = supabase
-        .from('communication_logs')
+      let q = fromTable('communication_logs')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('occurred_at', { ascending: false })
-      if (contactId) q = q.eq('contact_id', contactId)
+      if (contactId) q = q.eq('contact_id' as never, contactId)
       const { data, error } = await q
       if (error) throw error
-      return (data ?? []) as CommunicationLogRow[]
+      return (data ?? []) as unknown as CommunicationLogRow[]
     },
   })
 }
@@ -96,10 +95,9 @@ export function useLastContactMap(projectId: string | undefined) {
     queryKey: ['communication_logs', 'last_by_contact', projectId],
     enabled: !!projectId,
     queryFn: async (): Promise<Map<string, string>> => {
-      const { data, error } = await supabase
-        .from('communication_logs')
+      const { data, error } = await fromTable('communication_logs')
         .select('contact_id, occurred_at')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('occurred_at', { ascending: false })
       if (error) throw error
       const map = new Map<string, string>()

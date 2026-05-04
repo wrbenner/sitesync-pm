@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { colors } from '../styles/theme'
 import { useEffect, useId } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 import { isDevBypassActive } from '../lib/devBypass'
@@ -228,23 +229,21 @@ export function usePermissions(): PermissionsResult {
       if (!projectId || !user?.id) return null
 
       // 1. Try project_members first (normal path)
-      const { data, error } = await supabase
-        .from('project_members')
+      const { data, error } = await fromTable('project_members')
         .select('role')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
+        .eq('project_id' as never, projectId)
+        .eq('user_id' as never, user.id)
         .maybeSingle()
       if (!error && data?.role) return data.role as ProjectRole
 
       // 2. Fallback: check if user is the project owner
-      const { data: proj } = await supabase
-        .from('projects')
+      const { data: proj } = await fromTable('projects')
         .select('owner_id')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .maybeSingle()
       if (proj?.owner_id === user.id) {
         // Auto-insert membership row for the owner (best-effort, may fail due to RLS)
-        await supabase.from('project_members').upsert({
+        await fromTable('project_members').upsert({
           project_id: projectId,
           user_id: user.id,
           role: 'owner',
@@ -254,13 +253,12 @@ export function usePermissions(): PermissionsResult {
       }
 
       // 3. Fallback: check if user created the project (created_by field)
-      const { data: projCreator } = await supabase
-        .from('projects')
+      const { data: projCreator } = await fromTable('projects')
         .select('created_by')
-        .eq('id', projectId)
+        .eq('id' as never, projectId)
         .maybeSingle()
       if (projCreator?.created_by === user.id) {
-        await supabase.from('project_members').upsert({
+        await fromTable('project_members').upsert({
           project_id: projectId,
           user_id: user.id,
           role: 'project_manager',

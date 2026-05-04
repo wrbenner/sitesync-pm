@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 
 interface AuditEntry {
   projectId: string
@@ -28,7 +29,7 @@ function diffFields(
 export async function logAuditEntry(entry: AuditEntry): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from('audit_log').insert({
+  const { error } = await fromTable('audit_log').insert({
     project_id: entry.projectId,
     user_id: user?.id ?? null,
     user_email: user?.email ?? null,

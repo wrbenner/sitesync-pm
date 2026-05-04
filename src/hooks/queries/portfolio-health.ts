@@ -9,6 +9,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useAuthStore } from '../../stores/authStore';
 import type { PortfolioProjectInput } from '../../types/portfolio';
 
@@ -20,10 +21,9 @@ export function usePortfolioHealth() {
     staleTime: 60_000,
     queryFn: async (): Promise<PortfolioProjectInput[]> => {
       if (!company?.id) return [];
-      const { data, error } = await supabase
-        .from('project_health_summary')
+      const { data, error } = await fromTable('project_health_summary')
         .select('*')
-        .eq('organization_id', company.id);
+        .eq('organization_id' as never, company.id);
       if (error) {
         // Materialized view may not exist yet in older deploys —
         // graceful degradation.

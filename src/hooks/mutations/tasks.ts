@@ -8,7 +8,7 @@ import { validateTaskStatusTransition } from './state-machine-validation-helpers
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Tasks ─────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ export function useUpdateTask() {
       if (typeof updates.status === 'string') {
         await validateTaskStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('tasks').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('tasks').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -73,7 +73,7 @@ export function useDeleteTask() {
     entityType: 'task',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('tasks').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('tasks').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

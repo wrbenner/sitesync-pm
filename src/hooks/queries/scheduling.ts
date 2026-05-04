@@ -4,7 +4,7 @@ import type { WorkingDaysConfig } from '../../services/schedulingEngine'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Non-Working Days ─────────────────────────────────────
 
@@ -22,10 +22,10 @@ export function useNonWorkingDays(projectId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await from('non_working_days')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('date', { ascending: true })
       if (error) throw error
-      return (data ?? []) as NonWorkingDay[]
+      return (data ?? []) as unknown as NonWorkingDay[]
     },
     enabled: !!projectId,
   })
@@ -36,7 +36,7 @@ export function useCreateNonWorkingDay() {
   return useMutation({
     mutationFn: async (params: { project_id: string; name: string; date: string }) => {
       const { data, error } = await from('non_working_days')
-        .insert(params)
+        .insert(params as never)
         .select()
         .single()
       if (error) throw error
@@ -54,7 +54,7 @@ export function useDeleteNonWorkingDay() {
     mutationFn: async (params: { id: string; projectId: string }) => {
       const { error } = await from('non_working_days')
         .delete()
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
       if (error) throw error
     },
     onSuccess: (_data, vars) => {
@@ -84,10 +84,10 @@ export function useTaskRelations(taskId: string | undefined) {
       const [fromResult, toResult] = await Promise.all([
         from('task_relations')
           .select('*')
-          .eq('from_task_id', taskId!),
+          .eq('from_task_id' as never, taskId!),
         from('task_relations')
           .select('*')
-          .eq('to_task_id', taskId!),
+          .eq('to_task_id' as never, taskId!),
       ])
       if (fromResult.error) throw fromResult.error
       if (toResult.error) throw toResult.error
@@ -136,7 +136,7 @@ export function useDeleteTaskRelation() {
     mutationFn: async (params: { id: string; fromTaskId: string; toTaskId: string }) => {
       const { error } = await from('task_relations')
         .delete()
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
       if (error) throw error
     },
     onSuccess: (_data, vars) => {
@@ -165,7 +165,7 @@ export function useWorkingDaysConfig(projectId: string | undefined) {
       try {
         const { data: project } = await from('projects')
           .select('settings')
-          .eq('id', projectId!)
+          .eq('id' as never, projectId!)
           .single()
         const settings = (project as Record<string, unknown>)?.settings as Record<string, unknown> | null
         if (settings?.working_week_days && Array.isArray(settings.working_week_days)) {

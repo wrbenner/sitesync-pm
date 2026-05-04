@@ -14,6 +14,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import type {
   DraftedAction,
   DraftedActionInsert,
@@ -59,8 +60,7 @@ export async function draftAction<T extends DraftedActionType>(
     status: 'pending' as const,
   }
 
-  const { data, error } = await supabase
-    .from('drafted_actions')
+  const { data, error } = await fromTable('drafted_actions')
     .insert(row as never)
     .select('*')
     .single()
@@ -81,15 +81,14 @@ export async function withdrawDraft(
   draftId: string,
   reason: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
-    .from('drafted_actions')
+  const { error } = await fromTable('drafted_actions')
     .update({
       status: 'rejected',
       decision_note: `[withdrawn by system] ${reason}`,
       decided_at: new Date().toISOString(),
     } as never)
-    .eq('id', draftId)
-    .eq('status', 'pending')
+    .eq('id' as never, draftId)
+    .eq('status' as never, 'pending')
 
   if (error) return { ok: false, error: error.message }
   return { ok: true }

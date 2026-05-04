@@ -13,6 +13,7 @@
  */
 
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 import type { DraftedAction, DraftedPayAppPayload } from '../../../types/draftedActions'
 
 export async function executeDraftedPayApp(draft: DraftedAction): Promise<{
@@ -40,8 +41,7 @@ export async function executeDraftedPayApp(draft: DraftedAction): Promise<{
     source_drafted_action_id: draft.id,
   }
 
-  const { data: headerData, error: headerError } = await supabase
-    .from('payment_applications')
+  const { data: headerData, error: headerError } = await fromTable('payment_applications')
     .insert(headerRow as never)
     .select('id, application_number')
     .single()
@@ -66,8 +66,7 @@ export async function executeDraftedPayApp(draft: DraftedAction): Promise<{
   }))
 
   if (lineRows.length > 0) {
-    const { error: linesError } = await supabase
-      .from('payment_application_line_items')
+    const { error: linesError } = await fromTable('payment_application_line_items')
       .insert(lineRows as never)
 
     if (linesError) {
@@ -75,7 +74,7 @@ export async function executeDraftedPayApp(draft: DraftedAction): Promise<{
       // fails, the user sees the partial state in the UI and can
       // delete it manually. Never silently swallow the original error.
       try {
-        await supabase.from('payment_applications').delete().eq('id', payAppId)
+        await fromTable('payment_applications').delete().eq('id' as never, payAppId)
       } catch { /* fall through */ }
       throw new Error(`Pay app line insert failed: ${linesError.message}`)
     }

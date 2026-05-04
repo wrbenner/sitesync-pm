@@ -5,7 +5,7 @@ import { contactSchema } from '../../components/forms/schemas'
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Directory Contacts ────────────────────────────────────
 
@@ -38,7 +38,7 @@ export function useUpdateDirectoryContact() {
     getEntityId: (p) => p.id,
     getAfterState: (p) => p.updates,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').update(params.updates).eq('id', params.id).eq('project_id', params.projectId)
+      const { error } = await from('directory_contacts').update(params.updates).eq('id' as never, params.id).eq('project_id' as never, params.projectId)
       if (error) throw error
       return { projectId: params.projectId, id: params.id }
     },
@@ -55,7 +55,7 @@ export function useDeleteDirectoryContact() {
     entityType: 'contact',
     getEntityId: (p) => p.id,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').delete().eq('id', params.id).eq('project_id', params.projectId)
+      const { error } = await from('directory_contacts').delete().eq('id' as never, params.id).eq('project_id' as never, params.projectId)
       if (error) throw error
       return { projectId: params.projectId }
     },

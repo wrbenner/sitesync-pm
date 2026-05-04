@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 import Sentry from '../../lib/sentry'
 import posthog from '../../lib/analytics'
@@ -13,8 +14,7 @@ export function useCreatePermit() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: PermitInsert) => {
-      const { data, error } = await supabase
-        .from('permits')
+      const { data, error } = await fromTable('permits')
         .insert(payload as Record<string, unknown>)
         .select()
         .single()
@@ -37,10 +37,9 @@ export function useUpdatePermit() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: PermitUpdate }) => {
-      const { data, error } = await supabase
-        .from('permits')
+      const { data, error } = await fromTable('permits')
         .update(params.updates as Record<string, unknown>)
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
         .select()
         .single()
       if (error) throw error
@@ -75,7 +74,7 @@ export function useDeletePermit() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string }) => {
-      const { error } = await supabase.from('permits').delete().eq('id', params.id)
+      const { error } = await fromTable('permits').delete().eq('id' as never, params.id)
       if (error) throw error
       return params
     },

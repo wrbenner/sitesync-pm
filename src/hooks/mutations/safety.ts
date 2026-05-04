@@ -8,7 +8,7 @@ import { createOnError } from './createAuditedMutation'
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Safety ───────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ export function useUpdateCorrectiveAction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
-      const { error } = await from('corrective_actions').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('corrective_actions').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

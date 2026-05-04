@@ -2,6 +2,7 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { queryClient } from '../lib/queryClient'
 import { setSentryUser, clearSentryUser } from '../lib/sentry'
 
@@ -308,7 +309,7 @@ export function useAuth(): AuthState {
       const first_name = nameParts[0] ?? ''
       const last_name = nameParts.slice(1).join(' ') || null
       // Create profile row for the new user
-      await supabase.from('profiles').insert({
+      await fromTable('profiles').insert({
         user_id: data.user.id,
         full_name: name.trim(),
         first_name,

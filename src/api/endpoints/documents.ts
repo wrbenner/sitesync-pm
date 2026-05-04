@@ -1,4 +1,5 @@
 import { supabase, transformSupabaseError } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { DrawingRow, FileRow, DrawingRevision, MappedDrawing, MappedFile } from '../../types/api'
 
@@ -67,10 +68,9 @@ function getDisciplineIcon(discipline: string): string {
 export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> => {
   await assertProjectAccess(projectId)
 
-  const { data: drawingData, error: drawingError } = await supabase
-    .from('drawings')
+  const { data: drawingData, error: drawingError } = await fromTable('drawings')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('sheet_number')
   if (drawingError) throw transformSupabaseError(drawingError)
 
@@ -81,10 +81,9 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
 
   // Fetch revisions — gracefully handle missing table so the page never crashes.
   let revisionData: DrawingRevision[] | null = null
-  const { data: revData, error: revisionError } = await supabase
-    .from('drawing_revisions')
+  const { data: revData, error: revisionError } = await fromTable('drawing_revisions')
     .select('*')
-    .in('drawing_id', drawingIds)
+    .in('drawing_id' as never, drawingIds)
     .order('revision_number', { ascending: false })
   if (revisionError) {
     // Log but don't crash — table may not exist yet (migration pending).
@@ -141,10 +140,9 @@ export const getDrawings = async (projectId: string): Promise<MappedDrawing[]> =
 }
 
 export const getDrawingRevisionHistory = async (drawingId: string): Promise<DrawingRevision[]> => {
-  const { data, error } = await supabase
-    .from('drawing_revisions')
+  const { data, error } = await fromTable('drawing_revisions')
     .select('*')
-    .eq('drawing_id', drawingId)
+    .eq('drawing_id' as never, drawingId)
     .order('revision_number', { ascending: false })
   if (error) throw transformSupabaseError(error)
   return (data || []) as DrawingRevision[]
@@ -152,7 +150,7 @@ export const getDrawingRevisionHistory = async (drawingId: string): Promise<Draw
 
 export const getFiles = async (projectId: string): Promise<MappedFile[]> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('files').select('*').eq('project_id', projectId).order('name')
+  const { data, error } = await fromTable('files').select('*').eq('project_id' as never, projectId).order('name')
   if (error) throw transformSupabaseError(error)
   const rows = (data || []) as FileRow[]
 

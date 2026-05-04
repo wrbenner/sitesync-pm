@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────
@@ -83,11 +84,10 @@ export function useSSO() {
     if (!domain) return { enforced: false, domain: '' }
 
     try {
-      const { data } = await supabase
-        .from('sso_configurations')
+      const { data } = await fromTable('sso_configurations')
         .select('enforced')
-        .contains('allowed_domains', [domain])
-        .eq('enforced', true)
+        .contains('allowed_domains' as never, [domain])
+        .eq('enforced' as never, true)
         .limit(1)
 
       return { enforced: (data?.length ?? 0) > 0, domain }
@@ -107,12 +107,11 @@ export function useSSOAdmin(organizationId: string | undefined) {
   // Get current SSO configuration
   const getConfig = useCallback(async (): Promise<SSOConfig | null> => {
     if (!organizationId) return null
-    const { data } = await supabase
-      .from('sso_configurations')
+    const { data } = await fromTable('sso_configurations')
       .select('*')
-      .eq('organization_id', organizationId)
+      .eq('organization_id' as never, organizationId)
       .single()
-    return data as SSOConfig | null
+    return data as unknown as SSOConfig | null
   }, [organizationId])
 
   // Save SSO configuration
@@ -121,8 +120,7 @@ export function useSSOAdmin(organizationId: string | undefined) {
     setSaving(true)
 
     try {
-      const { error } = await supabase
-        .from('sso_configurations')
+      const { error } = await fromTable('sso_configurations')
         .upsert({
           organization_id: organizationId,
           ...config,

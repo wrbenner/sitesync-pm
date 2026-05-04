@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export type Contract = {
   id: string
@@ -38,13 +39,12 @@ export function useContracts(projectId: string | undefined) {
   return useQuery({
     queryKey: ['contracts', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
+      const { data, error } = await fromTable('contracts')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Contract[]
+      return (data ?? []) as unknown as Contract[]
     },
     enabled: !!projectId,
   })
@@ -59,10 +59,9 @@ export function useContractRetainageTotals(contractIds: string[]) {
     queryKey: ['contracts', 'retainage_totals', key],
     queryFn: async (): Promise<Record<string, number>> => {
       if (contractIds.length === 0) return {}
-      const { data, error } = await supabase
-        .from('schedule_of_values')
+      const { data, error } = await fromTable('schedule_of_values')
         .select('contract_id, retainage')
-        .in('contract_id', contractIds)
+        .in('contract_id' as never, contractIds)
       if (error) throw error
       const totals: Record<string, number> = {}
       for (const row of (data ?? []) as Array<{ contract_id: string; retainage: number | null }>) {
@@ -78,13 +77,12 @@ export function useContract(id: string | undefined) {
   return useQuery({
     queryKey: ['contracts', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contracts')
+      const { data, error } = await fromTable('contracts')
         .select('*')
-        .eq('id', id!)
+        .eq('id' as never, id!)
         .single()
       if (error) throw error
-      return data as Contract
+      return data as unknown as Contract
     },
     enabled: !!id,
   })

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import type { AgentDomain, AgentTask, AgentTaskStatus } from '../queries/agent-tasks'
 
 // ── Inputs ────────────────────────────────────────────────────────
@@ -29,8 +30,7 @@ export function useCreateAgentTask() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: CreateAgentTaskInput): Promise<AgentTask> => {
-      const { data, error } = await supabase
-        .from('agent_tasks')
+      const { data, error } = await fromTable('agent_tasks')
         .insert({
           project_id: input.project_id,
           user_id: input.user_id,
@@ -48,7 +48,7 @@ export function useCreateAgentTask() {
         .select()
         .single()
       if (error) throw error
-      return data as AgentTask
+      return data as unknown as AgentTask
     },
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['agent_tasks', task.project_id] })
@@ -74,10 +74,9 @@ export function useApproveAgentTask() {
       }
 
       const startedAt = new Date().toISOString()
-      await supabase
-        .from('agent_tasks')
+      await fromTable('agent_tasks')
         .update({ status: 'running', started_at: startedAt })
-        .eq('id', task.id)
+        .eq('id' as never, task.id)
 
       let orchestratorResult: Record<string, unknown> | null = null
       let execError: Error | null = null
@@ -100,8 +99,7 @@ export function useApproveAgentTask() {
       }
 
       const completedAt = new Date().toISOString()
-      const { error: updateError } = await supabase
-        .from('agent_tasks')
+      const { error: updateError } = await fromTable('agent_tasks')
         .update(execError
           ? {
               status: 'failed',
@@ -115,7 +113,7 @@ export function useApproveAgentTask() {
               approved_at: completedAt,
               completed_at: completedAt,
             })
-        .eq('id', task.id)
+        .eq('id' as never, task.id)
       if (updateError) throw updateError
       if (execError) throw execError
       return orchestratorResult
@@ -138,10 +136,9 @@ export function useRejectAgentTask() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (task: AgentTask) => {
-      const { error } = await supabase
-        .from('agent_tasks')
+      const { error } = await fromTable('agent_tasks')
         .update({ status: 'cancelled', completed_at: new Date().toISOString() })
-        .eq('id', task.id)
+        .eq('id' as never, task.id)
       if (error) throw error
       return task
     },

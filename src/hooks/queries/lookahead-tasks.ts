@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { getPayApplication } from '../../api/endpoints/budget'
 import type {
   Task,
@@ -17,25 +18,23 @@ export function useLookaheadTasks(projectId: string | undefined) {
 
       // Try embedded crew join first; fall back to a plain select if the
       // crews FK isn't configured in this environment (Supabase returns 400).
-      const joined = await supabase
-        .from('tasks')
+      const joined = await fromTable('tasks')
         .select('*, crew:crews(id, name)')
-        .eq('project_id', projectId!)
-        .gte('start_date', today.toISOString().slice(0, 10))
-        .lte('start_date', threeWeeksOut.toISOString().slice(0, 10))
-        .in('status', ['todo', 'in_progress'])
+        .eq('project_id' as never, projectId!)
+        .gte('start_date' as never, today.toISOString().slice(0, 10))
+        .lte('start_date' as never, threeWeeksOut.toISOString().slice(0, 10))
+        .in('status' as never, ['todo', 'in_progress'])
         .order('start_date')
 
       if (!joined.error) return joined.data as Task[]
 
       if (import.meta.env.DEV) console.warn('[LookaheadTasks] crews join unavailable, falling back:', joined.error.message)
-      const plain = await supabase
-        .from('tasks')
+      const plain = await fromTable('tasks')
         .select('*')
-        .eq('project_id', projectId!)
-        .gte('start_date', today.toISOString().slice(0, 10))
-        .lte('start_date', threeWeeksOut.toISOString().slice(0, 10))
-        .in('status', ['todo', 'in_progress'])
+        .eq('project_id' as never, projectId!)
+        .gte('start_date' as never, today.toISOString().slice(0, 10))
+        .lte('start_date' as never, threeWeeksOut.toISOString().slice(0, 10))
+        .in('status' as never, ['todo', 'in_progress'])
         .order('start_date')
       if (plain.error) throw plain.error
       const tasks = (plain.data ?? []) as Array<Task & { crew_id?: string | null; crew?: { id: string; name: string } | null }>
@@ -44,7 +43,7 @@ export function useLookaheadTasks(projectId: string | undefined) {
       // that read task.crew?.name still work even when the FK-join isn't set up.
       const crewIds = Array.from(new Set(tasks.map(t => t.crew_id).filter((v): v is string => !!v)))
       if (crewIds.length > 0) {
-        const { data: crewsData } = await supabase.from('crews').select('id, name').in('id', crewIds)
+        const { data: crewsData } = await fromTable('crews').select('id, name').in('id' as never, crewIds)
         const crewMap = new Map((crewsData ?? []).map(c => [(c as { id: string }).id, c as { id: string; name: string }]))
         for (const t of tasks) {
           if (t.crew_id) t.crew = crewMap.get(t.crew_id) ?? null
@@ -78,8 +77,7 @@ export function useCreateLookaheadTask() {
 
   return useMutation({
     mutationFn: async (input: CreateLookaheadTaskInput) => {
-      const { data, error } = await supabase
-        .from('tasks')
+      const { data, error } = await fromTable('tasks')
         .insert({
           project_id: input.project_id,
           title: input.title,

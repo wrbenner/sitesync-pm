@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { getLienWaivers } from '../../api/endpoints/lienWaivers'
 import { toast } from 'sonner'
 
@@ -19,10 +20,9 @@ export function useLienWaiversByPayApp(payAppId: string | undefined) {
   return useQuery({
     queryKey: ['lien_waivers', 'pay_app', payAppId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lien_waivers')
+      const { data, error } = await fromTable('lien_waivers')
         .select('*')
-        .eq('pay_app_id', payAppId!)
+        .eq('pay_app_id' as never, payAppId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data
@@ -43,8 +43,7 @@ export function useCreateLienWaiver() {
       status: string
       notes: string | null
     }) => {
-      const { data, error } = await supabase
-        .from('lien_waivers')
+      const { data, error } = await fromTable('lien_waivers')
         .insert(payload as never)
         .select()
         .single()
@@ -65,10 +64,9 @@ export function useDeleteLienWaiver() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await supabase
-        .from('lien_waivers')
+      const { error } = await fromTable('lien_waivers')
         .delete()
-        .eq('id', id)
+        .eq('id' as never, id)
       if (error) throw error
       return { projectId }
     },

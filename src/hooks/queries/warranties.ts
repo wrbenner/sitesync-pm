@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface WarrantyRow {
   id: string
@@ -51,10 +52,9 @@ export function useWarranties(projectId: string | undefined) {
   return useQuery({
     queryKey: ['warranties', projectId],
     queryFn: async (): Promise<WarrantyWithStatus[]> => {
-      const { data, error } = await supabase
-        .from('warranties')
+      const { data, error } = await fromTable('warranties')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('expiration_date', { ascending: true, nullsFirst: false })
       if (error) throw error
       const rows = (data ?? []) as unknown as WarrantyRow[]

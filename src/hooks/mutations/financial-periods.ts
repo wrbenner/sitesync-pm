@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import {
   financialPeriodsKey,
   activePeriodKey,
@@ -36,15 +37,14 @@ export function useClosePeriod() {
         updates.closed_at = new Date().toISOString()
         updates.closed_by = userId
       }
-      const { data, error } = await supabase
-        .from('financial_periods')
-        .update(updates)
-        .eq('id', input.id)
-        .eq('project_id', input.projectId)
+      const { data, error } = await fromTable('financial_periods')
+        .update(updates as never)
+        .eq('id' as never, input.id)
+        .eq('project_id' as never, input.projectId)
         .select()
         .single()
       if (error) throw error
-      return data as FinancialPeriod
+      return data as unknown as FinancialPeriod
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: financialPeriodsKey(vars.projectId) })
@@ -70,20 +70,19 @@ export function useReopenPeriod() {
       }
       const { data: session } = await supabase.auth.getSession()
       const userId = session?.session?.user?.id ?? null
-      const { data, error } = await supabase
-        .from('financial_periods')
+      const { data, error } = await fromTable('financial_periods')
         .update({
           status: 'reopened',
           reopened_at: new Date().toISOString(),
           reopened_by: userId,
           notes: input.notes,
         })
-        .eq('id', input.id)
-        .eq('project_id', input.projectId)
+        .eq('id' as never, input.id)
+        .eq('project_id' as never, input.projectId)
         .select()
         .single()
       if (error) throw error
-      return data as FinancialPeriod
+      return data as unknown as FinancialPeriod
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: financialPeriodsKey(vars.projectId) })
@@ -109,8 +108,7 @@ export function useCreatePeriod() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: CreatePeriodInput) => {
-      const { data, error } = await supabase
-        .from('financial_periods')
+      const { data, error } = await fromTable('financial_periods')
         .insert({
           project_id: input.projectId,
           period_month: input.periodMonth,
@@ -119,7 +117,7 @@ export function useCreatePeriod() {
         .select()
         .single()
       if (error) throw error
-      return data as FinancialPeriod
+      return data as unknown as FinancialPeriod
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: financialPeriodsKey(vars.projectId) })

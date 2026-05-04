@@ -7,7 +7,7 @@ import { validatePunchItemStatusTransition } from './state-machine-validation-he
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ export function useCreatePunchItem() {
     getNewValue: (p) => p.data,
     mutationFn: async (params) => {
       const insertData = sanitizePunchData(params.data)
-      const { data, error } = await from('punch_items').insert(insertData).select().single()
+      const { data, error } = await from('punch_items').insert(insertData as never).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }
     },
@@ -73,7 +73,7 @@ export function useUpdatePunchItem() {
         await validatePunchItemStatusTransition(id, projectId, updates.status)
       }
       const cleanUpdates = sanitizePunchData(updates as Record<string, unknown>)
-      const { error } = await from('punch_items').update(cleanUpdates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('punch_items').update(cleanUpdates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -96,7 +96,7 @@ export function useDeletePunchItem() {
     entityType: 'punch_item',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('punch_items').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('punch_items').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

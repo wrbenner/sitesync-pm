@@ -1,4 +1,5 @@
 import { supabase, supabaseMutation, transformSupabaseError } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess } from '../middleware/projectScope'
 import type { ScheduleActivity, SchedulePhaseRow, SchedulePhaseUpdate } from '../../types/api'
 import { calculateCriticalPath, tasksToCPM } from '../../lib/criticalPath'
@@ -91,22 +92,20 @@ export const getSchedulePhases = async (projectId: string): Promise<ScheduleActi
 
   let rows: RawRow[]
   try {
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .select(SCHEDULE_SELECT)
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('start_date')
     if (error) throw error
-    rows = (data ?? []) as RawRow[]
+    rows = (data ?? []) as unknown as RawRow[]
   } catch {
     // Extended columns may not exist yet; fall back to base columns with schema defaults.
-    const { data, error } = await supabase
-      .from('schedule_phases')
+    const { data, error } = await fromTable('schedule_phases')
       .select(SCHEDULE_SELECT_BASE)
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('start_date')
     if (error) throw transformSupabaseError(error)
-    rows = (data ?? []) as RawRow[]
+    rows = (data ?? []) as unknown as RawRow[]
   }
 
   const cpmInput = tasksToCPM(
@@ -153,8 +152,8 @@ export const updateScheduleActivity = async (
   return supabaseMutation((client) =>
     client
       .from('schedule_phases')
-      .update(updates)
-      .eq('id', id)
+      .update(updates as never)
+      .eq('id' as never, id)
       .select()
       .single()
   )

@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 
 export function useInvitations(projectId: string | undefined) {
   return useQuery({
     queryKey: ['invitations', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_invitations')
+      const { data, error } = await fromTable('user_invitations')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data
@@ -31,9 +31,8 @@ export function useCreateInvitation() {
       invited_by?: string
       expires_at?: string
     }) => {
-      const { data, error } = await supabase
-        .from('user_invitations')
-        .insert(payload)
+      const { data, error } = await fromTable('user_invitations')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -53,10 +52,9 @@ export function useRevokeInvitation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId?: string }) => {
-      const { data, error } = await supabase
-        .from('user_invitations')
+      const { data, error } = await fromTable('user_invitations')
         .update({ status: 'revoked' })
-        .eq('id', id)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -76,11 +74,10 @@ export function useAcceptInvitation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ token, acceptedBy }: { token: string; acceptedBy: string }) => {
-      const { data, error } = await supabase
-        .from('user_invitations')
+      const { data, error } = await fromTable('user_invitations')
         .update({ status: 'accepted', accepted_by: acceptedBy, accepted_at: new Date().toISOString() })
-        .eq('token', token)
-        .eq('status', 'pending')
+        .eq('token' as never, token)
+        .eq('status' as never, 'pending')
         .select()
         .single()
       if (error) throw error

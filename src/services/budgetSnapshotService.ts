@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 export interface BudgetSnapshotRow {
   id: string
@@ -31,10 +32,9 @@ export interface CreateSnapshotInput {
 
 export const budgetSnapshotService = {
   async loadSnapshots(projectId: string): Promise<BudgetSnapshotRow[]> {
-    const { data, error } = await supabase
-      .from('budget_snapshots')
+    const { data, error } = await fromTable('budget_snapshots')
       .select('*')
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('snapshot_date', { ascending: false })
 
     if (error) throw error
@@ -49,8 +49,7 @@ export const budgetSnapshotService = {
     const { data: session } = await supabase.auth.getSession()
     const userId = session.session?.user?.id ?? null
 
-    const { data, error } = await supabase
-      .from('budget_snapshots')
+    const { data, error } = await fromTable('budget_snapshots')
       .insert({
         project_id: input.projectId,
         name: input.name,
@@ -65,14 +64,13 @@ export const budgetSnapshotService = {
 
     if (error) throw error
 
-    return data as BudgetSnapshotRow
+    return data as unknown as BudgetSnapshotRow
   },
 
   async deleteSnapshot(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('budget_snapshots')
+    const { error } = await fromTable('budget_snapshots')
       .delete()
-      .eq('id', id)
+      .eq('id' as never, id)
 
     if (error) throw error
   },

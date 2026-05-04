@@ -15,6 +15,7 @@
  */
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import type { DraftedAction, DraftedActionType } from '../../types/draftedActions'
 import { executeDraftedRfi } from './executors/rfi'
 import { executeDraftedDailyLog } from './executors/dailyLog'
@@ -64,18 +65,17 @@ const executors: Partial<Record<DraftedActionType, Executor>> = {
  *   5. On failure → mark 'failed' with execution_result.error
  */
 export async function approveAndExecute(input: ExecuteActionInput): Promise<ExecuteActionResult> {
-  // Step 1+2: claim the draft. The .eq('status', 'pending') guards
+  // Step 1+2: claim the draft. The .eq('status' as never, 'pending') guards
   // against double-execute when two reviewers click approve at once.
-  const claimResult = await supabase
-    .from('drafted_actions')
+  const claimResult = await fromTable('drafted_actions')
     .update({
       status: 'approved',
       decided_by: input.decided_by,
       decided_at: new Date().toISOString(),
       decision_note: input.decision_note ?? null,
     } as never)
-    .eq('id', input.draftId)
-    .eq('status', 'pending')
+    .eq('id' as never, input.draftId)
+    .eq('status' as never, 'pending')
     .select('*')
     .single()
 
@@ -95,8 +95,7 @@ export async function approveAndExecute(input: ExecuteActionInput): Promise<Exec
 
   try {
     const out = await executor(draft)
-    await supabase
-      .from('drafted_actions')
+    await fromTable('drafted_actions')
       .update({
         status: 'executed',
         executed_at: new Date().toISOString(),
@@ -104,7 +103,7 @@ export async function approveAndExecute(input: ExecuteActionInput): Promise<Exec
         executed_resource_id: out.resource_id,
         execution_result: out.result ?? {},
       } as never)
-      .eq('id', draft.id)
+      .eq('id' as never, draft.id)
 
     return {
       ok: true,
@@ -121,27 +120,25 @@ export async function approveAndExecute(input: ExecuteActionInput): Promise<Exec
 
 /** User explicitly rejected a draft. Keep the row for the audit trail. */
 export async function rejectDraft(input: ExecuteActionInput): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
-    .from('drafted_actions')
+  const { error } = await fromTable('drafted_actions')
     .update({
       status: 'rejected',
       decided_by: input.decided_by,
       decided_at: new Date().toISOString(),
       decision_note: input.decision_note ?? null,
     } as never)
-    .eq('id', input.draftId)
-    .eq('status', 'pending')
+    .eq('id' as never, input.draftId)
+    .eq('status' as never, 'pending')
 
   if (error) return { ok: false, error: error.message }
   return { ok: true }
 }
 
 async function markFailed(draftId: string, errorMessage: string): Promise<void> {
-  await supabase
-    .from('drafted_actions')
+  await fromTable('drafted_actions')
     .update({
       status: 'failed',
       execution_result: { error: errorMessage } as Record<string, unknown>,
     } as never)
-    .eq('id', draftId)
+    .eq('id' as never, draftId)
 }

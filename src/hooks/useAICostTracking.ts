@@ -4,6 +4,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -146,19 +147,18 @@ export function useAICostTracking(filters: AICostFilters = {}) {
     queryFn: async () => {
       const sinceIso = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString()
 
-      let query = supabase
-        .from('ai_cost_tracking')
+      let query = fromTable('ai_cost_tracking')
         .select('id, project_id, user_id, service, operation, input_tokens, output_tokens, total_cost_cents, model, created_at')
-        .gte('created_at', sinceIso)
+        .gte('created_at' as never, sinceIso)
         .order('created_at', { ascending: false })
         .limit(5000)
 
-      if (projectId) query = query.eq('project_id', projectId)
+      if (projectId) query = query.eq('project_id' as never, projectId)
 
       const { data, error } = await query
       if (error) throw error
 
-      const rows = (data ?? []) as AICostRow[]
+      const rows = (data ?? []) as unknown as AICostRow[]
       return aggregate(rows)
     },
     staleTime: 60 * 1000,

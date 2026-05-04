@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // Columns match supabase/migrations/20260424000015_retainage_entries.sql
 export interface RetainageEntry {
@@ -31,13 +32,12 @@ export function useRetainageEntries(projectId: string | undefined) {
   return useQuery({
     queryKey: retainageKeys.byProject(projectId),
     queryFn: async (): Promise<RetainageEntry[]> => {
-      const { data, error } = await supabase
-        .from('retainage_entries')
+      const { data, error } = await fromTable('retainage_entries')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as RetainageEntry[]
+      return (data ?? []) as unknown as RetainageEntry[]
     },
     enabled: !!projectId,
   })
@@ -47,13 +47,12 @@ export function useRetainageEntriesByContract(contractId: string | undefined) {
   return useQuery({
     queryKey: retainageKeys.byContract(contractId),
     queryFn: async (): Promise<RetainageEntry[]> => {
-      const { data, error } = await supabase
-        .from('retainage_entries')
+      const { data, error } = await fromTable('retainage_entries')
         .select('*')
-        .eq('contract_id', contractId!)
+        .eq('contract_id' as never, contractId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as RetainageEntry[]
+      return (data ?? []) as unknown as RetainageEntry[]
     },
     enabled: !!contractId,
   })
@@ -63,13 +62,12 @@ export function useRetainageEntriesByPayApp(payAppId: string | undefined) {
   return useQuery({
     queryKey: retainageKeys.byPayApp(payAppId),
     queryFn: async (): Promise<RetainageEntry[]> => {
-      const { data, error } = await supabase
-        .from('retainage_entries')
+      const { data, error } = await fromTable('retainage_entries')
         .select('*')
-        .eq('pay_app_id', payAppId!)
+        .eq('pay_app_id' as never, payAppId!)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as RetainageEntry[]
+      return (data ?? []) as unknown as RetainageEntry[]
     },
     enabled: !!payAppId,
   })

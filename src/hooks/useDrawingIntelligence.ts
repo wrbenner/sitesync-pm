@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { DrawingPair, DrawingDiscrepancy } from '../types/ai'
 
 // ── Pipeline Stages ─────────────────────────────────────────
@@ -43,10 +44,9 @@ export function useProjectDrawingPairs(projectId: string | undefined) {
     queryKey: pairsKey(projectId ?? ''),
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_pairs')
+      const { data, error } = await fromTable('drawing_pairs')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingPair[]
@@ -59,10 +59,9 @@ export function useProjectDiscrepancies(projectId: string | undefined) {
     queryKey: discrepanciesKey(projectId ?? ''),
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
+      const { data, error } = await fromTable('drawing_discrepancies')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingDiscrepancy[]
@@ -79,18 +78,16 @@ export function useDiscrepanciesForDrawing(
     enabled: !!drawingId && !!projectId,
     retry: false,
     queryFn: async () => {
-      const { data: pairs, error: pairErr } = await supabase
-        .from('drawing_pairs')
+      const { data: pairs, error: pairErr } = await fromTable('drawing_pairs')
         .select('id')
         .or(`arch_drawing_id.eq.${drawingId!},struct_drawing_id.eq.${drawingId!}`)
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (pairErr) throw pairErr
       const pairIds = (pairs ?? []).map((p: { id: string }) => p.id)
       if (pairIds.length === 0) return []
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
+      const { data, error } = await fromTable('drawing_discrepancies')
         .select('*')
-        .in('pair_id', pairIds)
+        .in('pair_id' as never, pairIds)
         .order('severity', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingDiscrepancy[]
@@ -142,7 +139,7 @@ async function getDrawingFileUrls(pairId: string, supabaseClient = supabase) {
     .select(
       'id, arch_drawing_id, struct_drawing_id, arch:arch_drawing_id(file_url), struct:struct_drawing_id(file_url)',
     )
-    .eq('id', pairId)
+    .eq('id' as never, pairId)
     .single()
   if (error) throw error
   type DrawingRef = { file_url: string | null } | { file_url: string | null }[] | null
@@ -161,10 +158,9 @@ export function useConfirmDiscrepancy() {
   const qc = useQueryClient()
   return useMutation<DrawingDiscrepancy, Error, { id: string; projectId: string; drawingId?: string }>({
     mutationFn: async ({ id }) => {
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
+      const { data, error } = await fromTable('drawing_discrepancies')
         .update({ user_confirmed: true, is_false_positive: false })
-        .eq('id', id)
+        .eq('id' as never, id)
         .select('*')
         .single()
       if (error) throw error
@@ -183,10 +179,9 @@ export function useDismissDiscrepancy() {
   const qc = useQueryClient()
   return useMutation<DrawingDiscrepancy, Error, { id: string; projectId: string; drawingId?: string }>({
     mutationFn: async ({ id }) => {
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
+      const { data, error } = await fromTable('drawing_discrepancies')
         .update({ is_false_positive: true, user_confirmed: false })
-        .eq('id', id)
+        .eq('id' as never, id)
         .select('*')
         .single()
       if (error) throw error
@@ -291,8 +286,8 @@ export function useDrawingIntelligence(projectId: string | undefined) {
           const { data: highSev } = await sb
             .from('drawing_discrepancies')
             .select('id, severity, created_at')
-            .in('pair_id', pairIds)
-            .in('severity', ['high', 'critical'])
+            .in('pair_id' as never, pairIds)
+            .in('severity' as never, ['high', 'critical'])
             .order('created_at', { ascending: false })
             .limit(20)
           if (!highSev || highSev.length === 0) return

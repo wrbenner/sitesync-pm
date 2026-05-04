@@ -17,6 +17,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useProjectId } from '../useProjectId'
 import { logAuditEntry } from '../../lib/auditLogger'
 import { approveAndExecute, rejectDraft as rejectDraftServer } from '../../services/iris/executeAction'
@@ -105,13 +106,12 @@ export function useDraftedActions(
     enabled: !!projectId && !!entityId && isSupabaseConfigured,
     staleTime: 15_000,
     queryFn: async (): Promise<DraftedAction[]> => {
-      const { data, error } = await supabase
-        .from('drafted_actions')
+      const { data, error } = await fromTable('drafted_actions')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('related_resource_type', entityType)
-        .eq('related_resource_id', entityId!)
-        .eq('status', 'pending')
+        .eq('project_id' as never, projectId!)
+        .eq('related_resource_type' as never, entityType)
+        .eq('related_resource_id' as never, entityId!)
+        .eq('status' as never, 'pending')
         .order('confidence', { ascending: false })
 
       if (error) {
@@ -153,11 +153,10 @@ export function useDraftedActionsForProject(opts: UseDraftedActionsForProjectOpt
       if (expanded.has('rejected')) expanded.add('failed')
       const filterStatuses = Array.from(expanded)
 
-      const { data, error } = await supabase
-        .from('drafted_actions')
+      const { data, error } = await fromTable('drafted_actions')
         .select('*')
-        .eq('project_id', projectId!)
-        .in('status', filterStatuses)
+        .eq('project_id' as never, projectId!)
+        .in('status' as never, filterStatuses)
         .order('updated_at', { ascending: false })
         .limit(limit)
 
@@ -201,10 +200,9 @@ export function useApproveDraftedAction() {
 
       // 1. Idempotent short-circuit: if the row is already decided,
       //    treat as success so a stale realtime payload + click is safe.
-      const { data: current, error: readError } = await supabase
-        .from('drafted_actions')
+      const { data: current, error: readError } = await fromTable('drafted_actions')
         .select('id, status')
-        .eq('id', draft.id)
+        .eq('id' as never, draft.id)
         .maybeSingle()
       if (readError && !isMissingSchemaError(readError)) throw readError
       const currentStatus = (current as { status?: string } | null)?.status

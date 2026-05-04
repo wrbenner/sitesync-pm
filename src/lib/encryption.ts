@@ -3,6 +3,7 @@
 // Encrypts: SSNs, financial amounts, contract terms.
 
 import { supabase } from './supabase'
+import { fromTable } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ export async function encryptField(
   const vaultSecretId = data as string
 
   // Store the reference (not the plaintext) in our tracking table
-  await supabase.from('encrypted_fields').upsert({
+  await fromTable('encrypted_fields').upsert({
     project_id: projectId,
     entity_type: entityType,
     entity_id: entityId,
@@ -60,12 +61,11 @@ export async function decryptField(
   fieldName: string
 ): Promise<string | null> {
   // Look up the vault reference
-  const { data: ref } = await supabase
-    .from('encrypted_fields')
+  const { data: ref } = await fromTable('encrypted_fields')
     .select('vault_secret_id')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .eq('field_name', fieldName)
+    .eq('entity_type' as never, entityType)
+    .eq('entity_id' as never, entityId)
+    .eq('field_name' as never, fieldName)
     .single()
 
   if (!ref?.vault_secret_id) return null

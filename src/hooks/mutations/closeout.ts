@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { uploadProjectFile } from '../../lib/storage'
 
 // Most closeout mutations already live in ../queries/closeout.ts — re-export
@@ -34,10 +35,9 @@ export function useToggleCloseoutItemComplete() {
         completed_date: complete ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
       }
-      const { data, error } = await supabase
-        .from('closeout_items')
-        .update(updates)
-        .eq('id', id)
+      const { data, error } = await fromTable('closeout_items')
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -72,8 +72,7 @@ export function useUploadOMManual() {
       const { url, error: upErr } = await uploadProjectFile(projectId, file)
       if (upErr) throw new Error(upErr)
 
-      const { data, error } = await supabase
-        .from('closeout_items')
+      const { data, error } = await fromTable('closeout_items')
         .insert({
           project_id: projectId,
           category: 'om_manual',
@@ -120,11 +119,10 @@ export function useRecordSignOff() {
       signatureDataUrl?: string | null
     }) => {
       // Ensure the closeout_item row exists for this sign-off kind
-      const { data: existing } = await supabase
-        .from('closeout_items')
+      const { data: existing } = await fromTable('closeout_items')
         .select('id')
-        .eq('project_id', projectId)
-        .eq('category', kind)
+        .eq('project_id' as never, projectId)
+        .eq('category' as never, kind)
         .limit(1)
 
       const label =
@@ -142,8 +140,7 @@ export function useRecordSignOff() {
       const existingRows = (existing as unknown as { id: string }[] | null) ?? []
       let itemId: string | undefined = existingRows[0]?.id
       if (!itemId) {
-        const { data: created, error: createErr } = await supabase
-          .from('closeout_items')
+        const { data: created, error: createErr } = await fromTable('closeout_items')
           .insert({
             project_id: projectId,
             category: kind,
@@ -158,15 +155,14 @@ export function useRecordSignOff() {
         if (createErr) throw createErr
         itemId = (created as unknown as { id: string }).id
       } else {
-        const { error: updErr } = await supabase
-          .from('closeout_items')
+        const { error: updErr } = await fromTable('closeout_items')
           .update({
             status: 'approved',
             completed_date: new Date().toISOString(),
             notes: notesBlob,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', itemId)
+          .eq('id' as never, itemId)
         if (updErr) throw updErr
       }
 

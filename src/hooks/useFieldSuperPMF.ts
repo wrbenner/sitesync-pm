@@ -12,6 +12,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 export interface FieldSuperPMF {
   /** Median field-surface sessions per active user per day, last 30d. */
@@ -42,11 +43,10 @@ export function useFieldSuperPMF(projectId: string | undefined) {
       const since = new Date()
       since.setDate(since.getDate() - 30)
 
-      const { data, error } = await supabase
-        .from('field_session_events')
+      const { data, error } = await fromTable('field_session_events')
         .select('user_id, started_at, surface')
-        .eq('project_id', projectId!)
-        .gte('started_at', since.toISOString())
+        .eq('project_id' as never, projectId!)
+        .gte('started_at' as never, since.toISOString())
         .order('started_at', { ascending: false })
 
       if (error) {
@@ -57,7 +57,7 @@ export function useFieldSuperPMF(projectId: string | undefined) {
         throw error
       }
 
-      const rows = (data ?? []) as SessionRow[]
+      const rows = (data ?? []) as unknown as SessionRow[]
       const fieldRows = rows.filter((r) => r.surface === 'field')
 
       // Sessions-per-(user, day) counter

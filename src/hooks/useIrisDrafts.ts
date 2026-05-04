@@ -8,6 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { DraftedAction, DraftedActionStatus } from '../types/draftedActions'
 
 export interface UseIrisDraftsOptions {
@@ -26,11 +27,10 @@ export function useIrisDrafts(
     queryKey: ['drafted_actions', projectId, status.join(','), limit],
     enabled: !!projectId,
     queryFn: async (): Promise<DraftedAction[]> => {
-      const { data, error } = await supabase
-        .from('drafted_actions')
+      const { data, error } = await fromTable('drafted_actions')
         .select('*')
-        .eq('project_id', projectId!)
-        .in('status', status)
+        .eq('project_id' as never, projectId!)
+        .in('status' as never, status)
         .order('created_at', { ascending: false })
         .limit(limit)
 

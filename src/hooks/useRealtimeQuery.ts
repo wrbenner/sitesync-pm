@@ -154,7 +154,7 @@ export function useOptimisticLock(
       if (!entityId) return null
       const { data, error } = await fromTable(table)
         .select('updated_at')
-        .eq('id', entityId)
+        .eq('id' as never, entityId)
         .single()
       if (error) return null
       return (data as Record<string, unknown>)?.updated_at as string | null

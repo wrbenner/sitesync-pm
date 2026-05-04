@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 
 
@@ -9,10 +10,9 @@ export function useEstimates(projectId: string | undefined) {
   return useQuery({
     queryKey: ['estimates', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('estimates')
+      const { data, error } = await fromTable('estimates')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data
@@ -25,10 +25,9 @@ export function useEstimateLineItems(estimateId: string | undefined) {
   return useQuery({
     queryKey: ['estimate_line_items', estimateId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('estimate_line_items')
+      const { data, error } = await fromTable('estimate_line_items')
         .select('*')
-        .eq('estimate_id', estimateId!)
+        .eq('estimate_id' as never, estimateId!)
         .order('sort_order', { ascending: true })
       if (error) throw error
       return data
@@ -41,10 +40,9 @@ export function useBidPackages(projectId: string | undefined) {
   return useQuery({
     queryKey: ['bid_packages', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bid_packages')
+      const { data, error } = await fromTable('bid_packages')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('due_date', { ascending: true })
       if (error) throw error
       return data
@@ -57,10 +55,9 @@ export function useBidResponses(bidPackageId: string | undefined) {
   return useQuery({
     queryKey: ['bid_responses', bidPackageId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bid_responses')
+      const { data, error } = await fromTable('bid_responses')
         .select('*')
-        .eq('bid_package_id', bidPackageId!)
+        .eq('bid_package_id' as never, bidPackageId!)
         .order('base_bid', { ascending: true })
       if (error) throw error
       return data
@@ -73,10 +70,9 @@ export function useTakeoffItems(projectId: string | undefined) {
   return useQuery({
     queryKey: ['takeoff_items', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('takeoff_items')
+      const { data, error } = await fromTable('takeoff_items')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data
@@ -91,7 +87,7 @@ export function useCreateEstimate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('estimates').insert(payload).select().single()
+      const { data, error } = await fromTable('estimates').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -105,7 +101,7 @@ export function useDeleteEstimate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; project_id: string }) => {
-      const { error } = await supabase.from('estimates').delete().eq('id', payload.id)
+      const { error } = await fromTable('estimates').delete().eq('id' as never, payload.id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
@@ -118,7 +114,7 @@ export function useCreateEstimateLineItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data, error } = await supabase.from('estimate_line_items').insert(payload).select().single()
+      const { data, error } = await fromTable('estimate_line_items').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -132,7 +128,7 @@ export function useDeleteEstimateLineItem() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; estimate_id: string }) => {
-      const { error } = await supabase.from('estimate_line_items').delete().eq('id', payload.id)
+      const { error } = await fromTable('estimate_line_items').delete().eq('id' as never, payload.id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
@@ -145,8 +141,7 @@ export function useCostDatabase() {
   return useQuery({
     queryKey: ['cost_database'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cost_database')
+      const { data, error } = await fromTable('cost_database')
         .select('*')
         .order('csi_code', { ascending: true })
       if (error) throw error

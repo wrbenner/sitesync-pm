@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 
 // ── IndexedDB queue for pending photo captures ─────────────────────────────
 // Lives in a separate DB from src/lib/offlineQueue.ts to avoid the IDB
@@ -119,7 +120,7 @@ async function uploadAndAttach(blob: Blob, meta: CaptureMetadata): Promise<strin
     accuracy: meta.accuracy,
   };
 
-  const { error: insertErr } = await supabase.from('daily_log_entries').insert({
+  const { error: insertErr } = await fromTable('daily_log_entries').insert({
     daily_log_id: meta.dailyLogId,
     type: 'photo',
     description: meta.caption || meta.filename,

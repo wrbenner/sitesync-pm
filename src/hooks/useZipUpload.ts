@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 export interface ZipUploadJob {
   id: string
@@ -42,8 +43,7 @@ async function uploadZipToStorage(args: StartUploadArgs): Promise<StartUploadRes
   // Create a tracking job row (optional — table may not exist in every env).
   let jobId: string | null = null
   try {
-    const { data, error } = await supabase
-      .from('zip_upload_jobs')
+    const { data, error } = await fromTable('zip_upload_jobs')
       .insert({
         project_id: args.projectId,
         status: 'queued',
@@ -81,12 +81,11 @@ export function useZipUpload() {
     clearPoll()
     pollTimerRef.current = window.setInterval(async () => {
       try {
-        const { data, error } = await supabase
-          .from('zip_upload_jobs')
+        const { data, error } = await fromTable('zip_upload_jobs')
           .select(
             'id, status, progress_pct, total_files, processed_files, failed_files, error',
           )
-          .eq('id', jobId)
+          .eq('id' as never, jobId)
           .single()
         if (error) return
         const j = data as ZipUploadJob

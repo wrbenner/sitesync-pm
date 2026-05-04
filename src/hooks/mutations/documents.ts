@@ -9,7 +9,7 @@ import { createOnError } from './createAuditedMutation'
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Documents ────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ export function useDeleteDrawingMarkup() {
   };
   return useMutation({
     mutationFn: async (params: { id: string; drawingId: string }) => {
-      const { error } = await from('drawing_markups').delete().eq('id', params.id)
+      const { error } = await from('drawing_markups').delete().eq('id' as never, params.id)
       if (error) throw error
       return { drawingId: params.drawingId, id: params.id }
     },

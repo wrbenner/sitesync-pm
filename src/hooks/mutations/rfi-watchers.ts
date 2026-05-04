@@ -7,7 +7,7 @@ import { createOnError } from './createAuditedMutation'
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── RFI Watchers ─────────────────────────────────────────
 
@@ -30,7 +30,7 @@ export function useRemoveRFIWatcher() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ rfiId, userId }: { rfiId: string; userId: string }) => {
-      const { error } = await from('rfi_watchers').delete().eq('rfi_id', rfiId).eq('user_id', userId)
+      const { error } = await from('rfi_watchers').delete().eq('rfi_id' as never, rfiId).eq('user_id' as never, userId)
       if (error) throw error
       return { rfiId }
     },

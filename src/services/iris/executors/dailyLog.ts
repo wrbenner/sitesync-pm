@@ -14,6 +14,7 @@
  */
 
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 import type { DraftedAction, DraftedDailyLogPayload } from '../../../types/draftedActions'
 
 export async function executeDraftedDailyLog(draft: DraftedAction): Promise<{
@@ -41,8 +42,7 @@ export async function executeDraftedDailyLog(draft: DraftedAction): Promise<{
     source_drafted_action_id: draft.id,
   }
 
-  const { data, error } = await supabase
-    .from('daily_logs')
+  const { data, error } = await fromTable('daily_logs')
     .insert(insertRow as never)
     .select('id')
     .single()
@@ -57,10 +57,9 @@ export async function executeDraftedDailyLog(draft: DraftedAction): Promise<{
   // already saved; the photo association is a nice-to-have.
   if (payload.photo_ids && payload.photo_ids.length > 0) {
     try {
-      await supabase
-        .from('field_captures')
+      await fromTable('field_captures')
         .update({ daily_log_id: logId } as never)
-        .in('id', payload.photo_ids)
+        .in('id' as never, payload.photo_ids)
     } catch {
       // Swallow — log is saved; photo link is supplementary
     }

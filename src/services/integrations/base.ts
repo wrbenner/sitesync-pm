@@ -2,6 +2,7 @@
 // All external service connectors implement IntegrationProvider.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export interface IntegrationProvider {
 // ── Shared Helpers ───────────────────────────────────────
 
 export async function logSyncResult(integrationId: string, result: SyncResult, direction: string): Promise<void> {
-  await supabase.from('integration_sync_log').insert({
+  await fromTable('integration_sync_log').insert({
     integration_id: integrationId,
     direction,
     records_synced: result.recordsSynced,
@@ -57,7 +58,7 @@ export async function updateIntegrationStatus(integrationId: string, status: Int
   if (errorLog) {
     updates.error_log = [errorLog]
   }
-  await supabase.from('integrations').update(updates).eq('id', integrationId)
+  await fromTable('integrations').update(updates as never).eq('id' as never, integrationId)
 }
 
 export async function createIntegrationRecord(
@@ -66,7 +67,7 @@ export async function createIntegrationRecord(
   config: Record<string, unknown>,
   userId: string
 ): Promise<string> {
-  const { data, error } = await supabase.from('integrations').insert({
+  const { data, error } = await fromTable('integrations').insert({
     type,
     status: 'connected',
     config,

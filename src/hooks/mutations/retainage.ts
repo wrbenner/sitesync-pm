@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { retainageKeys, type RetainageEntry } from '../queries/retainage'
 
 export interface CreateRetainageInput {
@@ -36,13 +37,12 @@ export function useCreateRetainageEntry() {
         released_amount: 0,
         notes: input.notes ?? null,
       }
-      const { data, error } = await supabase
-        .from('retainage_entries')
-        .insert(payload)
+      const { data, error } = await fromTable('retainage_entries')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
-      return data as RetainageEntry
+      return data as unknown as RetainageEntry
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: retainageKeys.byProject(data.project_id) })
@@ -81,10 +81,9 @@ export function useReleaseRetainageEntry() {
         throw new Error('Release amount must be greater than 0')
       }
 
-      const { data: existing, error: readErr } = await supabase
-        .from('retainage_entries')
+      const { data: existing, error: readErr } = await fromTable('retainage_entries')
         .select('amount_held, released_amount, released_at')
-        .eq('id', input.id)
+        .eq('id' as never, input.id)
         .single()
       if (readErr) throw readErr
 
@@ -107,15 +106,14 @@ export function useReleaseRetainageEntry() {
       }
       if (input.notes != null) updates.notes = input.notes
 
-      const { data, error } = await supabase
-        .from('retainage_entries')
-        .update(updates)
-        .eq('id', input.id)
-        .eq('project_id', input.project_id)
+      const { data, error } = await fromTable('retainage_entries')
+        .update(updates as never)
+        .eq('id' as never, input.id)
+        .eq('project_id' as never, input.project_id)
         .select()
         .single()
       if (error) throw error
-      return data as RetainageEntry
+      return data as unknown as RetainageEntry
     },
     onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: retainageKeys.byProject(variables.project_id) })
@@ -137,10 +135,9 @@ export function useDeleteRetainageEntry() {
   const qc = useQueryClient()
   return useMutation<{ id: string; projectId: string }, Error, { id: string; projectId: string }>({
     mutationFn: async (params) => {
-      const { error } = await supabase
-        .from('retainage_entries')
+      const { error } = await fromTable('retainage_entries')
         .delete()
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
       if (error) throw error
       return params
     },

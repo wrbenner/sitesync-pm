@@ -13,6 +13,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { useRFIs } from './queries/rfis';
 import { useSubmittals } from './queries/submittals';
 import { useScheduleActivities } from './useScheduleActivities';
@@ -269,14 +270,13 @@ export function useIrisInsights(projectId: string | undefined): UseIrisInsightsR
       if (!projectId) return [];
       const today = new Date().toISOString().slice(0, 10);
       const horizon = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
-      const { data, error } = await supabase
-        .from('weather_records')
+      const { data, error } = await fromTable('weather_records')
         .select('date, conditions')
-        .eq('project_id', projectId)
-        .gte('date', today)
-        .lte('date', horizon);
+        .eq('project_id' as never, projectId)
+        .gte('date' as never, today)
+        .lte('date' as never, horizon);
       if (error) return [];
-      return ((data ?? []) as WeatherRecordApi[])
+      return ((data ?? []) as unknown as WeatherRecordApi[])
         .filter((r): r is { date: string; conditions: string } => !!r.date && typeof r.conditions === 'string')
         .map((r) => ({ date: r.date, conditions: r.conditions }));
     },

@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── File Versions ───────────────────────────────────────
 
@@ -42,7 +43,7 @@ export function useFileVersions(fileId: string | undefined) {
       // Primary source: file_versions table
       const { data: versionRows, error: versionErr } = await from('file_versions')
         .select('*')
-        .eq('file_id', fileId!)
+        .eq('file_id' as never, fileId!)
         .order('version_number', { ascending: false })
       if (versionErr) {
         // Table missing in dev/preview — fall back to an empty list rather
@@ -55,7 +56,7 @@ export function useFileVersions(fileId: string | undefined) {
       // isn't already represented (file_versions usually holds prior edits).
       const { data: currentFile, error: fileErr } = await from('files')
         .select('id, version, file_url, file_size, uploaded_by, created_at')
-        .eq('id', fileId!)
+        .eq('id' as never, fileId!)
         .maybeSingle()
       if (!fileErr && currentFile) {
         const row = currentFile as unknown as {
@@ -103,7 +104,7 @@ export function useCreateFileVersion() {
   return useMutation({
     mutationFn: async (input: CreateFileVersionInput) => {
       const { data, error } = await from('file_versions')
-        .insert(input)
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error

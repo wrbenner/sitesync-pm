@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { projectService, type CreateProjectInput } from '../../services/projectService'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export type OnboardingProjectInput = {
   name: string
@@ -53,14 +54,13 @@ export function useMarkOnboardingComplete() {
         ? { widgets: input.dashboard_widgets }
         : {}
 
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await fromTable('profiles')
         .update({
           onboarded_at: now,
           dashboard_preferences: prefs,
           updated_at: now,
         })
-        .eq('user_id', input.user_id)
+        .eq('user_id' as never, input.user_id)
         .select('id, onboarded_at, dashboard_preferences')
         .single()
 

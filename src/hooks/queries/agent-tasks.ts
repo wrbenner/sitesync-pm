@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -60,18 +61,17 @@ export function useAgentTasks(
     queryKey: ['agent_tasks', projectId, userId, domain, status, limit],
     queryFn: async (): Promise<AgentTask[]> => {
       if (!projectId || !userId) return []
-      let q = supabase
-        .from('agent_tasks')
+      let q = fromTable('agent_tasks')
         .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', userId)
+        .eq('project_id' as never, projectId)
+        .eq('user_id' as never, userId)
         .order('created_at', { ascending: false })
         .limit(limit)
-      if (domain !== 'all') q = q.eq('agent_domain', domain)
-      if (status !== 'all') q = q.eq('status', status)
+      if (domain !== 'all') q = q.eq('agent_domain' as never, domain)
+      if (status !== 'all') q = q.eq('status' as never, status)
       const { data, error } = await q
       if (error) throw error
-      return (data ?? []) as AgentTask[]
+      return (data ?? []) as unknown as AgentTask[]
     },
     enabled: !!projectId && !!userId,
   })
@@ -84,16 +84,15 @@ export function usePendingApprovalTasks(projectId: string | null | undefined) {
     queryKey: ['agent_tasks', 'pending_approval', projectId],
     queryFn: async (): Promise<AgentTask[]> => {
       if (!projectId) return []
-      const { data, error } = await supabase
-        .from('agent_tasks')
+      const { data, error } = await fromTable('agent_tasks')
         .select('*')
-        .eq('project_id', projectId)
-        .eq('approval_required', true)
-        .eq('status', 'pending_approval')
+        .eq('project_id' as never, projectId)
+        .eq('approval_required' as never, true)
+        .eq('status' as never, 'pending_approval')
         .order('created_at', { ascending: false })
         .limit(50)
       if (error) throw error
-      return (data ?? []) as AgentTask[]
+      return (data ?? []) as unknown as AgentTask[]
     },
     enabled: !!projectId,
     // Short poll so newly-surfaced approvals show up without manual refresh.

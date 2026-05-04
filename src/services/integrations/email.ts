@@ -1,6 +1,7 @@
 // Email Integration (Resend): Send RFI responses, submittal transmittals, daily log summaries
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { colors } from '../../styles/theme'
 import {
   type IntegrationProvider,
@@ -175,7 +176,7 @@ export const emailProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
     return {
       status: (data?.status as IntegrationStatus) ?? 'disconnected',
       lastSync: data?.last_sync ?? null,
@@ -194,7 +195,7 @@ export async function sendRFIResponseEmail(
   to: string[],
   rfi: { number: string; title: string; response: string; respondedBy: string; projectName: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+  const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
   if (!integration?.config) return { success: false, error: 'Email integration not configured' }
 
   const config = integration.config as Record<string, string>
@@ -212,7 +213,7 @@ export async function sendSubmittalTransmittal(
   to: string[],
   submittal: { number: string; title: string; status: string; specSection: string; projectName: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+  const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
   if (!integration?.config) return { success: false, error: 'Email integration not configured' }
 
   const config = integration.config as Record<string, string>
@@ -230,7 +231,7 @@ export async function sendDailyLogSummaryEmail(
   to: string[],
   log: { date: string; workers: number; manHours: number; incidents: number; weather: string; summary: string; projectName: string }
 ): Promise<{ success: boolean; error?: string }> {
-  const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+  const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
   if (!integration?.config) return { success: false, error: 'Email integration not configured' }
 
   const config = integration.config as Record<string, string>

@@ -14,6 +14,7 @@
  */
 
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 import type {
   DraftedAction,
   DraftedSubmittalTransmittalPayload,
@@ -34,10 +35,9 @@ export async function executeDraftedSubmittalTransmittal(draft: DraftedAction): 
   // Look up the submittal so we can copy its title/spec section into the
   // transmittal record. Failure to read it doesn't block the transmittal —
   // we just fall back to a generic subject.
-  const { data: submittal } = await supabase
-    .from('submittals')
+  const { data: submittal } = await fromTable('submittals')
     .select('id, title, spec_section, number')
-    .eq('id', payload.submittal_id)
+    .eq('id' as never, payload.submittal_id)
     .maybeSingle()
 
   const submittalRow = submittal as
@@ -67,8 +67,7 @@ export async function executeDraftedSubmittalTransmittal(draft: DraftedAction): 
     source_drafted_action_id: draft.id,
   }
 
-  const { data, error } = await supabase
-    .from('transmittals')
+  const { data, error } = await fromTable('transmittals')
     .insert(insertRow as never)
     .select('id')
     .single()

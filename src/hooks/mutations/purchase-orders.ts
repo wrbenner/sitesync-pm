@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 type POPayload = Record<string, unknown>
 type LineItemPayload = Record<string, unknown>
@@ -8,8 +9,7 @@ export function useCreatePurchaseOrder() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { po: POPayload; lineItems?: LineItemPayload[] }) => {
-      const { data, error } = await supabase
-        .from('purchase_orders')
+      const { data, error } = await fromTable('purchase_orders')
         .insert(payload.po)
         .select()
         .single()
@@ -17,7 +17,7 @@ export function useCreatePurchaseOrder() {
       const items = payload.lineItems ?? []
       if (items.length > 0) {
         const rows = items.map((li, i) => ({ ...li, purchase_order_id: data.id, sort_order: i }))
-        const { error: liError } = await supabase.from('po_line_items').insert(rows)
+        const { error: liError } = await fromTable('po_line_items').insert(rows as never)
         if (liError) throw liError
       }
       return data
@@ -33,10 +33,9 @@ export function useUpdatePurchaseOrder() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; projectId: string; updates: POPayload }) => {
-      const { data, error } = await supabase
-        .from('purchase_orders')
+      const { data, error } = await fromTable('purchase_orders')
         .update(payload.updates)
-        .eq('id', payload.id)
+        .eq('id' as never, payload.id)
         .select()
         .single()
       if (error) throw error
@@ -53,7 +52,7 @@ export function useDeletePurchaseOrder() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: { id: string; projectId: string }) => {
-      const { error } = await supabase.from('purchase_orders').delete().eq('id', payload.id)
+      const { error } = await fromTable('purchase_orders').delete().eq('id' as never, payload.id)
       if (error) throw error
       return payload
     },

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 
 export type AnnotationType =
@@ -84,10 +85,9 @@ export function useDrawingAnnotations(drawingId: string | undefined) {
   return useQuery({
     queryKey: ['drawing_annotations', drawingId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_annotations')
+      const { data, error } = await fromTable('drawing_annotations')
         .select('*')
-        .eq('drawing_id', drawingId!)
+        .eq('drawing_id' as never, drawingId!)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data
@@ -100,9 +100,8 @@ export function useCreateDrawingAnnotation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: CreateAnnotationInput) => {
-      const { data, error } = await supabase
-        .from('drawing_annotations')
-        .insert(payload)
+      const { data, error } = await fromTable('drawing_annotations')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -120,10 +119,9 @@ export function useUpdateDrawingAnnotation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, drawingId, ...updates }: UpdateAnnotationInput) => {
-      const { data, error } = await supabase
-        .from('drawing_annotations')
-        .update(updates)
-        .eq('id', id)
+      const { data, error } = await fromTable('drawing_annotations')
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -141,7 +139,7 @@ export function useDeleteDrawingAnnotation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, drawingId }: { id: string; drawingId: string }) => {
-      const { error } = await supabase.from('drawing_annotations').delete().eq('id', id)
+      const { error } = await fromTable('drawing_annotations').delete().eq('id' as never, id)
       if (error) throw error
       return { drawingId }
     },

@@ -5,7 +5,7 @@ import { createOnError } from './createAuditedMutation'
 
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Inspection Checklists ──────────────────────────────────
 
@@ -40,14 +40,14 @@ export function useCreateChecklistFromTemplate() {
       // 1. Fetch template
       const { data: template, error: tErr } = await from('inspection_checklists')
         .select('*')
-        .eq('id', params.templateId)
+        .eq('id' as never, params.templateId)
         .single()
       if (tErr) throw tErr
 
       // 2. Fetch template items
       const { data: templateItems, error: iErr } = await from('inspection_checklist_items')
         .select('*')
-        .eq('checklist_id', params.templateId)
+        .eq('checklist_id' as never, params.templateId)
         .order('sort_order', { ascending: true })
       if (iErr) throw iErr
 
@@ -82,7 +82,7 @@ export function useCreateChecklistFromTemplate() {
           status: 'pending',
           meter_unit: item.meter_unit,
         }))
-        const { error: insertErr } = await from('inspection_checklist_items').insert(items)
+        const { error: insertErr } = await from('inspection_checklist_items').insert(items as never)
         if (insertErr) throw insertErr
       }
 
@@ -107,13 +107,13 @@ export function useUpdateChecklistItem() {
     }) => {
       const { error } = await from('inspection_checklist_items')
         .update(params.updates)
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
       if (error) throw error
 
       // Recalculate pass_rate for the checklist
       const { data: items, error: iErr } = await from('inspection_checklist_items')
         .select('status')
-        .eq('checklist_id', params.checklistId)
+        .eq('checklist_id' as never, params.checklistId)
       if (iErr) throw iErr
 
       const allItems = items as { status: string }[]
@@ -138,8 +138,8 @@ export function useUpdateChecklistItem() {
       }
 
       await from('inspection_checklists')
-        .update(checklistUpdate)
-        .eq('id', params.checklistId)
+        .update(checklistUpdate as never)
+        .eq('id' as never, params.checklistId)
 
       return { checklistId: params.checklistId, projectId: params.projectId }
     },
@@ -156,7 +156,7 @@ export function useDeleteChecklist() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string }) => {
-      const { error } = await from('inspection_checklists').delete().eq('id', params.id)
+      const { error } = await from('inspection_checklists').delete().eq('id' as never, params.id)
       if (error) throw error
       return { projectId: params.projectId }
     },

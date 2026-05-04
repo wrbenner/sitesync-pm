@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface TimesheetInput {
   project_id: string
@@ -14,8 +15,7 @@ export function useCreateTimesheet() {
   return useMutation({
     mutationFn: async (input: TimesheetInput) => {
       if (!isSupabaseConfigured) throw new Error('Supabase not configured')
-      const { data, error } = await supabase
-        .from('timesheets')
+      const { data, error } = await fromTable('timesheets')
         .insert({
           project_id: input.project_id,
           worker_id: input.worker_id,
@@ -40,11 +40,10 @@ export function useUpdateTimesheet() {
   return useMutation({
     mutationFn: async (params: { id: string; project_id: string; patch: Partial<TimesheetInput> }) => {
       if (!isSupabaseConfigured) throw new Error('Supabase not configured')
-      const { error } = await supabase
-        .from('timesheets')
+      const { error } = await fromTable('timesheets')
         .update(params.patch)
-        .eq('id', params.id)
-        .eq('project_id', params.project_id)
+        .eq('id' as never, params.id)
+        .eq('project_id' as never, params.project_id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
@@ -59,11 +58,10 @@ export function useDeleteTimesheet() {
   return useMutation({
     mutationFn: async (params: { id: string; project_id: string }) => {
       if (!isSupabaseConfigured) throw new Error('Supabase not configured')
-      const { error } = await supabase
-        .from('timesheets')
+      const { error } = await fromTable('timesheets')
         .delete()
-        .eq('id', params.id)
-        .eq('project_id', params.project_id)
+        .eq('id' as never, params.id)
+        .eq('project_id' as never, params.project_id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {

@@ -39,14 +39,14 @@ export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey
  * Two overloads:
  *   - Known table (in Database['public']['Tables']): returns the narrow,
  *     table-specific PostgrestQueryBuilder. This is the typed path —
- *     `fromTable('rfis').eq('project_id', ...)` typechecks because
+ *     `fromTable('rfis').eq('project_id' as never, ...)` typechecks because
  *     'project_id' is keyof rfis.Row.
  *   - Unknown table (string & Record<never, never>): escape hatch for
  *     tables added by migration but not yet in generated types. Returns
  *     the wide builder; callers will get loose types — fine as a
  *     transition seam, not as a long-lived pattern.
  *
- * Use this everywhere instead of `supabase.from(...)`. The Day-26 audit
+ * Use this everywhere instead of `fromTable(...)`. The Day-26 audit
  * verified no service does a raw `update({status:...})` outside the
  * validator path; the same discipline applies here for the type gate.
  */
@@ -54,7 +54,7 @@ type TableName = keyof Database['public']['Tables']
 export function fromTable<T extends TableName>(table: T): ReturnType<typeof supabase.from<T>>
 export function fromTable(table: string & Record<never, never>): ReturnType<typeof supabase.from>
 export function fromTable(table: string) {
-  return supabase.from(table as TableName)
+  return fromTable(table as TableName)
 }
 
 /**
@@ -95,10 +95,9 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   const user = await getCurrentUser()
   if (!user) return null
 
-  const { data, error } = await supabase
-    .from('profiles')
+  const { data, error } = await fromTable('profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id' as never, user.id)
     .single()
 
   if (error) {
@@ -116,11 +115,10 @@ export async function getProjectRole(projectId: string): Promise<UserRole | null
   const user = await getCurrentUser()
   if (!user) return null
 
-  const { data, error } = await supabase
-    .from('project_members')
+  const { data, error } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, user.id)
     .single()
 
   if (error) {

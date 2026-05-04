@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 
 export function useConversations(projectId: string | undefined) {
   return useQuery({
     queryKey: ['conversations', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('conversations')
+      const { data, error } = await fromTable('conversations')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('updated_at', { ascending: false })
       if (error) throw error
       return data
@@ -22,10 +22,9 @@ export function useConversationMessages(conversationId: string | undefined) {
   return useQuery({
     queryKey: ['chat_messages', conversationId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('chat_messages')
+      const { data, error } = await fromTable('chat_messages')
         .select('*')
-        .eq('conversation_id', conversationId!)
+        .eq('conversation_id' as never, conversationId!)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data
@@ -45,9 +44,8 @@ export function useCreateConversation() {
       context_id?: string
       route?: string
     }) => {
-      const { data, error } = await supabase
-        .from('conversations')
-        .insert(payload)
+      const { data, error } = await fromTable('conversations')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -69,9 +67,8 @@ export function useSendMessage() {
       content: string
       metadata?: Record<string, unknown>
     }) => {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .insert(payload)
+      const { data, error } = await fromTable('chat_messages')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error

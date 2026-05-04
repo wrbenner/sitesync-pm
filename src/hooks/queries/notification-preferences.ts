@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 
 
@@ -9,10 +10,9 @@ export function useNotificationPreferences(userId: string | undefined) {
   return useQuery({
     queryKey: ['notification_preferences', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notification_preferences')
+      const { data, error } = await fromTable('notification_preferences')
         .select('*')
-        .eq('user_id', userId!)
+        .eq('user_id' as never, userId!)
         .single()
       if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows
       return data

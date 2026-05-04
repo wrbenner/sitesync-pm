@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export type LaborRate = {
   id: string
@@ -43,7 +44,7 @@ function makeListHook<T>(table: string, queryKey: string) {
     return useQuery({
       queryKey: [queryKey, projectId],
       queryFn: async () => {
-        const { data, error } = await supabase.from(table).select('*').eq('project_id', projectId!).order('created_at', { ascending: false })
+        const { data, error } = await fromTable(table).select('*').eq('project_id' as never, projectId!).order('created_at', { ascending: false })
         if (error) throw error
         return (data || []) as T[]
       },
@@ -57,7 +58,7 @@ function makeCreateHook<T>(table: string, queryKey: string) {
     const qc = useQueryClient()
     return useMutation({
       mutationFn: async (payload: Partial<T> & { project_id: string }) => {
-        const { data, error } = await supabase.from(table).insert(payload).select().single()
+        const { data, error } = await fromTable(table).insert(payload as never).select().single()
         if (error) throw error
         return data as T
       },
@@ -82,8 +83,8 @@ export function useImportDavisBacon(projectId: string | undefined) {
   return useMutation({
     mutationFn: async ({ state, county }: { state: string; county?: string }) => {
       if (!projectId) throw new Error('No project')
-      let q = supabase.from('prevailing_wage_rates').select('*').eq('state_code', state)
-      if (county) q = q.eq('county_name', county)
+      let q = fromTable('prevailing_wage_rates').select('*').eq('state_code' as never, state)
+      if (county) q = q.eq('county_name' as never, county)
       const { data: rates, error } = await q
       if (error) throw error
       const rows = (rates || []).map((r: Record<string, unknown>) => ({
@@ -97,7 +98,7 @@ export function useImportDavisBacon(projectId: string | undefined) {
         source: 'davis_bacon' as const,
       }))
       if (rows.length === 0) return { inserted: 0 }
-      const { error: insErr } = await supabase.from('labor_rates').insert(rows)
+      const { error: insErr } = await fromTable('labor_rates').insert(rows as never)
       if (insErr) throw insErr
       return { inserted: rows.length }
     },

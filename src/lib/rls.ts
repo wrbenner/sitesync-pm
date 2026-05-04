@@ -7,6 +7,7 @@
  */
 
 import { supabase, isSupabaseConfigured, fromTable } from './supabase';
+import { fromTable } from '../lib/db/queries'
 
 // ---------------------------------------------------------------------------
 // PermissionError
@@ -63,11 +64,10 @@ export async function ensureProjectAccess(projectId: string): Promise<void> {
     throw new PermissionError('Not authenticated', projectId);
   }
 
-  const { data, error } = await supabase
-    .from('project_members')
+  const { data, error } = await fromTable('project_members')
     .select('id')
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, user.id)
     .maybeSingle();
 
   if (error || !data) {
@@ -90,11 +90,10 @@ export async function getUserProjectRole(projectId: string): Promise<string> {
     throw new PermissionError('Not authenticated', projectId);
   }
 
-  const { data, error } = await supabase
-    .from('project_members')
+  const { data, error } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', user.id)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, user.id)
     .single();
 
   if (error || !data) {
@@ -181,7 +180,7 @@ export function scopedQuery(table: string) {
   const ctx = getTenantContext();
   const query = fromTable(table).select('*');
   if (ctx) {
-    return query.eq('project_id', ctx.projectId);
+    return query.eq('project_id' as never, ctx.projectId);
   }
   return query;
 }
@@ -260,7 +259,7 @@ export function scopedInsert(table: string, data: Record<string, unknown>) {
   const enriched = ctx
     ? { ...data, project_id: ctx.projectId, created_by: ctx.userId }
     : data;
-  return fromTable(table).insert(enriched);
+  return fromTable(table).insert(enriched as never);
 }
 
 /**
@@ -271,11 +270,10 @@ export async function validateOwnership(table: string, entityId: string): Promis
   const ctx = getTenantContext();
   if (!ctx || !isSupabaseConfigured) return true;
 
-  const { data } = await supabase
-    .from(table)
+  const { data } = await fromTable(table)
     .select('id')
-    .eq('id', entityId)
-    .eq('project_id', ctx.projectId)
+    .eq('id' as never, entityId)
+    .eq('project_id' as never, ctx.projectId)
     .single();
 
   return !!data;

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { uploadFile } from '../../lib/storage'
 
 type CertPayload = {
@@ -25,9 +26,8 @@ export function useCreateInsuranceCertificate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: CertPayload) => {
-      const { data, error } = await supabase
-        .from('insurance_certificates')
-        .insert(payload)
+      const { data, error } = await fromTable('insurance_certificates')
+        .insert(payload as never)
         .select()
         .single()
       if (error) throw error
@@ -52,9 +52,8 @@ export function useUploadInsuranceCertificate() {
         documentUrl = url
       }
       const row: CertPayload = { ...payload.cert, document_url: documentUrl }
-      const { data, error } = await supabase
-        .from('insurance_certificates')
-        .insert(row)
+      const { data, error } = await fromTable('insurance_certificates')
+        .insert(row as never)
         .select()
         .single()
       if (error) throw error
@@ -70,10 +69,9 @@ export function useUpdateInsuranceCertificate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string; updates: Partial<CertPayload> }) => {
-      const { data, error } = await supabase
-        .from('insurance_certificates')
+      const { data, error } = await fromTable('insurance_certificates')
         .update(params.updates)
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
         .select()
         .single()
       if (error) throw error
@@ -89,7 +87,7 @@ export function useDeleteInsuranceCertificate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string }) => {
-      const { error } = await supabase.from('insurance_certificates').delete().eq('id', params.id)
+      const { error } = await fromTable('insurance_certificates').delete().eq('id' as never, params.id)
       if (error) throw error
       return params
     },

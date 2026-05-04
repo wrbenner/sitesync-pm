@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import type {
   PunchItem,
@@ -14,14 +15,13 @@ export function usePunchItems(projectId: string | undefined, pagination?: Pagina
     queryFn: async (): Promise<PaginatedResult<PunchItem>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      const { data, error, count } = await supabase
-        .from('punch_items')
+      const { data, error, count } = await fromTable('punch_items')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('number', { ascending: false })
         .range(from, to)
       if (error) throw error
-      return { data: (data ?? []) as PunchItem[], total: count ?? 0, page, pageSize }
+      return { data: (data ?? []) as unknown as PunchItem[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -31,13 +31,12 @@ export function usePunchItem(id: string | undefined) {
   return useQuery({
     queryKey: ['punch_items', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('punch_items')
+      const { data, error } = await fromTable('punch_items')
         .select('*')
-        .eq('id', id!)
+        .eq('id' as never, id!)
         .single()
       if (error) throw error
-      return data as PunchItem
+      return data as unknown as PunchItem
     },
     enabled: !!id,
   })

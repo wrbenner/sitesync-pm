@@ -8,7 +8,7 @@ import { createOnError } from './createAuditedMutation'
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Notifications ─────────────────────────────────────────
 
@@ -16,7 +16,7 @@ export function useMarkNotificationRead() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
-      const { error } = await from('notifications').update({ read: true }).eq('id', id)
+      const { error } = await from('notifications').update({ read: true }).eq('id' as never, id)
       if (error) throw error
       return { userId }
     },
@@ -33,7 +33,7 @@ export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false)
+      const { error } = await from('notifications').update({ read: true }).eq('user_id' as never, userId).eq('read' as never, false)
       if (error) throw error
       return { userId }
     },

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from '../mutations/createAuditedMutation'
 import { vendorSchema } from '../../components/forms/schemas'
 
@@ -52,15 +53,13 @@ export function useVendors(projectId: string | undefined) {
       // sidesteps PostgREST's embedded-filter parsing edge cases and
       // makes RLS evaluation simpler on each branch.
       const [scoped, globals] = await Promise.all([
-        supabase
-          .from('vendors')
+        fromTable('vendors')
           .select('*')
-          .eq('project_id', projectId!)
+          .eq('project_id' as never, projectId!)
           .order('company_name', { ascending: true }),
-        supabase
-          .from('vendors')
+        fromTable('vendors')
           .select('*')
-          .is('project_id', null)
+          .is('project_id' as never, null)
           .order('company_name', { ascending: true }),
       ])
       if (scoped.error) throw scoped.error
@@ -85,9 +84,9 @@ export function useCreateVendor() {
     getEntityTitle: (p) => p.company_name,
     getAfterState: (p) => p as Record<string, unknown>,
     mutationFn: async (payload) => {
-      const { data, error } = await supabase.from('vendors').insert(payload).select().single()
+      const { data, error } = await fromTable('vendors').insert(payload as never).select().single()
       if (error) throw error
-      return data as Vendor
+      return data as unknown as Vendor
     },
     invalidateKeys: () => [['vendors']],
     analyticsEvent: 'vendor_created',
@@ -105,14 +104,13 @@ export function useUpdateVendor() {
     getEntityId: (p) => p.id,
     getAfterState: (p) => p.updates as Record<string, unknown>,
     mutationFn: async (params) => {
-      const { data, error } = await supabase
-        .from('vendors')
+      const { data, error } = await fromTable('vendors')
         .update(params.updates)
-        .eq('id', params.id)
+        .eq('id' as never, params.id)
         .select()
         .single()
       if (error) throw error
-      return data as Vendor
+      return data as unknown as Vendor
     },
     invalidateKeys: () => [['vendors']],
     analyticsEvent: 'vendor_updated',
@@ -127,7 +125,7 @@ export function useDeleteVendor() {
     entityType: 'vendor',
     getEntityId: (p) => p.id,
     mutationFn: async (params) => {
-      const { error } = await supabase.from('vendors').delete().eq('id', params.id)
+      const { error } = await fromTable('vendors').delete().eq('id' as never, params.id)
       if (error) throw error
       return { id: params.id }
     },
@@ -141,10 +139,9 @@ export function useVendorEvaluations(vendorId: string | undefined) {
   return useQuery({
     queryKey: ['vendor_evaluations', vendorId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vendor_evaluations')
+      const { data, error } = await fromTable('vendor_evaluations')
         .select('*')
-        .eq('vendor_id', vendorId!)
+        .eq('vendor_id' as never, vendorId!)
         .order('evaluated_at', { ascending: false })
       if (error) throw error
       return (data || []) as VendorEvaluation[]
@@ -157,9 +154,9 @@ export function useCreateVendorEvaluation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<VendorEvaluation> & { vendor_id: string }) => {
-      const { data, error } = await supabase.from('vendor_evaluations').insert(payload).select().single()
+      const { data, error } = await fromTable('vendor_evaluations').insert(payload as never).select().single()
       if (error) throw error
-      return data as VendorEvaluation
+      return data as unknown as VendorEvaluation
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['vendor_evaluations', vars.vendor_id] })

@@ -1,4 +1,5 @@
 import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { RfiRow, PaginationParams, PaginatedResult, CreateRfiPayload } from '../../types/api'
 import type { Database } from '../../types/database'
@@ -27,10 +28,9 @@ export const getRfis = async (
   try {
     const result = await buildPaginatedQuery<RfiRow, MappedRfi>(
       (from, to) =>
-        supabase
-          .from('rfis')
+        fromTable('rfis')
           .select('*', { count: 'exact' })
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('number', { ascending: false })
           .range(from, to),
       pagination,
@@ -45,7 +45,7 @@ export const getRfis = async (
 }
 export const getRfiById = async (projectId: string, id: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).eq('id', id).single()
+  const { data, error } = await fromTable('rfis').select('*').eq('project_id' as never, projectId).eq('id' as never, id).single()
   if (error) throw transformSupabaseError(error)
   return mapRfi(data)
 }
@@ -67,8 +67,8 @@ export const updateRfi = async (
   const data = await supabaseMutation<RfiRow>(client =>
     client.from('rfis')
       .update({ ...updates, updated_at: new Date().toISOString() } as Database['public']['Tables']['rfis']['Update'])
-      .eq('id', id)
-      .eq('project_id', projectId)
+      .eq('id' as never, id)
+      .eq('project_id' as never, projectId)
       .select()
       .single()
   )

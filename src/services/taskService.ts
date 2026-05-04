@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import type { TaskState } from '../machines/taskMachine';
 import {
   type Result,
@@ -19,11 +20,10 @@ async function resolveProjectRole(
   userId: string | null,
 ): Promise<string | null> {
   if (!userId) return null;
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
   return data?.role ?? null;
 }
@@ -62,10 +62,9 @@ export const taskService = {
     taskId: string,
     newStatus: TaskState,
   ): Promise<Result> {
-    const { data: task, error: fetchError } = await supabase
-      .from('tasks')
+    const { data: task, error: fetchError } = await fromTable('tasks')
       .select('status, project_id')
-      .eq('id', taskId)
+      .eq('id' as never, taskId)
       .single();
 
     if (fetchError || !task) {
@@ -95,10 +94,9 @@ export const taskService = {
     };
     if (newStatus === 'done') updates.percent_complete = 100;
 
-    const { error } = await supabase
-      .from('tasks')
-      .update(updates)
-      .eq('id', taskId);
+    const { error } = await fromTable('tasks')
+      .update(updates as never)
+      .eq('id' as never, taskId);
 
     if (error) return fail(dbError(error.message, { taskId, newStatus }));
     return { data: null, error: null };
@@ -126,16 +124,15 @@ export const taskService = {
       const { data: prior } = await sb
         .from('tasks')
         .select('end_date, project_id')
-        .eq('id', taskId)
+        .eq('id' as never, taskId)
         .maybeSingle();
       baselineEndDate = (prior?.end_date as string | null) ?? null;
       projectId = (prior?.project_id as string | null) ?? null;
     }
 
-    const { error } = await supabase
-      .from('tasks')
+    const { error } = await fromTable('tasks')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', taskId);
+      .eq('id' as never, taskId);
 
     if (error) return fail(dbError(error.message, { taskId }));
 

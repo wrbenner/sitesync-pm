@@ -9,7 +9,7 @@ import { invalidateEntity } from '../../api/invalidation'
 import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: AnyTableName) => fromTable(table as keyof Database['public']['Tables'])
 
 // ── Files ─────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ export function useDeleteFile() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await from('files').delete().eq('id', id)
+      const { error } = await from('files').delete().eq('id' as never, id)
       if (error) throw error
       return { projectId }
     },

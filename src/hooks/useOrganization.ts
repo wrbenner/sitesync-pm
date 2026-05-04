@@ -6,6 +6,7 @@ import { queryKeys } from '../api/queryKeys'
 import type { OrgRole } from '../types/tenant'
 import type { Organization } from '../types/database'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 interface OrganizationContextValue {
   currentOrg: Organization | null
@@ -56,11 +57,10 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     let cancelled = false
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user || cancelled) return
-      supabase
-        .from('organization_members')
+      fromTable('organization_members')
         .select('role')
-        .eq('organization_id', currentOrg.id)
-        .eq('user_id', user.id)
+        .eq('organization_id' as never, currentOrg.id)
+        .eq('user_id' as never, user.id)
         .maybeSingle()
         .then(({ data }) => {
           if (!cancelled) setCurrentOrgRole((data?.role as OrgRole) ?? null)

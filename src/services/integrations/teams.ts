@@ -2,6 +2,7 @@
 // Same notification types as Slack: RFI responses, submittal reviews, daily log approvals, schedule changes.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -131,7 +132,7 @@ export const teamsProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
     return {
       status: (data?.status as IntegrationStatus) ?? 'disconnected',
       lastSync: data?.last_sync ?? null,
@@ -150,7 +151,7 @@ export async function sendTeamsRFINotification(
   integrationId: string,
   rfi: { number: string; title: string; respondedBy: string; status: string },
 ): Promise<{ success: boolean; error?: string }> {
-  const { data } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
   const config = data?.config as Record<string, string> | null
   if (!config?.webhookUrl) return { success: false, error: 'Teams not configured' }
 
@@ -171,7 +172,7 @@ export async function sendTeamsSubmittalNotification(
   integrationId: string,
   sub: { number: string; title: string; reviewedBy: string; status: string; specSection: string },
 ): Promise<{ success: boolean; error?: string }> {
-  const { data } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
   const config = data?.config as Record<string, string> | null
   if (!config?.webhookUrl) return { success: false, error: 'Teams not configured' }
 

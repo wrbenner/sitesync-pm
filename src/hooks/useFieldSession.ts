@@ -17,6 +17,7 @@
 
 import { useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { useAuth } from './useAuth'
 import { useProjectId } from './useProjectId'
 
@@ -63,8 +64,7 @@ export function useFieldSession(activity: 'capture' | 'view' | 'navigate' | 'log
         app_build: APP_BUILD,
       }
       try {
-        const { data } = await supabase
-          .from('field_session_events')
+        const { data } = await fromTable('field_session_events')
           .insert(insertRow as never)
           .select('id')
           .single()
@@ -80,10 +80,9 @@ export function useFieldSession(activity: 'capture' | 'view' | 'navigate' | 'log
       if (closedRef.current || !sessionIdRef.current) return
       closedRef.current = true
       try {
-        await supabase
-          .from('field_session_events')
+        await fromTable('field_session_events')
           .update({ ended_at: new Date().toISOString() } as never)
-          .eq('id', sessionIdRef.current)
+          .eq('id' as never, sessionIdRef.current)
       } catch {
         // ignore
       }
@@ -118,10 +117,9 @@ export function useFieldSession(activity: 'capture' | 'view' | 'navigate' | 'log
   const recordMutation = async () => {
     if (!sessionIdRef.current) return
     try {
-      await supabase
-        .from('field_session_events')
+      await fromTable('field_session_events')
         .update({ did_mutate: true } as never)
-        .eq('id', sessionIdRef.current)
+        .eq('id' as never, sessionIdRef.current)
     } catch {
       // ignore
     }
