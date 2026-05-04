@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
 
-import { fromTable } from '../../../lib/db/queries'
+import { fromTable, asRow, asRows } from '../../../lib/db/queries'
 import { computeDeadlines, alertTier, type StateLienRule } from '../../../lib/compliance/lienRights'
 import { KpiTile, StatusPill, DegradedBanner, TableHeaderRow, TableBodyRow, type StatusPillTone } from './_kit'
 
@@ -48,10 +48,19 @@ export const LienRightsPanel: React.FC<{ projectId: string | undefined }> = ({ p
         fromTable('contracts').select('id, counterparty, type, start_date, end_date, original_value').eq('project_id' as never, projectId!).limit(200),
         fromTable('state_lien_rules').select('*').limit(500),
       ])
+      type ProjectRow = { id: string; state: string | null; start_date: string | null; end_date: string | null }
+      type ContractRow = {
+        id: string
+        counterparty: string | null
+        type: string | null
+        start_date: string | null
+        end_date: string | null
+        original_value: number | null
+      }
       return {
-        project: proj.data,
-        contracts: contracts.data ?? [],
-        rules: (rules.data ?? []) as unknown as StateLienRule[],
+        project: asRow<ProjectRow>(proj.data),
+        contracts: asRows<ContractRow>(contracts.data),
+        rules: asRows<StateLienRule>(rules.data),
         errors: [proj.error, contracts.error, rules.error].filter(Boolean),
       }
     },
@@ -60,11 +69,12 @@ export const LienRightsPanel: React.FC<{ projectId: string | undefined }> = ({ p
   // ── Compute one row per contract ─────────────────────────────────
   const rows = useMemo(() => {
     if (!data?.project || !data.contracts.length || !data.rules.length) return []
-    const stateCode = (data.project.state as string) ?? 'TX'
+    const project = data.project
+    const stateCode = project.state ?? 'TX'
     return data.contracts.map(c => {
       // Map contract type → claimant role. Default first_tier_sub for subs;
       // GC for prime contracts; everything else falls through to first_tier.
-      const ctype = (c.type as string | null) ?? 'subcontract'
+      const ctype = c.type ?? 'subcontract'
       const claimantRole: StateLienRule['claimant_role'] =
         ctype === 'prime' ? 'general_contractor' : 'first_tier_sub'
 
@@ -72,8 +82,8 @@ export const LienRightsPanel: React.FC<{ projectId: string | undefined }> = ({ p
         {
           stateCode,
           claimantRole,
-          firstDayOfWork: (c.start_date as string | null) ?? (data.project!.start_date as string | null) ?? null,
-          lastDayOfWork: (c.end_date as string | null) ?? (data.project!.end_date as string | null) ?? null,
+          firstDayOfWork: c.start_date ?? project.start_date ?? null,
+          lastDayOfWork: c.end_date ?? project.end_date ?? null,
         },
         data.rules,
       )
@@ -91,10 +101,10 @@ export const LienRightsPanel: React.FC<{ projectId: string | undefined }> = ({ p
       const next = tiers[0]
 
       return {
-        contractId: c.id as string,
-        counterparty: (c.counterparty as string) ?? 'Unknown',
+        contractId: c.id,
+        counterparty: c.counterparty ?? 'Unknown',
         state: stateCode,
-        contractDate: (c.start_date as string | null) ?? '—',
+        contractDate: c.start_date ?? '—',
         nextDeadline: next?.deadline ?? null,
         nextKind: next?.kind ?? null,
         tier: next?.tier ?? 'safe',
