@@ -133,7 +133,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
     if (!metricsData) return undefined
 
     const pendingChangeOrderExposure = (budgetData.changeOrders ?? [])
-      .filter(co => co.status === 'pending' || co.status === 'submitted' || co.status === 'review')
+      .filter(co => co.status === 'draft' || co.status === 'pending_review')
       .reduce((sum, co) => sum + (co.amount ?? co.estimated_cost ?? 0), 0)
 
     const criticalPathActivities = (scheduleData ?? [])
@@ -184,7 +184,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
     setError(null)
 
     const context: AIContext = {
-      projectId,
+      projectId: projectId ?? '',
       currentPage: pageContext,
       selectedEntities: entityContext ? [{ type: 'entity', id: entityContext }] : undefined,
       projectData,
@@ -321,7 +321,7 @@ export function useProjectAI(pageContext?: string, entityContext?: string): UseP
       setMessages(prev => [...prev, confirmMessage])
 
       const context: AIContext = {
-        projectId,
+        projectId: projectId ?? '',
         currentPage: pageContext,
         projectData,
       }
