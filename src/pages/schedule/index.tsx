@@ -256,7 +256,7 @@ const SchedulePage: React.FC = () => {
         insert.depends_on = data.predecessor_ids[0];
         insert.predecessor_ids = data.predecessor_ids;
       }
-      const { error: insertError } = await supabase.from('schedule_phases').insert(insert);
+      const { error: insertError } = await fromTable('schedule_phases').insert(insert as never);
       if (insertError) {
         toast.error(insertError.message || 'Failed to create activity');
         throw insertError;

@@ -10,6 +10,7 @@ import React, { useEffect, useState } from 'react'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { Eyebrow, Hairline, PageQuestion, SectionHeading } from '../../components/atoms'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import type { UserNotificationPreferences, NotificationEventType, ChannelMatrixEntry } from '../../types/notifications'
 import { defaultPreferences } from '../../lib/notifications/preferences'
 
@@ -43,13 +44,12 @@ export const PreferencesPage: React.FC = () => {
       const { data: userData } = await supabase.auth.getUser()
       const userId = userData.user?.id
       if (!userId) return
-      const { data } = await supabase
-        .from('notification_preferences')
+      const { data } = await fromTable('notification_preferences')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id' as never, userId)
         .maybeSingle()
       if (!mounted) return
-      setPrefs((data as UserNotificationPreferences) ?? defaultPreferences(userId))
+      setPrefs((data as unknown as UserNotificationPreferences) ?? defaultPreferences(userId))
     })()
     return () => {
       mounted = false
@@ -73,7 +73,7 @@ export const PreferencesPage: React.FC = () => {
   const save = async () => {
     setSaving(true)
     try {
-      await supabase.from('notification_preferences').upsert({
+      await fromTable('notification_preferences').upsert({
         user_id: prefs.user_id,
         channels: prefs.channels,
         dnd_start: prefs.dnd_start ?? null,

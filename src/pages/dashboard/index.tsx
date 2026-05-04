@@ -28,6 +28,7 @@ import type { AIInsight } from '../../types/ai';
 import { useProjectStore } from '../../stores/projectStore';
 import { useScheduleStore } from '../../stores/scheduleStore';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { compactDollars } from './types';
@@ -183,11 +184,11 @@ function useLiveMetricsFallback(projectId: string | undefined, matViewHasData: b
     queryKey: ['live-metrics', projectId],
     queryFn: async () => {
       const [rfis, punchItems, budgetItems, submittals, dailyLogs] = await Promise.all([
-        supabase.from('rfis').select('id, status, due_date', { count: 'exact' }).eq('project_id', projectId!),
-        supabase.from('punch_items').select('id, status', { count: 'exact' }).eq('project_id', projectId!),
-        supabase.from('budget_items').select('original_amount, actual_amount', { count: 'exact' }).eq('project_id', projectId!),
-        supabase.from('submittals').select('id, status', { count: 'exact' }).eq('project_id', projectId!),
-        supabase.from('daily_logs').select('id', { count: 'exact' }).eq('project_id', projectId!),
+        fromTable('rfis').select('id, status, due_date', { count: 'exact' }).eq('project_id' as never, projectId!),
+        fromTable('punch_items').select('id, status', { count: 'exact' }).eq('project_id' as never, projectId!),
+        fromTable('budget_items').select('original_amount, actual_amount', { count: 'exact' }).eq('project_id' as never, projectId!),
+        fromTable('submittals').select('id, status', { count: 'exact' }).eq('project_id' as never, projectId!),
+        fromTable('daily_logs').select('id', { count: 'exact' }).eq('project_id' as never, projectId!),
       ]);
       const rfiRows = rfis.data ?? [];
       const punchRows = punchItems.data ?? [];

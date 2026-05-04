@@ -11,6 +11,7 @@ import { useCreateLookaheadTask } from '../hooks/queries/lookahead-tasks';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useProjectId } from '../hooks/useProjectId';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { getWeatherForecast } from '../lib/weather';
 import type { WeatherDay } from '../lib/weather';
 import type { Task, Crew } from '../types/database';
@@ -165,10 +166,9 @@ export const Lookahead: React.FC = () => {
     if (dbId) {
       const newStart = new Date(boardStartDate);
       newStart.setDate(newStart.getDate() + newDayIndex);
-      const { error } = await supabase
-        .from('tasks')
+      const { error } = await fromTable('tasks')
         .update({ start_date: newStart.toISOString().slice(0, 10), trade: newCrew } as Record<string, unknown>)
-        .eq('id', dbId);
+        .eq('id' as never, dbId);
       if (error) {
         addToast('error', 'Failed to save task move');
         return;
@@ -207,7 +207,7 @@ export const Lookahead: React.FC = () => {
       // For material/inspection constraints, resolved means the requirement is fulfilled
       // We store a constraint_notes update for other types
       if (field) {
-        await supabase.from('tasks').update({ [field]: !resolvedConstraint.resolved } as Record<string, unknown>).eq('id', dbId);
+        await fromTable('tasks').update({ [field]: !resolvedConstraint.resolved } as Record<string, unknown>).eq('id' as never, dbId);
       }
     }
     addToast('info', 'Constraint updated');
@@ -292,7 +292,7 @@ export const Lookahead: React.FC = () => {
             if (!projectId) return;
             try {
               const { data: { user } } = await supabase.auth.getUser();
-              await supabase.from('notifications').insert({
+              await fromTable('notifications').insert({
                 project_id: projectId,
                 title: `${weekView}-Week Lookahead Published`,
                 body: `Lookahead schedule with ${tasks.length} tasks sent to field team.`,

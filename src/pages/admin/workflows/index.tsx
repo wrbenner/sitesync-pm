@@ -9,6 +9,7 @@ import { WorkflowBuilder } from '../../../components/workflows/WorkflowBuilder'
 import { buildDefaultWorkflow } from '../../../lib/workflows'
 import type { WorkflowDefinition, WorkflowEntityType } from '../../../types/workflows'
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 
 const ENTITY_TYPES: WorkflowEntityType[] = ['rfi', 'submittal', 'change_order']
 
@@ -23,7 +24,7 @@ export const AdminWorkflowsPage: React.FC = () => {
     let mounted = true
     ;(async () => {
       // Best-effort: pull the user's first project membership.
-      const { data } = await supabase.from('project_members').select('project_id').limit(1).maybeSingle()
+      const { data } = await fromTable('project_members').select('project_id').limit(1).maybeSingle()
       if (mounted && data?.project_id) setProjectId(data.project_id as string)
     })()
     return () => {
@@ -35,12 +36,11 @@ export const AdminWorkflowsPage: React.FC = () => {
     if (!projectId) return
     let mounted = true
     ;(async () => {
-      const { data } = await supabase
-        .from('workflow_definitions')
+      const { data } = await fromTable('workflow_definitions')
         .select('*')
-        .eq('project_id', projectId)
-        .eq('entity_type', entity)
-        .is('archived_at', null)
+        .eq('project_id' as never, projectId)
+        .eq('entity_type' as never, entity)
+        .is('archived_at' as never, null)
         .order('version', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -68,7 +68,7 @@ export const AdminWorkflowsPage: React.FC = () => {
     if (!projectId) return
     // Always create a new version row.
     const next = (def.version ?? 1) + 1
-    await supabase.from('workflow_definitions').insert({
+    await fromTable('workflow_definitions').insert({
       project_id: projectId,
       entity_type: entity,
       version: next,

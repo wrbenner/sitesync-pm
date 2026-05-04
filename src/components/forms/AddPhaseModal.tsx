@@ -3,6 +3,7 @@ import { X, Calendar, Link2, AlertTriangle, Users, Clock } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useProjectStore } from '../../stores/projectStore';
 
 /* ── Types ────────────────────────────────────────────────── */
@@ -99,8 +100,8 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
     if (!open || !activeProject?.id) return;
     (async () => {
       const [phasesRes, crewsRes] = await Promise.all([
-        supabase.from('schedule_phases').select('id, name').eq('project_id', activeProject.id).order('start_date'),
-        supabase.from('crews').select('id, name').eq('project_id', activeProject.id).order('name'),
+        fromTable('schedule_phases').select('id, name').eq('project_id' as never, activeProject.id).order('start_date'),
+        fromTable('crews').select('id, name').eq('project_id' as never, activeProject.id).order('name'),
       ]);
       if (phasesRes.data) setExistingPhases(phasesRes.data);
       if (crewsRes.data) setCrews(crewsRes.data);

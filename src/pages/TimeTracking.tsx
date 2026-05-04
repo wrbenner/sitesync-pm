@@ -1145,7 +1145,7 @@ const TimeTracking: React.FC = () => {
               const lr = Number(tmForm.laborRate) || 0
               const mc = Number(tmForm.materialCost) || 0
               const ec = Number(tmForm.equipmentCost) || 0
-              const { error } = await supabase.from('time_material_tickets').insert({
+              const { error } = await fromTable('time_material_tickets').insert({
                 project_id: projectId,
                 ticket_number: `TM-${Date.now().toString(36).toUpperCase()}`,
                 date: tmForm.date,

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Clock, TrendingUp, Award, Bell, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { Card } from '../Primitives';
 
@@ -46,27 +47,27 @@ function useProactiveAlerts(projectId: string | undefined) {
 
       const [submittalsData, rfisData, certsData, budgetData] = await Promise.all([
         safeRun<{ id: string; title: string; due_date: string; status: string }>(() =>
-          supabase.from('submittals')
+          fromTable('submittals')
             .select('id, title, due_date, status')
-            .eq('project_id', projectId)
-            .in('status', ['pending', 'under_review'])
-            .lte('due_date', inSevenDays.toISOString())
-            .gte('due_date', now.toISOString())),
+            .eq('project_id' as never, projectId)
+            .in('status' as never, ['pending', 'under_review'])
+            .lte('due_date' as never, inSevenDays.toISOString())
+            .gte('due_date' as never, now.toISOString())),
         safeRun<{ id: string; number: number; title: string | null; created_at: string; status: string | null }>(() =>
-          supabase.from('rfis')
+          fromTable('rfis')
             .select('id, number, title, created_at, status')
-            .eq('project_id', projectId)
-            .eq('status', 'open')),
+            .eq('project_id' as never, projectId)
+            .eq('status' as never, 'open')),
         safeRun<{ id: string; certification_type: string; worker_name: string; expiration_date: string }>(() =>
-          supabase.from('safety_certifications')
+          fromTable('safety_certifications')
             .select('id, certification_type, worker_name, expiration_date')
-            .eq('project_id', projectId)
-            .lte('expiration_date', inThirtyDays.toISOString().split('T')[0])
-            .gte('expiration_date', now.toISOString().split('T')[0])),
+            .eq('project_id' as never, projectId)
+            .lte('expiration_date' as never, inThirtyDays.toISOString().split('T')[0])
+            .gte('expiration_date' as never, now.toISOString().split('T')[0])),
         safeRun<{ id: string; division?: string; original_amount?: number; actual_amount?: number }>(() =>
-          supabase.from('budget_items')
+          fromTable('budget_items')
             .select('id, division, original_amount, actual_amount')
-            .eq('project_id', projectId)),
+            .eq('project_id' as never, projectId)),
       ]);
 
       const alerts: ProactiveAlert[] = [];

@@ -1497,7 +1497,7 @@ const AddLineModal: React.FC<{
     setErr(null)
     try {
       const amt = Number.parseFloat(form.original_amount) || 0
-      const { error } = await supabase.from('budget_items').insert({
+      const { error } = await fromTable('budget_items').insert({
         project_id: projectId,
         description: form.description,
         csi_division: form.csi_division || null,

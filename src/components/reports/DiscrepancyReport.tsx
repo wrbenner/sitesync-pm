@@ -6,6 +6,7 @@
 import React from 'react'
 import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -414,10 +415,10 @@ export async function generateDiscrepancyReport(
   opts: DiscrepancyReportOptions = {},
 ): Promise<{ blob: Blob; filename: string; data: DiscrepancyReportData }> {
   const [projectRes, pairsRes, discRes, drawingsRes] = await Promise.all([
-    supabase.from('projects').select('name, location').eq('id', projectId).maybeSingle(),
-    supabase.from('drawing_pairs').select('id, drawing_a_id, drawing_b_id, overlap_image_url').eq('project_id', projectId),
-    supabase.from('drawing_discrepancies').select('id, description, severity, confidence, arch_dimension, struct_dimension, drawing_id, drawing_pair_id, auto_rfi_id').eq('project_id', projectId).eq('is_false_positive', false),
-    supabase.from('drawings').select('id, sheet_number, thumbnail_url').eq('project_id', projectId),
+    fromTable('projects').select('name, location').eq('id' as never, projectId).maybeSingle(),
+    fromTable('drawing_pairs').select('id, drawing_a_id, drawing_b_id, overlap_image_url').eq('project_id' as never, projectId),
+    fromTable('drawing_discrepancies').select('id, description, severity, confidence, arch_dimension, struct_dimension, drawing_id, drawing_pair_id, auto_rfi_id').eq('project_id' as never, projectId).eq('is_false_positive' as never, false),
+    fromTable('drawings').select('id, sheet_number, thumbnail_url').eq('project_id' as never, projectId),
   ])
 
   const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
@@ -434,7 +435,7 @@ export async function generateDiscrepancyReport(
   const rfiIds = Array.from(new Set(rawDiscrepancies.map((d) => d.auto_rfi_id).filter(Boolean))) as string[]
   let rfiById = new Map<string, RfiRow>()
   if (rfiIds.length > 0) {
-    const { data: rfis } = await supabase.from('rfis').select('id, number').in('id', rfiIds)
+    const { data: rfis } = await fromTable('rfis').select('id, number').in('id' as never, rfiIds)
     rfiById = new Map(((rfis ?? []) as RfiRow[]).map((r) => [r.id, r]))
   }
 

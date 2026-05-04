@@ -262,9 +262,9 @@ export const ScheduleImportWizard: React.FC<ScheduleImportWizardProps> = ({
         const slice = activities.slice(i, i + BATCH_SIZE);
         const rows = slice.map((a) => activityToPhaseRow(projectId, a));
 
-        const { error } = await (supabase.from('schedule_phases') as unknown as {
+        const { error } = await (fromTable('schedule_phases') as unknown as {
           insert: (rows: Array<Record<string, unknown>>) => Promise<{ error: { message: string } | null }>;
-        }).insert(rows);
+        }).insert(rows as never);
         if (error) {
           toast.error(`Import failed at row ${inserted + 1}: ${error.message}`);
           setImporting(false);

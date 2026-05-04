@@ -4,6 +4,7 @@ import { DataTable, createColumnHelper } from '../../components/shared/DataTable
 import { ShieldCheck } from 'lucide-react';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useProjectId } from '../../hooks/useProjectId';
 
 // ── Column definitions ────────────────────────────────────────
@@ -91,7 +92,7 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
 
     setSubmitting(true);
     try {
-      const { data: inserted, error } = await supabase.from('toolbox_talks').insert({
+      const { data: inserted, error } = await fromTable('toolbox_talks').insert({
         project_id: projectId,
         title: form.topic,
         topic: form.topic,
@@ -101,7 +102,7 @@ export const ToolboxTalkForm: React.FC<ToolboxTalkFormProps> = ({ onClose }) => 
       if (error) throw error;
       const talkId = inserted?.id as string | undefined;
       if (talkId && form.attendees.length > 0) {
-        await supabase.from('toolbox_talk_attendees').insert(
+        await fromTable('toolbox_talk_attendees').insert(
           form.attendees.map((name) => ({ toolbox_talk_id: talkId, worker_name: name }))
         );
       }

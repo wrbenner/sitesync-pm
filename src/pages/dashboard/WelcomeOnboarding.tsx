@@ -9,6 +9,7 @@ import { duration, easing } from '../../styles/animations';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
@@ -33,8 +34,7 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
       return;
     }
 
-    const { data: newProject, error } = await supabase
-      .from('projects')
+    const { data: newProject, error } = await fromTable('projects')
       .insert({
         name: data.name as string,
         organization_id: orgId,
@@ -59,7 +59,7 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
 
     // Add creator as project manager — critical for RBAC access
     if (user?.id && newProject) {
-      const { error: memberError } = await supabase.from('project_members').insert({
+      const { error: memberError } = await fromTable('project_members').insert({
         project_id: newProject.id,
         user_id: user.id,
         role: 'project_manager',

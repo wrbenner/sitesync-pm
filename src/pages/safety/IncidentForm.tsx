@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Btn } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 
 interface IncidentFormState {
   date: string;
@@ -95,7 +96,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
           photoUrl = pub?.publicUrl ?? null;
         }
       }
-      const { error } = await supabase.from('incidents').insert({
+      const { error } = await fromTable('incidents').insert({
         project_id: projectId,
         date: form.date,
         type: form.type,
@@ -109,7 +110,7 @@ export const IncidentForm: React.FC<IncidentFormProps> = ({ projectId, onClose, 
       if (error) throw error;
 
       if (form.ca_description.trim()) {
-        await supabase.from('corrective_actions').insert({
+        await fromTable('corrective_actions').insert({
           project_id: projectId,
           description: form.ca_description,
           assigned_to: form.ca_assignee || null,

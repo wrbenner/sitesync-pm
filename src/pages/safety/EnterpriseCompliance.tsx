@@ -9,6 +9,7 @@ import { usePermits } from '../../hooks/queries/permits';
 import { useMaterialInventory, useCreateMaterialItem } from '../../hooks/queries/procurement-equipment';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useQueryClient } from '@tanstack/react-query';
 
 /* ================================================================
@@ -614,7 +615,7 @@ export const PermitsTab: React.FC = () => {
     try {
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;
-      const { error } = await supabase.from('permits').insert({
+      const { error } = await fromTable('permits').insert({
         project_id: projectId,
         permit_type: permitForm.type,
         location: permitForm.location,

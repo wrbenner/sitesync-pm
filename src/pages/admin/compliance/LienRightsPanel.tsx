@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 import { computeDeadlines, alertTier, type StateLienRule } from '../../../lib/compliance/lienRights'
 import { KpiTile, StatusPill, DegradedBanner, TableHeaderRow, TableBodyRow, type StatusPillTone } from './_kit'
 
@@ -43,9 +44,9 @@ export const LienRightsPanel: React.FC<{ projectId: string | undefined }> = ({ p
     staleTime: 60_000,
     queryFn: async () => {
       const [proj, contracts, rules] = await Promise.all([
-        supabase.from('projects').select('id, state, start_date, end_date').eq('id', projectId!).maybeSingle(),
-        supabase.from('contracts').select('id, counterparty, type, start_date, end_date, original_value').eq('project_id', projectId!).limit(200),
-        supabase.from('state_lien_rules').select('*').limit(500),
+        fromTable('projects').select('id, state, start_date, end_date').eq('id' as never, projectId!).maybeSingle(),
+        fromTable('contracts').select('id, counterparty, type, start_date, end_date, original_value').eq('project_id' as never, projectId!).limit(200),
+        fromTable('state_lien_rules').select('*').limit(500),
       ])
       return {
         project: proj.data,

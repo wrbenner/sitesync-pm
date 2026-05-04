@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { SignaturePad } from '../dailylog/SignaturePad'
 import { WeatherCard } from '../dailylog/WeatherCard'
 import { supabase } from '../../api/client'
+import { fromTable } from '../../lib/db/queries'
 import { useIsOnline } from '../../hooks/useOfflineStatus'
 import { useOfflineMutation } from '../../hooks/useOfflineMutation'
 
@@ -693,7 +694,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         const logData: Record<string, unknown> = { ...form as unknown as Record<string, unknown>, id: createdId }
         summarizeDailyLog(logData).then((summary) => {
           if (summary) {
-            supabase.from('daily_logs').update({ ai_summary: summary }).eq('id', createdId).then(() => {})
+            fromTable('daily_logs').update({ ai_summary: summary }).eq('id' as never, createdId).then(() => {})
           }
         }).catch(() => {})
       }
@@ -730,10 +731,9 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     if (!projectId) return
     setSameAsYesterdayLoading(true)
     try {
-      const { data: rows } = await supabase
-        .from('daily_logs')
+      const { data: rows } = await fromTable('daily_logs')
         .select('id, workers_onsite, daily_log_entries(type, company, trade, headcount, hours)')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('log_date', { ascending: false })
         .limit(1)
       if (rows && rows.length > 0) {

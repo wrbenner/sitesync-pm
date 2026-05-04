@@ -168,7 +168,7 @@ export const InspectionsTab: React.FC<InspectionsTabProps> = ({ inspections, pas
       const findings = tmpl.items.map((item, idx) => ({
         item, result: checklistResults[idx] ?? null, note: checklistNotes[idx] ?? '',
       }));
-      const { error } = await supabase.from('safety_inspections').insert({
+      const { error } = await fromTable('safety_inspections').insert({
         project_id: projectId,
         date: new Date().toISOString().slice(0, 10),
         type: tmpl.label,

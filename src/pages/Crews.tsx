@@ -16,6 +16,7 @@ import { PermissionGate } from '../components/auth/PermissionGate';
 import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { useEntityStore, useEntityActions } from '../stores/entityStore';
 import type { Crew } from '../types/database';
 import { useProjectStore } from '../stores/projectStore';
@@ -75,7 +76,7 @@ function AddCrewModal({ open, onClose, projectId, onCreated }: AddCrewModalProps
     setSaving(true);
     setErr(null);
     try {
-      const { error } = await (supabase.from('crews') as unknown as {
+      const { error } = await (fromTable('crews') as unknown as {
         insert: (row: Record<string, unknown>) => Promise<{ error: Error | null }>
       }).insert({
         project_id: projectId,
@@ -243,13 +244,13 @@ export const Crews: React.FC = () => {
 
   const updateCrewMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await (supabase.from('crews') as unknown as {
+      const { data, error } = await (fromTable('crews') as unknown as {
         update: (u: Record<string, unknown>) => {
           eq: (col: string, v: string) => {
             select: () => { single: () => Promise<{ data: unknown; error: Error | null }> }
           }
         }
-      }).update(updates).eq('id', id).select().single();
+      }).update(updates as never).eq('id' as never, id).select().single();
       if (error) throw error;
       return data;
     },

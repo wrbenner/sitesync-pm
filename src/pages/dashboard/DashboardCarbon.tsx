@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Leaf } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 
 // ────────────────────────────────────────────────────────────────
@@ -50,10 +51,9 @@ function useCarbonData(projectId: string | undefined) {
     queryFn: async () => {
       if (!projectId) return { entries: [] as CarbonEntry[], fallbackTotal: 0 };
 
-      const entriesRes = await supabase
-        .from('project_carbon_entries')
+      const entriesRes = await fromTable('project_carbon_entries')
         .select('carbon_kg, created_at')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('created_at', { ascending: true });
 
       const entries = ((entriesRes.data ?? []) as CarbonEntry[]).filter((e) => typeof e.carbon_kg === 'number');
@@ -64,8 +64,8 @@ function useCarbonData(projectId: string | undefined) {
 
       // Fallback: estimate from deliveries.items matched against carbon_factors.
       const [deliveriesRes, factorsRes] = await Promise.all([
-        supabase.from('deliveries').select('actual_date, created_at, items').eq('project_id', projectId),
-        supabase.from('carbon_factors').select('id, material_name, embodied_carbon_kg_per_unit, unit'),
+        fromTable('deliveries').select('actual_date, created_at, items').eq('project_id' as never, projectId),
+        fromTable('carbon_factors').select('id, material_name, embodied_carbon_kg_per_unit, unit'),
       ]);
 
       const deliveries = (deliveriesRes.data ?? []) as DeliveryRow[];

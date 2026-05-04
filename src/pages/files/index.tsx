@@ -10,6 +10,7 @@ import { useFiles } from '../../hooks/queries';
 import { useCreateFile, useDeleteFile } from '../../hooks/mutations';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { type FileItem, formatBytes } from './fileTypes';
 import { FileGrid } from './FileGrid';
 import { FileUpload } from './FileUpload';
@@ -211,7 +212,7 @@ const FilesPage: React.FC = () => {
     const source = files.find((f: FileItem) => f.id === sourceId);
     const target = files.find((f: FileItem) => f.id === targetFolderId);
     if (source && target) {
-      const { error } = await supabase.from('files').update({ parent_folder_id: targetFolderId }).eq('id', sourceId);
+      const { error } = await fromTable('files').update({ parent_folder_id: targetFolderId }).eq('id' as never, sourceId);
       if (error) { addToast('error', `Failed to move "${source.name}"`); return; }
       addToast('success', `Moved "${source.name}" into "${target.name}"`);
       refetch();

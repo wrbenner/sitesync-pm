@@ -26,6 +26,7 @@ import {
 } from '../hooks/queries/signatures'
 import { getSignerColorPalette } from '../services/signatureService'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation'
 import { PageInsightBanners } from '../components/ai/PredictiveAlert'
 
@@ -1169,16 +1170,15 @@ const PaymentScheduleSection: React.FC<{ contractId: string; contractTitle: stri
   const { data: milestones = [], isLoading: milestonesLoading } = useQuery({
     queryKey: ['payment_milestones', contractId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('payment_milestones')
+      const { data, error } = await fromTable('payment_milestones')
         .select('*')
-        .eq('contract_id', contractId)
+        .eq('contract_id' as never, contractId)
         .order('target_date', { ascending: true })
       if (error) {
         console.warn('[PaymentScheduleSection] Query failed:', error.message)
         return [] as PaymentMilestone[]
       }
-      return (data ?? []) as PaymentMilestone[]
+      return (data ?? []) as unknown as PaymentMilestone[]
     },
     enabled: !!contractId,
   })
@@ -2281,7 +2281,7 @@ export const Contracts: React.FC = () => {
             if (!clause || !contract) return
             try {
               // Persist clause-contract association; table may not exist yet
-              const { error } = await supabase.from('contract_clauses').insert({
+              const { error } = await fromTable('contract_clauses').insert({
                 contract_id: contractId,
                 clause_id: clauseId,
                 clause_title: clause.title,

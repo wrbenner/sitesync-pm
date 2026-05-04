@@ -18,6 +18,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries'
 import { useEntityStore, useEntityActions } from '../stores/entityStore';
 import type { Equipment } from '../services/equipmentService';
 import { useEquipmentMaintenance } from '../hooks/queries/equipment';
@@ -128,13 +129,13 @@ export const EquipmentPage: React.FC = () => {
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
       // Cast through unknown — Supabase generated types lag the actual schema
       // shape this page expects; runtime is correct, RLS gates the boundary.
-      const { data, error: updErr } = await (supabase.from('equipment') as unknown as {
+      const { data, error: updErr } = await (fromTable('equipment') as unknown as {
         update: (u: Record<string, unknown>) => {
           eq: (col: string, v: string) => {
             select: () => { single: () => Promise<{ data: unknown; error: Error | null }> }
           }
         }
-      }).update(updates).eq('id', id).select().single();
+      }).update(updates as never).eq('id' as never, id).select().single();
       if (updErr) throw updErr;
       return data;
     },
@@ -148,9 +149,9 @@ export const EquipmentPage: React.FC = () => {
 
   const deleteEquipmentMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error: delErr } = await (supabase.from('equipment') as unknown as {
+      const { error: delErr } = await (fromTable('equipment') as unknown as {
         delete: () => { eq: (col: string, v: string) => Promise<{ error: Error | null }> }
-      }).delete().eq('id', id);
+      }).delete().eq('id' as never, id);
       if (delErr) throw delErr;
     },
     onSuccess: () => {
@@ -637,7 +638,7 @@ function AddEquipmentModal({ projectId, onClose, onCreated }: AddEquipmentModalP
     setSaving(true);
     setErr(null);
     try {
-      const { error } = await (supabase.from('equipment') as unknown as {
+      const { error } = await (fromTable('equipment') as unknown as {
         insert: (row: Record<string, unknown>) => Promise<{ error: Error | null }>
       }).insert({
         project_id: projectId,

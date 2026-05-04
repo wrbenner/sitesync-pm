@@ -25,6 +25,7 @@ import {
 import { PendingPunchStack } from '../../components/walkthrough/PendingPunchStack'
 import { SessionPdfExport } from '../../components/walkthrough/SessionPdfExport'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 import type {
   WalkthroughCapture,
@@ -48,8 +49,8 @@ const SessionView: React.FC<SessionViewProps> = ({ sessionId }) => {
     async function load() {
       setLoading(true)
       const [sRes, cRes] = await Promise.all([
-        supabase.from('walkthrough_sessions').select('*').eq('id', sessionId).single(),
-        supabase.from('walkthrough_captures').select('*').eq('session_id', sessionId).order('captured_at', { ascending: false }),
+        fromTable('walkthrough_sessions').select('*').eq('id' as never, sessionId).single(),
+        fromTable('walkthrough_captures').select('*').eq('session_id' as never, sessionId).order('captured_at', { ascending: false }),
       ])
       if (cancelled) return
       if (sRes.data) setSession(sRes.data as unknown as WalkthroughSession)
@@ -63,10 +64,9 @@ const SessionView: React.FC<SessionViewProps> = ({ sessionId }) => {
   const updateCaptureStatus = useCallback(
     async (capture: WalkthroughCapture, status: WalkthroughCapture['status']) => {
       setBusyId(capture.id)
-      const { error } = await supabase
-        .from('walkthrough_captures')
+      const { error } = await fromTable('walkthrough_captures')
         .update({ status } as never)
-        .eq('id', capture.id)
+        .eq('id' as never, capture.id)
       setBusyId(null)
       if (error) {
         toast.error('Could not update capture')

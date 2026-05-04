@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query'
 import { spacing, colors, typography, borderRadius } from '../../../styles/theme'
 import { Skeleton, EmptyState, Btn } from '../../../components/Primitives'
 import { supabase } from '../../../lib/supabase'
+import { fromTable } from '../../../lib/db/queries'
 import { buildForm300, buildForm300A, exportItaCsv, type IncidentRow, type Form300Row } from '../../../lib/compliance/osha300'
 import { KpiTile, StatusPill, DegradedBanner, TableHeaderRow, TableBodyRow } from './_kit'
 
@@ -39,21 +40,19 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
     enabled: !!projectId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data: rows, error } = await supabase
-        .from('incidents')
+      const { data: rows, error } = await fromTable('incidents')
         .select('id, type, severity, date, location, description, injured_party_name, injured_party_company, injured_party_trade, osha_recordable, days_away, days_restricted, case_classification')
-        .eq('project_id', projectId!)
-        .gte('date', `${year}-01-01`)
-        .lte('date', `${year}-12-31T23:59:59Z`)
+        .eq('project_id' as never, projectId!)
+        .gte('date' as never, `${year}-01-01`)
+        .lte('date' as never, `${year}-12-31T23:59:59Z`)
         .limit(500)
       // PostgREST 42703 = column doesn't exist — fall back to minimal columns
       if (error && /column .* does not exist/i.test(error.message)) {
-        const r2 = await supabase
-          .from('incidents')
+        const r2 = await fromTable('incidents')
           .select('id, type, severity, date, location, description, injured_party_name, injured_party_company, injured_party_trade, osha_recordable')
-          .eq('project_id', projectId!)
-          .gte('date', `${year}-01-01`)
-          .lte('date', `${year}-12-31T23:59:59Z`)
+          .eq('project_id' as never, projectId!)
+          .gte('date' as never, `${year}-01-01`)
+          .lte('date' as never, `${year}-12-31T23:59:59Z`)
           .limit(500)
         return { rows: (r2.data ?? []) as Record<string, unknown>[], error: r2.error, partial: true }
       }
@@ -65,7 +64,7 @@ export const Osha300Panel: React.FC<{ projectId: string | undefined }> = ({ proj
     queryKey: ['osha-project', projectId],
     enabled: !!projectId,
     queryFn: async () => {
-      const { data } = await supabase.from('projects').select('name').eq('id', projectId!).maybeSingle()
+      const { data } = await fromTable('projects').select('name').eq('id' as never, projectId!).maybeSingle()
       return { project: data }
     },
   }).data ?? { project: null }

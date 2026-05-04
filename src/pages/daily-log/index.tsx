@@ -52,6 +52,7 @@ import { useIsOnline } from '../../hooks/useOfflineStatus';
 import { useIrisDrafts } from '../../hooks/useIrisDrafts';
 
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { fetchWeather, formatWeatherSummary } from '../../lib/weather';
 import type { WeatherData } from '../../lib/weather';
 import { typography } from '../../styles/theme';
@@ -560,12 +561,12 @@ const DailyLogPage: React.FC = () => {
     try {
       // Loose update payload — daily_log_entries has many discriminator-style
       // columns and we only set a subset per call.
-      const builder = supabase.from('daily_log_entries') as unknown as {
+      const builder = fromTable('daily_log_entries') as unknown as {
         update: (u: Record<string, unknown>) => {
           eq: (col: string, val: string) => Promise<{ error: unknown }>;
         };
       };
-      const { error } = await builder.update(updates).eq('id', entryId);
+      const { error } = await builder.update(updates as never).eq('id' as never, entryId);
       if (error) throw error;
       refetch();
     } catch {
@@ -866,7 +867,7 @@ const DailyLogPage: React.FC = () => {
         const { data: pub } = supabase.storage.from('daily-log-photos').getPublicUrl(path);
         const photoUrl = pub?.publicUrl ?? null;
         if (!photoUrl) { addToast('error', 'Could not retrieve URL'); return; }
-        const insertBuilder = supabase.from('daily_log_entries') as unknown as {
+        const insertBuilder = fromTable('daily_log_entries') as unknown as {
           insert: (row: Record<string, unknown>) => Promise<{ error: unknown }>;
         };
         await insertBuilder.insert({

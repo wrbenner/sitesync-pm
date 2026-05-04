@@ -8,6 +8,7 @@
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface ScaleAuditRow {
   pairId: string
@@ -253,10 +254,10 @@ export async function generateScaleAuditReport(
   opts: ScaleAuditReportOptions = {},
 ): Promise<{ blob: Blob; filename: string; data: ScaleAuditReportData }> {
   const [projectRes, pairsRes, drawingsRes, classificationsRes] = await Promise.all([
-    supabase.from('projects').select('name, location').eq('id', projectId).maybeSingle(),
-    supabase.from('drawing_pairs').select('id, drawing_a_id, drawing_b_id').eq('project_id', projectId),
-    supabase.from('drawings').select('id, sheet_number').eq('project_id', projectId),
-    supabase.from('drawing_classifications').select('drawing_id, scale_text, scale_ratio').eq('project_id', projectId),
+    fromTable('projects').select('name, location').eq('id' as never, projectId).maybeSingle(),
+    fromTable('drawing_pairs').select('id, drawing_a_id, drawing_b_id').eq('project_id' as never, projectId),
+    fromTable('drawings').select('id, sheet_number').eq('project_id' as never, projectId),
+    fromTable('drawing_classifications').select('drawing_id, scale_text, scale_ratio').eq('project_id' as never, projectId),
   ])
 
   const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'

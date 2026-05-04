@@ -34,6 +34,7 @@ import { useFieldCapture } from '../../hooks/useFieldCapture';
 import { useSignedUrl } from '../../hooks/useSignedUrl';
 
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { typography } from '../../styles/theme';
 import type { FieldCapture as FieldCaptureRow } from '../../types/database';
 
@@ -318,12 +319,12 @@ const CaptureOverlay: React.FC<CaptureOverlayProps> = ({ open, onClose, projectI
         if (category || tags.length > 0) {
           setAiCategory(category);
           setAiTags(tags);
-          const builder = supabase.from('field_captures') as unknown as {
+          const builder = fromTable('field_captures') as unknown as {
             update: (u: Record<string, unknown>) => {
               eq: (col: string, val: string) => Promise<{ error: unknown }>;
             };
           };
-          await builder.update({ ai_category: category, ai_tags: tags }).eq('id', newId);
+          await builder.update({ ai_category: category, ai_tags: tags }).eq('id' as never, newId);
         }
       }
 
@@ -912,8 +913,7 @@ const PhotosPage: React.FC = () => {
       const todayLog = logs.find((l) => (l.log_date ?? '').slice(0, 10) === today);
       let dailyLogId = todayLog?.id;
       if (!dailyLogId) {
-        const { data: created, error: createErr } = await (supabase
-          .from('daily_logs') as unknown as {
+        const { data: created, error: createErr } = await (fromTable('daily_logs') as unknown as {
           insert: (row: Record<string, unknown>) => {
             select: () => { single: () => Promise<{ data: { id?: string } | null; error: unknown }> };
           };
@@ -933,7 +933,7 @@ const PhotosPage: React.FC = () => {
         category: photo.ai_category ?? 'progress',
         timestamp: photo.created_at ?? new Date().toISOString(),
       };
-      const insertBuilder = supabase.from('daily_log_entries') as unknown as {
+      const insertBuilder = fromTable('daily_log_entries') as unknown as {
         insert: (row: Record<string, unknown>) => Promise<{ error: unknown }>;
       };
       const { error: insertErr } = await insertBuilder.insert({

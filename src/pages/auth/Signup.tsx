@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 import { signupSchema } from '../../schemas/auth'
 
@@ -127,8 +128,7 @@ export const Signup: React.FC = () => {
 
       // Insert organization row
       const slug = company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
+      const { data: orgData, error: orgError } = await fromTable('organizations')
         .insert({ name: company.trim(), slug })
         .select('id')
         .single()
@@ -137,7 +137,7 @@ export const Signup: React.FC = () => {
 
       // Add user as owner of the organization
       if (organizationId) {
-        await supabase.from('organization_members').insert({
+        await fromTable('organization_members').insert({
           organization_id: organizationId,
           user_id: userId,
           role: 'owner',
@@ -145,7 +145,7 @@ export const Signup: React.FC = () => {
       }
 
       // Create user profile
-      await supabase.from('profiles').insert({
+      await fromTable('profiles').insert({
         user_id: userId,
         full_name: `${firstName.trim()} ${lastName.trim()}`,
         first_name: firstName.trim(),
