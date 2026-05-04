@@ -114,12 +114,6 @@ export default function IntelligenceGraphPage() {
     void node
   }, [focusMode])
 
-  const _handleNodeSelect = useCallback((node: GraphNode) => {
-    if (focusMode) {
-      setFocusNodeId(node.id)
-    }
-  }, [focusMode])
-
   // ── Filter panel styles ──
 
   const filterChipStyle = (active: boolean, color?: string): React.CSSProperties => ({

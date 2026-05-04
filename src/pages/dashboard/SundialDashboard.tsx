@@ -75,8 +75,7 @@ function handleDecisionAnswer(
       return;
     default: {
       // Exhaustiveness: TS will flag if a new kind is added without a case
-      const _exhaustive: never = decision.kind;
-            void _exhaustive;
+      ((_exhaustive: never) => _exhaustive)(decision.kind);
       toast.message('Action noted.');
       return;
     }

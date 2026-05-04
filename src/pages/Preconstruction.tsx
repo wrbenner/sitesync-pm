@@ -202,14 +202,12 @@ export const Preconstruction: React.FC = () => {
 
   const createPackage = useCreatePreconBidPackage()
   const updatePackage = useUpdatePreconBidPackage()
-  const _deletePackage = useDeletePreconBidPackage()
   const createSubmission = useCreatePreconBidSubmission()
   const updateSubmission = useUpdatePreconBidSubmission()
   const createContract = useCreateContract()
   const createSubcontractor = useCreatePreconSubcontractor()
   const updateSubcontractor = useUpdatePreconSubcontractor()
   const createInvitation = useCreatePreconBidInvitation()
-  const _updateInvitation = useUpdatePreconBidInvitation()
   const createScopeItem = useCreatePreconScopeItem()
   const deleteScopeItem = useDeletePreconScopeItem()
   const upsertScopeResponse = useUpsertPreconBidScopeResponse()
@@ -1270,7 +1268,7 @@ function PackagesView({
 
 function LevelingView({
   packageList, selectedPackageId, selectedPackage, selectedSubmissions,
-  scopeItemList, scopeResponseList, _aiAnalysis,
+  scopeItemList, scopeResponseList,
   onSelectPackage, onScopeResponse, onAddScope, onDeleteScope, onAward,
 }: {
   packageList: PreconBidPackage[]

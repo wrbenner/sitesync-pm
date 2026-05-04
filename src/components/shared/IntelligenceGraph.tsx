@@ -329,14 +329,6 @@ export function IntelligenceGraph({
     }
   }, [])
 
-  const _worldToScreen = useCallback((wx: number, wy: number) => {
-    const t = transformRef.current
-    return {
-      x: wx * t.scale + t.offsetX,
-      y: wy * t.scale + t.offsetY,
-    }
-  }, [])
-
   // ── Find node/edge at position ──
 
   const findNodeAt = useCallback((wx: number, wy: number): SimNode | null => {

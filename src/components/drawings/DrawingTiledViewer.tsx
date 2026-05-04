@@ -375,8 +375,6 @@ interface AnnotationOverlayItem {
 
 const VIEWER_ID = 'osd-tiled-viewer';
 const NAVIGATOR_ID = 'osd-navigator';
-const _EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
-      void _EASING;
 
 
 const HEADER_HEIGHT = 48;

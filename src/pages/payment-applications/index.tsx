@@ -125,24 +125,6 @@ const PaymentApplicationsPage: React.FC = () => {
     setG702ModalOpen(true)
   }, [])
 
-  const _handleRetainageRelease = useCallback(async (itemId: string) => {
-    setRetainageItems((prev) => prev.map((item) =>
-      item.id === itemId
-        ? { ...item, stage: 'requested' as RetainageStage }
-        : item
-    ))
-    const { error } = await supabase
-      .from('retainage_ledger')
-      .update({ stage: 'requested', updated_at: new Date().toISOString() } as never)
-      .eq('id', itemId)
-    if (error) {
-      toast.error('Failed to save retainage release request')
-    } else {
-      toast.success('Retainage release requested')
-      queryClient.invalidateQueries({ queryKey: ['retainage_ledger', projectId] })
-    }
-  }, [projectId, queryClient])
-
   const handleRetainageStageAdvance = useCallback(async (itemId: string) => {
     let nextStage: RetainageStage | null = null
     let released = 0
@@ -162,8 +144,8 @@ const PaymentApplicationsPage: React.FC = () => {
       }
       const { error } = await supabase
         .from('retainage_ledger')
-        .update(updatePayload)
-        .eq('id', itemId)
+        .update(updatePayload as never)
+        .eq('id' as never, itemId)
       if (error) {
         toast.error('Failed to advance retainage stage')
       } else {
@@ -236,8 +218,8 @@ const PaymentApplicationsPage: React.FC = () => {
     [retainageEntries],
   )
 
-  const apps = (payApps ?? []) as Array<Record<string, unknown>>
-  const contractList = (contracts ?? []) as Array<Record<string, unknown>>
+  const apps = (payApps ?? []) as unknown as Array<Record<string, unknown>>
+  const contractList = (contracts ?? []) as unknown as Array<Record<string, unknown>>
   const waivers = (lienWaivers ?? []) as unknown as LienWaiverRow[]
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
@@ -283,7 +265,7 @@ const PaymentApplicationsPage: React.FC = () => {
   const g703Lines = useMemo((): G703Line[] => {
     if (!g702ModalApp) return []
     // Use retainage ledger data scoped to this pay app if available
-    const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
+    const retainageArr = (retainage ?? []) as unknown as Array<Record<string, unknown>>
     return retainageArr
       .filter((r) => (r.pay_application_id as string) === g702ModalAppId || !r.pay_application_id)
       .map((r, i) => {
@@ -310,7 +292,7 @@ const PaymentApplicationsPage: React.FC = () => {
 
   // Populate retainageItems from the retainage ledger when data arrives
   useEffect(() => {
-    const retainageArr = (retainage ?? []) as Array<Record<string, unknown>>
+    const retainageArr = (retainage ?? []) as unknown as Array<Record<string, unknown>>
     if (retainageArr.length > 0 && retainageItems.length === 0) {
       setRetainageItems(retainageArr.map((r) => ({
         id: (r.id as string) || crypto.randomUUID(),
@@ -608,7 +590,7 @@ const PaymentApplicationsPage: React.FC = () => {
       )}
 
       {activeTab === 'cash_flow' && !isLoading && (
-        <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as Array<Record<string, unknown>>} />
+        <CashFlowPanel payApps={apps} retainage={(retainage ?? []) as unknown as Array<Record<string, unknown>>} />
       )}
 
       {/* ── Retainage Ledger (retainage_entries) ────────────── */}

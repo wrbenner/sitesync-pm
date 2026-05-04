@@ -312,7 +312,6 @@ export const Vendors: React.FC = () => {
     // actual percentages are 0. When a certification_type field is added to
     // the vendors table, this computation will populate real numbers.
     const _list = vendors ?? []
-    const _totalValue = _list.reduce((sum, v) => sum + (v.bonding_capacity ?? 0), 0)
 
     return DIVERSITY_GOAL_TARGETS.map((g) => ({
       category: g.category,

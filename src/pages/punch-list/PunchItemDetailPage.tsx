@@ -34,9 +34,6 @@ import type { PunchItem } from './types'
 
 // ─── Helpers ──────────────────────────────────────────────
 
-const _getInitials = (_s: string) =>
-  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
-
 const relativeTime = (dateStr: string) => {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)

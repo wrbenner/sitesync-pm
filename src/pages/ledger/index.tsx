@@ -247,15 +247,6 @@ const LedgerPage: React.FC = () => {
     [contractData]
   );
 
-  const _payApps = useMemo(
-    () => (payAppData ?? []) as Array<{
-      id: string; app_number: number; period_to: string;
-      current_payment_due: number; status: string;
-    }>,
-    [payAppData]
-  );
-  void _payApps;
-
   // ── Derived values — prefer live data, fallback to metrics ──
   const budgetTotal = useMemo(() => {
     const fromItems = budgetItems.reduce((sum, b) => sum + (b.budgeted_amount ?? 0), 0);

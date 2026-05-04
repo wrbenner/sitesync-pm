@@ -462,7 +462,7 @@ const SheetCard: React.FC<{
   onSelect: (d: DrawingItem) => void;
   onView: (d: DrawingItem) => void;
   onToggleSelect: (id: string) => void;
-}> = ({ drawing, isSelected, isFocused, _onSelect, onView, onToggleSelect }) => {
+}> = ({ drawing, isSelected, isFocused, onView, onToggleSelect }) => {
   const [hovered, setHovered] = React.useState(false);
   const discColor = DISCIPLINE_COLORS[drawing.discipline] || DISCIPLINE_COLORS.unclassified;
   const statusKey = drawing.status || 'current';
