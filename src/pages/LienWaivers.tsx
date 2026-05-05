@@ -17,6 +17,21 @@ type WaiverStateValue = 'conditional_progress' | 'unconditional_progress' | 'con
 type WaiverFilterType = WaiverStateValue | 'all';
 type StatusFilter = 'all' | 'pending' | 'signed';
 
+type LienWaiverRow = {
+  id: string;
+  status?: string | null;
+  amount?: number | null;
+  through_date?: string | null;
+  payment_period?: string | null;
+  signed_at?: string | null;
+  received_at?: string | null;
+  waiver_type?: string | null;
+  waiver_state?: string | null;
+  type?: string | null;
+  contractor_name?: string | null;
+  subcontractor_id?: string | null;
+}
+
 const WAIVER_TYPE_LABELS: Record<WaiverStateValue, string> = {
   conditional_progress: 'Conditional Progress',
   unconditional_progress: 'Unconditional Progress',
@@ -52,8 +67,7 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  const waivers = (rawWaivers ?? []) as LienWaiverRow[];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
@@ -79,11 +93,11 @@ export function LienWaivers() {
   };
 
   // Use the actual DB column names. The API endpoint maps them so we need to handle both naming conventions.
-  const getWaiverState = (w: any): string => w.waiver_type ?? w.waiver_state ?? w.type ?? '';
-  const getContractorName = (w: any): string => w.contractor_name ?? w.subcontractor_id ?? '';
-  const getThroughDate = (w: any): string | null => w.through_date ?? w.payment_period ?? null;
-  const getSignedAt = (w: any): string | null => w.signed_at ?? w.received_at ?? null;
-  const getStatus = (w: any): string => w.status ?? 'pending';
+  const getWaiverState = (w: LienWaiverRow): string => w.waiver_type ?? w.waiver_state ?? w.type ?? '';
+  const getContractorName = (w: LienWaiverRow): string => w.contractor_name ?? w.subcontractor_id ?? '';
+  const getThroughDate = (w: LienWaiverRow): string | null => w.through_date ?? w.payment_period ?? null;
+  const getSignedAt = (w: LienWaiverRow): string | null => w.signed_at ?? w.received_at ?? null;
+  const getStatus = (w: LienWaiverRow): string => w.status ?? 'pending';
 
   const filtered = waivers.filter((w) => {
     const ws = getWaiverState(w);

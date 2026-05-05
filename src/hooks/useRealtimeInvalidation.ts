@@ -45,7 +45,7 @@ export function useRealtimeInvalidation(activeProjectId?: string) {
 
     // Use a unique suffix to avoid collisions with existing subscribed channels
     // (React strict mode or multiple components using this hook)
-    const uid = Math.random().toString(36).slice(2, 8)
+    const uid = crypto.randomUUID().slice(0, 8)
     const channelName = `project-${projectId}-changes-${uid}`
 
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -115,7 +115,7 @@ export function useRealtimeRowInvalidation(
   useEffect(() => {
     if (!rowId) return
 
-    const uid = Math.random().toString(36).slice(2, 8)
+    const uid = crypto.randomUUID().slice(0, 8)
     const channelName = `row-${table}-${rowId}-${uid}`
 
     let channel: ReturnType<typeof supabase.channel> | null = null

@@ -271,18 +271,15 @@ function generateDefaultCurve(totalBudget: number): number[] {
 }
 
 function generateActualFromSpent(spent: number, planned: number[]): number[] {
-  // Find where actual spend falls on the planned curve
+  // Track actual spend against planned curve — no synthetic variance
   const spentM = spent / 1_000_000;
   if (spentM <= 0 || planned.length === 0) return [];
 
   const result: number[] = [];
   for (let i = 0; i < planned.length; i++) {
     if (planned[i] <= spentM) {
-      // Apply slight variance from planned (realistic)
-      const variance = 0.95 + Math.random() * 0.1;
-      result.push(Math.round(planned[i] * variance * 100) / 100);
+      result.push(Math.round(planned[i] * 100) / 100);
     } else if (result.length > 0) {
-      // One more point at current spend level
       result.push(Math.round(spentM * 100) / 100);
       break;
     }
