@@ -68,53 +68,68 @@ export function WorkflowTimeline({
             <div
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: isLast ? '0 0 auto' : undefined }}
             >
+              {/* 56 px transparent hit area satisfies industrial touch-target floor */}
               <button
                 aria-label={stepLabel}
                 onClick={canTransition ? () => onTransition!(state) : undefined}
                 disabled={!canTransition}
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 56,
+                  height: 56,
+                  minWidth: 56,
+                  minHeight: 56,
                   borderRadius: '50%',
-                  backgroundColor: circleColor,
-                  border: isCurrent ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+                  backgroundColor: 'transparent',
+                  border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: canTransition ? 'pointer' : 'default',
                   padding: 0,
                   flexShrink: 0,
-                  position: 'relative',
                   outline: 'none',
-                  transition: 'transform 0.15s ease',
-                  minWidth: 32,
-                  minHeight: 32,
                 }}
               >
-                {isCompleted ? (
-                  <Check size={14} color="#fff" strokeWidth={3} />
-                ) : isCurrent ? (
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: '#fff',
-                      display: 'block',
-                      animation: 'pulse 2s ease-in-out infinite',
-                    }}
-                  />
-                ) : (
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: colors.textTertiary,
-                      display: 'block',
-                    }}
-                  />
-                )}
+                {/* 32 px visual circle */}
+                <span
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    backgroundColor: circleColor,
+                    border: isCurrent ? `2px solid ${colors.primaryOrange}` : '2px solid transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                >
+                  {isCompleted ? (
+                    <Check size={14} color="#fff" strokeWidth={3} />
+                  ) : isCurrent ? (
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: '#fff',
+                        display: 'block',
+                        animation: 'pulse 2s ease-in-out infinite',
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        backgroundColor: colors.textTertiary,
+                        display: 'block',
+                      }}
+                    />
+                  )}
+                </span>
               </button>
               <span
                 style={{
