@@ -36,6 +36,7 @@ engine-logs/*.log
 
 # Playwright test output
 playwright-report/
+polish-review/
 test-results/
 
 # Coverage reports
