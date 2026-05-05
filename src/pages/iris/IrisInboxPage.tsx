@@ -23,6 +23,8 @@ import {
 } from '../../hooks/queries/draftedActions'
 import { useIrisInsights } from '../../hooks/useIrisInsights'
 import { useProjectId } from '../../hooks/useProjectId'
+import { InboxSessionProvider } from '../../hooks/useInboxSession'
+import { CitationPanel } from '../../components/iris/CitationPanel'
 import { IrisInsightsCard } from '../../components/cockpit/IrisInsightsCard'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
@@ -138,6 +140,7 @@ const IrisInboxPage: React.FC = () => {
   const draftsCount = pendingDrafts.length
 
   return (
+    <InboxSessionProvider>
     <PageContainer
       title="Iris Inbox"
       subtitle="Drafted actions waiting for your approval"
@@ -306,7 +309,9 @@ const IrisInboxPage: React.FC = () => {
           )}
         </div>
       )}
+      <CitationPanel drafts={pendingDrafts} />
     </PageContainer>
+    </InboxSessionProvider>
   )
 }
 

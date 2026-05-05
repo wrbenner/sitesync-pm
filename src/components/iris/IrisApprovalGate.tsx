@@ -15,7 +15,40 @@
 import React, { useState } from 'react'
 import { Sparkles, Check, X, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { useRecordDraftView } from '../../hooks/useRecordDraftView'
+import { useOpenCitationPanel } from '../../hooks/useOpenCitationPanel'
+import { isCitationKind } from '../../lib/iris/citationRouting'
 import type { DraftedAction } from '../../types/draftedActions'
+
+type DecisionMethod = 'keyboard' | 'mouse' | 'voice' | 'unknown'
+
+/**
+ * Mouse vs keyboard detection. A `<button>` activated by Enter/Space
+ * fires a synthetic click whose MouseEvent.detail is 0 (no click count).
+ * Real mouse clicks set detail >= 1. This is the cheapest reliable
+ * signal — no separate keyboard handlers, no global focus tracking.
+ */
+function detectDecisionMethod(event: React.MouseEvent<HTMLButtonElement>): DecisionMethod {
+  return event.detail === 0 ? 'keyboard' : 'mouse'
+}
+
+/** Fire-and-forget telemetry. Errors are silently swallowed — never block the user. */
+function recordDecisionTelemetry(
+  draftId: string,
+  method: DecisionMethod,
+  requiredEdits: boolean,
+): void {
+  if (!isSupabaseConfigured) return
+  // Synthetic drafts (e.g. IrisSuggestionCard) use a non-uuid id like
+  // "synthetic:..." — skip telemetry rather than fail the RPC's uuid cast.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(draftId)) return
+  void supabase.rpc('record_draft_decision', {
+    p_draft_id: draftId,
+    p_decision_method: method,
+    p_required_edits: requiredEdits,
+  })
+}
 
 export interface IrisApprovalGateProps {
   draft: DraftedAction
@@ -47,11 +80,41 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
   busy = false,
 }) => {
   const [expanded, setExpanded] = useState(false)
+  // Lap 3 will wire an inline edit panel that flips this true. Today the
+  // value is always false; the column exists so the gate can record it
+  // honestly the moment edit-then-approve ships.
+  const [editsApplied] = useState(false)
   const tone = confidenceTone(draft.confidence)
   const actionLabel = ACTION_LABELS[draft.action_type]
 
+  // Records first_viewed_at when the card scrolls into view (≥ 50% visible).
+  const recordViewRef = useRecordDraftView(draft.id)
+  const openCitationPanel = useOpenCitationPanel()
+
+  const handleApprove = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const method = detectDecisionMethod(event)
+    try {
+      await onApprove(draft)
+    } catch (err) {
+      // Don't record telemetry for a decision that didn't land.
+      throw err
+    }
+    recordDecisionTelemetry(draft.id, method, editsApplied)
+  }
+
+  const handleReject = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    const method = detectDecisionMethod(event)
+    try {
+      await onReject(draft)
+    } catch (err) {
+      throw err
+    }
+    recordDecisionTelemetry(draft.id, method, editsApplied)
+  }
+
   return (
     <article
+      ref={recordViewRef}
       role="article"
       aria-label={`Iris drafted ${actionLabel}: ${draft.title}`}
       style={{
@@ -165,30 +228,83 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
                 gap: spacing['2'],
               }}
             >
-              {draft.citations.map((c, i) => (
-                <li
-                  key={i}
-                  style={{
-                    padding: spacing['2'],
-                    backgroundColor: colors.surfaceInset,
-                    borderRadius: borderRadius.base,
-                    fontSize: typography.fontSize.sm,
-                    color: colors.textSecondary,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: spacing['1'],
-                  }}
-                >
-                  <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>
-                    {c.label}
-                  </span>
-                  {c.snippet && (
-                    <span style={{ fontStyle: 'italic', color: colors.textTertiary }}>
-                      "{c.snippet}"
-                    </span>
-                  )}
-                </li>
-              ))}
+              {draft.citations.map((c, i) => {
+                const clickable = isCitationKind(c.kind) && !!c.ref
+                const handleClick = () => {
+                  if (!clickable || !isCitationKind(c.kind)) return
+                  openCitationPanel(draft.id, i, c.kind)
+                }
+                return (
+                  <li
+                    key={i}
+                    style={{
+                      padding: 0,
+                      listStyle: 'none',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleClick}
+                      disabled={!clickable}
+                      aria-label={
+                        clickable
+                          ? `Open citation: ${c.label}`
+                          : `Citation: ${c.label} (no source link)`
+                      }
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: spacing['2'],
+                        backgroundColor: colors.surfaceInset,
+                        borderRadius: borderRadius.base,
+                        border: `1px solid transparent`,
+                        fontSize: typography.fontSize.sm,
+                        color: colors.textSecondary,
+                        fontFamily: typography.fontFamily,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: spacing['1'],
+                        cursor: clickable ? 'pointer' : 'default',
+                        transition: 'border-color 0.15s ease, background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!clickable) return
+                        e.currentTarget.style.borderColor = colors.primaryOrange
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'transparent'
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontWeight: typography.fontWeight.semibold,
+                          color: colors.textPrimary,
+                        }}
+                      >
+                        {c.label}
+                        {clickable && (
+                          <span
+                            aria-hidden
+                            style={{
+                              marginLeft: 6,
+                              fontSize: typography.fontSize.caption,
+                              color: colors.primaryOrange,
+                              fontWeight: typography.fontWeight.semibold,
+                            }}
+                          >
+                            ↗
+                          </span>
+                        )}
+                      </span>
+                      {c.snippet && (
+                        <span style={{ fontStyle: 'italic', color: colors.textTertiary }}>
+                          "{c.snippet}"
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
@@ -204,7 +320,7 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
       }}>
         <button
           type="button"
-          onClick={() => onApprove(draft)}
+          onClick={handleApprove}
           disabled={busy}
           aria-label="Approve and execute this drafted action"
           style={{
@@ -226,7 +342,7 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => onReject(draft)}
+          onClick={handleReject}
           disabled={busy}
           aria-label="Reject this drafted action"
           style={{

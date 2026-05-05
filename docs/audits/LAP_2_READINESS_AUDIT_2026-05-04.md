@@ -194,7 +194,7 @@ Realistic sequencing if the goal is a clean Day 31 kickoff:
 | May 9 | Gap 5 part 2 (onboarding + standup + exit criteria) | Backup-GC outreach starts; this is the long-lead item |
 | May 10 | Gap 4 voice guide + Gap 7 remaining ADRs | CI workflow file lap-2-acceptance.yml |
 
-**That's 7 days of pre-flight, with Lap 2 kicking off ~May 11.** The 90-day calendar from `REVERSE_ENGINEERED_MILESTONES_2026-05-04.md` says scheduled-insights ships May 18 — so the 7 pre-flight days do not slip the critical path. They are inside the 21 days of slack the Reverse-Engineered Milestones doc identified.
+**That's 7 days of pre-flight, with Lap 2 kicking off ~May 11.** Lap 2 Day 60 then lands ~June 9. The Reverse-Engineered Milestones T-300 hard date is July 2 → 23 days of slack. Tight pilot calendar runs Day 50 = May 30 to Day 60 = June 9. Loose pilot calendar (per the Reverse-Engineered doc literally) runs Day 50 = June 12 to Day 60 = July 2 with zero slack. Default tight; widen only if the GC needs more lead time.
 
 Skipping the pre-flight saves a week of doc time and costs at minimum two weeks of execution time, because Days 31–35 turn into "scaffold + design + decide + retry" instead of "execute the spec." The Bugatti standard is non-negotiable here: **Lap 1 shipped clean because Lap 1 had specs. Lap 2 will ship clean if and only if Lap 2 has equivalent specs.**
 

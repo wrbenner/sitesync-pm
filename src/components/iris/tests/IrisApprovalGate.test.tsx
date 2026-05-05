@@ -9,8 +9,16 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { IrisApprovalGate } from '../IrisApprovalGate'
 import type { DraftedAction } from '../../../types/draftedActions'
+
+// useOpenCitationPanel + useRecordDraftView need a Router + Supabase context.
+// Wrap renders in a MemoryRouter so the gate's hooks resolve. The hooks
+// themselves are exercised in their own focused unit tests.
+function renderInRouter(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>)
+}
 
 function makeDraft(overrides: Partial<DraftedAction> = {}): DraftedAction {
   return {
@@ -45,7 +53,7 @@ function makeDraft(overrides: Partial<DraftedAction> = {}): DraftedAction {
 
 describe('IrisApprovalGate', () => {
   it('renders the action label, title, and confidence', () => {
-    render(
+    renderInRouter(
       <IrisApprovalGate draft={makeDraft()} onApprove={vi.fn()} onReject={vi.fn()} />,
     )
     expect(screen.getByText(/Iris drafted · RFI/)).toBeTruthy()
@@ -56,7 +64,7 @@ describe('IrisApprovalGate', () => {
   it('fires onApprove with the full draft on approve click', () => {
     const onApprove = vi.fn()
     const draft = makeDraft()
-    render(<IrisApprovalGate draft={draft} onApprove={onApprove} onReject={vi.fn()} />)
+    renderInRouter(<IrisApprovalGate draft={draft} onApprove={onApprove} onReject={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: /approve/i }))
     expect(onApprove).toHaveBeenCalledWith(draft)
@@ -65,14 +73,14 @@ describe('IrisApprovalGate', () => {
   it('fires onReject on reject click', () => {
     const onReject = vi.fn()
     const draft = makeDraft()
-    render(<IrisApprovalGate draft={draft} onApprove={vi.fn()} onReject={onReject} />)
+    renderInRouter(<IrisApprovalGate draft={draft} onApprove={vi.fn()} onReject={onReject} />)
 
     fireEvent.click(screen.getByRole('button', { name: /reject/i }))
     expect(onReject).toHaveBeenCalledWith(draft)
   })
 
   it('disables both buttons when busy is true', () => {
-    render(
+    renderInRouter(
       <IrisApprovalGate
         draft={makeDraft()}
         onApprove={vi.fn()}

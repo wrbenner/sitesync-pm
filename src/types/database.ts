@@ -1149,6 +1149,87 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_incidents: {
+        Row: {
+          context: Json
+          category: string
+          description: string
+          detected_at: string
+          detected_by: string
+          id: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          related_project_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+        }
+        Insert: {
+          context?: Json
+          category: string
+          description: string
+          detected_at?: string
+          detected_by?: string
+          id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          related_project_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+        }
+        Update: {
+          context?: Json
+          category?: string
+          description?: string
+          detected_at?: string
+          detected_by?: string
+          id?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          related_project_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+        }
+        Relationships: []
+      }
+      citation_interactions: {
+        Row: {
+          citation_index: number
+          citation_kind: string
+          drafted_action_id: string
+          id: string
+          inbox_session_id: string | null
+          interaction_type: string
+          occurred_at: string
+          user_id: string
+        }
+        Insert: {
+          citation_index: number
+          citation_kind: string
+          drafted_action_id: string
+          id?: string
+          inbox_session_id?: string | null
+          interaction_type: string
+          occurred_at?: string
+          user_id: string
+        }
+        Update: {
+          citation_index?: number
+          citation_kind?: string
+          drafted_action_id?: string
+          id?: string
+          inbox_session_id?: string | null
+          interaction_type?: string
+          occurred_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -5713,6 +5794,7 @@ export type Database = {
           created_at: string
           decided_at: string | null
           decided_by: string | null
+          decision_method: string | null
           decision_note: string | null
           draft_reason: string | null
           drafted_by: string
@@ -5720,15 +5802,21 @@ export type Database = {
           executed_resource_id: string | null
           executed_resource_type: string | null
           execution_result: Json | null
+          first_viewed_at: string | null
           id: string
+          inbox_session_id: string | null
           payload: Json
           project_id: string
           related_resource_id: string | null
           related_resource_type: string | null
+          required_edits: boolean
           status: string
           summary: string | null
+          time_to_decide_ms: number | null
+          time_to_first_view_ms: number | null
           title: string
           updated_at: string
+          viewed_count: number
         }
         Insert: {
           action_type: string
@@ -5737,6 +5825,7 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
+          decision_method?: string | null
           decision_note?: string | null
           draft_reason?: string | null
           drafted_by: string
@@ -5744,15 +5833,19 @@ export type Database = {
           executed_resource_id?: string | null
           executed_resource_type?: string | null
           execution_result?: Json | null
+          first_viewed_at?: string | null
           id?: string
+          inbox_session_id?: string | null
           payload?: Json
           project_id: string
           related_resource_id?: string | null
           related_resource_type?: string | null
+          required_edits?: boolean
           status?: string
           summary?: string | null
           title: string
           updated_at?: string
+          viewed_count?: number
         }
         Update: {
           action_type?: string
@@ -5761,6 +5854,7 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
+          decision_method?: string | null
           decision_note?: string | null
           draft_reason?: string | null
           drafted_by?: string
@@ -5768,15 +5862,19 @@ export type Database = {
           executed_resource_id?: string | null
           executed_resource_type?: string | null
           execution_result?: Json | null
+          first_viewed_at?: string | null
           id?: string
+          inbox_session_id?: string | null
           payload?: Json
           project_id?: string
           related_resource_id?: string | null
           related_resource_type?: string | null
+          required_edits?: boolean
           status?: string
           summary?: string | null
           title?: string
           updated_at?: string
+          viewed_count?: number
         }
         Relationships: [
           {
@@ -21561,6 +21659,52 @@ export type Database = {
           metadata: Json
           similarity: number
         }[]
+      }
+      record_citation_interaction: {
+        Args: {
+          p_citation_index: number
+          p_citation_kind: string
+          p_draft_id: string
+          p_interaction_type: string
+          p_session_id?: string | null
+        }
+        Returns: undefined
+      }
+      record_draft_decision: {
+        Args: {
+          p_decision_method: string
+          p_draft_id: string
+          p_required_edits: boolean
+        }
+        Returns: undefined
+      }
+      record_draft_view: {
+        Args: { p_draft_id: string; p_session_id: string | null }
+        Returns: undefined
+      }
+      resolve_citation: {
+        Args: {
+          p_kind: string
+          p_payload?: Json
+          p_ref: string
+        }
+        Returns: Json
+      }
+      lap_2_open_incident_count: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      withdraw_stale_draft: {
+        Args: { p_draft_id: string; p_reason: string }
+        Returns: undefined
+      }
+      promote_insight_to_draft: {
+        Args: { p_insight: Json; p_project_id: string }
+        Returns: string
+      }
+      enqueue_insights_jobs: {
+        Args: Record<string, never>
+        Returns: number
       }
       record_failed_login: {
         Args: {

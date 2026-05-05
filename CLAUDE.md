@@ -42,21 +42,34 @@ IMPORTANT: Before finishing, you MUST write your complete final response to `/tm
 
 ## Current Sprint Context (read this first)
 
-We are in Lap 1 of the SiteSync 90-Day plan. The active doc set lives under `docs/audits/`. Read these in order before doing any work:
+**Lap 1 closed 2026-05-04. We are in Lap 2 pre-flight (May 4–11). Lap 2 kickoff: ~May 11. Day 60 acceptance gate: ~June 9 (tight) or ~July 2 (loose, per Reverse-Engineered Milestones T-300).**
 
-### Read first — what just shipped
-1. **`docs/audits/INDEX.md`** — one-line map of every audit, receipt, and ADR. Skim this to know which docs exist.
-2. **`docs/audits/DAY_8_ZUSTAND_RECEIPT_2026-05-01.md`** — what landed Day 8 (14 dead stores deleted, notificationStore merged into uiStore, shims removed; 33→16 stores).
-3. **`docs/audits/DAY_9_ZUSTAND_RECEIPT_2026-05-01.md`** — what landed Day 9 (Group B migrations + AI store decision; 16→13 stores).
+The active doc set lives under `docs/audits/`. Read in order before doing any work:
 
-### Read next — what's queued
-4. **`docs/audits/MONEY_CENTS_AUDIT_2026-05-01.md`** — Day 13–17 spec. Inventory of 22 files needing migration, 4-phase plan, DB column list, test plan.
-5. **`docs/audits/STATE_MACHINE_INVENTORY_2026-05-01.md`** — Day 20–24 spec. (Forthcoming.)
-6. **`docs/audits/BUNDLE_ATTACK_SPEC_2026-05-01.md`** — Day 27–28 spec. (Forthcoming.)
+### Read first — orient yourself
+1. **`docs/audits/INDEX.md`** — one-line map of every audit, receipt, and ADR. Skim this first.
+2. **`docs/audits/LAP_2_READINESS_AUDIT_2026-05-04.md`** — the gap report that drove the Lap 2 spec set.
+3. **`docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md`** — what closed Lap 1 (3 gates green; 580 KB bundle; 976ms first paint).
+
+### Lap 2 pre-flight specs (READ THE RELEVANT ONE BEFORE TOUCHING ITS CODE)
+4. **`docs/audits/IRIS_TELEMETRY_SPEC_2026-05-04.md`** — DB telemetry columns + RPCs + materialized view. **Migration must land before Lap 2 Day 31.**
+5. **`docs/audits/LAP_2_ACCEPTANCE_GATE_SPEC_2026-05-04.md`** — Day 60 gate spec + CI workflow. Includes counting rules + "I don't want to go back" capture.
+6. **`docs/audits/SCHEDULED_INSIGHTS_SPEC_2026-05-04.md`** — Days 31–35. Hybrid cron (pg_cron + pgmq + edge fns). ADR-003 inline.
+7. **`docs/audits/IRIS_CITATIONS_SPEC_2026-05-04.md`** — Days 38–41. 8 citation kinds, side-panel UI, resolver, snippet verification. ADR-004 inline.
+8. **`docs/audits/IRIS_VOICE_GUIDE_SPEC_2026-05-04.md`** — Days 43–49. 150-draft hand-edit corpus → `style.ts` + voice linter. ADR-005 inline.
+9. **`docs/audits/SOFT_PILOT_PLAYBOOK_2026-05-04.md`** — Days 50–60. Nexus (Brad Cameron) + Carleton. Pilot agreement + onboarding + standup + exit criteria. ADR-006 inline.
+10. **`docs/audits/LAP_1_CARRYOVER_PLAN_2026-05-04.md`** — Decisions on the 3 Lap 1 deferred items (drawer-gate seed → Lap 2 Day 31; Dexie → Lap 3; state-machine wiring → DESCOPED).
 
 ### Architectural decisions (load when relevant)
-7. **`docs/audits/STORE_CONSOLIDATION_PLAN_2026-05-01.md`** — original 33→5 store plan. Note: the 5-store target was revised; see ADR-002.
-8. **`docs/audits/ADR_002_AI_STORES_STAY_SEPARATE_2026-05-01.md`** — why the 5 AI stores stay separate. Don't try to merge them.
+11. **`docs/audits/ADR_002_AI_STORES_STAY_SEPARATE_2026-05-01.md`** — why the 5 AI stores stay separate. Don't merge.
+12. **`docs/audits/ADR_003_HYBRID_CRON_2026-05-04.md`** — pg_cron heartbeat + pgmq queue + edge fn workers (scheduled-insights pipeline).
+13. **`docs/audits/ADR_004_CITATION_SIDE_PANEL_2026-05-04.md`** — citations open in a right-edge side panel (not modal, not full-page nav).
+14. **`docs/audits/ADR_005_VOICE_ENFORCEMENT_2026-05-04.md`** — voice enforcement is both prompt-time and post-process linter.
+15. **`docs/audits/ADR_006_PILOT_DATA_ISOLATION_2026-05-04.md`** — soft pilot uses row-level multi-tenancy + `is_soft_pilot` flag.
+16. **`docs/audits/ADR_007_AUTO_WITHDRAW_POLICY_2026-05-04.md`** — auto-withdraw stale drafts; never auto-update; never stay-stale.
+17. **`docs/audits/ADR_008_TELEMETRY_RETENTION_2026-05-04.md`** — 12-month default telemetry retention; 24-month for soft pilot, then anonymized.
+18. **`docs/audits/ADR_009_STATE_MACHINE_WIRING_DESCOPED_2026-05-04.md`** — `useMachine` wiring for the 15 machines is descoped.
+19. **`docs/audits/REVERSE_ENGINEERED_MILESTONES_2026-05-04.md`** — 12-month reverse-engineered calendar from T-0 (Apr 30, 2027 = Embedded Payments v0).
 
 ### Tracker
 9. **`SiteSync_90_Day_Tracker.xlsx`** — root of repo. Status column shows ✓ for completed days. Update when you finish a day.

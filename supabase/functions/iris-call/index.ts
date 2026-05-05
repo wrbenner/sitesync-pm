@@ -73,6 +73,7 @@ import {
   type AITaskType,
   type StreamEvent,
 } from '../shared/aiRouter.ts'
+import { lintVoice, type DraftedActionTypeLite } from '../shared/voiceLinter.ts'
 
 // ── Tunables ─────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,21 @@ interface CallRequest {
   search_context?: string
   json_schema?: object
   idempotency_key?: string
+  /**
+   * When the call is producing a drafted_action, the caller passes
+   * action_type so the voice linter can apply action-scoped rules
+   * (length caps, contractions). Optional; undefined skips action-scoped
+   * rules but still lints universal banned phrases.
+   *
+   * Per IRIS_VOICE_GUIDE_SPEC § Phase 4 / ADR-005.
+   */
+  action_type?: string
+  /**
+   * When set, the resulting drafted_action.id this call is contributing
+   * to. Used for the iris_voice_diffs.drafted_action_id linkage so
+   * Walker can pull "what did the linter change for this specific draft".
+   */
+  drafted_action_id?: string
 }
 
 // ── Hashing ──────────────────────────────────────────────────────────────────
@@ -459,6 +475,34 @@ Deno.serve(async (req) => {
           controller.close()
           return
         }
+
+        // ── Voice linter (post-process) ─────────────────────────────────────
+        // Per ADR-005: every iris-call output passes through the linter.
+        // Banned-phrase rules autofix; length rules report only. The diff
+        // between raw and linted lands in iris_voice_diffs as the
+        // training/telemetry corpus the spec requires.
+        const lintCtx = body.action_type
+          ? { actionType: body.action_type as DraftedActionTypeLite }
+          : {}
+        const lintResult = lintVoice(finalContent, lintCtx)
+        const lintedContent = lintResult.text
+        if (lintedContent !== finalContent) {
+          // Best-effort diff log; never block the response on a write failure.
+          try {
+            await supabase.from('iris_voice_diffs').insert({
+              drafted_action_id: body.drafted_action_id ?? null,
+              raw_text: finalContent,
+              linted_text: lintedContent,
+              failed_rule_ids: lintResult.failedRules.map((f) => f.ruleId),
+              action_type: body.action_type ?? null,
+            } as never)
+          } catch (err) {
+            console.warn('[iris-call] iris_voice_diffs insert failed (non-fatal):', err)
+          }
+        }
+        // From here on, the audit log + idempotency cache + done event
+        // all use the linted text — the user never sees the raw output.
+        finalContent = lintedContent
 
         // ── Audit + idempotency write ───────────────────────────────────────
         const outputHash = await sha256Hex(finalContent)
