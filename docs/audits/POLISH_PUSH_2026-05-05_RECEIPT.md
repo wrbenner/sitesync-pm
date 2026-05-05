@@ -25,6 +25,9 @@
 | Dead-click detector | 1 finding (`LienWaiverPanel.tsx:261`) | **0 findings, deterministic baseline** | baseline refreshed + timestamp removed |
 | `Audit - static detectors` CI | ❌ failure (stale baseline + nondet timestamp) | **✅ success** | both root causes fixed |
 | `Homeostasis — Quality Ratchet CI` | ❌ failure (mock + bundle ratchets) | **✅ success** | metric alignment + floor honesty |
+| `Lap 1 Acceptance Gate` CI | (in flight) | **✅ success** | held green on the polish stack |
+| `Test + Audit` CI | (in flight) | **✅ success** | held green on the polish stack |
+| `Eval Harness` CI | (in flight) | **✅ success** | held green on the polish stack |
 | PermissionGate audit | ✓ 0 violations | ✓ 0 violations | held |
 
 ## Floor ratchet (`.quality-floor.json` v3 → v5)
