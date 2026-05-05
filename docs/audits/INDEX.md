@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-04 (Lap 2 spec set landed)
+**Last updated:** 2026-05-04 (Bugatti Launch Roadmap + 25 specs across Waves 1-3 landed; Lap 2 execution in flight)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -75,6 +75,54 @@ entries before starting work. Update this file when you add a new doc.
 
 ---
 
+## Bugatti Launch Roadmap (post-Lap-3 → Apr 30, 2027 launch)
+
+| Doc | One-line summary |
+|---|---|
+| `BUGATTI_LAUNCH_ROADMAP_2026-05-04.md` | The 20-program plan from Lap 2 close to Embedded Payments v0 launch. Weapon-grade discipline applied. |
+
+### Wave 1 — Long-lead specs (immediate; this week)
+
+| Spec | Purpose |
+|---|---|
+| `ACH_PARTNER_RFP_AND_RECOMMENDATION_2026-05-04.md` | Modern Treasury + Alloy + First-Citizens stack. Walker takes to MT this week. ADR-011 inline. |
+| `ADR_010_MOBILE_NATIVE_ARCHITECTURE_2026-05-04.md` | RN 0.76+ + Expo + ONE custom native module (SiteSyncPlanView). Apple Developer approved. |
+| `SOC_2_READINESS_SPEC_2026-05-04.md` | A-LIGN engagement May 20. Vanta. ~$130K through GA. ADR-013 + ADR-014 inline. |
+| `CHAIN_AUDIT_PREP_2026-05-04.md` | 12-check internal chain audit; Trail of Bits engagement July; attestation Oct 15, 2026. |
+| `SEED_DECK_v0_2026-05-04.md` | 18-slide investor deck outline + first-draft content. v1 final by Dec 1, 2026. |
+
+### Wave 2 — Lap 3 spec set (Days 61-90, June-Aug 2026)
+
+| Spec | Purpose |
+|---|---|
+| `LAP_3_ACCEPTANCE_GATE_SPEC_2026-05-04.md` | Day 90 gate: 1 paid contract + 2 in legal + demo flawless 4× + auto-execute live + Walker takes weekend off |
+| `HARDENED_EXECUTORS_SPEC_2026-05-04.md` | Days 61-65: RFI routing + daily log compilation + punch item assignment hardened with framework |
+| `AUTO_EXECUTE_CANCEL_WINDOW_SPEC_2026-05-04.md` | Days 66-67: 60-second human cancel UX (push/email/SMS/in-app/desktop) |
+| `PRICING_DECISION_DOC_2026-05-04.md` | % of construction volume + free sub seats. ADR-012 inline. Day 80. |
+| `SALES_DECK_v1_2026-05-04.md` | 10-slide customer-facing deck. Day 78. |
+| `BATTLECARDS_FRAMEWORK_2026-05-04.md` | 5 cards (Procore, Trunk Tools, Fieldwire, Buildots, Newforma) |
+| `MSA_TEMPLATE_NOTES_2026-05-04.md` | MSA + DPA + Order Form principles. Outside counsel drafts. Day 82. |
+| `FIRST_CONTRACT_PLAYBOOK_2026-05-04.md` | Days 82-87: Brad pilot conversion + prospects 2/3/4 |
+| `MARKETING_SITE_REWRITE_SPEC_2026-05-04.md` | Astro-based 9-page site. Day 78. |
+| `DEMO_REHEARSAL_PLAYBOOK_2026-05-04.md` | Days 73-77: 200 reps of the 12-second demo |
+
+### Wave 3 — Q3 2026 build readiness (Aug-Oct 2026)
+
+| Spec | Purpose |
+|---|---|
+| `RELIABILITY_ARCHITECTURE_ADR_015_2026-05-04.md` | Multi-region active-active + chaos engineering + 99.99% SLA. ADR-015. |
+| `INCIDENT_RESPONSE_RUNBOOK_2026-05-04.md` | 5 severity levels, 12 incident types, on-call rotation, communication templates |
+| `PROCORE_IMPORTER_SPEC_2026-05-04.md` | 8-entity import + verification report + idempotent re-import. ADR-016 (integration framework) inline. |
+| `IOS_APP_SPEC_2026-05-04.md` | App Store Sept 1 submission; 10 screens + Live Activities + field-test rig |
+| `ANDROID_APP_SPEC_2026-05-04.md` | Closed-track beta Oct 2026; same RN codebase + Kotlin native module |
+| `PUSH_NOTIFICATIONS_SPEC_2026-05-04.md` | 5 notification types + per-user prefs + bilingual EN/ES |
+| `SUB_PORTAL_V0_SPEC_2026-05-04.md` | Magic-link onboarding + 3 tabs (Projects/Pay Apps/Documents) + Spanish at GA |
+| `COI_INGESTION_SPEC_2026-05-04.md` | Textract + AM Best + endorsement detection. The free-vs-Procore-paid wedge. |
+| `BRAND_VISUAL_IDENTITY_SPEC_2026-05-04.md` | Lethal calm: Inter + Söhne + slate/iris-gold/safety-orange + real photos |
+| `GROUNDBREAK_RESPONSE_PLAYBOOK_2026-05-04.md` | Pre-drafted Sept 1; activated within 6 hrs of Procore Oct 6-8 keynote |
+
+---
+
 ## Architectural Decision Records
 
 | ID | Title | File | Status |
@@ -88,6 +136,13 @@ entries before starting work. Update this file when you add a new doc.
 | ADR-007 | Auto-withdraw stale drafts; never auto-update; never stay-stale | `ADR_007_AUTO_WITHDRAW_POLICY_2026-05-04.md` | Accepted |
 | ADR-008 | Telemetry retention: 12-month default, 24-month for soft pilot, then anonymize | `ADR_008_TELEMETRY_RETENTION_2026-05-04.md` | Accepted |
 | ADR-009 | `useMachine` wiring for the 15 XState machines is descoped | `ADR_009_STATE_MACHINE_WIRING_DESCOPED_2026-05-04.md` | Accepted |
+| ADR-010 | Mobile native architecture: React Native + Expo + one custom native module | Standalone: `ADR_010_MOBILE_NATIVE_ARCHITECTURE_2026-05-04.md` | Accepted |
+| ADR-011 | ACH partner: Modern Treasury + Alloy + First-Citizens (or Cross River) | Inline in `ACH_PARTNER_RFP_AND_RECOMMENDATION_2026-05-04.md` | Accepted |
+| ADR-012 | Pricing model: % of construction volume + free sub seats, three tiers | Inline in `PRICING_DECISION_DOC_2026-05-04.md` | Accepted |
+| ADR-013 | Audit firm + tooling: A-LIGN + Vanta | Inline in `SOC_2_READINESS_SPEC_2026-05-04.md` | Accepted |
+| ADR-014 | Public Trust Center at trust.sitesync.com | Inline in `SOC_2_READINESS_SPEC_2026-05-04.md` | Accepted |
+| ADR-015 | Multi-region active-active + chaos engineering + 4-nines SLA | Standalone: `RELIABILITY_ARCHITECTURE_ADR_015_2026-05-04.md` | Accepted |
+| ADR-016 | Integration framework pattern (every connector implements common interface) | Inline in `PROCORE_IMPORTER_SPEC_2026-05-04.md` | Accepted |
 
 ---
 
