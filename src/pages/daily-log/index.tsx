@@ -457,10 +457,15 @@ const DailyLogPage: React.FC = () => {
     () => allLogs.find((l) => (l.log_date ?? '').slice(0, 10) === selectedDate),
     [allLogs, selectedDate],
   );
+  // todayLogId is hoisted so callbacks below can depend on the primitive
+  // — the compiler can't narrow `todayLogId` via optional chaining and
+  // would skip preserve-manual-memoization for every callback that uses
+  // it as a dep otherwise.
+  const todayLogId = todayLogId;
   const logStatus = deriveStatus(todayLog);
   const isLocked = logStatus === 'submitted' || logStatus === 'approved';
 
-  const { data: rawEntries = [] } = useDailyLogEntries(todayLog?.id);
+  const { data: rawEntries = [] } = useDailyLogEntries(todayLogId);
   const entries = (rawEntries ?? []) as unknown as DailyLogEntry[];
 
   // Pending Iris draft for the selected date.
@@ -542,20 +547,20 @@ const DailyLogPage: React.FC = () => {
   const updateLogField = useCallback(async (
     updates: Partial<Record<keyof ExtendedDailyLog, unknown>>,
   ) => {
-    if (!todayLog?.id || !projectId) return;
+    if (!todayLogId || !projectId) return;
     if (isLocked) {
       addToast('error', 'Submitted logs are locked. Return to draft to edit.');
       return;
     }
     try {
       await updateDailyLog.mutateAsync({
-        id: todayLog.id, projectId,
+        id: todayLogId, projectId,
         updates: updates as unknown as Record<string, unknown>,
       });
     } catch {
       // mutation toasts on its own
     }
-  }, [todayLog?.id, projectId, isLocked, updateDailyLog, addToast]);
+  }, [todayLogId, projectId, isLocked, updateDailyLog, addToast]);
 
   const updateEntry = useCallback(async (entryId: string, updates: Record<string, unknown>) => {
     if (isLocked) { addToast('error', 'Log is locked'); return; }
@@ -576,7 +581,7 @@ const DailyLogPage: React.FC = () => {
   }, [isLocked, addToast, refetch]);
 
   const ensureLogId = useCallback(async (): Promise<string | undefined> => {
-    if (todayLog?.id) return todayLog.id;
+    if (todayLogId) return todayLogId;
     if (!projectId) return undefined;
     try {
       const created = await createDailyLog.mutateAsync({
@@ -595,7 +600,7 @@ const DailyLogPage: React.FC = () => {
       addToast('error', 'Could not start daily log');
       return undefined;
     }
-  }, [todayLog?.id, projectId, selectedDate, createDailyLog, addToast]);
+  }, [todayLogId, projectId, selectedDate, createDailyLog, addToast]);
 
   const addCrewRow = useCallback(async () => {
     if (isLocked) return;
@@ -661,11 +666,11 @@ const DailyLogPage: React.FC = () => {
   }, [isLocked, ensureLogId, projectId, createEntry]);
 
   const removeEntry = useCallback(async (id: string) => {
-    if (!todayLog?.id || !projectId) return;
+    if (!todayLogId || !projectId) return;
     try {
-      await deleteEntry.mutateAsync({ id, dailyLogId: todayLog.id, projectId });
+      await deleteEntry.mutateAsync({ id, dailyLogId: todayLogId, projectId });
     } catch { /* mutation toasts */ }
-  }, [todayLog?.id, projectId, deleteEntry]);
+  }, [todayLogId, projectId, deleteEntry]);
 
   // ── Auto-draft from photos & field notes ─────────────────────────────────
   // Builds a DayContext from already-loaded entries, photos, weather, and
@@ -754,7 +759,7 @@ const DailyLogPage: React.FC = () => {
   }, [projectId, selectedDate, weather, crewRows, photos, fieldEntries, visitorRows, deliveryRows, ensureLogId, addToast]);
 
   const handleAutoDraftApprove = useCallback(async (draft: DraftedDailyLog) => {
-    if (!todayLog?.id) { setAutoDraft(null); return; }
+    if (!todayLogId) { setAutoDraft(null); return; }
     try {
       // Persist the assembled narrative as the AI summary. The super can
       // still edit any zone in place after Approve; this only seeds the
@@ -776,7 +781,7 @@ const DailyLogPage: React.FC = () => {
         lines.push('Visitors / inspections:');
         for (const b of draft.visitors) lines.push(`  • ${b.text}`);
       }
-      const result = await dailyLogService.updateSummary(todayLog.id, lines.join('\n'));
+      const result = await dailyLogService.updateSummary(todayLogId, lines.join('\n'));
       if (result.error) {
         toast.error(result.error);
         return;
@@ -787,7 +792,7 @@ const DailyLogPage: React.FC = () => {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save draft');
     }
-  }, [todayLog?.id, refetch, addToast]);
+  }, [todayLogId, refetch, addToast]);
 
   const handleAutoDraftReject = useCallback(() => {
     setAutoDraft(null);
@@ -795,43 +800,43 @@ const DailyLogPage: React.FC = () => {
 
   // ── Submit / approve / reject ─────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
-    if (!todayLog?.id || !projectId) {
+    if (!todayLogId || !projectId) {
       addToast('error', 'Nothing to submit yet');
       return;
     }
     try {
-      await submitDailyLog.mutateAsync({ id: todayLog.id, projectId });
+      await submitDailyLog.mutateAsync({ id: todayLogId, projectId });
       addToast('success', 'Daily log submitted');
     } catch { /* mutation toasts */ }
-  }, [todayLog?.id, projectId, submitDailyLog, addToast]);
+  }, [todayLogId, projectId, submitDailyLog, addToast]);
 
   const handleApprove = useCallback(async () => {
-    if (!todayLog?.id || !projectId || !authUserId) {
+    if (!todayLogId || !projectId || !authUserId) {
       addToast('error', 'You must be signed in to approve');
       return;
     }
     try {
-      await approveDailyLog.mutateAsync({ id: todayLog.id, projectId, userId: authUserId });
+      await approveDailyLog.mutateAsync({ id: todayLogId, projectId, userId: authUserId });
       addToast('success', 'Daily log approved');
     } catch { /* mutation toasts */ }
-  }, [todayLog?.id, projectId, authUserId, approveDailyLog, addToast]);
+  }, [todayLogId, projectId, authUserId, approveDailyLog, addToast]);
 
   const handleReject = useCallback(async () => {
-    if (!todayLog?.id || !projectId || !authUserId) return;
+    if (!todayLogId || !projectId || !authUserId) return;
     if (!rejectReason.trim()) { addToast('error', 'Please provide a reason'); return; }
     try {
       await rejectDailyLog.mutateAsync({
-        id: todayLog.id, projectId,
+        id: todayLogId, projectId,
         userId: authUserId, comments: rejectReason.trim(),
       });
       setShowRejectModal(false);
       setRejectReason('');
       addToast('success', 'Returned for revision');
     } catch { /* mutation toasts */ }
-  }, [todayLog?.id, projectId, authUserId, rejectReason, rejectDailyLog, addToast]);
+  }, [todayLogId, projectId, authUserId, rejectReason, rejectDailyLog, addToast]);
 
   const handleDelete = useCallback(async () => {
-    if (!todayLog?.id || !projectId) return;
+    if (!todayLogId || !projectId) return;
     if (logStatus !== 'draft' && logStatus !== 'rejected') {
       addToast('error', 'Only draft/returned logs can be deleted'); return;
     }
@@ -843,11 +848,11 @@ const DailyLogPage: React.FC = () => {
     });
     if (!ok) return;
     try {
-      await deleteDailyLog.mutateAsync({ id: todayLog.id, projectId });
+      await deleteDailyLog.mutateAsync({ id: todayLogId, projectId });
       addToast('success', 'Log deleted');
       await refetch();
     } catch { /* mutation toasts */ }
-  }, [todayLog?.id, projectId, logStatus, selectedDate, confirmDeleteLog, deleteDailyLog, addToast, refetch]);
+  }, [todayLogId, projectId, logStatus, selectedDate, confirmDeleteLog, deleteDailyLog, addToast, refetch]);
 
   // ── Photo capture (camera / gallery) ─────────────────────────────────────
   const handlePhotoCapture = useCallback(() => {
@@ -1100,7 +1105,7 @@ const DailyLogPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!todayLog?.id || submitDailyLog.isPending}
+                disabled={!todayLogId || submitDailyLog.isPending}
                 style={primaryHeaderBtnStyle}
                 data-testid="submit-log-button"
               >
@@ -1245,7 +1250,7 @@ const DailyLogPage: React.FC = () => {
                 const lon = project?.longitude ? Number(project.longitude) : undefined;
                 const w = await fetchWeather(lat, lon);
                 setWeather(w);
-                if (todayLog?.id) {
+                if (todayLogId) {
                   await updateLogField({
                     weather: formatWeatherSummary(w),
                     temperature_high: w.temp_high,
@@ -1643,7 +1648,7 @@ const DailyLogPage: React.FC = () => {
         </div>
 
         {/* Trailing controls — delete (draft only) */}
-        {(logStatus === 'draft' || logStatus === 'rejected') && todayLog?.id && (
+        {(logStatus === 'draft' || logStatus === 'rejected') && todayLogId && (
           <PermissionGate permission="daily_log.edit">
             <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
               <button
@@ -1694,7 +1699,7 @@ const DailyLogPage: React.FC = () => {
         open={showFieldCapture}
         onClose={() => setShowFieldCapture(false)}
         projectId={projectId!}
-        dailyLogId={todayLog?.id}
+        dailyLogId={todayLogId}
         onCaptured={() => refetch()}
       />
 

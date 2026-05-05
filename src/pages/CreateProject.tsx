@@ -331,6 +331,10 @@ const CreateProjectPage: React.FC = () => {
   const valid = form.name.trim().length > 0;
   const submitting = createProject.isPending;
 
+  // currentOrgId is hoisted so the dep is a primitive — the compiler
+  // can't narrow `currentOrg?.id` through optional chaining and would
+  // skip preserve-manual-memoization for this callback otherwise.
+  const currentOrgId = currentOrg?.id;
   const handleCreate = useCallback(async () => {
     if (!valid) {
       toast.error('Project name is required');
@@ -347,14 +351,14 @@ const CreateProjectPage: React.FC = () => {
         address: form.address.trim() || undefined,
         start_date: form.startDate || undefined,
         scheduled_end_date: form.endDate || undefined,
-        organization_id: currentOrg?.id,
+        organization_id: currentOrgId,
       });
       toast.success(`${form.name.trim()} created`);
       navigate(`/projects/${project.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create project');
     }
-  }, [valid, createProject, form, currentOrg?.id, navigate]);
+  }, [valid, createProject, form, currentOrgId, navigate]);
 
   const handleSaveDraft = useCallback(async () => {
     setSavingDraft(true);

@@ -910,11 +910,19 @@ const PhotosPage: React.FC = () => {
   }, [captures]);
 
   // ── Add-to-daily-log ────────────────────────────────────────────────────
+  // dailyLogs is hoisted so the callback dep is the array reference
+  // directly — the compiler can't narrow `dailyLogsData?.data` via
+  // optional chaining and would skip preserve-manual-memoization
+  // otherwise.
+  const dailyLogs = useMemo(
+    () => (dailyLogsData?.data ?? []) as Array<{ id: string; log_date: string }>,
+    [dailyLogsData?.data],
+  );
   const handleAddToDailyLog = useCallback(async (photo: FieldCaptureRow) => {
     if (!projectId) return;
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const logs = (dailyLogsData?.data ?? []) as Array<{ id: string; log_date: string }>;
+      const logs = dailyLogs;
       const todayLog = logs.find((l) => (l.log_date ?? '').slice(0, 10) === today);
       let dailyLogId = todayLog?.id;
       if (!dailyLogId) {
@@ -953,7 +961,7 @@ const PhotosPage: React.FC = () => {
     } catch (err) {
       addToast('error', err instanceof Error ? err.message : 'Could not add to daily log');
     }
-  }, [projectId, dailyLogsData?.data, addToast]);
+  }, [projectId, dailyLogs, addToast]);
 
   // ── Keyboard nav (←/→/↑/↓ move focus, Enter open, c capture) ────────────
   useEffect(() => {

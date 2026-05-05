@@ -144,6 +144,11 @@ export function useAgentBuilder() {
   }, [projectId])
 
   // Create the agent in the database
+  // userId is hoisted out of the callback so the dep is a primitive — the
+  // compiler can't narrow `user?.id` from the whole `user` object via
+  // optional chaining, which causes preserve-manual-memoization to skip
+  // compilation when [user?.id] is used directly as the dep.
+  const userId = user?.id
   const createAgent = useCallback(async (definition: AgentDefinition) => {
     if (!projectId) return
     setCreating(true)
@@ -165,7 +170,7 @@ export function useAgentBuilder() {
           notificationTargets: definition.notificationTargets,
           auto_execute_threshold: 999, // Never auto-execute (human approval required)
         },
-        created_by: user?.id,
+        created_by: userId,
       } as never)
 
       if (insertError) throw insertError
@@ -176,7 +181,7 @@ export function useAgentBuilder() {
     } finally {
       setCreating(false)
     }
-  }, [projectId, user?.id])
+  }, [projectId, userId])
 
   const reset = useCallback(() => {
     setParsedAgent(null)

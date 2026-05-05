@@ -74,6 +74,10 @@ const ConversationPage: React.FC = () => {
   const isMobile = useIsMobile();
   const isOnline = useIsOnline();
   const user = useAuthStore((s) => s.user);
+  // Hoisted so callback deps below stay primitive — the compiler can't
+  // narrow `user?.id` via optional chaining and would skip
+  // preserve-manual-memoization for those callbacks otherwise.
+  const userId = user?.id;
   const navigate = useNavigate();
 
   useEffect(() => { setPageContext('conversation'); }, [setPageContext]);
@@ -109,9 +113,9 @@ const ConversationPage: React.FC = () => {
   );
 
   const handleApproveDraft = useCallback(async (draft: DraftedAction) => {
-    if (!user?.id) { toast.error('Sign in required'); return; }
+    if (!userId) { toast.error('Sign in required'); return; }
     setBusyDraftId(draft.id);
-    const result = await approveAndExecute({ draftId: draft.id, decided_by: user.id });
+    const result = await approveAndExecute({ draftId: draft.id, decided_by: userId });
     setBusyDraftId(null);
     if (result.ok) {
       // Invalidate everything the executor may have written so the inbox refreshes.
@@ -128,12 +132,12 @@ const ConversationPage: React.FC = () => {
     } else {
       toast.error(result.error ?? 'Failed to execute');
     }
-  }, [user?.id, qc]);
+  }, [userId, qc]);
 
   const handleRejectDraft = useCallback(async (draft: DraftedAction) => {
-    if (!user?.id) { toast.error('Sign in required'); return; }
+    if (!userId) { toast.error('Sign in required'); return; }
     setBusyDraftId(draft.id);
-    const result = await rejectDraft({ draftId: draft.id, decided_by: user.id });
+    const result = await rejectDraft({ draftId: draft.id, decided_by: userId });
     setBusyDraftId(null);
     if (result.ok) {
       qc.invalidateQueries({ queryKey: ['drafted_actions'] });
@@ -141,7 +145,7 @@ const ConversationPage: React.FC = () => {
     } else {
       toast.error(result.error ?? 'Failed to reject');
     }
-  }, [user?.id, qc]);
+  }, [userId, qc]);
 
   const todayStr = new Date().toISOString().split('T')[0];
 

@@ -40,6 +40,9 @@ import type {
 const WalkthroughPage: React.FC = () => {
   const projectId = useProjectId()
   const user = useAuthStore((s) => s.user)
+  // Hoisted so the callback dep is a primitive — the compiler can't
+  // narrow `user?.id` via optional chaining.
+  const userId = user?.id
 
   const [session, setSession] = useState<WalkthroughSession | null>(null)
   const [captures, setCaptures] = useState<WalkthroughCapture[]>([])
@@ -49,12 +52,12 @@ const WalkthroughPage: React.FC = () => {
   // ── Start session lazily on first capture ───────────────────
   const ensureSession = useCallback(async (): Promise<WalkthroughSession | null> => {
     if (session) return session
-    if (!projectId || !user?.id) return null
+    if (!projectId || !userId) return null
     const { data, error } = await supabase
       .from('walkthrough_sessions')
       .insert({
         project_id: projectId,
-        started_by_user: user.id,
+        started_by_user: userId,
         attendees: [],
       } as never)
       .select('*')
@@ -66,7 +69,7 @@ const WalkthroughPage: React.FC = () => {
     const s = data as unknown as WalkthroughSession
     setSession(s)
     return s
-  }, [session, projectId, user?.id])
+  }, [session, projectId, userId])
 
   // ── Handle a capture from the button ────────────────────────
   const handleCapture = useCallback(
