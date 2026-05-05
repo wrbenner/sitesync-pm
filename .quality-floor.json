@@ -15,7 +15,7 @@
   "tsErrors": 0,
   "eslintErrors": 480,
   "anyCount": 0,
-  "mockCount": 1,
+  "mockCount": 0,
   "a11yViolations": 0,
   "eslintWarnings": 968,
   "_e2ePassRate_note": "Set to 0 \u2014 no Playwright spec files exist in e2e/ yet; previous 0.7 was fictional.",
