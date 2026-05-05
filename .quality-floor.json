@@ -1,9 +1,9 @@
 {
   "_comment": "Quality floors \u2014 these values can only improve, never regress. CI and immune-gate.sh enforce this. Updated automatically when metrics improve.",
-  "_version": 6,
-  "_updated": "2026-05-04T21:00:00Z",
+  "_version": 7,
+  "_updated": "2026-05-05T08:20:00Z",
   "_updatedBy": "auto/polish-20260504-1800",
-  "_floor_realignment_note": "v6: 280 additional ESLint no-unused-vars errors eliminated across 60+ files. All @typescript-eslint/no-unused-vars errors are now zero. Remaining 125 errors are structural react-hooks React Compiler errors requiring architectural changes. Floor was 405, now 125.",
+  "_floor_realignment_note": "v7: WorkflowTimeline connector line bug fixed + 8 new WorkflowTimeline tests. testCount 1416→1563 (CI-visible subset 1547→1555).",
   "bundleSizeKB": 3550,
   "coveragePercent": 43.2,
   "testCoverage": {
@@ -23,7 +23,7 @@
   "tsIgnoreComments": 0,
   "longestResponseMs": 340,
   "pageCount": 40,
-  "testCount": 1416,
+  "testCount": 1555,
   "migrationCount": 48,
   "_targets": {
     "_comment": "Where we want to be in 6 months \u2014 the organism moves floor values toward these targets",

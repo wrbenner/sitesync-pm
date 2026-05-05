@@ -187,7 +187,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                   minWidth: isMobile ? undefined : 8,
                   marginLeft: isMobile ? (touchSize / 2 - 1) + 'px' : undefined,
                   backgroundColor:
-                    completedStates.includes(state) || state === currentState
+                    completedStates.includes(state)
                       ? `${colors.primaryOrange}40`
                       : colors.surfaceInset,
                   borderRadius: 2,
