@@ -61,53 +61,61 @@ export default defineConfig([
       'react-refresh/only-export-components': 'warn',
       //
       // ── React Compiler signals (eslint-plugin-react-hooks v7+) ──────────
-      // These rules ship via reactHooks.configs.flat.recommended at error
-      // severity. They flag patterns that prevent the upcoming React Compiler
-      // optimizer from auto-memoizing components — they are NOT runtime bug
-      // detectors.
+      // babel-plugin-react-compiler is installed (vite.config.ts wires it
+      // in annotation mode). The 14 Recommended-preset rules promote to
+      // error as their backlog reaches zero — landed in slice B
+      // (feat/react-compiler-slice-b-2026-05-05).
       //
-      // The codebase has not adopted React Compiler (no
-      // babel-plugin-react-compiler installed). Until we do, these signals
-      // belong at warning severity (visible, ratcheted by quality floor) and
-      // not at error severity (which would treat fetch-on-mount and similar
-      // canonical patterns as build-blocking).
+      // Promoted to ERROR (Slice B, 2026-05-05):
+      //   capitalized-calls, static-components       (cleared 790d1fa)
+      //   purity                                      (cleared a458e61)
+      //   incompatible-library                        (cleared 7edca0e)
+      //   immutability                                (cleared 2a31ca3)
+      //   config, error-boundaries, gating, globals,
+      //   set-state-in-render, unsupported-syntax,
+      //   use-memo                                    (already at 0)
       //
-      // Re-enable as 'error' when babel-plugin-react-compiler is installed —
-      // adopt in one focused PR that migrates the flagged patterns:
-      //   set-state-in-effect → TanStack Query for fetch-on-mount,
-      //   refs → hoist ref reads into effects/callbacks,
-      //   preserve-manual-memoization → audit each useMemo/useCallback,
-      //   immutability → switch to immutable updates,
-      //   purity → move side-effects out of render.
+      // Still at WARN — backlog being migrated in Slice B follow-up phases:
+      //   set-state-in-effect (82) → TanStack Query for fetch-on-mount;
+      //     each migration is a focused per-page PR.
+      //   refs (24) → hoist ref reads/writes into effects/event handlers.
+      //   preserve-manual-memoization (15) → audit each existing
+      //     useMemo/useCallback against compiler-derived memoization.
       //
-      // rules-of-hooks and exhaustive-deps stay at default (error) — they
-      // catch real runtime bugs independent of the compiler.
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/set-state-in-render': 'warn',
-      'react-hooks/no-deriving-state-in-effects': 'warn',
-      'react-hooks/refs': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
-      'react-hooks/static-components': 'warn',
-      'react-hooks/incompatible-library': 'warn',
-      'react-hooks/capitalized-calls': 'warn',
-      'react-hooks/error-boundaries': 'warn',
-      'react-hooks/use-memo': 'warn',
+      // The remaining non-Recommended-preset rules below stay at WARN and
+      // are NOT slated for promotion — they cover compiler-internal
+      // limitations (todo, invariant, syntax, unsupported-syntax) and
+      // backlog signals (memo-dependencies, exhaustive-deps) that need
+      // their own architectural campaigns.
+      //
+      // rules-of-hooks and exhaustive-deps stay at default — they catch
+      // real runtime bugs independent of the compiler.
+      'react-hooks/set-state-in-effect': 'warn', // 82 backlog → TanStack Query migration
+      'react-hooks/set-state-in-render': 'error',
+      'react-hooks/no-deriving-state-in-effects': 'error',
+      'react-hooks/refs': 'warn', // 24 backlog → ref-read hoist
+      'react-hooks/purity': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/preserve-manual-memoization': 'warn', // 15 backlog → memoization audit
+      'react-hooks/static-components': 'error',
+      'react-hooks/incompatible-library': 'error',
+      'react-hooks/capitalized-calls': 'error',
+      'react-hooks/error-boundaries': 'error',
+      'react-hooks/use-memo': 'error',
       'react-hooks/void-use-memo': 'warn',
       'react-hooks/memoized-effect-dependencies': 'warn',
       'react-hooks/exhaustive-effect-dependencies': 'warn',
       'react-hooks/memo-dependencies': 'warn',
-      'react-hooks/gating': 'warn',
-      'react-hooks/globals': 'warn',
+      'react-hooks/gating': 'error',
+      'react-hooks/globals': 'error',
       'react-hooks/fbt': 'warn',
       'react-hooks/hooks': 'warn',
-      'react-hooks/invariant': 'warn',
+      'react-hooks/invariant': 'warn', // compiler-internal codegen errors, not app bugs
       'react-hooks/syntax': 'warn',
-      'react-hooks/unsupported-syntax': 'warn',
-      'react-hooks/config': 'warn',
+      'react-hooks/unsupported-syntax': 'error',
+      'react-hooks/config': 'error',
       'react-hooks/rule-suppression': 'warn',
-      'react-hooks/todo': 'warn',
+      'react-hooks/todo': 'warn', // compiler-internal "BuildHIR can't lower this expression yet"
       //
       // Hardcoded hex colors — the audit/ROADMAP.md Phase B3 codemod lifts
       // these into src/styles/theme tokens. Rule is currently disabled here
