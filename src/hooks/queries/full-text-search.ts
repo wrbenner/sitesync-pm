@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
-import type { Database } from '../../types/database'
+import { fromTable } from '../../lib/supabase'
 
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+type SearchRow = { id: string; project_id: string; created_at: string; [key: string]: unknown }
 
 // ── Full-Text Search ────────────────────────────────────────
 
@@ -33,18 +31,18 @@ export function useFullTextSearch(
       const results: SearchResult[] = []
 
       if (searchTypes.includes('document')) {
-        const { data } = await from('documents')
+        const { data } = await fromTable('documents')
           .select('id, name, description, project_id, created_at')
           .eq('project_id', projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name as string,
+              description: d.description as string | null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -54,18 +52,18 @@ export function useFullTextSearch(
       }
 
       if (searchTypes.includes('file')) {
-        const { data } = await from('files')
+        const { data } = await fromTable('files')
           .select('id, name, description, project_id, created_at')
           .eq('project_id', projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name as string,
+              description: d.description as string | null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -75,18 +73,18 @@ export function useFullTextSearch(
       }
 
       if (searchTypes.includes('drawing')) {
-        const { data } = await from('drawings')
+        const { data } = await fromTable('drawings')
           .select('id, title, discipline, project_id, created_at')
           .eq('project_id', projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
-              title: d.title,
-              description: d.discipline,
+              title: d.title as string,
+              description: d.discipline as string | null,
               project_id: d.project_id,
               relevance: 1,
               created_at: d.created_at,
@@ -96,17 +94,17 @@ export function useFullTextSearch(
       }
 
       if (searchTypes.includes('wiki')) {
-        const { data } = await from('wiki_pages')
+        const { data } = await fromTable('wiki_pages')
           .select('id, title, project_id, created_at')
           .eq('project_id', projectId!)
           .textSearch('search_vector', tsQuery)
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
-              title: d.title,
+              title: d.title as string,
               description: null,
               project_id: d.project_id,
               relevance: 1,

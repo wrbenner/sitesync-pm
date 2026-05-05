@@ -29,7 +29,6 @@ import {
   borderRadius,
   shadows,
   transitions,
-  zIndex,
 } from '../../styles/theme'
 
 // ── Types ─────────────────────────────────────────────────
@@ -106,7 +105,7 @@ const TOOL_ITEMS: Array<{ tool: ToolType; icon: React.ReactNode; label: string }
 // ── Helpers ───────────────────────────────────────────────
 
 function generateId(): string {
-  return `wb_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return crypto.randomUUID()
 }
 
 function snapToGrid(val: number, enabled: boolean): number {

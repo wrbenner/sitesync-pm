@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { colors, spacing, typography, borderRadius } from '../../styles/theme';
+import { colors, spacing } from '../../styles/theme';
 import { STATUS_COLORS } from './types';
 
 interface PunchListFiltersProps {
