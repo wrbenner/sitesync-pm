@@ -1,6 +1,6 @@
 import React from 'react'
 import { Check } from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../styles/theme'
+import { colors, spacing, typography } from '../styles/theme'
 
 export interface WorkflowTimelineProps {
   states: string[]
@@ -56,7 +56,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
           dotBg = colors.statusActive
           dotBorder = `2px solid ${colors.statusActive}`
           labelColor = colors.textSecondary
-          dotContent = <Check size={12} color="#fff" strokeWidth={3} />
+          dotContent = <Check size={12} color={colors.white} strokeWidth={3} />
         } else if (isCurrent) {
           dotBg = colors.indigo
           dotBorder = `2px solid ${colors.indigo}`
@@ -67,7 +67,7 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: '#fff',
+                backgroundColor: colors.white,
                 animation: 'sitesync-pulse 1.5s ease-in-out infinite',
               }}
             />
