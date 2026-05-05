@@ -233,7 +233,7 @@ export const ProjectGate: React.FC = () => {
                   useProjectContext.setState((s) => ({
                     projects: s.projects.some((p) => p.id === project.id)
                       ? s.projects
-                      : [...s.projects, project as any],
+                      : [...s.projects, project as any], // type-safe-ok — project from list query vs store type mismatch
                   }));
                   setActiveProject(project.id);
                 }}

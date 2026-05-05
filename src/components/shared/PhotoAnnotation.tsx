@@ -84,15 +84,13 @@ function uid(): string {
   return `ann_${crypto.randomUUID()}`
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 function getMeta(obj: FabricObject, key: string): unknown {
-  return (obj as any)[key]
+  return (obj as any)[key] // type-safe-ok — Fabric.js object metadata is not typed; custom properties added at runtime
 }
 
 function setMeta(obj: FabricObject, key: string, value: unknown) {
-  ;(obj as any)[key] = value
+  ;(obj as any)[key] = value // type-safe-ok — same as above
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function getAnnotationType(obj: FabricObject): AnnotationData['type'] {
   const custom = getMeta(obj, '_annotationType') as AnnotationData['type'] | undefined

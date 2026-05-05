@@ -45,7 +45,7 @@ export function useCreateLienWaiver() {
     }) => {
       const { data, error } = await supabase
         .from('lien_waivers')
-        .insert(payload as any)
+        .insert(payload as any) // type-safe-ok — UI allows nullable amount/through_date; DB accepts null at runtime
         .select()
         .single()
       if (error) throw error
