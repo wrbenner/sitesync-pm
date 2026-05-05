@@ -44,7 +44,6 @@ interface Finding {
 }
 
 interface DeadClicksFile {
-  generated_at: string
   scanned_files: number
   findings: Array<Finding | { reason: string; [k: string]: unknown }>
   by_reason: Record<string, number>
@@ -179,7 +178,6 @@ function main(): void {
   }
 
   const merged: DeadClicksFile = existing ?? {
-    generated_at: new Date().toISOString(),
     scanned_files: 0,
     findings: [],
     by_reason: {},
@@ -197,9 +195,11 @@ function main(): void {
   }
   merged.by_reason.destructured_unused =
     (merged.by_reason.destructured_unused ?? 0) + sorted.length
-  merged.generated_at = new Date().toISOString()
+  // Drop any legacy generated_at field so the file stays deterministic and
+  // CI's `git diff --quiet` gate doesn't fire on every run.
+  delete (merged as { generated_at?: string }).generated_at
 
-  fs.writeFileSync(outPath, JSON.stringify(merged, null, 2))
+  fs.writeFileSync(outPath, JSON.stringify(merged, null, 2) + '\n')
 
   console.log(`[check-handler-bindings] scanned ${scanned} file(s); ${sorted.length} unused-callback prop(s)`)
   console.log(`  → ${path.relative(REPO_ROOT, outPath)}`)

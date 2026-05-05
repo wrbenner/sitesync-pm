@@ -51,7 +51,6 @@ interface Finding {
 }
 
 interface Output {
-  generated_at: string
   scanned_files: number
   findings: Finding[]
   /** Counts by reason; useful for CI summaries. */
@@ -306,8 +305,12 @@ function main(): void {
   }
   for (const f of allFindings) byReason[f.reason] += 1
 
+  // Note: no `generated_at` timestamp — the file is committed as a baseline,
+  // and a non-deterministic timestamp would make every CI run report a diff
+  // against the committed baseline (the diff gate would always fail). The git
+  // commit timestamp is the right source of truth for "when was this
+  // baseline last updated."
   const output: Output = {
-    generated_at: new Date().toISOString(),
     scanned_files: scanned,
     findings: allFindings.sort((a, b) =>
       a.file.localeCompare(b.file) || a.line - b.line,
@@ -318,7 +321,7 @@ function main(): void {
   const outDir = path.join(REPO_ROOT, 'audit')
   fs.mkdirSync(outDir, { recursive: true })
   const outPath = path.join(outDir, 'dead-clicks.json')
-  fs.writeFileSync(outPath, JSON.stringify(output, null, 2))
+  fs.writeFileSync(outPath, JSON.stringify(output, null, 2) + '\n')
 
   console.log(`[detect-dead-clicks] scanned ${scanned} file(s); ${allFindings.length} finding(s)`)
   for (const r of Object.keys(byReason) as Reason[]) {
