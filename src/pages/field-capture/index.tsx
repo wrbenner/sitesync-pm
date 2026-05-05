@@ -1171,7 +1171,9 @@ const PhotoGroups: React.FC<{
   onSelect: (p: FieldCaptureRow) => void;
   thumbRefs: React.MutableRefObject<(HTMLButtonElement | null)[]>;
 }> = ({ groups, orderedFlat, focusedIndex, onFocus, onSelect, thumbRefs }) => {
-  let runningIdx = 0;
+  // Each thumb's flat index is derived purely from its position in
+  // orderedFlat; previously a `let runningIdx = 0` mutated through render
+  // (forbidden by react-hooks/immutability).
   return (
     <>
       <style>{`
@@ -1201,16 +1203,15 @@ const PhotoGroups: React.FC<{
           )}
           <div className="ph-grid" style={{ display: 'grid', gap: 4 }}>
             {items.map((c) => {
-              const idx = orderedFlat.indexOf(c);
-              if (idx >= 0) runningIdx = idx;
+              const flatIdx = orderedFlat.indexOf(c);
               return (
                 <Thumb
                   key={c.id}
                   photo={c}
-                  focused={runningIdx === focusedIndex}
+                  focused={flatIdx === focusedIndex}
                   onClick={() => onSelect(c)}
-                  onFocus={() => onFocus(runningIdx)}
-                  refCb={(el) => { thumbRefs.current[runningIdx] = el; }}
+                  onFocus={() => onFocus(flatIdx)}
+                  refCb={(el) => { thumbRefs.current[flatIdx] = el; }}
                 />
               );
             })}

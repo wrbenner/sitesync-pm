@@ -151,33 +151,33 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
               No matches.
             </p>
           )}
-          {(() => {
-            let cursor = -1
-            return TYPE_ORDER.map(t => {
-              const rows = grouped[t] ?? []
-              if (rows.length === 0) return null
-              return (
-                <div key={t} style={{ marginBottom: spacing['3'] }}>
-                  <Eyebrow style={{ padding: `${spacing['2']} ${spacing['3']} ${spacing['1']}`, display: 'block' }}>
-                    {TYPE_HEADER[t]} <span style={{ color: colors.ink4, fontWeight: 400 }}>· {rows.length}</span>
-                  </Eyebrow>
-                  {rows.map(r => {
-                    cursor += 1
-                    return (
-                      <SearchResultRow
-                        key={`${r.entity_type}-${r.entity_id}`}
-                        row={r}
-                        highlights={parsed.highlights}
-                        projectName={projectNames.get(r.project_id) ?? '(project)'}
-                        active={cursor === activeIdx}
-                        onClick={() => onSelect(r)}
-                      />
-                    )
-                  })}
-                </div>
-              )
-            })
-          })()}
+          {TYPE_ORDER.map(t => {
+            const rows = grouped[t] ?? []
+            if (rows.length === 0) return null
+            // Compute the global cursor index for each row purely from the
+            // visible-rows-prefix length, avoiding a mutable counter
+            // (forbidden by react-hooks/immutability).
+            const baseIdx = TYPE_ORDER
+              .slice(0, TYPE_ORDER.indexOf(t))
+              .reduce((sum, prev) => sum + (grouped[prev]?.length ?? 0), 0)
+            return (
+              <div key={t} style={{ marginBottom: spacing['3'] }}>
+                <Eyebrow style={{ padding: `${spacing['2']} ${spacing['3']} ${spacing['1']}`, display: 'block' }}>
+                  {TYPE_HEADER[t]} <span style={{ color: colors.ink4, fontWeight: 400 }}>· {rows.length}</span>
+                </Eyebrow>
+                {rows.map((r, i) => (
+                  <SearchResultRow
+                    key={`${r.entity_type}-${r.entity_id}`}
+                    row={r}
+                    highlights={parsed.highlights}
+                    projectName={projectNames.get(r.project_id) ?? '(project)'}
+                    active={baseIdx + i === activeIdx}
+                    onClick={() => onSelect(r)}
+                  />
+                ))}
+              </div>
+            )
+          })}
         </div>
 
         {/* Footer */}

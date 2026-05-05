@@ -1454,18 +1454,19 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
   // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
   // Using a ref-held timer avoids recreating the timeout identity every render.
-  // We intentionally don't include `handleSave` in deps to avoid re-debouncing on every render
-  // (React-Query's mutate identity is stable enough for this purpose).
+  // handleSave is forward-declared further down; we route through a ref so the
+  // effect doesn't capture an un-initialized binding (immutability rule). The
+  // ref is populated by an effect immediately below handleSave's definition.
+  const handleSaveRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (localAnnotations.length === 0) return;
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
-      handleSave();
+      handleSaveRef.current();
     }, 1500);
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localAnnotations]);
 
   // ── Interactive drawing event handlers ─────────────────────────────────
@@ -1762,6 +1763,13 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       setIsSaving(false);
     }
   }, [projectId, drawing.id, localAnnotations, createMarkup, isOnline, enqueueOffline, broadcastMarkup]);
+
+  // Keep the auto-save effect's ref pointed at the latest handleSave so the
+  // debounced fire calls the current closure (not the one captured at
+  // handleSaveRef's first creation).
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
 
   // Combine DB annotations + local unsaved annotations
   const allAnnotations = useMemo(

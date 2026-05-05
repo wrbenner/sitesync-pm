@@ -374,6 +374,13 @@ export function IntelligenceGraph({
 
   // ── Physics step ──
 
+  // Physics step mutates the ref-stored simulation objects in place. These
+  // are intentionally not React state — the force-directed layout updates
+  // ~60×/s and immutable copies would dominate the frame budget. The
+  // compiler can't see that the mutations target ref-internal scratch
+  // fields (fx/fy/x/y); flag the whole callback as out-of-scope for the
+  // immutability rule.
+  /* eslint-disable react-hooks/immutability -- physics scratch state lives in refs by design (60Hz force-directed layout) */
   const physicsStep = useCallback(() => {
     const nodes = simNodesRef.current
     const edges = simEdgesRef.current
@@ -438,6 +445,7 @@ export function IntelligenceGraph({
 
     return totalVelocity / Math.max(1, nodes.length)
   }, [])
+  /* eslint-enable react-hooks/immutability */
 
   // ── Draw ──
 

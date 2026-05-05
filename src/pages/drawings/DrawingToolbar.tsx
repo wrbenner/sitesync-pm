@@ -336,12 +336,19 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   searchInputRef,
 }) => {
   const localSearchRef = useRef<HTMLInputElement>(null);
-  // Forward the input element to the parent if a ref was passed in.
+  // Forward the input element to the parent if a ref was passed in. The
+  // ref-forwarding pattern requires writing through the parent ref's
+  // .current — RefObject .current is officially mutable per React's
+  // public types (see React.MutableRefObject) and this is the documented
+  // ref-callback handoff pattern.
+  // eslint-disable-next-line react-hooks/immutability -- ref.current is the documented mutation surface for forwarded refs (React.MutableRefObject)
   const setSearchRef = useCallback((node: HTMLInputElement | null) => {
+    // eslint-disable-next-line react-hooks/immutability -- ref.current is the documented mutation surface for forwarded refs
     (localSearchRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
     if (typeof searchInputRef === 'function') {
       searchInputRef(node);
     } else if (searchInputRef && typeof searchInputRef === 'object') {
+      // eslint-disable-next-line react-hooks/immutability -- ref.current is the documented mutation surface for forwarded refs
       (searchInputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
     }
   }, [searchInputRef]);

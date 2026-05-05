@@ -845,6 +845,12 @@ export default function SiteMap() {
   }, [projectCoords]);
 
   const clickCtxRef = useRef({ mode, placingType });
+  // Latest-ref pattern: keep ref.current synced with mode/placingType so
+  // imperative click handlers (registered once with the Leaflet map) can
+  // read the current values without being re-bound on every state change.
+  // The ref-write is the documented escape hatch — mutating .current is
+  // the supported API.
+  // eslint-disable-next-line react-hooks/immutability -- latest-ref pattern; ref.current is the public mutation surface
   useEffect(() => { clickCtxRef.current = { mode, placingType }; }, [mode, placingType]);
 
   // ── Switch base layer ──
