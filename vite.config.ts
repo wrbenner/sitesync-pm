@@ -9,7 +9,20 @@ export default defineConfig(({ mode }) => {
   return {
     base: process.env.VERCEL ? '/' : '/sitesync-pm/',
     plugins: [
-      react(),
+      react({
+        // React Compiler runs as a Babel plugin during Vite's React transform.
+        // We're on React 19 so no react-compiler-runtime helper is needed.
+        // Currently in annotation mode: only files/components opting in via
+        // a `'use memo'` directive get auto-memoized. This unblocks the
+        // eslint-plugin-react-hooks v7 compiler-signal rules so they can
+        // be promoted to error severity once the codebase migrates the
+        // flagged patterns. See eslint.config.js for the rule list.
+        babel: {
+          plugins: [
+            ['babel-plugin-react-compiler', { compilationMode: 'annotation' }],
+          ],
+        },
+      }),
       // Bundle visualizer: run ANALYZE=true npm run build to generate stats.html
       isAnalyze &&
         import('rollup-plugin-visualizer').then((m) =>
