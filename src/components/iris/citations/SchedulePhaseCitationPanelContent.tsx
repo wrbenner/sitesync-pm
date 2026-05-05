@@ -9,7 +9,7 @@
  * Shows "today" / "in N days" / "N days ago" relative position so the
  * PM has urgency context without leaving the inbox.
  */
-import React from 'react'
+import React, { useState } from 'react'
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
 
 interface Props {
@@ -28,7 +28,7 @@ export const SchedulePhaseCitationPanelContent: React.FC<Props> = ({ data }) => 
   const endMs = ph.end ? Date.parse(ph.end) : NaN
   const validRange = !isNaN(startMs) && !isNaN(endMs) && endMs >= startMs
   const durationDays = validRange ? Math.max(1, Math.round((endMs - startMs) / 86_400_000)) : null
-  const today = Date.now()
+  const [today] = useState(() => Date.now())
   const positionLabel = validRange ? phasePositionLabel(today, startMs, endMs) : null
   const positionTone = validRange ? phasePositionTone(today, startMs, endMs) : 'neutral'
 

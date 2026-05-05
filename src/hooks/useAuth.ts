@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
@@ -341,14 +341,24 @@ export function useAuth(): AuthState {
   }, [])
 
   const isAuthenticated = !!session
-  const isSessionValid = !!session && !!session.expires_at && session.expires_at > Math.floor(Date.now() / 1000)
+  // Session validity is recomputed by the expiry effect below — Date.now()
+  // during render is impure (forbidden by react-hooks/purity) and any value
+  // derived from it would silently go stale across renders anyway.
+  const [isSessionValid, setIsSessionValid] = useState(false)
 
   // Enforce session expiry: if we have a user but the session has expired, sign out.
   useEffect(() => {
-    if (user && session && !isSessionValid) {
+    const expiresAt = session?.expires_at
+    if (!session || !expiresAt) {
+      setIsSessionValid(false)
+      return
+    }
+    const valid = expiresAt > Math.floor(Date.now() / 1000)
+    setIsSessionValid(valid)
+    if (user && !valid) {
       supabase.auth.signOut()
     }
-  }, [user, session, isSessionValid])
+  }, [user, session])
 
   return { user, session, loading, error, signIn, signUp, signOut, resetPassword, isAuthenticated, isSessionValid }
 }

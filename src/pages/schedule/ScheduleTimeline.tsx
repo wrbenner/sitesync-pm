@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { colors, typography, spacing } from '../../styles/theme';
 import type { SchedulePhase } from '../../stores/scheduleStore';
@@ -71,6 +71,9 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({
     [range],
   );
   const focusedRef = useRef<HTMLDivElement | null>(null);
+  // nowMs is captured at mount; the "today" bar position only matters at
+  // day-crossing granularity — Date.now() during render is impure.
+  const [nowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (focusedRef.current) {
@@ -94,7 +97,7 @@ export const ScheduleTimeline: React.FC<ScheduleTimelineProps> = ({
     );
   }
 
-  const todayPct = pctOfRange(Date.now(), range.start, range.spanMs);
+  const todayPct = pctOfRange(nowMs, range.start, range.spanMs);
 
   return (
     <div

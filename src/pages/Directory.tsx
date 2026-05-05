@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Users, Phone, Mail, Building, Plus, ShieldCheck, FileText, Upload, MessageSquare, Clock, AlertTriangle } from 'lucide-react';
 import { PageContainer, Card, MetricBox, Avatar, Tag, Btn } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
@@ -691,6 +691,14 @@ export const Directory: React.FC = () => {
   const STALE_DAYS = 30;
   const staleThresholdMs = STALE_DAYS * 24 * 60 * 60 * 1000;
 
+  // "now" is captured at mount and refreshed every 60s — pulling Date.now()
+  // during render is impure (forbidden by react-hooks/purity).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
   const filteredContacts = useMemo(() => {
     let result = CONTACTS;
     if (searchQuery.trim()) {
@@ -708,15 +716,14 @@ export const Directory: React.FC = () => {
       result = result.filter(c => c.trade === tradeFilter);
     }
     if (commFilter === 'stale' && lastContactMap) {
-      const now = Date.now();
       result = result.filter(c => {
         const last = lastContactMap.get(c.id);
         if (!last) return true; // never contacted
-        return now - new Date(last).getTime() > staleThresholdMs;
+        return nowMs - new Date(last).getTime() > staleThresholdMs;
       });
     }
     return result;
-  }, [searchQuery, CONTACTS, tradeFilter, commFilter, lastContactMap, staleThresholdMs]);
+  }, [searchQuery, CONTACTS, tradeFilter, commFilter, lastContactMap, staleThresholdMs, nowMs]);
 
   const filteredCompanies = useMemo(() => {
     let result = companies;
@@ -739,7 +746,7 @@ export const Directory: React.FC = () => {
   const formatLastContact = (contactId: string): string => {
     const iso = lastContactMap?.get(contactId);
     if (!iso) return '—';
-    const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+    const days = Math.floor((nowMs - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
     if (days === 0) return 'Today';
     if (days === 1) return '1d ago';
     if (days < 30) return `${days}d ago`;
