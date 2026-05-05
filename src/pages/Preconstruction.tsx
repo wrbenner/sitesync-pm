@@ -502,7 +502,7 @@ export const Preconstruction: React.FC = () => {
         bid_submission_id: bidSubmissionId,
         response,
       })
-    } catch (err) {
+    } catch {
       toast.error('Failed to update scope response')
     }
   }

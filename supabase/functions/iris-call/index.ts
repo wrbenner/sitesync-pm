@@ -71,7 +71,6 @@ import {
   routeAIStream,
   type AIRequest,
   type AITaskType,
-  type StreamEvent,
 } from '../shared/aiRouter.ts'
 import { lintVoice, type DraftedActionTypeLite } from '../shared/voiceLinter.ts'
 

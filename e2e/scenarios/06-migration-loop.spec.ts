@@ -21,7 +21,7 @@
  * the Avery Oaks seed; that's covered in `08-realtime-loop` indirectly.
  */
 
-import { test, expect } from '@playwright/test'
+import { test } from '@playwright/test'
 import { setupScenario } from '../helpers/scenarioRunner'
 
 test.skip('migration — Procore + Sage 300 → portfolio + cross-project search', async ({ page }) => {

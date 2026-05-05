@@ -14,8 +14,7 @@ import {
 } from '../../types/money'
 
 
-const LIEN_WAIVER_TYPES = ['conditional_progress', 'unconditional_progress', 'conditional_final', 'unconditional_final'] as const
-type LienWaiverType = typeof LIEN_WAIVER_TYPES[number]
+type LienWaiverType = 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final'
 
 /**
  * AIA G702 formula for a single SOV line item.

@@ -9,7 +9,6 @@ import {
   handleCors,
   getCorsHeaders,
   parseJsonBody,
-  HttpError,
   errorResponse,
   verifyProjectMembership,
   requireUuid,

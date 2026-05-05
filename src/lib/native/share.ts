@@ -61,7 +61,7 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
         return { ok: true, channel: 'native' }
       }
     }
-  } catch (err) {
+  } catch {
     // fall through to web/copy
   }
 

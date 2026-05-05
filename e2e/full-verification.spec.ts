@@ -155,7 +155,7 @@ const results: PageResult[] = []
 
 const isIgnoredUrl = (u: string) => ignoredUrlPatterns.some((p) => p.test(u))
 const isIgnoredConsole = (t: string) => ignoredConsoleSubstrings.some((s) => t.includes(s))
-const isDestructive = (label: string) => {
+const _isDestructive = (label: string) => {
   const lc = label.toLowerCase()
   return DESTRUCTIVE_VERBS.some((v) => lc.includes(v))
 }
@@ -360,7 +360,9 @@ test('full verification — every route, every safe button', async ({ page }) =>
     try {
       const body = await page.locator('body').innerText({ timeout: 2000 })
       bodyTextLen = body.length
-    } catch {}
+    } catch {
+      // best-effort body text capture; falls through with bodyTextLen=0
+    }
 
     const brokenImages = await checkBrokenImages(page).catch(() => [])
     const layoutIssues = await checkLayoutIssues(page).catch(() => [])

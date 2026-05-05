@@ -39,7 +39,7 @@ test.setTimeout(5 * 60 * 1000)
 test.describe.configure({ retries: 0 })
 
 /** Wrap a step body so a thrown assertion still records FAIL + screenshot. */
-async function safeStep<T>(
+async function safeStep<_T>(
   page: Page,
   step: string,
   title: string,

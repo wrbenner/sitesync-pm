@@ -726,7 +726,7 @@ interface WeatherCacheRow {
   forecast_data: unknown
 }
 
-interface ForecastDay {
+interface _ForecastDay {
   date?: string
   conditions?: string
   condition?: string

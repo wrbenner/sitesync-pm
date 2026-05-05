@@ -13,7 +13,6 @@
  */
 
 import { readdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 
 const PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? ''
 const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN ?? ''

@@ -45,7 +45,7 @@ interface MintBody {
   ttl_hours?: number
 }
 
-interface ValidateQuery {
+interface _ValidateQuery {
   token: string
   entity_type: string
   entity_id: string

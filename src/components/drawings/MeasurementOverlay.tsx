@@ -229,6 +229,7 @@ const ArchDimensionLine: React.FC<{
           {label}
         </text>
         {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
+        {/* eslint-disable-next-line no-constant-binary-expression */}
         {false && sublabel && (
           <text
             x={0} y={14}

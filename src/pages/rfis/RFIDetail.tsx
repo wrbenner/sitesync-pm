@@ -591,7 +591,7 @@ export function RFIDetail() {
 
   useEffect(() => {
     if (lastViewedKey) {
-      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch {}
+      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch { /* localStorage may be unavailable (Safari private mode) */ }
     }
   }, [lastViewedKey])
 

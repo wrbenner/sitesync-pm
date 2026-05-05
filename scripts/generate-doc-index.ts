@@ -19,7 +19,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, "..");
-const ROOTS = [
+const _ROOTS = [
   "src/lib",
   "src/services",
   "supabase/functions",

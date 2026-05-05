@@ -60,6 +60,55 @@ export default defineConfig([
       // React Refresh: dev convenience, not a production bug.
       'react-refresh/only-export-components': 'warn',
       //
+      // ── React Compiler signals (eslint-plugin-react-hooks v7+) ──────────
+      // These rules ship via reactHooks.configs.flat.recommended at error
+      // severity. They flag patterns that prevent the upcoming React Compiler
+      // optimizer from auto-memoizing components — they are NOT runtime bug
+      // detectors.
+      //
+      // The codebase has not adopted React Compiler (no
+      // babel-plugin-react-compiler installed). Until we do, these signals
+      // belong at warning severity (visible, ratcheted by quality floor) and
+      // not at error severity (which would treat fetch-on-mount and similar
+      // canonical patterns as build-blocking).
+      //
+      // Re-enable as 'error' when babel-plugin-react-compiler is installed —
+      // adopt in one focused PR that migrates the flagged patterns:
+      //   set-state-in-effect → TanStack Query for fetch-on-mount,
+      //   refs → hoist ref reads into effects/callbacks,
+      //   preserve-manual-memoization → audit each useMemo/useCallback,
+      //   immutability → switch to immutable updates,
+      //   purity → move side-effects out of render.
+      //
+      // rules-of-hooks and exhaustive-deps stay at default (error) — they
+      // catch real runtime bugs independent of the compiler.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/set-state-in-render': 'warn',
+      'react-hooks/no-deriving-state-in-effects': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/incompatible-library': 'warn',
+      'react-hooks/capitalized-calls': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/use-memo': 'warn',
+      'react-hooks/void-use-memo': 'warn',
+      'react-hooks/memoized-effect-dependencies': 'warn',
+      'react-hooks/exhaustive-effect-dependencies': 'warn',
+      'react-hooks/memo-dependencies': 'warn',
+      'react-hooks/gating': 'warn',
+      'react-hooks/globals': 'warn',
+      'react-hooks/fbt': 'warn',
+      'react-hooks/hooks': 'warn',
+      'react-hooks/invariant': 'warn',
+      'react-hooks/syntax': 'warn',
+      'react-hooks/unsupported-syntax': 'warn',
+      'react-hooks/config': 'warn',
+      'react-hooks/rule-suppression': 'warn',
+      'react-hooks/todo': 'warn',
+      //
       // Hardcoded hex colors — the audit/ROADMAP.md Phase B3 codemod lifts
       // these into src/styles/theme tokens. Rule is currently disabled here
       // because enabling it as warn added ~450 new warnings and tripped the

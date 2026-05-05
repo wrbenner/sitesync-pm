@@ -106,7 +106,7 @@ export const MetricCard: React.FC<MetricCardProps> = React.memo(({ icon, label, 
       {(() => {
         if (trend === undefined || !trendLabel || trend === 0) return null;
         const numericValue = typeof value === 'string'
-          ? parseFloat(value.replace(/[^0-9.\-]/g, ''))
+          ? parseFloat(value.replace(/[^0-9.-]/g, ''))
           : Number(value);
         if (!Number.isFinite(numericValue) || numericValue === 0) return null;
         return (

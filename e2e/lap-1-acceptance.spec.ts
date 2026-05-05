@@ -35,7 +35,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
 
-const FOUR_G_PROFILE = {
+const _FOUR_G_PROFILE = {
   offline: false,
   downloadThroughput: (4 * 1024 * 1024) / 8,  // 4 Mbps
   uploadThroughput: (3 * 1024 * 1024) / 8,    // 3 Mbps

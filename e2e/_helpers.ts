@@ -43,7 +43,7 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
       // Catch every "Loading…" or "Loading <X>…" subtitle plus the
       // OfflineBanner sync message. Pages like /budget show
       // "Loading financial data…" instead of plain "Loading...".
-      const stillLoading = /Loading[\s\.…]|Loading[a-zA-Z]/.test(text)
+      const stillLoading = /Loading[\s.…]|Loading[a-zA-Z]/.test(text)
       const stillCaching = /Caching project data|Loading project/.test(text)
       // Detect skeleton placeholders by aria-busy or known animation
       // class names ("safety-pulse" + the generic pulse used by

@@ -135,7 +135,7 @@ Scan for ANY of these patterns:
 Return JSON:
 {
   "scale_text": "string | null — EXACT scale text as printed. For 'NOT TO SCALE' / 'SCALE: NONE' / 'NTS' / 'NONE' return 'NTS'. Otherwise return the literal text. Null only if no scale of any kind is printed.",
-  "scale_ratio": "number | null — the numeric ratio. Architectural: 1/16\"=1'-0\" → 192, 3/32\"=1'-0\" → 128, 1/8\"=1'-0\" → 96, 3/16\"=1'-0\" → 64, 1/4\"=1'-0\" → 48, 3/8\"=1'-0\" → 32, 1/2\"=1'-0\" → 24, 3/4\"=1'-0\" → 16, 1\"=1'-0\" → 12, 1-1/2\"=1'-0\" → 8, 3\"=1'-0\" → 4. Engineering: 1\"=10' → 120, 1\"=20' → 240, 1\"=30' → 360, 1\"=40' → 480, 1\"=50' → 600, 1\"=60' → 720, 1\"=100' → 1200. For NTS → null."
+  "scale_ratio": "number | null — the numeric ratio. Architectural: 1/16"=1'-0" → 192, 3/32"=1'-0" → 128, 1/8"=1'-0" → 96, 3/16"=1'-0" → 64, 1/4"=1'-0" → 48, 3/8"=1'-0" → 32, 1/2"=1'-0" → 24, 3/4"=1'-0" → 16, 1"=1'-0" → 12, 1-1/2"=1'-0" → 8, 3"=1'-0" → 4. Engineering: 1"=10' → 120, 1"=20' → 240, 1"=30' → 360, 1"=40' → 480, 1"=50' → 600, 1"=60' → 720, 1"=100' → 1200. For NTS → null."
 }
 
 DO NOT guess from drawing type. If no scale text appears, null.
@@ -153,7 +153,7 @@ function stripCodeFence(text: string): string {
 }
 function extractJson(text: string): Record<string, unknown> {
   const stripped = stripCodeFence(text);
-  try { return JSON.parse(stripped); } catch {}
+  try { return JSON.parse(stripped); } catch { /* fall through to regex extraction */ }
   const m = stripped.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('Gemini did not return JSON');
   return JSON.parse(m[0]);
@@ -279,4 +279,4 @@ console.log(`  Temp images: ${tmpDir}  (delete with: rm -rf "${tmpDir}")`);
 console.log('═'.repeat(72));
 
 // Best-effort cleanup — comment this out if you want to inspect the rendered PNGs.
-try { rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+try { rmSync(tmpDir, { recursive: true, force: true }); } catch { /* best-effort cleanup */ }

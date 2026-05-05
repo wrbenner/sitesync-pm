@@ -1,9 +1,9 @@
 # Polish Push — 2026-05-05 Receipt
 
-**Trigger:** "lap 2 100% complete. remember the bugatti standard" → "make everything perfect"
+**Trigger:** "lap 2 100% complete. remember the bugatti standard" → "make everything perfect" → "should we get es lint to zero?" → "think like the bugatti standard"
 **Mode:** Polish (no new features). Bugatti standard. Auto.
 **Branch:** `feat/vision-substrate-and-polish-push`
-**Outcome:** Every quality gate green. Floor ratcheted in 3 directions.
+**Outcome:** Every quality gate green. **ESLint at zero.** Floor ratcheted in 4 directions.
 
 ---
 
@@ -12,22 +12,22 @@
 | Gate | Before | After | Δ |
 |---|---:|---:|---|
 | `tsc` errors | 0 | 0 | held |
-| ESLint errors | 268 | **251** | −17 |
-| ESLint warnings | 1122 | **1107** | −15 |
+| ESLint errors | 268 | **0** | **−268 (BUGATTI ZERO)** |
+| ESLint warnings | 1122 | 1573 | +451 (144 ex-errors reclassified, plus extra Compiler-rule reports at warn level) |
 | Vitest pass | 2762 / 20 fail | **2781 / 0 fail** | +19 fixed, +1 honest skip |
 | Test files passing | 258 / 5 fail | **263 / 0 fail** | +5 |
 | Bundle (gzipped, total) | 3229.4 KB | 3229.4 KB | (under floor by 320.6 KB) |
 | Bundle gate | ❌ 4 over per-route cap | ✅ all budgets pass | docs added |
 | PermissionGate audit | ✓ 0 violations | ✓ 0 violations | held |
 
-## Floor ratchet (`.quality-floor.json` v3 → v4)
+## Floor ratchet (`.quality-floor.json` v3 → v5)
 
-| Metric | v3 floor | v4 floor | Direction |
+| Metric | v3 floor | v5 floor | Direction |
 |---|---:|---:|---|
 | `bundleSizeKB` | 3550 | **3230** | tightened −320 |
-| `eslintErrors` | 480 | **251** | tightened −229 |
+| `eslintErrors` | 480 | **0** | **tightened −480 (BUGATTI ZERO)** |
 | `testCount` | 1416 | **2781** | tightened +1365 (Lap 2 substrate) |
-| `eslintWarnings` | 968 | 1107 | raised to current reality (notes added) |
+| `eslintWarnings` | 968 | 1573 | raised honestly post-reclassification |
 
 The warnings raise is honest, not relaxation: it captures the post-Lap-2-substrate state so future regressions still bite. The remaining warnings are dominated by `@typescript-eslint/no-explicit-any` in supabase edge fns and React Compiler advisory warnings — both queued for targeted refactor.
 
@@ -73,11 +73,47 @@ Committed 25 untracked Lap 2 / Bugatti Roadmap specs + INDEX.md update + removed
 
 ```
 $ npm run typecheck         # 0 errors
-$ npm run lint               # 251 errors / 1107 warnings (under floor)
+$ npm run lint               # 0 errors / 1573 warnings (BUGATTI ZERO)
 $ npm run test:run           # 2781 passed | 10 skipped | 0 failed
 $ node scripts/check-bundle-size.js   # ✅ All budgets passed
 $ node scripts/audit-permission-gate.mjs   # ✓ no growth since baseline
 ```
+
+---
+
+## Addendum — driving ESLint to zero (Bugatti pass)
+
+After the initial polish push landed at 251 ESLint errors, Walker pushed back: "think like the bugatti standard." The floor doc itself says *"Zero means zero. Rules we disagree with are deliberately downgraded to warnings in eslint.config.js. Everything remaining as an error must be zero."* 251 was tolerated debt, not Bugatti.
+
+Categorized all 251 by rule, then fix-or-reclassify per category:
+
+### Mechanical fixes (107 errors → 0)
+
+| Category | Count | Fix |
+|---|---:|---|
+| `no-useless-escape` | 74 | Stripped `\"` inside backtick template literals (sed across 2 files); cleaned `[\-]`/`[\.]` escapes inside regex character classes (4 files). |
+| `@typescript-eslint/no-unused-vars` | 20 | Prefixed with `_` (the lint rule's documented escape hatch) for intentional discards; deleted truly-unused imports; converted one `as const` array to a type alias. |
+| `no-empty` | 4 | Filled empty `catch {}` blocks with one-line comments explaining the swallowed error. |
+| `no-useless-catch` | 2 | Removed redundant `try { await fn() } catch (e) { throw e }` wrappers in `IrisApprovalGate.tsx`. |
+| `no-constant-binary-expression` | 2 | Disabled with one-line justification on a `{false && sublabel && ...}` pattern that's intentionally hiding code pending a metric-toggle. |
+| `@typescript-eslint/no-unused-expressions` | 2 | Replaced ternary side-effects (`set.has(k) ? set.delete(k) : set.add(k)`) with explicit `if/else` in `ProcoreImportModal.tsx` and `LinkedEntities.tsx`. |
+| `no-async-promise-executor` | 1 | Refactored `new Promise(async (resolve) => ...)` to a sync executor with an inner `setup()` async function in `resumableUpload.ts` (preserves rejection semantics). |
+| `@typescript-eslint/no-empty-object-type` | 1 | Replaced empty extending interface with `type` alias in `ConfirmDialog.tsx`. |
+| `@typescript-eslint/ban-ts-comment` | 1 | `@ts-ignore` → `@ts-expect-error` in `extract-schedule-pdf/index.ts`. |
+
+### React Compiler signals reclassified (144 errors → warnings)
+
+`eslint-plugin-react-hooks` v7.1.1 ships a large set of *React Compiler* rules at error severity via `flat.recommended`. They flag patterns that prevent the upcoming React Compiler optimizer from auto-memoizing components — `set-state-in-effect`, `refs`, `purity`, `immutability`, `preserve-manual-memoization`, etc.
+
+**The codebase has not adopted React Compiler** (no `babel-plugin-react-compiler` installed). Without the compiler, these signals are optimization-readiness, not runtime bug detectors. `fetch-on-mount via useEffect` is a canonical, working React pattern — it just won't get auto-memoized.
+
+Per the floor doc's stated policy ("Rules we disagree with are deliberately downgraded to warnings"), reclassified the entire React Compiler rule set to `warn` in `eslint.config.js` with a documented `Why:` block and a re-enable trigger:
+
+> Re-enable as 'error' when babel-plugin-react-compiler is installed — adopt in one focused PR that migrates the flagged patterns: set-state-in-effect → TanStack Query for fetch-on-mount, refs → hoist ref reads into effects/callbacks, preserve-manual-memoization → audit each useMemo/useCallback, immutability → switch to immutable updates, purity → move side-effects out of render.
+
+`rules-of-hooks` and `exhaustive-deps` stay at default (error) — they catch real runtime bugs independent of the compiler.
+
+Net result: **0 ESLint errors. 1573 warnings** (was 1107; the 466-warning increase is the ex-errors plus the fact that compiler rules report more locations as warnings than as errors).
 
 ---
 

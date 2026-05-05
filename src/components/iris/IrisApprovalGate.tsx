@@ -93,22 +93,15 @@ export const IrisApprovalGate: React.FC<IrisApprovalGateProps> = ({
 
   const handleApprove = async (event: React.MouseEvent<HTMLButtonElement>) => {
     const method = detectDecisionMethod(event)
-    try {
-      await onApprove(draft)
-    } catch (err) {
-      // Don't record telemetry for a decision that didn't land.
-      throw err
-    }
+    // If onApprove throws, we let it propagate and skip the telemetry record —
+    // we only count decisions that actually landed.
+    await onApprove(draft)
     recordDecisionTelemetry(draft.id, method, editsApplied)
   }
 
   const handleReject = async (event: React.MouseEvent<HTMLButtonElement>) => {
     const method = detectDecisionMethod(event)
-    try {
-      await onReject(draft)
-    } catch (err) {
-      throw err
-    }
+    await onReject(draft)
     recordDecisionTelemetry(draft.id, method, editsApplied)
   }
 

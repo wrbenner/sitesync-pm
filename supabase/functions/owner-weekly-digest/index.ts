@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
     await verifyProjectMembership(supabase, user.id, project_id)
 
     const snapshotAt = new Date()
-    const periodEnd = snapshotAt
     const periodStart = new Date(snapshotAt.getTime() - 7 * 86400_000)
 
     const { data: runRow } = await supabase

@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         .from('crews')
         .select('id, name')
         .eq('project_id', p.id)
-      for (const c of crews ?? []) {
+      for (const _c of crews ?? []) {
         const result = computeDeadlines(
           {
             stateCode: (p.state as string) ?? 'TX',

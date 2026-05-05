@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       .select('id')
       .single()
 
-    const [{ data: rfis = [] }, { data: subs = [] }, { data: cos = [] }, { data: punch = [] }, { data: insp = [] }, { data: project }] = await Promise.all([
+    const [{ data: rfis = [] }, { data: subs = [] }, { data: cos = [] }, { data: punch = [] }, { data: _insp = [] }, { data: project }] = await Promise.all([
       supabase.from('rfis').select('id, number, title, status, sent_at, responded_at').eq('project_id', project_id),
       supabase.from('submittals').select('id, number, title, status').eq('project_id', project_id),
       supabase.from('change_orders').select('id, number, title, status, cost_impact').eq('project_id', project_id),

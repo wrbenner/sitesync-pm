@@ -294,7 +294,7 @@ for (const vp of VIEWPORTS) {
         }
 
         track('grid-view')
-        const gridIcon = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '' }).nth(1)
+        const _gridIcon = page.locator('button').filter({ has: page.locator('svg') }).filter({ hasText: '' }).nth(1)
         // try grid icon by aria-label
         const gridBtn = page.getByRole('button', { name: /grid view/i }).first()
         if (await gridBtn.count() > 0) {

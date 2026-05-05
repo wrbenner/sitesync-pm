@@ -379,7 +379,7 @@ export default ConfirmDialog
  *   )
  */
 
-interface ConfirmRequest extends Omit<ConfirmDialogProps, 'open' | 'onConfirm' | 'onCancel'> {}
+type ConfirmRequest = Omit<ConfirmDialogProps, 'open' | 'onConfirm' | 'onCancel'>
 
 export function useConfirm(): {
   confirm: (req: ConfirmRequest) => Promise<boolean>
