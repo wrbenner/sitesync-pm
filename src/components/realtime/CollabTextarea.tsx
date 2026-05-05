@@ -37,7 +37,7 @@ export const CollabTextarea: React.FC<Props> = ({
   const [liveblocksReady, setLiveblocksReady] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     let cancelled = false;
     if (!liveblocksRoomId) {
       setLiveblocksReady(false);

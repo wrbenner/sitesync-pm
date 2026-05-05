@@ -102,6 +102,6 @@ test.afterAll(async () => {
     fired: results.filter((r) => r.fired).length,
     results,
   }, null, 2))
-  // eslint-disable-next-line no-console
+   
   console.log(`[keyboard-shortcuts] ${results.filter((r) => r.fired).length}/${results.length} fired`)
 })

@@ -137,6 +137,6 @@ test.afterAll(async () => {
     routes: all.sort((a, b) => a.tier - b.tier || a.slug.localeCompare(b.slug)),
   }
   fs.writeFileSync(JSON_PATH, JSON.stringify(payload, null, 2))
-  // eslint-disable-next-line no-console
+   
   console.log(`[click-through] wrote ${path.relative(REPO_ROOT, JSON_PATH)}`)
 })

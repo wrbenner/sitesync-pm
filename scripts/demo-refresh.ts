@@ -433,7 +433,7 @@ async function seedAuditAttribution(sb: SupabaseClient, projectId: string, dryRu
       user_id: null,
       user_email: 'jennifer.cole@avery-oaks-owner.demo',
       user_name: 'Jennifer Cole (magic link)',
-      // eslint-disable-next-line @typescript-eslint/naming-convention
+       
       metadata: {
         actor_kind: 'magic_link',
         magic_link_token_id: 'demo-magic-tok-001',
@@ -450,7 +450,7 @@ async function seedAuditAttribution(sb: SupabaseClient, projectId: string, dryRu
       user_id: null,
       user_email: 'jennifer.cole@avery-oaks-owner.demo',
       user_name: 'Jennifer Cole (magic link)',
-      // eslint-disable-next-line @typescript-eslint/naming-convention
+       
       metadata: {
         actor_kind: 'magic_link',
         magic_link_token_id: 'demo-magic-tok-001',

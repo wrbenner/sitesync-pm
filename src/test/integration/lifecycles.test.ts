@@ -35,6 +35,8 @@ vi.mock('../../lib/supabase', () => ({
       const chain: Record<string, unknown> = {}
       chain.select = vi.fn().mockReturnValue(chain)
       chain.eq = vi.fn().mockReturnValue(chain)
+      chain.in = vi.fn().mockReturnValue(chain)
+      chain.order = vi.fn().mockResolvedValue({ data: [], error: null })
       chain.maybeSingle = mockMaybySingle
       chain.single = mockMaybySingle
       return chain

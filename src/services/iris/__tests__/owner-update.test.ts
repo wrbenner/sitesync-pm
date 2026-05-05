@@ -160,13 +160,20 @@ describe('generateIrisDraft — owner_update path', () => {
     'Decisions needed: storefront color sign-off. Progress: level 3 framing 95% complete. ' +
     'Lookahead: roof TPO weld-down May 6–10. — Alex PM'
 
+  const stubCallIris = (text: string) =>
+    vi.fn(async () => ({
+      content: text,
+      usage: { inputTokens: 0, outputTokens: 0 },
+      latencyMs: 0,
+      provider: 'test',
+      model: 'test',
+      auditId: 'test',
+    }))
+
   it('returns a non-empty draft with status pending and 0.5 confidence', async () => {
-    const generate = vi.fn().mockResolvedValue({ text: fakeBody })
-    // The real generateText returns much more — for our purposes only `text`
-    // matters. Cast through unknown to satisfy the strict signature.
     const draft = await generateIrisDraft(triggerItem, richContext, {
-      generate: generate as unknown as typeof import('ai').generateText,
-    } as never)
+      callIris: stubCallIris(fakeBody),
+    })
     expect(draft.content.length).toBeGreaterThan(0)
     expect(draft.status).toBe('pending')
     expect(draft.confidence).toBe(0.5)
@@ -176,13 +183,18 @@ describe('generateIrisDraft — owner_update path', () => {
 
   it('passes a prompt covering every section to the model', async () => {
     let capturedPrompt = ''
-    const generate = vi.fn(async (args: { prompt: string }) => {
-      capturedPrompt = args.prompt
-      return { text: fakeBody }
+    const callIris = vi.fn(async (request: { prompt: string }) => {
+      capturedPrompt = request.prompt
+      return {
+        content: fakeBody,
+        usage: { inputTokens: 0, outputTokens: 0 },
+        latencyMs: 0,
+        provider: 'test',
+        model: 'test',
+        auditId: 'test',
+      }
     })
-    await generateIrisDraft(triggerItem, richContext, {
-      generate: generate as unknown as typeof import('ai').generateText,
-    } as never)
+    await generateIrisDraft(triggerItem, richContext, { callIris })
     expect(capturedPrompt).toContain('Schedule status:')
     expect(capturedPrompt).toContain('Budget status:')
     expect(capturedPrompt).toContain('Top risks')
@@ -190,10 +202,9 @@ describe('generateIrisDraft — owner_update path', () => {
   })
 
   it('attaches the de-duped source labels to the draft', async () => {
-    const generate = vi.fn().mockResolvedValue({ text: fakeBody })
     const draft = await generateIrisDraft(triggerItem, richContext, {
-      generate: generate as unknown as typeof import('ai').generateText,
-    } as never)
+      callIris: stubCallIris(fakeBody),
+    })
     expect(draft.sources).toContain('Schedule activity #142')
     expect(draft.sources).toContain('Cost Codes — committed vs approved')
     expect(draft.sources).toContain('Risk card: storefront-submittal')
@@ -201,12 +212,11 @@ describe('generateIrisDraft — owner_update path', () => {
   })
 
   it('returns gracefully (no throws) when project data is sparse', async () => {
-    const generate = vi.fn().mockResolvedValue({
-      text: 'Brief update — no material change across schedule, budget, risks, or lookahead.',
-    })
     const draft = await generateIrisDraft(triggerItem, sparseContext, {
-      generate: generate as unknown as typeof import('ai').generateText,
-    } as never)
+      callIris: stubCallIris(
+        'Brief update — no material change across schedule, budget, risks, or lookahead.',
+      ),
+    })
     expect(draft.content.length).toBeGreaterThan(0)
     expect(draft.status).toBe('pending')
   })

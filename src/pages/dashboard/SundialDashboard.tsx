@@ -206,7 +206,7 @@ function MarginaliaCard({
 }: MarginaliaNote) {
   // Parse body for **bold** markdown patterns and boldValues
   const renderBody = useMemo(() => {
-    let text = body;
+    const text = body;
     const parts: Array<{ text: string; bold: boolean }> = [];
 
     // Parse **bold** markdown

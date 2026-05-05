@@ -45,7 +45,7 @@ export const DemoSeedButton: React.FC = () => {
         toast.error('Nothing was seeded — check console for skipped tables')
       }
       if (result.skipped.length > 0) {
-        // eslint-disable-next-line no-console
+         
         console.warn('[demo seeder] skipped:', result.skipped)
       }
       refreshHasData()
@@ -64,7 +64,7 @@ export const DemoSeedButton: React.FC = () => {
       const total = result.deleted.reduce((s, r) => s + r.count, 0)
       toast.success(`Wiped ${total} demo records`)
       if (result.failed.length > 0) {
-        // eslint-disable-next-line no-console
+         
         console.warn('[demo seeder] wipe failures:', result.failed)
       }
       refreshHasData()

@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-04 (Bugatti Launch Roadmap + 25 specs across Waves 1-3 landed; Lap 2 execution in flight)
+**Last updated:** 2026-05-05 (Lap 2 100% complete; polish-push receipt landed; quality floor v3→v4)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -38,6 +38,7 @@ entries before starting work. Update this file when you add a new doc.
 | 43–49 | Iris voice guide infrastructure | `DAYS_43_49_VOICE_GUIDE_RECEIPT_2026-05-04.md` | iris_voice_diffs migration + style.ts (10 seed rules) + voiceLinter.ts (fixed-point autofix) + voicePrompt.ts (action-scoped) + sample-voice-corpus.ts + ADR-005 standalone. 40 new tests; voice work substrate ready for Walker's hand-edit cycle. |
 | 50–60 | Soft pilot playbook substrate | `DAYS_50_60_PILOT_PLAYBOOK_RECEIPT_2026-05-04.md` | pilot_agreements migration + is_pilot_user() helper + agreement template v1 + standup template + provision-pilot-org.ts + ADR-006 standalone. Code substrate complete; Walker-side recruit/onboard/run pilot remains. |
 | 39+45+60 | Citations dedicated panels + voice linter wiring + pilot data export | `DAYS_39_45_60_FOLLOWUP_RECEIPT_2026-05-04.md` | 4 dedicated citation panels (daily_log/CO/spec/schedule_phase) + iris-call voice linter post-process with iris_voice_diffs logging + 11-case Deno/src parity tests + scripts/export-pilot-data.ts. 29 new tests; 170 total session tests green. |
+| Lap 2 close | Polish push (close-out) | `POLISH_PUSH_2026-05-05_RECEIPT.md` | All gates green: typecheck 0; tests 2781 passed / 0 failed (+19 fixed, +1 honest skip); bundle 3229 KB (under floor by 320). Floor v3→v4: bundleSizeKB 3550→3230, eslintErrors 480→251, testCount 1416→2781. |
 
 ---
 

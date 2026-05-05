@@ -65,15 +65,15 @@ export const AutoDraftPanelDemo: React.FC = () => {
       <AutoDraftPanel
         draft={demoDraft}
         onApprove={async (d) => {
-          // eslint-disable-next-line no-console
+           
           console.log('[demo] approve →', d);
         }}
         onReject={async (reason) => {
-          // eslint-disable-next-line no-console
+           
           console.log('[demo] reject →', reason);
         }}
         onRegenerateSection={async (id) => {
-          // eslint-disable-next-line no-console
+           
           console.log('[demo] regenerate section →', id);
         }}
       />

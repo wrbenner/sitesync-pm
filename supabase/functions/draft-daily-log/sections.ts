@@ -148,9 +148,9 @@ function bulletFrom(
 
 export function assembleDailyLogDraft(ctx: DayContext, generated_by = 'claude-sonnet-4-6'): DraftedDailyLog {
   // Weather
-  let weather: DraftedDailyLogWeather = ctx.weather ?? { condition: 'unknown', weather_source: 'unknown' }
+  const weather: DraftedDailyLogWeather = ctx.weather ?? { condition: 'unknown', weather_source: 'unknown' }
   let weather_summary = 'Weather data unavailable.'
-  let weather_reason: string | undefined = ctx.weather ? undefined : 'No weather record for the day.'
+  const weather_reason: string | undefined = ctx.weather ? undefined : 'No weather record for the day.'
   if (ctx.weather) {
     const parts: string[] = [ctx.weather.condition]
     if (ctx.weather.high_temp_f != null && ctx.weather.low_temp_f != null) {

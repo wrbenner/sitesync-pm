@@ -133,7 +133,7 @@ test.afterAll(async () => {
     generated_at: new Date().toISOString(),
     cases: results,
   }, null, 2))
-  // eslint-disable-next-line no-console
+   
   const allClosed = results.filter((r) => r.opened && r.closes_on_escape && r.closes_on_backdrop && r.closes_on_x).length
   console.log(`[modal-escape] ${allClosed}/${results.length} cases pass all three close paths`)
 })

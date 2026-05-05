@@ -113,7 +113,7 @@ const PunchListPage: React.FC = () => {
   const { hasPermission, role } = usePermissions();
   const { user } = useAuth();
   // project lookup retained for future header use; ignore unused-binding warning.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const { data: _project } = useProject(projectId);
   const {
     data: punchListResult,

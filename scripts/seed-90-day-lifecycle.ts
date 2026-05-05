@@ -99,7 +99,7 @@ const log = (msg: string) => { if (!opts.quiet) console.log(msg) }
 // tables this seed populates (line_items, dispute_status, etc.). We use the
 // codebase's standard escape hatch — cast through `any` once and rely on
 // PostgREST to validate the row shape server-side.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const admin = createClient(supabaseUrl, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 }) as unknown as SupabaseClient<any>

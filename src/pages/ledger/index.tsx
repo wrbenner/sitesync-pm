@@ -218,8 +218,6 @@ const LedgerPage: React.FC = () => {
   const { data: contractData } = useContracts(projectId);
   usePayApplications(projectId);
 
-  if (!projectId) return <ProjectGate />;
-
   // ── Data arrays ─────────────────────────────────────────
   const budgetItems = useMemo(
     () => (budgetData ?? []) as unknown as Array<{
@@ -299,6 +297,8 @@ const LedgerPage: React.FC = () => {
   );
 
   const isLoading = metricsLoading || budgetLoading || coLoading;
+
+  if (!projectId) return <ProjectGate />;
 
   // ── Render ─────────────────────────────────────────────────
   return (
