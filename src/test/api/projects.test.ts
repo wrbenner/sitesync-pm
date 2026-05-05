@@ -212,28 +212,34 @@ describe('assertProjectAccess', () => {
     clearTtlCache()
   })
 
-  it('throws 403 when project.organization_id does not match caller active org', async () => {
+  // Org-context hydration is now best-effort and NEVER throws — RLS is the real
+  // enforcement layer. A verified project_members row is sufficient for access.
+  it('resolves when user is a project member, even if project org differs from active org', async () => {
     mockMaybySingle
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      .mockResolvedValueOnce({ data: { organization_id: ORG_B_ID }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' })
+      .mockResolvedValue({ data: { organization_id: ORG_B_ID }, error: null })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
   it('resolves when project.organization_id matches caller active org', async () => {
     mockMaybySingle
       .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      .mockResolvedValueOnce({ data: { organization_id: ORG_A_ID }, error: null })
+      .mockResolvedValue({ data: { organization_id: ORG_A_ID }, error: null })
     await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
-  it('throws 403 when no active organization context', async () => {
+  it('resolves when user is a project member even without active org context', async () => {
     mockOrgGetState.mockReturnValue({ currentOrg: null })
-    mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-    await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+    mockMaybySingle
+      .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+      .mockResolvedValue({ data: null, error: null })
+    await expect(assertProjectAccess(PROJ_ID)).resolves.toBeUndefined()
   })
 
-  it('throws 403 when user is not a project member', async () => {
-    mockMaybySingle.mockResolvedValueOnce({ data: null, error: null })
+  it('throws 403 when user is not a project member and not the project owner', async () => {
+    mockMaybySingle
+      .mockResolvedValueOnce({ data: null, error: null })           // project_members → no row
+      .mockResolvedValueOnce({ data: { owner_id: 'other-user' }, error: null }) // projects.owner_id → not this user
     await expect(assertProjectAccess(PROJ_ID)).rejects.toMatchObject({ status: 403 })
   })
 
