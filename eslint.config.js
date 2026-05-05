@@ -66,37 +66,42 @@ export default defineConfig([
       // error as their backlog reaches zero — landed in slice B
       // (feat/react-compiler-slice-b-2026-05-05).
       //
-      // Promoted to ERROR (Slice B, 2026-05-05):
+      // Promoted to ERROR (Slice B Phase 1+2, 2026-05-05):
       //   capitalized-calls, static-components       (cleared 790d1fa)
       //   purity                                      (cleared a458e61)
+      //   no-deriving-state-in-effects                (cleared 59ce638)
       //   incompatible-library                        (cleared 7edca0e)
       //   immutability                                (cleared 2a31ca3)
+      //   preserve-manual-memoization                 (cleared 92b5b2e)
+      //   refs                                        (cleared cdd43cc)
       //   config, error-boundaries, gating, globals,
       //   set-state-in-render, unsupported-syntax,
       //   use-memo                                    (already at 0)
       //
-      // Still at WARN — backlog being migrated in Slice B follow-up phases:
-      //   set-state-in-effect (82) → TanStack Query for fetch-on-mount;
-      //     each migration is a focused per-page PR.
-      //   refs (24) → hoist ref reads/writes into effects/event handlers.
-      //   preserve-manual-memoization (15) → audit each existing
-      //     useMemo/useCallback against compiler-derived memoization.
+      // Still at WARN — last Recommended-preset rule, deferred to Phase 3:
+      //   set-state-in-effect (82) → splits into 4 distinct migrations:
+      //     • ~20 fetch-on-mount sites → TanStack Query
+      //     • ~30 reset-on-prop-change sites → react.dev "compare prev
+      //       props during render" pattern
+      //     • ~5 derive-from-props sites → derive in render
+      //     • ~5 subscription/event sites → keep effect, refactor
+      //       per-case
+      //   Each batch deserves its own focused PR for review.
       //
-      // The remaining non-Recommended-preset rules below stay at WARN and
-      // are NOT slated for promotion — they cover compiler-internal
-      // limitations (todo, invariant, syntax, unsupported-syntax) and
-      // backlog signals (memo-dependencies, exhaustive-deps) that need
-      // their own architectural campaigns.
+      // The remaining non-Recommended-preset rules below stay at WARN —
+      // they cover compiler-internal limitations (todo, invariant) and
+      // advisory signals (memo-dependencies, exhaustive-deps) that need
+      // their own campaigns.
       //
-      // rules-of-hooks and exhaustive-deps stay at default — they catch
-      // real runtime bugs independent of the compiler.
-      'react-hooks/set-state-in-effect': 'warn', // 82 backlog → TanStack Query migration
+      // rules-of-hooks stays at default (error) — it catches real
+      // runtime bugs independent of the compiler.
+      'react-hooks/set-state-in-effect': 'warn', // Phase 3 — see breakdown above
       'react-hooks/set-state-in-render': 'error',
       'react-hooks/no-deriving-state-in-effects': 'error',
-      'react-hooks/refs': 'warn', // 24 backlog → ref-read hoist
+      'react-hooks/refs': 'error',
       'react-hooks/purity': 'error',
       'react-hooks/immutability': 'error',
-      'react-hooks/preserve-manual-memoization': 'warn', // 15 backlog → memoization audit
+      'react-hooks/preserve-manual-memoization': 'error',
       'react-hooks/static-components': 'error',
       'react-hooks/incompatible-library': 'error',
       'react-hooks/capitalized-calls': 'error',
