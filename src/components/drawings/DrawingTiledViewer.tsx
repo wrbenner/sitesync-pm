@@ -166,8 +166,19 @@ const OsdLoupe: React.FC<{
   // Throttle repaints to one per animation frame. At 60fps this matches display refresh;
   // without it, high-frequency mousemove events cause needless redraws and jank.
   const rafRef = useRef<number | null>(null);
-  const lastPosRef = useRef({ x: screenX, y: screenY });
-  lastPosRef.current = { x: screenX, y: screenY };
+
+  // Track container size in state via ResizeObserver — refs can't be
+  // read during render, so positioning math below uses the snapshot.
+  const [containerSize, setContainerSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setContainerSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [containerRef]);
 
   useEffect(() => {
     const paint = () => {
@@ -181,12 +192,13 @@ const OsdLoupe: React.FC<{
       const ctx = loupe.getContext('2d');
       if (!ctx) return;
 
-      const { x, y } = lastPosRef.current;
+      // Closure captures the latest screenX/screenY because the effect
+      // re-runs on every position change (deps below).
       const srcSize = SIZE / MAG;
       const scaleX = sourceCanvas.width / container.clientWidth;
       const scaleY = sourceCanvas.height / container.clientHeight;
-      const srcX = x * scaleX - srcSize / 2;
-      const srcY = y * scaleY - srcSize / 2;
+      const srcX = screenX * scaleX - srcSize / 2;
+      const srcY = screenY * scaleY - srcSize / 2;
 
       ctx.save();
       ctx.clearRect(0, 0, SIZE, SIZE);
@@ -220,10 +232,11 @@ const OsdLoupe: React.FC<{
 
   // Position via transform (GPU-accelerated) — no CSS transition so the loupe sticks to the cursor.
   const OFFSET = 64;
-  const containerEl = containerRef.current;
-  const maxRight = (containerEl?.clientWidth ?? window.innerWidth) - SIZE - 16;
+  const containerW = containerSize?.w ?? window.innerWidth;
+  const containerH = containerSize?.h ?? window.innerHeight;
+  const maxRight = containerW - SIZE - 16;
   const leftPos = screenX + OFFSET + SIZE > maxRight ? Math.max(16, screenX - OFFSET - SIZE) : screenX + OFFSET;
-  const topPos = Math.max(16, Math.min((containerEl?.clientHeight ?? window.innerHeight) - SIZE - 16, screenY - SIZE / 2));
+  const topPos = Math.max(16, Math.min(containerH - SIZE - 16, screenY - SIZE / 2));
 
   return (
     <div style={{
@@ -1137,6 +1150,10 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   } | null>(null);
   const [localAnnotations, setLocalAnnotations] = useState<AnnotationOverlayItem[]>([]);
   const undoStack = useRef<AnnotationOverlayItem[][]>([]);
+  // undoStackSize mirrors undoStack.current.length so the toolbar's
+  // canUndo flag can read it during render (refs can't be read in render).
+  // Updated alongside every push/pop/clear of undoStack below.
+  const [undoStackSize, setUndoStackSize] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const activeColor = '#E05252'; // Default red for construction markups
   // Seed from the persisted drawing.scale_ratio so a previously-calibrated
@@ -1424,6 +1441,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     const isLocal = localAnnotations.some((a) => a.id === selectedId);
     if (isLocal) {
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => prev.filter((a) => a.id !== selectedId));
     } else {
       // Persisted — delete from DB; react-query invalidation will refresh the list.
@@ -1491,6 +1509,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           stampType: stampTypeSel,
         };
         undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
         setLocalAnnotations((prev) => [...prev, newAnn]);
         return;
       }
@@ -1528,6 +1547,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           uiTool: activeTool,
         };
         undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
         setLocalAnnotations((prev) => [...prev, newAnn]);
         return;
       }
@@ -1602,6 +1622,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       };
 
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => [...prev, newAnn]);
       setDrawingInProgress(null);
     },
@@ -1611,6 +1632,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // ── Undo ───────────────────────────────────────────────────────────────
   const handleUndo = useCallback(() => {
     const prev = undoStack.current.pop();
+    setUndoStackSize(undoStack.current.length);
     if (prev) setLocalAnnotations(prev);
   }, []);
 
@@ -1632,6 +1654,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         uiTool: 'text',
       };
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => [...prev, newAnn]);
     }
     setTextPrompt(null);
@@ -1665,6 +1688,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         : 'count',
     };
     undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
     setLocalAnnotations((prev) => [...prev, ann]);
   }, [activeColor, localAnnotations]);
 
@@ -1750,6 +1774,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       // Drop successful ones from local state; keep failed ones so retry just means clicking Save again.
       setLocalAnnotations(failedAnnotations);
       undoStack.current = [];
+      setUndoStackSize(0);
       if (failedAnnotations.length === 0) {
         setSaveConfirmedAt(Date.now());
         window.setTimeout(() => setSaveConfirmedAt(null), 2200);
@@ -2254,7 +2279,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               activeTool={activeTool}
               onToolChange={(t) => { setExtendedTool(null); setActiveTool(t); }}
               onUndo={handleUndo}
-              canUndo={undoStack.current.length > 0 || localAnnotations.length > 0}
+              canUndo={undoStackSize > 0 || localAnnotations.length > 0}
               canSave={localAnnotations.length > 0}
               unsavedCount={localAnnotations.length}
               onSave={handleSave}

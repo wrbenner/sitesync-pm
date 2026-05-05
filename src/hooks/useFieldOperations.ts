@@ -27,8 +27,10 @@ export function useDailyLogs(projectId: string) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   // BUG-H17 FIX: Mirror state in a ref so mutation callbacks can read the latest
   // value without listing the array in their deps (which caused infinite re-creation).
+  // Synced from an effect rather than during render — ref writes during
+  // render are forbidden by react-hooks/refs.
   const logsRef = useRef<DailyLogRow[]>(logs)
-  logsRef.current = logs
+  useEffect(() => { logsRef.current = logs }, [logs])
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -139,7 +141,7 @@ export function useIncidents(projectId: string) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   // BUG-H17 FIX: See useDailyLogs above for rationale.
   const incidentsRef = useRef<IncidentRow[]>(incidents)
-  incidentsRef.current = incidents
+  useEffect(() => { incidentsRef.current = incidents }, [incidents])
 
   const refetch = useCallback(async () => {
     if (!projectId) return
@@ -361,7 +363,7 @@ export function useCorrectiveActions(projectId: string) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   // BUG-H17 FIX: See useDailyLogs above for rationale.
   const actionsRef = useRef<CorrectiveActionRow[]>(actions)
-  actionsRef.current = actions
+  useEffect(() => { actionsRef.current = actions }, [actions])
 
   const refetch = useCallback(async () => {
     if (!projectId) return

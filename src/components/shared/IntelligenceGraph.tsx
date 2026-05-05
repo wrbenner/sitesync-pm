@@ -248,6 +248,11 @@ export function IntelligenceGraph({
   const [hoveredEdge, setHoveredEdge] = useState<SimEdge | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(highlightedNodeId ?? null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  // Mirror of dragRef.current.isPanning surfaced to render so the wrapper
+  // can switch the cursor to 'grabbing'. Refs can't be read during
+  // render; the state is updated alongside the ref in the gesture
+  // handlers below.
+  const [isPanning, setIsPanning] = useState(false)
 
   // Transform state
   const transformRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 })
@@ -652,6 +657,7 @@ export function IntelligenceGraph({
       drag.startY = wy
     } else {
       drag.isPanning = true
+      setIsPanning(true)
       drag.startX = e.clientX
       drag.startY = e.clientY
     }
@@ -710,6 +716,7 @@ export function IntelligenceGraph({
     }
     drag.isDragging = false
     drag.isPanning = false
+    setIsPanning(false)
     drag.dragNode = null
     settledRef.current = false
   }, [screenToWorld])
@@ -852,7 +859,7 @@ export function IntelligenceGraph({
         background: '#0F1629',
         borderRadius: borderRadius.lg,
         overflow: 'hidden',
-        cursor: hoveredNode ? 'grab' : dragRef.current.isPanning ? 'grabbing' : 'default',
+        cursor: hoveredNode ? 'grab' : isPanning ? 'grabbing' : 'default',
       }}
     >
       {/* Search box */}

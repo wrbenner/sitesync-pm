@@ -6,7 +6,7 @@
 // We render only the most-recent device per user (multi-device dedup is
 // the contract from src/lib/realtime/presenceChannel).
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import {
   CURSOR_PALETTE,
@@ -31,7 +31,23 @@ interface CursorEntry extends PresenceMember {
 
 export const LiveCursorOverlay: React.FC<Props> = ({ roomKey, surfaceRef, selfUserId }) => {
   const [cursors, setCursors] = useState<CursorEntry[]>([]);
-  const allMembersRef = useRef<PresenceMember[]>([]);
+  // Surface bounding rect is tracked in state via ResizeObserver so the
+  // render-time denormalize calls don't read surfaceRef.current.
+  const [surfaceRect, setSurfaceRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    const el = surfaceRef.current;
+    if (!el) return;
+    const update = () => setSurfaceRect(el.getBoundingClientRect());
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    window.addEventListener('scroll', update, { passive: true, capture: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', update, { capture: true });
+    };
+  }, [surfaceRef]);
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,7 +62,6 @@ export const LiveCursorOverlay: React.FC<Props> = ({ roomKey, surfaceRef, selfUs
             (c) => !(c.user_id === payload.user_id && c.device_id === payload.device_id),
           );
           next.push({ ...payload, last_seen_at: Date.now() });
-          allMembersRef.current = next;
           return next;
         });
       })
@@ -55,8 +70,7 @@ export const LiveCursorOverlay: React.FC<Props> = ({ roomKey, surfaceRef, selfUs
     return () => { try { sb.removeChannel(channel); } catch { /* idempotent */ } };
   }, [roomKey, selfUserId]);
 
-  if (!surfaceRef.current) return null;
-  const rect = surfaceRef.current.getBoundingClientRect();
+  if (!surfaceRect) return null;
 
   return (
     <div
@@ -66,9 +80,12 @@ export const LiveCursorOverlay: React.FC<Props> = ({ roomKey, surfaceRef, selfUs
       }}
     >
       {cursors
-        .filter((c) => isMostRecentDeviceForUser(allMembersRef.current, c.user_id, c.device_id))
+        // cursors state is the canonical member list (each broadcast
+        // upsert leaves a single entry per user_id/device_id), so we
+        // can dedupe directly off it instead of via a render-time ref read.
+        .filter((c) => isMostRecentDeviceForUser(cursors, c.user_id, c.device_id))
         .map((c) => {
-          const px = denormalizePoint({ x: c.cursor.x, y: c.cursor.y }, rect);
+          const px = denormalizePoint({ x: c.cursor.x, y: c.cursor.y }, surfaceRect);
           const color = c.cursor.color ?? colorForUser(c.user_id, roomKey);
           return (
             <CursorMarker key={`${c.user_id}:${c.device_id}`} x={px.x} y={px.y} name={c.user_name} color={color} />
