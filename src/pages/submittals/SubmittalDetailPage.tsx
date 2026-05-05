@@ -43,7 +43,7 @@ import {
   ExternalLink, Eye, Stamp, Send, Forward,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submittals'
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'
@@ -54,6 +54,7 @@ import {
   type SubmittalState, type SubmittalStamp,
 } from '../../machines/submittalMachine'
 import { DocumentViewer } from '../../components/submittals/DocumentViewer'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { supabase } from '../../lib/supabase'
 
 const SUBMITTAL_BUCKET = 'project-files'
@@ -613,7 +614,7 @@ export function SubmittalDetailPage() {
   const navigate = useNavigate()
   const projectId = useProjectId()
   const { addToast } = useToast()
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
 
   const { data: submittal, isLoading, error } = useSubmittal(submittalId)
   const { data: reviewers = [] } = useSubmittalReviewers(submittalId)
@@ -622,7 +623,7 @@ export function SubmittalDetailPage() {
 
   // Normalize legacy DB statuses (pending, under_review) to machine states so
   // that the XState-driven workflow, stepper, and action buttons all render.
-  const rawStatus = ((submittal as any)?.status as string) || 'draft'
+  const rawStatus = submittal?.status || 'draft'
   const currentStatus: SubmittalState = (() => {
     switch (rawStatus) {
       case 'pending': return 'draft'
@@ -635,7 +636,7 @@ export function SubmittalDetailPage() {
   const statusConfig = getSubmittalStatusConfig(currentStatus)
   const transitions = getValidSubmittalTransitions(currentStatus)
 
-  const sub = (submittal as Record<string, any>) || {}
+  const sub = submittal
 
   // ── Construct files for DocumentViewer ──────────────────
   // Uses signed URLs since project-files is a private bucket. We normalize
@@ -645,8 +646,9 @@ export function SubmittalDetailPage() {
 
   useEffect(() => {
     let cancelled = false
-    if (!submittal) { setResolvedFiles([]); return }
-    const attachments = ((submittal as any).attachments || []) as unknown[]
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing derived state when source data disappears is intentional
+    if (!submittal) { setResolvedFiles(prev => prev.length === 0 ? prev : []); return }
+    const attachments = ((submittal as unknown as { attachments?: unknown[] }).attachments ?? []) as unknown[]
     const normalized = attachments.map((att: unknown, i: number) => {
       if (typeof att === 'string') {
         return { name: att.split('/').pop() || `Document ${i + 1}`, path: att, url: '' }
@@ -686,7 +688,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Cannot upload: missing project context')
       return
     }
-    const storagePath = `submittals/${projectId}/${(submittal as any).id}/${Date.now()}_${file.name}`
+    const storagePath = `submittals/${projectId}/${submittal.id}/${Date.now()}_${file.name}`
     const { error: uploadErr } = await supabase.storage
       .from(SUBMITTAL_BUCKET)
       .upload(storagePath, file, { contentType: file.type, upsert: false })
@@ -694,7 +696,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Failed to upload: ' + uploadErr.message)
       return
     }
-    const currentAttachments = ((submittal as any).attachments || []) as unknown[]
+    const currentAttachments = ((submittal as unknown as { attachments?: unknown[] }).attachments ?? []) as unknown[]
     const newAttachment = {
       path: storagePath,
       name: file.name,
@@ -704,7 +706,7 @@ export function SubmittalDetailPage() {
     }
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: submittal.id,
         projectId,
         updates: { attachments: [...currentAttachments, newAttachment] },
       })
@@ -730,7 +732,7 @@ export function SubmittalDetailPage() {
     setTransitioning(action)
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: submittal.id,
         projectId,
         updates: { status: toDbStatus(nextStatus) },
       })
@@ -786,7 +788,7 @@ export function SubmittalDetailPage() {
             Submittal not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: typography.fontSize.body }}>
-            {(error as any)?.message || 'This submittal may have been deleted or you don\'t have access.'}
+            {(error as Error)?.message || 'This submittal may have been deleted or you don\'t have access.'}
           </p>
           <Btn onClick={() => navigate('/submittals')}>Back to Submittals</Btn>
         </div>
@@ -868,6 +870,32 @@ export function SubmittalDetailPage() {
             transitions={transitions}
             onAction={handleTransition}
             loading={transitioning}
+          />
+        </motion.div>
+
+        {/* ── Workflow Timeline ───────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          style={{ marginBottom: spacing.md }}
+        >
+          <WorkflowTimeline
+            states={['draft', 'submitted', 'gc_review', 'architect_review', 'approved', 'closed']}
+            currentState={currentStatus === 'resubmit' ? 'gc_review' : currentStatus}
+            completedStates={(() => {
+              const order = ['draft', 'submitted', 'gc_review', 'architect_review', 'approved', 'closed']
+              const idx = order.indexOf(currentStatus === 'resubmit' ? 'gc_review' : currentStatus)
+              return order.slice(0, Math.max(0, idx))
+            })()}
+            labels={{
+              draft: 'Draft',
+              submitted: 'Submitted',
+              gc_review: 'GC Review',
+              architect_review: 'A/E Review',
+              approved: 'Approved',
+              closed: 'Closed',
+            }}
           />
         </motion.div>
 

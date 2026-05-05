@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2, Clock, Target } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -29,27 +29,27 @@ interface ScheduleKPIsProps {
 // ── Color Logic ──────────────────────────────────────────
 
 function varianceStyle(days: number): { color: string; bg: string; icon: React.ReactNode; trend: 'up' | 'down' | 'flat' } {
-  if (days <= 0) return { color: '#16A34A', bg: '#F0FDF4', icon: <TrendingUp size={14} />, trend: 'up' };
-  if (days <= 5) return { color: '#D97706', bg: '#FEF3C7', icon: <Minus size={14} />, trend: 'flat' };
-  return { color: '#DC2626', bg: '#FEF2F2', icon: <TrendingDown size={14} />, trend: 'down' };
+  if (days <= 0) return { color: colors.statusActive, bg: colors.statusActiveSubtle, icon: <TrendingUp size={14} />, trend: 'up' };
+  if (days <= 5) return { color: colors.statusPending, bg: colors.statusPendingSubtle, icon: <Minus size={14} />, trend: 'flat' };
+  return { color: colors.statusCritical, bg: colors.statusCriticalSubtle, icon: <TrendingDown size={14} />, trend: 'down' };
 }
 
 function criticalStyle(count: number): { color: string; bg: string } {
-  if (count === 0) return { color: '#16A34A', bg: '#F0FDF4' };
-  if (count <= 5) return { color: '#D97706', bg: '#FEF3C7' };
-  return { color: '#DC2626', bg: '#FEF2F2' };
+  if (count === 0) return { color: colors.statusActive, bg: colors.statusActiveSubtle };
+  if (count <= 5) return { color: colors.statusPending, bg: colors.statusPendingSubtle };
+  return { color: colors.statusCritical, bg: colors.statusCriticalSubtle };
 }
 
 function onTrackStyle(pct: number): { color: string; bg: string } {
-  if (pct >= 80) return { color: '#16A34A', bg: '#F0FDF4' };
-  if (pct >= 60) return { color: '#D97706', bg: '#FEF3C7' };
-  return { color: '#DC2626', bg: '#FEF2F2' };
+  if (pct >= 80) return { color: colors.statusActive, bg: colors.statusActiveSubtle };
+  if (pct >= 60) return { color: colors.statusPending, bg: colors.statusPendingSubtle };
+  return { color: colors.statusCritical, bg: colors.statusCriticalSubtle };
 }
 
 function completeStyle(pct: number): { color: string; bg: string } {
-  if (pct >= 90) return { color: '#16A34A', bg: '#F0FDF4' };
-  if (pct >= 50) return { color: '#2563EB', bg: '#EFF6FF' };
-  return { color: '#6B7280', bg: '#F3F4F6' };
+  if (pct >= 90) return { color: colors.statusActive, bg: colors.statusActiveSubtle };
+  if (pct >= 50) return { color: colors.statusInfo, bg: colors.statusInfoSubtle };
+  return { color: colors.textTertiary, bg: colors.statusNeutralSubtle };
 }
 
 // ── Animated Number ──────────────────────────────────────
@@ -88,19 +88,19 @@ function AnimatedValue({ value, suffix = '', prefix = '' }: { value: number; suf
 // A tiny inline SVG sparkline for visual trend context.
 
 function MiniSparkline({ value, color, max = 100 }: { value: number; color: string; max?: number }) {
-  // Generate a plausible micro-trend from the current value
+  // Quantize value so the sparkline only re-renders when the value moves by ≥5 units.
+  const quantizedValue = Math.round(value / 5);
   const points = React.useMemo(() => {
     const baseline = Math.max(0, value - 15);
     const pts = [
-      baseline + Math.random() * 8,
-      baseline + 4 + Math.random() * 6,
-      baseline + 2 + Math.random() * 10,
-      baseline + 6 + Math.random() * 8,
+      baseline + 4,
+      baseline + 7,
+      baseline + 7,
+      baseline + 10,
       value,
     ].map(v => Math.min(max, Math.max(0, v)));
     return pts;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Math.round(value / 5), max]);
+  }, [quantizedValue, max]); // eslint-disable-line react-hooks/exhaustive-deps -- quantizedValue intentionally quantizes value to limit re-renders
 
   const w = 48;
   const h = 20;
@@ -507,8 +507,8 @@ const FullCards: React.FC<{
 
 export const ScheduleKPIs: React.FC<ScheduleKPIsProps> = ({
   activityMetrics,
-  metrics,
-  projectMetrics,
+  metrics: _metrics,
+  projectMetrics: _projectMetrics,
   isMobile,
   isNarrow,
   compact = false,

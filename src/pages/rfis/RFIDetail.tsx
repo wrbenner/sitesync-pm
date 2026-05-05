@@ -16,22 +16,21 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
-  CheckCircle, AlertTriangle, XCircle, MessageSquare, FileText,
-  Image, ChevronDown, MoreHorizontal, User, Eye, EyeOff,
-  Paperclip, Flag, Bell, Users, Timer, CircleDot, Zap,
-  Copy, ExternalLink, Share2
+  AlertTriangle, MessageSquare, FileText,
+  Image, ChevronDown, User, Eye, EyeOff,
+  Paperclip, Flag, Timer, Zap,
 } from 'lucide-react'
-import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { colors, spacing, borderRadius } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
 import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { EntityPresence } from '../../components/collaboration/PresenceBar'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import {
   getRFIStatusConfig, getValidTransitions, getNextStatus,
   getDueDateUrgency, getDaysOpen,
@@ -72,14 +71,6 @@ const relativeTime = (d: string | null) => {
   const days = Math.floor(hrs / 24)
   if (days < 7) return `${days}d ago`
   return formatShortDate(d)
-}
-
-// ─── Types ────────────────────────────────────────────────
-
-interface ActivityEvent {
-  type: 'response' | 'status_change'
-  timestamp: string
-  data: RFIResponse | { from: string; to: string; changedBy: string }
 }
 
 // ─── Watchers Hook ────────────────────────────────────────
@@ -279,13 +270,13 @@ const ResponseBubble: React.FC<{
         }}>
           {authorName}
         </span>
-        {(response as any).company && (
+        {(response as Record<string, unknown>).company && (
           <span style={{
             fontSize: '10px', color: colors.textTertiary,
             padding: '1px 6px', borderRadius: '10px',
             backgroundColor: colors.surfaceInset,
           }}>
-            {(response as any).company}
+            {(response as Record<string, unknown>).company as string}
           </span>
         )}
         <span style={{ fontSize: '11px', color: colors.textTertiary }}>
@@ -584,12 +575,13 @@ export function RFIDetail() {
 
   useEffect(() => {
     if (lastViewedKey) {
-      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch {}
+      try { localStorage.setItem(lastViewedKey, new Date().toISOString()) } catch { /* ignore QuotaExceededError */ }
     }
   }, [lastViewedKey])
 
   const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
-  const responses = rfi?.responses ?? []
+  // Stable identity for the responses array so downstream useMemos don't re-run on every render.
+  const responses = useMemo(() => rfi?.responses ?? [], [rfi?.responses])
 
   const userIdsToResolve = useMemo(
     () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.created_by)],
@@ -775,6 +767,32 @@ export function RFIDetail() {
           )}
         </div>
 
+        {/* ── Workflow Timeline ───────────────────────────── */}
+        <div style={{
+          marginBottom: spacing['5'],
+          padding: `${spacing['4']} ${spacing['5']}`,
+          borderRadius: borderRadius.xl,
+          border: `1px solid ${colors.borderSubtle}`,
+          backgroundColor: colors.surfaceRaised,
+        }}>
+          <WorkflowTimeline
+            states={['draft', 'open', 'under_review', 'answered', 'closed']}
+            currentState={currentStatus === 'void' ? 'closed' : currentStatus}
+            completedStates={(() => {
+              const order = ['draft', 'open', 'under_review', 'answered', 'closed']
+              const idx = order.indexOf(currentStatus === 'void' ? 'closed' : currentStatus)
+              return order.slice(0, idx)
+            })()}
+            labels={{
+              draft: 'Draft',
+              open: 'Submitted',
+              under_review: 'Under Review',
+              answered: 'Answered',
+              closed: 'Closed',
+            }}
+          />
+        </div>
+
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
@@ -801,13 +819,13 @@ export function RFIDetail() {
                 <span style={{ fontSize: '13px', fontWeight: 600, color: colors.textPrimary }}>
                   {creatorName}
                 </span>
-                {(rfi as any).from_company && (
+                {(rfi as Record<string, unknown>).from_company && (
                   <span style={{
                     marginLeft: '6px', fontSize: '10px', color: colors.textTertiary,
                     padding: '1px 6px', borderRadius: '10px',
                     backgroundColor: colors.surfaceInset,
                   }}>
-                    {(rfi as any).from_company}
+                    {(rfi as Record<string, unknown>).from_company as string}
                   </span>
                 )}
                 <div style={{ fontSize: '11px', color: colors.textTertiary, marginTop: '1px' }}>
@@ -826,7 +844,7 @@ export function RFIDetail() {
               fontSize: '15px', color: colors.textPrimary,
               lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
-              {rfi.description || (rfi as any).question || rfi.title}
+              {rfi.description || ((rfi as Record<string, unknown>).question as string | undefined) || rfi.title}
             </div>
 
             {/* Metadata pills */}

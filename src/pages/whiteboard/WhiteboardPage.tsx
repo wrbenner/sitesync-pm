@@ -23,7 +23,7 @@ interface SavedBoard {
 }
 
 function generateBoardId(): string {
-  return `board_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `board_${Date.now()}_${crypto.randomUUID().replace(/-/g, '').slice(0, 7)}`
 }
 
 const EMPTY_DATA: WhiteboardData = {

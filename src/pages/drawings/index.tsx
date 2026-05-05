@@ -803,9 +803,7 @@ const DrawingsPage: React.FC = () => {
     const uploadAsSpec = async (file: File, idx: number) => {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
       setUploadProgressText(`[${idx + 1}/${total}] Uploading spec "${file.name}" (${sizeMB} MB)...`);
-      const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-        ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const storageKey = globalThis.crypto.randomUUID();
       const path = `${projectId}/specifications/${storageKey}-${file.name}`;
       let fileUrl = path;
       try {
@@ -932,9 +930,7 @@ const DrawingsPage: React.FC = () => {
 
         // Unique storage key per page — UUID avoids Date.now() collisions
         // across concurrent uploads from different users/tabs.
-        const pageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-          ? globalThis.crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const pageKey = globalThis.crypto.randomUUID();
         const pageImagePath = `${projectId}/drawings/pages/${pageKey}-p${page.pageNumber}.png`;
         const thumbPath = `${projectId}/drawings/thumbs/${pageKey}-p${page.pageNumber}-thumb.png`;
         let pageImageStoragePath: string | null = null;
@@ -1044,9 +1040,7 @@ const DrawingsPage: React.FC = () => {
               page.pageWidth,
               page.pageHeight,
             );
-            const cropKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-              ? globalThis.crypto.randomUUID()
-              : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+            const cropKey = globalThis.crypto.randomUUID();
             const cropPath = `${projectId}/drawings/crops/${cropKey}-strip-p${page.pageNumber}.png`;
             const cropFile = new window.File([cropBlob], `strip-${cropKey}.png`, { type: 'image/png' });
             const cropUploadResult = await smartUpload('project-files', cropPath, cropFile, () => {});
@@ -1103,9 +1097,7 @@ const DrawingsPage: React.FC = () => {
       setUploadProgressText(`[${idx + 1}/${total}] Uploading "${file.name}" (${sizeMB} MB)...`);
       const sheetMatch = titleNoExt.match(/^([A-Z]{1,3}-?\d+)/i);
       const sheetNumber = sheetMatch ? sheetMatch[1].toUpperCase() : titleNoExt.substring(0, 20);
-      const storageKey = (globalThis.crypto && 'randomUUID' in globalThis.crypto)
-        ? globalThis.crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const storageKey = globalThis.crypto.randomUUID();
       const storagePath = `${projectId}/drawings/${storageKey}-${file.name}`;
       let fileUrl = storagePath;
       let publicUrl: string | null = null;
