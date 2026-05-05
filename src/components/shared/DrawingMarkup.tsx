@@ -564,6 +564,16 @@ export default function DrawingMarkup({
   const [activeColor, setActiveColor] = useState<string>(MARKUP_COLORS[0].value)
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>(initialAnnotations)
+  // Reset local annotations whenever the parent supplies a new
+  // initialAnnotations identity. Per React docs, this is the canonical
+  // "compare prev props during render" pattern — preferred over a
+  // useEffect that derives state.
+  // https://react.dev/learn/you-might-not-need-an-effect#resetting-state-when-a-prop-changes
+  const [prevInitialAnnotations, setPrevInitialAnnotations] = useState(initialAnnotations)
+  if (prevInitialAnnotations !== initialAnnotations) {
+    setPrevInitialAnnotations(initialAnnotations)
+    setAnnotations(initialAnnotations)
+  }
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [undoStack, setUndoStack] = useState<DrawingAnnotation[][]>([])
   const [hoveredLinkedItem, setHoveredLinkedItem] = useState<string | null>(null)
@@ -599,12 +609,6 @@ export default function DrawingMarkup({
     }
     img.src = imageUrl
   }, [imageUrl])
-
-  // ── Sync initial annotations ──────────────────────────
-
-  useEffect(() => {
-    setAnnotations(initialAnnotations)
-  }, [initialAnnotations])
 
   // ── Canvas coordinate helpers ─────────────────────────
 

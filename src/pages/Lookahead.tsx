@@ -148,12 +148,16 @@ export const Lookahead: React.FC = () => {
     });
   }, [lookaheadTasks, crews, boardStartDate]);
 
-  const [tasks, setTasks] = useState<LookaheadTask[]>([]);
-
-  // Sync mapped tasks from API into local state for drag/drop
-  React.useEffect(() => {
+  const [tasks, setTasks] = useState<LookaheadTask[]>(mappedTasks);
+  // Reset local tasks when mappedTasks identity changes. Per React docs,
+  // this "compare prev value during render" pattern is preferred over a
+  // useEffect that derives state.
+  // https://react.dev/learn/you-might-not-need-an-effect#resetting-state-when-a-prop-changes
+  const [prevMappedTasks, setPrevMappedTasks] = useState(mappedTasks);
+  if (prevMappedTasks !== mappedTasks) {
+    setPrevMappedTasks(mappedTasks);
     setTasks(mappedTasks);
-  }, [mappedTasks]);
+  }
 
   const handleTaskMove = useCallback(async (taskId: number, newDayIndex: number, newCrew: string) => {
     const task = tasks.find(t => t.id === taskId);
