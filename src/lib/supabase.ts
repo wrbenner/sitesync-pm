@@ -4,19 +4,33 @@ import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/enums'
 
 // Supabase config: env vars are injected at build time by Vite.
-// Required — no source-level fallbacks. If either is missing the client
-// creation below will throw, which is what we want: a silently-running
-// build pointed at the wrong project is worse than a hard failure.
+// Required in production — no source-level fallbacks. If either is missing and
+// we're not in dev-bypass mode the client creation will throw, which is what we
+// want: a silently-running build pointed at the wrong project is worse than a
+// hard failure.
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+const isDevBypass =
+  import.meta.env.DEV === true &&
+  import.meta.env.VITE_DEV_BYPASS === 'true' &&
+  !supabaseUrl &&
+  !supabaseAnonKey
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
-    'Configure them in your deployment environment (Vercel project settings, .env.local, etc.).',
-  )
+  if (!isDevBypass) {
+    throw new Error(
+      '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
+      'Configure them in your deployment environment (Vercel project settings, .env.local, etc.).',
+    )
+  }
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// In dev-bypass mode we still need a valid-looking client object so imports
+// don't crash, but it will never reach a real Supabase project.
+const effectiveUrl = supabaseUrl || 'http://localhost:54321'
+const effectiveKey = supabaseAnonKey || 'dev-bypass-placeholder-key'
+
+export const supabase = createClient<Database>(effectiveUrl, effectiveKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
