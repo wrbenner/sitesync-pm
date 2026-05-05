@@ -73,6 +73,7 @@ import {
   type AITaskType,
 } from '../shared/aiRouter.ts'
 import { lintVoice, type DraftedActionTypeLite } from '../shared/voiceLinter.ts'
+import { type LaxClient } from '../shared/types.ts'
 
 // ── Tunables ─────────────────────────────────────────────────────────────────
 
@@ -170,8 +171,7 @@ interface CachedResponse {
 }
 
 async function readIdempotencyCache(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: LaxClient,
   idempotencyKey: string,
   requestHash: string,
 ): Promise<CachedResponse | null> {
@@ -195,8 +195,7 @@ async function readIdempotencyCache(
 }
 
 async function writeIdempotencyCache(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: LaxClient,
   idempotencyKey: string,
   userId: string,
   requestHash: string,
@@ -221,8 +220,7 @@ async function writeIdempotencyCache(
 // ── Rate limiting ────────────────────────────────────────────────────────────
 
 async function checkRateLimit(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: LaxClient,
   userId: string,
 ): Promise<void> {
   const { data, error } = await supabase.rpc('iris_call_count_recent', {
@@ -258,8 +256,7 @@ async function checkRateLimit(
 // Returns the audit_log row id so the SSE response can include it.
 
 async function writeAuditEntry(params: {
-  // deno-lint-ignore no-explicit-any
-  supabase: any
+  supabase: LaxClient
   userId: string
   userEmail: string | null
   projectId: string | null
@@ -335,8 +332,7 @@ Deno.serve(async (req) => {
 
   let body: CallRequest
   let user: { id: string; email: string }
-  // deno-lint-ignore no-explicit-any
-  let supabase: any
+  let supabase: LaxClient
 
   try {
     const auth = await authenticateRequest(req)

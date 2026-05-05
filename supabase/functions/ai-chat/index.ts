@@ -12,6 +12,58 @@ import {
   errorResponse,
   HttpError,
 } from '../shared/auth.ts'
+import { type LaxClient } from '../shared/types.ts'
+
+// ── Anthropic content-block shapes ───────────────────────
+interface AnthropicTextBlock {
+  type: 'text'
+  text: string
+}
+interface AnthropicToolUseBlock {
+  type: 'tool_use'
+  id: string
+  name: string
+  input: Record<string, unknown>
+}
+type AnthropicContentBlock = AnthropicTextBlock | AnthropicToolUseBlock | { type: string }
+
+interface AnthropicMessageResult {
+  content?: AnthropicContentBlock[]
+  stop_reason?: string | null
+}
+
+interface ToolInput {
+  status?: string
+  priority?: string
+  overdue?: boolean
+  assigned_to?: string
+  limit?: number
+  type?: string
+  days?: number
+  title?: string
+  description?: string
+  due_date?: string
+  entity_type?: string
+  entity_id?: string
+  new_status?: string
+  query?: string
+}
+
+interface ProjectHealthRfi { status: string; due_date: string | null }
+interface ProjectHealthTask { status: string; due_date: string | null }
+interface ProjectHealthBudget { original_amount: number | null; actual_amount: number | null }
+
+interface ToolResultEntry {
+  tool: string
+  input: Record<string, unknown>
+  result: unknown
+}
+
+interface ToolResultBlock {
+  type: 'tool_result'
+  tool_use_id: string
+  content: string
+}
 
 // ── Constants ────────────────────────────────────────────
 
@@ -173,12 +225,12 @@ const tools = [
 // ── Tool Execution ───────────────────────────────────────
 
 async function executeTool(
-  supabase: any,
+  supabase: LaxClient,
   projectId: string,
   userRole: string,
   toolName: string,
-  toolInput: any,
-): Promise<any> {
+  toolInput: ToolInput,
+): Promise<Record<string, unknown>> {
   // Check tool-level permission
   const requiredRole = TOOL_PERMISSIONS[toolName]
   if (requiredRole && !isRoleAtLeast(userRole, requiredRole)) {
@@ -299,10 +351,13 @@ async function executeTool(
         supabase.from('tasks').select('id, status, due_date').eq('project_id', projectId),
         supabase.from('budget_items').select('original_amount, actual_amount').eq('project_id', projectId),
       ])
-      const openRfis = (rfis.data || []).filter((r: any) => ['open', 'under_review'].includes(r.status)).length
-      const overdueTasks = (tasks.data || []).filter((t: any) => t.due_date && t.due_date < today && t.status !== 'done').length
-      const totalBudget = (budget.data || []).reduce((s: number, b: any) => s + (b.original_amount || 0), 0)
-      const totalSpent = (budget.data || []).reduce((s: number, b: any) => s + (b.actual_amount || 0), 0)
+      const rfiRows = (rfis.data ?? []) as ProjectHealthRfi[]
+      const taskRows = (tasks.data ?? []) as ProjectHealthTask[]
+      const budgetRows = (budget.data ?? []) as ProjectHealthBudget[]
+      const openRfis = rfiRows.filter((r) => ['open', 'under_review'].includes(r.status)).length
+      const overdueTasks = taskRows.filter((t) => t.due_date && t.due_date < today && t.status !== 'done').length
+      const totalBudget = budgetRows.reduce((s: number, b) => s + (b.original_amount || 0), 0)
+      const totalSpent = budgetRows.reduce((s: number, b) => s + (b.actual_amount || 0), 0)
       return { open_rfis: openRfis, overdue_tasks: overdueTasks, budget_percent: totalBudget > 0 ? Math.round(totalSpent / totalBudget * 100) : 0 }
     }
 
@@ -439,9 +494,12 @@ GENERATIVE UI TYPES (return as tool result with ui_type field):
     }))
 
     // Tool use loop
-    let currentMessages = apiMessages
+    type ApiMessage =
+      | { role: 'assistant'; content: string | AnthropicContentBlock[] }
+      | { role: 'user'; content: string | ToolResultBlock[] }
+    let currentMessages: ApiMessage[] = apiMessages
     let finalResponse = ''
-    const toolResults: any[] = []
+    const toolResults: ToolResultEntry[] = []
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -464,22 +522,25 @@ GENERATIVE UI TYPES (return as tool result with ui_type field):
         throw new HttpError(502, 'AI service temporarily unavailable')
       }
 
-      const result = await response.json()
-      const hasToolUse = result.content?.some((block: any) => block.type === 'tool_use')
+      const result = await response.json() as AnthropicMessageResult
+      const blocks: AnthropicContentBlock[] = result.content ?? []
+      const hasToolUse = blocks.some((block) => block.type === 'tool_use')
 
       if (!hasToolUse || result.stop_reason === 'end_turn') {
-        finalResponse = (result.content || [])
-          .filter((block: any) => block.type === 'text')
-          .map((block: any) => block.text)
+        finalResponse = blocks
+          .filter((block): block is AnthropicTextBlock => block.type === 'text')
+          .map((block) => block.text)
           .join('\n')
         break
       }
 
-      const toolUseBlocks = result.content.filter((block: any) => block.type === 'tool_use')
-      const toolResultBlocks: any[] = []
+      const toolUseBlocks = blocks.filter(
+        (block): block is AnthropicToolUseBlock => block.type === 'tool_use',
+      )
+      const toolResultBlocks: ToolResultBlock[] = []
 
       for (const toolBlock of toolUseBlocks) {
-        const toolResult = await executeTool(supabase, projectId, userRole, toolBlock.name, toolBlock.input)
+        const toolResult = await executeTool(supabase, projectId, userRole, toolBlock.name, toolBlock.input as ToolInput)
         toolResults.push({ tool: toolBlock.name, input: toolBlock.input, result: toolResult })
         toolResultBlocks.push({
           type: 'tool_result',
@@ -490,8 +551,8 @@ GENERATIVE UI TYPES (return as tool result with ui_type field):
 
       currentMessages = [
         ...currentMessages,
-        { role: 'assistant' as const, content: result.content },
-        { role: 'user' as const, content: toolResultBlocks },
+        { role: 'assistant', content: blocks },
+        { role: 'user', content: toolResultBlocks },
       ]
     }
 

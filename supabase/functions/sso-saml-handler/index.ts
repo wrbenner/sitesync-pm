@@ -27,6 +27,9 @@ import {
   errorResponse,
   HttpError,
 } from '../shared/auth.ts'
+import { type LaxClient } from '../shared/types.ts'
+
+interface OrgSlugRow { id: string; slug: string }
 
 interface SsoConfigRow {
   organization_id: string
@@ -67,18 +70,20 @@ Deno.serve(async (req) => {
     const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const admin = createClient(sUrl, sKey)
 
-    const { data: org } = await (admin as any)
+    const orgRes = await admin
       .from('organizations')
       .select('id, slug')
       .eq('slug', orgSlug)
       .maybeSingle()
+    const org = orgRes.data as OrgSlugRow | null
     if (!org) throw new HttpError(404, `unknown org: ${orgSlug}`)
 
-    const { data: cfg } = await (admin as any)
+    const cfgRes = await admin
       .from('org_sso_config')
       .select('*')
       .eq('organization_id', org.id)
-      .maybeSingle() as { data: SsoConfigRow | null }
+      .maybeSingle()
+    const cfg = cfgRes.data as SsoConfigRow | null
     if (!cfg || !cfg.enabled || cfg.protocol !== 'saml') {
       throw new HttpError(400, 'SAML SSO not enabled for this org')
     }
@@ -146,7 +151,7 @@ function extractAttribute(xml: string, name: string): string | null {
 }
 
 async function logSsoEvent(
-  admin: ReturnType<typeof createClient>,
+  admin: LaxClient,
   organization_id: string,
   protocol: 'saml' | 'oidc',
   email: string | null,
@@ -155,7 +160,7 @@ async function logSsoEvent(
   raw_excerpt: string,
 ) {
   try {
-    await (admin as any).from('sso_login_events').insert({
+    await admin.from('sso_login_events').insert({
       organization_id,
       protocol,
       email,

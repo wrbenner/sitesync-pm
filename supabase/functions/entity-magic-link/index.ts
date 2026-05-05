@@ -28,6 +28,36 @@ import {
   errorResponse,
 } from '../shared/auth.ts'
 
+interface MagicLinkTokenRow {
+  id: string
+  scope: 'view' | 'comment'
+  project_id: string
+  entity_type: string
+  expires_at: string
+  revoked_at: string | null
+  recipient_email: string | null
+  accessed_count?: number | null
+  first_accessed_at?: string | null
+}
+
+interface ProjectShareRow {
+  name: string | null
+  address: string | null
+  company_id: string | null
+}
+
+interface JwtPayload {
+  iss?: string
+  sub?: string
+  aud?: string
+  pid?: string
+  scope?: string
+  exp?: number
+  iat?: number
+  nonce?: string
+  [k: string]: unknown
+}
+
 const MAGIC_LINK_SECRET = Deno.env.get('MAGIC_LINK_SECRET') ?? Deno.env.get('SUPABASE_JWT_SECRET') ?? ''
 const SHARE_BASE_URL = Deno.env.get('SHARE_BASE_URL') ?? 'https://app.sitesync.example/sitesync-pm/#/share'
 
@@ -115,7 +145,7 @@ async function handleMint(req: Request): Promise<Response> {
   const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(sUrl, sKey)
 
-  const { error: insertErr } = await (admin as any).from('magic_link_tokens').insert({
+  const { error: insertErr } = await admin.from('magic_link_tokens').insert({
     project_id: projectId,
     entity_type: body.entity_type,
     entity_id: entityId,
@@ -197,12 +227,13 @@ async function handleValidate(url: URL): Promise<Response> {
   const admin = createClient(sUrl, sKey)
 
   const tokenHash = await sha256(token)
-  const { data: row, error: fetchErr } = await (admin as any)
+  const { data: rowData, error: fetchErr } = await admin
     .from('magic_link_tokens')
-    .select('id, scope, project_id, entity_type, expires_at, revoked_at, recipient_email')
+    .select('id, scope, project_id, entity_type, expires_at, revoked_at, recipient_email, accessed_count, first_accessed_at')
     .eq('token_hash', tokenHash)
     .maybeSingle()
   if (fetchErr) throw new HttpError(500, `validate: ${fetchErr.message}`)
+  const row = rowData as MagicLinkTokenRow | null
   if (!row) throw new HttpError(401, 'token not found')
   if (row.revoked_at) throw new HttpError(401, 'token revoked')
   if (isOwnerPortalProbe && row.entity_type !== 'owner_portal') {
@@ -210,11 +241,11 @@ async function handleValidate(url: URL): Promise<Response> {
   }
 
   // Best-effort access log.
-  await (admin as any)
+  await admin
     .from('magic_link_tokens')
     .update({
-      accessed_count: ((row as any).accessed_count ?? 0) + 1,
-      first_accessed_at: (row as any).first_accessed_at ?? new Date().toISOString(),
+      accessed_count: (row.accessed_count ?? 0) + 1,
+      first_accessed_at: row.first_accessed_at ?? new Date().toISOString(),
       last_accessed_at: new Date().toISOString(),
     })
     .eq('id', row.id)
@@ -225,15 +256,16 @@ async function handleValidate(url: URL): Promise<Response> {
   let projectAddress: string | null = null
   let companyId: string | null = null
   if (row.entity_type === 'owner_portal') {
-    const { data: proj } = await (admin as any)
+    const { data: projData } = await admin
       .from('projects')
       .select('name, address, company_id')
       .eq('id', row.project_id)
       .maybeSingle()
+    const proj = projData as ProjectShareRow | null
     if (proj) {
-      projectName = (proj as any).name ?? null
-      projectAddress = (proj as any).address ?? null
-      companyId = (proj as any).company_id ?? null
+      projectName = proj.name ?? null
+      projectAddress = proj.address ?? null
+      companyId = proj.company_id ?? null
     }
   }
 
@@ -296,7 +328,7 @@ async function signJwt(payload: Record<string, unknown>, secret: string): Promis
   return `${data}.${b64urlEncode(sig)}`
 }
 
-async function verifyJwt(token: string, secret: string): Promise<{ ok: boolean; payload?: Record<string, any> }> {
+async function verifyJwt(token: string, secret: string): Promise<{ ok: boolean; payload?: JwtPayload }> {
   const parts = token.split('.')
   if (parts.length !== 3) return { ok: false }
   const [headerB, payloadB, sigB] = parts
