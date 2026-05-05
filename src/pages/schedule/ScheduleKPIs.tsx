@@ -88,7 +88,8 @@ function AnimatedValue({ value, suffix = '', prefix = '' }: { value: number; suf
 // A tiny inline SVG sparkline for visual trend context.
 
 function MiniSparkline({ value, color, max = 100 }: { value: number; color: string; max?: number }) {
-  // Generate a plausible micro-trend from the current value
+  // Quantize value so the sparkline only re-renders when the value moves by ≥5 units.
+  const quantizedValue = Math.round(value / 5);
   const points = React.useMemo(() => {
     const baseline = Math.max(0, value - 15);
     const pts = [
@@ -99,8 +100,7 @@ function MiniSparkline({ value, color, max = 100 }: { value: number; color: stri
       value,
     ].map(v => Math.min(max, Math.max(0, v)));
     return pts;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Math.round(value / 5), max]);
+  }, [quantizedValue, max]); // eslint-disable-line react-hooks/exhaustive-deps -- quantizedValue intentionally quantizes value to limit re-renders
 
   const w = 48;
   const h = 20;
@@ -507,8 +507,8 @@ const FullCards: React.FC<{
 
 export const ScheduleKPIs: React.FC<ScheduleKPIsProps> = ({
   activityMetrics,
-  metrics,
-  projectMetrics,
+  metrics: _metrics,
+  projectMetrics: _projectMetrics,
   isMobile,
   isNarrow,
   compact = false,

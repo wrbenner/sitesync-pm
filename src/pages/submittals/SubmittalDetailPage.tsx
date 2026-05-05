@@ -43,7 +43,7 @@ import {
   ExternalLink, Eye, Stamp, Send, Forward,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
-import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
+import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { useAuth } from '../../hooks/useAuth'
 import { useSubmittal, useSubmittalReviewers } from '../../hooks/queries/submittals'
 import { useUpdateSubmittal } from '../../hooks/mutations/submittals'
@@ -614,7 +614,7 @@ export function SubmittalDetailPage() {
   const navigate = useNavigate()
   const projectId = useProjectId()
   const { addToast } = useToast()
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
 
   const { data: submittal, isLoading, error } = useSubmittal(submittalId)
   const { data: reviewers = [] } = useSubmittalReviewers(submittalId)
@@ -646,7 +646,8 @@ export function SubmittalDetailPage() {
 
   useEffect(() => {
     let cancelled = false
-    if (!submittal) { setResolvedFiles([]); return }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- clearing derived state when source data disappears is intentional
+    if (!submittal) { setResolvedFiles(prev => prev.length === 0 ? prev : []); return }
     const attachments = ((submittal as unknown as { attachments?: unknown[] }).attachments ?? []) as unknown[]
     const normalized = attachments.map((att: unknown, i: number) => {
       if (typeof att === 'string') {

@@ -77,6 +77,8 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
         return (
           <React.Fragment key={state}>
             <div
+              role={isClickable && !isUpcoming ? 'button' : undefined}
+              tabIndex={isClickable && !isUpcoming ? 0 : undefined}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -87,6 +89,12 @@ export const WorkflowTimeline: React.FC<WorkflowTimelineProps> = ({
                 opacity: isUpcoming ? 0.5 : 1,
               }}
               onClick={() => isClickable && !isUpcoming && onTransition?.(state)}
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && isClickable && !isUpcoming) {
+                  e.preventDefault()
+                  onTransition?.(state)
+                }
+              }}
               aria-label={`Step ${idx + 1}: ${label(state, labels)} - ${isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming'}`}
             >
               {/* Dot */}
