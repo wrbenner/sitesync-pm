@@ -80,7 +80,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${crypto.randomUUID().slice(0, 7)}`;
 
 function normalizedDistance(
   a: NormalizedPoint,

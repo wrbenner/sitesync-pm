@@ -88,19 +88,14 @@ function AnimatedValue({ value, suffix = '', prefix = '' }: { value: number; suf
 // A tiny inline SVG sparkline for visual trend context.
 
 function MiniSparkline({ value, color, max = 100 }: { value: number; color: string; max?: number }) {
-  // Generate a plausible micro-trend from the current value
+  // Deterministic linear ramp from (value - 15) to value — stable across renders
   const points = React.useMemo(() => {
     const baseline = Math.max(0, value - 15);
-    const pts = [
-      baseline + Math.random() * 8,
-      baseline + 4 + Math.random() * 6,
-      baseline + 2 + Math.random() * 10,
-      baseline + 6 + Math.random() * 8,
-      value,
-    ].map(v => Math.min(max, Math.max(0, v)));
-    return pts;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Math.round(value / 5), max]);
+    const steps = [0, 0.25, 0.5, 0.75, 1];
+    return steps
+      .map(t => baseline + (value - baseline) * t)
+      .map(v => Math.min(max, Math.max(0, v)));
+  }, [value, max]);
 
   const w = 48;
   const h = 20;
