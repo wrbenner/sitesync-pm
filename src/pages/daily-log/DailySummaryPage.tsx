@@ -153,7 +153,7 @@ const DailySummaryPage: React.FC = () => {
         marginBottom: spacing['6'],
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'] }}>
-          <Sparkles size={20} style={{ color: '#6366F1' }} />
+          <Sparkles size={20} style={{ color: colors.indigo }} />
           <h1 style={{
             margin: 0,
             fontSize: typography.fontSize.subtitle,
