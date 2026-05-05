@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions, touchT
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useLienWaivers, useCreateLienWaiver, useDeleteLienWaiver } from '../hooks/queries/lien-waivers';
+import type { LienWaiver } from '../types/api';
 import { toast } from 'sonner';
 import {
   useCreateSignatureRequest,
@@ -52,8 +53,7 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  const waivers: LienWaiver[] = rawWaivers ?? [];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
@@ -79,11 +79,11 @@ export function LienWaivers() {
   };
 
   // Use the actual DB column names. The API endpoint maps them so we need to handle both naming conventions.
-  const getWaiverState = (w: any): string => w.waiver_type ?? w.waiver_state ?? w.type ?? '';
-  const getContractorName = (w: any): string => w.contractor_name ?? w.subcontractor_id ?? '';
-  const getThroughDate = (w: any): string | null => w.through_date ?? w.payment_period ?? null;
-  const getSignedAt = (w: any): string | null => w.signed_at ?? w.received_at ?? null;
-  const getStatus = (w: any): string => w.status ?? 'pending';
+  const getWaiverState = (w: LienWaiver): string => w.waiver_type ?? '';
+  const getContractorName = (w: LienWaiver): string => w.subcontractor_id ?? '';
+  const getThroughDate = (w: LienWaiver): string | null => w.payment_period ?? null;
+  const getSignedAt = (w: LienWaiver): string | null => w.received_at ?? null;
+  const getStatus = (w: LienWaiver): string => w.status ?? 'pending';
 
   const filtered = waivers.filter((w) => {
     const ws = getWaiverState(w);

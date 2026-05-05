@@ -570,7 +570,7 @@ const PunchItemCreateWizard: React.FC<PunchItemCreateWizardProps> = ({
 
   const handleAddPhotos = useCallback((newFiles: File[]) => {
     const mapped: PhotoFile[] = newFiles.map(f => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: `${Date.now()}-${crypto.randomUUID().replace(/-/g, '')}`,
       file: f, name: f.name, size: f.size,
       preview: URL.createObjectURL(f),
     }))
@@ -605,7 +605,7 @@ const PunchItemCreateWizard: React.FC<PunchItemCreateWizardProps> = ({
       const uploadedUrls: string[] = []
       for (const p of photos) {
         const ext = p.name.split('.').pop() || 'jpg'
-        const path = `${projectId}/pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const path = `${projectId}/pending-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, 6)}.${ext}`
         const { error: upErr } = await supabase.storage
           .from('punch-list-photos')
           .upload(path, p.file, { contentType: p.file.type, upsert: false })
