@@ -81,7 +81,7 @@ const CUSTOM_PROPS = ['_annotationType', '_annotationColor', '_annotationId'] as
 // ── Helpers ──────────────────────────────────────────────
 
 function uid(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${crypto.randomUUID().slice(0, 8)}`
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
