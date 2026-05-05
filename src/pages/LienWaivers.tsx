@@ -12,6 +12,7 @@ import {
   useAddSigner,
 } from '../hooks/queries/signatures';
 import { getSignerColorPalette } from '../services/signatureService';
+import type { LienWaiverRow } from '../types/api';
 
 type WaiverStateValue = 'conditional_progress' | 'unconditional_progress' | 'conditional_final' | 'unconditional_final';
 type WaiverFilterType = WaiverStateValue | 'all';
@@ -52,8 +53,7 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  const waivers: LienWaiverRow[] = rawWaivers ?? [];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');

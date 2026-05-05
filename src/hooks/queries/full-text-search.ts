@@ -5,6 +5,8 @@ import type { Database } from '../../types/database'
 type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
 
+type SearchRow = { id: string; name?: string | null; title?: string | null; description?: string | null; discipline?: string | null; project_id: string; created_at: string | null }
+
 // ── Full-Text Search ────────────────────────────────────────
 
 export interface SearchResult {
@@ -40,14 +42,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'document' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name ?? '',
+              description: d.description ?? null,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
@@ -61,14 +63,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'file' as const,
-              title: d.name,
-              description: d.description,
+              title: d.name ?? '',
+              description: d.description ?? null,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
@@ -82,14 +84,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'drawing' as const,
-              title: d.title,
-              description: d.discipline,
+              title: d.title ?? '',
+              description: d.discipline ?? null,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
@@ -103,14 +105,14 @@ export function useFullTextSearch(
           .limit(limit)
         if (data) {
           results.push(
-            ...(data as any[]).map((d: any) => ({
+            ...(data as SearchRow[]).map((d) => ({
               id: d.id,
               type: 'wiki' as const,
-              title: d.title,
+              title: d.title ?? '',
               description: null,
               project_id: d.project_id,
               relevance: 1,
-              created_at: d.created_at,
+              created_at: d.created_at ?? '',
             }))
           )
         }
