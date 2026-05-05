@@ -40,7 +40,7 @@ shown to subs and owners flows through this path.
 
 | File | Pattern | Risk |
 |---|---|---|
-| `src/services/payAppComputation.ts` | Float math (`gross_completed * (rate/100)`) | **Critical** — primary calculator |
+| `src/services/payAppComputation.ts` | Float math (`gross_completed * (rate/100)`) | **Critical** — primary calculator (removed) |
 | `src/pages/payment-applications/types.ts` | `parseFloat(row.scheduledValue)` | High — feeds calculator |
 | `src/pages/payment-applications/SOVEditor.tsx` | `parseFloat(value)`, `parseFloat(e.target.value)` | High — user input ingest |
 | `src/pages/payment-applications/PayAppDetail.tsx` | Reads + displays | Medium |

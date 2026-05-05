@@ -25,6 +25,47 @@ const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
 // Inline-code citations: `src/lib/foo.ts` or `src/lib/foo.ts:42`
 const CITE_RE = /`((?:src|supabase|scripts|docs|public|e2e)\/[A-Za-z0-9_./@-]+\.[A-Za-z0-9]+)(?::\d+(?:-\d+)?)?`/g;
 
+// A cite/link is exempt from the existence check when its surrounding line
+// declares it as planned, new, WIP, deferred, or removed. This lets spec docs
+// and receipts reference files that don't exist yet (Lap 3+ work) without
+// lying about their status.
+//
+// Recognized markers (case-insensitive, on the same line as the cite):
+//   (planned) | (NEW) | (WIP) | (TODO) | (deferred) | (removed)
+//   | NEW [anything] |   (table cell starting with NEW/PLANNED/...)
+//   NEW —    | PLANNED:    (status word at start of cell or sentence)
+//   — Deferred to ...     (em-dash or colon followed by status word)
+//   to be (created|written|added|implemented|built)
+//   will be (created|written|added|implemented|shipped|built)
+//   coming in (Lap 3|Wave 2|Q3|...)  (explicit deferral phrase)
+//
+// Word boundaries on every keyword so accidental prose like "a new feature"
+// doesn't quietly exempt a real broken link.
+const PLANNED_KEYWORD = "(?:planned|new|wip|todo|deferred|removed)";
+const PLANNED_MARKER_RE = new RegExp(
+  `\\(${PLANNED_KEYWORD}\\)` +              // (planned), (NEW), ...
+  `|\\|\\s*${PLANNED_KEYWORD}\\b` +          // | NEW [anything] |
+  `|^\\s*${PLANNED_KEYWORD}\\b` +            // NEW: ... at start of line
+  `|[—:]\\s*${PLANNED_KEYWORD}\\b` +         // — Deferred ..., : Planned ...
+  `|\\bto be (?:created|written|added|implemented|built|shipped)\\b` +
+  `|\\bwill be (?:created|written|added|implemented|shipped|built)\\b` +
+  `|\\bcoming in (?:Lap|Wave|Q[1-4]|Day|Phase)\\b` +
+  // Standalone "deferred" anywhere on the line — specific enough that it
+  // doesn't trigger on prose. Same for explicit "Day NN prep step" /
+  // "Day NN deliverable" / "needs to be (created|written|added)" phrases.
+  `|\\bdeferred\\b` +
+  `|\\bDay \\d+ (?:prep|deliverable|step|spec)\\b` +
+  `|\\bneeds to be (?:created|written|added|implemented|built)\\b` +
+  // Inline-only references: a doc may cite an ADR or section that lives
+  // inline in the same file rather than as a standalone document.
+  `|\\b(?:inlined?|cross-reference)\\b` +
+  // Explicit migration / removed pointers to phased-out files.
+  `|\\b(?:moved to|renamed to|superseded by|replaced by|see also)\\b` +
+  // Date placeholders like 2026-06-XX (XX = TBD) are explicit "not yet".
+  `|\\d{4}-\\d{2}-XX\\b`,
+  "i",
+);
+
 interface Issue {
   file: string;
   raw: string;
@@ -85,11 +126,23 @@ function checkCite(citePath: string): { ok: boolean; resolved: string } {
   return { ok: fs.existsSync(resolved), resolved };
 }
 
+function lineContaining(text: string, charIndex: number): string {
+  // Returns the line of `text` that contains the byte at charIndex.
+  const start = text.lastIndexOf("\n", charIndex - 1) + 1;
+  const end = text.indexOf("\n", charIndex);
+  return text.slice(start, end < 0 ? text.length : end);
+}
+
+function isPlanned(line: string): boolean {
+  return PLANNED_MARKER_RE.test(line);
+}
+
 function main() {
   const files = listMarkdownFiles(DOCS_DIR);
   const broken: Issue[] = [];
   let totalLinks = 0;
   let totalCites = 0;
+  let plannedSkips = 0;
 
   for (const file of files) {
     const text = fs.readFileSync(file, "utf8");
@@ -101,6 +154,10 @@ function main() {
       totalLinks++;
       const { ok, resolved } = checkLink(file, href);
       if (!ok) {
+        if (isPlanned(lineContaining(text, match.index ?? 0))) {
+          plannedSkips++;
+          continue;
+        }
         broken.push({ file, raw: href, resolved });
       }
     }
@@ -111,9 +168,17 @@ function main() {
       totalCites++;
       const { ok, resolved } = checkCite(citePath);
       if (!ok) {
+        if (isPlanned(lineContaining(text, match.index ?? 0))) {
+          plannedSkips++;
+          continue;
+        }
         broken.push({ file, raw: match[0], resolved });
       }
     }
+  }
+
+  if (plannedSkips > 0) {
+    console.log(`(${plannedSkips} cites skipped — line marked planned/NEW/WIP/TODO/deferred/removed)`);
   }
 
   // Summary

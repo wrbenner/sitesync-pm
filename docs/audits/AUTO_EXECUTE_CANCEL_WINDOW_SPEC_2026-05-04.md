@@ -301,7 +301,7 @@ Day 67 is FRIDAY before opt-in starts Day 68. Walker tests every surface in the 
 - [ ] **Network off:** airplane mode; trigger draft; let timer expire; verify executor ran; restore network; verify "this happened" notification arrives
 - [ ] **Multiple drafts:** trigger 3 eligible drafts simultaneously; verify 3 separate windows; cancel one + let two fire
 
-Each test pass logged to `docs/audits/cancel-window-test-runs/2026-06-15.md` per the Bugatti standard.
+Each test pass logged to `docs/audits/cancel-window-test-runs/2026-06-15.md` per the Bugatti standard. (planned)
 
 ---
 
@@ -330,7 +330,7 @@ CI fails if any budget regresses by > 20%.
 | `supabase/functions/cancel-by-email-reply/index.ts` | NEW — Postmark inbound webhook |
 | `supabase/functions/cancel-by-sms-reply/index.ts` | NEW — Twilio inbound webhook |
 | `src/components/iris/AutoExecuteCancelBanner.tsx` | NEW — in-app banner with countdown |
-| `src/components/iris/AutoExecuteToggle.tsx` | EDIT — add channel preferences |
+| `src/components/iris/AutoExecuteToggle.tsx` | EDIT — add channel preferences (planned) |
 | `src/hooks/useCancelExecutor.ts` | NEW |
 | `mobile/src/lib/push-notifications.ts` | EDIT — add cancel-window notification format |
 | `mobile/src/lib/live-activities.ts` | NEW — iOS Live Activity for countdown |

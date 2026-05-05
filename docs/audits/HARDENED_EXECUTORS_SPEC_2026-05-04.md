@@ -82,7 +82,7 @@ interface HardenedExecutor<T> {
 
 ### Tasks
 
-- Write `HardenedExecutor` interface + base class (`src/services/iris/hardenedExecutor.ts`)
+- Write `HardenedExecutor` interface + base class (`src/services/iris/hardenedExecutor.ts`) (planned)
 - Migration for `executor_runs` telemetry table
 - Migration for org-level feature flag table
 - Update existing 5 executors to optionally implement HardenedExecutor (start: just RFI, daily log, punch item; pay app + submittal transmittal NOT hardened in Lap 3)

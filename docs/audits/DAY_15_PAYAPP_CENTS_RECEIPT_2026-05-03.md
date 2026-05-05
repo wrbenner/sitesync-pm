@@ -51,7 +51,7 @@ across them aren't yet consistent (calc #4 uses banker's rounding, calc
 ## Files Touched
 
 **Deleted:**
-- `src/services/payAppComputation.ts` (dead code, ~106 LOC)
+- `src/services/payAppComputation.ts` (dead code, ~106 LOC) (removed)
 
 **Modified (Cents-internal accumulators):**
 - `src/pages/payment-applications/types.ts`

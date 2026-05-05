@@ -132,7 +132,7 @@ By September 1, 2026, the response landing page lives at **`sitesync.com/groundb
 </footer>
 ```
 
-The template lives at `docs/marketing/groundbreak-template.html`. Engineer + designer review Sept 1; designer mocks up the visual.
+The template lives at `docs/marketing/groundbreak-template.html`. Engineer + designer review Sept 1; designer mocks up the visual. (planned)
 
 ### What's Pre-Built by Sept 1
 

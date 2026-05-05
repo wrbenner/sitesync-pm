@@ -185,7 +185,7 @@ For each: confirm a chain row exists with correct entity_type, action, before_st
 | **May 11-15** | Walker runs Checks 1, 2, 4, 6, 7, 8 (5 hours total) | Walker |
 | **May 18-22** | Walker runs Checks 3, 5, 9, 10, 12 (10 hours total) | Walker |
 | **May 25-29** | Document findings; fix any critical issues; re-run | Walker + Eng |
-| **June 1** | Internal chain audit memo committed: `docs/audits/INTERNAL_CHAIN_AUDIT_2026-06-01.md` | Walker |
+| **June 1** | Internal chain audit memo committed: `docs/audits/INTERNAL_CHAIN_AUDIT_2026-06-01.md` | Walker (planned) |
 | **June 1** | Trail of Bits initial outreach (with the memo + reference to migration files) | Walker |
 | **June 15** | Trail of Bits scoping call | Walker |
 | **July 1** | Trail of Bits engagement signed | Walker |
@@ -215,7 +215,7 @@ For each: confirm a chain row exists with correct entity_type, action, before_st
 
 ## What Goes in the Internal Chain Audit Memo
 
-`docs/audits/INTERNAL_CHAIN_AUDIT_2026-06-01.md` should contain:
+`docs/audits/INTERNAL_CHAIN_AUDIT_2026-06-01.md` should contain: (planned)
 
 ```markdown
 # Internal Chain Audit Memo
@@ -294,7 +294,7 @@ Date: 2026-06-01
 
 ## What Claude Code Does With This Spec
 
-- Write a script (`scripts/chain-audit-checks.ts`) that automates Checks 2, 5, 6, 7, 8, 9, 12 (the SQL-driven ones). ~1 day work.
+- Write a script (`scripts/chain-audit-checks.ts`) that automates Checks 2, 5, 6, 7, 8, 9, 12 (the SQL-driven ones). ~1 day work. (planned)
 - Document the remediation pattern for any check that fails. ~1 day work.
 - Generate the 100K-row staging snapshot for performance testing. ~0.5 day.
 

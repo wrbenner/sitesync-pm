@@ -349,7 +349,7 @@ The playbook stays the same regardless of which customer is "first."
 
 ## CRM / Pipeline Tracking
 
-Walker tracks the funnel in `docs/sales/pipeline.md` (text-based; Notion-friendly):
+Walker tracks the funnel in `docs/sales/pipeline.md` (text-based; Notion-friendly): (planned)
 
 ```markdown
 # Sales Pipeline — Updated [date]
@@ -389,7 +389,7 @@ Updated weekly. Powers the seed deck Slide 14 (numbers).
 2. Identify prospects 2, 3, 4 (warm intros first)
 3. Schedule outreach for Day 84
 4. Confirm outside counsel availability for redline review (per `MSA_TEMPLATE_NOTES`)
-5. Set up `docs/sales/pipeline.md` with current state
+5. Set up `docs/sales/pipeline.md` with current state (planned)
 
 ---
 

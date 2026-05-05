@@ -279,7 +279,7 @@ Date:                    Date:
 ## What Claude Code Does With This Spec
 
 - Convert this spec into MSA + DPA + Order Form drafts (text format) for outside counsel review (~3 days)
-- Maintain the templates as `docs/legal/MSA_TEMPLATE_v1.md`, `docs/legal/DPA_TEMPLATE_v1.md`, `docs/legal/ORDER_FORM_TEMPLATE_v1.md`
+- Maintain the templates as `docs/legal/MSA_TEMPLATE_v1.md`, `docs/legal/DPA_TEMPLATE_v1.md`, `docs/legal/ORDER_FORM_TEMPLATE_v1.md` (planned)
 - Track customer-specific redlines in `docs/legal/customer-redlines/<customer-slug>.md`
 - Sync executed agreements to `docs/legal/executed/<customer-slug>-MSA-<date>.pdf`
 

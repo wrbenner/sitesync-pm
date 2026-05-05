@@ -472,7 +472,7 @@ Postmortems are public for SEV-1 with customer impact, internal for SEV-2/3.
 
 ## What Claude Code Does With This Spec
 
-- Build `scripts/dr-drill.sh` — runs the synthetic regional outage
+- Build `scripts/dr-drill.sh` — runs the synthetic regional outage (planned)
 - Build status page integration with Sentry alerts
 - Build the postmortem template tooling
 - Maintain runbook through quarterly drills

@@ -76,7 +76,7 @@ These are the integration points this tab intentionally did **not** touch
    - Suggested mount point: just above the existing `WorkflowTimeline` in
      `PayAppDetail.tsx` (~ line 80).
 
-2. **`src/pages/site/check-in.tsx`** (or whichever route hosts crew check-in)
+2. **`src/pages/site/check-in.tsx`** (or whichever route hosts crew check-in) (planned)
    — render `CoiBlockBanner` at the top, gated on
    `useQuery(['coi-blocks', projectId])`. The banner is a no-op when the
    `blocks` array doesn't include the current sub — drop it into the page

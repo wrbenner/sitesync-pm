@@ -31,7 +31,7 @@ imported behind its route** so it's not in the main chunk.
 ### Step 1 — Establish baseline
 1. `npm run build` — output goes to `dist/`.
 2. `du -h dist/assets/*.js | sort -h` — print every chunk size, largest last.
-3. Save the output to `docs/audits/BUNDLE_BASELINE_2026-05-01.txt`.
+3. Save the output to `docs/audits/BUNDLE_BASELINE_2026-05-01.txt`. (planned)
 4. Identify the main chunk (largest `index-*.js`). Record its size.
 
 ### Step 2 — Three.js lazy-load
@@ -131,7 +131,7 @@ Three.js, PDF, BIM, OCR, file upload — none of these should load.
 4. If not, identify the worst-offending Lighthouse audit (LCP, TBT, CLS) and fix it specifically.
 
 ### Step 4 — Document baseline
-Save final numbers to `docs/audits/BUNDLE_FINAL_2026-05-01.txt`. Include:
+Save final numbers to `docs/audits/BUNDLE_FINAL_2026-05-01.txt`. Include: (planned)
 - Main chunk size (raw + gzipped)
 - Demo-path total size (raw + gzipped)
 - Lighthouse perf score

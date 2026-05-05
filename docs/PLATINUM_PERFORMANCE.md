@@ -69,7 +69,7 @@ src/lib/perf/queryRegression.ts      assertQueryP95 with warmup + outlier discar
 - **Index suggestion generator.** `scripts/index-audit.ts` produces the slowest-query report; the auto-suggest of indexes from filter columns is TODO. Manual review of the report is more useful than over-aggressive suggestions for the next 30 days of production traffic.
 - **Duplicate-index detection.** Same script — TODO section. Easy follow-up once production has indexes that risk overlap.
 - **`admin_refresh_view(text)` SQL function.** The refresh edge function calls this RPC; the function itself is a one-line `CREATE OR REPLACE FUNCTION ... RETURNS void LANGUAGE sql AS $$ REFRESH MATERIALIZED VIEW ... $$` per view. Lands when the function-permission model is settled.
-- **Restore drill's schema sanity step.** Workflow scaffold is in (`.github/workflows/restore-drill.yml`); the `scripts/restore-sanity.ts` impl is TODO.
+- **Restore drill's schema sanity step.** Workflow scaffold is in (`.github/workflows/restore-drill.yml`); the `scripts/restore-sanity.ts` impl is TODO. (planned)
 - **CONCURRENTLY index rebuild for production.** Supabase migrations run inside a transaction; `CREATE INDEX CONCURRENTLY` doesn't work there. A separate "post-migration" workflow step runs the indexes with CONCURRENTLY against production directly — TODO.
 - **Cross-project search hit-into-project routing.** The palette emits an `onSelect(row)` callback; the parent navigates. The actual route map per entity_type lands when the palette's parent integration ships.
 - **Liveblocks ↔ materialized views consistency.** Out of scope per the spec — Tab A territory. Doc note in case the MVs ever drift.

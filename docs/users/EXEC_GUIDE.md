@@ -4,7 +4,7 @@ You own the portfolio. SiteSync gives you one screen — KPIs across every proje
 
 ## Portfolio dashboard
 
-The dashboard is [src/pages/portfolio/PortfolioDashboard.tsx](../../src/pages/portfolio/PortfolioDashboard.tsx). It reads from a materialized view (`project_health_summary`) created in [supabase/migrations/20260502120004_portfolio_health_view.sql](../../supabase/migrations/20260502120004_portfolio_health_view.sql), refreshed every 5 minutes by [supabase/functions/portfolio-summary-refresh/index.ts](../../supabase/functions/portfolio-summary-refresh/index.ts) (cron registered at [supabase/migrations/20260502130000_portfolio_summary_refresh_cron.sql](../../supabase/migrations/20260502130000_portfolio_summary_refresh_cron.sql)).
+The dashboard is [src/pages/dashboard/DashboardPortfolio.tsx](../../src/pages/dashboard/DashboardPortfolio.tsx) (consolidated under `/dashboard` after the Wave 1 redesign — was previously a standalone `/portfolio` route). It reads from a materialized view (`project_health_summary`) created in [supabase/migrations/20260502120004_portfolio_health_view.sql](../../supabase/migrations/20260502120004_portfolio_health_view.sql), refreshed every 5 minutes by [supabase/functions/portfolio-summary-refresh/index.ts](../../supabase/functions/portfolio-summary-refresh/index.ts) (cron registered at [supabase/migrations/20260502130000_portfolio_summary_refresh_cron.sql](../../supabase/migrations/20260502130000_portfolio_summary_refresh_cron.sql)).
 
 The pure portfolio library:
 
@@ -24,7 +24,7 @@ The dashboard is NOT yet route-registered per [STATUS.md](../STATUS.md). Once re
 
 ## Cross-project search
 
-[src/pages/portfolio/CrossProjectSearch.tsx](../../src/pages/portfolio/CrossProjectSearch.tsx) calls [supabase/functions/cross-project-search/index.ts](../../supabase/functions/cross-project-search/index.ts), which calls the SQL function `search_org()`. The SQL function joins `project_members.user_id = auth.uid()` server-side, so even an executive only sees results from projects they belong to. RLS is enforced at the SQL function level, not the edge function — a compromised edge function cannot expose inaccessible projects.
+[src/components/search/CrossProjectSearchPalette.tsx](../../src/components/search/CrossProjectSearchPalette.tsx) (now mounted as a command-palette component, was previously a standalone `/portfolio/search` page) calls [supabase/functions/cross-project-search/index.ts](../../supabase/functions/cross-project-search/index.ts), which calls the SQL function `search_org()`. The SQL function joins `project_members.user_id = auth.uid()` server-side, so even an executive only sees results from projects they belong to. RLS is enforced at the SQL function level, not the edge function — a compromised edge function cannot expose inaccessible projects.
 
 The search is full-text. Index migration: [supabase/migrations/20260503110000_fts_indexes.sql](../../supabase/migrations/20260503110000_fts_indexes.sql). The org search index view: [supabase/migrations/20260502120005_org_search_index.sql](../../supabase/migrations/20260502120005_org_search_index.sql).
 

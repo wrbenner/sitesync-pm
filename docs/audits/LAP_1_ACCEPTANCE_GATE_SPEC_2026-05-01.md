@@ -169,7 +169,7 @@ If the gate fails:
 
 - All 3 Playwright tests green in CI.
 - `BUNDLE_FINAL_2026-05-01.txt` shows demo-path ≤ 500 KB gzipped.
-- `docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-01.md` shipped with the actual measured numbers.
+- `docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-01.md` shipped with the actual measured numbers. (planned)
 - Tracker row 30 → ✓.
 - Walker emails a friendly GC. They walk through the demo. Either they
   email back asking about a pilot — or we learn what to fix in Lap 2.

@@ -389,7 +389,7 @@ Before Day 90, run a synthetic dry-run:
 4. Insert: a single failed demo at the front of demo_runs → expect FAIL (consecutive count drops)
 5. Withdraw a contract → expect FAIL on Gate 1 or Gate 2 depending which
 
-These dry runs land in `e2e/lap-3-gate.spec.ts`.
+These dry runs land in `e2e/lap-3-gate.spec.ts`. (planned)
 
 ---
 

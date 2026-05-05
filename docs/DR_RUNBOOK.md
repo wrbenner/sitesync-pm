@@ -59,7 +59,7 @@ When: AWS region outage, primary DB unrecoverable. RTO target: 4 hours.
 
 Runs the first Tuesday of each month. Validates:
 - Restore target is reachable
-- Schema sanity check (full implementation TODO in `scripts/restore-sanity.ts`)
+- Schema sanity check (full implementation TODO in `scripts/restore-sanity.ts`) (planned)
 - Most recent daily_log row is < 25 hours old (PITR window confirmed live)
 - Sentinel row in `projects` matches the seed (no drift)
 

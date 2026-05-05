@@ -403,11 +403,11 @@ Every card follows this exact structure. Save in `docs/sales/battlecards/<compet
 
 ## Where these live
 
-- `docs/sales/battlecards/procore.md`
-- `docs/sales/battlecards/trunk-tools.md`
-- `docs/sales/battlecards/fieldwire.md`
-- `docs/sales/battlecards/buildots-openspace.md`
-- `docs/sales/battlecards/newforma.md`
+- `docs/sales/battlecards/procore.md` (planned)
+- `docs/sales/battlecards/trunk-tools.md` (planned)
+- `docs/sales/battlecards/fieldwire.md` (planned)
+- `docs/sales/battlecards/buildots-openspace.md` (planned)
+- `docs/sales/battlecards/newforma.md` (planned)
 
 Cards are version-controlled. Copy-pasteable into Notion / Slack as needed.
 

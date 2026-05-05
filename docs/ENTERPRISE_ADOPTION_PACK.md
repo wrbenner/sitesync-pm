@@ -77,7 +77,7 @@ These edits remain to be made by whoever wires the routes:
    - `/admin/project-templates` → `lazy(() => import('./pages/admin/project-templates'))`
    - `/portfolio/dashboard` → `lazy(() => import('./pages/portfolio/PortfolioDashboard'))`
    - `/portfolio/search` → `lazy(() => import('./pages/portfolio/CrossProjectSearch'))`
-2. **`src/pages/Portfolio.tsx` (legacy stub)** — recommended: replace its body with a redirect to `/portfolio/dashboard`. Left untouched here per file-boundary rule.
+2. **`src/pages/Portfolio.tsx` (legacy stub)** — recommended: replace its body with a redirect to `/portfolio/dashboard`. Left untouched here per file-boundary rule. (removed)
 3. **Navigation** (wherever the org-admin nav lives): add the four `/admin/*` entries under an "Integrations" section.
 
 ## Cron entries to add

@@ -248,9 +248,9 @@ This script runs every morning Walker has a demo. Output goes in `docs/sales/dem
 
 ## What Claude Code Does
 
-- Build the demo prep script (`scripts/demo-prep.sh`)
+- Build the demo prep script (`scripts/demo-prep.sh`) (planned)
 - Build the demo log table (`demo_runs` per `LAP_3_ACCEPTANCE_GATE_SPEC` migration)
-- Maintain the demo environment seed (`scripts/reset-demo-data.sql`)
+- Maintain the demo environment seed (`scripts/reset-demo-data.sql`) (planned)
 - Build a "demo health check" widget for Walker's standup feed
 
 Total Claude Code work: ~2 days.

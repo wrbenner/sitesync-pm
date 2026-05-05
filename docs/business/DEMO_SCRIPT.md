@@ -67,9 +67,9 @@ A 25-minute guided demo that takes a prospect from "what's wrong with Procore" t
 **The pitch:** *Risk-rank every project in one screen.*
 
 1. Switch to an executive view.
-2. Open [src/pages/portfolio/PortfolioDashboard.tsx](../../src/pages/portfolio/PortfolioDashboard.tsx). Show the KPI tiles and the risk-ranked table.
+2. Open [src/pages/dashboard/DashboardPortfolio.tsx](../../src/pages/dashboard/DashboardPortfolio.tsx) (now consolidated under /dashboard). Show the KPI tiles and the risk-ranked table.
 3. The risk weighting is documented in [src/lib/portfolio/riskRanker.ts](../../src/lib/portfolio/riskRanker.ts).
-4. Show cross-project search at [src/pages/portfolio/CrossProjectSearch.tsx](../../src/pages/portfolio/CrossProjectSearch.tsx); RLS is enforced server-side via [supabase/migrations/20260502120005_org_search_index.sql](../../supabase/migrations/20260502120005_org_search_index.sql).
+4. Show cross-project search via the [src/components/search/CrossProjectSearchPalette.tsx](../../src/components/search/CrossProjectSearchPalette.tsx) command palette; RLS is enforced server-side via [supabase/migrations/20260502120005_org_search_index.sql](../../supabase/migrations/20260502120005_org_search_index.sql).
 
 ## Act 8 — Procore migration (2 min)
 

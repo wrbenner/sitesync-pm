@@ -68,7 +68,7 @@ We sample 150 drafts from this pool, biased to:
 - Even distribution across the 5 detector kinds (cascade, aging, variance, staffing, weather)
 - All 5 confidence buckets (0.7–0.75, 0.75–0.8, 0.8–0.85, 0.85–0.9, 0.9+)
 
-Sampling script: `scripts/sample-voice-corpus.ts`. Output: `docs/audits/voice-corpus/sample-150.jsonl` (gitignored except for the schema file).
+Sampling script: `scripts/sample-voice-corpus.ts`. Output: `docs/audits/voice-corpus/sample-150.jsonl` (gitignored except for the schema file). (planned)
 
 ### Why dev environment is acceptable
 

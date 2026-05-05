@@ -200,9 +200,9 @@ update locally:
 ## Files Touched
 
 **Deleted:**
-- `src/stores/crewStore.ts`
-- `src/stores/equipmentStore.ts`
-- `src/stores/submittalStore.ts`
+- `src/stores/crewStore.ts` (removed)
+- `src/stores/equipmentStore.ts` (removed)
+- `src/stores/submittalStore.ts` (removed)
 
 **Modified:**
 - `src/stores/punchListStore.ts` (rewritten as comment-only)

@@ -52,7 +52,7 @@ organism should sanity-check those before wiring.
 **Goal:** No code changes today. Output is a per-machine call-site map.
 **Steps:**
 1. Run `grep -rn "getNextStatus\|getValidTransitions\|getBallInCourt"` to enumerate every consumer.
-2. For each machine, write a call-site list to `docs/audits/STATE_MACHINE_CALLSITES_2026-05-01.md` (one section per machine).
+2. For each machine, write a call-site list to `docs/audits/STATE_MACHINE_CALLSITES_2026-05-01.md` (one section per machine). (planned)
 3. Prioritize by consumer count: highest = wire first.
 
 **Acceptance:** doc shipped; CI green.
@@ -75,7 +75,7 @@ For each of the 5:
 - RFI: `src/pages/rfis/RFIDetail.tsx`, `src/services/rfiService.ts`
 - Submittal: `src/pages/submittals/SubmittalsTable.tsx`, `src/services/submittalService.ts`
 - ChangeOrder: `src/pages/ChangeOrders.tsx`, `src/services/changeOrderService.ts`
-- PayApp: `src/pages/payment-applications/PayAppDetail.tsx`, `src/services/payAppComputation.ts`
+- PayApp: `src/pages/payment-applications/PayAppDetail.tsx`, `src/services/payAppComputation.ts` (removed)
 - Punch: `src/pages/punch-list/PunchListDetail.tsx`
 
 **Acceptance:** All 5 machines have at least one production call site invoking `useMachine`. Existing E2E flows pass.

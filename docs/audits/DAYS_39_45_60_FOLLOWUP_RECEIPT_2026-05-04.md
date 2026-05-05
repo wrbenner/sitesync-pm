@@ -169,7 +169,7 @@ Code-side, the next durable wins would be:
 
 1. **Promote `budget_line` and `photo_observation` to dedicated panels** when their data shapes solidify (Lap 3+).
 2. **Wire `is_pilot_user(decided_by)`** into the matview so Walker's debugging clicks are factored out of gate counts (the helper is shipped; the matview filter is a 1-line edit + REFRESH).
-3. **`scripts/seed-pilot-project.ts`** once Walker confirms which GC's data lives where.
+3. **`scripts/seed-pilot-project.ts`** once Walker confirms which GC's data lives where. (planned)
 4. **`e2e/pilot-smoke.spec.ts`** Day 49 prep smoke.
 
 The Lap 2 substrate is shipped. The pilot is the next thing to *do*, not the next thing to *build*.

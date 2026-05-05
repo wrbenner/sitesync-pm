@@ -365,7 +365,7 @@ Before Day 60, run a "gate dry run" with synthetic data on staging:
 6. Set approved_count = 99 → expect hard fail
 7. Resolve the incident, set count = 100 → expect pass
 
-These dry runs land in `e2e/lap-2-gate.spec.ts` and run on every push that touches the gate workflow file.
+These dry runs land in `e2e/lap-2-gate.spec.ts` and run on every push that touches the gate workflow file. (planned)
 
 ---
 

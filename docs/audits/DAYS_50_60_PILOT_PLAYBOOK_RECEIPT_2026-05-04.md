@@ -179,7 +179,7 @@ Pre-flight is operationally complete. The remaining work that *can* be done in c
 
 1. **Day 39 — 4 dedicated citation panels** (daily_log, change_order, spec, schedule_phase) following the `RfiCitationPanelContent` pattern.
 2. **Day 45 — wire `voiceLinter` into `supabase/functions/iris-call/index.ts`** (3-line edit + diff-log insert).
-3. **`scripts/seed-pilot-project.ts`** — once Walker confirms which GC's data lives in which system, write the importer for that system.
+3. **`scripts/seed-pilot-project.ts`** — once Walker confirms which GC's data lives in which system, write the importer for that system. (planned)
 4. **`scripts/export-pilot-data.ts`** — Day 60 right-to-export workflow.
 5. **`e2e/pilot-smoke.spec.ts`** — Day 49 prep smoke test.
 

@@ -103,8 +103,8 @@ The nine workflows below are the spine of the product. Each is functional and de
 - MS Project XML: [src/lib/integrations/msProjectXml](../src/lib/integrations/msProjectXml)
 - Cost-code importers (Sage, Viewpoint, Foundation, Yardi, Spectrum): [src/lib/integrations/costCodeImporters](../src/lib/integrations/costCodeImporters)
 - Portfolio rollup: [src/lib/portfolio/healthRollup.ts](../src/lib/portfolio/healthRollup.ts), [src/lib/portfolio/riskRanker.ts](../src/lib/portfolio/riskRanker.ts)
-- Portfolio dashboard: [src/pages/portfolio/PortfolioDashboard.tsx](../src/pages/portfolio/PortfolioDashboard.tsx)
-- Cross-project search: [src/pages/portfolio/CrossProjectSearch.tsx](../src/pages/portfolio/CrossProjectSearch.tsx), [supabase/functions/cross-project-search/index.ts](../supabase/functions/cross-project-search/index.ts)
+- Portfolio dashboard: [src/pages/dashboard/DashboardPortfolio.tsx](../src/pages/dashboard/DashboardPortfolio.tsx) (consolidated under /dashboard)
+- Cross-project search: [src/components/search/CrossProjectSearchPalette.tsx](../src/components/search/CrossProjectSearchPalette.tsx) (now a command-palette component), [supabase/functions/cross-project-search/index.ts](../supabase/functions/cross-project-search/index.ts)
 - Project templates: [src/lib/projectTemplates](../src/lib/projectTemplates), [src/pages/admin/project-templates/index.tsx](../src/pages/admin/project-templates/index.tsx)
 
 ### Compliance computation packs
@@ -133,8 +133,8 @@ Routes pending registration in [src/App.tsx](../src/App.tsx):
 - `/admin/cost-code-library` → [src/pages/admin/cost-code-library/index.tsx](../src/pages/admin/cost-code-library/index.tsx)
 - `/admin/bulk-invite` → [src/pages/admin/bulk-invite](../src/pages/admin/bulk-invite)
 - `/admin/project-templates` → [src/pages/admin/project-templates/index.tsx](../src/pages/admin/project-templates/index.tsx)
-- `/portfolio/dashboard` → [src/pages/portfolio/PortfolioDashboard.tsx](../src/pages/portfolio/PortfolioDashboard.tsx)
-- `/portfolio/search` → [src/pages/portfolio/CrossProjectSearch.tsx](../src/pages/portfolio/CrossProjectSearch.tsx)
+- `/portfolio/dashboard` (planned — superseded by /dashboard which renders [src/pages/dashboard/DashboardPortfolio.tsx](../src/pages/dashboard/DashboardPortfolio.tsx))
+- `/portfolio/search` (planned — superseded by [src/components/search/CrossProjectSearchPalette.tsx](../src/components/search/CrossProjectSearchPalette.tsx) command-palette)
 - Public route `/share/owner-payapp` → [src/pages/share/OwnerPayAppPreview.tsx](../src/pages/share/OwnerPayAppPreview.tsx) (must NOT require Supabase auth)
 
 ### Component mounts
