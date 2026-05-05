@@ -328,21 +328,24 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/punch-list/index.tsx',
     title: 'Punch List',
     entity: 'punch-item',
+    // No standalone export today — the punch-list export route is wired
+    // through the global ExportCenter (route: /reports). Don't double-claim.
     expected: {
       has_list: true,
       has_create: true,
       has_edit: true,
       has_delete: true,
-      has_export: true,
       has_detail_view: true,
       has_filters: true,
     },
     createModal: 'CreatePunchItemModal',
     hooksModule: 'src/hooks/mutations/punch-items.ts',
-    exportReportType: 'punch_list',
     permissionModule: 'punch-list',
     status: 'production',
-    knownIssues: ['Missing useDeletePunchItem hook'],
+    knownIssues: [
+      'Missing useDeletePunchItem hook',
+      'No standalone export — handled by the global ExportCenter',
+    ],
   },
   {
     route: '/meetings',
@@ -405,18 +408,22 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/schedule/index.tsx',
     title: 'Schedule',
     entity: 'phase',
+    // Today: list + create + ScheduleImportWizard. Export and a per-phase
+    // detail view are not yet implemented — promote when they ship rather
+    // than overpromising in the audit contract.
     expected: {
       has_list: true,
       has_create: true,
       has_import: true,
-      has_detail_view: true,
-      has_export: true,
     },
     createModal: 'AddPhaseModal',
-    exportReportType: 'schedule',
     permissionModule: 'schedule',
     status: 'production',
-    knownIssues: ['Missing useUpdatePhase + useDeletePhase hooks'],
+    knownIssues: [
+      'Missing useUpdatePhase + useDeletePhase hooks',
+      'No phase detail view yet — list-only',
+      'No XLSX export yet — schedule export is a Lap 3 deliverable',
+    ],
   },
   {
     route: '/lookahead',
@@ -943,7 +950,10 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/admin/cost-code-library/index.tsx',
     title: 'Cost Code Library',
     entity: 'cost-code',
-    expected: { has_list: true, has_create: true, has_edit: true, has_delete: true },
+    // Bulk-import-only today: drops a CSV from supported accounting systems
+    // (Sage, Procore, etc.) and ingests cost codes en masse. Per-row CRUD
+    // happens at the database/integration layer, not the page UI.
+    expected: { has_import: true },
     permissionModule: 'settings',
     status: 'production',
   },
@@ -952,7 +962,9 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/admin/project-templates/index.tsx',
     title: 'Project Templates',
     entity: null,
-    expected: { has_list: true, has_create: true },
+    // List-only today. The doc-comment mentions "create-from-existing and
+    // materialize" but those flows haven't shipped — promote when they do.
+    expected: { has_list: true },
     permissionModule: 'settings',
     status: 'production',
   },

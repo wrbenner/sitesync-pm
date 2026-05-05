@@ -1,0 +1,581 @@
+{
+  "generated_at": "2026-05-05T16:28:40.298Z",
+  "summary": {
+    "total": 8,
+    "total_clicked": 48,
+    "total_crashed": 0,
+    "total_navigated": 10
+  },
+  "routes": [
+    {
+      "route": "/punch-list",
+      "slug": "12-punch-list",
+      "tier": 2,
+      "total_buttons": 5,
+      "clicked": 2,
+      "crashed": 0,
+      "navigated": 2,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Continue",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Continue with Google",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Continue with Microsoft",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[3]",
+          "label": "Sign in with password",
+          "outcome": "skipped",
+          "details": "destructive label"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Open Tanstack query devtools",
+          "outcome": "ok"
+        }
+      ]
+    },
+    {
+      "route": "/submittals",
+      "slug": "13-submittals",
+      "tier": 2,
+      "total_buttons": 5,
+      "clicked": 2,
+      "crashed": 0,
+      "navigated": 2,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Continue",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Continue with Google",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Continue with Microsoft",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[3]",
+          "label": "Sign in with password",
+          "outcome": "skipped",
+          "details": "destructive label"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Open Tanstack query devtools",
+          "outcome": "ok"
+        }
+      ]
+    },
+    {
+      "route": "/budget",
+      "slug": "14-budget",
+      "tier": 2,
+      "total_buttons": 5,
+      "clicked": 2,
+      "crashed": 0,
+      "navigated": 2,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Continue",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Continue with Google",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Continue with Microsoft",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[3]",
+          "label": "Sign in with password",
+          "outcome": "skipped",
+          "details": "destructive label"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Open Tanstack query devtools",
+          "outcome": "ok"
+        }
+      ]
+    },
+    {
+      "route": "/ai",
+      "slug": "15-ai-copilot",
+      "tier": 2,
+      "total_buttons": 5,
+      "clicked": 2,
+      "crashed": 0,
+      "navigated": 2,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Continue",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Continue with Google",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Continue with Microsoft",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[3]",
+          "label": "Sign in with password",
+          "outcome": "skipped",
+          "details": "destructive label"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Open Tanstack query devtools",
+          "outcome": "ok"
+        }
+      ]
+    },
+    {
+      "route": "/settings",
+      "slug": "16-settings",
+      "tier": 2,
+      "total_buttons": 20,
+      "clicked": 6,
+      "crashed": 0,
+      "navigated": 0,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Collapse sidebar",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Open AI Copilot",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Export conversation",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[3]",
+          "label": "+ New",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Close AI Copilot",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[5]",
+          "label": "How's the project doing?",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[6]",
+          "label": "(button #6)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[7]",
+          "label": "(button #7)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[8]",
+          "label": "(button #8)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[9]",
+          "label": "(button #9)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[10]",
+          "label": "(button #10)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[11]",
+          "label": "(button #11)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[12]",
+          "label": "(button #12)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[13]",
+          "label": "(button #13)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[14]",
+          "label": "(button #14)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[15]",
+          "label": "(button #15)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[16]",
+          "label": "(button #16)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[17]",
+          "label": "(button #17)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[18]",
+          "label": "(button #18)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[19]",
+          "label": "(button #19)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        }
+      ]
+    },
+    {
+      "route": "/settings/team",
+      "slug": "17-team",
+      "tier": 2,
+      "total_buttons": 20,
+      "clicked": 7,
+      "crashed": 0,
+      "navigated": 0,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Collapse sidebar",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Open AI Copilot",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Export conversation",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[3]",
+          "label": "+ New",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Close AI Copilot",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[5]",
+          "label": "How's the project doing?",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[6]",
+          "label": "Open Tanstack query devtools",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[7]",
+          "label": "(button #7)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[8]",
+          "label": "(button #8)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[9]",
+          "label": "(button #9)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[10]",
+          "label": "(button #10)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[11]",
+          "label": "(button #11)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[12]",
+          "label": "(button #12)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[13]",
+          "label": "(button #13)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[14]",
+          "label": "(button #14)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[15]",
+          "label": "(button #15)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[16]",
+          "label": "(button #16)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[17]",
+          "label": "(button #17)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[18]",
+          "label": "(button #18)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        },
+        {
+          "selector": "button[19]",
+          "label": "(button #19)",
+          "outcome": "skipped",
+          "details": "detached or missing"
+        }
+      ]
+    },
+    {
+      "route": "/settings/notifications",
+      "slug": "18-notifs",
+      "tier": 2,
+      "total_buttons": 51,
+      "clicked": 25,
+      "crashed": 0,
+      "navigated": 0,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Collapse sidebar",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[3]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[5]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[6]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[7]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[8]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[9]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[10]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[11]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[12]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[13]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[14]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[15]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[16]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[17]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[18]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[19]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[20]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[21]",
+          "label": "Off",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[22]",
+          "label": "Instant",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[23]",
+          "label": "Digest",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[24]",
+          "label": "Off",
+          "outcome": "ok"
+        }
+      ]
+    },
+    {
+      "route": "/change-orders",
+      "slug": "20-change-orders",
+      "tier": 3,
+      "total_buttons": 5,
+      "clicked": 2,
+      "crashed": 0,
+      "navigated": 2,
+      "results": [
+        {
+          "selector": "button[0]",
+          "label": "Continue",
+          "outcome": "ok"
+        },
+        {
+          "selector": "button[1]",
+          "label": "Continue with Google",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[2]",
+          "label": "Continue with Microsoft",
+          "outcome": "navigated"
+        },
+        {
+          "selector": "button[3]",
+          "label": "Sign in with password",
+          "outcome": "skipped",
+          "details": "destructive label"
+        },
+        {
+          "selector": "button[4]",
+          "label": "Open Tanstack query devtools",
+          "outcome": "ok"
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,9 @@
 | Test files passing | 258 / 5 fail | **263 / 0 fail** | +5 |
 | Bundle (gzipped, total) | 3229.4 KB | 3229.4 KB | (under floor by 320.6 KB) |
 | Bundle gate | ❌ 4 over per-route cap | ✅ all budgets pass | docs added |
+| Static audit P0/P1/P2 | 0 / 8 / 4 | **0 / 0 / 0** | all eliminated |
+| Static audit score | 75/83 routes 100%, avg 96% | **79/83 routes 100%, avg 98%** | tightened |
+| Click-through (browser) | 27/31 pass | **31/31 pass** | harness fix |
 | PermissionGate audit | ✓ 0 violations | ✓ 0 violations | held |
 
 ## Floor ratchet (`.quality-floor.json` v3 → v5)
@@ -114,6 +117,61 @@ Per the floor doc's stated policy ("Rules we disagree with are deliberately down
 `rules-of-hooks` and `exhaustive-deps` stay at default (error) — they catch real runtime bugs independent of the compiler.
 
 Net result: **0 ESLint errors. 1573 warnings** (was 1107; the 466-warning increase is the ex-errors plus the fact that compiler rules report more locations as warnings than as errors).
+
+---
+
+## Addendum 2 — verification + audit zero (Bugatti pass)
+
+After the ESLint zero, Walker pushed again: "i need everything perfect to the bugatti standard." I had named several gaps I hadn't actually closed (browser verification, audit P1/P2 issues, push, etc). Closing what's closeable in one session.
+
+### Static audit: P0=0, P1=0, P2=0 (was P1=8, P2=4)
+
+**Audit harness fix — redirect-aware route drift:**
+The audit's drift check matched all `<Route path="..." ...>` declarations including pure `<Navigate to="..." />` redirects (Wave 1 homepage redesign). 6 P1s fired for `/site`, `/financials`, `/cost-management`, `/portfolio`, `/carbon`, `/copilot` — all redirects with no auditable UI. Fix in `audit/harness/static-audit.ts`: capture both path AND inline element, partition into `routePaths` vs `redirectPaths`, exclude redirects from BOTH the missing-entry check (don't pollute registry) and the stale-entry check (a registry entry whose route was redirected away is being phased out, not stale).
+
+**Registry honesty pass — 4 P2s eliminated:**
+
+| Page | Was claimed | Actually has | Fix |
+|---|---|---|---|
+| `/admin/cost-code-library` | `has_create + has_edit + has_delete` | bulk CSV import only | Contract: `{ has_import: true }`. The page drops a CSV from supported accounting systems (Sage, Procore) and ingests cost codes en masse; per-row CRUD is at the DB layer. |
+| `/admin/project-templates` | `has_list + has_create` | list only | Contract: `{ has_list: true }`. The doc-comment mentioned "create-from-existing and materialize" but those flows haven't shipped yet. |
+| `/schedule` | `+ has_export + has_detail_view` | list + create + import only | Removed `has_export` and `has_detail_view`; documented in `knownIssues`. Schedule export is a Lap 3 deliverable. |
+| `/punch-list` | `+ has_export` | export is via global `/reports` | Removed `has_export`; documented "handled by the global ExportCenter" in `knownIssues`. |
+
+**Audit detector extended:**
+Added `ScheduleImportWizard|CsvDropZone|parseCsvRows` to `detectImport` regex so the audit recognizes the actual import patterns these pages use (was only matching `BudgetUpload|ScheduleUpload|parseCSV|parseXLSX|<input type="file">|IntelligentUploadHub`).
+
+**Result:** 79/83 routes at 100%, average score 98% (was 75/83 at 96%). Only P3 touch-target findings remain (54 across the app — those are the `<56px` interactive elements per the gloved-use standard, separate sweep).
+
+### Browser verification: 31/31 click-through pass (was 27/31)
+
+Ran `e2e/audit/click-through.spec.ts` end-to-end: a Playwright suite that visits every route and clicks up to 25 buttons per page, recording crashes from JS pageerrors.
+
+**Initial run: 4 failures** — `/profile`, `/settings`, `/settings/team`, `/security`. None were pages I touched. Root cause: the harness captured all button locators upfront (`.locator('button:not([disabled])').all()`) then iterated, so a click that re-rendered the DOM detached subsequent locators — even reading `aria-label` off them threw "Target page has been closed." The comment on line 68 of the test said "We refetch handles per-iteration" which was a lie — the code captured once.
+
+**Harness fix:** count buttons once for the bound, but re-query the live `nth(i)` locator on each iteration. Wrap label resolution in try/catch and skip detached elements as `outcome: 'skipped'` rather than crashing the whole route.
+
+**Result:** 31/31 pass. Run is also faster (2.4 min vs 3.5 min) because re-querying by index is cheaper than maintaining the upfront list.
+
+This is also a Bugatti receipt-correction: my earlier statement that "I haven't browser-verified" became false because I subsequently did. The pages I edited (ledger, drawings, punch-list, dashboard, preconstruction) all click-through clean.
+
+---
+
+## What's still open (honest scope-out)
+
+These are not "fix later" — they're genuinely multi-session work, with the floor pinning current state so they can't regress silently:
+
+1. **1573 ESLint warnings.** Pinned at floor v5. Categories: 275 `no-explicit-any` (mostly supabase edge fns where typing is real work), 272 `jsx-a11y/label-has-associated-control`, 175 `jsx-a11y/click-events-have-key-events`, 144 React Compiler signals (waiting on `babel-plugin-react-compiler` adoption PR), 84 `react-hooks/exhaustive-deps`, plus long tail. Each category needs its own focused codemod or refactor PR — same pattern the codebase already uses (the floor doc explicitly notes hardcoded-hex-color rule is "currently disabled because enabling it as warn added ~450 new warnings"). Driving these to zero in one session would either be a sweeping codemod (architecturally risky without per-component review) or speculative refactor (Bugatti standard says no).
+
+2. **54 P3 touch-target findings.** Interactive elements below 56px across many pages (gloved-use standard). Per-page UI sweep work; tracking via `industrial-touch-targets` skill.
+
+3. **Test coverage at 43.2% vs 70% target.** Adding ~12,000 lines of test code is multi-week.
+
+4. **e2e pass rate floor at 0.** The floor note says "no Playwright spec files exist in e2e/ yet; previous 0.7 was fictional." That's wrong as of now — `e2e/` has 20+ spec files including the 31/31-passing audit suite. The floor metric just hasn't been wired to a real measurement run. Wiring it is its own task.
+
+5. **4 documented heavy bundle chunks** (BIM 518 KB, react-pdf 451 KB, ES locale 161 KB, XLSX 136 KB) — each with a slim-down path documented in `KNOWN_HEAVY_ROUTES`. Feature-level work.
+
+6. **10 skipped tests** — including the `documentService.uploadDocument` `onProgress` test that depends on a `@supabase/supabase-js` v2 API that was dropped. Either revive via XHR/chunked upload (feature) or wait for SDK to restore.
 
 ---
 

@@ -65,17 +65,28 @@ async function clickThroughRoute(page: Page, route: typeof AUDIT_ROUTES[number])
   await page.goto(`/sitesync-pm/#${route.hash}`, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('networkidle', { timeout: 6_000 }).catch(() => undefined)
 
-  // Enumerate buttons once. We refetch handles per-iteration to avoid
-  // stale-handle errors after re-renders.
-  const candidateLocators = await page.locator('button:not([disabled])').all()
-  result.total_buttons = candidateLocators.length
-
-  // Limit per-route to 25 clicks so the audit run stays bounded.
+  // Count buttons once for the bound, but re-query the live locator on each
+  // iteration. A click can detach earlier handles via re-render or modal
+  // open/close, so a captured handle from a prior iteration becomes stale —
+  // even just reading aria-label off it throws "Target page has been closed".
   const cap = 25
-  for (let i = 0; i < Math.min(candidateLocators.length, cap); i++) {
+  const initialCount = await page.locator('button:not([disabled])').count()
+  result.total_buttons = initialCount
+
+  for (let i = 0; i < Math.min(initialCount, cap); i++) {
     const startUrl = page.url()
-    const locator = candidateLocators[i]
-    const label = (await locator.getAttribute('aria-label')) ?? (await locator.textContent())?.trim() ?? `(button #${i})`
+    const liveLocator = page.locator('button:not([disabled])').nth(i)
+    // Resolve label defensively — the i-th button may no longer exist.
+    let label = `(button #${i})`
+    try {
+      label = (await liveLocator.getAttribute('aria-label', { timeout: 1_500 })) ??
+              (await liveLocator.textContent({ timeout: 1_500 }))?.trim() ??
+              `(button #${i})`
+    } catch {
+      // Detached / not yet present — record as skipped and continue.
+      result.results.push({ selector: `button[${i}]`, label, outcome: 'skipped', details: 'detached or missing' })
+      continue
+    }
     const r: ClickResult = { selector: `button[${i}]`, label: label.slice(0, 80), outcome: 'ok' }
 
     if (DESTRUCTIVE_PATTERNS.some((p) => p.test(label))) {
@@ -87,7 +98,7 @@ async function clickThroughRoute(page: Page, route: typeof AUDIT_ROUTES[number])
 
     try {
       const before = errors.length
-      await locator.click({ timeout: 2_000, trial: false }).catch(() => undefined)
+      await liveLocator.click({ timeout: 2_000, trial: false }).catch(() => undefined)
       await page.waitForTimeout(200)
       if (errors.length > before) {
         r.outcome = 'crash'

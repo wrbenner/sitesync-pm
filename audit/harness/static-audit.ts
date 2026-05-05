@@ -106,7 +106,7 @@ function detectExport(src: string): boolean {
 }
 
 function detectImport(src: string): boolean {
-  return /BudgetUpload|ScheduleUpload|parseCSV|parseXLSX|<input[^>]*type=["']file["']|IntelligentUploadHub/.test(
+  return /BudgetUpload|ScheduleUpload|ScheduleImportWizard|CsvDropZone|parseCsvRows|parseCSV|parseXLSX|<input[^>]*type=["']file["']|IntelligentUploadHub/.test(
     src,
   )
 }
@@ -162,12 +162,28 @@ export function runStaticAudit(): AuditReport {
   const results: AuditResult[] = []
   const globalFindings: Finding[] = []
 
-  // 1. Route-drift check — every route in App.tsx must have a registry entry
+  // 1. Route-drift check — every route in App.tsx must have a registry entry,
+  //    EXCEPT redirect-only routes (<Navigate to="..." />) which have no UI
+  //    surface to audit. We track redirects separately so they're excluded
+  //    from BOTH the missing-entry check (we don't want them in the registry)
+  //    AND the stale-entry check (a registry entry whose App.tsx route became
+  //    a redirect is being phased out, not stale).
   const appTsx = read('src/App.tsx') ?? ''
   const routePaths = new Set<string>()
-  const reRoute = /<Route\s+path=["']([^"']+)["']/g
+  const redirectPaths = new Set<string>()
+  // Capture path + everything up to the next `>` so we can detect inline
+  // <Navigate> elements on the same Route declaration.
+  const reRoute = /<Route\s+path=["']([^"']+)["']([^>]*)>/g
   let rm: RegExpExecArray | null
-  while ((rm = reRoute.exec(appTsx)) !== null) routePaths.add(rm[1])
+  while ((rm = reRoute.exec(appTsx)) !== null) {
+    const path = rm[1]
+    const rest = rm[2]
+    if (/<Navigate\b/.test(rest)) {
+      redirectPaths.add(path)
+    } else {
+      routePaths.add(path)
+    }
+  }
 
   const registeredRoutes = new Set(PAGE_REGISTRY.map((p) => p.route))
 
@@ -181,7 +197,9 @@ export function runStaticAudit(): AuditReport {
     }
   }
   for (const r of registeredRoutes) {
-    if (!routePaths.has(r) && r !== '*') {
+    // Allowed: route is in App.tsx as a real route, OR the registry entry
+    // exists for a route that's been redirected away (deprecated, not stale).
+    if (!routePaths.has(r) && !redirectPaths.has(r) && r !== '*') {
       globalFindings.push({
         severity: 'P1',
         code: 'REGISTRY_DRIFT_STALE_ENTRY',
