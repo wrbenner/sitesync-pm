@@ -219,8 +219,6 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = (props) => {
     [dailyLogEntries],
   );
 
-  const WeatherIcon = weather ? weatherIcon(weather.condition) : Sun;
-
   const hasWorkActivity = dailyLogEntries && dailyLogEntries.length > 0;
   const hasSafety = safetyIncidents && safetyIncidents.length > 0;
   const hasRFIs = rfiActivity && rfiActivity.length > 0;
@@ -290,7 +288,10 @@ export const AIDailySummary: React.FC<AIDailySummaryProps> = (props) => {
             background: '#F9FAFB',
             borderBottom: '1px solid #F3F4F6',
           }}>
-            <WeatherIcon size={20} style={{ color: '#6B7280', flexShrink: 0 }} />
+            {React.createElement(weather ? weatherIcon(weather.condition) : Sun, {
+              size: 20,
+              style: { color: '#6B7280', flexShrink: 0 },
+            })}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['4'], fontSize: typography.fontSize.sm, color: '#374151' }}>
               <span style={{ fontWeight: typography.fontWeight.medium }}>{weather.condition}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: spacing['1'] }}>

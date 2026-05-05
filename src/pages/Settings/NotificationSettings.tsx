@@ -189,7 +189,7 @@ const NotificationSettings: React.FC = () => {
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [digestTime, setDigestTime] = useState('08:00');
   const [timezone, setTimezone] = useState(
-    Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
   );
 
   // ── Fetch on mount ─────────────────────────────────────────────────────────
