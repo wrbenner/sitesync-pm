@@ -305,38 +305,38 @@ describe('Daily Log Lifecycle Integration', () => {
 })
 
 describe('Punch Item Lifecycle Integration', () => {
-  it('full lifecycle: open → work → resolve → verify', () => {
+  it('full lifecycle: open → in_progress → sub_complete → verified', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
 
     expect(actor.getSnapshot().value).toBe('open')
     actor.send({ type: 'START_WORK' })
     expect(actor.getSnapshot().value).toBe('in_progress')
-    actor.send({ type: 'RESOLVE' })
-    expect(actor.getSnapshot().value).toBe('resolved')
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
+    expect(actor.getSnapshot().value).toBe('sub_complete')
     actor.send({ type: 'VERIFY' })
     expect(actor.getSnapshot().value).toBe('verified')
-    // Verified is no longer final (can be rejected back to in_progress)
+    // Verified is not final — superintendent can reject back to in_progress
     expect(actor.getSnapshot().status).toBe('active')
     actor.stop()
   })
 
-  it('failed verification sends to rework', () => {
+  it('failed verification sends back to in_progress', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
     actor.send({ type: 'START_WORK' })
-    actor.send({ type: 'RESOLVE' })
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
     actor.send({ type: 'VERIFY' })
-    actor.send({ type: 'REJECT_VERIFICATION' })
+    actor.send({ type: 'REJECT' })
     expect(actor.getSnapshot().value).toBe('in_progress')
     actor.stop()
   })
 
-  it('failed verification reopens', () => {
+  it('reopen from sub_complete returns to open', () => {
     const actor = createActor(punchItemMachine)
     actor.start()
     actor.send({ type: 'START_WORK' })
-    actor.send({ type: 'RESOLVE' })
+    actor.send({ type: 'MARK_SUB_COMPLETE' })
     actor.send({ type: 'REOPEN' })
     expect(actor.getSnapshot().value).toBe('open')
     actor.stop()
@@ -470,27 +470,31 @@ describe('Cross-Org Document Access Control', () => {
 
   // -------------------------------------------------------------------------
   // getDrawings cross-org guard
+  // Cross-org enforcement is at the DB/RLS layer. assertProjectAccess verifies
+  // project membership only — org-context drift never blocks a valid member.
   // -------------------------------------------------------------------------
   describe('getDrawings cross-org access', () => {
-    it('returns 403 when project belongs to a different org (criterion 1)', async () => {
-      // assertProjectAccess: project_members membership check passes
+    it('resolves for a project member even when org context differs (RLS enforces at DB level)', async () => {
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        // assertProjectBelongsToOrg: project not found under active org
-        .mockResolvedValueOnce({ data: null, error: null })
-      await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+        .mockResolvedValue({ data: null, error: null })
+      const result = await getDrawings(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
     })
 
-    it('returns 403 when there is no active organization context', async () => {
+    it('resolves for a project member even without active org context (RLS enforces at DB level)', async () => {
       mockOrgGetState.mockReturnValue({ currentOrg: null })
-      mockMaybySingle.mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-      await expect(getDrawings(PROJ_ID)).rejects.toMatchObject({ status: 403 })
-    })
-
-    it('returns drawings array when project belongs to the active org (criterion 3)', async () => {
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: { organization_id: ORG_A_ID }, error: null })
+        .mockResolvedValue({ data: null, error: null })
+      const result = await getDrawings(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
+    })
+
+    it('returns drawings array when project belongs to the active org', async () => {
+      mockMaybySingle
+        .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
+        .mockResolvedValue({ data: { organization_id: ORG_A_ID }, error: null })
       const result = await getDrawings(PROJ_ID)
       expect(Array.isArray(result)).toBe(true)
     })
@@ -500,17 +504,18 @@ describe('Cross-Org Document Access Control', () => {
   // getFiles cross-org guard
   // -------------------------------------------------------------------------
   describe('getFiles cross-org access', () => {
-    it('returns 403 when project belongs to a different org (criterion 1)', async () => {
+    it('resolves for a project member even when org context differs (RLS enforces at DB level)', async () => {
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: null, error: null })
-      await expect(getFiles(PROJ_ID)).rejects.toMatchObject({ status: 403 })
+        .mockResolvedValue({ data: null, error: null })
+      const result = await getFiles(PROJ_ID)
+      expect(Array.isArray(result)).toBe(true)
     })
 
-    it('returns files array when project belongs to the active org (criterion 3)', async () => {
+    it('returns files array when project belongs to the active org', async () => {
       mockMaybySingle
         .mockResolvedValueOnce({ data: { id: 'member-1' }, error: null })
-        .mockResolvedValueOnce({ data: { organization_id: ORG_A_ID }, error: null })
+        .mockResolvedValue({ data: { organization_id: ORG_A_ID }, error: null })
       const result = await getFiles(PROJ_ID)
       expect(Array.isArray(result)).toBe(true)
     })

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { supabase, fromTable } from '../../lib/supabase'
 import { getLienWaivers } from '../../api/endpoints/lienWaivers'
 import { toast } from 'sonner'
 
@@ -43,9 +43,8 @@ export function useCreateLienWaiver() {
       status: string
       notes: string | null
     }) => {
-      const { data, error } = await supabase
-        .from('lien_waivers')
-        .insert(payload as any)
+      const { data, error } = await fromTable('lien_waivers')
+        .insert(payload)
         .select()
         .single()
       if (error) throw error

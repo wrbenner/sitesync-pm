@@ -55,6 +55,7 @@ import {
 } from '../../machines/submittalMachine'
 import { DocumentViewer } from '../../components/submittals/DocumentViewer'
 import { supabase } from '../../lib/supabase'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 
 const SUBMITTAL_BUCKET = 'project-files'
 
@@ -622,7 +623,7 @@ export function SubmittalDetailPage() {
 
   // Normalize legacy DB statuses (pending, under_review) to machine states so
   // that the XState-driven workflow, stepper, and action buttons all render.
-  const rawStatus = ((submittal as any)?.status as string) || 'draft'
+  const rawStatus = submittal?.status ?? 'draft'
   const currentStatus: SubmittalState = (() => {
     switch (rawStatus) {
       case 'pending': return 'draft'
@@ -635,7 +636,7 @@ export function SubmittalDetailPage() {
   const statusConfig = getSubmittalStatusConfig(currentStatus)
   const transitions = getValidSubmittalTransitions(currentStatus)
 
-  const sub = (submittal as Record<string, any>) || {}
+  const sub = (submittal as Record<string, unknown>) || {}
 
   // ── Construct files for DocumentViewer ──────────────────
   // Uses signed URLs since project-files is a private bucket. We normalize
@@ -646,7 +647,7 @@ export function SubmittalDetailPage() {
   useEffect(() => {
     let cancelled = false
     if (!submittal) { setResolvedFiles([]); return }
-    const attachments = ((submittal as any).attachments || []) as unknown[]
+    const attachments = ((submittal as unknown as { attachments?: unknown[] }).attachments || []) as unknown[]
     const normalized = attachments.map((att: unknown, i: number) => {
       if (typeof att === 'string') {
         return { name: att.split('/').pop() || `Document ${i + 1}`, path: att, url: '' }
@@ -686,7 +687,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Cannot upload: missing project context')
       return
     }
-    const storagePath = `submittals/${projectId}/${(submittal as any).id}/${Date.now()}_${file.name}`
+    const storagePath = `submittals/${projectId}/${submittal.id}/${Date.now()}_${file.name}`
     const { error: uploadErr } = await supabase.storage
       .from(SUBMITTAL_BUCKET)
       .upload(storagePath, file, { contentType: file.type, upsert: false })
@@ -694,7 +695,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Failed to upload: ' + uploadErr.message)
       return
     }
-    const currentAttachments = ((submittal as any).attachments || []) as unknown[]
+    const currentAttachments = ((submittal as unknown as { attachments?: unknown[] }).attachments || []) as unknown[]
     const newAttachment = {
       path: storagePath,
       name: file.name,
@@ -704,7 +705,7 @@ export function SubmittalDetailPage() {
     }
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: submittal.id,
         projectId,
         updates: { attachments: [...currentAttachments, newAttachment] },
       })
@@ -730,7 +731,7 @@ export function SubmittalDetailPage() {
     setTransitioning(action)
     try {
       await updateSubmittal.mutateAsync({
-        id: (submittal as any).id,
+        id: submittal.id,
         projectId,
         updates: { status: toDbStatus(nextStatus) },
       })
@@ -786,7 +787,7 @@ export function SubmittalDetailPage() {
             Submittal not found
           </h2>
           <p style={{ color: colors.textTertiary, margin: '0 0 20px', fontSize: typography.fontSize.body }}>
-            {(error as any)?.message || 'This submittal may have been deleted or you don\'t have access.'}
+            {(error as Error)?.message || 'This submittal may have been deleted or you don\'t have access.'}
           </p>
           <Btn onClick={() => navigate('/submittals')}>Back to Submittals</Btn>
         </div>
@@ -898,6 +899,26 @@ export function SubmittalDetailPage() {
           style={{ marginBottom: spacing.lg }}
         >
           <ApprovalPipeline status={currentStatus} reviewers={reviewers} />
+        </motion.div>
+
+        {/* ── Workflow Timeline ───────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+          style={{ marginBottom: spacing.lg, padding: spacing.md, borderRadius: borderRadius.lg, border: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceInset }}
+        >
+          <WorkflowTimeline
+            states={['draft', 'submitted', 'gc_review', 'architect_review', 'approved', 'closed']}
+            currentState={currentStatus}
+            completedStates={
+              (() => {
+                const order = ['draft', 'submitted', 'gc_review', 'architect_review', 'approved', 'closed']
+                const idx = order.indexOf(currentStatus)
+                return order.slice(0, idx)
+              })()
+            }
+          />
         </motion.div>
 
         {/* ── Info Card ──────────────────────────────── */}
