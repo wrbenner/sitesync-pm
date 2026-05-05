@@ -4,16 +4,13 @@
 // useCommitDrawReport  — given reviewed JSON: insert pay app + line items, update budget actuals, trigger RAG embed
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { supabase, fromTable } from '../../lib/supabase'
 import { uploadFile } from '../../lib/storage'
 import { prepareDrawReportUpload } from '../../lib/drawReportParser'
 
-// Untyped escape hatch: some tables we write to (pay_application_line_items,
-// freshly added columns on pay_applications, etc.) aren't in the generated
-// Database types yet. Cast through any so the query builder accepts .eq()
-// filters on columns PostgREST validates server-side.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromAny = (table: string): any => (supabase.from as any)(table)
+// Some tables written here (pay_application_line_items, freshly added columns)
+// aren't in the generated types yet. fromTable accepts any table name.
+const fromAny = fromTable
 
 // ── Shared types ────────────────────────────────────────────
 
