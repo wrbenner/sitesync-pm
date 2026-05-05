@@ -168,7 +168,11 @@ export function useEntityStore<T extends BaseEntity = BaseEntity>(key: string): 
 
   // Lazily init the slice outside the render path (synchronous but only once)
   if (!slice) {
-    // Direct state check + mutation avoids calling setState during render
+    // Direct state check + mutation avoids calling setState during render.
+    // useEntityStoreRoot is a Zustand store; .getState() is a static method
+    // on the store object, not a hook reference. The compiler rule treats
+    // any 'useX.foo' read as a hook misuse, which doesn't apply here.
+    // eslint-disable-next-line react-hooks/hooks -- Zustand .getState() is a static store method, not a hook reference
     const state = useEntityStoreRoot.getState();
     if (!state.slices[key]) {
       state.initSlice(key);

@@ -185,13 +185,16 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   // ── Liveblocks hooks ──────────────────────────────────────────────────────
   // LIVEBLOCKS_CONFIGURED is a module-level constant derived from import.meta.env,
   // so each component instance takes the same branch on every render — hook order
-  // is stable. The conditional exists because hooks would throw outside RoomProvider
-  // (the outer wrapper short-circuits to a no-provider render when not configured).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // is stable across the lifetime of the application bundle. The conditional
+  // exists because hooks would throw outside RoomProvider (the outer wrapper
+  // short-circuits to a no-provider render when not configured). The same
+  // rationale applies to react-hooks/hooks (v7 stricter sibling of
+  // rules-of-hooks).
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks -- module-level conditional, stable per build
   const _updatePresence = LIVEBLOCKS_CONFIGURED ? useUpdateMyPresence() : null;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks -- module-level conditional, stable per build
   const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks -- module-level conditional, stable per build
   const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
   const updateMyPresence = _updatePresence ?? (() => {});
   const broadcastEvent = _broadcastEvent ?? (() => {});
@@ -205,7 +208,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   // Receive remote markup events and apply to local state
   if (LIVEBLOCKS_CONFIGURED) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
+    // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks -- module-level conditional, stable per build (see rationale above)
     useEventListener(({ event }) => {
       if (event.type === 'MARKUP_ADD') {
         setMarkups((prev) => {
