@@ -245,6 +245,8 @@ These are not "fix later" — they're genuinely multi-session work, with the flo
 
 7. **Performance Budget CI gate (`NO_FCP` after URL fix)** — Lighthouse loads `http://localhost:4173/sitesync-pm/` correctly now, but the SPA crashes in init without Supabase env vars and never paints. Needs either a perf-test build mode that bypasses Supabase init, fake env vars in the workflow, or a static "perf-only" entry route that doesn't require auth. Out of scope for one polish session because it's perf-testing infrastructure work, not a code-quality issue.
 
+8. **E2E Scenarios CI gate** — `e2e/scenarios/02-scope-change-loop.spec.ts` was failing with `Cannot find package 'postgres'`. Added `postgres@^3.4.9` as devDep (commit `b8c40b9`); the package now loads. The test now fails differently: `PostgresError: relation "rfis" does not exist` — it needs a live Supabase DB with migrations applied. The spec header itself says `STATUS: PARTIAL`. Genuine test-infra debt; either the CI job needs to start Supabase + apply migrations before running scenarios, OR the test should be marked `.fixme()` until the infra is in place.
+
 ---
 
 ## Sprint position
