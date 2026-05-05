@@ -278,7 +278,6 @@ function generateActualFromSpent(spent: number, planned: number[]): number[] {
   const result: number[] = [];
   for (let i = 0; i < planned.length; i++) {
     if (planned[i] <= spentM) {
-      // Apply slight variance from planned (realistic)
       result.push(Math.round(planned[i] * 100) / 100);
     } else if (result.length > 0) {
       // One more point at current spend level

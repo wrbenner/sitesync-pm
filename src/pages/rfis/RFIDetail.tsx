@@ -778,9 +778,9 @@ export function RFIDetail() {
 
         {/* ── Workflow Timeline ───────────────────────────── */}
         <div style={{
-          marginBottom: '20px',
-          padding: '16px 20px',
-          borderRadius: '12px',
+          marginBottom: spacing['5'],
+          padding: `${spacing['4']} ${spacing['5']}`,
+          borderRadius: borderRadius.xl,
           border: `1px solid ${colors.borderSubtle}`,
           backgroundColor: colors.surfaceRaised,
         }}>
