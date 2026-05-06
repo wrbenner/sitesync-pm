@@ -191,6 +191,32 @@ describe('rule: no-filler-words', () => {
   })
 })
 
+describe('rule: acronym-casing', () => {
+  const rule = getRuleById('acronym-casing')!
+  it('flags lowercase rfi and rewrites to RFI', () => {
+    const r = rule.lintCheck!('The rfi was filed yesterday.', RFI_CTX)
+    expect(r.passed).toBe(false)
+    expect(r.suggestedReplacement).toBe('The RFI was filed yesterday.')
+  })
+  it('flags TitleCase Rfis and rewrites to RFIs', () => {
+    const r = rule.lintCheck!('Expect 5 Rfis back this week.', RFI_CTX)
+    expect(r.passed).toBe(false)
+    expect(r.suggestedReplacement).toBe('Expect 5 RFIs back this week.')
+  })
+  it('does not touch already-correct uppercase RFI / RFIs', () => {
+    const r = rule.lintCheck!('The RFI was filed yesterday; expect 5 RFIs.', RFI_CTX)
+    expect(r.passed).toBe(true)
+  })
+  it('does not touch identifiers like rfi_id or RfiList (substring matches)', () => {
+    const r = rule.lintCheck!('Reads from rfi_id; uses RfiList component.', RFI_CTX)
+    expect(r.passed).toBe(true)
+  })
+  it('leaves the word "co" alone (ambiguous with the noun)', () => {
+    const r = rule.lintCheck!('They run a small co for steel erection.', RFI_CTX)
+    expect(r.passed).toBe(true)
+  })
+})
+
 describe('lintVoice (aggregator)', () => {
   it('passes a clean RFI follow-up', () => {
     const text = 'Need wall finish at column line 7 confirmed before MEP rough-in. Slab pour is Friday.'
@@ -294,6 +320,7 @@ describe('coverage: every lintable rule has at least one test', () => {
       'daily-log-length',
       'no-contractions-in-formal-actions',
       'no-filler-words',
+      'acronym-casing',
     ])
     for (const r of getLintableRules()) {
       expect(tested.has(r.id), `rule ${r.id} has no test block`).toBe(true)

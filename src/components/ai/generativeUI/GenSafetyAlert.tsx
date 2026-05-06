@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { AlertTriangle, AlertCircle, CheckCircle, Clock, MapPin, User } from 'lucide-react'
 import { Btn } from '../../Primitives'
 import { PermissionGate } from '../../auth/PermissionGate'
+import { UserName } from '../../UserName'
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
 import type { SafetyAlertBlock } from './types'
 
@@ -102,7 +103,10 @@ export const GenSafetyAlert: React.FC<GenSafetyAlertProps> = React.memo(({ block
         </span>
         {block.assigned_to && (
           <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, marginLeft: spacing['2'] }}>
-            Assigned to {block.assigned_to}
+            {/* AI-generated content may pass either a UUID or an already-resolved
+                display name. UserName handles both — UUIDs go through profile
+                lookup, plain strings render as-is. */}
+            Assigned to <UserName userId={block.assigned_to} fallback="—" />
           </span>
         )}
       </div>

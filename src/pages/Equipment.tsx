@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ProjectGate } from '../components/ProjectGate';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { UserName } from '../components/UserName';
 import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography } from '../styles/theme';
 import { useProjectId } from '../hooks/useProjectId';
@@ -516,7 +517,10 @@ function EquipmentTable({ rows, selectedId, onSelect, hoursToday, nextMaintenanc
               <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 13, fontWeight: 500, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={eq.name}>{eq.name}</div>
               <div style={{ padding: `0 ${spacing[3]}` }}><StatusChip status={eq.status} /></div>
               <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, color: colors.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{eq.current_location || '—'}</div>
-              <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, color: colors.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{eq.assigned_to || '—'}</div>
+              <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, color: colors.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {/* assigned_to is a uuid FK to auth.users — never render raw. */}
+                <UserName userId={eq.assigned_to} fallback="—" />
+              </div>
               <div style={{ padding: `0 ${spacing[3]}`, textAlign: 'right', fontFamily: typography.fontFamily, fontSize: 12, fontVariantNumeric: 'tabular-nums', color: ht && ht > 0 ? colors.textSecondary : colors.textTertiary }}>{ht != null ? `${ht.toFixed(1)}h` : '—'}</div>
               <div style={{ padding: `0 ${spacing[3]}`, textAlign: 'right', fontFamily: typography.fontFamily, fontSize: 12, fontVariantNumeric: 'tabular-nums', color: colors.textSecondary }}>{eq.hours_meter != null ? `${Number(eq.hours_meter).toFixed(0)}h` : '—'}</div>
               <div style={{ padding: `0 ${spacing[3]}`, fontFamily: typography.fontFamily, fontSize: 12, fontVariantNumeric: 'tabular-nums', color: maintenanceColor(m?.scheduled_date ?? null), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatShortDate(m?.scheduled_date ?? null)}</div>
@@ -573,7 +577,8 @@ function EquipmentDetailPanel({ equipment, nextMaintenance, hoursToday, onClose,
           <DetailRow label="Make / Model" value={[equipment.make, equipment.model].filter(Boolean).join(' ') || '—'} />
           <DetailRow label="Serial" value={equipment.serial_number ?? '—'} mono />
           <DetailRow label="Location" value={equipment.current_location ?? '—'} />
-          <DetailRow label="Operator" value={equipment.assigned_to ?? '—'} mono />
+          {/* Operator is a uuid FK to auth.users — resolve via UserName. */}
+          <DetailRow label="Operator" value={<UserName userId={equipment.assigned_to} fallback="—" />} />
           <DetailRow label="Hours today" value={hoursToday != null ? `${hoursToday.toFixed(1)}h` : '—'} num />
           <DetailRow label="Hours total" value={equipment.hours_meter != null ? `${Number(equipment.hours_meter).toFixed(0)}h` : '—'} num />
           <DetailRow label="Last service" value={formatShortDate(equipment.last_service_date)} />
@@ -599,7 +604,7 @@ function EquipmentDetailPanel({ equipment, nextMaintenance, hoursToday, onClose,
   );
 }
 
-function DetailRow({ label, value, mono = false, num = false }: { label: string; value: string; mono?: boolean; num?: boolean }) {
+function DetailRow({ label, value, mono = false, num = false }: { label: string; value: React.ReactNode; mono?: boolean; num?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing[3], padding: `${spacing[2]} 0`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
       <span style={{ fontFamily: typography.fontFamily, fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: colors.textTertiary }}>{label}</span>

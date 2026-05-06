@@ -19,7 +19,7 @@ describe('RFI State Machine', () => {
 
     it('open can Assign or Close', () => {
       const t = getValidTransitions('open')
-      expect(t).toContain('Assign for Review')
+      expect(t).toContain('Send for Review')
       expect(t).toContain('Close')
     })
 
@@ -77,7 +77,7 @@ describe('RFI State Machine', () => {
     })
 
     it('Assign from open goes to under_review', () => {
-      expect(getNextStatus('open', 'Assign for Review')).toBe('under_review')
+      expect(getNextStatus('open', 'Send for Review')).toBe('under_review')
     })
 
     it('Respond from under_review goes to answered', () => {

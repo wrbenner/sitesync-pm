@@ -49,7 +49,7 @@ export async function validateRfiStatusTransition(
   // Map from machine action labels to status values
   const rfiActionToStatus: Record<string, string> = {
     'Submit': 'open',
-    'Assign for Review': 'under_review',
+    'Send for Review': 'under_review',
     'Respond': 'answered',
     'Close': 'closed',
     'Reopen': 'open',

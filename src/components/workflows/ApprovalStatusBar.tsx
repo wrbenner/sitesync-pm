@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { CheckCircle2, XCircle, Clock, RotateCcw, MessageSquare } from 'lucide-react'
 import { Card, Btn, Modal } from '../Primitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { entityLabel } from '../../lib/entityLabel'
 import {
   useApprovalStatus,
   useStartApproval,
@@ -35,10 +36,15 @@ export const ApprovalStatusBar: React.FC<Props> = ({ entityType, entityId }) => 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['3'] }}>
           <div>
             <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium }}>
-              No approval workflow started
+              No multi-step approval chain started
             </div>
             <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-              Start the configured approval chain for this {entityType.replace('_', ' ')}
+              {/* Distinguished from "Send for Review" (the single-step
+                  state-machine transition on the StatusControl button).
+                  This card initiates a configurable multi-party approval
+                  chain (PM → Architect → Owner). entityLabel keeps acronyms
+                  upper-cased ('rfi' → 'RFI', etc). */}
+              Start the configured multi-step approval chain for this {entityLabel(entityType)}
             </div>
           </div>
           <Btn
@@ -48,12 +54,12 @@ export const ApprovalStatusBar: React.FC<Props> = ({ entityType, entityId }) => 
                 { entityType, entityId },
                 {
                   onError: (e: unknown) => toast.error(e instanceof Error ? e.message : 'Failed to start approval'),
-                  onSuccess: () => toast.success('Approval started'),
+                  onSuccess: () => toast.success('Multi-step approval started'),
                 },
               )
             }
           >
-            Start Approval
+            Start Multi-Step Approval
           </Btn>
         </div>
       </Card>

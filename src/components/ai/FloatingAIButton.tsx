@@ -61,13 +61,13 @@ export const FloatingAIButton: React.FC = () => {
       ? 'Loading AI insights...'
       : insightCount > 0
         ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available`
-        : 'Open AI Copilot';
+        : 'Open Iris';
 
   return (
     <button
       onClick={isError ? async () => { const result = await refetch(); if (result.isError) { toast.error('Unable to load AI insights. Please try again.'); } else { openCopilot(); } } : openCopilot}
       title={titleText}
-      aria-label={insightCount > 0 ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available. Open AI Copilot` : 'Open AI Copilot'}
+      aria-label={insightCount > 0 ? `${insightCount} AI insight${insightCount !== 1 ? 's' : ''} available. Open Iris` : 'Open Iris'}
       role="button"
       tabIndex={0}
       onMouseDown={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}

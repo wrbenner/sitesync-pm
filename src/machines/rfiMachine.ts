@@ -107,7 +107,7 @@ export function getValidTransitions(status: RFIState, userRole: string = 'viewer
 
   const base: Record<RFIState, string[]> = {
     draft: ['Submit'],
-    open: ['Assign for Review', 'Close'],
+    open: ['Send for Review', 'Close'],
     under_review: ['Respond', 'Close'],
     answered: ['Close', 'Reopen'],
     closed: ['Reopen'],
@@ -129,7 +129,7 @@ export function getValidTransitions(status: RFIState, userRole: string = 'viewer
 export function getNextStatus(currentStatus: RFIState, action: string): RFIState | null {
   const map: Record<string, Record<string, RFIState>> = {
     draft: { 'Submit': 'open', 'Void': 'void' },
-    open: { 'Assign for Review': 'under_review', 'Close': 'closed', 'Void': 'void' },
+    open: { 'Send for Review': 'under_review', 'Close': 'closed', 'Void': 'void' },
     under_review: { 'Respond': 'answered', 'Close': 'closed', 'Void': 'void' },
     answered: { 'Close': 'closed', 'Reopen': 'open', 'Void': 'void' },
     closed: { 'Reopen': 'open', 'Void': 'void' },

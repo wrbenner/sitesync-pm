@@ -29,9 +29,14 @@ import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
+import { UserName } from '../../components/UserName'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
+import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
+import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
+import { PermissionGate } from '../../components/auth/PermissionGate'
+import { usePermissions } from '../../hooks/usePermissions'
 import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
 import { SpecExcerptPanel } from '../../components/specifications/SpecExcerptPanel'
 import { RfiSlaPanel } from '../../components/conversation/RfiSlaPanel'
@@ -581,6 +586,7 @@ export function RFIDetail() {
     ['rfis', projectId],
   ])
   const [transitioning, setTransitioning] = useState<string | null>(null)
+  const [distributeOpen, setDistributeOpen] = useState(false)
 
   // Track "last viewed" for unread indicator
   const lastViewedKey = rfiId ? `rfi_viewed_${rfiId}` : null
@@ -608,7 +614,12 @@ export function RFIDetail() {
 
   const currentStatus = (rfi?.status as RFIState) || 'draft'
   const statusConfig = getRFIStatusConfig(currentStatus)
-  const transitions = getValidTransitions(currentStatus, 'admin')
+  // Pass the real user role so getValidTransitions can hide Void from
+  // non-admin/non-owner users (per PermissionGate audit + Build Spec
+  // Part 5). Falls back to 'viewer' which yields the safest minimum
+  // transition set while permissions are loading.
+  const { role: userRole } = usePermissions()
+  const transitions = getValidTransitions(currentStatus, userRole ?? 'viewer')
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
   const newResponseCount = useMemo(() => {
@@ -759,12 +770,52 @@ export function RFIDetail() {
                 projectId={rfi.project_id}
               />
               <WatchButton rfiId={rfi.id} watchers={watchers} userId={user?.id} />
-              <StatusControl
-                currentStatus={currentStatus}
-                transitions={transitions}
-                onTransition={handleTransition}
-                loading={transitioning}
-              />
+              {/* Distribute / Forward to sub — P0 #8. Permission-gated to
+                  rfis.edit so read-only users see no affordance. The
+                  dialog itself persists to rfi_distributions and the
+                  audit trigger surfaces the event in History. */}
+              <PermissionGate permission="rfis.edit">
+                <button
+                  type="button"
+                  onClick={() => setDistributeOpen(true)}
+                  title="Forward this RFI to a sub or other recipient"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 12px', borderRadius: 8,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    backgroundColor: 'transparent',
+                    color: colors.textSecondary,
+                    fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  <Send size={12} /> Distribute
+                </button>
+              </PermissionGate>
+              {/* PermissionGate around the entire StatusControl (P0 #9):
+                  Close, Void, Send for Review, Reopen, Submit all live
+                  here. Read-only / viewer role sees only the static pill.
+                  Void is further filtered to admin/owner inside
+                  getValidTransitions(role) — defense in depth. */}
+              <PermissionGate
+                permission="rfis.edit"
+                fallback={
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px', borderRadius: '20px',
+                    backgroundColor: statusConfig.bg, color: statusConfig.color,
+                    fontSize: '12px', fontWeight: 600,
+                  }}>
+                    {statusConfig.label}
+                  </span>
+                }
+              >
+                <StatusControl
+                  currentStatus={currentStatus}
+                  transitions={transitions}
+                  onTransition={handleTransition}
+                  loading={transitioning}
+                />
+              </PermissionGate>
             </div>
           </div>
 
@@ -788,7 +839,10 @@ export function RFIDetail() {
               fontSize: '12px', color: colors.primaryOrange, fontWeight: 600,
             }}>
               <Flag size={11} />
-              Ball in court: {displayName(profileMap, rfi.ball_in_court)}
+              {/* The literal site of Walker's "code in activity" complaint —
+                  this used to render a raw UUID. UserName guarantees skeleton
+                  during load, then a name; never the UUID. */}
+              Ball in court: <UserName userId={rfi.ball_in_court} fallback="—" />
             </div>
           )}
         </div>
@@ -819,6 +873,12 @@ export function RFIDetail() {
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
+        </div>
+
+        {/* ── Inline-editable metadata (P0 #7: subject, ball-in-court,
+            due date, priority, drawing ref, spec section) ───────── */}
+        <div style={{ marginBottom: '24px' }}>
+          <RFIInlineMetadata rfi={rfi as RFI} />
         </div>
 
         {/* ── Audit timeline (the moat) ──────────────────── */}
@@ -989,6 +1049,16 @@ export function RFIDetail() {
         </div>
 
       </div>
+
+      {/* ── Distribute / Forward dialog (P0 #8). Mounted here so it
+          overlays the whole detail page when open. ───────────────── */}
+      <RFIDistributeDialog
+        rfiId={rfi.id}
+        projectId={rfi.project_id}
+        rfiNumber={rfi.number}
+        open={distributeOpen}
+        onClose={() => setDistributeOpen(false)}
+      />
     </PageContainer>
   )
 }

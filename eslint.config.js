@@ -5,6 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import sitesyncRules from './eslint-rules/index.js'
 
 export default defineConfig([
   globalIgnores([
@@ -29,7 +30,20 @@ export default defineConfig([
       ecmaVersion: 2023,
       globals: globals.browser,
     },
+    plugins: {
+      sitesync: sitesyncRules,
+    },
     rules: {
+      // ── Bugatti-grade safety rules ───────────────────────────────
+      // Raw user_id in JSX text leaks UUIDs into the UI (the deep-dive's
+      // "code in activity" finding). UserName is the canonical resolver;
+      // ESLint blocks regressions at build time.
+      'sitesync/no-raw-user-id-in-jsx': 'error',
+      // UserName.tsx itself is the canonical resolver — it has to render
+      // the raw value in the non-UUID early-return branch. Disabling at
+      // the per-file level (below) instead of inside the file keeps the
+      // exception discoverable in the lint config.
+      //
       // ── DELIBERATE DOWNGRADES (April 16 2026 audit) ──────────────
       // These are tracked as warnings, not errors. They matter and will
       // be fixed, but they should not block the quality floor at 0.
@@ -124,6 +138,16 @@ export default defineConfig([
       // Re-enable after the mass codemod in a PR that ratchets the floor down
       // in the same commit. Audit harness still catches new sub-56 touch
       // targets and other regressions.
+    },
+  },
+  {
+    // The UserName component is the canonical user_id resolver. After it
+    // proves the input is not a UUID, it intentionally renders the raw
+    // value (which is, by that point, a display name). The lint rule's
+    // heuristic can't distinguish that case, so disable it here.
+    files: ['src/components/UserName.tsx'],
+    rules: {
+      'sitesync/no-raw-user-id-in-jsx': 'off',
     },
   },
 ])

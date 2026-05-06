@@ -304,6 +304,68 @@ const noFiller: VoiceRule = {
   derivedFrom: [],
 }
 
+// ── Acronym casing — RFI / RFIs must always be uppercase ─────────────
+// Walker's deep-dive (RFI_DEEP_DIVE_2026-05-04.md) flagged lowercase
+// "rfi" and TitleCase "Rfis" leaking into user-facing copy. The
+// codebase used .replace('_', ' ') on entity_type tokens, which turned
+// the technical 'rfi' string into the rendered word "rfi". Iris-
+// generated text suffers the same risk: "the rfi was filed yesterday"
+// reads as a developer artifact, not professional construction copy.
+//
+// The lint check below catches both cases and auto-fixes:
+//   "this rfi"  → "this RFI"
+//   "5 Rfis"    → "5 RFIs"
+//
+// Word-boundary anchored so legitimate identifiers in code blocks (rare
+// in Iris output) don't get rewritten. Also skips 'rfi' inside hyphens
+// like 'rfi-followup' which is a system token.
+const acronymCasing: VoiceRule = {
+  id: 'acronym-casing',
+  category: 'register',
+  description:
+    'Construction acronyms (RFI, CO, RFP) must be uppercase in user-facing text. ' +
+    'Lowercase or TitleCase variants leak technical tokens into copy.',
+  promptBlock:
+    'When you write "RFI", "RFIs", "CO", "POs", "MEP", "ADA", or any ' +
+    'construction acronym, ALWAYS use ALL CAPS. Never write "rfi", "Rfi", or "Rfis". ' +
+    'These are acronyms, not regular words.',
+  lintCheck: (text) => {
+    // Match: standalone "rfi", "Rfi", "rfis", "Rfis" — but NOT inside
+    // identifiers like rfi_id, RfiList, useRFI, etc. We anchor with
+    // word boundaries on both sides AND require the surrounding chars
+    // not to be alphanumeric or underscore.
+    const acronymRe = /(^|[^\w])(rfi|Rfi|rfis|Rfis|co|Co|cos|Cos|mep|Mep|ada|Ada|rfp|Rfp|rfps|Rfps)(?=[^\w]|$)/g
+    let needsFix = false
+    const replaced = text.replace(acronymRe, (_match, before, token) => {
+      // CO/Co is ambiguous (could be the word "co"); only uppercase
+      // when followed by a # or digit — a CO ID convention.
+      if (/^cos?$/i.test(token)) {
+        return _match // leave word "co" alone — too risky to autofix
+      }
+      needsFix = true
+      // Plural form: keep the trailing "s" lowercase ("RFIs", not "RFIS").
+      const isPlural = /s$/.test(token)
+      const root = isPlural ? token.slice(0, -1) : token
+      return `${before}${root.toUpperCase()}${isPlural ? 's' : ''}`
+    })
+    if (!needsFix) return { passed: true }
+    return {
+      passed: false,
+      message:
+        'Found lowercase or TitleCase variant of a construction acronym. ' +
+        'Use ALL CAPS (RFI, RFIs, MEP, ADA, RFP).',
+      suggestedReplacement: replaced,
+    }
+  },
+  examples: [
+    {
+      good: 'The RFI was filed yesterday; expect 5 RFIs back from MEP this week.',
+      bad: 'The rfi was filed yesterday; expect 5 Rfis back from Mep this week.',
+    },
+  ],
+  derivedFrom: [], // seeded from RFI_DEEP_DIVE_2026-05-04.md
+}
+
 // ── Registry ─────────────────────────────────────────────────────────
 
 export const VOICE_RULES: VoiceRule[] = [
@@ -317,6 +379,7 @@ export const VOICE_RULES: VoiceRule[] = [
   rfiStateQuestionAndDeadline,
   noContractions,
   noFiller,
+  acronymCasing,
 ]
 
 // ── Convenience accessors ────────────────────────────────────────────

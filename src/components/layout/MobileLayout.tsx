@@ -34,7 +34,7 @@ const moreItems = [
   { id: 'meetings', label: 'Meetings', route: '/meetings', group: 'People' },
   { id: 'files', label: 'Files', route: '/files', group: 'Docs' },
   { id: 'activity', label: 'Activity', route: '/activity', group: 'Docs' },
-  { id: 'copilot', label: 'AI Copilot', route: '/copilot', group: 'AI' },
+  { id: 'copilot', label: 'Iris', route: '/copilot', group: 'AI' },
   { id: 'safety', label: 'Safety', route: '/safety', group: 'Project' },
   { id: 'project-health', label: 'Project Health', route: '/project-health', group: 'AI' },
 ];

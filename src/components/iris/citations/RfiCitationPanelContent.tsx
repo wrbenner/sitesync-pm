@@ -10,6 +10,7 @@
  */
 import React from 'react'
 import { colors, spacing, typography, borderRadius } from '../../../styles/theme'
+import { UserName } from '../../UserName'
 
 interface Props {
   data?: Record<string, unknown>
@@ -33,7 +34,14 @@ export const RfiCitationPanelContent: React.FC<Props> = ({ data }) => {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing['2'] }}>
         <Pill label="Status" value={status} tone={statusTone(rfi.status)} />
         {rfi.ball_in_court && (
-          <Pill label="Ball in court" value={rfi.ball_in_court} tone="neutral" />
+          <Pill
+            label="Ball in court"
+            // ball_in_court is a UUID FK to auth.users — never render raw.
+            // <UserName /> resolves to the person's name with a skeleton
+            // shimmer during load, never "Unknown".
+            value={<UserName userId={rfi.ball_in_court} fallback="—" />}
+            tone="neutral"
+          />
         )}
         {due && <Pill label="Due" value={due} tone={dueTone(rfi.due_date)} />}
       </div>
@@ -75,7 +83,7 @@ const Eyebrow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger'
 
-const Pill: React.FC<{ label: string; value: string; tone: Tone }> = ({
+const Pill: React.FC<{ label: string; value: React.ReactNode; tone: Tone }> = ({
   label,
   value,
   tone,

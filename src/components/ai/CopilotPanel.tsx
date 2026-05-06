@@ -525,7 +525,7 @@ export const CopilotPanel: React.FC = () => {
                   {[
                     { icon: <Clipboard size={14} />, label: 'Copy to Clipboard', action: () => {
                       const text = messages
-                        .map((m) => `${m.role === 'user' ? 'You' : (m.agentDomain ? SPECIALIST_AGENTS[m.agentDomain].shortName : 'AI Copilot')}: ${m.content}`)
+                        .map((m) => `${m.role === 'user' ? 'You' : (m.agentDomain ? SPECIALIST_AGENTS[m.agentDomain].shortName : 'Iris')}: ${m.content}`)
                         .join('\n\n')
                       if (!text) { toast.error('No messages to copy'); return }
                       navigator.clipboard.writeText(text).then(
@@ -804,7 +804,7 @@ export const CopilotPanel: React.FC = () => {
               aria-label={
                 msg.role === 'user'
                   ? 'Message from You'
-                  : `Message from ${msg.agentDomain ? SPECIALIST_AGENTS[msg.agentDomain].shortName : 'AI Copilot'}`
+                  : `Message from ${msg.agentDomain ? SPECIALIST_AGENTS[msg.agentDomain].shortName : 'Iris'}`
               }
             >
               <PanelMessageRenderer message={msg} onSend={handleSendMessage} />
