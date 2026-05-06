@@ -14,7 +14,6 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { colors, typography, borderRadius } from '../../styles/theme';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -66,9 +65,8 @@ const WITNESS_OVERSHOOT = 8;
 const WITNESS_GAP = 6;
 /** Tick mark half-width at dimension line endpoints */
 const TICK_SIZE = 5;
-/** Frosted label pill padding */
+/** Frosted label pill horizontal padding */
 const PILL_PAD_X = 10;
-const PILL_PAD_Y = 5;
 
 // Architectural orange — warm, confident, reads on any background
 const DIM_COLOR = '#F47820';
@@ -147,9 +145,10 @@ const ArchDimensionLine: React.FC<{
   p1: { x: number; y: number };
   p2: { x: number; y: number };
   label: string;
+  /** Reserved for a future metric-toggle reveal. Currently unrendered. */
   sublabel?: string;
   offset?: number;
-}> = ({ p1, p2, label, sublabel, offset = 16 }) => {
+}> = ({ p1, p2, label, offset = 16 }) => {
   const perp = perpUnit(p1, p2);
   const angle = lineAngle(p1, p2);
   const angleDeg = (angle * 180) / Math.PI;
@@ -229,19 +228,6 @@ const ArchDimensionLine: React.FC<{
         >
           {label}
         </text>
-        {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
-        {false && sublabel && (
-          <text
-            x={0} y={14}
-            textAnchor="middle"
-            fill="rgba(255,255,255,0.45)"
-            fontSize={10}
-            fontWeight={500}
-            fontFamily="'SF Mono', 'Menlo', 'Consolas', monospace"
-          >
-            {sublabel}
-          </text>
-        )}
       </g>
     </g>
   );
@@ -458,7 +444,6 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   }, [snapPoints]);
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [inProgressPoints, setInProgressPoints] = useState<NormalizedPoint[]>([]);
-  const [countIndex, setCountIndex] = useState(1);
   const [calibratePoints, setCalibratePoints] = useState<NormalizedPoint[]>([]);
 
   // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
@@ -571,7 +556,6 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         const nextNum = existingCounts + 1;
         const result: MeasurementResult = { id: genId(), type: 'count', points: [pt], label: `${nextNum}` };
         setMeasurements((prev) => [...prev, result]);
-        setCountIndex(nextNum + 1);
         onMeasurementAdd?.(result);
         return;
       }

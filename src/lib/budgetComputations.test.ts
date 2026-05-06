@@ -190,7 +190,7 @@ describe('computeContingency', () => {
     const items = [div({ csi_division: '01', budget: 100_000, spent: 5_000 })];
     const cos = [
       co({ amount: 20_000, status: 'approved' }),
-      co({ amount: 5_000, status: 'submitted' }),
+      co({ amount: 5_000, status: 'pending_review' }),
     ];
     const result = computeContingency(items, cos);
     expect(result.consumed).toBe(20_000);

@@ -204,29 +204,47 @@ function MarginaliaCard({
   body,
   boldValues,
 }: MarginaliaNote) {
-  // Parse body for **bold** markdown patterns and boldValues
+  // Parse body for **bold** markdown patterns first, then bold any
+  // verbatim occurrences from boldValues inside the remaining plain runs.
   const renderBody = useMemo(() => {
-    const text = body;
-    const parts: Array<{ text: string; bold: boolean }> = [];
-
-    // Parse **bold** markdown
-    const regex = /\*\*(.*?)\*\*/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({ text: text.slice(lastIndex, match.index), bold: false });
+    const splitBy = (
+      text: string,
+      pattern: RegExp,
+      capture: (m: RegExpMatchArray) => string,
+    ): Array<{ text: string; bold: boolean }> => {
+      const out: Array<{ text: string; bold: boolean }> = [];
+      let cursor = 0;
+      for (const m of text.matchAll(pattern)) {
+        const start = m.index ?? 0;
+        if (start > cursor) out.push({ text: text.slice(cursor, start), bold: false });
+        out.push({ text: capture(m), bold: true });
+        cursor = start + m[0].length;
       }
-      parts.push({ text: match[1], bold: true });
-      lastIndex = match.index + match[0].length;
-    }
-    if (lastIndex < text.length) {
-      parts.push({ text: text.slice(lastIndex), bold: false });
-    }
+      if (cursor < text.length) out.push({ text: text.slice(cursor), bold: false });
+      return out;
+    };
 
-    return parts.length > 0 ? parts : [{ text: body, bold: false }];
-  }, [body]);
+    const markdown = splitBy(body, /\*\*(.*?)\*\*/g, (m) => m[1]);
+    if (markdown.length === 0) markdown.push({ text: body, bold: false });
+
+    const values = (boldValues ?? []).filter((v) => v.length > 0);
+    if (values.length === 0) return markdown;
+
+    // Build a single regex matching any boldValue (longest-first so longer
+    // overlapping values win), with regex metachars escaped.
+    const escaped = values
+      .slice()
+      .sort((a, b) => b.length - a.length)
+      .map((v) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const valuesRegex = new RegExp(`(${escaped.join('|')})`, 'g');
+
+    const expanded: Array<{ text: string; bold: boolean }> = [];
+    for (const part of markdown) {
+      if (part.bold) { expanded.push(part); continue; }
+      expanded.push(...splitBy(part.text, valuesRegex, (m) => m[1]));
+    }
+    return expanded;
+  }, [body, boldValues]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

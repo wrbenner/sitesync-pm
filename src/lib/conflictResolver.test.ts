@@ -130,11 +130,11 @@ describe('resolveConflict', () => {
 
   it('applies per-field resolutions on top of server', () => {
     const result = resolveConflict(
-      {
+      conflict({
         base_version: {},
         local_version: { name: 'L', desc: 'L' },
         server_version: { name: 'S', desc: 'S' },
-      } as ConflictRecord,
+      }),
       'local',
       { name: 'server' },
     );

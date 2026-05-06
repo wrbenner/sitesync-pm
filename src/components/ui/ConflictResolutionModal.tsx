@@ -454,7 +454,9 @@ const ConflictRow: React.FC<ConflictRowProps> = ({
           color: colors.textPrimary,
           wordBreak: 'break-word',
           cursor: showToggle ? 'pointer' : 'default',
-          outline: localChosen && showToggle ? `2px solid ${colors.primaryBlue ?? '#3B82F6'}` : 'none',
+          // Tailwind blue-500 — deliberate non-brand accent that distinguishes
+          // "local change chosen" from the orange brand color.
+          outline: localChosen && showToggle ? '2px solid #3B82F6' : 'none',
           outlineOffset: '-2px',
           transition: transitions.quick,
         }}

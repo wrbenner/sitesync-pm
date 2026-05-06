@@ -61,13 +61,20 @@ export function useOptimisticLock(
     try {
       const selectFields =
         lockedStatuses && lockedStatuses.length > 0 ? 'updated_at, status' : 'updated_at';
+      // `table` is dynamic; collapse Supabase's per-table column-name
+      // generics to bypass inference. Same pattern as useRealtimeQuery.
       const runQuery = () =>
-        fromTable(table)
+        fromTable(table as never)
           .select(selectFields)
-          .eq('id', entityId)
+          .eq('id' as never, entityId)
           .single();
 
-      let { data, error } = await runQuery();
+      // Supabase's typed .select() requires a literal string to infer the
+      // returned shape. We branch selectFields at runtime, so the inferred
+      // type collapses to ParserError. Cast the resulting row to the shape
+      // we know the runtime always returns for these two columns.
+      type ConflictRow = { updated_at?: string; status?: string };
+      let { data, error } = (await runQuery()) as { data: ConflictRow | null; error: unknown };
 
       if (error || !data) {
         const retryDelays = [500, 1500];
@@ -75,11 +82,14 @@ export function useOptimisticLock(
           const delay = retryDelays[retryCountRef.current];
           retryCountRef.current += 1;
           await new Promise<void>((resolve) => setTimeout(resolve, delay));
-          ({ data, error } = await runQuery());
+          ({ data, error } = (await runQuery()) as { data: ConflictRow | null; error: unknown });
         }
 
         if (error || !data) {
-          if (import.meta.env.DEV) console.warn(`[useOptimisticLock] Conflict check failed for table "${table}":`, error?.message ?? 'No data returned');
+          if (import.meta.env.DEV) {
+            const msg = error && typeof error === 'object' && 'message' in error ? (error as { message?: string }).message : undefined;
+            console.warn(`[useOptimisticLock] Conflict check failed for table "${table}":`, msg ?? 'No data returned');
+          }
           useUiStore.getState().addToast({
             type: 'warning',
             title: 'Conflict check failed',

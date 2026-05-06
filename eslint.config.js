@@ -7,7 +7,15 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    // macOS Finder / iCloud sync conflict duplicates (e.g. "foo 2.tsx",
+    // "foo 3.md", "android/app 4/"). Already gitignored, but iCloud may
+    // regenerate them on disk and ESLint would otherwise lint stale copies.
+    '**/* [0-9].*',
+    '**/* [0-9]/**',
+    '**/* [0-9]',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

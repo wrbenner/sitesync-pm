@@ -141,7 +141,7 @@ export function useRealtimeQuery<T>(
 import { updatePresencePage } from '../lib/realtime'
 
 export function useEntityPresence(page: string, entityId?: string) {
-  const prevEntityRef = useRef<string | undefined>()
+  const prevEntityRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
@@ -165,9 +165,12 @@ export function useOptimisticLock(
     queryKey: ['optimistic_lock', table, entityId],
     queryFn: async () => {
       if (!entityId) return null
-      const { data, error } = await fromTable(table)
+      // `table` is dynamic, so collapse the inferred literal-union to bypass
+      // Supabase's per-table column-name constraints. Same pattern used
+      // elsewhere in the codebase for runtime-table queries.
+      const { data, error } = await fromTable(table as never)
         .select('updated_at')
-        .eq('id', entityId)
+        .eq('id' as never, entityId)
         .single()
       if (error) return null
       return (data as Record<string, unknown>)?.updated_at as string | null

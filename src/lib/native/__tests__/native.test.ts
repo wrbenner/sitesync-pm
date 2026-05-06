@@ -94,8 +94,15 @@ describe('APP_SHORTCUTS', () => {
     }
   });
   it('today\'s daily log uses today\'s date', () => {
+    // Match the impl's local-date computation. Using toISOString() (UTC)
+    // would flake whenever the test machine sits in a non-UTC tz and the
+    // local clock has not yet rolled to the next UTC day.
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const today = `${y}-${m}-${day}`;
     const todays = APP_SHORTCUTS.find((s) => s.id === 'todays_log')!;
-    const today = new Date().toISOString().slice(0, 10);
     expect(todays.url).toContain(today);
   });
 });
