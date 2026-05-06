@@ -141,6 +141,10 @@ export function useRealtimeQuery<T>(
       }
       channels.forEach((ch) => supabase.removeChannel(ch))
     }
+    // relatedTablesKey carries the same content as options.relatedTables
+    // but with a stable string identity. Listing the array directly would
+    // resubscribe on every render even when contents are unchanged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- relatedTablesKey is the stable serialization
   }, [projectId, options.table, relatedTablesKey, instanceId]) // Re-subscribe only when the subscription topology changes
 
   return query

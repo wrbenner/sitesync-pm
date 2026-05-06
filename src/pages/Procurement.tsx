@@ -817,7 +817,7 @@ export const Procurement: React.FC = () => {
         </span>
       ),
     }),
-  ], [])
+  ], [inventoryCol])
 
   // ── Render ──────────────────────────────────────────────────
 

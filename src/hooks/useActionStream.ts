@@ -530,7 +530,10 @@ export function useActionStream(role?: StreamRole): ActionStreamResult {
   const snooze = useStreamStore((s) => s.snooze)
 
   const effectiveRole: StreamRole = role ?? toStreamRole(projectRole)
-  const filterCtx = { companyId: actor.companyId }
+  // Memoize filterCtx so its object identity is stable when companyId
+  // doesn't change — listing it directly as a dep would invalidate the
+  // result memo on every render.
+  const filterCtx = useMemo(() => ({ companyId: actor.companyId }), [actor.companyId])
 
   const result = useMemo(() => {
     const now = new Date()
