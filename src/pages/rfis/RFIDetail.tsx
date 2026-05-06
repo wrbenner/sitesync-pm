@@ -18,17 +18,17 @@ import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
   AlertTriangle, MessageSquare, FileText,
   Image, ChevronDown, User, Eye, EyeOff,
-  Paperclip, Flag, Pencil, Timer, Zap,
+  Flag, Pencil, Timer,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
 import { colors, spacing, borderRadius } from '../../styles/theme'
 import { fromTable } from '../../lib/db/queries'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
-import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
+import { useUpdateRFI } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
+import { useProfileNames, displayName } from '../../hooks/queries/profiles'
 import { UserName } from '../../components/UserName'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
@@ -76,23 +76,11 @@ const formatDateTime = (d: string | null) => {
   })
 }
 
-const formatShortDate = (d: string | null) => {
-  if (!d) return ''
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+// formatShortDate helper removed under P1b — unused after RFIResponseThread
+// took over response date rendering.
 
-const relativeTime = (d: string | null) => {
-  if (!d) return ''
-  const diff = Date.now() - new Date(d).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  if (days < 7) return `${days}d ago`
-  return formatShortDate(d)
-}
+// relativeTime helper removed under P1b — RFIResponseThread owns
+// its own date formatting now.
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -253,182 +241,6 @@ const StatusControl: React.FC<{
   )
 }
 
-// ─── Response Bubble ──────────────────────────────────────
-
-const ResponseBubble: React.FC<{
-  response: RFIResponse
-  index: number
-  isNew?: boolean
-  profileMap?: ProfileMap
-}> = ({ response, index, isNew, profileMap }) => {
-  const authorName = displayName(profileMap, response.author_id)
-  return (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.03, type: 'spring', stiffness: 500, damping: 35 }}
-    style={{
-      display: 'flex', gap: '10px', alignItems: 'flex-start',
-      position: 'relative', padding: '2px 0',
-    }}
-  >
-    {/* New indicator */}
-    {isNew && (
-      <div style={{
-        position: 'absolute', left: -12, top: 14,
-        width: 5, height: 5, borderRadius: '50%',
-        backgroundColor: colors.primaryOrange,
-      }} />
-    )}
-
-    <Avatar initials={getInitials(authorName)} size={30} />
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-        <span style={{
-          fontSize: '13px', fontWeight: 600,
-          color: colors.textPrimary,
-        }}>
-          {authorName}
-        </span>
-        {(response as RFIResponse & { company?: string }).company && (
-          <span style={{
-            fontSize: '10px', color: colors.textTertiary,
-            padding: '1px 6px', borderRadius: '10px',
-            backgroundColor: colors.surfaceInset,
-          }}>
-            {(response as RFIResponse & { company?: string }).company}
-          </span>
-        )}
-        <span style={{ fontSize: '11px', color: colors.textTertiary }}>
-          {relativeTime(response.created_at)}
-        </span>
-      </div>
-      <div style={{
-        padding: '12px 16px',
-        backgroundColor: colors.surfaceInset,
-        borderRadius: '4px 14px 14px 14px',
-        fontSize: '14px', color: colors.textPrimary,
-        lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-      }}>
-        {response.content || ''}
-      </div>
-      {/* Attachments */}
-      {response.attachments && Array.isArray(response.attachments) && (response.attachments as unknown[]).length > 0 && (
-        <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-          {(response.attachments as unknown[]).map((att: unknown, i: number) => (
-            <span key={i} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px',
-              fontSize: '11px', color: colors.primaryOrange,
-              padding: '3px 8px', borderRadius: '6px',
-              backgroundColor: colors.orangeSubtle, cursor: 'pointer',
-            }}>
-              <Paperclip size={10} />
-              {typeof att === 'string' ? att : `File ${i + 1}`}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  </motion.div>
-  )
-}
-
-// ─── Compose Box ──────────────────────────────────────────
-
-const ComposeBox: React.FC<{
-  rfiId: string
-  projectId: string
-}> = ({ rfiId, projectId }) => {
-  const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
-  const createResponse = useCreateRFIResponse()
-  const ref = useRef<HTMLTextAreaElement>(null)
-
-  const handleSend = useCallback(async () => {
-    if (!text.trim() || sending) return
-    setSending(true)
-    try {
-      await createResponse.mutateAsync({
-        data: { rfi_id: rfiId, content: text.trim() },
-        rfiId, projectId,
-      })
-      setText('')
-    } catch {
-      // handled by mutation
-    } finally {
-      setSending(false)
-    }
-  }, [text, sending, rfiId, projectId, createResponse])
-
-  // Auto-grow textarea
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = 'auto'
-      ref.current.style.height = Math.min(ref.current.scrollHeight, 180) + 'px'
-    }
-  }, [text])
-
-  return (
-    <div style={{
-      display: 'flex', gap: '10px', alignItems: 'flex-end',
-      padding: '16px 20px',
-      borderTop: `1px solid ${colors.borderSubtle}`,
-      backgroundColor: colors.surfaceInset,
-      borderRadius: '0 0 16px 16px',
-    }}>
-      <textarea
-        ref={ref}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Write a response… (⌘+Enter to send)"
-        rows={1}
-        style={{
-          flex: 1, padding: '11px 14px',
-          fontSize: '14px', color: colors.textPrimary,
-          backgroundColor: colors.surfaceRaised,
-          border: `1.5px solid ${colors.borderSubtle}`,
-          borderRadius: '12px',
-          outline: 'none', resize: 'none',
-          fontFamily: 'inherit', lineHeight: 1.5,
-          minHeight: 44, maxHeight: 180,
-          transition: 'border-color 0.15s, box-shadow 0.15s',
-          boxSizing: 'border-box',
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = colors.primaryOrange
-          e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.primaryOrange}10`
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = colors.borderSubtle
-          e.currentTarget.style.boxShadow = 'none'
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault()
-            handleSend()
-          }
-        }}
-      />
-      <button
-        onClick={handleSend}
-        disabled={!text.trim() || sending}
-        title="Send (⌘+Enter)"
-        style={{
-          width: 42, height: 42, borderRadius: '12px', border: 'none',
-          backgroundColor: text.trim() && !sending ? colors.primaryOrange : colors.surfaceDisabled,
-          color: text.trim() && !sending ? colors.white : colors.textDisabled,
-          cursor: text.trim() && !sending ? 'pointer' : 'not-allowed',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, transition: 'all 0.15s',
-          boxShadow: text.trim() && !sending ? '0 2px 8px rgba(244,120,32,0.25)' : 'none',
-        }}
-      >
-        <Send size={16} />
-      </button>
-    </div>
-  )
-}
-
 // ─── Watch Button ────────────────────────────────────────
 
 const WatchButton: React.FC<{
@@ -548,28 +360,6 @@ const MetadataSection: React.FC<{ rfi: RFI; assignedName?: string | null }> = ({
   )
 }
 
-// ─── New Activity Banner ─────────────────────────────────
-
-const NewActivityBanner: React.FC<{ count: number }> = ({ count }) => {
-  if (count === 0) return null
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '8px',
-      padding: '6px 0',
-    }}>
-      <div style={{ flex: 1, height: 1, backgroundColor: `${colors.primaryOrange}25` }} />
-      <span style={{
-        fontSize: '11px', fontWeight: 600,
-        color: colors.primaryOrange, textTransform: 'uppercase',
-        letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '4px',
-      }}>
-        <Zap size={10} />
-        {count} new
-      </span>
-      <div style={{ flex: 1, height: 1, backgroundColor: `${colors.primaryOrange}25` }} />
-    </div>
-  )
-}
 
 // ─── Main Page ────────────────────────────────────────────
 
@@ -648,10 +438,9 @@ export function RFIDetail() {
     return responses.filter(r => r.created_at && r.created_at > lastViewed).length
   }, [lastViewed, responses])
 
-  const firstNewIndex = useMemo(() => {
-    if (!lastViewed || newResponseCount === 0) return -1
-    return responses.findIndex(r => r.created_at && r.created_at > lastViewed)
-  }, [lastViewed, newResponseCount, responses])
+  // firstNewIndex deprecated under P1b — RFIResponseThread owns
+  // ordering + new-since indicators inside its own cards.
+  void newResponseCount
 
   const handleTransition = useCallback(async (action: string) => {
     if (!rfi || !projectId) return
