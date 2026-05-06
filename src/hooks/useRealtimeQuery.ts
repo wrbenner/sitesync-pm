@@ -12,7 +12,6 @@ import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────
 
-
 const TABLE_LABELS: Record<string, string> = {
   rfis: 'RFI', submittals: 'Submittal', tasks: 'Task',
   punch_items: 'Punch Item', daily_logs: 'Daily Log',
@@ -65,10 +64,22 @@ export function useRealtimeQuery<T>(
     ...options.queryOptions,
   })
 
+  // Latest-callback ref pattern: the subscription callback reads these via ref
+  // so we avoid tearing down/recreating channels every time queryClient,
+  // queryKey, or showToasts identity changes.
+  const callbackRef = useRef({ queryKey, queryClient, currentUserId, showToasts: options.showToasts })
+  callbackRef.current = { queryKey, queryClient, currentUserId, showToasts: options.showToasts }
+
+  // Extract the array dep to a stable string so identity-by-reference doesn't
+  // re-trigger the subscription effect when the caller passes a new array literal.
+  const relatedTablesKey = (options.relatedTables ?? []).join(',')
+  const queryKeyRoot = queryKey[0]
+  const primaryTable = options.table
+
   useEffect(() => {
     if (!projectId) return
 
-    const tables = [options.table, ...(options.relatedTables ?? [])]
+    const tables = [primaryTable, ...(relatedTablesKey ? relatedTablesKey.split(',') : [])]
     const channels: ReturnType<typeof supabase.channel>[] = []
 
     for (const table of tables) {
@@ -84,20 +95,21 @@ export function useRealtimeQuery<T>(
           table,
           filter: `project_id=eq.${projectId}`,
         }, (payload) => {
+          const { queryKey: currentQueryKey, queryClient: currentQueryClient, currentUserId: currentUid, showToasts: currentShowToasts } = callbackRef.current
           // Debounce invalidation: rapid changes (bulk updates, template apply) shouldn't cause N refetches
           if (pendingInvalidation.current) {
             clearTimeout(pendingInvalidation.current)
           }
           pendingInvalidation.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey })
+            currentQueryClient.invalidateQueries({ queryKey: currentQueryKey })
             pendingInvalidation.current = null
           }, INVALIDATION_DEBOUNCE_MS)
 
           // Toast for changes by OTHER users
-          if (options.showToasts !== false) {
-            const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
+          if (currentShowToasts !== false) {
+            const record = (payload.new || payload.old) as Record<string, unknown> | null
             const changedBy = record?.updated_by ?? record?.created_by ?? record?.submitted_by
-            if (changedBy && changedBy !== currentUserId) {
+            if (changedBy && changedBy !== currentUid) {
               const label = TABLE_LABELS[table] ?? table
               const event = EVENT_LABELS[payload.eventType] ?? 'changed'
               const title = (record?.title ?? record?.name ?? record?.number ?? '') as string
@@ -117,7 +129,7 @@ export function useRealtimeQuery<T>(
       }
       channels.forEach((ch) => supabase.removeChannel(ch))
     }
-  }, [projectId, options.table, queryKey[0]]) // Re-subscribe when table or primary key changes
+  }, [projectId, primaryTable, relatedTablesKey, instanceId, queryKeyRoot])
 
   return query
 }
@@ -129,7 +141,7 @@ export function useRealtimeQuery<T>(
 import { updatePresencePage } from '../lib/realtime'
 
 export function useEntityPresence(page: string, entityId?: string) {
-  const prevEntityRef = useRef<string | undefined>(undefined)
+  const prevEntityRef = useRef<string | undefined>()
 
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
@@ -153,12 +165,12 @@ export function useOptimisticLock(
     queryKey: ['optimistic_lock', table, entityId],
     queryFn: async () => {
       if (!entityId) return null
-      const { data, error } = await fromTable(table as never)
+      const { data, error } = await fromTable(table)
         .select('updated_at')
-        .eq('id' as never, entityId)
+        .eq('id', entityId)
         .single()
       if (error) return null
-      return (data as unknown as Record<string, unknown>)?.updated_at as string | null
+      return (data as Record<string, unknown>)?.updated_at as string | null
     },
     enabled: !!entityId && !!loadedUpdatedAt,
     refetchInterval: 10_000, // Check every 10 seconds while editing

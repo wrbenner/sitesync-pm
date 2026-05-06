@@ -5,9 +5,11 @@ export function useAnimatedNumber(target: number, duration = 800): number {
   const startRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | undefined>(undefined);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   useEffect(() => {
-    startRef.current = value;
+    startRef.current = valueRef.current;
     startTimeRef.current = null;
 
     const animate = (timestamp: number) => {

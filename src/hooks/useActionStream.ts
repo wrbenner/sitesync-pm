@@ -530,7 +530,7 @@ export function useActionStream(role?: StreamRole): ActionStreamResult {
   const snooze = useStreamStore((s) => s.snooze)
 
   const effectiveRole: StreamRole = role ?? toStreamRole(projectRole)
-  const filterCtx = { companyId: actor.companyId }
+  const filterCtx = useMemo(() => ({ companyId: actor.companyId }), [actor.companyId])
 
   const result = useMemo(() => {
     const now = new Date()
@@ -609,7 +609,7 @@ export function useActionStream(role?: StreamRole): ActionStreamResult {
     rfisQ.data, punchQ.data, submittalsQ.data, tasksQ.data,
     incidentsQ.data, dailyLogsQ.data, scheduleQ.data,
     dismissedIds, snoozedItems,
-    effectiveRole, filterCtx.companyId,
+    effectiveRole, filterCtx,
   ])
 
   const isLoading = !!(
