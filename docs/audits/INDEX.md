@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-05 (Lap 2 100% complete; polish-push receipt landed; quality floor v3→v4)
+**Last updated:** 2026-05-05 (Slice D + E parallel push receipt landed; 339 lib tests + 47 exhaustive-deps fixes; polish-push receipt; quality floor v3→v5)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -39,6 +39,7 @@ entries before starting work. Update this file when you add a new doc.
 | 50–60 | Soft pilot playbook substrate | `DAYS_50_60_PILOT_PLAYBOOK_RECEIPT_2026-05-04.md` | pilot_agreements migration + is_pilot_user() helper + agreement template v1 + standup template + provision-pilot-org.ts + ADR-006 standalone. Code substrate complete; Walker-side recruit/onboard/run pilot remains. |
 | 39+45+60 | Citations dedicated panels + voice linter wiring + pilot data export | `DAYS_39_45_60_FOLLOWUP_RECEIPT_2026-05-04.md` | 4 dedicated citation panels (daily_log/CO/spec/schedule_phase) + iris-call voice linter post-process with iris_voice_diffs logging + 11-case Deno/src parity tests + scripts/export-pilot-data.ts. 29 new tests; 170 total session tests green. |
 | Lap 2 close | Polish push (close-out + ESLint zero) | `POLISH_PUSH_2026-05-05_RECEIPT.md` | All gates green: typecheck 0; **lint 0 errors (Bugatti zero)**; tests 2781 passed / 0 failed (+19 fixed, +1 honest skip); bundle 3229 KB (under floor by 320). Floor v3→v5: bundleSizeKB 3550→3230, eslintErrors 480→0, testCount 1416→2781. |
+| Lap 2 pre-flight | Slice D + E parallel push (4-worktree session) | `SLICE_D_E_PARALLEL_PUSH_RECEIPT_2026-05-05.md` | Slice E: 339 lib tests across 12 files (riskEngine/safetyScoring/budgetComputations/criticalPath/hudCompliance/predictions/scheduleHealth/scheduleExport/conflictResolver/projectAnalytics/annotationGeometry/routeContext, all green in 2.29s). Slice D: 47 `react-hooks/exhaustive-deps` correctness sites across hooks/components/pages. Gitignore generalized for all single-digit iCloud duplicates. Typecheck held at 0. Did not auto-PR the 240-commit integration. |
 
 ---
 
