@@ -24,11 +24,11 @@ export function validateProjectId(projectId: string): void {
  *     data via row-level security on every downstream query, so failing closed
  *     here would lock out legitimate users without adding security.
  *
- * Three lookup paths (each goes through a different RLS policy surface):
- *   1. projects.organization_id directly
- *   2. drawings.organization_id (cross-ref — works when a member can read
- *      project sibling rows but not the parent projects row)
- *   3. rfis.organization_id (second cross-ref for projects with no drawings yet)
+ * Two lookup paths:
+ *   1. projects.organization_id directly (works for any org member — see
+ *      00050_projects_org_membership_rls.sql).
+ *   2. project_members → projects(organization_id) embed (works when a user
+ *      has a project_members row but the projects RLS hides metadata).
  */
 export async function assertProjectBelongsToActiveOrg(projectId: string, orgId: string): Promise<void> {
   const observed = await observeProjectOrg(projectId)
@@ -39,7 +39,7 @@ export async function assertProjectBelongsToActiveOrg(projectId: string, orgId: 
 }
 
 async function observeProjectOrg(projectId: string): Promise<string | null> {
-  // Path 1
+  // Path 1 — direct projects read (org members can SELECT)
   const direct = await (fromTable('projects')
     .select('organization_id')
     .eq('id' as never, projectId)
@@ -47,24 +47,19 @@ async function observeProjectOrg(projectId: string): Promise<string | null> {
     .then(({ data }) => data?.organization_id ?? null)
     .catch(() => null)
   if (direct) return direct
-  // Path 2 — drawings cross-ref
-  const viaDrawing = await (fromTable('drawings')
-    .select('organization_id')
+  // Path 2 — embed via the user's project_members row. Avoids the
+  // historical drawings/rfis cross-refs that pointed at a non-existent
+  // organization_id column on those tables.
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const viaMember = await (fromTable('project_members')
+    .select('project:projects(organization_id)')
     .eq('project_id' as never, projectId)
-    .limit(1)
-    .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
-    .then(({ data }) => data?.organization_id ?? null)
+    .eq('user_id' as never, user.id)
+    .maybeSingle() as unknown as Promise<{ data: { project?: { organization_id?: string } | null } | null }>)
+    .then(({ data }) => data?.project?.organization_id ?? null)
     .catch(() => null)
-  if (viaDrawing) return viaDrawing
-  // Path 3 — rfis cross-ref
-  const viaRfi = await (fromTable('rfis')
-    .select('organization_id')
-    .eq('project_id' as never, projectId)
-    .limit(1)
-    .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
-    .then(({ data }) => data?.organization_id ?? null)
-    .catch(() => null)
-  return viaRfi
+  return viaMember
 }
 
 export async function assertProjectAccess(projectId: string): Promise<void> {
@@ -120,44 +115,7 @@ export async function assertProjectAccess(projectId: string): Promise<void> {
     if (!activeOrg) {
       try {
         const orgKey = queryKey('projects_org_hydrate', { project_id: projectId, user_id: user.id })
-        const orgId = await dedupTtl(orgKey, 2000, async (): Promise<string | null> => {
-          // Path 1: direct projects SELECT.
-          const direct = await (fromTable('projects')
-            .select('organization_id')
-            .eq('id' as never, projectId)
-            .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
-            .then(({ data }) => data?.organization_id ?? null)
-            .catch(() => null)
-          if (direct) return direct
-          // Path 2: embedded join via the user's project_members row.
-          const viaMember = await (fromTable('project_members')
-            .select('project:projects(organization_id)')
-            .eq('project_id' as never, projectId)
-            .eq('user_id' as never, user.id)
-            .maybeSingle() as unknown as Promise<{ data: { project?: { organization_id?: string } | null } | null }>)
-            .then(({ data }) => data?.project?.organization_id ?? null)
-            .catch(() => null)
-          if (viaMember) return viaMember
-          // Path 3: drawings cross-ref — works when a member can read sibling
-          // rows but not the parent projects row (common RLS shape).
-          const viaDrawing = await (fromTable('drawings')
-            .select('organization_id')
-            .eq('project_id' as never, projectId)
-            .limit(1)
-            .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
-            .then(({ data }) => data?.organization_id ?? null)
-            .catch(() => null)
-          if (viaDrawing) return viaDrawing
-          // Path 4: rfis cross-ref — second sibling fallback.
-          const viaRfi = await (fromTable('rfis')
-            .select('organization_id')
-            .eq('project_id' as never, projectId)
-            .limit(1)
-            .maybeSingle() as unknown as Promise<{ data: { organization_id?: string } | null }>)
-            .then(({ data }) => data?.organization_id ?? null)
-            .catch(() => null)
-          return viaRfi
-        })
+        const orgId = await dedupTtl(orgKey, 2000, () => observeProjectOrg(projectId))
         if (orgId) {
           const { data: memberships } = await fromTable('organization_members')
             .select('organization_id, organizations:organization_id(id, name, slug)')

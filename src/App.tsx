@@ -657,7 +657,11 @@ function AppContent() {
           id="main-content"
           role="main"
           aria-label="Page content"
-          tabIndex={-1}
+          // tabIndex=0 satisfies axe `scrollable-region-focusable` — the
+          // <main> is overflow:auto, so keyboard users need a focus stop
+          // to scroll it with arrow keys when no inner control is focused.
+          // The skip-link still works (programmatic focus() ignores tabIndex).
+          tabIndex={0}
           style={{
             // Always live in column 2 regardless of which siblings are
             // mounted. Without this, when <Sidebar> is unmounted on

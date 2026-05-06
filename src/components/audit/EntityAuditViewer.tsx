@@ -12,7 +12,7 @@
 // All fetches are project-scoped via the user's RLS; the magic-link path
 // (read-only viewer) uses a separate component MagicLinkEntity.tsx.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Send } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -27,6 +27,20 @@ import { AuditTimeline } from './AuditTimeline';
 import { toast } from 'sonner';
 
 export type AuditEntityType = 'rfi' | 'submittal' | 'change_order' | 'punch_item';
+
+// Stable references for the loading/empty state. Keeping these module-scoped
+// is what prevents the consumer effect from re-firing every render — a fresh
+// `[]` literal in a useQuery default would mint a new identity each pass and
+// loop through verifyChain forever.
+const EMPTY_ROWS: readonly AuditLogRow[] = Object.freeze([]);
+
+const sortAuditRows = (raw: AuditLogRow[]): AuditLogRow[] =>
+  [...raw].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime();
+    const tb = new Date(b.created_at).getTime();
+    if (ta !== tb) return ta - tb;
+    return a.id.localeCompare(b.id);
+  });
 
 interface EntityAuditViewerProps {
   entityType: AuditEntityType;
@@ -47,7 +61,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
   const [chain, setChain] = useState<ChainVerificationResult | undefined>();
   const [showGapDetail, setShowGapDetail] = useState(false);
 
-  const { data: rows = [], isPending } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['audit-log', entityType, entityId],
     queryFn: async (): Promise<AuditLogRow[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,16 +80,10 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
       if (error) throw error;
       return (data as unknown as AuditLogRow[]) ?? [];
     },
+    select: sortAuditRows,
   });
 
-  const orderedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const ta = new Date(a.created_at).getTime();
-      const tb = new Date(b.created_at).getTime();
-      if (ta !== tb) return ta - tb;
-      return a.id.localeCompare(b.id);
-    });
-  }, [rows]);
+  const orderedRows = data ?? (EMPTY_ROWS as AuditLogRow[]);
 
   useEffect(() => {
     let cancelled = false;

@@ -1,7 +1,9 @@
 import { fromTable } from '../../lib/db/queries'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
 
 import posthog from '../../lib/analytics'
+import { supabase } from '../../lib/supabase'
 import { useAuditedMutation, createOnError } from './createAuditedMutation'
 import { invalidateEntity } from '../../api/invalidation'
 import {
@@ -9,6 +11,19 @@ import {
   rfiSchema,
 } from '../../components/forms/schemas'
 import { validateRfiStatusTransition } from './state-machine-validation-helpers'
+
+// Zod gate for rfi_responses inserts. Mirrors the DB column set —
+// `project_id` is intentionally absent because it lives on the parent
+// `rfis` row (RLS resolves it via subquery). Matches database.ts exactly.
+const rfiResponseInsertSchema = z.object({
+  rfi_id: z.string().uuid(),
+  content: z.string().min(1, 'Response content is required'),
+  attachments: z.array(z.unknown()).optional(),
+  response_type: z.string().optional(),
+  is_official: z.boolean().optional(),
+})
+
+export type RFIResponseInsert = z.infer<typeof rfiResponseInsertSchema>
 
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 // `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
@@ -121,8 +136,17 @@ export function useDeleteRFI() {
 export function useCreateRFIResponse() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (params: { data: Record<string, unknown>; rfiId: string; projectId: string }) => {
-      const { data, error } = await from('rfi_responses').insert(params.data as never).select().single()
+    mutationFn: async (params: { data: RFIResponseInsert; rfiId: string; projectId: string }) => {
+      // Validate at the boundary — catches drift between callers and DB schema
+      // before PostgREST returns an opaque 400. Strips unknown fields like a
+      // legacy `project_id` so old callers degrade gracefully.
+      const parsed = rfiResponseInsertSchema.parse(params.data)
+      // Auto-attach author_id from the session. Callers shouldn't have to
+      // wire this through, and it keeps the response trail accurate even
+      // when the UI layer forgot to set it.
+      const { data: { user } } = await supabase.auth.getUser()
+      const payload = { ...parsed, author_id: user?.id ?? null }
+      const { data, error } = await from('rfi_responses').insert(payload as never).select().single()
       if (error) throw error
       return { data, rfiId: params.rfiId, projectId: params.projectId }
     },

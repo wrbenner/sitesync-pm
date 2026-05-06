@@ -476,8 +476,10 @@ const RFIsPage: React.FC = () => {
     if (!aiDraftInput.trim()) return;
     setAiDraftLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
-        body: { projectId, description: aiDraftInput },
+      // Edge function expects snake_case keys (server contract — see
+       // supabase/functions/ai-rfi-draft/index.ts → RfiDraftRequest).
+       const { data, error } = await supabase.functions.invoke('ai-rfi-draft', {
+        body: { project_id: projectId, description: aiDraftInput },
       });
       if (error || !data) throw new Error('AI draft failed');
       setAiPrefillKey((k) => k + 1);

@@ -340,7 +340,7 @@ const ComposeBox: React.FC<{
     setSending(true)
     try {
       await createResponse.mutateAsync({
-        data: { rfi_id: rfiId, content: text.trim(), project_id: projectId },
+        data: { rfi_id: rfiId, content: text.trim() },
         rfiId, projectId,
       })
       setText('')

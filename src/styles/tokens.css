@@ -48,7 +48,11 @@
   --color-parchment-3: #EFE9DD;
   --color-ink:    #1A1613;
   --color-ink-2:  #5C5550;
-  --color-ink-3:  #8C857E;
+  /* ink-3 darkened from #8C857E → #6B655F to clear WCAG AA (4.5:1)
+     on the lightest inset surfaces (#F4F4F2, #F6F6F4). The previous
+     value gave 3.36:1 — failing — and triggered the axe color-contrast
+     rule on every list view that used it for metadata text. */
+  --color-ink-3:  #6B655F;
   --color-ink-4:  #C4BDB4;
   --color-ink-5:  #E5DFD4;
   --color-rust:   #B8472E;
@@ -83,7 +87,8 @@
   /* ── Text (ink hierarchy from manifesto) ──────────── */
   --color-textPrimary: #1A1613;
   --color-textSecondary: #5C5550;
-  --color-textTertiary: #8C857E;
+  /* See ink-3 above — bumped to 4.5:1 minimum on light inset surfaces. */
+  --color-textTertiary: #6B655F;
   --color-textDisabled: #C4BDB4;
   --color-textOnDark: rgba(255, 255, 255, 0.92);
   --color-textOnDarkMuted: rgba(255, 255, 255, 0.5);

@@ -156,8 +156,12 @@ Deno.serve(async (req) => {
         upsert: true,
         contentType: 'text/html',
       })
-    if (upload.error && !`${upload.error.message}`.includes('Bucket not found')) {
-      // If the bucket exists but upload failed for another reason, surface.
+    if (upload.error) {
+      // Surface every upload error including "Bucket not found". The bucket
+      // is provisioned by migration 20260506000002_sealed_exports_bucket.sql
+      // — a missing-bucket failure means the migration never ran on this
+      // environment and the operator needs to know loudly, not via a
+      // downstream 500 from createSignedUrl.
       throw new HttpError(500, `upload: ${upload.error.message}`)
     }
 

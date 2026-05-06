@@ -73,8 +73,7 @@ export const RFIActionPanel: React.FC<RFIActionPanelProps> = ({ open, onClose, r
       await createResponse.mutateAsync({
         data: {
           rfi_id: rfi.id,
-          response_text: responseText.trim(),
-          project_id: projectId,
+          content: responseText.trim(),
         },
         rfiId: rfi.id,
         projectId,
