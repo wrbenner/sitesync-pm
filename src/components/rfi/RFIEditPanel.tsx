@@ -32,6 +32,8 @@ import { toast } from 'sonner'
 import { DetailPanel } from '../Primitives'
 import { PermissionGate } from '../auth/PermissionGate'
 import { UserChipEditor, type UserChipOption } from './UserChipEditor'
+import { RFIRichTextEditor } from './RFIRichTextEditor'
+import { RFIAttachmentManager } from './RFIAttachmentManager'
 import { useRFI } from '../../hooks/queries'
 import { useUpdateRFI } from '../../hooks/mutations'
 import { useProjectDirectory } from '../../hooks/queries/useProjectDirectory'
@@ -107,9 +109,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
       cost_impact_dollars:
         r.cost_impact_cents != null
           ? fromCents(Number(r.cost_impact_cents) as never).toFixed(2)
-          : r.cost_impact != null
-            ? String(r.cost_impact)
-            : '',
+          : '',
       reference: (r.reference as string | null) ?? '',
       is_private: Boolean(r.is_private),
     })
@@ -164,9 +164,7 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
       draft.cost_impact_dollars !==
         (r.cost_impact_cents != null
           ? fromCents(Number(r.cost_impact_cents) as never).toFixed(2)
-          : r.cost_impact != null
-            ? String(r.cost_impact)
-            : '') ||
+          : '') ||
       draft.reference !== ((r.reference as string | null) ?? '') ||
       draft.is_private !== Boolean(r.is_private) ||
       // Watcher / distribution add-only diffs
@@ -274,12 +272,13 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
             />
           </FieldRow>
 
-          <FieldRow label="Question" hint="Plain text today; rich-text editor lands in P1b.">
-            <textarea
+          <FieldRow label="Question" hint="Rich-text — paste screenshots, format with lists, links.">
+            <RFIRichTextEditor
               value={draft.question}
-              onChange={(e) => setField('question', e.target.value)}
-              style={{ ...inputStyle, minHeight: 120, resize: 'vertical', fontFamily: 'inherit' }}
-              aria-label="Question"
+              onChange={(html) => setField('question', html)}
+              placeholder="What needs to be clarified?"
+              ariaLabel="Question"
+              minHeight={140}
             />
           </FieldRow>
 
@@ -394,6 +393,12 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
                 return { value: trimmed, label: trimmed }
               }}
             />
+          </FieldRow>
+
+          <FieldRow label="Attachments" hint="Drag-drop, paste, or click to upload. Mark Official with the star.">
+            {rfiId && (
+              <RFIAttachmentManager rfiId={rfiId} projectId={projectId} responseId={null} />
+            )}
           </FieldRow>
 
           <label
