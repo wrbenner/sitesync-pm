@@ -22,6 +22,7 @@ import {
   Copy, ExternalLink, Share2
 } from 'lucide-react'
 import { PageContainer, Card, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
+import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -778,6 +779,17 @@ export function RFIDetail() {
             </div>
           )}
         </div>
+
+        {/* ── Workflow Timeline ──────────────────────────── */}
+        {currentStatus !== 'void' && (
+          <div style={{ marginBottom: '20px' }}>
+            <WorkflowTimeline
+              states={['draft', 'open', 'under_review', 'answered', 'closed']}
+              stateLabels={{ under_review: 'In Review' }}
+              currentState={currentStatus}
+            />
+          </div>
+        )}
 
         {/* ── Approval Workflow ──────────────────────────── */}
         <div style={{ marginBottom: '24px' }}>
