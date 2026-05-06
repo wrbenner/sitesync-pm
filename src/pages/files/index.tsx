@@ -309,7 +309,7 @@ const FilesPage: React.FC = () => {
         <EmptyState
           icon={<FilesIcon size={32} color={colors.textTertiary} />}
           title="No project selected"
-          description="Select a project from the sidebar to view project files."
+          description="Select a project to view project files."
         />
       </PageContainer>
     );

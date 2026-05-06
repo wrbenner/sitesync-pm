@@ -153,7 +153,7 @@ export const Closeout: React.FC = () => {
         <Skeleton width="100%" height="320px" />
       ) : !projectId ? (
         <Card padding={spacing['5']}>
-          <EmptyState icon={<Shield size={48} />} title="No project selected" description="Select a project from the sidebar to manage closeout." />
+          <EmptyState icon={<Shield size={48} />} title="No project selected" description="Select a project to manage closeout." />
         </Card>
       ) : (
         <>

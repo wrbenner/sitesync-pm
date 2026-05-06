@@ -4,14 +4,14 @@ import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { createColumnHelper } from '@tanstack/react-table';
-import { PageContainer, Card, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, Tag, RelatedItems, useToast, EmptyState } from '../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../styles/theme';
+import { PageContainer, Btn, StatusTag, PriorityTag, DetailPanel, Avatar, RelatedItems, useToast, EmptyState } from '../components/Primitives';
+import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme';
 import { RFIKPIs } from './rfis/RFIKPIs';
 import { RFITabBar, type RFIStatusFilter } from './rfis/RFITabBar';
 import { useRFIs, useRFI, useProject } from '../hooks/queries';
 import { exportRFILogXlsx } from '../lib/exportXlsx';
 import { ExportButton } from '../components/shared/ExportButton';
-import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, TrendingUp, CircleDot, Timer, CheckCircle2, AlertCircle, ArrowUpRight, ChevronRight, DollarSign } from 'lucide-react';
+import { AlertTriangle, FileQuestion, FilterX, Plus, Clock, MessageSquare, Calendar, RefreshCw, Send, Sparkles, LayoutGrid, List, UserCheck, Flag, Download, XCircle, Wand2, Loader2, X, AlertCircle, ChevronRight, DollarSign } from 'lucide-react';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { useCreateRFI, useUpdateRFI, useDeleteRFI, useCreateRFIResponse } from '../hooks/mutations';
 import { useProjectId } from '../hooks/useProjectId';
@@ -527,7 +527,7 @@ const RFIsPage: React.FC = () => {
         <EmptyState
           icon={<FileQuestion size={32} color={colors.textTertiary} />}
           title="No project selected"
-          description="Select a project from the sidebar to view and manage RFIs."
+          description="Select a project to view and manage RFIs."
         />
       </PageContainer>
     );
@@ -544,9 +544,12 @@ const RFIsPage: React.FC = () => {
             background-size: 200% 100%;
             animation: rfi-shimmer 1.8s ease-in-out infinite;
           }
+          .rfi-kpi-skeleton-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+          @media (max-width: 1100px) { .rfi-kpi-skeleton-grid { grid-template-columns: repeat(2, 1fr); } }
+          @media (max-width: 580px) { .rfi-kpi-skeleton-grid { grid-template-columns: 1fr; } }
         `}</style>
         {/* KPI Skeleton */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+        <div className="rfi-kpi-skeleton-grid">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} style={{
               backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,

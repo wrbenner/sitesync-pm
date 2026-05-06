@@ -51,7 +51,7 @@ export function useSubmittalReviewers(submittalId: string | undefined) {
         .from('submittal_approvals')
         .select('*')
         .eq('submittal_id', submittalId!)
-        .order('created_at', { ascending: true })
+        .order('chain_order', { ascending: true, nullsFirst: false })
       if (error) throw error
       return (data ?? []) as Array<{
         id: string

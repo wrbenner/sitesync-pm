@@ -328,7 +328,7 @@ const genId = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return `anno_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return `anno_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 };
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -1217,8 +1217,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
     const viewer = new OpenSeadragon.Viewer({
       id: VIEWER_ID,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tileSources: osdTileSource as any,
+      tileSources: osdTileSource as unknown as OpenSeadragon.Options['tileSources'],
       prefixUrl: '', // We use custom controls
       showNavigationControl: false,
       showNavigator: true,

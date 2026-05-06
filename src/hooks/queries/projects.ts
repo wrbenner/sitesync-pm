@@ -9,14 +9,23 @@ import type {
 export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
+      // Cap each attempt at 5s. Without this, undici's TCP connect timeout is
+      // ~7s per attempt, making the skeleton stick for 14+ seconds on bad networks.
+      const timeout = AbortSignal.timeout(5_000)
+      const combined = AbortSignal.any([signal, timeout])
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false })
+        .abortSignal(combined)
       if (error) throw error
       return (data ?? []) as Project[]
     },
+    retry: 0,
+    // Always attempt the fetch regardless of navigator.onLine (relevant in
+    // headless / CI environments where onLine may be false or unreliable).
+    networkMode: 'always',
   })
 }
 

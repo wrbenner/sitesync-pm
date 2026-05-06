@@ -551,7 +551,7 @@ const DailyLogPage: React.FC = () => {
         <EmptyState
           icon={<BookOpen size={32} color={colors.textTertiary} />}
           title="No project selected"
-          description="Select a project from the sidebar to view daily logs."
+          description="Select a project to view daily logs."
         />
       </PageContainer>
     );
