@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { isSupabaseConfigured } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 export interface CrewScheduleRow {
   id: string
@@ -20,10 +21,9 @@ export function useCrewSchedules(projectId: string | undefined) {
     queryKey: ['crew_schedules', projectId],
     queryFn: async (): Promise<CrewScheduleRow[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('crew_schedules')
+      const { data, error } = await fromTable('crew_schedules')
         .select('*, schedule_phases(name, percent_complete)')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('start_date', { ascending: true })
       if (error) throw error
       return (data ?? []).map((r: Record<string, unknown>) => {
@@ -60,10 +60,9 @@ export function useSchedulePhasesForAssignment(projectId: string | undefined) {
     queryKey: ['schedule_phases', 'for_assignment', projectId],
     queryFn: async (): Promise<SchedulePhaseOption[]> => {
       if (!projectId || !isSupabaseConfigured) return []
-      const { data, error } = await supabase
-        .from('schedule_phases')
+      const { data, error } = await fromTable('schedule_phases')
         .select('id, name, start_date, end_date, percent_complete')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('start_date', { ascending: true, nullsFirst: false })
       if (error) throw error
       return (data ?? []).map((r: Record<string, unknown>) => ({

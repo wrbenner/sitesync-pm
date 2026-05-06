@@ -2,6 +2,7 @@
 // Credential-based authentication via Sage API or file import.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -71,8 +72,8 @@ export const sageProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data: integration } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const config = (integration as unknown as { config?: Record<string, string> } | null)?.config ?? null
 
     if (!config?.serverUrl || !config?.username) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Sage not configured'] }
@@ -96,13 +97,13 @@ export const sageProvider: IntegrationProvider = {
 
           for (const code of codes) {
             try {
-              await supabase.from('budget_items').upsert({
+              await fromTable('budget_items').upsert({
                 code: code.code ?? code.costCode ?? '',
                 description: code.description ?? code.name ?? '',
                 budget_amount: code.budgetAmount ?? code.originalBudget ?? 0,
                 external_id: code.id ?? code.code,
                 external_source: 'sage',
-              }, { onConflict: 'external_id,external_source' })
+              } as never, { onConflict: 'external_id,external_source' })
               synced++
             } catch {
               failed++
@@ -124,16 +125,17 @@ export const sageProvider: IntegrationProvider = {
 
       if (direction === 'export' || direction === 'bidirectional') {
         // Export approved change orders as journal entries
-        const { data: changeOrders } = await supabase
-          .from('change_orders')
+        const { data: changeOrders } = await fromTable('change_orders')
           .select('*')
-          .eq('status', 'approved')
-          .is('synced_to_sage', null)
+          .eq('status' as never, 'approved')
+          .is('synced_to_sage' as never, null)
 
-        if (changeOrders) {
-          details.changeOrders = changeOrders.length
+        type CORow = { id?: string; title?: string | null; description?: string | null; amount?: number | null }
+        const coRows = (changeOrders ?? []) as unknown as CORow[]
+        if (coRows.length > 0) {
+          details.changeOrders = coRows.length
 
-          for (const co of changeOrders) {
+          for (const co of coRows) {
             try {
               await sageApi(config.serverUrl, config.username, config.password ?? '', '/journalentries', {
                 method: 'POST',
@@ -147,7 +149,7 @@ export const sageProvider: IntegrationProvider = {
               synced++
 
               // Mark as synced
-              await supabase.from('change_orders').update({ synced_to_sage: new Date().toISOString() }).eq('id', co.id)
+              if (co.id) await fromTable('change_orders').update({ synced_to_sage: new Date().toISOString() } as never).eq('id' as never, co.id)
             } catch (err) {
               errors.push(`CO ${co.id}: ${(err as Error).message}`)
               failed++
@@ -156,15 +158,16 @@ export const sageProvider: IntegrationProvider = {
         }
 
         // Export payment applications
-        const { data: payApps } = await supabase
-          .from('pay_applications')
+        const { data: payApps } = await fromTable('pay_applications')
           .select('*')
-          .eq('status', 'approved')
+          .eq('status' as never, 'approved')
 
-        if (payApps) {
-          details.paymentApplications = payApps.length
+        type PARow = { id?: string; application_number?: number | null; period_to?: string | null; total_completed_and_stored?: number | null; retainage?: number | null; current_payment_due?: number | null }
+        const paRows = (payApps ?? []) as unknown as PARow[]
+        if (paRows.length > 0) {
+          details.paymentApplications = paRows.length
 
-          for (const pa of payApps) {
+          for (const pa of paRows) {
             try {
               await sageApi(config.serverUrl, config.username, config.password ?? '', '/paymentapplications', {
                 method: 'POST',
@@ -177,7 +180,7 @@ export const sageProvider: IntegrationProvider = {
                 }),
               })
               synced++
-              await supabase.from('pay_applications').update({ updated_at: new Date().toISOString() }).eq('id', pa.id)
+              if (pa.id) await fromTable('pay_applications').update({ updated_at: new Date().toISOString() } as never).eq('id' as never, pa.id)
             } catch (err) {
               errors.push(`PayApp ${pa.id}: ${(err as Error).message}`)
               failed++
@@ -199,11 +202,12 @@ export const sageProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as unknown as { status?: string; last_sync?: string | null; error_log?: unknown } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

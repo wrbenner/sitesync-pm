@@ -1,5 +1,5 @@
+import { fromTable } from '../../lib/db/queries'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
 import posthog from '../../lib/analytics'
 import { useAuditedMutation, createOnError } from './createAuditedMutation'
 import { invalidateEntity } from '../../api/invalidation'
@@ -9,10 +9,8 @@ import { validateDailyLogStatusTransition } from './state-machine-validation-hel
 
 
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+const from = (table: string) => fromTable(table as never)
 
 // ── Daily Log Entries ─────────────────────────────────────
 
@@ -20,13 +18,38 @@ export function useCreateDailyLogEntry() {
 
   return useMutation({
     mutationFn: async (params: { data: Record<string, unknown>; projectId: string }) => {
-      const { data, error } = await from('daily_log_entries').insert(params.data).select().single()
+      const { data, error } = await from('daily_log_entries').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
-    onSuccess: (result: { projectId: string }) => {
+    onSuccess: (result: { data: unknown; projectId: string }) => {
       invalidateEntity('daily_log', result.projectId)
       posthog.capture('daily_log_entry_created', { project_id: result.projectId })
+
+      // Cross-feature workflows: dispatch by entry type. Each chain is
+      // fire-and-forget — failures never block the user's primary action.
+      const entry = result.data as { id?: string; type?: string } | null
+      if (entry?.id) {
+        if (entry.type === 'incident') {
+          // → create a tracked safety incident
+          void import('../../lib/crossFeatureWorkflows')
+            .then(({ runDailyLogIncidentChain }) => runDailyLogIncidentChain(entry.id!))
+            .then((r) => {
+              if (r.error) console.warn('[daily_log_incident chain]', r.error)
+              else if (r.created) console.info('[daily_log_incident chain] created', r.created)
+            })
+            .catch((err) => console.warn('[daily_log_incident chain] dispatch failed:', err))
+        } else if (entry.type === 'delay') {
+          // → post a schedule-shift suggestion to activity_feed
+          void import('../../lib/crossFeatureWorkflows')
+            .then(({ runDailyLogDelayChain }) => runDailyLogDelayChain(entry.id!))
+            .then((r) => {
+              if (r.error) console.warn('[daily_log_delay chain]', r.error)
+              else if (r.created) console.info('[daily_log_delay chain] created', r.created)
+            })
+            .catch((err) => console.warn('[daily_log_delay chain] dispatch failed:', err))
+        }
+      }
     },
     onError: createOnError('create_daily_log_entry'),
   })
@@ -36,7 +59,7 @@ export function useDeleteDailyLogEntry() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { id: string; dailyLogId: string; projectId: string }) => {
-      const { error } = await from('daily_log_entries').delete().eq('id', params.id)
+      const { error } = await from('daily_log_entries').delete().eq('id' as never, params.id)
       if (error) throw error
       return { dailyLogId: params.dailyLogId, projectId: params.projectId }
     },
@@ -61,7 +84,7 @@ export function useSubmitDailyLog() {
         return {
           ...prev,
           data: (prev?.data ?? []).map((log: unknown) => {
-            const l = log as Record<string, unknown>
+            const l = log as unknown as Record<string, unknown>
             return l.id === id ? { ...l, status: 'submitted', is_submitted: true } : l
           }),
         }
@@ -77,7 +100,7 @@ export function useSubmitDailyLog() {
         updated_at: new Date().toISOString(),
       }
       if (signatureUrl) updates.superintendent_signature_url = signatureUrl
-      const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('daily_logs').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -99,17 +122,17 @@ export function useSubmitDailyLog() {
 export function useApproveDailyLog() {
   return useAuditedMutation<{ id: string; signatureUrl?: string; userId: string; projectId: string }, { projectId: string }>({
     permission: 'daily_log.approve',
-    action: 'approve_daily_log',
+    action: 'approve',
     entityType: 'daily_log',
-    getEntityId: (p) => p.id,
-    getNewValue: (p) => ({ status: 'approved', approved_by: p.userId }),
+    getEntityId: (p: { id: string; projectId: string }) => p.id,
+    getAfterState: (p: any) => ({ status: 'approved', approved_by: p.userId }),
     mutationFn: async ({ id, signatureUrl, userId, projectId }) => {
       await validateDailyLogStatusTransition(id, projectId, 'approved')
       const updates: Record<string, unknown> = {
         status: 'approved', approved: true, approved_at: new Date().toISOString(), approved_by: userId,
       }
       if (signatureUrl) updates.manager_signature_url = signatureUrl
-      const { error } = await from('daily_logs').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('daily_logs').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -122,17 +145,17 @@ export function useApproveDailyLog() {
 export function useRejectDailyLog() {
   return useAuditedMutation<{ id: string; comments: string; userId: string; projectId: string }, { projectId: string }>({
     permission: 'daily_log.approve',
-    action: 'reject_daily_log',
+    action: 'reject',
     entityType: 'daily_log',
-    getEntityId: (p) => p.id,
-    getNewValue: (p) => ({ status: 'rejected', comments: p.comments, rejected_by: p.userId }),
+    getEntityId: (p: { id: string; projectId: string }) => p.id,
+    getAfterState: (p: any) => ({ status: 'rejected', comments: p.comments, rejected_by: p.userId }),
     mutationFn: async ({ id, comments, userId: _userId, projectId }) => {
       await validateDailyLogStatusTransition(id, projectId, 'rejected')
       const { error } = await from('daily_logs').update({
         status: 'rejected',
         rejection_comments: comments,
         approved: false,
-      }).eq('id', id).eq('project_id', projectId)
+      } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

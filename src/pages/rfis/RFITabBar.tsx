@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { CircleDot, Timer, CheckCircle2, AlertCircle, XCircle, Layers } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
+import { getRFIStatusConfig, type RFIState } from '../../machines/rfiMachine'
 
 export type RFIStatusFilter = 'all' | 'open' | 'under_review' | 'answered' | 'overdue' | 'closed'
 
@@ -17,13 +18,23 @@ interface RFITabBarProps {
   counts: Record<RFIStatusFilter, number>
 }
 
+// Status-pill vocabulary is single-sourced in rfiMachine.getRFIStatusConfig.
+// Aliasing here so the list-view tab labels can never drift from the
+// detail-view pill labels (the historical "In Review" vs "Under Review"
+// inconsistency the deep-dive flagged).
+const labelFor = (id: RFIStatusFilter): string => {
+  if (id === 'all') return 'All'
+  if (id === 'overdue') return 'Overdue'  // synthetic filter, not a real status
+  return getRFIStatusConfig(id as RFIState).label
+}
+
 const TABS: TabDef[] = [
-  { id: 'all', label: 'All', icon: Layers },
-  { id: 'open', label: 'Open', icon: CircleDot },
-  { id: 'under_review', label: 'In Review', icon: Timer },
-  { id: 'answered', label: 'Answered', icon: CheckCircle2 },
-  { id: 'overdue', label: 'Overdue', icon: AlertCircle, isAlert: true },
-  { id: 'closed', label: 'Closed', icon: XCircle },
+  { id: 'all', label: labelFor('all'), icon: Layers },
+  { id: 'open', label: labelFor('open'), icon: CircleDot },
+  { id: 'under_review', label: labelFor('under_review'), icon: Timer },
+  { id: 'answered', label: labelFor('answered'), icon: CheckCircle2 },
+  { id: 'overdue', label: labelFor('overdue'), icon: AlertCircle, isAlert: true },
+  { id: 'closed', label: labelFor('closed'), icon: XCircle },
 ]
 
 export const RFITabBar: React.FC<RFITabBarProps> = ({
@@ -34,7 +45,7 @@ export const RFITabBar: React.FC<RFITabBarProps> = ({
   const [indicator, setIndicator] = useState({ left: 0, width: 0 })
   const [hovered, setHovered] = useState<RFIStatusFilter | null>(null)
 
-  const updateIndicator = () => {
+  const updateIndicator = useCallback(() => {
     const el = tabRefs.current.get(activeTab)
     const container = containerRef.current
     if (el && container) {
@@ -42,13 +53,13 @@ export const RFITabBar: React.FC<RFITabBarProps> = ({
       const tRect = el.getBoundingClientRect()
       setIndicator({ left: tRect.left - cRect.left, width: tRect.width })
     }
-  }
+  }, [activeTab])
 
-  useLayoutEffect(updateIndicator, [activeTab])
+  useLayoutEffect(updateIndicator, [updateIndicator])
   useEffect(() => {
     window.addEventListener('resize', updateIndicator)
     return () => window.removeEventListener('resize', updateIndicator)
-  }, [activeTab])
+  }, [updateIndicator])
 
   return (
     <div

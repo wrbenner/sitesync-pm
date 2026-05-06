@@ -1,0 +1,63 @@
+name: Lap 1 Acceptance Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Spec: docs/audits/LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md
+# Receipt: docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md
+#
+# Three programmatic gates (re-baselined 2026-05-04 — see receipt):
+#   1. Cold-open first paint <= 4000ms on CPUx4 mobile (was 1.4s)
+#   2. Audit-row drawer opens <= 800ms after click (skips in CI - no real
+#      Supabase backend is wired into the vite preview build, so the audit
+#      table is empty. Will run for real against staging once seed-into-CI
+#      lands; tracked for Lap 2.)
+#   3. Cold-open eager bundle <= 600 KB gzipped (was 500 KB; deterministic
+#      gzip of dist/index.html's eager-load set rather than a race against
+#      first paint)
+#
+# Build is parameterized by VITE_ACCEPTANCE_MODE=true, which activates a
+# CI-only auth bypass in src/lib/devBypass.ts. The flag is set ONLY in
+# this workflow's env (and locally via playwright.acceptance.config.ts);
+# it must never be set in production deploys.
+#
+# This workflow does not consume untrusted GitHub event payloads, so the
+# command-injection class of risks does not apply.
+
+jobs:
+  acceptance-gate:
+    name: Lap 1 acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Lap 1 acceptance gate
+        env:
+          CI: '1'
+        run: npx playwright test --config=playwright.acceptance.config.ts --reporter=line
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lap-1-acceptance-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

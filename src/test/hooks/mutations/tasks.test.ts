@@ -3,7 +3,7 @@ import { waitFor } from '@testing-library/react'
 import { renderMutation } from './_helpers'
 
 const h = vi.hoisted(() => {
-  const pending = { current: { data: { id: 'mock-id' }, error: null as { message: string } | null } }
+  const pending: { current: { data: Record<string, unknown> & { id: string }; error: { message: string } | null } } = { current: { data: { id: 'mock-id' }, error: null } }
   const methods = ['insert','update','delete','upsert','select','eq','neq','in','is','gt','gte','lt','lte','order','limit','range'] as const
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
   for (const m of methods) chain[m] = vi.fn(() => chain)

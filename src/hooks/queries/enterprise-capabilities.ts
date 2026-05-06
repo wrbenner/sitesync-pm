@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
+
+const from = (table: string) => fromTable(table as never)
 
 // ── Cost Codes ────────────────────────────────────────────
 export type CostCode = {
@@ -18,13 +20,12 @@ export function useCostCodes(projectId: string | undefined) {
   return useQuery({
     queryKey: ['cost_codes', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cost_codes')
+      const { data, error } = await from('cost_codes')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('code', { ascending: true })
       if (error) throw error
-      return data as CostCode[]
+      return data as unknown as CostCode[]
     },
     enabled: !!projectId,
   })
@@ -34,7 +35,7 @@ export function useCreateCostCode() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<CostCode>) => {
-      const { data, error } = await supabase.from('cost_codes').insert(payload).select().single()
+      const { data, error } = await from('cost_codes').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -62,11 +63,11 @@ export function useCostTransactions(projectId: string | undefined, costCodeId?: 
   return useQuery({
     queryKey: ['cost_transactions', projectId, costCodeId ?? null],
     queryFn: async () => {
-      let q = supabase.from('cost_transactions').select('*').eq('project_id', projectId!)
-      if (costCodeId) q = q.eq('cost_code_id', costCodeId)
+      let q = from('cost_transactions').select('*').eq('project_id' as never, projectId!)
+      if (costCodeId) q = q.eq('cost_code_id' as never, costCodeId)
       const { data, error } = await q.order('date', { ascending: false })
       if (error) throw error
-      return data as CostTransaction[]
+      return data as unknown as CostTransaction[]
     },
     enabled: !!projectId,
   })
@@ -76,7 +77,7 @@ export function useCreateCostTransaction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<CostTransaction>) => {
-      const { data, error } = await supabase.from('cost_transactions').insert(payload).select().single()
+      const { data, error } = await from('cost_transactions').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -114,12 +115,12 @@ export function useTimeEntries(projectId: string | undefined, weekStart?: string
   return useQuery({
     queryKey: ['time_entries', projectId, weekStart ?? null, weekEnd ?? null],
     queryFn: async () => {
-      let q = supabase.from('time_entries').select('*').eq('project_id', projectId!)
-      if (weekStart) q = q.gte('date', weekStart)
-      if (weekEnd) q = q.lte('date', weekEnd)
+      let q = from('time_entries').select('*').eq('project_id' as never, projectId!)
+      if (weekStart) q = q.gte('date' as never, weekStart)
+      if (weekEnd) q = q.lte('date' as never, weekEnd)
       const { data, error } = await q.order('date', { ascending: false })
       if (error) throw error
-      return data as TimeEntry[]
+      return data as unknown as TimeEntry[]
     },
     enabled: !!projectId,
   })
@@ -129,7 +130,7 @@ export function useCreateTimeEntry() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<TimeEntry>) => {
-      const { data, error } = await supabase.from('time_entries').insert(payload).select().single()
+      const { data, error } = await from('time_entries').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -143,10 +144,9 @@ export function useApproveTimeEntry() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, approved_by, project_id: _project_id }: { id: string; approved_by: string; project_id: string }) => {
-      const { data, error } = await supabase
-        .from('time_entries')
-        .update({ approved: true, approved_by })
-        .eq('id', id)
+      const { data, error } = await from('time_entries')
+        .update({ approved: true, approved_by } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -166,26 +166,26 @@ export type Delivery = {
   description: string | null
   expected_date: string
   actual_date: string | null
-  status: 'scheduled' | 'in_transit' | 'delivered' | 'delayed' | 'cancelled'
+  status: 'scheduled' | 'in_transit' | 'delivered' | 'delayed' | 'cancelled' | 'partial'
   location: string | null
   po_number: string | null
   notes: string | null
   created_by: string | null
   created_at: string
   updated_at: string
+  damage_reports: unknown[] | null
 }
 
 export function useDeliveries(projectId: string | undefined) {
   return useQuery({
     queryKey: ['deliveries', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('deliveries')
+      const { data, error } = await from('deliveries')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('expected_date', { ascending: true })
       if (error) throw error
-      return data as Delivery[]
+      return data as unknown as Delivery[]
     },
     enabled: !!projectId,
   })
@@ -195,7 +195,7 @@ export function useCreateDelivery() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<Delivery>) => {
-      const { data, error } = await supabase.from('deliveries').insert(payload).select().single()
+      const { data, error } = await from('deliveries').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -209,10 +209,9 @@ export function useUpdateDelivery() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Delivery> }) => {
-      const { data, error } = await supabase
-        .from('deliveries')
-        .update(updates)
-        .eq('id', id)
+      const { data, error } = await from('deliveries')
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -241,13 +240,12 @@ export function useWikiPages(projectId: string | undefined) {
   return useQuery({
     queryKey: ['wiki_pages', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('wiki_pages')
+      const { data, error } = await from('wiki_pages')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('title', { ascending: true })
       if (error) throw error
-      return data as WikiPage[]
+      return data as unknown as WikiPage[]
     },
     enabled: !!projectId,
   })
@@ -257,7 +255,7 @@ export function useCreateWikiPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Partial<WikiPage>) => {
-      const { data, error } = await supabase.from('wiki_pages').insert(payload).select().single()
+      const { data, error } = await from('wiki_pages').insert(payload as never).select().single()
       if (error) throw error
       return data
     },
@@ -271,10 +269,9 @@ export function useUpdateWikiPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<WikiPage> }) => {
-      const { data, error } = await supabase
-        .from('wiki_pages')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const { data, error } = await from('wiki_pages')
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -290,7 +287,7 @@ export function useDeleteWikiPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, project_id: _project_id }: { id: string; project_id: string }) => {
-      const { error } = await supabase.from('wiki_pages').delete().eq('id', id)
+      const { error } = await from('wiki_pages').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {

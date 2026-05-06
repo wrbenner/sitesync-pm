@@ -155,7 +155,7 @@ describe('equipmentService.createEquipment', () => {
     expect(result.error).toBeNull()
 
     const insertCall = chain.insert as ReturnType<typeof vi.fn>
-    const payload = insertCall.mock.calls[0][0] as Record<string, unknown>
+    const payload = insertCall.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload.status).toBe('idle')
     expect(payload.created_by).toBe('user-1')
     expect(payload.project_id).toBe('proj-1')
@@ -317,7 +317,7 @@ describe('equipmentService.transitionStatus', () => {
     const result = await equipmentService.transitionStatus('eq-1', 'retired')
 
     expect(result.error).toBeNull()
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(typeof payload['deleted_at']).toBe('string')
     expect(payload['deleted_by']).toBe('admin-1')
     expect(payload['status']).toBe('retired')
@@ -341,7 +341,7 @@ describe('equipmentService.transitionStatus', () => {
 
     await equipmentService.transitionStatus('eq-1', 'active')
 
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload['updated_by']).toBe('pm-99')
   })
 
@@ -382,7 +382,7 @@ describe('equipmentService.deleteEquipment', () => {
 
     expect(result.error).toBeNull()
     const updateCall = chain.update as ReturnType<typeof vi.fn>
-    const payload = updateCall.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateCall.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(typeof payload.deleted_at).toBe('string')
     expect(payload.deleted_by).toBe('user-1')
     expect(payload.status).toBe('retired')
@@ -441,7 +441,7 @@ describe('equipmentService.checkout', () => {
     })
 
     expect(result.error).toBeNull()
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload.status).toBe('active')
     expect(payload.current_project_id).toBe('proj-2')
     expect(payload.assigned_to).toBe('operator-1')
@@ -505,7 +505,7 @@ describe('equipmentService.checkin', () => {
     const result = await equipmentService.checkin('eq-1')
 
     expect(result.error).toBeNull()
-    const payload = updateFn.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateFn.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload.status).toBe('idle')
     expect(payload.assigned_to).toBeNull()
     expect(typeof payload.checkin_date).toBe('string')
@@ -594,7 +594,7 @@ describe('equipmentService.scheduleMaintenance', () => {
     expect(result.data?.status).toBe('scheduled')
 
     const insertCall = insertChain.insert as ReturnType<typeof vi.fn>
-    const payload = insertCall.mock.calls[0][0] as Record<string, unknown>
+    const payload = insertCall.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload.type).toBe('preventive')
     expect(payload.description).toBe('Oil change')
     expect(payload.created_by).toBe('super-1')
@@ -632,7 +632,7 @@ describe('equipmentService.updateEquipment', () => {
     })
 
     const updateCall = chain.update as ReturnType<typeof vi.fn>
-    const payload = updateCall.mock.calls[0][0] as Record<string, unknown>
+    const payload = updateCall.mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload.name).toBe('Updated Crane')
     expect(payload.status).toBeUndefined()
     expect(payload.updated_by).toBe('user-1')
@@ -645,7 +645,7 @@ describe('equipmentService.updateEquipment', () => {
 
     await equipmentService.updateEquipment('eq-1', { name: 'Another Name' })
 
-    const payload = (chain.update as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>
+    const payload = (chain.update as ReturnType<typeof vi.fn>).mock.calls[0][0] as unknown as Record<string, unknown>
     expect(payload.updated_by).toBe('user-99')
   })
 

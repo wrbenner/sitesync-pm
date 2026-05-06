@@ -79,14 +79,21 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
   const attachPopoverRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
-  // Load reactions for all messages from DB
+  // Load reactions for all messages from DB.
+  // Re-fetch only when the *set of message IDs* changes (not on every parent
+  // re-render). The latest messages array is read via ref so the closure stays
+  // fresh without re-triggering the fetch.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const messageIdsKey = messages.map((m) => m.id).join(',');
   useEffect(() => {
-    const messageIds = messages.map((m) => m.id);
+    const current = messagesRef.current;
+    const messageIds = current.map((m) => m.id);
     if (messageIds.length === 0) return;
 
     // Seed from prop data first
     const seed: ReactionState = {};
-    messages.forEach((m) => {
+    current.forEach((m) => {
       if (m.reactions && m.reactions.length > 0) seed[m.id] = m.reactions;
     });
     setTimeout(() => setReactions(seed), 0);
@@ -94,7 +101,9 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     // Then fetch live from DB
     Promise.all(
       messageIds.map(async (id) => {
-        const rows = await fetchReactions(id);
+        // ThreadMessage.id is numeric in the local UI model; reactions API
+        // takes the string DB key, so stringify at the boundary.
+        const rows = await fetchReactions(String(id));
         const grouped: { emoji: string; userIds: string[] }[] = [];
         rows.forEach(({ emoji, userId }) => {
           const existing = grouped.find((g) => g.emoji === emoji);
@@ -112,7 +121,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
         return next;
       });
     });
-  }, [messages.map((m) => m.id).join(',')]);
+  }, [messageIdsKey]);
 
   // Close popovers on outside click
   useEffect(() => {
@@ -174,9 +183,9 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     const existing = reactions[messageId]?.find((g) => g.emoji === emoji);
     const hasReacted = existing?.userIds.includes(currentUserId) ?? false;
     if (hasReacted) {
-      await removeReaction(messageId, currentUserId, emoji);
+      await removeReaction(String(messageId), currentUserId, emoji);
     } else {
-      await addReaction(messageId, currentUserId, emoji);
+      await addReaction(String(messageId), currentUserId, emoji);
     }
   };
 

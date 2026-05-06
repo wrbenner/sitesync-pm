@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import type { Submittal } from '../types/database';
 import type { SubmittalApproval } from '../types/entities';
 import type { SubmittalStatus, CreateSubmittalInput } from '../types/submittal';
@@ -30,36 +31,33 @@ async function resolveProjectRole(
 ): Promise<string | null> {
   if (!userId) return null;
 
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
 
-  return data?.role ?? null;
+  return (data as unknown as { role?: string } | null)?.role ?? null;
 }
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
 export const submittalService = {
   async loadSubmittals(projectId: string): Promise<Result<Submittal[]>> {
-    const { data, error } = await supabase
-      .from('submittals')
+    const { data, error } = await fromTable('submittals')
       .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
+      .eq('project_id' as never, projectId)
+      .is('deleted_at' as never, null)
       .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as Submittal[]);
+    return ok((data ?? []) as unknown as Submittal[]);
   },
 
   async createSubmittal(input: CreateSubmittalInput): Promise<Result<Submittal>> {
     const userId = await getCurrentUserId();
 
-    const { data, error } = await supabase
-      .from('submittals')
+    const { data, error } = await fromTable('submittals')
       .insert({
         project_id: input.project_id,
         title: input.title,
@@ -74,12 +72,12 @@ export const submittalService = {
         parent_submittal_id: input.parent_submittal_id ?? null,
         revision_number: input.parent_submittal_id ? null : 1,
         created_by: userId,
-      })
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { project_id: input.project_id }));
-    return ok(data as Submittal);
+    return ok(data as unknown as Submittal);
   },
 
   /**
@@ -97,24 +95,24 @@ export const submittalService = {
     submittalId: string,
     newStatus: SubmittalStatus,
   ): Promise<Result> {
-    const { data: submittal, error: fetchError } = await supabase
-      .from('submittals')
+    const { data: submittal, error: fetchError } = await fromTable('submittals')
       .select('status, created_by, assigned_to, project_id')
-      .eq('id', submittalId)
-      .is('deleted_at', null)
+      .eq('id' as never, submittalId)
+      .is('deleted_at' as never, null)
       .single();
 
     if (fetchError || !submittal) {
       return fail(notFoundError('Submittal', submittalId));
     }
+    const submittalRow = submittal as unknown as { status: string | null; created_by: string | null; assigned_to: string | null; project_id: string }
 
     const userId = await getCurrentUserId();
-    const role = await resolveProjectRole(submittal.project_id, userId);
+    const role = await resolveProjectRole(submittalRow.project_id, userId);
     if (!role) {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = submittal.status as SubmittalStatus;
+    const currentStatus = submittalRow.status as SubmittalStatus;
     const validTransitions = getValidSubmittalStatusTransitions(currentStatus, role);
     if (!validTransitions.includes(newStatus)) {
       return fail(
@@ -138,12 +136,32 @@ export const submittalService = {
       updates.approved_date = new Date().toISOString();
     }
 
-    const { error } = await supabase
-      .from('submittals')
-      .update(updates)
-      .eq('id', submittalId);
+    const { error } = await fromTable('submittals')
+      .update(updates as never)
+      .eq('id' as never, submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId, newStatus }));
+
+    // Cross-feature workflows: a rejected submittal drafts an RFI; an
+    // approved submittal posts a procurement suggestion. Fire-and-forget.
+    if (newStatus === 'rejected') {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runSubmittalRejectedChain }) => runSubmittalRejectedChain(submittalId))
+        .then((result) => {
+          if (result.error) console.warn('[submittal_rejected chain]', result.error);
+          else if (result.created) console.info('[submittal_rejected chain] created', result.created);
+        })
+        .catch((err) => console.warn('[submittal_rejected chain] dispatch failed:', err));
+    } else if (newStatus === 'approved') {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runSubmittalApprovedChain }) => runSubmittalApprovedChain(submittalId))
+        .then((result) => {
+          if (result.error) console.warn('[submittal_approved chain]', result.error);
+          else if (result.created) console.info('[submittal_approved chain] created', result.created);
+        })
+        .catch((err) => console.warn('[submittal_approved chain] dispatch failed:', err));
+    }
+
     return { data: null, error: null };
   },
 
@@ -155,12 +173,11 @@ export const submittalService = {
     submittalId: string,
     updates: Partial<Submittal>,
   ): Promise<Result> {
-    const { status: _status, ...safeUpdates } = updates as Record<string, unknown>;
+    const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
 
-    const { error } = await supabase
-      .from('submittals')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', submittalId);
+    const { error } = await fromTable('submittals')
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId }));
     return { data: null, error: null };
@@ -169,27 +186,25 @@ export const submittalService = {
   async deleteSubmittal(submittalId: string): Promise<Result> {
     const userId = await getCurrentUserId();
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('submittals')
+    const { error } = await fromTable('submittals')
       .update({
         deleted_at: now,
         deleted_by: userId,
-      } as Record<string, unknown>)
-      .eq('id', submittalId);
+      } as never)
+      .eq('id' as never, submittalId);
 
     if (error) return fail(dbError(error.message, { submittalId }));
     return { data: null, error: null };
   },
 
   async loadApprovals(submittalId: string): Promise<Result<SubmittalApproval[]>> {
-    const { data, error } = await supabase
-      .from('submittal_approvals')
+    const { data, error } = await fromTable('submittal_approvals')
       .select('*')
-      .eq('submittal_id', submittalId)
+      .eq('submittal_id' as never, submittalId)
       .order('reviewed_at');
 
     if (error) return fail(dbError(error.message, { submittalId }));
-    return ok((data ?? []) as SubmittalApproval[]);
+    return ok((data ?? []) as unknown as SubmittalApproval[]);
   },
 
   /**
@@ -206,20 +221,19 @@ export const submittalService = {
   ): Promise<Result> {
     const userId = await getCurrentUserId();
 
-    const { data: submittal, error: fetchError } = await supabase
-      .from('submittals')
+    const { data: submittal, error: fetchError } = await fromTable('submittals')
       .select('project_id')
-      .eq('id', submittalId)
+      .eq('id' as never, submittalId)
       .single();
 
     if (fetchError || !submittal) {
       return fail(notFoundError('Submittal', submittalId));
     }
+    const submittalRow = submittal as unknown as { project_id: string }
 
-    const role = await resolveProjectRole(submittal.project_id, userId);
+    const role = await resolveProjectRole(submittalRow.project_id, userId);
 
-    const { error: insertError } = await supabase
-      .from('submittal_approvals')
+    const { error: insertError } = await fromTable('submittal_approvals')
       .insert({
         submittal_id: submittalId,
         approver_id: userId,
@@ -228,7 +242,7 @@ export const submittalService = {
         status: stamp === 'approved' || stamp === 'approved_as_noted' ? 'approved' : 'rejected',
         comments: comments ?? null,
         reviewed_at: new Date().toISOString(),
-      });
+      } as never);
 
     if (insertError) {
       return fail(dbError(`Failed to record approval: ${insertError.message}`, { submittalId }));
@@ -259,40 +273,39 @@ export const submittalService = {
    * Links to parent via parent_submittal_id and increments revision_number.
    */
   async createRevision(parentSubmittalId: string): Promise<Result<Submittal>> {
-    const { data: parent, error: fetchError } = await supabase
-      .from('submittals')
+    const { data: parent, error: fetchError } = await fromTable('submittals')
       .select('*')
-      .eq('id', parentSubmittalId)
+      .eq('id' as never, parentSubmittalId)
       .single();
 
     if (fetchError || !parent) {
       return fail(notFoundError('Submittal', parentSubmittalId));
     }
+    const parentRow = parent as unknown as Submittal
 
     const userId = await getCurrentUserId();
-    const nextRevision = (parent.revision_number ?? 1) + 1;
+    const nextRevision = (parentRow.revision_number ?? 1) + 1;
 
-    const { data, error } = await supabase
-      .from('submittals')
+    const { data, error } = await fromTable('submittals')
       .insert({
-        project_id: parent.project_id,
-        title: parent.title,
+        project_id: parentRow.project_id,
+        title: parentRow.title,
         status: 'draft' as SubmittalStatus,
-        spec_section: parent.spec_section,
-        assigned_to: parent.assigned_to,
-        subcontractor: parent.subcontractor,
-        due_date: parent.due_date,
-        submit_by_date: parent.submit_by_date,
-        required_onsite_date: parent.required_onsite_date,
-        lead_time_weeks: parent.lead_time_weeks,
+        spec_section: parentRow.spec_section,
+        assigned_to: parentRow.assigned_to,
+        subcontractor: parentRow.subcontractor,
+        due_date: parentRow.due_date,
+        submit_by_date: parentRow.submit_by_date,
+        required_onsite_date: parentRow.required_onsite_date,
+        lead_time_weeks: parentRow.lead_time_weeks,
         parent_submittal_id: parentSubmittalId,
         revision_number: nextRevision,
         created_by: userId,
-      } as Record<string, unknown>)
+      } as never)
       .select()
       .single();
 
     if (error) return fail(dbError(error.message, { parentSubmittalId }));
-    return ok(data as Submittal);
+    return ok(data as unknown as Submittal);
   },
 };

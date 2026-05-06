@@ -143,7 +143,7 @@ function getConfidenceBg(confidence: number): string {
 
 type ParseState = 'idle' | 'processing' | 'complete';
 
-const SpecParser: React.FC<SpecParserProps> = ({ projectId, onExtractComplete }) => {
+const SpecParser: React.FC<SpecParserProps> = ({ onExtractComplete }) => {
   const [state, setState] = useState<ParseState>('idle');
   const [processingStep, setProcessingStep] = useState(0);
   const [progress, setProgress] = useState(0);

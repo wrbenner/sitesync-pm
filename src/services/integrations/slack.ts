@@ -2,6 +2,7 @@
 // Sends real-time alerts for RFI responses, submittal reviews, daily log approvals, schedule changes.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -17,7 +18,7 @@ import {
 interface SlackBlock {
   type: string
   text?: { type: string; text: string; emoji?: boolean }
-  elements?: Array<{ type: string; text?: { type: string; text: string }; url?: string }>
+  elements?: Array<{ type: string; text?: string | { type: string; text: string }; url?: string }>
   fields?: Array<{ type: string; text: string }>
   accessory?: Record<string, unknown>
 }
@@ -169,11 +170,12 @@ export const slackProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as unknown as { status?: string; last_sync?: string | null; error_log?: unknown } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 
@@ -188,8 +190,8 @@ export async function sendSlackRFINotification(
   integrationId: string,
   rfi: { number: string; title: string; respondedBy: string; status: string; projectUrl?: string },
 ): Promise<{ success: boolean; error?: string }> {
-  const { data } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-  const config = data?.config as Record<string, string> | null
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const config = (data as unknown as { config?: Record<string, string> } | null)?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Slack not configured' }
   return postToSlack(config.webhookUrl, rfiResponseBlocks(rfi), `RFI ${rfi.number} response from ${rfi.respondedBy}`)
 }
@@ -198,8 +200,8 @@ export async function sendSlackSubmittalNotification(
   integrationId: string,
   sub: { number: string; title: string; reviewedBy: string; status: string; specSection: string },
 ): Promise<{ success: boolean; error?: string }> {
-  const { data } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-  const config = data?.config as Record<string, string> | null
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const config = (data as unknown as { config?: Record<string, string> } | null)?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Slack not configured' }
   return postToSlack(config.webhookUrl, submittalReviewBlocks(sub), `Submittal ${sub.number} ${sub.status}`)
 }
@@ -208,18 +210,32 @@ export async function sendSlackDailyLogNotification(
   integrationId: string,
   log: { date: string; approvedBy: string; workers: number; incidents: number },
 ): Promise<{ success: boolean; error?: string }> {
-  const { data } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-  const config = data?.config as Record<string, string> | null
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const config = (data as unknown as { config?: Record<string, string> } | null)?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Slack not configured' }
   return postToSlack(config.webhookUrl, dailyLogApprovalBlocks(log), `Daily log approved: ${log.date}`)
+}
+
+export async function sendSlackChangeOrderNotification(
+  integrationId: string,
+  co: { title: string; amount: number; approvedBy: string; projectId: string },
+): Promise<{ success: boolean; error?: string }> {
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const config = (data as unknown as { config?: Record<string, string> } | null)?.config ?? null
+  if (!config?.webhookUrl) return { success: false, error: 'Slack not configured' }
+  void co.projectId
+  const text = `Change order approved: ${co.title} ($${co.amount.toLocaleString()}) — by ${co.approvedBy}`
+  return postToSlack(config.webhookUrl, [
+    { type: 'section', text: { type: 'mrkdwn', text: `*Change order approved*\n${co.title}\nAmount: $${co.amount.toLocaleString()}\nApproved by: ${co.approvedBy}` } },
+  ], text)
 }
 
 export async function sendSlackScheduleChangeNotification(
   integrationId: string,
   change: { task: string; field: string; oldValue: string; newValue: string; changedBy: string },
 ): Promise<{ success: boolean; error?: string }> {
-  const { data } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-  const config = data?.config as Record<string, string> | null
+  const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+  const config = (data as unknown as { config?: Record<string, string> } | null)?.config ?? null
   if (!config?.webhookUrl) return { success: false, error: 'Slack not configured' }
   return postToSlack(config.webhookUrl, scheduleChangeBlocks(change), `Schedule change: ${change.task}`)
 }

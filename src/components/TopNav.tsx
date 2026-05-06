@@ -33,7 +33,7 @@ const moreNav = [
   { id: 'directory', label: 'Directory', icon: Users },
   { id: 'meetings', label: 'Meetings', icon: Calendar },
   { id: 'files', label: 'Files', icon: FileText },
-  { id: 'copilot', label: 'AI Copilot', icon: Zap },
+  { id: 'copilot', label: 'Iris', icon: Zap },
   { id: 'vision', label: 'Vision', icon: Eye },
 ];
 
@@ -104,6 +104,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
           <img
             src={`${import.meta.env.BASE_URL}logos/sitesync-symbol.png`}
             alt=""
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
             style={{ height: 36, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
           />
           <span style={{ fontSize: typography.fontSize['2xl'], fontWeight: 800, color: colors.textPrimary, letterSpacing: '-0.03em', lineHeight: 1 }}>

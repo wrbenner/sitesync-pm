@@ -2,8 +2,10 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import { queryClient } from '../lib/queryClient'
 import { setSentryUser, clearSentryUser } from '../lib/sentry'
+import { isDevBypassActive } from '../lib/devBypass'
 
 // ── Shared auth state (module-level singleton) ──────────────
 // All callers of useAuth() share this exact state.
@@ -92,18 +94,67 @@ async function initAuth() {
     setState({ loading: false })
   }
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+  supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
       setState({ session: s, user: s?.user ?? null, error: null })
       if (s?.user) {
         setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
         recordActivity() // reset idle clock on fresh sign-in / refresh
+        // Persist greeting data for "The Threshold" login page.
+        // On next visit the greeting will say "Good morning, Alex."
+        try {
+          const firstName = s.user.user_metadata?.first_name as string | undefined
+          if (firstName) localStorage.setItem('ss:last-name', firstName)
+          localStorage.setItem('ss:returning', '1')
+        } catch { /* localStorage unavailable */ }
+
+        // Honor a stashed returnTo from the magic-link/OAuth handoff.
+        // Login can't put a route in the URL fragment (supabase fills the
+        // fragment with auth tokens), so it parks the destination in
+        // sessionStorage. Pop it here, exactly once, on SIGNED_IN only.
+        if (_event === 'SIGNED_IN') {
+          let didReturnNavigate = false
+          try {
+            const returnTo = sessionStorage.getItem('ss:returnTo')
+            if (returnTo) {
+              sessionStorage.removeItem('ss:returnTo')
+              if (returnTo.startsWith('/')) {
+                navigateFn?.(returnTo)
+                didReturnNavigate = true
+              }
+            }
+          } catch { /* sessionStorage unavailable */ }
+          // Fallback: if SIGNED_IN fires while we're still on /login (password
+          // sign-in with no returnTo stash), bounce to the Day command stream
+          // so the user isn't stranded on the login screen. Magic-link / OAuth
+          // flows already redirect away naturally; this only catches the
+          // password path that previously left users on /login indefinitely.
+          if (!didReturnNavigate && typeof window !== 'undefined') {
+            // HashRouter: route lives in window.location.hash (e.g. "#/login").
+            // Cover both hash and path forms in case the router setup changes.
+            const onLogin = window.location.hash.startsWith('#/login') || window.location.pathname.endsWith('/login')
+            if (onLogin) navigateFn?.('/')
+          }
+        }
       }
+      // Invalidate React Query so any queries that ran before the JWT was
+      // attached (e.g. useProjects mounted by the Dashboard at the moment
+      // signIn returned) refetch with the now-authenticated client.
+      // Without this, fresh sign-ins land on an empty Welcome state until
+      // the user hard-refreshes — the bug Walker reported on 2026-04-27.
+      queryClient.invalidateQueries()
     } else if (_event === 'SIGNED_OUT') {
       setState({ session: null, user: null, error: null })
       queryClient.clear()
       clearSentryUser()
-      navigateFn?.('/login')
+      // Clear the named greeting but keep the returning flag so
+      // next visit shows "Welcome back." instead of "Welcome."
+      try { localStorage.removeItem('ss:last-name') } catch { /* noop */ }
+      // In acceptance-mode builds (Lap 1 gate) the placeholder Supabase
+      // client fires SIGNED_OUT immediately on its initial session check;
+      // honoring the redirect would route the gate away from /day. Skip
+      // the redirect when the bypass is active.
+      if (!isDevBypassActive()) navigateFn?.('/login')
     } else if (_event === 'INITIAL_SESSION') {
       setState({ session: s, user: s?.user ?? null, loading: false })
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
@@ -164,8 +215,7 @@ async function recordFailedLogin(email: string): Promise<void> {
   try {
     await supabase.rpc('record_failed_login', {
       email_to_record: email,
-      ip_hint_text: null,
-      user_agent_text: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 256) : null,
+      user_agent_text: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 256) : undefined,
     })
   } catch {
     // best-effort; never block sign-in path on a failed record
@@ -263,13 +313,13 @@ export function useAuth(): AuthState {
       const first_name = nameParts[0] ?? ''
       const last_name = nameParts.slice(1).join(' ') || null
       // Create profile row for the new user
-      await supabase.from('profiles').insert({
+      await fromTable('profiles').insert({
         user_id: data.user.id,
         full_name: name.trim(),
         first_name,
         last_name,
         organization_id: null,
-      })
+      } as never)
     }
     if (data.session) {
       setState({ session: data.session, user: data.session.user })

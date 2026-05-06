@@ -124,28 +124,35 @@ const EmptyStateInner: React.FC<EmptyProps> = ({ title, description, icon, cta, 
         padding: `${spacing['10']} ${spacing['6']}`,
       }}
     >
+      {/* Icon halo: a quiet hairline circle, not a filled tile. The empty
+          state should feel like a beginning, not a placeholder. */}
       <div
         aria-hidden="true"
         style={{
-          width: 72,
-          height: 72,
-          borderRadius: borderRadius.xl,
-          background: colors.surfaceInset,
+          width: 64,
+          height: 64,
+          borderRadius: '50%',
+          border: '1px solid var(--hairline)',
+          background: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: colors.textTertiary,
-          marginBottom: spacing['1'],
+          marginBottom: spacing['2'],
         }}
       >
-        {icon ?? <FileQuestion size={32} />}
+        {icon ?? <FileQuestion size={28} />}
       </div>
+      {/* Garamond title — empty state is a moment of decision, not chrome. */}
       <h3
         style={{
           margin: 0,
-          fontSize: typography.fontSize.title,
-          fontWeight: typography.fontWeight.semibold,
+          fontFamily: typography.fontFamilySerif,
+          fontSize: '24px',
+          fontWeight: 400,
           color: colors.textPrimary,
+          letterSpacing: '-0.01em',
+          lineHeight: 1.2,
         }}
       >
         {title}
@@ -164,7 +171,7 @@ const EmptyStateInner: React.FC<EmptyProps> = ({ title, description, icon, cta, 
         </p>
       )}
       {(cta || secondaryCta) && (
-        <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['2'], flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: spacing['2'], marginTop: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
           {cta && (
             <Btn variant="primary" onClick={cta.onClick} icon={cta.icon} style={{ minHeight: 56 }}>
               {cta.label}
@@ -202,27 +209,33 @@ const ErrorStateInner: React.FC<ErrorProps> = ({
         padding: `${spacing['10']} ${spacing['6']}`,
       }}
     >
+      {/* Critical-tinted hairline circle. Calm but unmistakable — same shape
+          language as the empty state, only the ink color changes. */}
       <div
         aria-hidden="true"
         style={{
           width: 56,
           height: 56,
-          borderRadius: borderRadius.xl,
-          background: `${colors.statusCritical}15`,
+          borderRadius: '50%',
+          border: `1px solid ${colors.statusCritical}33`,
+          background: `${colors.statusCritical}0d`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: colors.statusCritical,
         }}
       >
-        <AlertCircle size={24} />
+        <AlertCircle size={22} />
       </div>
       <h3
         style={{
           margin: 0,
-          fontSize: typography.fontSize.title,
-          fontWeight: typography.fontWeight.semibold,
+          fontFamily: typography.fontFamilySerif,
+          fontSize: '24px',
+          fontWeight: 400,
           color: colors.textPrimary,
+          letterSpacing: '-0.01em',
+          lineHeight: 1.2,
         }}
       >
         {title}

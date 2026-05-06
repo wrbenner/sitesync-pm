@@ -1,0 +1,1017 @@
+{
+  "areas": {
+    "RFI": {
+      "files": {
+        "src/pages/RFIs.tsx": [
+          {
+            "line": 205,
+            "label": "[aria] Iris drafted a response \u2014 review before sending",
+            "click": "onClick={(e) => { e.stopPropagation(); onClick?.(e); }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 231,
+            "label": "",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 848,
+            "label": "[aria] Draft an RFI with Iris",
+            "click": "onClick={() => setShowAIDraftModal(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 862,
+            "label": "[aria] Create new RFI",
+            "click": "onClick={() => setShowCreateModal(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1204,
+            "label": "",
+            "click": "onClick={() => navigate(`/rfis/${selectedRfi.id}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1255,
+            "label": "",
+            "click": "onClick={() => navigate(`/rfis/${selectedRfi.id}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1275,
+            "label": "",
+            "click": "onClick={fetchAISuggestion}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1310,
+            "label": "",
+            "click": "",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1370,
+            "label": "",
+            "click": "onClick={handleDeleteRFI}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1449,
+            "label": "} style= } aria-label=\"Close\" >",
+            "click": "onClick={() => { setShowAIDraftModal(false); setAiDraftInput(''); }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1494,
+            "label": "",
+            "click": "onClick={() => { setShowAIDraftModal(false); setAiDraftInput(''); }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1507,
+            "label": "",
+            "click": "onClick={handleAIDraft}",
+            "gated": true,
+            "kind": "A"
+          }
+        ]
+      },
+      "buttons": 12,
+      "actions": 1,
+      "unguarded_actions": 0
+    },
+    "Submittal": {
+      "files": {
+        "src/pages/submittals/GroupedSubmittalsView.tsx": [
+          {
+            "line": 566,
+            "label": "Expand all",
+            "click": "onClick={expandAll}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 578,
+            "label": "Collapse all",
+            "click": "onClick={collapseAll}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 662,
+            "label": "",
+            "click": "onClick={() => onChange(mode)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/submittals/SubmittalDetailPage.tsx": [
+          {
+            "line": 471,
+            "label": "",
+            "click": "onClick={() => setShowMore(!showMore)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 845,
+            "label": "",
+            "click": "onClick={() => navigate('/submittals')}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/submittals/SubmittalTabBar.tsx": [
+          {
+            "line": 92,
+            "label": "",
+            "click": "onClick={() => onTabChange(tab.id)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/submittals/SubmittalsTable.tsx": [
+          {
+            "line": 424,
+            "label": "Clear filters",
+            "click": "onClick={clearFilters}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/submittals/index.tsx": [
+          {
+            "line": 533,
+            "label": "",
+            "click": "onClick={() => onChange(v)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 563,
+            "label": "",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 587,
+            "label": "",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          }
+        ]
+      },
+      "buttons": 10,
+      "actions": 0,
+      "unguarded_actions": 0
+    },
+    "ChangeOrder": {
+      "files": {
+        "src/pages/ChangeOrders.tsx": [
+          {
+            "line": 537,
+            "label": "",
+            "click": "onClick={() => refetch()}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 918,
+            "label": "[aria] Close",
+            "click": "onClick={onClose}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1314,
+            "label": "",
+            "click": "onClick={() => setFilter(f)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1488,
+            "label": "",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1514,
+            "label": "",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          }
+        ]
+      },
+      "buttons": 5,
+      "actions": 0,
+      "unguarded_actions": 0
+    },
+    "PayApp": {
+      "files": {
+        "src/pages/payment-applications/G702Preview.tsx": [
+          {
+            "line": 135,
+            "label": "[aria] Export AIA G702 G703 payment application as PDF",
+            "click": "onClick={handleExportG702G703}",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/payment-applications/LienWaiverPanel.tsx": [
+          {
+            "line": 110,
+            "label": "",
+            "click": "onClick={() => selectedPayAppId && onGenerateAll(selectedPayAppId)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 219,
+            "label": "",
+            "click": "onClick={() => onMarkReceived(waiver.id)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 236,
+            "label": "",
+            "click": "onClick={() => onMarkExecuted(waiver.id)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 252,
+            "label": "[aria] PDF generator loading",
+            "click": "",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/payment-applications/PayAppDetail.tsx": [
+          {
+            "line": 197,
+            "label": "",
+            "click": "onClick={() => {\n                if (!g702Allowed) return\n                window.print()\n                toast.success('G702/G703 print view",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 302,
+            "label": "",
+            "click": "onClick={() => setDetailTab(t.key)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 443,
+            "label": "",
+            "click": "onClick={() => onMarkReceived(waiver.id)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 460,
+            "label": "",
+            "click": "onClick={() => onMarkExecuted(waiver.id)}",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/payment-applications/PayAppList.tsx": [
+          {
+            "line": 119,
+            "label": "[aria] Edit Schedule of Values",
+            "click": "onClick={(e) => { e.stopPropagation(); onEditApp(info.row.original) }",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 137,
+            "label": "[aria] Pay subcontractor",
+            "click": "",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 160,
+            "label": "[aria] Submit application for review",
+            "click": "onClick={(e) => { e.stopPropagation(); submitMutation.mutate(info.row.original.id as string) }",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/payment-applications/PreSubmissionAudit.tsx": [
+          {
+            "line": 176,
+            "label": "",
+            "click": "onClick={() => onFixLink?.(r.fix_link!)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/payment-applications/SOVEditor.tsx": [
+          {
+            "line": 645,
+            "label": "",
+            "click": "onClick={onClose}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 862,
+            "label": "[aria] Remove row",
+            "click": "onClick={() => removeRow(row.key)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 893,
+            "label": "",
+            "click": "onClick={addRow}",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/payment-applications/index.tsx": [
+          {
+            "line": 412,
+            "label": "",
+            "click": "onClick={() => setActiveTab(tab.key)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 840,
+            "label": "",
+            "click": "onClick={() => handleRetainageStageAdvance(item.id)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 856,
+            "label": "",
+            "click": "onClick={() => handleRetainageStageAdvance(item.id)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 919,
+            "label": "setG702ModalOpen(false)} style= }>",
+            "click": "onClick={() => setG702ModalOpen(false)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ]
+      },
+      "buttons": 20,
+      "actions": 12,
+      "unguarded_actions": 0
+    },
+    "Punch": {
+      "files": {
+        "src/pages/punch-list/PunchItemDetailPage.tsx": [
+          {
+            "line": 269,
+            "label": "",
+            "click": "onClick={() => onAnnotate(showAfter ? afterUrl : beforeUrl)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 306,
+            "label": "",
+            "click": "onClick={() => onAnnotate(beforeUrl)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 381,
+            "label": "",
+            "click": "onClick={() => setShowReject(!showReject)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 403,
+            "label": "",
+            "click": "onClick={() => onAction(a.key)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 451,
+            "label": "",
+            "click": "onClick={() => {\n                  onAction('reject', { rejection_reason: rejectReason }",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 654,
+            "label": "navigate('/punch-list')} style= } > Back to Punch List",
+            "click": "onClick={() => navigate('/punch-list')}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 680,
+            "label": "",
+            "click": "onClick={() => navigate('/punch-list')}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 791,
+            "label": "setAnnotateImageUrl(null)} style= }> Esc to close",
+            "click": "onClick={() => setAnnotateImageUrl(null)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/punch-list/PunchListDenseTable.tsx": [
+          {
+            "line": 173,
+            "label": "",
+            "click": "onClick={() => onHeaderClick(col.key)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/punch-list/PunchListDetail.tsx": [
+          {
+            "line": 277,
+            "label": "",
+            "click": "onClick={handleAddPhoto}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 487,
+            "label": "Start Work",
+            "click": "onClick={handleMarkInProgress}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 502,
+            "label": "Mark Complete",
+            "click": "onClick={handleMarkSubComplete}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 518,
+            "label": "Verify & Close",
+            "click": "onClick={handleVerify}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 549,
+            "label": "Reject & Return",
+            "click": "onClick={handleReject}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 561,
+            "label": "",
+            "click": "onClick={() => { setShowRejectNote(false); setRejectNote(''); }",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 574,
+            "label": "",
+            "click": "onClick={() => setShowRejectNote(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 591,
+            "label": "Resubmit for Verification",
+            "click": "onClick={handleMarkSubComplete}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 765,
+            "label": "",
+            "click": "onClick={handleSubmitComment}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 795,
+            "label": "Add Photo",
+            "click": "onClick={handleAddPhoto}",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/punch-list/PunchListPlanView.tsx": [
+          {
+            "line": 170,
+            "label": "",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 490,
+            "label": "",
+            "click": "onClick={() => setShowSidebar(!showSidebar)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 524,
+            "label": "",
+            "click": "onClick={() => setStatusFilter(f)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 544,
+            "label": "",
+            "click": "onClick={handleZoomOut}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 554,
+            "label": "",
+            "click": "onClick={handleZoomIn}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 557,
+            "label": "",
+            "click": "onClick={handleFitToScreen}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 560,
+            "label": "",
+            "click": "onClick={handleReset}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/punch-list/index.tsx": [
+          {
+            "line": 499,
+            "label": "",
+            "click": "onClick={() => setView(v.key)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 530,
+            "label": "",
+            "click": "",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 552,
+            "label": "",
+            "click": "onClick={() => setShowCreateModal(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 595,
+            "label": "",
+            "click": "onClick={() => setStatusFilter(f.key)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 662,
+            "label": "",
+            "click": "onClick={() => refetch()}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 791,
+            "label": "[aria] Quick capture punch item",
+            "click": "onClick={() => setShowCreateModal(true)}",
+            "gated": false,
+            "kind": "U"
+          }
+        ]
+      },
+      "buttons": 32,
+      "actions": 5,
+      "unguarded_actions": 0
+    },
+    "DailyLog": {
+      "files": {
+        "src/pages/daily-log/CrewHoursEntry.tsx": [
+          {
+            "line": 29,
+            "label": "",
+            "click": "onClick={() => setShowAddManpowerRow(true)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 69,
+            "label": "setManpowerRows(prev => prev.filter(r => r.id !== row.id))} style= }>Remove",
+            "click": "onClick={() => setManpowerRows(prev => prev.filter(r => r.id !== row.id))}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 120,
+            "label": "",
+            "click": "",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 131,
+            "label": "",
+            "click": "onClick={() => { setShowAddManpowerRow(false); setNewManpowerRow({ trade: '', company: '', headcount: 0, hours: 0 }",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/daily-log/DailyLogForm.tsx": [
+          {
+            "line": 395,
+            "label": "setShowAddEquipment(true)} style= >+ Add",
+            "click": "onClick={() => setShowAddEquipment(true)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 421,
+            "label": "setEquipmentRows(prev => prev.filter(r => r.id !== row.id))} style= >Remove",
+            "click": "onClick={() => setEquipmentRows(prev => prev.filter(r => r.id !== row.id))}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 439,
+            "label": "]); setNewEquipment( ); setShowAddEquipment(false); }} style= >Add",
+            "click": "onClick={() => { setShowAddEquipment(false); setNewEquipment({ type: '', count: 1, hours_operated: 0 }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 445,
+            "label": "); }} style= >Cancel",
+            "click": "onClick={() => { setShowAddEquipment(false); setNewEquipment({ type: '', count: 1, hours_operated: 0 }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 463,
+            "label": "setShowAddMaterial(true)} style= >+ Add",
+            "click": "onClick={() => setShowAddMaterial(true)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 490,
+            "label": "setMaterialRows(prev => prev.filter(r => r.id !== row.id))} style= >Remove",
+            "click": "onClick={() => setMaterialRows(prev => prev.filter(r => r.id !== row.id))}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 511,
+            "label": "]); setNewMaterial( ); setShowAddMaterial(false); }} style= >Add",
+            "click": "onClick={() => { setShowAddMaterial(false); setNewMaterial({ description: '', quantity: 1, po_reference: '', delivery_ticket: '' }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 517,
+            "label": "); }} style= >Cancel",
+            "click": "onClick={() => { setShowAddMaterial(false); setNewMaterial({ description: '', quantity: 1, po_reference: '', delivery_ticket: '' }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 532,
+            "label": "setShowAddVisitor(true)} style= >+ Add",
+            "click": "onClick={() => setNoVisitorsToday((v) => !v)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 543,
+            "label": "setShowAddVisitor(true)} style= >+ Add",
+            "click": "onClick={() => setShowAddVisitor(true)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 577,
+            "label": "setVisitorRows(prev => prev.filter(r => r.id !== row.id))} style= >Remove",
+            "click": "onClick={() => setVisitorRows(prev => prev.filter(r => r.id !== row.id))}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 601,
+            "label": "]); setNewVisitor( ); setShowAddVisitor(false); }} style= >Add",
+            "click": "onClick={() => { setShowAddVisitor(false); setNewVisitor({ name: '', company: '', purpose: '', time_in: '', time_out: '' }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 607,
+            "label": "); }} style= >Cancel",
+            "click": "onClick={() => { setShowAddVisitor(false); setNewVisitor({ name: '', company: '', purpose: '', time_in: '', time_out: '' }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 662,
+            "label": "handleDeleteEntry(entry.id)} title=\"Delete entry\" style= }>",
+            "click": "onClick={() => handleDeleteEntry(entry.id)}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 715,
+            "label": "",
+            "click": "onClick={() => setNoIncidentsToday((v) => !v)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 788,
+            "label": "); }} style= >Cancel",
+            "click": "onClick={() => { setNoIncidentsToday(true); setIncidentForm({ type: 'near_miss', description: '', corrective_action: '' }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 789,
+            "label": "); }} style= }>Log Incident",
+            "click": "",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 842,
+            "label": "",
+            "click": "onClick={onAiSummary}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 925,
+            "label": "setShowComparison(false)} style= }>Close",
+            "click": "onClick={() => setShowComparison(false)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 952,
+            "label": "setShowAddendumForm(false)} aria-label=\"Close\" style= }>",
+            "click": "onClick={() => setShowAddendumForm(false)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 994,
+            "label": "setHistorySearch('')} style= $ ` }}>Clear search",
+            "click": "onClick={() => setHistorySearch('')}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1020,
+            "label": "",
+            "click": "onClick={(e) => { e.stopPropagation(); setExpandedIncident(expandedIncident === log.id ? null : log.id); }",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1051,
+            "label": "Submit for Approval",
+            "click": "onClick={onSubmit}",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/daily-log/DailyLogPDFExport.tsx": [
+          {
+            "line": 116,
+            "label": "",
+            "click": "onClick={handleExport}",
+            "gated": true,
+            "kind": "A"
+          }
+        ],
+        "src/pages/daily-log/DailySummaryPage.tsx": [
+          {
+            "line": 179,
+            "label": "[aria] Previous day",
+            "click": "onClick={goToPrev}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 216,
+            "label": "[aria] Next day",
+            "click": "onClick={goToNext}",
+            "gated": false,
+            "kind": "U"
+          }
+        ],
+        "src/pages/daily-log/index.tsx": [
+          {
+            "line": 249,
+            "label": "",
+            "click": "onClick={() => !disabled && setEditing(true)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 976,
+            "label": "setSelectedDate((d) => shiftDate(d, -1))} style= >",
+            "click": "onClick={() => setSelectedDate((d) => shiftDate(d, -1))}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 990,
+            "label": "setSelectedDate((d) => shiftDate(d, +1))} style= >",
+            "click": "onClick={() => setSelectedDate((d) => shiftDate(d, +1))}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 998,
+            "label": "",
+            "click": "onClick={() => setSelectedDate(todayISODate())}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1016,
+            "label": "[aria] Iris drafted this log from field data \u2014 open to review",
+            "click": "onClick={() => setShowIrisDraftSheet(true)}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1064,
+            "label": "setShowFieldCapture(true)} style= > Field capture )` : ''}",
+            "click": "onClick={() => setShowFieldCapture(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1072,
+            "label": "New entry",
+            "click": "onClick={addFieldEntry}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1086,
+            "label": "setShowCreateModal(true)} style= data-testid=\"start-log-button\" > Start log",
+            "click": "onClick={() => setShowCreateModal(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1098,
+            "label": "",
+            "click": "onClick={handleSubmit}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1113,
+            "label": "Approve",
+            "click": "onClick={handleApprove}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1124,
+            "label": "setShowRejectModal(true)} style= > Return",
+            "click": "onClick={() => setShowRejectModal(true)}",
+            "gated": true,
+            "kind": "U"
+          },
+          {
+            "line": 1171,
+            "label": "",
+            "click": "onClick={handleAutoDraft}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1239,
+            "label": "",
+            "click": "",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1302,
+            "label": "Add crew",
+            "click": "onClick={addCrewRow}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1371,
+            "label": "Add equipment",
+            "click": "onClick={addEquipmentRow}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1429,
+            "label": "Add entry",
+            "click": "onClick={addFieldEntry}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1500,
+            "label": "Capture",
+            "click": "onClick={handlePhotoCapture}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1525,
+            "label": "Add visitor",
+            "click": "onClick={addVisitorRow}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1591,
+            "label": "Add delivery",
+            "click": "onClick={addDeliveryRow}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1647,
+            "label": "",
+            "click": "onClick={handleDelete}",
+            "gated": true,
+            "kind": "A"
+          },
+          {
+            "line": 1756,
+            "label": "[aria] Remove row",
+            "click": "onClick={onClick}",
+            "gated": false,
+            "kind": "U"
+          },
+          {
+            "line": 1828,
+            "label": "",
+            "click": "onClick={onClose}",
+            "gated": false,
+            "kind": "U"
+          }
+        ]
+      },
+      "buttons": 52,
+      "actions": 15,
+      "unguarded_actions": 0
+    }
+  },
+  "summary": {
+    "buttons": 131,
+    "actions": 33,
+    "unguarded_actions": 0,
+    "schema_version": 1
+  }
+}

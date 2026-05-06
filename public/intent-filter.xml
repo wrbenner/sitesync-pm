@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android intent-filter snippet for the sitesync:// URL scheme + the
+  app-link domain. Drop into android/app/src/main/AndroidManifest.xml
+  inside the existing <activity android:name="MainActivity"> element.
+
+  Capacitor's `npx cap sync android` can overwrite the manifest; preserve
+  this block manually OR add the `application` patch via a Capacitor
+  config plugin.
+-->
+<intent-filters>
+
+  <!-- Custom URL scheme: sitesync://entity/rfi/<id> -->
+  <intent-filter android:label="SiteSync deep link">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="sitesync" />
+  </intent-filter>
+
+  <!-- App Links (https://app.sitesync.example/share/...) — verified
+       via the assetlinks.json hosted at the domain root. -->
+  <intent-filter android:autoVerify="true" android:label="SiteSync share link">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https"
+          android:host="app.sitesync.example"
+          android:pathPrefix="/share/" />
+  </intent-filter>
+</intent-filters>
+
+<!--
+  Static app shortcuts. Place inside <application> as a resource
+  reference, then create res/xml/shortcuts.xml with the contents below.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+  <shortcut
+      android:shortcutId="new_rfi"
+      android:enabled="true"
+      android:icon="@drawable/ic_shortcut_rfi"
+      android:shortcutShortLabel="@string/shortcut_new_rfi_short"
+      android:shortcutLongLabel="@string/shortcut_new_rfi_long">
+    <intent
+        android:action="android.intent.action.VIEW"
+        android:targetPackage="com.sitesync.app"
+        android:data="sitesync://capture?intent=rfi" />
+    <categories android:name="android.shortcut.conversation" />
+  </shortcut>
+
+  <shortcut
+      android:shortcutId="capture_photo"
+      android:enabled="true"
+      android:icon="@drawable/ic_shortcut_camera"
+      android:shortcutShortLabel="@string/shortcut_capture_short"
+      android:shortcutLongLabel="@string/shortcut_capture_long">
+    <intent
+        android:action="android.intent.action.VIEW"
+        android:targetPackage="com.sitesync.app"
+        android:data="sitesync://capture" />
+  </shortcut>
+
+  <shortcut
+      android:shortcutId="todays_log"
+      android:enabled="true"
+      android:icon="@drawable/ic_shortcut_log"
+      android:shortcutShortLabel="@string/shortcut_log_short"
+      android:shortcutLongLabel="@string/shortcut_log_long">
+    <intent
+        android:action="android.intent.action.VIEW"
+        android:targetPackage="com.sitesync.app"
+        android:data="sitesync://daily-log" />
+  </shortcut>
+</shortcuts>

@@ -17,7 +17,8 @@ import {
   onConnectivityChange,
   type PendingAnnotation,
 } from '../lib/offlineQueue';
-import { supabase } from '../lib/supabase';
+
+import { fromTable } from '../lib/db/queries'
 
 interface UseOfflineSyncReturn {
   /** Whether the device currently has network connectivity */
@@ -50,8 +51,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
 
   // Sync function: drain queue to Supabase
   const syncFn = useCallback(async (ann: PendingAnnotation) => {
-    const { error } = await supabase
-      .from('drawing_markups')
+    const { error } = await fromTable('drawing_markups')
       .insert({
         project_id: ann.project_id,
         drawing_id: ann.drawing_id,
@@ -64,7 +64,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
         layer: ann.layer,
         visibility: ann.visibility,
         markup_status: 'active',
-      });
+      } as never);
 
     if (error) throw error;
   }, []);

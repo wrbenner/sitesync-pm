@@ -56,8 +56,8 @@ vi.mock('../../../hooks/useReducedMotion', () => ({
   useReducedMotion: () => true,
 }))
 
-vi.mock('../../../stores/projectContextStore', () => ({
-  useProjectContext: (selector: (s: unknown) => unknown) =>
+vi.mock('../../../stores/projectStore', () => ({
+  useProjectStore: (selector: (s: unknown) => unknown) =>
     selector({ setActiveProject: vi.fn() }),
 }))
 

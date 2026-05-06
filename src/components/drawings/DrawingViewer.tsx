@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Canvas as FabricCanvas, PencilBrush, Circle as FabricCircle, Line as FabricLine, IText as FabricIText, Rect as FabricRect } from 'fabric';
 import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2, ChevronUp, ChevronDown } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme';
@@ -16,8 +16,8 @@ import {
   useEventListener,
 } from '../../lib/liveblocks';
 import { DrawingPresenceBar } from '../collaboration/PresenceBar';
-import { supabase } from '../../api/client';
-import type { Database } from '../../types/database';
+
+import { fromTable } from '../../lib/db/queries'
 import { useUiStore } from '../../stores';
 import { useAuthStore } from '../../stores/authStore';
 import { useDrawingAnnotations, useCreateDrawingAnnotation } from '../../hooks/queries/drawing-annotations';
@@ -101,7 +101,7 @@ export const DrawingViewer: React.FC<DrawingViewerProps> = (props) => {
         project_id: props.projectId!,
         drawing_id: drawingId!,
         page_number: 1,
-        annotation_type: 'markup',
+        annotation_type: 'markup' as never,
         shape_data: shapeData,
         color: '#F47820',
       });
@@ -182,12 +182,19 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
 
   const announceStatus = useUiStore((s) => s.announceStatus);
 
-  // ── Liveblocks hooks (no-op when not configured) ──────────────────────────
+  // ── Liveblocks hooks ──────────────────────────────────────────────────────
+  // LIVEBLOCKS_CONFIGURED is a module-level constant derived from import.meta.env,
+  // so each component instance takes the same branch on every render — hook order
+  // is stable. The conditional exists because hooks would throw outside RoomProvider
+  // (the outer wrapper short-circuits to a no-provider render when not configured).
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const _updatePresence = LIVEBLOCKS_CONFIGURED ? useUpdateMyPresence() : null;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
-  const updateMyPresence = _updatePresence ?? (() => {});
-  const broadcastEvent = _broadcastEvent ?? (() => {});
+  const updateMyPresence = useMemo(() => _updatePresence ?? (() => {}), [_updatePresence]);
+  const broadcastEvent = useMemo(() => _broadcastEvent ?? (() => {}), [_broadcastEvent]);
 
   // Update presence name/color once on mount
   useEffect(() => {
@@ -693,7 +700,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
     if (fc && createAnnotationMutate) {
       setIsSaving(true);
       try {
-        const objects = fc.toJSON().objects as Record<string, unknown>[];
+        const objects = fc.toJSON().objects as unknown as Record<string, unknown>[];
         for (const obj of objects) {
           createAnnotationMutate(obj);
         }
@@ -717,7 +724,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
         created_by: presenceUser.name,
         created_at: new Date().toISOString(),
       }));
-      await supabase.from('drawing_markups').insert(records as Database['public']['Tables']['drawing_markups']['Insert'][]);
+      await fromTable('drawing_markups').insert(records as never);
     } finally {
       setIsSaving(false);
     }
@@ -842,7 +849,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
                     fontSize: '8px', fontWeight: 700, color: colors.white,
                     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
                   }}>
-                    {other.presence.initials || '?'}
+                    {other.presence.initials || (other.presence.name?.[0]?.toUpperCase() ?? 'U')}
                   </div>
                   {/* Name label */}
                   <div style={{

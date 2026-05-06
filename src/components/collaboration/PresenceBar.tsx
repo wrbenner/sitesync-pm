@@ -101,8 +101,8 @@ const STATUS_COLOR: Record<PresenceStatus, string> = {
 
 const STATUS_BORDER: Record<PresenceStatus, string> = {
   active: colors.statusActive,
-  idle: colors.statusPending,
-  away: '#C0C4CC',
+  idle:   colors.statusPending,
+  away:   colors.textTertiary,
 };
 
 // ── Role category ─────────────────────────────────────────────────────────────
@@ -119,13 +119,18 @@ function getRoleCategory(role?: string): RoleCategory {
   return 'unknown';
 }
 
+// Role-category accents map to semantic tokens. Architect/Engineer get
+// the `indigo` accent reserved for design-side stakeholders; owner takes
+// the brand orange (they are who SiteSync ultimately serves); GC gets
+// statusInfo blue; subcontractors fade to textTertiary so cursors don't
+// dominate when many subs are present at once.
 const ROLE_CATEGORY_COLOR: Record<RoleCategory, string> = {
-  gc: '#3B82F6',
-  architect: '#8B5CF6',
-  owner: '#F47820',
-  subcontractor: '#9CA3AF',
-  unknown: '#9CA3AF',
-};
+  gc:            colors.statusInfo,
+  architect:     colors.indigo,
+  owner:         colors.primaryOrange,
+  subcontractor: colors.textTertiary,
+  unknown:       colors.textTertiary,
+}
 
 // ── Drawing presence data (Liveblocks presence may include extra fields) ──────
 
@@ -282,9 +287,9 @@ interface AvatarProps {
 
 function getActivityDotColor(user: PresenceUserWithAction): string {
   const isIdle = (Date.now() - user.lastSeen) / 60_000 > 5;
-  if (isIdle) return '#9CA3AF';
-  if (user.action === 'editing') return '#4EC896';
-  return '#3B82F6';
+  if (isIdle) return colors.textTertiary;
+  if (user.action === 'editing') return colors.statusActive;
+  return colors.statusInfo;
 }
 
 const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
@@ -701,7 +706,9 @@ const DrawingPresenceBarContent: React.FC = () => {
         role: p.role,
         company: p.company,
         color: p.color || colors.statusInfo,
-        initials: p.initials || '?',
+        // Derive a safe initial from the displayName when the presence
+        // payload didn't ship one. "?" reads as a missing person.
+        initials: p.initials || ((p.displayName || p.name || 'S').trim()[0]?.toUpperCase() ?? 'S'),
       });
     } catch {
       // skip malformed presence entry

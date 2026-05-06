@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, Sparkles, ListChecks, ChevronDown, ChevronRight, Trash2, Check, X, Minus, Hash, Type, Gauge, CheckSquare } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, Award, Users, Plus, ShieldCheck, Shield, Wrench, ListChecks, ChevronDown, ChevronRight, Trash2, Check, X, Minus, Hash, Type, Gauge, CheckSquare } from 'lucide-react'
 import { PageContainer, Card, Btn, MetricBox, Modal } from '../components/Primitives'
 import { SafetyPhotoAnalyzer } from '../components/safety/SafetyPhotoAnalyzer'
 import { PermissionGate } from '../components/auth/PermissionGate'
@@ -7,10 +7,12 @@ import { DataTable, createColumnHelper } from '../components/shared/DataTable'
 import { ExportButton } from '../components/shared/ExportButton'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useSafetyInspections, useIncidents, useToolboxTalks, useSafetyCertifications, useCorrectiveActions, useDailyLogs, useInspectionChecklists, useChecklistTemplates, useChecklistItems } from '../hooks/queries'
 import { useCreateIncident, useCreateSafetyInspection, useCreateCorrectiveAction, useUpdateCorrectiveAction, useCreateChecklist, useCreateChecklistFromTemplate, useUpdateChecklistItem, useDeleteChecklist } from '../hooks/mutations'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { fromTable, asRow } from '../lib/db/queries'
 import type { InspectionChecklist, InspectionChecklistItem } from '../hooks/queries/inspection-checklists'
 
 type TabKey = 'incidents' | 'inspections' | 'toolbox' | 'certifications' | 'corrective_actions' | 'checklists'
@@ -48,7 +50,7 @@ const incidentColumns = [
     header: 'Date',
     cell: (info) => (
       <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
+        {info.getValue() ? new Date(String(info.getValue())).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -78,7 +80,7 @@ const incidentColumns = [
   }),
   incidentCol.accessor('location', {
     header: 'Location',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   incidentCol.accessor('investigation_status', {
     header: 'Status',
@@ -128,7 +130,7 @@ const incidentColumns = [
     id: 'ca_count',
     header: 'Corrective Actions',
     cell: (info) => {
-      const count = (info.row.original as Record<string, unknown>).corrective_action_count as number ?? 0
+      const count = (info.row.original as unknown as Record<string, unknown>).corrective_action_count as number ?? 0
       if (count === 0) return <span style={{ color: colors.textTertiary }}>None</span>
       return (
         <span style={{
@@ -150,7 +152,7 @@ const inspectionColumns = [
     header: 'Date',
     cell: (info) => (
       <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
+        {info.getValue() ? new Date(String(info.getValue())).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -158,17 +160,17 @@ const inspectionColumns = [
     header: 'Type',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue()}
+        {String(info.getValue() ?? '')}
       </span>
     ),
   }),
   inspectionCol.accessor('inspector', {
     header: 'Inspector',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   inspectionCol.accessor('area', {
     header: 'Area',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   inspectionCol.accessor('status', {
     header: 'Status',
@@ -212,7 +214,7 @@ const talkColumns = [
     header: 'Date',
     cell: (info) => (
       <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
+        {info.getValue() ? new Date(String(info.getValue())).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -220,23 +222,23 @@ const talkColumns = [
     header: 'Title',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue()}
+        {String(info.getValue() ?? '')}
       </span>
     ),
   }),
   talkCol.accessor('topic', {
     header: 'Topic',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   talkCol.accessor('presenter', {
     header: 'Presenter',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   talkCol.accessor('attendance_count', {
     header: 'Attendees',
     cell: (info) => (
       <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, fontWeight: typography.fontWeight.medium, fontVariantNumeric: 'tabular-nums' as const }}>
-        {info.getValue() ?? 0}
+        {String(info.getValue() ?? 0)}
       </span>
     ),
   }),
@@ -248,23 +250,23 @@ const certColumns = [
     header: 'Worker',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue()}
+        {String(info.getValue() ?? '')}
       </span>
     ),
   }),
   certCol.accessor('company', {
     header: 'Company',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   certCol.accessor('certification_type', {
     header: 'Type',
-    cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue()}</span>,
+    cell: (info) => <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '')}</span>,
   }),
   certCol.accessor('expiration_date', {
     header: 'Expires',
     cell: (info) => (
       <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, color: colors.textSecondary, fontVariantNumeric: 'tabular-nums' as const }}>
-        {info.getValue() ? new Date(info.getValue()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014'}
+        {info.getValue() ? new Date(String(info.getValue())).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014'}
       </span>
     ),
   }),
@@ -274,7 +276,7 @@ const certColumns = [
     cell: (info) => {
       const expDate = info.row.original.expiration_date
       if (!expDate) return <span style={{ color: colors.textTertiary }}>No expiry</span>
-      const daysUntil = (new Date(expDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      const daysUntil = (new Date(String(expDate)).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
       if (daysUntil < 0) {
         return (
           <span style={{
@@ -348,14 +350,14 @@ const caColumns = [
     header: 'Description',
     cell: (info) => (
       <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>
-        {info.getValue()}
+        {String(info.getValue() ?? '')}
       </span>
     ),
   }),
   caCol.accessor('assigned_to', {
     header: 'Assigned To',
     cell: (info) => (
-      <span style={{ color: colors.textSecondary }}>{info.getValue() || '\u2014'}</span>
+      <span style={{ color: colors.textSecondary }}>{String(info.getValue() ?? '\u2014')}</span>
     ),
   }),
   caCol.accessor('due_date', {
@@ -719,6 +721,7 @@ export const Safety: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('incidents')
   const [nowMs] = useState(() => Date.now())
   const projectId = useProjectId()
+  const isNarrow = useMediaQuery('(max-width: 640px)')
 
   const { data: inspections, isLoading: loadingInspections, isError: errorInspections } = useSafetyInspections(projectId)
   const { data: incidents, isLoading: loadingIncidents, isError: errorIncidents, refetch: refetchIncidents } = useIncidents(projectId)
@@ -729,7 +732,7 @@ export const Safety: React.FC = () => {
   const dailyLogs = dailyLogsResult?.data
 
   // Checklist hooks
-  const { data: checklists, isLoading: loadingChecklists, refetch: refetchChecklists } = useInspectionChecklists(projectId)
+  const { data: checklists, isLoading: loadingChecklists } = useInspectionChecklists(projectId)
   const { data: checklistTemplatesData } = useChecklistTemplates(projectId)
 
   const createIncident = useCreateIncident()
@@ -741,9 +744,9 @@ export const Safety: React.FC = () => {
   const updateChecklistItemMut = useUpdateChecklistItem()
   const deleteChecklistMut = useDeleteChecklist()
 
-  const displayIncidents = (incidents || []) as Array<Record<string, unknown>>
+  const displayIncidents = (incidents || []) as unknown as Array<Record<string, unknown>>
 
-  const displayCAs = (correctiveActions || []) as Array<Record<string, unknown>>
+  const displayCAs = (correctiveActions || []) as unknown as Array<Record<string, unknown>>
 
   // ── Real-time subscriptions ────────────────────────────────
 
@@ -782,7 +785,7 @@ export const Safety: React.FC = () => {
     ? Math.floor((nowMs - new Date(String(lastRecordableIncident.date ?? '')).getTime()) / 86400000)
     : null
 
-  const computedHours = dailyLogs?.reduce((s: number, l: Record<string, unknown>) => s + (Number(l.total_hours) || 0), 0) ?? 0
+  const computedHours = (dailyLogs as unknown as Array<Record<string, unknown>> | undefined)?.reduce((s: number, l) => s + (Number(l.total_hours) || 0), 0) ?? 0
   // Default to 250000 hours for a realistic TRIR calculation in prototype
   const totalHoursWorked = computedHours > 0 ? computedHours : 250000
   const recordableCount = displayIncidents.filter((i) => recordableSeverities.includes(String(i.severity ?? ''))).length
@@ -798,7 +801,6 @@ export const Safety: React.FC = () => {
   const dartRaw = totalHoursWorked > 0 ? (dartCases * 200000) / totalHoursWorked : null
   const dart = dartRaw !== null ? dartRaw.toFixed(2) : null
 
-  const nearMissCount = displayIncidents.filter((i) => i.severity === 'near_miss' || i.type === 'near_miss').length
 
   const openCorrectiveActions = (correctiveActions as Array<Record<string, unknown>> | undefined)?.filter(
     (ca) => ca.status !== 'closed' && ca.status !== 'verified'
@@ -806,25 +808,20 @@ export const Safety: React.FC = () => {
 
   const now = new Date()
 
-  const expiringCerts = certifications?.filter((c: unknown) => {
+  const expiringCerts = (certifications as unknown as Array<Record<string, unknown>> | undefined)?.filter((c) => {
     if (!c.expiration_date) return false
-    const daysUntil = (new Date(c.expiration_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    const daysUntil = (new Date(String(c.expiration_date)).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return daysUntil > 0 && daysUntil <= 30
   }).length ?? 0
 
-  const passCount = inspections?.filter((i: unknown) => i.status === 'passed').length ?? 0
-  const failCount = inspections?.filter((i: unknown) => i.status === 'failed').length ?? 0
+  const passCount = (inspections as unknown as Array<Record<string, unknown>> | undefined)?.filter((i) => i.status === 'passed').length ?? 0
+  const failCount = (inspections as unknown as Array<Record<string, unknown>> | undefined)?.filter((i) => i.status === 'failed').length ?? 0
 
   const weekStart = new Date(now)
   weekStart.setHours(0, 0, 0, 0)
   weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekStart.getDate() + 7)
-  const inspectionsThisWeek = inspections?.filter((insp: unknown) => {
-    if (!insp.date) return false
-    const d = new Date(insp.date)
-    return d >= weekStart && d < weekEnd
-  }).length ?? 0
 
   // ── MetricBox color overrides ──────────────────────────────
 
@@ -850,11 +847,7 @@ export const Safety: React.FC = () => {
     expiringCerts === 0 ? 'success' : 'warning'
 
   const dartValue = dart !== null ? parseFloat(dart) : null
-  const dartColor: 'success' | 'warning' | 'danger' | undefined =
-    dartValue === null ? undefined
-    : dartValue <= 1.5 ? 'success'
-    : dartValue <= 2.5 ? 'warning'
-    : 'danger'
+  void dartValue;
 
   // ── Incident form state ────────────────────────────────────
 
@@ -986,7 +979,7 @@ export const Safety: React.FC = () => {
         },
         projectId: projectId!,
       })
-      const incidentId = (result.data as Record<string, unknown>)?.id as string | undefined
+      const incidentId = (result.data as unknown as Record<string, unknown>)?.id as string | undefined
       // Upload photo to Supabase storage if provided
       if (incidentForm.photo && incidentId) {
         const ext = incidentForm.photo.name.split('.').pop() || 'jpg'
@@ -995,7 +988,7 @@ export const Safety: React.FC = () => {
           .from('safety-photos')
           .upload(filePath, incidentForm.photo, { contentType: incidentForm.photo.type, upsert: true })
         if (!uploadError) {
-          await supabase.from('incidents').update({ photos: [filePath] }).eq('id', incidentId)
+          await fromTable('incidents').update({ photos: [filePath] } as never).eq('id' as never, incidentId)
         }
       }
       if (incidentForm.ca_description.trim()) {
@@ -1053,21 +1046,21 @@ export const Safety: React.FC = () => {
       return
     }
     try {
-      const { data: insertedTalk, error: insertError } = await supabase.from('toolbox_talks').insert({
+      const { data: insertedTalk, error: insertError } = await fromTable('toolbox_talks').insert({
         project_id: projectId,
         title: talkForm.topic.trim(),
         topic: talkForm.topic.trim(),
         date: talkForm.date,
         attendance_count: talkForm.attendees.length,
-      }).select('id').single()
+      } as never).select('id').single()
       if (insertError) throw insertError
-      const talkId = insertedTalk?.id as string | undefined
+      const talkId = asRow<{ id: string }>(insertedTalk)?.id
       if (talkId && talkForm.attendees.length > 0) {
-        await supabase.from('toolbox_talk_attendees').insert(
+        await fromTable('toolbox_talk_attendees').insert(
           talkForm.attendees.map((name) => ({
             toolbox_talk_id: talkId,
             worker_name: name,
-          }))
+          })) as never
         )
       }
       toast.success('Toolbox talk saved')
@@ -1208,29 +1201,42 @@ export const Safety: React.FC = () => {
         </div>
       )}
 
-      {/* Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: spacing['1'],
-        backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg,
-        padding: spacing['1'],
-        marginBottom: spacing.lg,
-        overflowX: 'auto',
-      }}>
+      {/* Tab Switcher — wrapped so the right-edge gradient hint stays
+          aligned with the scroll container even when more tabs are
+          present than fit on iPhone width. */}
+      <div style={{ position: 'relative', marginBottom: spacing.lg }}>
+      <div
+        role="tablist"
+        aria-label="Safety sections"
+        style={{
+          display: 'flex',
+          gap: spacing['2'],
+          backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg,
+          padding: spacing['1'],
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          minWidth: 0,
+        }}
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.key
           return (
             <button
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
               aria-pressed={isActive}
               onClick={() => setActiveTab(tab.key)}
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
+                padding: isNarrow ? `${spacing['2']} ${spacing['3']}` : `${spacing['2']} ${spacing['4']}`,
                 border: 'none',
                 borderRadius: borderRadius.base,
                 cursor: 'pointer',
@@ -1241,13 +1247,25 @@ export const Safety: React.FC = () => {
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`,
                 whiteSpace: 'nowrap',
+                flex: '0 0 auto',
+                minWidth: 'max-content',
               }}
             >
               {React.createElement(Icon, { size: 14 })}
-              {tab.label}
+              <span>{tab.label}</span>
             </button>
           )
         })}
+      </div>
+      {/* Right-edge fade hint that more tabs are scrollable. Pointer-events
+          off so it never swallows clicks on the rightmost tab. */}
+      <div aria-hidden style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
+        background: `linear-gradient(to left, ${colors.surfaceInset}, transparent)`,
+        borderTopRightRadius: borderRadius.lg,
+        borderBottomRightRadius: borderRadius.lg,
+        pointerEvents: 'none',
+      }} />
       </div>
 
       {/* Skeleton loaders while fetching */}
@@ -1337,7 +1355,7 @@ export const Safety: React.FC = () => {
               Run Inspection Checklist
             </p>
             <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap', marginBottom: activeTemplate ? spacing['5'] : 0 }}>
-              {(Object.keys(CHECKLIST_TEMPLATES) as TemplateKey[]).map((key) => {
+              {(Object.keys(CHECKLIST_TEMPLATES) as unknown as TemplateKey[]).map((key) => {
                 const isActive = activeTemplate === key
                 return (
                   <button
@@ -1500,7 +1518,7 @@ export const Safety: React.FC = () => {
                 <Card>
                   <DataTable
                     columns={inspectionColumns}
-                    data={inspections || []}
+                    data={(inspections || []) as unknown as Record<string, unknown>[]}
                     enableSorting
                   />
                 </Card>
@@ -1523,7 +1541,7 @@ export const Safety: React.FC = () => {
             <Card>
               <DataTable
                 columns={talkColumns}
-                data={talks || []}
+                data={(talks || []) as unknown as Record<string, unknown>[]}
                 enableSorting
               />
             </Card>
@@ -1544,7 +1562,7 @@ export const Safety: React.FC = () => {
             <Card>
               <DataTable
                 columns={certColumns}
-                data={certifications || []}
+                data={(certifications || []) as unknown as Record<string, unknown>[]}
                 enableSorting
               />
             </Card>
@@ -1587,7 +1605,7 @@ export const Safety: React.FC = () => {
                 const overdueCount = displayCAs.filter((ca) => {
                   if (!ca.due_date) return false
                   if (ca.status === 'closed' || ca.status === 'verified') return false
-                  return new Date(ca.due_date) < new Date()
+                  return new Date(ca.due_date as string).getTime() < Date.now()
                 }).length
                 if (overdueCount === 0) return null
                 return (

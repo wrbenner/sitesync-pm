@@ -166,7 +166,7 @@ export const AIInsightsWidget: React.FC = React.memo(() => {
 
       {/* Category filter */}
       <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['3'], flexWrap: 'wrap' }}>
-        {(Object.keys(categoryConfig) as Category[]).map((cat) => {
+        {(Object.keys(categoryConfig) as unknown as Category[]).map((cat) => {
           const cfg = categoryConfig[cat];
           const isActive = activeCategory === cat;
           return (

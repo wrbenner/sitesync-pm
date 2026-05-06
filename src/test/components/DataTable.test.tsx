@@ -9,10 +9,13 @@ interface TestItem {
 }
 
 const columnHelper = createColumnHelper<TestItem>()
+// TanStack Table's accessor() returns AccessorKeyColumnDef<T, V> with V
+// narrowed to the field's type — but DataTable's `columns` prop expects
+// ColumnDef<T, unknown>[]. Cast as never at the test boundary.
 const columns = [
   columnHelper.accessor('name', { header: 'Name' }),
   columnHelper.accessor('status', { header: 'Status' }),
-]
+] as never
 
 const data: TestItem[] = [
   { id: 1, name: 'Item One', status: 'active' },

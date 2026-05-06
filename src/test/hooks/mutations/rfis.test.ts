@@ -48,7 +48,8 @@ vi.mock('../../../lib/supabase', () => ({ supabase: h.supabase, fromTable: h.sup
 vi.mock('../../../hooks/usePermissions', () => ({
   usePermissions: () => ({ hasPermission: h.hasPermission, role: 'project_manager' }),
   PermissionError: class PermissionError extends Error {
-    constructor(m: string, public permission?: string) { super(m); this.name = 'PermissionError' }
+    permission?: string
+    constructor(m: string, permission?: string) { super(m); this.name = 'PermissionError'; this.permission = permission }
   },
 }))
 vi.mock('../../../hooks/useProjectId', () => ({ useProjectId: () => h.projectId }))

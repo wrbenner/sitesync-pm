@@ -16,20 +16,32 @@ function readSource(relPath: string): string {
 
 describe('PAGE_REGISTRY ↔ src/App.tsx', () => {
   const appTsx = readSource('src/App.tsx')
-  const declared = new Set<string>()
-  const re = /<Route\s+path=["']([^"']+)["']/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(appTsx)) !== null) declared.add(m[1])
+  // Two views of App.tsx routes:
+  //   - `pageRoutes`   — routes whose element is a real page component.
+  //                      These NEED a PAGE_REGISTRY contract.
+  //   - `allRoutes`    — every <Route path=…> declared, including pure
+  //                      redirects (`<Navigate to=…>`). A registry entry
+  //                      is "stale" only when its path doesn't appear
+  //                      here at all — redirected routes still count.
+  const pageRoutes = new Set<string>()
+  const allRoutes = new Set<string>()
+  const routeMatches = appTsx.matchAll(/<Route\s+path=["']([^"']+)["']\s+element=\{([^}]*)\}/g)
+  for (const match of routeMatches) {
+    const route = match[1]
+    const element = match[2] ?? ''
+    allRoutes.add(route)
+    if (!/<Navigate\b/.test(element)) pageRoutes.add(route)
+  }
 
   it('every App.tsx route has a registry entry', () => {
     const registered = new Set(PAGE_REGISTRY.map((p) => p.route))
-    const missing = [...declared].filter((r) => !registered.has(r))
+    const missing = [...pageRoutes].filter((r) => !registered.has(r))
     expect(missing, `Missing registry entries for routes: ${missing.join(', ')}`).toHaveLength(0)
   })
 
   it('every registry route (except the duplicate /crews stub) exists in App.tsx', () => {
     const stale = PAGE_REGISTRY
-      .filter((p) => p.status !== 'stub' && p.route !== '*' && !declared.has(p.route))
+      .filter((p) => p.status !== 'stub' && p.route !== '*' && !allRoutes.has(p.route))
       .map((p) => p.route)
     expect(stale, `Registry has routes not in App.tsx: ${stale.join(', ')}`).toHaveLength(0)
   })

@@ -2,10 +2,8 @@ import React, { useMemo } from 'react';
 import {
   Sparkles, Sun, CloudRain, Cloud, CloudSnow, Wind, Thermometer,
   Users, ShieldAlert, FileQuestion, ClipboardCheck, Truck, Search,
-  AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight,
-  Printer, Calendar,
-} from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+  AlertTriangle, CheckCircle2, XCircle, Clock, ChevronRight} from 'lucide-react';
+import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 
 // ── Types ────────────────────────────────────────────────────
 

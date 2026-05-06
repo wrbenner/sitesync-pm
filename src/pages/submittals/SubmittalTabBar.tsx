@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { Layers, ClipboardList, Timer, CheckCircle2, XCircle, RotateCcw } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
@@ -34,7 +34,7 @@ export const SubmittalTabBar: React.FC<SubmittalTabBarProps> = ({
   const [indicator, setIndicator] = useState({ left: 0, width: 0 })
   const [hovered, setHovered] = useState<SubmittalStatusFilter | null>(null)
 
-  const updateIndicator = () => {
+  const updateIndicator = useCallback(() => {
     const el = tabRefs.current.get(activeTab)
     const container = containerRef.current
     if (el && container) {
@@ -42,13 +42,13 @@ export const SubmittalTabBar: React.FC<SubmittalTabBarProps> = ({
       const tRect = el.getBoundingClientRect()
       setIndicator({ left: tRect.left - cRect.left, width: tRect.width })
     }
-  }
+  }, [activeTab])
 
-  useLayoutEffect(updateIndicator, [activeTab])
+  useLayoutEffect(updateIndicator, [updateIndicator])
   useEffect(() => {
     window.addEventListener('resize', updateIndicator)
     return () => window.removeEventListener('resize', updateIndicator)
-  }, [activeTab])
+  }, [updateIndicator])
 
   return (
     <div

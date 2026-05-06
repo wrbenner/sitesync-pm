@@ -50,13 +50,30 @@ type Step = 'select' | 'configure' | 'generate';
 interface ExportCenterProps {
   open: boolean;
   onClose: () => void;
+  /**
+   * Pre-select a report when opening from a "Generate" CTA on the
+   * Reports page. Without this, the modal always opens on Executive
+   * Summary and the user has to re-pick — making the Generate button
+   * feel broken for any other report type.
+   */
+  initialReport?: ReportType;
 }
 
 // ── Component ────────────────────────────────────────────
 
-export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose }) => {
-  const [step, setStep] = useState<Step>('select');
-  const [selectedReport, setSelectedReport] = useState<ReportType>('executive_summary');
+export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose, initialReport }) => {
+  const [step, setStep] = useState<Step>(initialReport ? 'configure' : 'select');
+  const [selectedReport, setSelectedReport] = useState<ReportType>(initialReport ?? 'executive_summary');
+
+  // Re-sync if the modal is opened with a different initialReport
+  // after having been closed. Without this, a second "Generate Daily
+  // Log" click after closing on "RFI Log" would still show RFI Log.
+  React.useEffect(() => {
+    if (open && initialReport) {
+      setSelectedReport(initialReport);
+      setStep('configure');
+    }
+  }, [open, initialReport]);
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -94,21 +111,21 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose }) => 
   const pdfDocument = useMemo(() => {
     switch (selectedReport) {
       case 'executive_summary':
-        return execData.data ? <ExecutiveSummary {...execData.data} /> : null;
+        return execData.data ? <ExecutiveSummary {...(execData.data as unknown as React.ComponentProps<typeof ExecutiveSummary>)} /> : null;
       case 'monthly_progress':
         return monthlyData.data ? <MonthlyProgressReport {...monthlyData.data} /> : null;
       case 'rfi_log':
         return rfiData.data ? <RFIReport {...rfiData.data} /> : null;
       case 'submittal_log':
-        return submittalData.data ? <SubmittalLog {...submittalData.data} /> : null;
+        return submittalData.data ? <SubmittalLog {...(submittalData.data as unknown as React.ComponentProps<typeof SubmittalLog>)} /> : null;
       case 'punch_list':
-        return punchData.data ? <PunchListReport projectName={punchData.data.projectName} items={punchData.data.items} /> : null;
+        return punchData.data ? <PunchListReport projectName={punchData.data.projectName} items={punchData.data.items as unknown as React.ComponentProps<typeof PunchListReport>['items']} /> : null;
       case 'budget_report':
-        return budgetData.data ? <BudgetReport {...budgetData.data} /> : null;
+        return budgetData.data ? <BudgetReport {...(budgetData.data as unknown as React.ComponentProps<typeof BudgetReport>)} /> : null;
       case 'daily_log_summary':
-        return dailyLogData.data ? <DailyLogReport projectName={dailyLogData.data.projectName} entries={dailyLogData.data.entries} totalManHours={dailyLogData.data.totalManHours} avgWorkers={dailyLogData.data.avgWorkers} totalIncidents={dailyLogData.data.totalIncidents} /> : null;
+        return dailyLogData.data ? <DailyLogReport {...(dailyLogData.data as unknown as React.ComponentProps<typeof DailyLogReport>)} /> : null;
       case 'safety_report':
-        return <SafetyReport projectName="Project" periodStart="" periodEnd="" daysWithoutIncident={30} trir={0} emr={0.85} openCorrectiveActions={0} incidents={[]} inspections={[]} />;
+        return <SafetyReport {...({ projectName: 'Project', periodStart: '', periodEnd: '', daysWithoutIncident: 30, trir: 0, emr: 0.85, openCorrectiveActions: 0, incidents: [], inspections: [] } as unknown as React.ComponentProps<typeof SafetyReport>)} />;
       case 'cost_report':
         return costData.data ? <CostReport data={costData.data} /> : null;
       case 'schedule_report':
@@ -363,7 +380,7 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose }) => 
                   <Suspense fallback={
                     <Btn disabled>Preparing PDF...</Btn>
                   }>
-                    <PDFDownloadLink document={pdfDocument as React.ReactElement} fileName={`${pdfFilename}.pdf`}>
+                    <PDFDownloadLink document={pdfDocument as never} fileName={`${pdfFilename}.pdf`}>
                       {({ loading }: { loading: boolean }) => (
                         <Btn
                           onClick={() => { if (!loading) { setStep('generate'); setDone(true); toast.success('PDF downloaded'); } }}

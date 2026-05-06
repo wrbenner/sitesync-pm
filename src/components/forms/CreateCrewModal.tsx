@@ -247,4 +247,5 @@ const CreateCrewModal: React.FC<CreateCrewModalProps> = ({ open, onClose, onSubm
   )
 }
 
+export { CreateCrewModal }
 export default CreateCrewModal

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardList, Calendar, AlertCircle, ChevronRight } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { Modal } from '../../components/Primitives';
 import { useAuth } from '../../hooks/useAuth';
@@ -43,26 +43,36 @@ function useMyTasks(userId: string | undefined) {
     queryKey: ['my_tasks', userId],
     queryFn: async (): Promise<AssignedTask[]> => {
       if (!userId) return [];
-      const { data, error } = await supabase
-        .from('tasks')
+      const { data, error } = await fromTable('tasks')
         .select('id, project_id, title, description, status, priority, due_date, projects(name)')
-        .eq('assigned_to', userId)
-        .in('status', ['todo', 'in_progress', 'in_review'])
+        .eq('assigned_to' as never, userId)
+        .in('status' as never, ['todo', 'in_progress', 'in_review'] as never)
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(12);
       if (error) throw error;
-      return (data ?? []).map((t) => {
-        const proj = t.projects as { name?: string } | { name?: string }[] | null;
+      type TaskRow = {
+        id: string;
+        project_id: string;
+        title: string;
+        description: string | null;
+        status: AssignedTask['status'];
+        priority: AssignedTask['priority'] | null;
+        due_date: string | null;
+        projects: { name?: string } | { name?: string }[] | null;
+      };
+      const rows = (data ?? []) as unknown as TaskRow[];
+      return rows.map((t) => {
+        const proj = t.projects;
         const projName = Array.isArray(proj) ? proj[0]?.name ?? null : proj?.name ?? null;
         return {
-          id: t.id as string,
-          project_id: t.project_id as string,
+          id: t.id,
+          project_id: t.project_id,
           project_name: projName,
-          title: t.title as string,
-          description: (t.description as string | null) ?? null,
-          status: t.status as AssignedTask['status'],
-          priority: (t.priority as AssignedTask['priority']) ?? null,
-          due_date: (t.due_date as string | null) ?? null,
+          title: t.title,
+          description: t.description ?? null,
+          status: t.status,
+          priority: t.priority ?? null,
+          due_date: t.due_date ?? null,
         };
       });
     },

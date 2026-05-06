@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const { sharedFrom } = vi.hoisted(() => ({ sharedFrom: vi.fn() }))
+
 vi.mock('../../lib/errorTracking', () => ({
   captureException: vi.fn(),
 }))
@@ -12,9 +14,12 @@ vi.mock('../../lib/aiService', () => ({
 }))
 
 vi.mock('../../api/client', () => ({
-  supabase: {
-    from: vi.fn(),
-  },
+  supabase: { from: sharedFrom },
+}))
+
+vi.mock('../../lib/supabase', () => ({
+  supabase: { from: sharedFrom },
+  isSupabaseConfigured: true,
 }))
 
 vi.mock('../../api/middleware/projectScope', () => ({

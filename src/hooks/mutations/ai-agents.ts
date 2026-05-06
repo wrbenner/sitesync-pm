@@ -1,14 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
 
+import { fromTable } from '../../lib/db/queries'
 
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── AI Agents ────────────────────────────────────────────
 
@@ -22,7 +21,7 @@ export function useApproveAgentAction() {
         reviewed_at: new Date().toISOString(),
         applied: true,
         applied_at: new Date().toISOString(),
-      }).eq('id', id).eq('project_id', projectId)
+      } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -42,7 +41,7 @@ export function useRejectAgentAction() {
         status: 'rejected',
         reviewed_by: userId,
         reviewed_at: new Date().toISOString(),
-      }).eq('id', id).eq('project_id', projectId)
+      } as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -58,7 +57,7 @@ export function useUpdateAgentConfig() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates, projectId }: { id: string; updates: Record<string, unknown>; projectId: string }) => {
-      const { error } = await from('ai_agents').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('ai_agents').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

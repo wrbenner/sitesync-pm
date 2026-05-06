@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Send, Mail, Eye, Clock, CheckCircle, Users, Plus, X,
-  Search, Bell, ExternalLink, Copy, Check
+  Send, Mail, Eye, Clock, CheckCircle, Plus, X,
+  Bell, Copy, Check
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
@@ -73,7 +73,7 @@ const RecipientRow: React.FC<{
       border: `1px solid ${colors.borderSubtle}`,
     }}
   >
-    <Avatar name={recipient.name} size={28} />
+    <Avatar initials={(recipient.name || '?').slice(0, 2).toUpperCase()} size={28} />
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{
         fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
@@ -123,7 +123,7 @@ const RecipientRow: React.FC<{
 // ─── Main Component ───────────────────────────────────────
 
 const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
-  rfiId, projectId, rfiTitle, rfiNumber, recipients: initialRecipients = [], onDistribute,
+  rfiId, projectId, recipients: initialRecipients = [], onDistribute,
 }) => {
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [recipients, setRecipients] = useState<DistributionRecipient[]>(initialRecipients)
@@ -314,7 +314,7 @@ const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <Avatar name={c.name || 'U'} size={24} />
+                    <Avatar initials={(c.name || 'U').slice(0, 2).toUpperCase()} size={24} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: typography.fontSize.caption, color: colors.textPrimary }}>
                         {c.name || 'Unknown'}

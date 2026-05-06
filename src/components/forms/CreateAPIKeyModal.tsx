@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { z } from 'zod'
-import { FormModal, FormBody, FormFooter, FormField, FormInput, FormCheckbox } from './FormPrimitives'
+import { FormModal, FormBody, FormField, FormInput, FormCheckbox } from './FormPrimitives'
 import { Btn } from '../Primitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
@@ -161,7 +161,7 @@ export const CreateAPIKeyModal: React.FC<CreateAPIKeyModalProps> = ({ open, onCl
     const result = CreateAPIKeySchema.safeParse(formData)
     if (!result.success) {
       const fieldErrors: Record<string, string> = {}
-      result.error.errors.forEach((err) => {
+      result.error.issues.forEach((err) => {
         const field = String(err.path[0] ?? '')
         if (field && !fieldErrors[field]) fieldErrors[field] = err.message
       })
@@ -211,14 +211,13 @@ export const CreateAPIKeyModal: React.FC<CreateAPIKeyModalProps> = ({ open, onCl
 
   return (
     <FormModal open={open} onClose={onClose} title="Create API Key" width={560}>
-      <form onSubmit={handleSubmit}>
-        <FormBody>
+      <FormBody onSubmit={handleSubmit}>
           <FormField label="Key Name" required error={errors.name}>
             <FormInput
               id="api-key-name"
               placeholder="e.g., Production Server, Mobile App"
               value={name}
-              onChange={setName}
+              onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
             />
           </FormField>
@@ -261,26 +260,29 @@ export const CreateAPIKeyModal: React.FC<CreateAPIKeyModalProps> = ({ open, onCl
               type="number"
               placeholder="e.g., 90"
               value={expirationDays}
-              onChange={setExpirationDays}
+              onChange={(e) => setExpirationDays(e.target.value)}
               disabled={isSubmitting}
             />
           </FormField>
-        </FormBody>
 
-        <FormFooter>
-          <Btn variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Btn>
-          <Btn type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 size={14} style={{ animation: 'spin 600ms linear infinite', marginRight: spacing['2'] }} />
-                Creating...
-              </>
-            ) : (
-              'Create API Key'
-            )}
-          </Btn>
-        </FormFooter>
-      </form>
+          <div style={{
+            display: 'flex', justifyContent: 'flex-end', gap: spacing['3'],
+            marginTop: spacing['2'], paddingTop: spacing['4'],
+            borderTop: `1px solid ${colors.borderSubtle}`,
+          }}>
+            <Btn variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Btn>
+            <Btn type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={14} style={{ animation: 'spin 600ms linear infinite', marginRight: spacing['2'] }} />
+                  Creating...
+                </>
+              ) : (
+                'Create API Key'
+              )}
+            </Btn>
+          </div>
+        </FormBody>
     </FormModal>
   )
 }

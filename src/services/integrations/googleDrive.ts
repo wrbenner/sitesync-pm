@@ -1,7 +1,8 @@
 // Google Drive Integration: OAuth2 + Drive API v3
 // Syncs drawings, submittals, RFI attachments, daily log photos to/from a project folder.
 
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -93,8 +94,9 @@ export const googleDriveProvider: IntegrationProvider = {
       return { integrationId: '', error: 'Integration ID required (OAuth flow must complete first)' }
     }
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data: integrationData } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = integrationData as { config: Record<string, string> | null } | null
+    const config = integration?.config ?? null
 
     if (!config?.accessToken) {
       return { integrationId: '', error: 'No access token. Complete OAuth flow first.' }
@@ -102,13 +104,14 @@ export const googleDriveProvider: IntegrationProvider = {
 
     try {
       // Create/find project folder
-      const { data: project } = await supabase.from('projects').select('name').eq('id', projectId).single()
+      const { data: projectData } = await fromTable('projects').select('name').eq('id' as never, projectId).single()
+      const project = projectData as { name: string | null } | null
       const folderId = await ensureProjectFolder(config.accessToken, project?.name ?? 'Project')
 
       // Store folder ID in config
-      await supabase.from('integrations').update({
+      await fromTable('integrations').update({
         config: { ...config, folderId },
-      }).eq('id', integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -124,8 +127,9 @@ export const googleDriveProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase.from('integrations').select('config, last_sync').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data: integrationData } = await fromTable('integrations').select('config, last_sync').eq('id' as never, integrationId).single()
+    const integration = integrationData as { config: Record<string, string> | null; last_sync: string | null } | null
+    const config = integration?.config ?? null
 
     if (!config?.accessToken || !config?.folderId) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Not configured. Reconnect Google Drive.'] }
@@ -148,14 +152,14 @@ export const googleDriveProvider: IntegrationProvider = {
         for (const file of files) {
           try {
             // Upsert document record
-            await supabase.from('documents').upsert({
+            await fromTable('documents').upsert({
               name: file.name,
               mime_type: file.mimeType,
               external_id: file.id,
               external_source: 'google_drive',
               file_size: parseInt(file.size ?? '0', 10),
               updated_at: file.modifiedTime,
-            }, { onConflict: 'external_id,external_source' })
+            } as never, { onConflict: 'external_id,external_source' })
             synced++
           } catch {
             failed++
@@ -165,10 +169,9 @@ export const googleDriveProvider: IntegrationProvider = {
 
       if (direction === 'export' || direction === 'bidirectional') {
         // Export: find documents not yet uploaded to Drive
-        const { data: pendingDocs } = await supabase
-          .from('documents')
+        const { data: pendingDocs } = await fromTable('documents')
           .select('id, name, storage_path')
-          .is('external_id', null)
+          .is('external_id' as never, null)
           .limit(50)
 
         details.pendingExports = pendingDocs?.length ?? 0
@@ -196,11 +199,12 @@ export const googleDriveProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as { status: string | null; last_sync: string | null; error_log: unknown } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

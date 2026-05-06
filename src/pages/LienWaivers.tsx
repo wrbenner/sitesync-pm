@@ -5,6 +5,7 @@ import { colors, spacing, typography, borderRadius, shadows, transitions, touchT
 import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useLienWaivers, useCreateLienWaiver, useDeleteLienWaiver } from '../hooks/queries/lien-waivers';
+import { useConfirm } from '../components/ConfirmDialog';
 import { toast } from 'sonner';
 import {
   useCreateSignatureRequest,
@@ -52,8 +53,14 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  // Cast to any[] since the API endpoint maps columns to different names
-  const waivers = (rawWaivers ?? []) as any[];
+  // Local row shape (API endpoint maps columns to different names — DB has
+  // both contractor_name/subcontractor_id, waiver_type/waiver_state, etc.)
+  type WaiverRow = {
+    id: string;
+    amount: number | null;
+    [key: string]: unknown;
+  };
+  const waivers = (rawWaivers ?? []) as unknown as WaiverRow[];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');
@@ -121,10 +128,17 @@ export function LienWaivers() {
     }
   };
 
+  const { confirm: confirmDeleteWaiver, dialog: deleteWaiverDialog } = useConfirm();
+
   const handleDelete = async (w: any) => {
     if (!projectId) return;
     const label = getContractorName(w) || 'this waiver';
-    if (!window.confirm(`Delete waiver for "${label}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteWaiver({
+      title: 'Delete lien waiver?',
+      description: `Waiver for "${label}" will be removed. If already submitted with a Pay App, the related Pay App audit will flag this missing waiver.`,
+      destructiveLabel: 'Delete waiver',
+    });
+    if (!ok) return;
     try {
       await deleteWaiver.mutateAsync({ id: w.id, projectId });
     } catch {
@@ -254,7 +268,7 @@ export function LienWaivers() {
           }}
         >
           <option value="all">All Types</option>
-          {(Object.keys(WAIVER_TYPE_LABELS) as WaiverStateValue[]).map((t) => (
+          {(Object.keys(WAIVER_TYPE_LABELS) as unknown as WaiverStateValue[]).map((t) => (
             <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
           ))}
         </select>
@@ -478,7 +492,7 @@ export function LienWaivers() {
                             size="sm"
                             variant="secondary"
                             icon={<Send size={12} />}
-                            onClick={(e) => { e.stopPropagation(); handleSendForSignature(w); }}
+                            onClick={(e) => { e?.stopPropagation(); handleSendForSignature(w); }}
                             loading={sendingSignatureId === w.id}
                             disabled={sendingSignatureId != null}
                             aria-label="Send for signature"
@@ -489,7 +503,7 @@ export function LienWaivers() {
                         <Btn
                           size="sm"
                           variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(w); }}
+                          onClick={(e) => { e?.stopPropagation(); handleDelete(w); }}
                           disabled={deleteWaiver.isPending}
                           aria-label="Delete waiver"
                         >
@@ -533,7 +547,7 @@ export function LienWaivers() {
                   fontFamily: typography.fontFamily,
                 }}
               >
-                {(Object.keys(WAIVER_TYPE_LABELS) as WaiverStateValue[]).map((t) => (
+                {(Object.keys(WAIVER_TYPE_LABELS) as unknown as WaiverStateValue[]).map((t) => (
                   <option key={t} value={t}>{WAIVER_TYPE_LABELS[t]}</option>
                 ))}
               </select>
@@ -608,6 +622,7 @@ export function LienWaivers() {
           </div>
         </div>
       </Modal>
+      {deleteWaiverDialog}
     </PageContainer>
   );
 }

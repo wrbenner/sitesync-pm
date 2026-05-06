@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw, Trash2, Clock, Users, FileText, ChevronDown, ChevronUp, CheckCircle, UserPlus, Video, Link2, Copy, Download, Bell, ArrowRight, Layout } from 'lucide-react';
+import { Plus, Calendar, MapPin, AlertTriangle, RefreshCw, Trash2, Clock, Users, FileText, ChevronUp, CheckCircle, UserPlus, Video, Link2, Copy, Download, Bell, ArrowRight, Layout } from 'lucide-react';
+import { ProjectGate } from '../components/ProjectGate';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  PageContainer, Tag, Btn, MetricBox, Skeleton, EmptyState, Modal, InputField, SectionHeader, Card,
+  PageContainer, Tag, Btn, MetricBox, Skeleton, Modal, InputField,
 } from '../components/Primitives';
 import { MetricCardSkeleton } from '../components/ui/Skeletons';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../styles/theme';
@@ -11,8 +12,10 @@ import { useDeleteMeeting, useAddAttendee, useRemoveAttendee } from '../hooks/mu
 import { useProjectActionItems } from '../hooks/queries/meeting-enhancements';
 import { useProjectId } from '../hooks/useProjectId';
 import { PermissionGate } from '../components/auth/PermissionGate';
+import { useConfirm } from '../components/ConfirmDialog';
 import CreateMeetingModal from '../components/forms/CreateMeetingModal';
 import { supabase } from '../lib/supabase';
+import { fromTable } from '../lib/db/queries';
 import { toast } from 'sonner';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { PageInsightBanners } from '../components/ai/PredictiveAlert';
@@ -206,13 +209,12 @@ function useMeetingAgendaItems(meetingId: string | null) {
     queryKey: ['meeting_agenda_items', meetingId],
     queryFn: async () => {
       if (!meetingId) return [];
-      const { data, error } = await supabase
-        .from('meeting_agenda_items')
+      const { data, error } = await fromTable('meeting_agenda_items')
         .select('*')
-        .eq('meeting_id', meetingId)
+        .eq('meeting_id' as never, meetingId)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as AgendaItem[];
     },
     enabled: !!meetingId,
   });
@@ -222,7 +224,7 @@ function useCreateAgendaItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (item: { meeting_id: string; title: string; presenter?: string; duration_minutes?: number; notes?: string }) => {
-      const { data, error } = await supabase.from('meeting_agenda_items').insert({
+      const { data, error } = await fromTable('meeting_agenda_items').insert({
         meeting_id: item.meeting_id,
         title: item.title,
         presenter: item.presenter || null,
@@ -230,7 +232,7 @@ function useCreateAgendaItem() {
         notes: item.notes || null,
         sort_order: 0,
         status: 'pending',
-      }).select().single();
+      } as never).select().single();
       if (error) throw error;
       return data;
     },
@@ -246,7 +248,7 @@ function useDeleteAgendaItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, meetingId }: { id: string; meetingId: string }) => {
-      const { error } = await supabase.from('meeting_agenda_items').delete().eq('id', id);
+      const { error } = await fromTable('meeting_agenda_items').delete().eq('id' as never, id);
       if (error) throw error;
       return { meetingId };
     },
@@ -263,13 +265,12 @@ function useMeetingParticipants(meetingId: string | null) {
     queryKey: ['meeting_participants', meetingId],
     queryFn: async () => {
       if (!meetingId) return [];
-      const { data, error } = await supabase
-        .from('meeting_participants')
+      const { data, error } = await fromTable('meeting_participants')
         .select('*')
-        .eq('meeting_id', meetingId)
+        .eq('meeting_id' as never, meetingId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as unknown as MeetingParticipant[];
     },
     enabled: !!meetingId,
   });
@@ -279,14 +280,14 @@ function useAddParticipant() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (p: { meeting_id: string; name: string; email?: string }) => {
-      const { data, error } = await supabase.from('meeting_participants').insert({
+      const { data, error } = await fromTable('meeting_participants').insert({
         meeting_id: p.meeting_id,
         name: p.name,
         email: p.email || null,
         invited: true,
         attended: false,
         rsvp_status: 'pending',
-      }).select().single();
+      } as never).select().single();
       if (error) throw error;
       return data;
     },
@@ -302,7 +303,7 @@ function useToggleAttendance() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, attended, meetingId }: { id: string; attended: boolean; meetingId: string }) => {
-      const { error } = await supabase.from('meeting_participants').update({ attended: !attended }).eq('id', id);
+      const { error } = await fromTable('meeting_participants').update({ attended: !attended } as never).eq('id' as never, id);
       if (error) throw error;
       return { meetingId };
     },
@@ -322,6 +323,7 @@ const MeetingDetailView: React.FC<{
 }> = ({ meetingId, meeting, onClose }) => {
   const queryClient = useQueryClient();
   const { data: agendaItems = [], isPending: agendaLoading } = useMeetingAgendaItems(meetingId);
+  const { confirm: confirmDeleteAgenda, dialog: deleteAgendaDialog } = useConfirm();
   const { data: participants = [], isPending: participantsLoading } = useMeetingParticipants(meetingId);
   const { data: attendees = [], isPending: attendeesLoading } = useMeetingAttendees(meetingId);
   const createAgendaItem = useCreateAgendaItem();
@@ -355,13 +357,12 @@ const MeetingDetailView: React.FC<{
   const { data: meetingDetail } = useQuery<MeetingDetail>({
     queryKey: ['meeting_detail', meetingId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('meetings')
+      const { data, error } = await fromTable('meetings')
         .select('id, title, status, type, date, location, duration_minutes, notes, minutes_published, minutes_published_at, video_conference_url')
-        .eq('id', meetingId)
+        .eq('id' as never, meetingId)
         .single();
       if (error) throw error;
-      return data;
+      return data as unknown as MeetingDetail;
     },
   });
 
@@ -391,7 +392,7 @@ const MeetingDetailView: React.FC<{
   const handleSaveNotes = async () => {
     setNotesSaving(true);
     try {
-      const { error } = await supabase.from('meetings').update({ notes: meetingNotes }).eq('id', meetingId);
+      const { error } = await fromTable('meetings').update({ notes: meetingNotes } as never).eq('id' as never, meetingId);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['meeting_detail', meetingId] });
       toast.success('Notes saved');
@@ -404,10 +405,10 @@ const MeetingDetailView: React.FC<{
 
   const handlePublishMinutes = async () => {
     try {
-      const { error } = await supabase.from('meetings').update({
+      const { error } = await fromTable('meetings').update({
         minutes_published: true,
         minutes_published_at: new Date().toISOString(),
-      }).eq('id', meetingId);
+      } as never).eq('id' as never, meetingId);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['meeting_detail', meetingId] });
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
@@ -419,7 +420,7 @@ const MeetingDetailView: React.FC<{
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      const { error } = await supabase.from('meetings').update({ status: newStatus }).eq('id', meetingId);
+      const { error } = await fromTable('meetings').update({ status: newStatus } as never).eq('id' as never, meetingId);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['meeting_detail', meetingId] });
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
@@ -604,7 +605,7 @@ const MeetingDetailView: React.FC<{
           )}
           <Btn variant="primary" onClick={async () => {
             try {
-              const { error } = await supabase.from('meetings').update({ video_conference_url: meetingLink || null }).eq('id', meetingId);
+              const { error } = await fromTable('meetings').update({ video_conference_url: meetingLink || null } as never).eq('id' as never, meetingId);
               if (error) throw error;
               queryClient.invalidateQueries({ queryKey: ['meeting_detail', meetingId] });
               toast.success('Meeting link saved');
@@ -679,8 +680,13 @@ const MeetingDetailView: React.FC<{
                     <td style={{ ...detailTdStyle, borderBottom: rowBorder, color: colors.textTertiary, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.notes ?? '-'}</td>
                     <td style={{ ...detailTdStyle, borderBottom: rowBorder }}>
                       <button
-                        onClick={() => {
-                          if (!window.confirm(`Delete agenda item "${item.title}"?`)) return;
+                        onClick={async () => {
+                          const ok = await confirmDeleteAgenda({
+                            title: 'Delete agenda item?',
+                            description: `"${item.title}" — meeting minutes export will reflect the updated agenda.`,
+                            destructiveLabel: 'Delete agenda item',
+                          });
+                          if (!ok) return;
                           deleteAgendaItem.mutate({ id: item.id, meetingId });
                         }}
                         style={{
@@ -1000,6 +1006,7 @@ const MeetingDetailView: React.FC<{
           </div>
         </Modal>
       )}
+      {deleteAgendaDialog}
     </div>
   );
 };
@@ -1105,7 +1112,7 @@ const MeetingCard: React.FC<{
       style={{
         background: colors.surfaceRaised,
         borderRadius: borderRadius.xl,
-        boxShadow: hovered ? shadows.hover : shadows.card,
+        boxShadow: hovered ? shadows.cardHover : shadows.card,
         padding: spacing.xl,
         display: 'flex',
         alignItems: 'flex-start',
@@ -1229,7 +1236,7 @@ export const Meetings: React.FC = () => {
 
   const updateMeetingMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
-      const { data, error } = await supabase.from('meetings').update(updates).eq('id', id).select().single();
+      const { data, error } = await fromTable('meetings').update(updates as never).eq('id' as never, id).select().single();
       if (error) throw error;
       return data;
     },
@@ -1264,9 +1271,16 @@ export const Meetings: React.FC = () => {
     });
   };
 
+  const { confirm: confirmDeleteMeeting, dialog: deleteMeetingDialog } = useConfirm();
+
   const handleDeleteMeeting = async (meeting: MeetingListItem) => {
     if (!projectId) return;
-    if (!window.confirm(`Delete "${meeting.title}"? This cannot be undone.`)) return;
+    const ok = await confirmDeleteMeeting({
+      title: 'Delete meeting?',
+      description: `"${meeting.title}" — meeting minutes, agenda, attendance, and action items will be removed. Action items in flight on other entities are preserved.`,
+      destructiveLabel: 'Delete meeting',
+    });
+    if (!ok) return;
     try {
       await deleteMeeting.mutateAsync({ id: String(meeting.id), projectId });
       await refetch();
@@ -1289,15 +1303,7 @@ export const Meetings: React.FC = () => {
   }));
 
   if (!projectId) {
-    return (
-      <PageContainer title="Meetings">
-        <EmptyState
-          icon={<Calendar size={32} color={colors.textTertiary} />}
-          title="No project selected"
-          description="Select a project from the sidebar to view meetings."
-        />
-      </PageContainer>
-    );
+    return <ProjectGate />;
   }
 
   if (isPending) return <MeetingsSkeleton />;
@@ -1325,9 +1331,16 @@ export const Meetings: React.FC = () => {
   const pastMeetings = allMeetings.filter((m) => ['completed', 'closed', 'cancelled'].includes(m.status));
   const displayedMeetings = activeTab === 'upcoming' ? upcomingMeetings : pastMeetings;
 
-  const allActionItems: ActionItem[] = (actionItemsData ?? []).map((ai) => {
-    const meetings = (ai as Record<string, unknown>).meetings as { title?: string } | { title?: string }[] | null;
-    const meetingRef = Array.isArray(meetings) ? meetings[0] : meetings;
+  const allActionItems: ActionItem[] = (actionItemsData ?? []).map((row) => {
+    const ai = row as unknown as {
+      id: string;
+      description: string;
+      assigned_to: string | null;
+      due_date: string | null;
+      status: string;
+      meetings?: { title?: string } | { title?: string }[] | null;
+    };
+    const meetingRef = Array.isArray(ai.meetings) ? ai.meetings[0] : ai.meetings;
     return {
       id: ai.id,
       description: ai.description,
@@ -1663,7 +1676,7 @@ export const Meetings: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(groupedByAssignee).map(([assignee, items]) =>
+                    {Object.entries(groupedByAssignee).map(([, items]) =>
                       items.map((item, idx) => {
                         const daysOver = getDaysOverdue(item.dueDate);
                         const isOverdue = item.status === 'open' && daysOver > 0;
@@ -1677,10 +1690,15 @@ export const Meetings: React.FC = () => {
                             key={item.id}
                             style={{
                               transition: transitions.quick,
-                              background: isOverdue ? `${colors.statusCritical ?? colors.statusPending}06` : undefined,
+                              // 3px red rail across action items — same
+                              // visual grammar as RFIs / Submittals /
+                              // Punch / COs so the Conversation reads
+                              // as one consistent ball-in-court signal.
+                              background: isOverdue ? `${colors.statusCritical ?? colors.statusPending}08` : undefined,
+                              boxShadow: isOverdue ? `inset 3px 0 0 0 ${colors.statusCritical ?? colors.statusPending}` : undefined,
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = colors.surfaceHover; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isOverdue ? `${colors.statusCritical ?? colors.statusPending}06` : ''; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = isOverdue ? `${colors.statusCritical ?? colors.statusPending}08` : ''; }}
                           >
                             <td style={{ padding: `${spacing.md} ${spacing.lg}`, borderBottom: rowBorder, maxWidth: 320 }}>
                               <p style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, margin: 0, lineHeight: typography.lineHeight.normal }}>
@@ -1720,7 +1738,7 @@ export const Meetings: React.FC = () => {
                                     try {
                                       const { data: { user } } = await supabase.auth.getUser();
                                       if (!user) { toast.error('Not authenticated'); return; }
-                                      const { error } = await supabase.from('notifications').insert({
+                                      const { error } = await fromTable('notifications').insert({
                                         user_id: user.id,
                                         title: `Overdue: ${item.description}`,
                                         body: `Action item assigned to ${item.assignee} is ${daysOver} day${daysOver > 1 ? 's' : ''} overdue.`,
@@ -1728,7 +1746,7 @@ export const Meetings: React.FC = () => {
                                         entity_type: 'meeting_action_item',
                                         entity_id: item.id,
                                         project_id: projectId ?? null,
-                                      });
+                                      } as never);
                                       if (error) throw error;
                                       toast.success(`Reminder sent to ${item.assignee}`);
                                     } catch (err: unknown) {
@@ -1821,7 +1839,24 @@ export const Meetings: React.FC = () => {
               </div>
             );
           })}
-          <div style={{ display: 'flex', gap: spacing.sm, justifyContent: 'flex-end', marginTop: spacing.sm }}>
+          {/* Sticky action footer — keeps Cancel / Create from Template
+              visible without forcing the user to scroll past the
+              template list, which on iPhone clipped both buttons below
+              the modal fold. */}
+          <div style={{
+            position: 'sticky',
+            bottom: 0,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: spacing.sm,
+            justifyContent: 'flex-end',
+            marginTop: spacing.sm,
+            paddingTop: spacing.sm,
+            paddingBottom: spacing.xs,
+            backgroundColor: colors.surfaceRaised,
+            borderTop: `1px solid ${colors.borderSubtle}`,
+            zIndex: 1,
+          }}>
             <Btn variant="secondary" onClick={() => { setShowTemplates(false); setSelectedTemplate(null); }}>Cancel</Btn>
             <Btn
               variant="primary"
@@ -1865,6 +1900,7 @@ export const Meetings: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteMeetingDialog}
     </PageContainer>
   );
 };

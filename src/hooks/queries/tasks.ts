@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import type {
   Task,
@@ -14,15 +15,14 @@ export function useTasks(projectId: string | undefined, pagination?: PaginationP
     queryFn: async (): Promise<PaginatedResult<Task>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      const { data, error, count } = await supabase
-        .from('tasks')
+      const { data, error, count } = await fromTable('tasks')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
         .range(from, to)
       if (error) throw error
-      return { data: (data ?? []) as Task[], total: count ?? 0, page, pageSize }
+      return { data: (data ?? []) as unknown as Task[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })

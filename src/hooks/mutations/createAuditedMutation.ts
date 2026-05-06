@@ -22,12 +22,14 @@ import { syncManager } from '../../lib/syncManager'
 // ── Types ────────────────────────────────────────────────
 
 export class ValidationError extends Error {
-  constructor(public readonly fieldErrors: Record<string, string[]>) {
+  readonly fieldErrors: Record<string, string[]>
+  constructor(fieldErrors: Record<string, string[]>) {
     const summary = Object.entries(fieldErrors)
       .map(([field, msgs]) => `${field}: ${msgs[0]}`)
       .join(', ')
     super(`Validation failed: ${summary}`)
     this.name = 'ValidationError'
+    this.fieldErrors = fieldErrors
   }
 }
 
@@ -128,7 +130,7 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
       // Step 2: Validate input with Zod schema (if provided)
       if (config.schema) {
         const key = config.schemaKey || 'data'
-        const dataToValidate = (params as Record<string, unknown>)[key] ?? params
+        const dataToValidate = (params as unknown as Record<string, unknown>)[key] ?? params
         try {
           config.schema.parse(dataToValidate)
         } catch (err) {
@@ -206,7 +208,7 @@ export function useAuditedMutation<TParams, TResult>(config: AuditedMutationConf
     },
 
     // ── onError: Rollback + toast + Sentry ───────────
-    onError: (error, params, context) => {
+    onError: (error, _params, context) => {
       // Rollback optimistic update
       if (context && typeof context === 'object' && 'previousData' in context) {
         const ctx = context as { previousData: unknown; queryKey: unknown[] }

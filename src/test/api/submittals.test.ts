@@ -53,7 +53,7 @@ describe('Submittals query', () => {
     const { data, error, count } = await supabase
       .from('submittals')
       .select('*', { count: 'exact' })
-      .eq('project_id', PROJECT_ID)
+      .eq('project_id' as never, PROJECT_ID)
       .order('number', { ascending: false })
       .range(from, to)
 
@@ -74,7 +74,7 @@ describe('Submittals query', () => {
     const { data, count } = await supabase
       .from('submittals')
       .select('*', { count: 'exact' })
-      .eq('project_id', 'proj-empty')
+      .eq('project_id' as never, 'proj-empty')
       .order('number', { ascending: false })
       .range(0, 49)
 
@@ -95,7 +95,7 @@ describe('Submittals query', () => {
     const { data, error } = await supabase
       .from('submittals')
       .select('*', { count: 'exact' })
-      .eq('project_id', 'proj-broken')
+      .eq('project_id' as never, 'proj-broken')
       .order('number', { ascending: false })
       .range(0, 49)
 

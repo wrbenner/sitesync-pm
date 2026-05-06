@@ -2,6 +2,7 @@
 // Parses Oracle Primavera P6 .xer files (tab-delimited format) into schedule data.
 
 import { supabase } from '../../lib/supabase'
+import { fromTable, asRow } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -162,7 +163,8 @@ export const primaveraP6Provider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = asRow<{ config: Record<string, unknown> | null }>(data)
     const config = (integration?.config ?? {}) as Record<string, unknown>
     const projectId = config.projectId as string
 
@@ -208,14 +210,14 @@ export const primaveraP6Provider: IntegrationProvider = {
           const wbsName = wbsMap.get(activity.wbsId) ?? ''
           const phaseName = wbsName ? `${wbsName}: ${activity.activityName}` : activity.activityName
 
-          await supabase.from('schedule_phases').upsert({
+          await fromTable('schedule_phases').upsert({
             project_id: projectId,
             name: phaseName,
             start_date: activity.startDate ? activity.startDate.slice(0, 10) : null,
             end_date: activity.finishDate ? activity.finishDate.slice(0, 10) : null,
             percent_complete: activity.percentComplete,
             status: activity.status,
-          }, { onConflict: 'name,project_id' })
+          } as never, { onConflict: 'name,project_id' })
           synced++
         } catch {
           failed++
@@ -223,9 +225,9 @@ export const primaveraP6Provider: IntegrationProvider = {
       }
 
       // Clear pending import
-      await supabase.from('integrations').update({
+      await fromTable('integrations').update({
         config: { ...config, pendingImportXer: null, lastImportFile: new Date().toISOString() },
-      }).eq('id', integrationId)
+      } as never).eq('id' as never, integrationId)
 
     } catch (err) {
       errors.push(`XER parse error: ${(err as Error).message}`)
@@ -238,10 +240,11 @@ export const primaveraP6Provider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
     }
   },
 

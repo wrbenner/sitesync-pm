@@ -29,7 +29,7 @@ const pages = [
   { icon: Calendar, label: 'Meetings', path: '/meetings' },
   { icon: FileText, label: 'Files', path: '/files' },
   { icon: MessageCircle, label: 'Activity', path: '/activity' },
-  { icon: Zap, label: 'AI Copilot', path: '/copilot' },
+  { icon: Zap, label: 'Iris', path: '/copilot' },
   { icon: Camera, label: 'Field Capture', path: '/field-capture' },
   { icon: Eye, label: 'Vision', path: '/vision' },
   { icon: Clock, label: 'Time Machine', path: '/time-machine' },

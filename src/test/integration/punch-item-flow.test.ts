@@ -62,7 +62,7 @@ vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: true,
 }))
 
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 
 describe('Punch item end-to-end flow', () => {
   beforeEach(() => {
@@ -75,14 +75,13 @@ describe('Punch item end-to-end flow', () => {
   it('create → in_progress → resolved → verified', async () => {
     // 1. Create
     const input = punchItemFactory.build({ title: 'Sealant missing at window W-07' })
-    const createRes = await supabase
-      .from('punch_items')
-      .insert({ project_id: input.project_id, title: input.title, location: input.location, trade: input.trade })
+    const createRes = await fromTable('punch_items')
+      .insert({ project_id: input.project_id, title: input.title, location: input.location, trade: input.trade } as never)
       .select()
       .single()
-    const createdId = (createRes.data as Record<string, unknown>).id as string
+    const createdId = (createRes.data as unknown as Record<string, unknown>).id as string
     expect(createRes.data).toMatchObject({ id: 'pi-1', status: 'open' })
-    mockDetailRow(createRes.data as Record<string, unknown>)
+    mockDetailRow(createRes.data as unknown as Record<string, unknown>)
 
     // 2. Start work (open → in_progress)
     const actor = createActor(punchItemMachine)
@@ -91,10 +90,9 @@ describe('Punch item end-to-end flow', () => {
     actor.send({ type: 'START_WORK' })
     expect(actor.getSnapshot().value).toBe('in_progress')
 
-    const inProgressRes = await supabase
-      .from('punch_items')
-      .update({ status: 'in_progress' })
-      .eq('id', createdId)
+    const inProgressRes = await fromTable('punch_items')
+      .update({ status: 'in_progress' } as never)
+      .eq('id' as never, createdId)
       .select()
       .single()
     expect(inProgressRes.data).toMatchObject({ status: 'in_progress' })
@@ -102,26 +100,24 @@ describe('Punch item end-to-end flow', () => {
     // 3. Sub marks complete (in_progress → sub_complete, persisted as DB 'resolved')
     actor.send({ type: 'MARK_SUB_COMPLETE' })
     expect(actor.getSnapshot().value).toBe('sub_complete')
-    const resolvedRes = await supabase
-      .from('punch_items')
-      .update({ status: 'resolved', resolved_date: new Date().toISOString().slice(0, 10) })
-      .eq('id', createdId)
+    const resolvedRes = await fromTable('punch_items')
+      .update({ status: 'resolved', resolved_date: new Date().toISOString().slice(0, 10) } as never)
+      .eq('id' as never, createdId)
       .select()
       .single()
     expect(resolvedRes.data).toMatchObject({ status: 'resolved' })
-    expect((resolvedRes.data as Record<string, unknown>).resolved_date).toBeTruthy()
+    expect((resolvedRes.data as unknown as Record<string, unknown>).resolved_date).toBeTruthy()
 
     // 4. Verify (sub_complete → verified)
     actor.send({ type: 'VERIFY' })
     expect(actor.getSnapshot().value).toBe('verified')
-    const verifyRes = await supabase
-      .from('punch_items')
-      .update({ status: 'verified', verified_date: new Date().toISOString().slice(0, 10) })
-      .eq('id', createdId)
+    const verifyRes = await fromTable('punch_items')
+      .update({ status: 'verified', verified_date: new Date().toISOString().slice(0, 10) } as never)
+      .eq('id' as never, createdId)
       .select()
       .single()
     expect(verifyRes.data).toMatchObject({ status: 'verified' })
-    expect((verifyRes.data as Record<string, unknown>).verified_date).toBeTruthy()
+    expect((verifyRes.data as unknown as Record<string, unknown>).verified_date).toBeTruthy()
     actor.stop()
   })
 
@@ -138,7 +134,7 @@ describe('Punch item end-to-end flow', () => {
 
   it('insert accepts photos array', async () => {
     const payload = { project_id: 'p', title: 'T', photos: ['url1', 'url2'] }
-    const res = await supabase.from('punch_items').insert(payload).select().single()
-    expect((res.data as Record<string, unknown>).photos).toEqual(['url1', 'url2'])
+    const res = await fromTable('punch_items').insert(payload as never).select().single()
+    expect((res.data as unknown as Record<string, unknown>).photos).toEqual(['url1', 'url2'])
   })
 })

@@ -3,7 +3,7 @@
 // Animated score ring, clickable findings with severity indicators,
 // and metrics dashboard. Steve Jobs would approve of the clarity.
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, AlertTriangle, AlertCircle, Info, ChevronDown, ChevronRight, X, Activity, Link2, Zap, Target } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import type { HealthReport, HealthFinding, Severity } from '../../lib/scheduleHealth';
@@ -47,7 +47,7 @@ function gradeColor(grade: string): string {
 const ScoreRing: React.FC<{ score: number; grade: string; size?: number }> = ({ score, grade, size = 120 }) => {
   const [animatedScore, setAnimatedScore] = useState(0);
   const [animatedPct, setAnimatedPct] = useState(0);
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const startTime = Date.now();
@@ -304,7 +304,7 @@ export const ScheduleHealthPanel: React.FC<ScheduleHealthPanelProps> = ({
           fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.semibold,
           color: colors.textPrimary,
         }}>
-          Schedule Health
+          Schedule Logic Quality
         </span>
         <span style={{
           fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.bold,

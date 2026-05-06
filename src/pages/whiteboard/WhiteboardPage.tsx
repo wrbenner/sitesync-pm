@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { Plus, Save, CheckCircle } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 import { Whiteboard } from '../../components/shared/Whiteboard'
 import type { WhiteboardData } from '../../components/shared/Whiteboard'
 import { PageContainer, Btn, useToast } from '../../components/Primitives'
@@ -8,7 +8,7 @@ import {
   spacing,
   typography,
   borderRadius,
-  shadows,
+
   transitions,
   layout,
 } from '../../styles/theme'
@@ -23,7 +23,7 @@ interface SavedBoard {
 }
 
 function generateBoardId(): string {
-  return `board_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `board_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 const EMPTY_DATA: WhiteboardData = {
@@ -60,7 +60,7 @@ export const WhiteboardPage: React.FC = () => {
 
     // Store in localStorage
     try {
-      const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as SavedBoard[]
+      const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as unknown as SavedBoard[]
       const idx = existing.findIndex(b => b.id === boardId)
       if (idx >= 0) existing[idx] = saved
       else existing.push(saved)
@@ -69,8 +69,8 @@ export const WhiteboardPage: React.FC = () => {
       // Silently fail on storage quota
     }
 
-    if (toast?.showToast) {
-      toast.showToast('Board saved successfully', 'success')
+    if (toast?.addToast) {
+      toast.addToast('success', 'Board saved successfully')
     }
   }, [boardId, boardName, boardData, toast])
 

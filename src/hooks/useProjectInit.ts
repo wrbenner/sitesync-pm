@@ -4,12 +4,12 @@
 
 import { useEffect, useRef } from 'react';
 import { useProjects } from './queries';
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectStore } from '../stores/projectStore';
 
 export function useProjectInit() {
   const { data: projects, isLoading } = useProjects();
-  const activeProjectId = useProjectContext((s) => s.activeProjectId);
-  const setActiveProject = useProjectContext((s) => s.setActiveProject);
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const setActiveProject = useProjectStore((s) => s.setActiveProject);
 
   // Track what we've already synced so the effect is idempotent even when
   // React Query hands us a new array reference with identical content.
@@ -22,13 +22,13 @@ export function useProjectInit() {
     // Read the current store state inside the effect instead of subscribing
     // via a selector; that avoids the effect's own setState from feeding back
     // into its dependency array and re-triggering.
-    const { projects: storeProjects, activeProject: currentActive } = useProjectContext.getState();
+    const { projects: storeProjects, activeProject: currentActive } = useProjectStore.getState();
     const queryKey = projects.map((p) => p.id).sort().join('|');
     const storeKey = storeProjects.map((p) => p.id).sort().join('|');
 
     if (queryKey !== storeKey && queryKey !== lastSyncKeyRef.current) {
       lastSyncKeyRef.current = queryKey;
-      useProjectContext.setState({ projects });
+      useProjectStore.setState({ projects });
     }
 
     const activeStillExists = activeProjectId && projects.some((p) => p.id === activeProjectId);
@@ -40,7 +40,7 @@ export function useProjectInit() {
       }
     } else if (!currentActive) {
       const match = projects.find((p) => p.id === activeProjectId);
-      if (match) useProjectContext.setState({ activeProject: match });
+      if (match) useProjectStore.setState({ activeProject: match });
     }
   }, [projects, activeProjectId, setActiveProject]);
 

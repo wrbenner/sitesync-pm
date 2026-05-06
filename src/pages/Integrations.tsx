@@ -2,12 +2,13 @@ import React, { useMemo, useState } from 'react'
 import { Plug, Check, X, RefreshCw, Clock, AlertTriangle, Zap, Shield, History, Lock, Download } from 'lucide-react'
 import { ProcoreImportModal } from '../components/integrations/ProcoreImportModal'
 import { useProjectId } from '../hooks/useProjectId'
-import { useProjectContext } from '../stores/projectContextStore'
+import { useProjectStore } from '../stores/projectStore'
 import { PageContainer, Card, Btn, Skeleton, MetricBox } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { FormModal, FormBody, FormFooter, FormField, FormInput } from '../components/forms/FormPrimitives'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useOrganization } from '../hooks/useOrganization'
 import {
   useIntegrationConnections,
@@ -164,7 +165,7 @@ export const Integrations: React.FC = () => {
   const [detailConnection, setDetailConnection] = useState<IntegrationConnection | null>(null)
   const [procoreImportOpen, setProcoreImportOpen] = useState(false)
   const projectId = useProjectId()
-  const { activeProject } = useProjectContext()
+  const { activeProject } = useProjectStore()
 
   const connectedCount = (connectionsQuery.data ?? []).filter((c) => c.status === 'connected').length
   const pendingCount = (connectionsQuery.data ?? []).filter((c) => c.status === 'pending_auth').length
@@ -199,9 +200,16 @@ export const Integrations: React.FC = () => {
     await disconnect.mutateAsync({ id: conn.id, organizationId: orgId })
   }
 
+  const { confirm: confirmRevokeIntegration, dialog: revokeIntegrationDialog } = useConfirm()
+
   const handleRevoke = async (conn: IntegrationConnection) => {
     if (!orgId) return
-    if (!window.confirm(`Revoke ${PROVIDER_REGISTRY[conn.provider].name}? This marks the connection revoked.`)) return
+    const ok = await confirmRevokeIntegration({
+      title: `Revoke ${PROVIDER_REGISTRY[conn.provider].name}?`,
+      description: 'Sync jobs running against this integration will stop. Past sync history is preserved for audit.',
+      destructiveLabel: 'Revoke connection',
+    })
+    if (!ok) return
     await revoke.mutateAsync({ id: conn.id, organizationId: orgId })
   }
 
@@ -456,6 +464,7 @@ export const Integrations: React.FC = () => {
           targetProjectName={activeProject?.name}
         />
       )}
+      {revokeIntegrationDialog}
     </PageContainer>
   )
 }

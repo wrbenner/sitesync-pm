@@ -1,6 +1,7 @@
 // QuickBooks Online Integration: Sync budget items and change orders
 
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -64,20 +65,20 @@ export const quickbooksProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase
-      .from('integrations')
+    const { data: integration } = await fromTable('integrations')
       .select('config')
-      .eq('id', integrationId)
+      .eq('id' as never, integrationId)
       .single()
 
-    if (!integration?.config) {
+    const integrationRow = integration as unknown as { config?: Record<string, string> } | null
+    if (!integrationRow?.config) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Integration config not found'] }
       await logSyncResult(integrationId, result, direction)
       await updateIntegrationStatus(integrationId, 'error')
       return result
     }
 
-    const config = integration.config as Record<string, string>
+    const config = integrationRow.config
     let synced = 0
     let failed = 0
     const errors: string[] = []
@@ -86,13 +87,14 @@ export const quickbooksProvider: IntegrationProvider = {
     try {
       if (direction === 'export' || direction === 'bidirectional') {
         // Export approved change orders as journal entries
-        const { data: changeOrders } = await supabase
-          .from('change_orders')
+        const { data: changeOrders } = await fromTable('change_orders')
           .select('*')
-          .eq('status', 'approved')
+          .eq('status' as never, 'approved')
 
-        if (changeOrders) {
-          for (const co of changeOrders) {
+        type COSyncRow = { id?: string; amount?: number | null; title?: string | null; description?: string | null }
+        const coRows = (changeOrders ?? []) as unknown as COSyncRow[]
+        if (coRows.length > 0) {
+          for (const co of coRows) {
             try {
               // Create a journal entry in QuickBooks
               await qbApi(config.realmId, config.accessToken ?? '', 'POST', '/journalentry', {
@@ -123,14 +125,13 @@ export const quickbooksProvider: IntegrationProvider = {
               failed++
             }
           }
-          details.changeOrders = changeOrders.length
+          details.changeOrders = coRows.length
         }
 
         // Export budget items as accounts/classes
-        const { data: budgetItems } = await supabase.from('budget_items').select('*')
-        if (budgetItems) {
-          details.budgetItems = budgetItems.length
-        }
+        const { data: budgetItems } = await fromTable('budget_items').select('*')
+        const budgetRows = (budgetItems ?? []) as unknown as Array<Record<string, unknown>>
+        details.budgetItems = budgetRows.length
       }
 
       if (direction === 'import' || direction === 'bidirectional') {
@@ -157,11 +158,12 @@ export const quickbooksProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = data as unknown as { status?: string; last_sync?: string | null; error_log?: unknown } | null
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

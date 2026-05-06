@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { toast } from 'sonner'
 import type {
   PrequalificationRow,
@@ -45,13 +46,12 @@ export function useUpsertPrequalification() {
         license_numbers: input.licenseNumbers ?? null,
         notes: input.notes ?? null,
       }
-      const { data, error } = await supabase
-        .from('prequalifications')
-        .upsert(payload, { onConflict: 'project_id,company_id' })
+      const { data, error } = await fromTable('prequalifications')
+        .upsert(payload as never, { onConflict: 'project_id,company_id' })
         .select()
         .single()
       if (error) throw error
-      return data as PrequalificationRow
+      return data as unknown as PrequalificationRow
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({
@@ -82,8 +82,7 @@ export function useCreateCommunicationLog() {
       const { data: session } = await supabase.auth.getSession()
       const userId = session.session?.user?.id ?? null
 
-      const { data, error } = await supabase
-        .from('communication_logs')
+      const { data, error } = await fromTable('communication_logs')
         .insert({
           project_id: input.projectId,
           contact_id: input.contactId,
@@ -92,11 +91,11 @@ export function useCreateCommunicationLog() {
           summary: input.summary ?? '',
           occurred_at: input.occurredAt ?? new Date().toISOString(),
           logged_by: userId,
-        })
+        } as never)
         .select()
         .single()
       if (error) throw error
-      return data as CommunicationLogRow
+      return data as unknown as CommunicationLogRow
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({
@@ -118,10 +117,9 @@ export function useDeleteCommunicationLog() {
   const qc = useQueryClient()
   return useMutation<void, Error, { id: string; projectId: string }>({
     mutationFn: async ({ id }) => {
-      const { error } = await supabase
-        .from('communication_logs')
+      const { error } = await fromTable('communication_logs')
         .delete()
-        .eq('id', id)
+        .eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: (_data, variables) => {

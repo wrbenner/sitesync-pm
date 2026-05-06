@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { Database } from '../types/database'
 
 type DailyLogsRow = Database['public']['Tables']['daily_logs']['Row']
@@ -53,14 +54,13 @@ export function useDailyLogs(projectId: string) {
   const refetch = useCallback(async () => {
     try {
       setIsLoading(true)
-      const { data: rows, error: queryError } = await supabase
-        .from('daily_logs')
+      const { data: rows, error: queryError } = await fromTable('daily_logs')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('log_date', { ascending: false })
 
       if (queryError) throw queryError
-      setData((rows ?? []).map(mapRow))
+      setData(((rows ?? []) as unknown as Parameters<typeof mapRow>[0][]).map(mapRow))
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -117,25 +117,25 @@ export function useDailyLogs(projectId: string) {
         summary: fields.summary ?? null,
         created_by: user?.id ?? null,
       }
-      const { data: rows, error: insertError } = await supabase
-        .from('daily_logs')
-        .insert([insert])
+      const { data: rows, error: insertError } = await fromTable('daily_logs')
+        .insert([insert] as never)
         .select()
       if (insertError) throw insertError
-      return rows?.[0] ? mapRow(rows[0]) : null
+      const typed = (rows ?? []) as unknown as Parameters<typeof mapRow>[0][]
+      return typed[0] ? mapRow(typed[0]) : null
     },
     [projectId],
   )
 
   const update = useCallback(
     async (id: string, updates: Pick<DailyLogsUpdate, 'status'>) => {
-      const { data: rows, error: updateError } = await supabase
-        .from('daily_logs')
-        .update(updates)
-        .eq('id', id)
+      const { data: rows, error: updateError } = await fromTable('daily_logs')
+        .update(updates as never)
+        .eq('id' as never, id)
         .select()
       if (updateError) throw updateError
-      return rows?.[0] ? mapRow(rows[0]) : null
+      const typed = (rows ?? []) as unknown as Parameters<typeof mapRow>[0][]
+      return typed[0] ? mapRow(typed[0]) : null
     },
     [],
   )

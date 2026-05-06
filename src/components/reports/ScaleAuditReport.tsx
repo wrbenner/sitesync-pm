@@ -7,7 +7,8 @@
 
 import React from 'react'
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 export interface ScaleAuditRow {
   pairId: string
@@ -253,18 +254,19 @@ export async function generateScaleAuditReport(
   opts: ScaleAuditReportOptions = {},
 ): Promise<{ blob: Blob; filename: string; data: ScaleAuditReportData }> {
   const [projectRes, pairsRes, drawingsRes, classificationsRes] = await Promise.all([
-    supabase.from('projects').select('name, location').eq('id', projectId).maybeSingle(),
-    supabase.from('drawing_pairs').select('id, drawing_a_id, drawing_b_id').eq('project_id', projectId),
-    supabase.from('drawings').select('id, sheet_number').eq('project_id', projectId),
-    supabase.from('drawing_classifications').select('drawing_id, scale_text, scale_ratio').eq('project_id', projectId),
+    fromTable('projects').select('name, location').eq('id' as never, projectId).maybeSingle(),
+    fromTable('drawing_pairs').select('id, drawing_a_id, drawing_b_id').eq('project_id' as never, projectId),
+    fromTable('drawings').select('id, sheet_number').eq('project_id' as never, projectId),
+    fromTable('drawing_classifications').select('drawing_id, scale_text, scale_ratio').eq('project_id' as never, projectId),
   ])
 
-  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
-  const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
+  const projectRow = projectRes.data as unknown as { name: string | null; location: string | null } | null
+  const projectName = projectRow?.name ?? 'Project'
+  const projectAddress = projectRow?.location ?? undefined
 
-  const pairs: PairWithClassifications[] = (pairsRes.data ?? []) as PairWithClassifications[]
-  const drawings: DrawingForScale[] = (drawingsRes.data ?? []) as DrawingForScale[]
-  const classifications: ClassificationForScale[] = (classificationsRes.data ?? []) as ClassificationForScale[]
+  const pairs: PairWithClassifications[] = (pairsRes.data ?? []) as unknown as PairWithClassifications[]
+  const drawings: DrawingForScale[] = (drawingsRes.data ?? []) as unknown as DrawingForScale[]
+  const classifications: ClassificationForScale[] = (classificationsRes.data ?? []) as unknown as ClassificationForScale[]
 
   const drawingById = new Map(drawings.map((d) => [d.id, d]))
   const classByDrawing = new Map<string, ClassificationForScale>()

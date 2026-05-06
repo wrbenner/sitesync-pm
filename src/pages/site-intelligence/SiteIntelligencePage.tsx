@@ -20,7 +20,7 @@ import {
   type SiteIntelligenceData,
   type GeocodingResult,
   type NearbyAmenity,
-  type WeatherForecastDay,
+
 } from '../../services/siteIntelligenceService';
 
 import 'leaflet/dist/leaflet.css';

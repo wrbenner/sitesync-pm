@@ -45,4 +45,5 @@ const CreateRFIModal: React.FC<CreateRFIModalProps> = ({ open, onClose, onSubmit
   />
 )
 
+export { CreateRFIModal }
 export default CreateRFIModal

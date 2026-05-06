@@ -1,0 +1,54 @@
+name: Performance Budget
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  perf-budget:
+    runs-on: ubuntu-latest
+    env:
+      # Source the override signal via env to avoid injection from PR title /
+      # commit message into the run: shell. See:
+      # https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+      COMMIT_MSG: ${{ github.event.head_commit.message }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check ratchet override
+        id: override
+        run: |
+          if printf '%s' "$COMMIT_MSG$PR_TITLE" | grep -q "RATCHET_OVERRIDE=1"; then
+            echo "override=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::RATCHET_OVERRIDE=1 detected — performance budget assertions will not block this run."
+          else
+            echo "override=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Run virtualization audit
+        run: bun scripts/virtualization-audit.ts || true
+        # Non-blocking — informational only. Convert to a hard check (drop the
+        # `|| true`) once the existing offenders are migrated.
+
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: ./lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        continue-on-error: ${{ steps.override.outputs.override == 'true' }}
+
+      - name: Run perf unit tests
+        run: bun vitest run src/lib/perf src/lib/search

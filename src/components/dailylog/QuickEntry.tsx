@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Cloud, Users, Wrench, HardHat, ShieldCheck, UserPlus, FileText, ChevronLeft, ChevronRight, Save, Lock, Truck, AlertTriangle, Plus, Trash2, WifiOff } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions, zIndex, touchTarget } from '../../styles/theme';
 import type { WeatherData } from '../../lib/weather';
-import { useOfflineStore } from '../../services/offlineQueue';
+import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 
 type Section = 'weather' | 'crew' | 'equipment' | 'materials' | 'work' | 'safety' | 'visitors' | 'incidents' | 'notes';
 
@@ -101,7 +101,11 @@ RemoveBtn.displayName = 'RemoveBtn';
 // ── Main Component ───────────────────────────────────────
 
 export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, onSubmit, onClose }) => {
-  const pendingCount = useOfflineStore(s => s.pendingCount);
+  // Day 10/11: switched from useOfflineStore (deleted) to useOfflineStatus,
+  // which already wraps syncManager via useSyncExternalStore. Field name is
+  // `pendingChanges` (mutations queue) to disambiguate from `pendingCaptures`
+  // (photo queue) and `pendingAnnotations` (drawing markup queue).
+  const { pendingChanges: pendingCount } = useOfflineStatus();
   const [activeSection, setActiveSection] = useState(0);
   const [data, setData] = useState<QuickEntryData>({
     weather: initialWeather ?? null,
@@ -213,7 +217,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
               <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, textAlign: 'center' }}>
                 <span style={{ fontSize: spacing['12'] }}>{data.weather.icon}</span>
                 <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: `${spacing['2']} 0 0` }}>
-                  {data.weather.temp_high}F / {data.weather.temp_low}F
+                  H {data.weather.temp_high}° / L {data.weather.temp_low}°
                 </p>
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
                   {data.weather.conditions} · Wind {data.weather.wind_speed}

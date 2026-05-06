@@ -14,7 +14,7 @@ export const SignatureCapture: React.FC<SignatureCaptureProps> = ({ visible, sig
     <SignaturePad
       signerName={signerName}
       signerTitle={signerTitle}
-      onSign={onSign}
+      onSigned={() => { void onSign() }}
     />
   );
 };

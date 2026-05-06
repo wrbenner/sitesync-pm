@@ -356,7 +356,7 @@ export function calculate45LCredit(
 
   return {
     perUnit,
-    total: perUnit.reduce((sum, credit) => sum + credit, 0),
+    total: perUnit.reduce<number>((sum, credit) => sum + credit, 0),
   }
 }
 

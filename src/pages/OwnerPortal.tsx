@@ -356,7 +356,7 @@ export const OwnerPortal: React.FC = () => {
               Schedule Milestones
             </h2>
           </div>
-          <MilestoneTimeline phases={(phases ?? []) as SchedulePhase[]} />
+          <MilestoneTimeline phases={(phases ?? []) as unknown as SchedulePhase[]} />
         </div>
 
         {/* Composer — owners only */}

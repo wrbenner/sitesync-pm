@@ -29,7 +29,7 @@ import {
   borderRadius,
   shadows,
   transitions,
-  zIndex,
+
 } from '../../styles/theme'
 
 // ── Types ─────────────────────────────────────────────────
@@ -97,7 +97,7 @@ const LINKED_ITEM_COLORS: Record<string, { bg: string; border: string }> = {
 }
 
 function generateId(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 // ── Canvas Drawing Helpers ────────────────────────────────
@@ -390,7 +390,7 @@ function drawRectangle(
 }
 
 function drawAnnotation(ctx: CanvasRenderingContext2D, ann: DrawingAnnotation) {
-  const d = ann.data as Record<string, unknown>
+  const d = ann.data as unknown as Record<string, unknown>
   switch (ann.type) {
     case 'cloud':
       drawRevisionCloud(
@@ -445,7 +445,7 @@ function drawAnnotation(ctx: CanvasRenderingContext2D, ann: DrawingAnnotation) {
 // ── Highlight selected annotation ─────────────────────────
 
 function drawSelectionHighlight(ctx: CanvasRenderingContext2D, ann: DrawingAnnotation) {
-  const d = ann.data as Record<string, unknown>
+  const d = ann.data as unknown as Record<string, unknown>
   ctx.save()
   ctx.strokeStyle = '#3A7BC8'
   ctx.lineWidth = 1.5
@@ -502,7 +502,7 @@ function drawSelectionHighlight(ctx: CanvasRenderingContext2D, ann: DrawingAnnot
 // ── Hit Testing ───────────────────────────────────────────
 
 function hitTest(ann: DrawingAnnotation, px: number, py: number, tolerance: number = 8): boolean {
-  const d = ann.data as Record<string, unknown>
+  const d = ann.data as unknown as Record<string, unknown>
   switch (ann.type) {
     case 'cloud':
     case 'rectangle': {
@@ -897,7 +897,7 @@ export default function DrawingMarkup({
   )
 
   const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
+    (_e: React.PointerEvent) => {
       if (isPanningRef.current) {
         isPanningRef.current = false
         return

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -66,20 +67,20 @@ function usePageContext(): PageContext {
     ;(async () => {
       try {
         if (path === 'drawings') {
-          const { count: sheets } = await supabase.from('drawing_classifications')
-            .select('*', { count: 'exact', head: true }).eq('project_id', projectId)
-          const { count: pairs } = await supabase.from('drawing_pairs')
-            .select('*', { count: 'exact', head: true }).eq('project_id', projectId)
+          const { count: sheets } = await fromTable('drawing_classifications')
+            .select('*', { count: 'exact', head: true }).eq('project_id' as never, projectId)
+          const { count: pairs } = await fromTable('drawing_pairs')
+            .select('*', { count: 'exact', head: true }).eq('project_id' as never, projectId)
           setStats({ sheets: sheets ?? 0, pairs: pairs ?? 0 })
         } else if (path === 'rfis') {
-          const { count: open } = await supabase.from('rfis')
+          const { count: open } = await fromTable('rfis')
             .select('*', { count: 'exact', head: true })
-            .eq('project_id', projectId).eq('status', 'open')
+            .eq('project_id' as never, projectId).eq('status' as never, 'open')
           setStats({ openRfis: open ?? 0 })
         } else if (path === 'tasks') {
-          const { count: open } = await supabase.from('tasks')
+          const { count: open } = await fromTable('tasks')
             .select('*', { count: 'exact', head: true })
-            .eq('project_id', projectId).neq('status', 'done')
+            .eq('project_id' as never, projectId).neq('status' as never, 'done')
           setStats({ openTasks: open ?? 0 })
         }
       } catch (err) {
@@ -277,7 +278,7 @@ export function AICommandCenter() {
 
   const contextPreamble = useMemo(() => {
     const parts: string[] = [`Current page: ${ctx.label}.`]
-    if (Object.keys(ctx.stats).length) {
+    if (ctx.stats && Object.keys(ctx.stats).length) {
       parts.push(`Page stats: ${JSON.stringify(ctx.stats)}.`)
     }
     if (projectId) parts.push(`Project: ${projectId}.`)
@@ -420,7 +421,7 @@ export function AICommandCenter() {
             AI Command Center
           </div>
           <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-            {ctx.label}{Object.entries(ctx.stats).map(([k, v]) => ` · ${k}: ${v}`).join('')}
+            {ctx.label}{Object.entries(ctx.stats ?? {}).map(([k, v]) => ` · ${k}: ${v}`).join('')}
           </div>
         </div>
         <button aria-label="Dock right" onClick={() => setDock('right')} style={iconBtn(dock === 'right')}>

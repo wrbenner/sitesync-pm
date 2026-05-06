@@ -12,6 +12,11 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 import { type FileItem, getGradient, getApprovalStatus, getFileTypeIcon, formatBytes } from './fileTypes';
 
+// Hoisted to module scope: createColumnHelper has no runtime dependencies, so a
+// stable identity here keeps the columns useMemo deps as []. Otherwise a fresh
+// helper object every render would invalidate the memo each pass.
+const fileGridColumnHelper = createColumnHelper<FileItem>();
+
 type ViewMode = 'list' | 'grid';
 
 interface FileGridProps {
@@ -121,8 +126,12 @@ export const FileGrid: React.FC<FileGridProps> = ({
       variant: 'secondary' as const,
       onClick: async (ids: string[]) => {
         const links = ids.map((id) => `${window.location.origin}/files/${id}`).join('\n');
-        await navigator.clipboard.writeText(links).catch(() => {});
-        addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        try {
+          await navigator.clipboard.writeText(links);
+          addToast('success', `Copied ${ids.length} link${ids.length !== 1 ? 's' : ''} to clipboard`);
+        } catch {
+          addToast('error', 'Could not access clipboard. Tap a link to copy manually.');
+        }
       },
     },
   ], [files, addToast]);
@@ -152,10 +161,9 @@ export const FileGrid: React.FC<FileGridProps> = ({
     if (row && listRef.current.contains(document.activeElement)) row.focus({ preventScroll: false });
   }, [focusedIndex, viewMode]);
 
-  // Column helper for list view
-  const columnHelper = createColumnHelper<FileItem>();
+  // Column helper for list view (see fileGridColumnHelper at module scope)
   const fileTableColumns = React.useMemo(() => [
-    columnHelper.accessor('name', {
+    fileGridColumnHelper.accessor('name', {
       header: 'Name',
       cell: (info) => {
         const file = info.row.original;
@@ -167,12 +175,12 @@ export const FileGrid: React.FC<FileGridProps> = ({
         );
       },
     }),
-    columnHelper.accessor('type', {
+    fileGridColumnHelper.accessor('type', {
       header: 'Type',
       size: 100,
       cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textTransform: 'capitalize' }}>{info.getValue()}</span>,
     }),
-    columnHelper.display({
+    fileGridColumnHelper.display({
       id: 'sizeCount',
       header: 'Size / Count',
       size: 150,
@@ -188,7 +196,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
         );
       },
     }),
-    columnHelper.display({
+    fileGridColumnHelper.display({
       id: 'modified',
       header: 'Modified',
       size: 120,
@@ -198,7 +206,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
         return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>{date || '—'}</span>;
       },
     }),
-    columnHelper.display({
+    fileGridColumnHelper.display({
       id: 'status',
       header: 'Status',
       size: 110,
@@ -371,7 +379,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
               <EmptyState icon={FileText} title="No files uploaded yet" description="Upload project documents, drawings, and photos to keep everything organized in one place." action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }} />
             ) : (
               <div ref={listRef} tabIndex={0} onKeyDown={handleKeyDown} role="list" aria-label="Project files" style={{ outline: 'none' }}>
-                <DataTable data={displayFiles} columns={fileTableColumns} enableSorting selectable onSelectionChange={setSelectedIds} onRowClick={handleFileClick} emptyMessage={searchQuery ? 'No files match your search' : 'This folder is empty'} />
+                <DataTable data={displayFiles} columns={fileTableColumns as never} enableSorting selectable onSelectionChange={setSelectedIds} onRowClick={handleFileClick} emptyMessage={searchQuery ? 'No files match your search' : 'This folder is empty'} />
               </div>
             )}
           </>

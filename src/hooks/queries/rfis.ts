@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { PaginationParams, PaginatedResult } from '../../types/api'
 import type {
   RFI,
@@ -15,14 +16,13 @@ export function useRFIs(projectId: string | undefined, pagination?: PaginationPa
     queryFn: async (): Promise<PaginatedResult<RFI>> => {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      const { data, error, count } = await supabase
-        .from('rfis')
+      const { data, error, count } = await fromTable('rfis')
         .select('*', { count: 'exact' })
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('number', { ascending: false })
         .range(from, to)
       if (error) throw error
-      return { data: (data ?? []) as RFI[], total: count ?? 0, page, pageSize }
+      return { data: (data ?? []) as unknown as RFI[], total: count ?? 0, page, pageSize }
     },
     enabled: !!projectId,
   })
@@ -33,18 +33,17 @@ export function useRFI(id: string | undefined) {
     queryKey: ['rfis', 'detail', id],
     queryFn: async () => {
       const [rfiResult, responsesResult] = await Promise.all([
-        supabase.from('rfis').select('*').eq('id', id!).single(),
-        supabase
-          .from('rfi_responses')
+        fromTable('rfis').select('*').eq('id' as never, id!).single(),
+        fromTable('rfi_responses')
           .select('*')
-          .eq('rfi_id', id!)
+          .eq('rfi_id' as never, id!)
           .order('created_at', { ascending: true }),
       ])
       if (rfiResult.error) throw rfiResult.error
       if (responsesResult.error) throw responsesResult.error
       return {
         ...(rfiResult.data as RFI),
-        responses: responsesResult.data as RFIResponse[],
+        responses: responsesResult.data as unknown as RFIResponse[],
       }
     },
     enabled: !!id,

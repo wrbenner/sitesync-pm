@@ -1,14 +1,15 @@
-import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
+
 import { useAuditedMutation } from './createAuditedMutation'
 import {
+
   taskSchema,
 } from '../../components/forms/schemas'
 import { validateTaskStatusTransition } from './state-machine-validation-helpers'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-// Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// Dynamic table access helper. `as never` collapses the table-name union
+// so the strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Tasks ─────────────────────────────────────────────────
 
@@ -16,14 +17,14 @@ export function useCreateTask() {
   return useAuditedMutation<{ data: Record<string, unknown>; projectId: string }, { data: Record<string, unknown>; projectId: string }>({
     permission: 'tasks.create',
     schema: taskSchema,
-    action: 'create_task',
+    action: 'create',
     entityType: 'task',
     getEntityTitle: (p) => (p.data.title as string) || undefined,
-    getNewValue: (p) => p.data,
+    getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('tasks').insert(params.data).select().single()
+      const { data, error } = await from('tasks').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'task_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -31,8 +32,8 @@ export function useCreateTask() {
     offlineQueue: {
       table: 'tasks',
       operation: 'insert',
-      getData: (p) => ({ ...(p.data as Record<string, unknown>), project_id: p.projectId }),
-      getStubResult: (p) => ({ data: { ...(p.data as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
+      getData: (p) => ({ ...(p.data as unknown as Record<string, unknown>), project_id: p.projectId }),
+      getStubResult: (p) => ({ data: { ...(p.data as unknown as Record<string, unknown>), id: `temp-${Date.now()}` }, projectId: p.projectId }),
     },
   })
 }
@@ -42,15 +43,15 @@ export function useUpdateTask() {
     permission: 'tasks.edit',
     schema: taskSchema.partial(),
     schemaKey: 'updates',
-    action: 'update_task',
+    action: 'update',
     entityType: 'task',
     getEntityId: (p) => p.id,
-    getNewValue: (p) => p.updates,
+    getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
       if (typeof updates.status === 'string') {
         await validateTaskStatusTransition(id, projectId, updates.status)
       }
-      const { error } = await from('tasks').update(updates).eq('id', id).eq('project_id', projectId)
+      const { error } = await from('tasks').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
     },
@@ -73,7 +74,7 @@ export function useDeleteTask() {
     entityType: 'task',
     getEntityId: (p) => p.id,
     mutationFn: async ({ id, projectId }) => {
-      const { error } = await from('tasks').delete().eq('id', id).eq('project_id', projectId)
+      const { error } = await from('tasks').delete().eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },

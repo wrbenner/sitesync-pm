@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, Link2, AlertTriangle, Users, Clock } from 'lucide-react';
-import { colors, spacing, typography, borderRadius, shadows, zIndex, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, zIndex, transitions } from '../../styles/theme';
 import { Btn } from '../Primitives';
-import { supabase } from '../../lib/supabase';
-import { useProjectContext } from '../../stores/projectContextStore';
+
+import { fromTable } from '../../lib/db/queries'
+import { useProjectStore } from '../../stores/projectStore';
 
 /* ── Types ────────────────────────────────────────────────── */
 
-interface PhaseData {
+export interface PhaseData {
   name: string;
   start_date: string;
   end_date: string;
@@ -93,14 +94,14 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
   const [existingPhases, setExistingPhases] = useState<ExistingPhase[]>([]);
   const [crews, setCrews] = useState<CrewOption[]>([]);
 
-  const { activeProject } = useProjectContext();
+  const { activeProject } = useProjectStore();
 
   useEffect(() => {
     if (!open || !activeProject?.id) return;
     (async () => {
       const [phasesRes, crewsRes] = await Promise.all([
-        supabase.from('schedule_phases').select('id, name').eq('project_id', activeProject.id).order('start_date'),
-        supabase.from('crews').select('id, name').eq('project_id', activeProject.id).order('name'),
+        fromTable('schedule_phases').select('id, name').eq('project_id' as never, activeProject.id).order('start_date'),
+        fromTable('crews').select('id, name').eq('project_id' as never, activeProject.id).order('name'),
       ]);
       if (phasesRes.data) setExistingPhases(phasesRes.data);
       if (crewsRes.data) setCrews(crewsRes.data);
@@ -154,7 +155,7 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
   };
 
   const progressColor = percentComplete === 100
-    ? colors.statusApproved
+    ? colors.statusActive
     : percentComplete > 0
     ? colors.primaryOrange
     : colors.borderDefault;

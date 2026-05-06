@@ -24,6 +24,9 @@ const TYPE_LABELS: Record<AnnotationShape['type'], string> = {
   measure: 'Measure',
   highlight: 'Highlight',
   draw: 'Draw',
+  path: 'Path',
+  area: 'Area',
+  count: 'Count',
 };
 
 export const AnnotationListPanel: React.FC<AnnotationListPanelProps> = ({

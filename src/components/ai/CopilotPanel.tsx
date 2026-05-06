@@ -6,7 +6,7 @@ import {
 import { colors, spacing, typography, borderRadius, transitions, shadows } from '../../styles/theme'
 import { useCopilotStore } from '../../stores/copilotStore'
 import { useAgentOrchestrator } from '../../stores/agentOrchestrator'
-import { useProjectContext } from '../../stores/projectContextStore'
+import { useProjectStore } from '../../stores/projectStore'
 import { useMultiAgentChat } from '../../hooks/useMultiAgentChat'
 import { supabase } from '../../lib/supabase'
 import { AgentMessage, AgentTypingIndicator, AGENT_COLORS } from './AgentMessage'
@@ -97,7 +97,7 @@ const PanelMessageRenderer = memo<{
     {message.toolCalls && message.toolCalls.length > 0 && (() => {
       const uiBlocks = message.generativeBlocks || []
       const plainToolCalls = message.toolCalls.filter(
-        (tc) => !(tc.result as Record<string, unknown>).ui_type,
+        (tc) => !(tc.result as unknown as Record<string, unknown>).ui_type,
       )
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'], marginTop: spacing['2'], marginLeft: '40px' }}>
@@ -107,7 +107,7 @@ const PanelMessageRenderer = memo<{
           {uiBlocks.map((block, i) => (
             <GenerativeUIRenderer
               key={`ui-${i}`}
-              block={block as Record<string, unknown>}
+              block={block as never}
               onAction={(action, data) => onSend(`Execute: ${action} with ${JSON.stringify(data)}`)}
             />
           ))}
@@ -119,7 +119,7 @@ const PanelMessageRenderer = memo<{
         {message.generativeBlocks.map((block, i) => (
           <GenerativeUIRenderer
             key={`gen-${i}`}
-            block={block as Record<string, unknown>}
+            block={block as never}
             onAction={(action, data) => onSend(`Execute: ${action} with ${JSON.stringify(data)}`)}
           />
         ))}
@@ -133,7 +133,7 @@ PanelMessageRenderer.displayName = 'PanelMessageRenderer'
 
 export const CopilotPanel: React.FC = () => {
   const { isOpen, closeCopilot, currentPageContext } = useCopilotStore()
-  const { activeProjectId } = useProjectContext()
+  const { activeProjectId } = useProjectStore()
   const { addCoordinatorMessage } = useAgentOrchestrator()
 
   const {
@@ -205,8 +205,8 @@ export const CopilotPanel: React.FC = () => {
         const { data, error } = await supabase
           .from('ai_conversations')
           .select('id, conversation_topic, started_at, message_count')
-          .eq('project_id', activeProjectId)
-          .eq('user_id', userId)
+          .eq('project_id' as never, activeProjectId)
+          .eq('user_id' as never, userId)
           .order('started_at', { ascending: false })
           .limit(10)
         if (error) throw error
@@ -525,7 +525,7 @@ export const CopilotPanel: React.FC = () => {
                   {[
                     { icon: <Clipboard size={14} />, label: 'Copy to Clipboard', action: () => {
                       const text = messages
-                        .map((m) => `${m.role === 'user' ? 'You' : (m.agentDomain ? SPECIALIST_AGENTS[m.agentDomain].shortName : 'AI Copilot')}: ${m.content}`)
+                        .map((m) => `${m.role === 'user' ? 'You' : (m.agentDomain ? SPECIALIST_AGENTS[m.agentDomain].shortName : 'Iris')}: ${m.content}`)
                         .join('\n\n')
                       if (!text) { toast.error('No messages to copy'); return }
                       navigator.clipboard.writeText(text).then(
@@ -804,7 +804,7 @@ export const CopilotPanel: React.FC = () => {
               aria-label={
                 msg.role === 'user'
                   ? 'Message from You'
-                  : `Message from ${msg.agentDomain ? SPECIALIST_AGENTS[msg.agentDomain].shortName : 'AI Copilot'}`
+                  : `Message from ${msg.agentDomain ? SPECIALIST_AGENTS[msg.agentDomain].shortName : 'Iris'}`
               }
             >
               <PanelMessageRenderer message={msg} onSend={handleSendMessage} />

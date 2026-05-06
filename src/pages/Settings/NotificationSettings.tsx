@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabase';
+
+import { fromTable } from '../../lib/db/queries'
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
@@ -200,14 +201,16 @@ const NotificationSettings: React.FC = () => {
     }
 
     const fetchPreferences = async () => {
-      const { data, error } = await supabase
-        .from('notification_preferences')
+      // .maybeSingle() returns null without error when no row exists. New
+      // users haven't had defaults written yet — we want to fall through
+      // to DEFAULT_PREFERENCES instead of surfacing a 406 in the console.
+      const { data, error } = await fromTable('notification_preferences')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id' as never, user.id)
+        .maybeSingle();
 
       if (!error && data) {
-        const row = data as Record<string, unknown>;
+        const row = data as unknown as Record<string, unknown>;
         const updated: Record<string, PreferenceValue> = { ...DEFAULT_PREFERENCES };
         for (const trigger of TRIGGER_CONFIG) {
           const val = row[trigger.key];
@@ -240,8 +243,8 @@ const NotificationSettings: React.FC = () => {
       const previous = preferences[triggerKey];
       setPreferences((prev) => ({ ...prev, [triggerKey]: value }));
 
-      const { error } = await supabase.from('notification_preferences').upsert(
-        { user_id: user.id, [triggerKey]: value },
+      const { error } = await fromTable('notification_preferences').upsert(
+        { user_id: user.id, [triggerKey]: value } as never,
         { onConflict: 'user_id' },
       );
 
@@ -260,7 +263,7 @@ const NotificationSettings: React.FC = () => {
     const next = !digestEnabled;
     setDigestEnabled(next);
 
-    const { error } = await supabase.from('notification_preferences').upsert(
+    const { error } = await fromTable('notification_preferences').upsert(
       { user_id: user.id, daily_digest: next },
       { onConflict: 'user_id' },
     );
@@ -276,7 +279,7 @@ const NotificationSettings: React.FC = () => {
       if (!user) return;
       setDigestTime(time);
 
-      const { error } = await supabase.from('notification_preferences').upsert(
+      const { error } = await fromTable('notification_preferences').upsert(
         { user_id: user.id, digest_time: time },
         { onConflict: 'user_id' },
       );
@@ -294,8 +297,8 @@ const NotificationSettings: React.FC = () => {
       const previous = timezone;
       setTimezone(tz);
 
-      const { error } = await supabase.from('notification_preferences').upsert(
-        { user_id: user.id, timezone: tz },
+      const { error } = await fromTable('notification_preferences').upsert(
+        { user_id: user.id, timezone: tz } as never,
         { onConflict: 'user_id' },
       );
 

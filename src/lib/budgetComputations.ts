@@ -464,7 +464,7 @@ export interface SCurveDataPoint {
  */
 export function generateSCurveData(
   cashFlow: CashFlowSummary,
-  totalBudget: number,
+  _totalBudget: number,
 ): { planned: number[]; actual: number[]; labels: string[] } {
   const months = cashFlow.monthlyData
   if (months.length === 0) {

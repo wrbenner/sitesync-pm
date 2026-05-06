@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 export interface ZipUploadJob {
   id: string
@@ -42,15 +43,14 @@ async function uploadZipToStorage(args: StartUploadArgs): Promise<StartUploadRes
   // Create a tracking job row (optional — table may not exist in every env).
   let jobId: string | null = null
   try {
-    const { data, error } = await supabase
-      .from('zip_upload_jobs')
+    const { data, error } = await fromTable('zip_upload_jobs')
       .insert({
         project_id: args.projectId,
         status: 'queued',
         progress_pct: 0,
         storage_path: storagePath,
         original_name: args.file.name,
-      })
+      } as never)
       .select('id')
       .single()
     if (!error && data) jobId = (data as { id: string }).id
@@ -70,7 +70,7 @@ export function useZipUpload() {
 
   const clearPoll = () => {
     if (pollTimerRef.current) {
-      window.clearInterval(pollTimerRef.current)
+      clearInterval(pollTimerRef.current)
       pollTimerRef.current = null
     }
   }
@@ -79,17 +79,16 @@ export function useZipUpload() {
 
   const startPolling = useCallback((jobId: string) => {
     clearPoll()
-    pollTimerRef.current = window.setInterval(async () => {
+    pollTimerRef.current = setInterval(async () => {
       try {
-        const { data, error } = await supabase
-          .from('zip_upload_jobs')
+        const { data, error } = await fromTable('zip_upload_jobs')
           .select(
             'id, status, progress_pct, total_files, processed_files, failed_files, error',
           )
-          .eq('id', jobId)
+          .eq('id' as never, jobId)
           .single()
         if (error) return
-        const j = data as ZipUploadJob
+        const j = data as unknown as ZipUploadJob
         setJob(j)
         if (j.status === 'completed' || j.status === 'failed') {
           clearPoll()

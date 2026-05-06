@@ -185,8 +185,13 @@ export function VirtualDataTable<T>({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorting]);
 
+  // Capture virtualizer via ref so the scroll effect doesn't re-fire on every
+  // render (useVirtualizer returns a fresh wrapper object each call). We only
+  // want to scroll when focusedIndex changes.
+  const virtualizerRef = useRef(virtualizer);
+  virtualizerRef.current = virtualizer;
   useEffect(() => {
-    virtualizer.scrollToIndex(focusedIndex, { align: 'auto' });
+    virtualizerRef.current.scrollToIndex(focusedIndex, { align: 'auto' });
     if (gridRef.current?.contains(document.activeElement)) {
       requestAnimationFrame(() => {
         const row = gridRef.current?.querySelector<HTMLElement>(`[data-row-index="${focusedIndex}"]`);

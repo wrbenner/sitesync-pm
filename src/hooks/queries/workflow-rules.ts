@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+import { fromTable } from '../../lib/db/queries'
+
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Workflow Rules ─────────────────────────────────────
 
@@ -40,7 +40,7 @@ export function useWorkflowRules(projectId: string | undefined) {
     queryFn: async (): Promise<WorkflowRule[]> => {
       const { data, error } = await from('workflow_rules')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return data as unknown as WorkflowRule[]
@@ -65,7 +65,7 @@ export function useCreateWorkflowRule() {
   return useMutation({
     mutationFn: async (input: CreateWorkflowRuleInput) => {
       const { data, error } = await from('workflow_rules')
-        .insert(input)
+        .insert(input as never)
         .select()
         .single()
       if (error) throw error
@@ -88,8 +88,8 @@ export function useUpdateWorkflowRule() {
   return useMutation({
     mutationFn: async ({ id, updates }: UpdateWorkflowRuleInput) => {
       const { data, error } = await from('workflow_rules')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -106,8 +106,8 @@ export function useToggleWorkflowRule() {
   return useMutation({
     mutationFn: async ({ id, is_active, projectId }: { id: string; is_active: boolean; projectId: string }) => {
       const { data, error } = await from('workflow_rules')
-        .update({ is_active, updated_at: new Date().toISOString() })
-        .eq('id', id)
+        .update({ is_active, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -123,7 +123,7 @@ export function useDeleteWorkflowRule() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await from('workflow_rules').delete().eq('id', id)
+      const { error } = await from('workflow_rules').delete().eq('id' as never, id)
       if (error) throw error
       return { projectId }
     },

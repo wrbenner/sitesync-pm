@@ -1,11 +1,12 @@
-import { supabase } from '../../lib/supabase'
+
 import { useAuditedMutation } from './createAuditedMutation'
 import { contactSchema } from '../../components/forms/schemas'
 
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
+import { fromTable } from '../../lib/db/queries'
+
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Directory Contacts ────────────────────────────────────
 
@@ -18,9 +19,9 @@ export function useCreateDirectoryContact() {
     getEntityTitle: (p) => (p.data.name as string) || undefined,
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const { data, error } = await from('directory_contacts').insert(params.data).select().single()
+      const { data, error } = await from('directory_contacts').insert(params.data as never).select().single()
       if (error) throw error
-      return { data, projectId: params.projectId }
+      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'directory_contact_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
@@ -38,7 +39,7 @@ export function useUpdateDirectoryContact() {
     getEntityId: (p) => p.id,
     getAfterState: (p) => p.updates,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').update(params.updates).eq('id', params.id).eq('project_id', params.projectId)
+      const { error } = await from('directory_contacts').update(params.updates as never).eq('id' as never, params.id).eq('project_id' as never, params.projectId)
       if (error) throw error
       return { projectId: params.projectId, id: params.id }
     },
@@ -55,7 +56,7 @@ export function useDeleteDirectoryContact() {
     entityType: 'contact',
     getEntityId: (p) => p.id,
     mutationFn: async (params) => {
-      const { error } = await from('directory_contacts').delete().eq('id', params.id).eq('project_id', params.projectId)
+      const { error } = await from('directory_contacts').delete().eq('id' as never, params.id).eq('project_id' as never, params.projectId)
       if (error) throw error
       return { projectId: params.projectId }
     },

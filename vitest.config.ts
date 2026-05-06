@@ -25,6 +25,12 @@ export default defineConfig({
       // @playwright/test, not vitest.
       'audit/generated/**',
       'audit/harness/route-audit.ts',
+      // macOS Finder / iCloud sync conflict duplicates ("foo 2.test.tsx",
+      // "__tests__ 4/foo.test.tsx", etc.). Already gitignored, but iCloud
+      // can regenerate them on disk and vitest would otherwise run stale
+      // copies that fail because their imports/exports drifted.
+      '**/* [0-9].*',
+      '**/* [0-9]/**',
     ],
     coverage: {
       provider: 'v8',

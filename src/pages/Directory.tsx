@@ -20,6 +20,7 @@ import {
 } from '../hooks/mutations/directory';
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { supabase } from '../lib/supabase';
+import { fromTable, asRows } from '../lib/db/queries'
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { DirectoryContact } from '../types/database';
@@ -49,10 +50,10 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({ projectId, onClose,
     try {
       const payload = { ...form, project_id: projectId };
       if (editing) {
-        const { error } = await supabase.from('directory_contacts').update(payload).eq('id', initial!.id!);
+        const { error } = await fromTable('directory_contacts').update(payload as never).eq('id' as never, initial!.id!);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('directory_contacts').insert(payload);
+        const { error } = await fromTable('directory_contacts').insert(payload as never);
         if (error) throw error;
       }
       toast.success(editing ? 'Contact updated' : 'Contact added');
@@ -100,13 +101,13 @@ const CompanyFormModal: React.FC<CompanyFormModalProps> = ({ projectId, onClose 
     if (!form.name.trim()) { setErr('Company name required'); return; }
     setSaving(true); setErr(null);
     try {
-      const { error } = await supabase.from('companies').insert({
+      const { error } = await fromTable('companies').insert({
         project_id: projectId,
         name: form.name.trim(),
         trade: form.trade.trim() || null,
         insurance_status: form.insurance_status,
         insurance_expiry: form.insurance_expiry || null,
-      });
+      } as never);
       if (error) throw error;
       toast.success('Company added');
       qc.invalidateQueries({ queryKey: ['companies'] });
@@ -237,20 +238,6 @@ function isPrequalExpired(lastUpdated: string): boolean {
 // TODO: Wire to Supabase tables: 'prequalifications', 'communication_logs'
 // These tables need to be created. For now, using local state with empty defaults.
 
-const DEFAULT_PREQUAL: PrequalInfo = {
-  status: 'not_started',
-  bondingCapacity: '',
-  insuranceLimits: '',
-  emrRate: 0,
-  yearsInBusiness: 0,
-  licenseNumbers: '',
-  lastUpdated: '',
-};
-
-function getDefaultPrequal(): PrequalInfo {
-  return { ...DEFAULT_PREQUAL };
-}
-
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const PrequalDetailPanel: React.FC<{ companyContactId: string; projectId?: string; onStatusChange?: (s: PrequalStatus) => void }> = ({ companyContactId, projectId, onStatusChange }) => {
@@ -338,14 +325,21 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
   // Load COI records from insurance_certificates table
   React.useEffect(() => {
     if (!projectId || !companyName) return;
-    supabase
-      .from('insurance_certificates')
+    fromTable('insurance_certificates')
       .select('*')
-      .eq('project_id', projectId)
-      .eq('company', companyName)
+      .eq('project_id' as never, projectId)
+      .eq('company' as never, companyName)
       .then(({ data }) => {
-        if (data && data.length > 0) {
-          setRecords(data.map(r => ({
+        const rows = asRows<{
+          policy_type: string | null
+          carrier: string | null
+          policy_number: string | null
+          coverage_amount: number | null
+          expiration_date: string | null
+          additional_insured: boolean | null
+        }>(data)
+        if (rows.length > 0) {
+          setRecords(rows.map(r => ({
             type: (r.policy_type || 'GL') as COIRecord['type'],
             carrier: r.carrier || '',
             policyNumber: r.policy_number || '',
@@ -369,12 +363,12 @@ const COISection: React.FC<{ companyName: string; projectId?: string }> = ({ com
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
-      const { error: insertError } = await supabase.from('insurance_certificates').insert({
+      const { error: insertError } = await fromTable('insurance_certificates').insert({
         project_id: projectId,
         company: companyName,
         document_url: publicUrl,
         policy_type: 'GL',
-      });
+      } as never);
       if (insertError) throw insertError;
       toast.success('COI uploaded successfully');
     } catch (err) {
@@ -676,7 +670,7 @@ export const Directory: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this contact?')) return;
-    const { error } = await supabase.from('directory_contacts').delete().eq('id', id);
+    const { error } = await fromTable('directory_contacts').delete().eq('id' as never, id);
     if (error) toast.error(error.message); else { toast.success('Deleted'); qc.invalidateQueries({ queryKey: ['directory_contacts'] }); }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -36,14 +36,14 @@ const DevBanner: React.FC = () => (
 )
 
 const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => {
-  const mql = window.matchMedia('(max-width: 767px)')
+  const mql = useMemo(() => window.matchMedia('(max-width: 767px)'), [])
   const [isMobile, setIsMobile] = useState(() => mql.matches)
 
   useEffect(() => {
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mql.addEventListener('change', handler)
     return () => mql.removeEventListener('change', handler)
-  }, [])
+  }, [mql])
 
   return (
   <div role="status" aria-busy="true" aria-label={ariaLabel} style={{

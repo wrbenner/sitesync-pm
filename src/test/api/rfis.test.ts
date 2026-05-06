@@ -56,7 +56,7 @@ describe('useRFIs query function', () => {
     const { data, error, count } = await supabase
       .from('rfis')
       .select('*', { count: 'exact' })
-      .eq('project_id', projectId)
+      .eq('project_id' as never, projectId)
       .order('number', { ascending: false })
       .range(from, to)
 
@@ -78,7 +78,7 @@ describe('useRFIs query function', () => {
     const { data, count } = await supabase
       .from('rfis')
       .select('*', { count: 'exact' })
-      .eq('project_id', 'proj-empty')
+      .eq('project_id' as never, 'proj-empty')
       .order('number', { ascending: false })
       .range(0, 49)
 
@@ -99,7 +99,7 @@ describe('useRFIs query function', () => {
     const { data, error } = await supabase
       .from('rfis')
       .select('*', { count: 'exact' })
-      .eq('project_id', 'proj-no-access')
+      .eq('project_id' as never, 'proj-no-access')
       .order('number', { ascending: false })
       .range(0, 49)
 
@@ -120,7 +120,7 @@ describe('useRFIs query function', () => {
     await supabase
       .from('rfis')
       .select('*', { count: 'exact' })
-      .eq('project_id', 'proj-big')
+      .eq('project_id' as never, 'proj-big')
       .order('number', { ascending: false })
       .range(from, to)
 

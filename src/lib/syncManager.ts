@@ -102,7 +102,7 @@ class SyncManager {
   }
 
   private handleOnline() {
-    this.update({ connection: 'online' })
+    this.update({ connection: 'online' } as never)
     // Duplicate sync prevention: check flag before calling sync
     if (!this.syncInProgress) {
       this.sync()
@@ -110,7 +110,7 @@ class SyncManager {
   }
 
   private handleOffline() {
-    this.update({ connection: 'offline' })
+    this.update({ connection: 'offline' } as never)
   }
 
   private startPolling() {
@@ -132,7 +132,7 @@ class SyncManager {
         getConflictCount(),
         getLastSyncTimestamp(),
       ])
-      this.update({ pendingCount, conflictCount, lastSynced })
+      this.update({ pendingCount, conflictCount, lastSynced } as never)
     } catch (err) {
       // Dexie may throw if DB is closing or tab is being unloaded
       if (import.meta.env.DEV) console.warn('SyncManager: refreshCounts error:', err)
@@ -155,7 +155,7 @@ class SyncManager {
     }
 
     this.syncInProgress = true
-    this.update({ syncState: 'syncing', syncProgress: null })
+    this.update({ syncState: 'syncing', syncProgress: null } as never)
 
     const onProgress: SyncProgressCallback = (progress) => {
       this.update({
@@ -164,18 +164,18 @@ class SyncManager {
           completed: progress.completed,
           current: progress.current,
         },
-      })
+      } as never)
     }
 
     try {
       const result = await processSyncQueue(onProgress)
       await processUploadQueue()
       await this.refreshCounts()
-      this.update({ syncState: 'idle', syncProgress: null })
+      this.update({ syncState: 'idle', syncProgress: null } as never)
       return result
     } catch (err) {
       if (import.meta.env.DEV) console.error('SyncManager: sync error:', err)
-      this.update({ syncState: 'error', syncProgress: null })
+      this.update({ syncState: 'error', syncProgress: null } as never)
       return { synced: 0, failed: 0, conflicts: 0 }
     } finally {
       this.syncInProgress = false
@@ -185,7 +185,7 @@ class SyncManager {
   async cacheProject(projectId: string): Promise<CacheResult | null> {
     if (!navigator.onLine) return null
 
-    this.update({ syncState: 'caching', cacheProgress: null })
+    this.update({ syncState: 'caching', cacheProgress: null } as never)
 
     const onProgress: CacheProgressCallback = (progress) => {
       this.update({
@@ -194,13 +194,13 @@ class SyncManager {
           completed: progress.completed,
           currentTable: progress.currentTable,
         },
-      })
+      } as never)
     }
 
     try {
       const result = await cacheProjectData(projectId, onProgress)
       await this.refreshCounts()
-      this.update({ syncState: 'idle', cacheProgress: null })
+      this.update({ syncState: 'idle', cacheProgress: null } as never)
 
       // Warn about failures
       if (import.meta.env.DEV) {
@@ -215,7 +215,7 @@ class SyncManager {
       return result
     } catch (err) {
       if (import.meta.env.DEV) console.error('SyncManager: cacheProject error:', err)
-      this.update({ syncState: 'error', cacheProgress: null })
+      this.update({ syncState: 'error', cacheProgress: null } as never)
       return null
     }
   }

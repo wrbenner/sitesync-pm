@@ -134,7 +134,7 @@ Return JSON array with this structure:
 
 Only include activities with notable risk (probability > 0.3 or on critical path).`
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages/create', {
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': anthropicApiKey,
@@ -142,7 +142,7 @@ Only include activities with notable risk (probability > 0.3 or on critical path
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-4-6-20250930',
         max_tokens: 2048,
         messages: [
           {

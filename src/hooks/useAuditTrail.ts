@@ -7,6 +7,7 @@ import type { AuditLogEntry } from '../api/endpoints/auditTrail'
 import { useProjectId } from './useProjectId'
 import { useAuth } from './useAuth'
 
+
 export interface AuditEntry {
   id: string
   project_id: string
@@ -57,7 +58,7 @@ export function useAuditTrail(filters?: AuditFilters) {
 
       const { data, error, count } = await query
       if (error) throw transformSupabaseError(error)
-      const entries = (data || []) as AuditEntry[]
+      const entries = (data || []) as unknown as AuditEntry[]
       setPage(1)
       setAccumulated(entries)
       setTotal(count ?? 0)
@@ -87,7 +88,7 @@ export function useAuditTrail(filters?: AuditFilters) {
 
       const { data, error } = await query
       if (error) throw transformSupabaseError(error)
-      setAccumulated(prev => [...prev, ...((data || []) as AuditEntry[])])
+      setAccumulated(prev => [...prev, ...((data || []) as unknown as AuditEntry[])])
       setPage(nextPage)
     } finally {
       setLoadingMore(false)
@@ -180,7 +181,7 @@ export function useWriteAudit() {
         old_value: oldValue || null,
         new_value: newValue || null,
         user_agent: navigator.userAgent,
-      })
+      } as never)
       if (error) throw transformSupabaseError(error)
     },
   })

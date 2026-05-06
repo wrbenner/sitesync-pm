@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { spacing, typography, borderRadius, zIndex } from '../../styles/theme'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -326,14 +326,6 @@ export function IntelligenceGraph({
     return {
       x: (sx - t.offsetX) / t.scale,
       y: (sy - t.offsetY) / t.scale,
-    }
-  }, [])
-
-  const worldToScreen = useCallback((wx: number, wy: number) => {
-    const t = transformRef.current
-    return {
-      x: wx * t.scale + t.offsetX,
-      y: wy * t.scale + t.offsetY,
     }
   }, [])
 

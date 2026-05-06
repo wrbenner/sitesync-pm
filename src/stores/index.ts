@@ -1,19 +1,18 @@
+// ─── Primary stores (target: 5 after Day 7–10 consolidation) ───────────────
+export { useAuthStore } from './authStore';
 export { useProjectStore } from './projectStore';
 export { useUiStore } from './uiStore';
-export { useUserStore } from './userStore';
-export { useNotificationStore } from './notificationStore';
+
+// ─── AI / Copilot (Day 9 → aiStore) ───────────────────────────────────────
 export { useAIAnnotationStore } from './aiAnnotationStore';
-export { useAuthStore } from './authStore';
-export { useProjectContext } from './projectContextStore';
-export { useRfiStore } from './rfiStore';
-export { useSubmittalStore } from './submittalStore';
-export { useFileStore } from './fileStore';
 export { useCopilotStore } from './copilotStore';
-export { useDailyLogStore } from './dailyLogStore';
-export { useFieldCaptureStore } from './fieldCaptureStore';
+
+// ─── Entity stores (Day 8–9 → entityStore migration targets) ──────────────
 export { usePunchListStore } from './punchListStore';
-export { useCrewStore } from './crewStore';
-export { useDirectoryStore } from './directoryStore';
+
+// ─── Schedule (Day 10 → useSchedule custom hook) ──────────────────────────
 export { useScheduleStore } from './scheduleStore';
-export { useActivityStore } from './activityStore';
-export { useLienWaiverStore } from './lienWaiverStore';
+
+// ─── Infrastructure / shared ──────────────────────────────────────────────
+export { useEntityStoreRoot, useEntityStore, useEntityActions } from './entityStore';
+export { usePresenceStore } from './presenceStore';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { z } from 'zod'
-import { FormModal, FormBody, FormFooter, FormField, FormInput, FormCheckbox } from './FormPrimitives'
+import { FormModal, FormBody, FormField, FormInput, FormCheckbox } from './FormPrimitives'
 import { Btn } from '../Primitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { toast } from 'sonner'
@@ -198,7 +198,7 @@ export const AddWebhookEndpointModal: React.FC<AddWebhookEndpointModalProps> = (
     const result = WebhookEndpointSchema.safeParse(formData)
     if (!result.success) {
       const fieldErrors: Record<string, string> = {}
-      result.error.errors.forEach((err) => {
+      result.error.issues.forEach((err) => {
         const field = String(err.path[0] ?? '')
         if (field && !fieldErrors[field]) fieldErrors[field] = err.message
       })
@@ -249,8 +249,7 @@ export const AddWebhookEndpointModal: React.FC<AddWebhookEndpointModalProps> = (
 
   return (
     <FormModal open={open} onClose={onClose} title="Add Webhook Endpoint" width={600}>
-      <form onSubmit={handleSubmit}>
-        <FormBody>
+      <FormBody onSubmit={handleSubmit}>
           {/* URL */}
           <FormField label="Endpoint URL" required error={errors.url}>
             <FormInput
@@ -258,7 +257,7 @@ export const AddWebhookEndpointModal: React.FC<AddWebhookEndpointModalProps> = (
               type="url"
               placeholder="https://your-server.com/webhooks/sitesync"
               value={url}
-              onChange={setUrl}
+              onChange={(e) => setUrl(e.target.value)}
               disabled={isSubmitting}
             />
           </FormField>
@@ -356,22 +355,25 @@ export const AddWebhookEndpointModal: React.FC<AddWebhookEndpointModalProps> = (
               onChange={setRetryOnFailure}
             />
           </div>
-        </FormBody>
 
-        <FormFooter>
-          <Btn variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Btn>
-          <Btn type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 size={14} style={{ animation: 'spin 600ms linear infinite', marginRight: spacing['2'] }} />
-                Creating...
-              </>
-            ) : (
-              'Create Endpoint'
-            )}
-          </Btn>
-        </FormFooter>
-      </form>
+          <div style={{
+            display: 'flex', justifyContent: 'flex-end', gap: spacing['3'],
+            marginTop: spacing['2'], paddingTop: spacing['4'],
+            borderTop: `1px solid ${colors.borderSubtle}`,
+          }}>
+            <Btn variant="ghost" onClick={onClose} disabled={isSubmitting}>Cancel</Btn>
+            <Btn type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={14} style={{ animation: 'spin 600ms linear infinite', marginRight: spacing['2'] }} />
+                  Creating...
+                </>
+              ) : (
+                'Create Endpoint'
+              )}
+            </Btn>
+          </div>
+        </FormBody>
     </FormModal>
   )
 }

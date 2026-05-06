@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { Database } from '../types/database'
 import { getCrews } from '../api/endpoints/people'
 import { fetchBudgetDivisions } from '../api/endpoints/budget'
@@ -13,7 +14,6 @@ type DailyLog = Tables['daily_logs']['Row']
 type PunchItem = Tables['punch_items']['Row']
 type SchedulePhase = Tables['schedule_phases']['Row']
 type BudgetItem = Tables['budget_items']['Row']
-type Crew = Tables['crews']['Row']
 type Notification = Tables['notifications']['Row']
 type ActivityFeed = Tables['activity_feed']['Row']
 type AIConversation = Tables['ai_conversations']['Row']
@@ -42,12 +42,11 @@ export function useRFIs(projectId: string) {
   return useQuery({
     queryKey: ['rfis', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rfis')
+      const { data, error } = await fromTable('rfis')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
       if (error) throw error
-      return (data ?? []) as RFI[]
+      return (data ?? []) as unknown as RFI[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -75,12 +74,11 @@ export function useSubmittals(projectId: string) {
   return useQuery({
     queryKey: ['submittals', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('submittals')
+      const { data, error } = await fromTable('submittals')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
       if (error) throw error
-      return (data ?? []) as Submittal[]
+      return (data ?? []) as unknown as Submittal[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -108,12 +106,11 @@ export function usePunchList(projectId: string) {
   return useQuery({
     queryKey: ['punch_items', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('punch_items')
+      const { data, error } = await fromTable('punch_items')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
       if (error) throw error
-      return (data ?? []) as PunchItem[]
+      return (data ?? []) as unknown as PunchItem[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -141,13 +138,12 @@ export function useDailyLogs(projectId: string) {
   return useQuery({
     queryKey: ['daily_logs', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('daily_logs')
+      const { data, error } = await fromTable('daily_logs')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('log_date', { ascending: false })
       if (error) throw error
-      return (data ?? []) as DailyLog[]
+      return (data ?? []) as unknown as DailyLog[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -175,12 +171,11 @@ export function useBudgetItems(projectId: string) {
   return useQuery({
     queryKey: ['budget_items', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('budget_items')
+      const { data, error } = await fromTable('budget_items')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
       if (error) throw error
-      return (data ?? []) as BudgetItem[]
+      return (data ?? []) as unknown as BudgetItem[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -208,13 +203,12 @@ export function useSchedulePhases(projectId: string) {
   return useQuery({
     queryKey: ['schedule_phases', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('schedule_phases')
+      const { data, error } = await fromTable('schedule_phases')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('start_date', { ascending: true })
       if (error) throw error
-      return (data ?? []) as SchedulePhase[]
+      return (data ?? []) as unknown as SchedulePhase[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -242,12 +236,11 @@ export function useChangeOrders(projectId: string) {
   return useQuery({
     queryKey: ['change_orders', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('change_orders')
+      const { data, error } = await fromTable('change_orders')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
       if (error) throw error
-      return (data ?? []) as ChangeOrder[]
+      return (data ?? []) as unknown as ChangeOrder[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,
@@ -301,15 +294,14 @@ export function useNotifications(userId: string) {
   return useQuery({
     queryKey: ['notifications', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notifications')
+      const { data, error } = await fromTable('notifications')
         .select('*')
-        .eq('user_id', userId)
-        .eq('read', false)
+        .eq('user_id' as never, userId)
+        .eq('read' as never, false)
         .order('created_at', { ascending: false })
         .limit(20)
       if (error) throw error
-      return (data ?? []) as Notification[]
+      return (data ?? []) as unknown as Notification[]
     },
     enabled: !!userId,
     staleTime: STALE_TIME,
@@ -329,13 +321,12 @@ export function useCreateMutation<T extends KnownTable>(
 
   return useMutation({
     mutationFn: async (record: Tables[T]['Insert']) => {
-      const { data, error } = await supabase
-        .from(tableName as string)
-        .insert([record])
+      const { data, error } = await fromTable(tableName as never)
+        .insert([record] as never)
         .select()
         .single()
       if (error) throw error
-      return data as Tables[T]['Row']
+      return data as unknown as Tables[T]['Row']
     },
     onMutate: async (record) => {
       await queryClient.cancelQueries({ queryKey })
@@ -369,14 +360,13 @@ export function useAICopilot(projectId: string) {
   const loadConversations = useCallback(async () => {
     try {
       setIsLoading(true)
-      const { data, error: err } = await supabase
-        .from('ai_conversations')
+      const { data, error: err } = await fromTable('ai_conversations')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('updated_at', { ascending: false })
 
       if (err) throw err
-      setConversations(data || [])
+      setConversations((data || []) as unknown as AIConversation[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -388,14 +378,13 @@ export function useAICopilot(projectId: string) {
   const loadMessages = useCallback(async (conversationId: string) => {
     try {
       setIsLoading(true)
-      const { data, error: err } = await supabase
-        .from('ai_messages')
+      const { data, error: err } = await fromTable('ai_messages')
         .select('*')
-        .eq('conversation_id', conversationId)
+        .eq('conversation_id' as never, conversationId)
         .order('created_at', { ascending: true })
 
       if (err) throw err
-      setMessages(data || [])
+      setMessages((data || []) as unknown as AIMessage[])
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)))
@@ -408,16 +397,16 @@ export function useAICopilot(projectId: string) {
     async (title: string) => {
       try {
         setIsLoading(true)
-        const { data, error: err } = await supabase
-          .from('ai_conversations')
-          .insert([{ project_id: projectId, title }])
+        const { data, error: err } = await fromTable('ai_conversations')
+          .insert([{ project_id: projectId, title }] as never)
           .select()
           .single()
 
         if (err) throw err
-        setCurrentConversation(data)
+        const conv = data as unknown as AIConversation
+        setCurrentConversation(conv)
         await loadConversations()
-        return data
+        return conv
       } catch (err) {
         const newErr = err instanceof Error ? err : new Error(String(err))
         setError(newErr)
@@ -433,15 +422,14 @@ export function useAICopilot(projectId: string) {
     async (conversationId: string, content: string) => {
       try {
         setIsLoading(true)
-        const { data, error: err } = await supabase
-          .from('ai_messages')
-          .insert([{ conversation_id: conversationId, role: 'user', content }])
+        const { data, error: err } = await fromTable('ai_messages')
+          .insert([{ conversation_id: conversationId, role: 'user', content }] as never)
           .select()
           .single()
 
         if (err) throw err
         await loadMessages(conversationId)
-        return data
+        return data as unknown as AIMessage
       } catch (err) {
         const newErr = err instanceof Error ? err : new Error(String(err))
         setError(newErr)
@@ -492,14 +480,13 @@ export function useActivityFeed(projectId: string) {
   return useQuery({
     queryKey: ['activity_feed', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('activity_feed')
+      const { data, error } = await fromTable('activity_feed')
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('created_at', { ascending: false })
         .limit(100)
       if (error) throw error
-      return (data ?? []) as ActivityFeed[]
+      return (data ?? []) as unknown as ActivityFeed[]
     },
     enabled: !!projectId,
     staleTime: STALE_TIME,

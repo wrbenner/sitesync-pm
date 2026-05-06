@@ -277,10 +277,12 @@ export interface PhotoGridItem {
 
 // ── Type Guard ──────────────────────────────────────────
 
-export function isGenerativeUI(result: Record<string, unknown>): result is GenerativeUIBlock {
-  return typeof result.ui_type === 'string' && [
+export function isGenerativeUI(result: unknown): result is GenerativeUIBlock {
+  if (!result || typeof result !== 'object') return false
+  const r = result as Record<string, unknown>
+  return typeof r.ui_type === 'string' && [
     'data_table', 'metric_cards', 'form', 'chart',
     'approval_card', 'timeline', 'checklist', 'comparison',
     'schedule_card', 'cost_breakdown', 'safety_alert', 'rfi_response', 'photo_grid',
-  ].includes(result.ui_type as string)
+  ].includes(r.ui_type as string)
 }

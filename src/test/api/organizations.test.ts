@@ -3,9 +3,8 @@ import type { ProjectRow, ProjectSummaryRow } from '../../types/api'
 
 // Compile-time check: ProjectSummaryRow must be a strict subset of ProjectRow keys.
 // If ProjectRow ever drops one of these fields the error surfaces here, not at runtime.
-type _SummaryKeysSubsetOfProject = keyof ProjectSummaryRow extends keyof ProjectRow ? true : never
-const _check: _SummaryKeysSubsetOfProject = true
-void _check
+// The asserted-true value is consumed via `satisfies` so noUnusedLocals stays happy.
+true satisfies (keyof ProjectSummaryRow extends keyof ProjectRow ? true : never)
 
 // Verify the summary shape is narrower than the full row.
 describe('ProjectSummaryRow', () => {

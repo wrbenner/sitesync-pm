@@ -2,9 +2,8 @@ import React, { useState, useCallback, useRef } from 'react'
 import { EntityFormModal } from './EntityFormModal'
 import { changeOrderSchema } from './schemas'
 import type { FieldConfig } from './EntityFormModal'
-import { Modal, Btn } from '../Primitives'
-import { Upload, FileText, X, Loader2, Paperclip } from 'lucide-react'
-import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { Upload, FileText, X, Loader2 } from 'lucide-react'
+import { colors, spacing, borderRadius } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
 import { useProjectId } from '../../hooks/useProjectId'
 import { toast } from 'sonner'
@@ -276,4 +275,5 @@ const CreateChangeOrderModal: React.FC<CreateChangeOrderModalProps> = ({ open, o
   )
 }
 
+export { CreateChangeOrderModal }
 export default CreateChangeOrderModal

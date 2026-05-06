@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, type CSSProperties, type ReactElement } from 'react'
 import { useOfflineStatus } from '../../hooks/useOffline'
 import {
   colors,
@@ -127,7 +127,7 @@ export function OfflineIndicator({ onConflictClick }: OfflineIndicatorProps) {
 
   // Pick the right appearance
   let colorScheme: CSSProperties
-  let content: JSX.Element
+  let content: ReactElement
 
   if (conflicts > 0) {
     colorScheme = conflictColors
