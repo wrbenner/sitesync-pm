@@ -327,7 +327,7 @@ export function ProjectSettings() {
         loadMembers(activeProject.id);
       }, 0);
     }
-  }, [activeProject?.id]);
+  }, [activeProject, loadMembers]);
 
   const markDirty = () => setHasChanges(true);
 

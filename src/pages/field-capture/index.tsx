@@ -912,7 +912,7 @@ const PhotosPage: React.FC = () => {
       trade: tradeKnown,
       linked,
     };
-  }, [captures]);
+  }, [captures, nowMs]);
 
   // ── Add-to-daily-log ────────────────────────────────────────────────────
   // dailyLogs is hoisted so the callback dep is the array reference

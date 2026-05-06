@@ -397,10 +397,13 @@ const FilesPage: React.FC = () => {
     } catch {
       addToast('error', `Failed to delete ${file.name}`);
     }
-  }, [addToast, deleteFile, projectId]);
+  }, [addToast, deleteFile, projectId, confirmDeleteFile]);
 
   // ── Columns ───────────────────────────────────────────
-  const columnHelper = createColumnHelper<FileItem>();
+  // columnHelper has stable identity per render but the rule wants it
+  // listed in deps anyway. Hoisted to module scope would be the ideal
+  // refactor; for now declare and depend.
+  const columnHelper = useMemo(() => createColumnHelper<FileItem>(), []);
 
   const fileTableColumns = useMemo(() => [
     columnHelper.accessor('name', {
@@ -477,7 +480,7 @@ const FilesPage: React.FC = () => {
         );
       },
     }),
-  ], []);
+  ], [columnHelper]);
 
   if (isError) {
     const message = error instanceof Error ? error.message : 'Failed to load documents';

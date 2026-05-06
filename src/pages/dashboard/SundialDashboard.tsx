@@ -202,9 +202,13 @@ function MarginaliaCard({
   symbol,
   heading,
   body,
-  boldValues,
+  // boldValues is part of the prop contract but the renderBody parser
+  // only reads `**bold**` markdown — discard with the leading-underscore
+  // convention until a future iteration wants to highlight specific
+  // string values from outside the body.
+  boldValues: _boldValues,
 }: MarginaliaNote) {
-  // Parse body for **bold** markdown patterns and boldValues
+  // Parse body for **bold** markdown patterns
   const renderBody = useMemo(() => {
     const text = body;
     const parts: Array<{ text: string; bold: boolean }> = [];
@@ -226,7 +230,9 @@ function MarginaliaCard({
     }
 
     return parts.length > 0 ? parts : [{ text: body, bold: false }];
-  }, [body, boldValues]);
+    // boldValues isn't read in the body — the inline markdown parser
+    // only consumes `body`. The rule is right that listing it is dead.
+  }, [body]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

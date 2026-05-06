@@ -198,7 +198,7 @@ export function VirtualDataTable<T>({
         row?.focus({ preventScroll: false });
       });
     }
-  }, [focusedIndex]);
+  }, [focusedIndex, virtualizer]);
 
   return (
     <div

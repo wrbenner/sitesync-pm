@@ -301,7 +301,7 @@ const FilesPage: React.FC = () => {
     } catch {
       addToast('error', `Failed to delete ${file.name}`);
     }
-  }, [addToast, deleteFile, projectId]);
+  }, [addToast, deleteFile, projectId, confirmDeleteFile]);
 
   useEffect(() => {
     if (!searchQuery.trim()) return;

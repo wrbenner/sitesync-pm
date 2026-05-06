@@ -609,7 +609,7 @@ export function useActionStream(role?: StreamRole): ActionStreamResult {
     rfisQ.data, punchQ.data, submittalsQ.data, tasksQ.data,
     incidentsQ.data, dailyLogsQ.data, scheduleQ.data,
     dismissedIds, snoozedItems,
-    effectiveRole, filterCtx.companyId,
+    effectiveRole, filterCtx,
   ])
 
   const isLoading = !!(

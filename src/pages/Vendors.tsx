@@ -316,7 +316,10 @@ export const Vendors: React.FC = () => {
       targetPct: g.targetPct,
       actualPct: 0, // No certification type data in DB yet
     }))
-  }, [vendors])
+    // [vendors] is intentionally excluded — the body returns a pure
+    // constant until the diversity_certifications schema lands. Restore
+    // when this memo starts reading vendors fields.
+  }, [])
 
   /* ── Derived vendor diversity records from real vendor data ── */
   const vendorDiversityRecords = useMemo((): VendorDiversity[] => {
@@ -324,7 +327,8 @@ export const Vendors: React.FC = () => {
     // When a diversity_certifications table or certification_type column
     // is added, this will derive real VendorDiversity records.
     return []
-  }, [vendors])
+    // [vendors] is intentionally excluded — same reasoning as above.
+  }, [])
 
   const handleCreate = async () => {
     if (!form.company_name) {

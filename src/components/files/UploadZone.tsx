@@ -260,7 +260,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
         setUploads((prev) => prev.map((u) => u.id === id ? { ...u, progress } : u));
       }
     }, 150);
-  }, [onUpload]);
+  }, [onUpload, onTagsSuggested]);
 
   const processDataTransferItems = useCallback(async (items: DataTransferItemList) => {
     const entries: FileSystemEntry[] = [];
@@ -333,7 +333,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ onUpload, onTagsSuggeste
       const firstName = retryFilesRef.current[0]?.name ?? 'file';
       setUploadError({ fileName: firstName, message: err instanceof Error ? err.message : 'Upload failed' });
     }
-  }, [processDataTransferItems, simulateUpload]);
+  }, [processDataTransferItems, simulateUpload, onFileReady]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();

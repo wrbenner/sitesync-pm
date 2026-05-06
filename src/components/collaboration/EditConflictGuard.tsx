@@ -124,7 +124,7 @@ export function useOptimisticLock(
     } finally {
       setIsChecking(false);
     }
-  }, [table, entityId, lastKnownUpdatedAt]);
+  }, [table, entityId, lastKnownUpdatedAt, lockedStatuses]);
 
   const dismissConflict = useCallback(() => {
     setConflictDetected(false);

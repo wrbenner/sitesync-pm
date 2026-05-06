@@ -179,7 +179,11 @@ export const PayAppList: React.FC<PayAppListProps> = ({
         },
       }),
     ]
-  }, [onEditApp, submitMutation, projectId])
+    // projectId is read transitively through markPaidMutation/submitMutation
+    // (mutationFn closes over it). Drop projectId; it would be a duplicate
+    // dep that the rule correctly flags as unnecessary, and add the
+    // markPaidMutation reference the columns use directly.
+  }, [onEditApp, submitMutation, markPaidMutation])
 
   return (
     <>

@@ -14,17 +14,17 @@ export function useAccessibleStatus(
     if (isLoading) {
       announceStatus(`Loading ${entityName}...`)
     }
-  }, [isLoading, entityName])
+  }, [isLoading, entityName, announceStatus])
 
   useEffect(() => {
     if (isError) {
       announceAlert(`Error loading ${entityName}. Please try again.`)
     }
-  }, [isError, entityName])
+  }, [isError, entityName, announceAlert])
 
   useEffect(() => {
     if (!isLoading && !isError && itemCount !== undefined) {
       announceStatus(`${itemCount} ${entityName} loaded.`)
     }
-  }, [isLoading, isError, itemCount, entityName])
+  }, [isLoading, isError, itemCount, entityName, announceStatus])
 }

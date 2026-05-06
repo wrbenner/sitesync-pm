@@ -458,7 +458,10 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   }, [snapPoints]);
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [inProgressPoints, setInProgressPoints] = useState<NormalizedPoint[]>([]);
-  const [countIndex, setCountIndex] = useState(1);
+  // countIndex value is never read — the count label is computed from
+  // existingCounts + 1 on each click. setCountIndex is kept only because
+  // legacy state-machine wiring referenced it; safe to leave the setter.
+  const [, setCountIndex] = useState(1);
   const [calibratePoints, setCalibratePoints] = useState<NormalizedPoint[]>([]);
 
   // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
@@ -623,7 +626,11 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         setInProgressPoints(newPts);
       }
     },
-    [activeTool, inProgressPoints, calibratePoints, imageSize, countIndex, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, calibrationScale, scaleParsed, onMeasurementAdd, snapTo, externalMeasurements, measurements],
+    // calibrationScale, countIndex, scaleParsed are read via closure
+    // through the formatArea/pixelsToRealInches callbacks (which list
+    // them as their own deps). Including them here is unnecessary and
+    // the rule correctly flags it.
+    [activeTool, inProgressPoints, calibratePoints, imageSize, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, onMeasurementAdd, snapTo, externalMeasurements, measurements],
   );
 
   // Detect snap range on cursor move so the parent can pulse the loupe.

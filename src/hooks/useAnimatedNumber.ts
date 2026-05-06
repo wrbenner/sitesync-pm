@@ -5,9 +5,14 @@ export function useAnimatedNumber(target: number, duration = 800): number {
   const startRef = useRef(0);
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | undefined>(undefined);
+  // Latest-value ref so the animate effect can capture the start
+  // position from the previous render without listing `value` in deps
+  // (which would re-fire the effect every frame and break the easing).
+  const valueRef = useRef(value);
+  useEffect(() => { valueRef.current = value; }, [value]);
 
   useEffect(() => {
-    startRef.current = value;
+    startRef.current = valueRef.current;
     startTimeRef.current = null;
 
     const animate = (timestamp: number) => {

@@ -770,7 +770,10 @@ export const Procurement: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [deleteDelivery.isPending, projectId])
 
-  const inventoryCol = createColumnHelper<Record<string, unknown>>()
+  // Wrap createColumnHelper in useMemo so the inventoryColumns memo's
+  // dep is stable (createColumnHelper otherwise mints a fresh helper
+  // identity on every render).
+  const inventoryCol = useMemo(() => createColumnHelper<Record<string, unknown>>(), [])
   const inventoryColumns = useMemo(() => [
     inventoryCol.accessor('name', {
       header: 'Name',

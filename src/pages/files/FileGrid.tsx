@@ -156,8 +156,9 @@ export const FileGrid: React.FC<FileGridProps> = ({
     if (row && listRef.current.contains(document.activeElement)) row.focus({ preventScroll: false });
   }, [focusedIndex, viewMode]);
 
-  // Column helper for list view
-  const columnHelper = createColumnHelper<FileItem>();
+  // Column helper for list view — wrapped in useMemo so the
+  // fileTableColumns memo's dep is stable.
+  const columnHelper = React.useMemo(() => createColumnHelper<FileItem>(), []);
   const fileTableColumns = React.useMemo(() => [
     columnHelper.accessor('name', {
       header: 'Name',
@@ -217,7 +218,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
         );
       },
     }),
-  ], []);
+  ], [columnHelper]);
 
   return (
     <>

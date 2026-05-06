@@ -329,7 +329,7 @@ const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatu
     } catch (err) {
       toast.error('Delete failed: ' + (err as Error).message)
     }
-  }, [deleteWarranty, projectId])
+  }, [deleteWarranty, projectId, confirmWarranty, warranties])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>

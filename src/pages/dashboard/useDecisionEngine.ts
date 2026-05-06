@@ -488,7 +488,10 @@ export function useDecisionEngine(): SundialData {
 
   // ── Derived values ────────────────────────────────────
 
-  const now = new Date();
+  // Memoize "now" so downstream useMemo deps are stable across renders
+  // — \`new Date()\` mints a new object on every render and would
+  // invalidate every dep that lists it.
+  const now = useMemo(() => new Date(), []);
   const nowMinutes = minutesFromMidnight(now);
   const sunTimes = estimateSunTimes(lat);
 
@@ -581,7 +584,7 @@ export function useDecisionEngine(): SundialData {
     events.sort((a, b) => a.minutes - b.minutes);
 
     return events;
-  }, [schedulePhases, crewCount, sunTimes.sunrise, sunTimes.sunset]);
+  }, [schedulePhases, crewCount, sunTimes.sunrise, sunTimes.sunset, now]);
 
   // ── Generate the decision ──────────────────────────────
 
@@ -642,7 +645,7 @@ export function useDecisionEngine(): SundialData {
       tempLow: weatherData.temp_low,
       precipProbability: todayForecast?.precip_probability ?? 0,
     };
-  }, [weatherData, forecastData]);
+  }, [weatherData, forecastData, now]);
 
   return {
     projectName,

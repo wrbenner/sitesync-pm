@@ -40,7 +40,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
       initial[f] = 'local'; // default: prefer your own changes
     }
     setTimeout(() => setFieldChoices(initial), 0);
-  }, [currentIndex, current?.id]);
+  }, [currentIndex, current]);
 
   const advanceOrClose = useCallback(
     (resolved: PendingMutation[]) => {
