@@ -2061,3 +2061,15 @@ END $$;
 
 -- Restore normal trigger firing for everything else in the database.
 SET session_replication_role = origin;
+
+-- Refresh the dashboard rollup so the demo project picks up its new
+-- schedule_phases / budget / RFI counts immediately, instead of waiting for
+-- the 5-minute pg_cron tick. Without this, a fresh seed shows "0% / On
+-- schedule" until the next refresh fires.
+DO $refresh$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class WHERE relname = 'project_metrics' AND relkind = 'm'
+  ) THEN
+    REFRESH MATERIALIZED VIEW project_metrics;
+  END IF;
+END $refresh$;
