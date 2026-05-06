@@ -63,9 +63,35 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
+  // Navigate to root first so subsequent hash-fragment navigation resolves
+  // against the app origin (not about:blank).
+  await page.goto('/')
+  await page.waitForLoadState('domcontentloaded', { timeout: 10_000 }).catch(() => undefined)
+
+  // If the app is running with VITE_DEV_BYPASS=true (no real Supabase URL),
+  // ProtectedRoute lets every route through without credentials. Detect this
+  // by navigating to the dashboard and checking whether the router kept us
+  // there or redirected to the login route.
+  await page.goto('#/dashboard')
+  await page.waitForTimeout(2_000)
+  const urlAfterNav = page.url()
+  const isOnDashboard = !urlAfterNav.includes('#/login') && !urlAfterNav.includes('/login')
+
+  if (isOnDashboard) {
+    // Bypass is active — we're already on an authenticated page.
+    await settle(page, 1500)
+    return
+  }
+
+  // Real auth path: switch to password mode (default mode is magic-link which
+  // has no placeholder text on the email field), then fill credentials.
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  await settle(page, 500)
+  const passwordModeBtn = page.getByRole('button', { name: 'Sign in with password' })
+  const hasPwdMode = await passwordModeBtn.isVisible({ timeout: 5_000 }).catch(() => false)
+  if (hasPwdMode) await passwordModeBtn.click()
+  await page.locator('input[type="email"]').fill(user)
+  await page.locator('input[type="password"]').fill(pass)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)

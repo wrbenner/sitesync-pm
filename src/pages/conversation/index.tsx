@@ -34,8 +34,8 @@ import {
   WifiOff, ChevronRight, HelpCircle, Send, FileEdit, ListChecks, ClipboardList, ListTodo,
   AlertTriangle, CheckCircle, Sparkles,
 } from 'lucide-react';
-import { RFIActionPanel } from '../../components/panels/RFIActionPanel';
-import { SubmittalActionPanel } from '../../components/panels/SubmittalActionPanel';
+import { RFIActionPanel, type RFIData } from '../../components/panels/RFIActionPanel';
+import { SubmittalActionPanel, type SubmittalData } from '../../components/panels/SubmittalActionPanel';
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
 import CreateRFIModal from '../../components/forms/CreateRFIModal';
 import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal';
@@ -575,14 +575,14 @@ const ConversationPage: React.FC = () => {
           <RFIActionPanel
             open={true}
             onClose={() => setSelectedItem(null)}
-            rfi={selectedItem.data as any}
+            rfi={selectedItem.data as unknown as RFIData}
           />
         )}
         {selectedItem?.type === 'submittal' && (
           <SubmittalActionPanel
             open={true}
             onClose={() => setSelectedItem(null)}
-            submittal={selectedItem.data as any}
+            submittal={selectedItem.data as unknown as SubmittalData}
           />
         )}
       </div>

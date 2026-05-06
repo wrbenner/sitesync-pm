@@ -274,10 +274,21 @@ const ActionButton: React.FC<{ action: SlideOverAction }> = ({ action }) => {
       fontSize: '13px',
       fontWeight: 500,
       cursor: action.disabled ? 'not-allowed' : 'pointer',
-      opacity: action.disabled ? 0.5 : 1,
       transition: transitions.quick,
       whiteSpace: 'nowrap',
     };
+
+    if (action.disabled) {
+      // Disabled: neutral surface + muted text regardless of variant.
+      // Avoids the "faded primary" problem where orange at 50% opacity
+      // reads as a broken CTA rather than an intentionally inert button.
+      return {
+        ...base,
+        backgroundColor: colors.surfaceInset,
+        color: colors.textTertiary,
+        border: `1px solid ${colors.borderSubtle}`,
+      };
+    }
 
     switch (action.variant) {
       case 'primary':
