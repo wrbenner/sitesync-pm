@@ -553,7 +553,9 @@ const PunchItemDetailPage: React.FC = () => {
   const projectId = useProjectId()
   const updatePunchItem = useUpdatePunchItem()
   const { data: punchListResult, isLoading } = usePunchItems(projectId)
-  const punchListRaw = punchListResult?.data ?? []
+  // Wrap optional-fallback in useMemo so the item lookup memo doesn't
+  // churn when punchListResult identity is stable.
+  const punchListRaw = useMemo(() => punchListResult?.data ?? [], [punchListResult])
 
   const item: PunchItem | null = useMemo(() => {
     const raw = punchListRaw.find((p: Record<string, unknown>) =>

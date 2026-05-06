@@ -38,7 +38,9 @@ export const SpecificationsPanel: React.FC = () => {
   const [searchText, setSearchText] = useState('')
   const [selectedDivision, setSelectedDivision] = useState<number | null>(null)
 
-  const list = (data ?? []) as unknown as SpecRow[]
+  // Wrap optional-fallback cast in useMemo so downstream filter memos
+  // don't churn when data identity is stable.
+  const list = useMemo(() => (data ?? []) as unknown as SpecRow[], [data])
 
   const filtered = useMemo(() => {
     let result = list

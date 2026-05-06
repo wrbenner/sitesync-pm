@@ -266,7 +266,12 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
     error: drawingsError,
     refetch: refetchDrawings,
   } = useDrawings(projectId)
-  const drawings = (drawingsResult?.data ?? []) as unknown as Drawing[]
+  // Wrap optional-fallback cast in useMemo so downstream effect/memo
+  // deps don't churn when drawingsResult identity is stable.
+  const drawings = useMemo(
+    () => (drawingsResult?.data ?? []) as unknown as Drawing[],
+    [drawingsResult],
+  )
 
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
   const [hoveredPinId, _setHoveredPinId] = useState<number | null>(null)

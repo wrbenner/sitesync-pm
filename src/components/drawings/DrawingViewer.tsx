@@ -196,8 +196,10 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
   // eslint-disable-next-line react-hooks/rules-of-hooks, react-hooks/hooks -- module-level conditional, stable per build
   const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
-  const updateMyPresence = _updatePresence ?? (() => {});
-  const broadcastEvent = _broadcastEvent ?? (() => {});
+  // Wrap optional-fallback callables in useMemo so the effect dep
+  // `updateMyPresence` doesn't churn on every render.
+  const updateMyPresence = useMemo(() => _updatePresence ?? (() => {}), [_updatePresence]);
+  const broadcastEvent = useMemo(() => _broadcastEvent ?? (() => {}), [_broadcastEvent]);
 
   // Update presence name/color once on mount
   useEffect(() => {

@@ -218,9 +218,20 @@ const PaymentApplicationsPage: React.FC = () => {
     [retainageEntries],
   )
 
-  const apps = (payApps ?? []) as unknown as Array<Record<string, unknown>>
-  const contractList = (contracts ?? []) as unknown as Array<Record<string, unknown>>
-  const waivers = (lienWaivers ?? []) as unknown as LienWaiverRow[]
+  // Wrap optional-fallback casts in useMemo so downstream filter/map
+  // memos don't churn when source identity is stable.
+  const apps = useMemo(
+    () => (payApps ?? []) as unknown as Array<Record<string, unknown>>,
+    [payApps],
+  )
+  const contractList = useMemo(
+    () => (contracts ?? []) as unknown as Array<Record<string, unknown>>,
+    [contracts],
+  )
+  const waivers = useMemo(
+    () => (lienWaivers ?? []) as unknown as LienWaiverRow[],
+    [lienWaivers],
+  )
   const selectedApp = apps.find((a) => a.id === selectedAppId)
 
   const isLoading = loadingApps || loadingContracts || loadingRetainage

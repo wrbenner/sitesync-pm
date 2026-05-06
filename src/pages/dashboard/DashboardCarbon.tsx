@@ -131,7 +131,10 @@ function buildSparkline(entries: CarbonEntry[], width: number, height: number, n
 
 export const DashboardCarbon: React.FC<Props> = ({ projectId }) => {
   const { data, isLoading } = useCarbonData(projectId);
-  const entries = data?.entries ?? [];
+  // Wrap optional-fallback in useMemo so total/change/spark memos
+  // don't churn when data identity is stable (each `?? []` mints a
+  // new array).
+  const entries = useMemo(() => data?.entries ?? [], [data]);
   const [now] = useState(() => Date.now());
 
   const total = useMemo(() => entries.reduce((s, e) => s + (e.carbon_kg ?? 0), 0), [entries]);

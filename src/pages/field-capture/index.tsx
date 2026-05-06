@@ -824,7 +824,12 @@ const PhotosPage: React.FC = () => {
   const { addToast } = useToast();
   const { data: capturesData, isLoading, refetch } = useFieldCaptures(projectId);
   const { data: dailyLogsData } = useDailyLogs(projectId);
-  const captures = (capturesData ?? []) as unknown as FieldCaptureRow[];
+  // Wrap optional-fallback cast in useMemo so downstream filter/group
+  // memos don't churn when capturesData identity is stable.
+  const captures = useMemo(
+    () => (capturesData ?? []) as unknown as FieldCaptureRow[],
+    [capturesData],
+  );
 
   const [filter, setFilter] = useState<FilterChip>('all');
   const [group, setGroup] = useState<GroupMode>('flat');

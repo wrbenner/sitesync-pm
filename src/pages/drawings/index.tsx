@@ -395,7 +395,13 @@ const DrawingsPage: React.FC = () => {
     }
   }, [projectId, addToast, refetchSets]);
 
-  const allDrawings: DrawingItem[] = (drawings || []) as unknown as DrawingItem[];
+  // Wrap optional-fallback cast in useMemo so the four downstream
+  // useMemo/useCallback hooks that depend on allDrawings don't churn
+  // when drawings identity is stable.
+  const allDrawings = useMemo<DrawingItem[]>(
+    () => (drawings || []) as unknown as DrawingItem[],
+    [drawings],
+  );
 
   const handleOpenDrawingFromSet = useCallback((drawingId: string) => {
     const drawing = allDrawings.find((d) => d.id === drawingId);

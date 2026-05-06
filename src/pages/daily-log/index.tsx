@@ -466,7 +466,9 @@ const DailyLogPage: React.FC = () => {
   const isLocked = logStatus === 'submitted' || logStatus === 'approved';
 
   const { data: rawEntries = [] } = useDailyLogEntries(todayLogId);
-  const entries = (rawEntries ?? []) as unknown as DailyLogEntry[];
+  // Wrap optional-fallback cast in useMemo so the six downstream
+  // entries-filter memos don't churn when rawEntries identity is stable.
+  const entries = useMemo(() => (rawEntries ?? []) as unknown as DailyLogEntry[], [rawEntries]);
 
   // Pending Iris draft for the selected date.
   const irisDraftForDate = useMemo(() => {

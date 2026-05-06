@@ -72,7 +72,10 @@ export const Closeout: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>('punch')
 
-  const items = closeoutData?.items ?? []
+  // Wrap optional array fallback in useMemo so downstream omItems/
+  // trainingItems memos don't re-compute when closeoutData identity is
+  // stable but `?? []` would mint a new array.
+  const items = useMemo(() => closeoutData?.items ?? [], [closeoutData])
   const totalItems = items.length
   const approvedItems = items.filter(i => i.status === 'approved').length
   const pctComplete = totalItems > 0 ? Math.round((approvedItems / totalItems) * 100) : 0

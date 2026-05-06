@@ -77,7 +77,9 @@ export const Specifications: React.FC = () => {
 
   const [form, setForm] = useState<FormState>({ ...emptyForm })
 
-  const list = (specs ?? []) as unknown as Specification[]
+  // Wrap optional-fallback in useMemo so downstream filter memos don't
+  // churn on every render (each `?? []` mints a new identity).
+  const list = useMemo(() => (specs ?? []) as unknown as Specification[], [specs])
 
   const filtered = useMemo(() => {
     let result = list

@@ -596,7 +596,9 @@ export function RFIDetail() {
   }, [lastViewedKey])
 
   const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
-  const responses = rfi?.responses ?? []
+  // Wrap optional-fallback in useMemo so downstream filter memos don't
+  // churn when rfi identity is stable (each `?? []` mints a new array).
+  const responses = useMemo(() => rfi?.responses ?? [], [rfi])
 
   const userIdsToResolve = useMemo(
     () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.author_id)],

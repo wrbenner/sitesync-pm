@@ -117,7 +117,10 @@ export const Transmittals: React.FC = () => {
     items: [{ name: '', description: '', copies: 1 }] as TransmittalItem[],
   })
 
-  const list = (transmittals ?? []) as unknown as Transmittal[]
+  // Wrap optional-fallback in useMemo so downstream filter memo doesn't
+  // re-compute when transmittals identity is stable (each `?? []` mints
+  // a new array).
+  const list = useMemo(() => (transmittals ?? []) as unknown as Transmittal[], [transmittals])
 
   const filtered = useMemo(() => {
     let result = list

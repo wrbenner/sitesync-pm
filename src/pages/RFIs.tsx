@@ -276,7 +276,10 @@ const RFIsPage: React.FC = () => {
   const { data: drafts } = useIrisDrafts(projectId, { status: ['pending'] });
   useRealtimeInvalidation(projectId);
 
-  const rfisRaw = rfisResult?.data ?? [];
+  // Wrap optional-fallback in useMemo so downstream filter/sort memos
+  // don't re-compute when rfisResult identity is stable but `?? []`
+  // mints a new array.
+  const rfisRaw = useMemo(() => rfisResult?.data ?? [], [rfisResult]);
 
   const navigate = useNavigate();
   const appNavigate = useAppNavigate();
