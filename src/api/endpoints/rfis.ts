@@ -1,7 +1,7 @@
-import { supabase, transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
+import { transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
 import type { RfiRow, PaginationParams, PaginatedResult, CreateRfiPayload } from '../../types/api'
-import type { Database } from '../../types/database'
 
 function mapRfi(r: RfiRow) {
   return {
@@ -20,40 +20,39 @@ export const getRfis = async (
   projectId: string,
   pagination?: PaginationParams
 ): Promise<PaginatedResult<MappedRfi>> => {
-  if (pagination !== undefined && pagination.page < 1) {
+  if (pagination !== undefined && (pagination.page ?? 1) < 1) {
     throw new Error('pagination.page must be >= 1')
   }
   await assertProjectAccess(projectId)
   try {
     const result = await buildPaginatedQuery<RfiRow, MappedRfi>(
       (from, to) =>
-        supabase
-          .from('rfis')
+        fromTable('rfis')
           .select('*', { count: 'exact' })
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .order('number', { ascending: false })
-          .range(from, to),
+          .range(from, to) as never,
       pagination,
       mapRfi
     )
     return { ...result, isEmpty: result.data.length === 0 && result.total === 0 }
   } catch (err) {
-    const base = transformSupabaseError(err)
+    const base = transformSupabaseError(err as never)
     base.message = 'Failed to load RFIs. Check your connection and try again.'
     throw base
   }
 }
 export const getRfiById = async (projectId: string, id: string) => {
   await assertProjectAccess(projectId)
-  const { data, error } = await supabase.from('rfis').select('*').eq('project_id', projectId).eq('id', id).single()
+  const { data, error } = await fromTable('rfis').select('*').eq('project_id' as never, projectId).eq('id' as never, id).single()
   if (error) throw transformSupabaseError(error)
-  return mapRfi(data)
+  return mapRfi(data as unknown as RfiRow)
 }
 
 export const createRfi = async (projectId: string, payload: CreateRfiPayload): Promise<MappedRfi> => {
   validateProjectId(projectId)
   const data = await supabaseMutation<RfiRow>(client =>
-    client.from('rfis').insert({ ...payload, project_id: projectId } as Database['public']['Tables']['rfis']['Insert']).select().single()
+    client.from('rfis').insert({ ...payload, project_id: projectId } as never).select().single()
   )
   return mapRfi(data)
 }
@@ -66,9 +65,9 @@ export const updateRfi = async (
   validateProjectId(projectId)
   const data = await supabaseMutation<RfiRow>(client =>
     client.from('rfis')
-      .update({ ...updates, updated_at: new Date().toISOString() } as Database['public']['Tables']['rfis']['Update'])
-      .eq('id', id)
-      .eq('project_id', projectId)
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, id)
+      .eq('project_id' as never, projectId)
       .select()
       .single()
   )

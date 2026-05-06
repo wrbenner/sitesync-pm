@@ -168,7 +168,11 @@ export function useEntityStore<T extends BaseEntity = BaseEntity>(key: string): 
 
   // Lazily init the slice outside the render path (synchronous but only once)
   if (!slice) {
-    // Direct state check + mutation avoids calling setState during render
+    // Direct state check + mutation avoids calling setState during render.
+    // useEntityStoreRoot is a Zustand store; .getState() is a static method
+    // on the store object, not a hook reference. The compiler rule treats
+    // any 'useX.foo' read as a hook misuse, which doesn't apply here.
+    // eslint-disable-next-line react-hooks/hooks -- Zustand .getState() is a static store method, not a hook reference
     const state = useEntityStoreRoot.getState();
     if (!state.slices[key]) {
       state.initSlice(key);
@@ -207,22 +211,22 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
     loadItems: async (projectId: string) => {
       setSlice({ loading: true, error: null });
       const { data, error } = await supabase
-        .from(key)
+        .from(key as never)
         .select('*')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('created_at', { ascending: false });
 
       if (error) {
         setSlice({ error: error.message, loading: false });
       } else {
-        setSlice({ items: (data ?? []) as T[], loading: false });
+        setSlice({ items: (data ?? []) as unknown as T[], loading: false });
       }
     },
 
     createItem: async (payload: Omit<T, 'id'>) => {
       const { data, error } = await supabase
-        .from(key)
-        .insert(payload as Record<string, unknown>)
+        .from(key as never)
+        .insert(payload as never)
         .select()
         .single();
 
@@ -230,7 +234,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
         return { item: null, error: error.message };
       }
 
-      const item = data as T;
+      const item = data as unknown as T;
       _setSlice(key, {}); // trigger re-render
       useEntityStoreRoot.setState((s) => ({
         slices: {
@@ -247,9 +251,9 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
 
     updateItem: async (id: string, updates: Partial<T>) => {
       const { error } = await supabase
-        .from(key)
-        .update(updates as Record<string, unknown>)
-        .eq('id', id);
+        .from(key as never)
+        .update(updates as never)
+        .eq('id' as never, id);
 
       if (error) return { error: error.message };
 
@@ -269,7 +273,7 @@ export function useEntityActions<T extends BaseEntity = BaseEntity>(
     },
 
     deleteItem: async (id: string) => {
-      const { error } = await supabase.from(key).delete().eq('id', id);
+      const { error } = await supabase.from(key as never).delete().eq('id' as never, id);
 
       if (error) return { error: error.message };
 

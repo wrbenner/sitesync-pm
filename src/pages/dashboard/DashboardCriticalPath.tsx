@@ -34,7 +34,7 @@ function useAIScheduleRisk(projectId: string | undefined) {
           : undefined,
       });
       if (res.error) throw res.error;
-      return (res.data?.risks ?? []) as ScheduleRisk[];
+      return (res.data?.risks ?? []) as unknown as ScheduleRisk[];
     },
     enabled: !!projectId && !!user,
     staleTime: 15 * 60 * 1000,

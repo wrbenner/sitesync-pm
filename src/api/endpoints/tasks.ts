@@ -1,4 +1,5 @@
-import { supabase, transformSupabaseError } from '../client'
+import { transformSupabaseError } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { validateProjectId } from '../middleware/projectScope'
 import type { TaskRow } from '../../types/api'
 
@@ -80,14 +81,14 @@ function mapTask(t: TaskRow): MappedTask {
 
 export const getTasks = async (projectId: string): Promise<MappedTask[]> => {
   validateProjectId(projectId)
-  const { data, error } = await supabase.from('tasks').select('*').eq('project_id', projectId).order('sort_order', { ascending: true })
+  const { data, error } = await fromTable('tasks').select('*').eq('project_id' as never, projectId).order('sort_order', { ascending: true })
   if (error) throw transformSupabaseError(error)
   return (data || []).map(mapTask)
 }
 
 export const getTaskById = async (projectId: string, id: string): Promise<MappedTask> => {
   validateProjectId(projectId)
-  const { data, error } = await supabase.from('tasks').select('*').eq('project_id', projectId).eq('id', id).single()
+  const { data, error } = await fromTable('tasks').select('*').eq('project_id' as never, projectId).eq('id' as never, id).single()
   if (error) throw transformSupabaseError(error)
   return mapTask(data)
 }

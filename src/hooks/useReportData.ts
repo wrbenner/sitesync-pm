@@ -55,6 +55,24 @@ export const REPORT_TYPES: ReportConfig[] = [
 
 // ── Helpers ──────────────────────────────────────────────
 
+/**
+ * Normalize a query result into a flat array of rows. Each entity hook
+ * returns either a `PaginatedResult<T>` (object with .data: T[]) or an
+ * array of T directly depending on the call site. This helper accepts
+ * both shapes and always returns T[]. Used everywhere this file does
+ * `(query.data ?? []).filter(...)` so the union from React Query cache
+ * is narrowed at one boundary.
+ */
+function rowsFrom<T>(res: { data: T[] | { data: T[] } | null | undefined }): T[] {
+  const d = res.data
+  if (!d) return []
+  if (Array.isArray(d)) return d
+  if (typeof d === 'object' && d !== null && Array.isArray((d as { data?: T[] }).data)) {
+    return (d as { data: T[] }).data
+  }
+  return []
+}
+
 function fmtDate(d: string | null | undefined): string {
   if (!d) return ''
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -86,11 +104,11 @@ export function useExecutiveSummaryData() {
 
   if (loading || error || !project.data) return { data: null, loading, error }
 
-  const rfiList = rfis.data ?? []
-  const submittalList = submittals.data ?? []
-  const punchList = punchItems.data ?? []
-  const budget = budgetItems.data ?? []
-  const phases = schedulePhases.data ?? []
+  const rfiList = rowsFrom(rfis)
+  const submittalList = rowsFrom(submittals)
+  const punchList = rowsFrom(punchItems)
+  const budget = rowsFrom(budgetItems)
+  const phases = rowsFrom(schedulePhases)
 
   const budgetTotal = budget.reduce((s, b) => s + (b.original_amount ?? 0), 0)
   const budgetSpent = budget.reduce((s, b) => s + (b.actual_amount ?? 0), 0)
@@ -109,8 +127,8 @@ export function useExecutiveSummaryData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      overallStatus: ((project.data as Record<string, unknown>).health_status as string) ?? 'on_track',
-      progress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
+      overallStatus: ((project.data as unknown as Record<string, unknown>).health_status as string) ?? 'on_track',
+      progress: ((project.data as unknown as Record<string, unknown>).percent_complete as number) ?? 62,
       budgetTotal,
       budgetSpent,
       budgetVariance,
@@ -145,7 +163,7 @@ export function useRFILogData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      rfis: (rfis.data ?? []).map((r) => ({
+      rfis: rowsFrom(rfis).map((r) => ({
         number: fmtRFINumber(r.number, r.id),
         title: r.title ?? '',
         priority: r.priority ?? 'medium',
@@ -172,7 +190,7 @@ export function useSubmittalLogData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      submittals: (submittals.data ?? []).map((s) => ({
+      submittals: rowsFrom(submittals).map((s) => ({
         number: fmtSubmittalNumber(s.number, s.id),
         title: s.title ?? '',
         specSection: s.spec_section ?? '',
@@ -199,7 +217,7 @@ export function usePunchListData() {
   return {
     data: {
       projectName: project.data.name ?? 'Project',
-      items: (punchItems.data ?? []).map((p) => ({
+      items: rowsFrom(punchItems).map((p) => ({
         number: String(p.number ?? p.id?.slice(0, 6)),
         area: p.area ?? p.location ?? '',
         description: p.title ?? p.description ?? '',
@@ -223,8 +241,8 @@ export function useBudgetReportData() {
   const loading = project.isLoading || budgetItems.isLoading || changeOrders.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const budget = budgetItems.data ?? []
-  const cos = changeOrders.data ?? []
+  const budget = rowsFrom(budgetItems)
+  const cos = rowsFrom(changeOrders)
 
   return {
     data: {
@@ -259,7 +277,7 @@ export function useDailyLogSummaryData() {
   const loading = project.isLoading || dailyLogs.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const logs = dailyLogs.data ?? []
+  const logs = rowsFrom(dailyLogs)
 
   return {
     data: {
@@ -294,12 +312,12 @@ export function useMonthlyProgressData() {
   const loading = project.isLoading || rfis.isLoading || submittals.isLoading || budgetItems.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const budget = budgetItems.data ?? []
-  const cos = changeOrders.data ?? []
-  const phases = schedulePhases.data ?? []
-  const rfiList = rfis.data ?? []
-  const subList = submittals.data ?? []
-  const logs = dailyLogs.data ?? []
+  const budget = rowsFrom(budgetItems)
+  const cos = rowsFrom(changeOrders)
+  const phases = rowsFrom(schedulePhases)
+  const rfiList = rowsFrom(rfis)
+  const subList = rowsFrom(submittals)
+  const logs = rowsFrom(dailyLogs)
 
   const originalContract = budget.reduce((s, b) => s + (b.original_amount ?? 0), 0)
   const coNet = cos.filter((c) => c.status === 'approved').reduce((s, c) => s + (c.amount ?? 0), 0)
@@ -313,11 +331,11 @@ export function useMonthlyProgressData() {
       periodStart: fmtDate(monthStart.toISOString()),
       periodEnd: fmtDate(now.toISOString()),
       scheduledProgress: 65,
-      actualProgress: ((project.data as Record<string, unknown>).percent_complete as number) ?? 62,
-      milestonesAchieved: phases.filter((p) => p.status === 'complete').slice(0, 5).map((p) => ({
+      actualProgress: ((project.data as unknown as Record<string, unknown>).percent_complete as number) ?? 62,
+      milestonesAchieved: phases.filter((p) => p.status === 'completed').slice(0, 5).map((p) => ({
         name: p.name ?? '', date: fmtDate(p.end_date),
       })),
-      milestonesUpcoming: phases.filter((p) => p.status === 'not_started' || p.status === 'in_progress').slice(0, 5).map((p) => ({
+      milestonesUpcoming: phases.filter((p) => p.status === 'upcoming' || p.status === 'active').slice(0, 5).map((p) => ({
         name: p.name ?? '', date: fmtDate(p.start_date),
       })),
       originalContract,
@@ -344,7 +362,7 @@ export function useMonthlyProgressData() {
         amount: co.amount ?? 0,
         status: co.status ?? 'draft',
       })),
-      workPerformed: phases.filter((p) => p.status === 'in_progress').slice(0, 10).map((p) => ({
+      workPerformed: phases.filter((p) => p.status === 'active').slice(0, 10).map((p) => ({
         area: p.name ?? '',
         description: '',
         percentComplete: p.percent_complete ?? 50,
@@ -367,9 +385,9 @@ export function useCostReportData() {
   const loading = project.isLoading || budgetItems.isLoading || changeOrders.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const budget = budgetItems.data ?? []
-  const cos = changeOrders.data ?? []
-  const phases = schedulePhases.data ?? []
+  const budget = rowsFrom(budgetItems)
+  const cos = rowsFrom(changeOrders)
+  const phases = rowsFrom(schedulePhases)
 
   const originalBudget = budget.reduce((s, b) => s + (b.original_amount ?? 0), 0)
   const approvedChanges = cos.filter((c) => c.status === 'approved').reduce((s, c) => s + (c.amount ?? 0), 0)
@@ -379,9 +397,9 @@ export function useCostReportData() {
 
   // Schedule % (from phases)
   const totalPhases = phases.length || 1
-  const completedPhases = phases.filter((p) => p.status === 'complete').length
+  const completedPhases = phases.filter((p) => p.status === 'completed').length
   const scheduledPct = totalPhases > 0 ? completedPhases / totalPhases : 0
-  const projectRecord = project.data as Record<string, unknown>
+  const projectRecord = project.data as unknown as Record<string, unknown>
   const rawPctComplete = projectRecord.percent_complete as number | undefined
   const actualPct = rawPctComplete ? rawPctComplete / 100 : scheduledPct
 
@@ -452,7 +470,7 @@ export function useScheduleReportData() {
   const loading = project.isLoading || phases.isLoading || tasks.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const phaseList = phases.data ?? []
+  const phaseList = rowsFrom(phases)
 
   const now = new Date()
   const threeWeeksOut = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)
@@ -488,24 +506,24 @@ export function useScheduleReportData() {
       startDate: fmtDate(p.start_date),
       endDate: fmtDate(p.end_date),
       status: p.status ?? 'not_started',
-      assignedTo: ((p as Record<string, unknown>).assigned_to as string) ?? '',
+      assignedTo: ((p as unknown as Record<string, unknown>).assigned_to as string) ?? '',
     }))
 
   // Milestones
   const milestones = phaseList
-    .filter((p) => (p as Record<string, unknown>).is_milestone || p.status === 'complete')
+    .filter((p) => (p as unknown as Record<string, unknown>).is_milestone || p.status === 'completed')
     .slice(0, 15)
     .map((p) => {
       const planned = p.end_date ? new Date(p.end_date) : null
-      const phaseRecord = p as Record<string, unknown>
+      const phaseRecord = p as unknown as Record<string, unknown>
       const actualEndDate = phaseRecord.actual_end_date as string | null | undefined
-      const actual = p.status === 'complete' ? actualEndDate ? new Date(actualEndDate) : planned : null
+      const actual = p.status === 'completed' ? actualEndDate ? new Date(actualEndDate) : planned : null
       const variance = planned && actual ? Math.round((actual.getTime() - planned.getTime()) / (1000 * 60 * 60 * 24)) : 0
       return {
         name: p.name ?? '',
         plannedDate: fmtDate(p.end_date),
         actualDate: actual ? fmtDate(actual.toISOString()) : '',
-        status: p.status === 'complete' ? 'achieved' : (planned && planned < now ? 'late' : 'upcoming'),
+        status: p.status === 'completed' ? 'achieved' : (planned && planned < now ? 'late' : 'upcoming'),
         varianceDays: variance,
       }
     })
@@ -513,7 +531,7 @@ export function useScheduleReportData() {
   // Delay analysis: tasks/phases that are behind schedule
   const delays = phaseList
     .filter((p) => {
-      if (p.status === 'complete') return false
+      if (p.status === 'completed') return false
       const end = p.end_date ? new Date(p.end_date) : null
       return end && end < now
     })
@@ -524,8 +542,8 @@ export function useScheduleReportData() {
         activity: p.name ?? '',
         plannedFinish: fmtDate(p.end_date),
         daysLate,
-        causeCode: ((p as Record<string, unknown>).delay_cause as string) ?? 'TBD',
-        responsibleParty: ((p as Record<string, unknown>).assigned_to as string) ?? 'TBD',
+        causeCode: ((p as unknown as Record<string, unknown>).delay_cause as string) ?? 'TBD',
+        responsibleParty: ((p as unknown as Record<string, unknown>).assigned_to as string) ?? 'TBD',
         impact: daysLate > 14 ? 'Critical' : daysLate > 7 ? 'Major' : 'Minor',
       }
     })
@@ -533,7 +551,7 @@ export function useScheduleReportData() {
 
   // Summary
   const totalActivities = phaseList.length
-  const completedActivities = phaseList.filter((p) => p.status === 'complete').length
+  const completedActivities = phaseList.filter((p) => p.status === 'completed').length
   const behindSchedule = delays.length
   const overallProgress = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0
 
@@ -566,9 +584,9 @@ export function useSubcontractorPerformanceData() {
   const loading = project.isLoading || rfis.isLoading || submittals.isLoading || punchItems.isLoading
   if (loading || !project.data) return { data: null, loading, error: null }
 
-  const rfiList = rfis.data ?? []
-  const subList = submittals.data ?? []
-  const punchList = punchItems.data ?? []
+  const rfiList = rowsFrom(rfis)
+  const subList = rowsFrom(submittals)
+  const punchList = rowsFrom(punchItems)
 
   // Aggregate by subcontractor/assignee
   const subMap = new Map<string, {

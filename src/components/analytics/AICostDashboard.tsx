@@ -129,7 +129,7 @@ const ServiceBreakdown: React.FC<{ summary: AICostSummary }> = ({ summary }) => 
                   style={{
                     width: '100%',
                     height: 8,
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.surfaceRaised,
                     borderRadius: borderRadius.full,
                     overflow: 'hidden',
                   }}
@@ -207,7 +207,7 @@ const TrendChart: React.FC<{ summary: AICostSummary }> = ({ summary }) => {
               <CartesianGrid stroke={colors.borderSubtle} strokeDasharray="3 3" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: colors.textTertiary }} />
               <YAxis tick={{ fontSize: 11, fill: colors.textTertiary }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(value: number) => `$${value.toFixed(4)}`} />
+              <Tooltip formatter={((value: number) => `$${value.toFixed(4)}`) as never} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {services.map((service, idx) => (
                 <Line
@@ -318,7 +318,7 @@ export const AICostDashboard: React.FC<AICostDashboardProps> = ({ projectId, sin
         style={{
           padding: spacing['6'],
           textAlign: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.lg,
           border: `1px solid ${colors.borderSubtle}`,
         }}
@@ -354,7 +354,7 @@ export const AICostDashboard: React.FC<AICostDashboardProps> = ({ projectId, sin
         style={{
           padding: spacing['6'],
           textAlign: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: colors.surfaceRaised,
           borderRadius: borderRadius.lg,
           border: `1px dashed ${colors.borderSubtle}`,
         }}

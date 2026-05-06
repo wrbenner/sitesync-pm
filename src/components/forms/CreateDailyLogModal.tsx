@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { SignaturePad } from '../dailylog/SignaturePad'
 import { WeatherCard } from '../dailylog/WeatherCard'
 import { supabase } from '../../api/client'
+import { fromTable } from '../../lib/db/queries'
 import { useIsOnline } from '../../hooks/useOfflineStatus'
 import { useOfflineMutation } from '../../hooks/useOfflineMutation'
 
@@ -33,7 +34,7 @@ const ToggleSwitch: React.FC<{ id: string; checked: boolean; onChange: (v: boole
     style={{
       width: 40, height: 22,
       borderRadius: 11,
-      backgroundColor: checked ? '#F47820' : '#D1D5DB',
+      backgroundColor: checked ? colors.primaryOrange : colors.borderDefault,
       border: 'none',
       cursor: 'pointer',
       position: 'relative',
@@ -544,16 +545,19 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
 
   // Track mobile viewport
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- matchMedia subscription effect: isMobile mirrors a live device breakpoint */
     const mq = window.matchMedia('(max-width: 767px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     setIsMobile(mq.matches)
     return () => mq.removeEventListener('change', handler)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
 
   // Auto-fetch weather on modal open (and when date changes) using project coordinates.
   // Uses Open-Meteo (free, no API key). Results are cached in localStorage.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: weather state mirrors fetch result; spans line ~590 fallback effect too */
     if (!open || isSubmittedView) return
     if (!projectLat || !projectLon) return
     setWeatherLoading(true)
@@ -579,11 +583,13 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         setAutoFilledFields(new Set(['weather_condition', 'temperature_high', 'temperature_low', 'wind_speed', 'precipitation_inches']))
       }
     }).finally(() => setWeatherLoading(false))
+    /* eslint-enable react-hooks/set-state-in-effect */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form.date, projectLat, projectLon])
 
   // Fallback: no coordinates provided — use fetchWeather() cache for current conditions
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O fallback effect: weather state mirrors fetchWeather() result */
     if (!open || isSubmittedView) return
     if (projectLat && projectLon) return
     setWeatherLoading(true)
@@ -604,7 +610,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         setAutoFilledFields(new Set(['weather_condition', 'temperature_high', 'temperature_low', 'wind_speed']))
       }
     }).finally(() => setWeatherLoading(false))
-   
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, isSubmittedView, projectLat, projectLon])
 
   const set =<K extends keyof CreateDailyLogFormData>(k: K, v: CreateDailyLogFormData[K]) =>
@@ -693,7 +699,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         const logData: Record<string, unknown> = { ...form as unknown as Record<string, unknown>, id: createdId }
         summarizeDailyLog(logData).then((summary) => {
           if (summary) {
-            supabase.from('daily_logs').update({ ai_summary: summary }).eq('id', createdId).then(() => {})
+            fromTable('daily_logs').update({ ai_summary: summary } as never).eq('id' as never, createdId).then(() => {})
           }
         }).catch(() => {})
       }
@@ -730,10 +736,9 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
     if (!projectId) return
     setSameAsYesterdayLoading(true)
     try {
-      const { data: rows } = await supabase
-        .from('daily_logs')
+      const { data: rows } = await fromTable('daily_logs')
         .select('id, workers_onsite, daily_log_entries(type, company, trade, headcount, hours)')
-        .eq('project_id', projectId)
+        .eq('project_id' as never, projectId)
         .order('log_date', { ascending: false })
         .limit(1)
       if (rows && rows.length > 0) {

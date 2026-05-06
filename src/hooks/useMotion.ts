@@ -16,7 +16,7 @@ export function useSafeVariants<T extends Record<string, unknown>>(props: T): T 
   const shouldReduce = useReducedMotion() ?? false;
   if (!shouldReduce) return props;
 
-  const safe = { ...props } as Record<string, unknown>;
+  const safe = { ...props } as unknown as Record<string, unknown>;
   if ('transition' in safe) safe.transition = instantTransition;
   if (safe.initial && typeof safe.initial === 'object') safe.initial = { opacity: 0 };
   if (safe.animate && typeof safe.animate === 'object') safe.animate = { opacity: 1 };

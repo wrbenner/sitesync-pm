@@ -3,10 +3,17 @@ import {
   AlertTriangle, Scale, Plus, Download,
 } from 'lucide-react'
 import { Card, SectionHeader, MetricBox, EmptyState } from '../../components/Primitives'
+import { PermissionGate } from '../../components/auth/PermissionGate'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import type { LienWaiverRow, LienWaiverStatus } from '../../types/api'
-import { LienWaiverPDF, lienWaiverDataFromRow } from '../../components/export/LienWaiverPDF'
-import type { LienWaiverRowContext } from '../../components/export/LienWaiverPDF'
+// Day 27: data adapter + types now live in LienWaiverPDFData (a
+// react-pdf-free file) so the listing surface doesn't pull the 1.8MB
+// vendor chunk. The PDF component itself is lazy.
+import { lienWaiverDataFromRow } from '../../components/export/LienWaiverPDFData'
+import type { LienWaiverRowContext } from '../../components/export/LienWaiverPDFData'
+const LienWaiverPDF = lazy(() =>
+  import('../../components/export/LienWaiverPDF').then((m) => ({ default: m.LienWaiverPDF })),
+)
 import {
   fmtCurrency,
   fmtDate,
@@ -16,6 +23,13 @@ import {
   stateToWaiverState,
   type PayAppProject,
 } from './types'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
 
 const PDFDownloadLink = lazy(() =>
   import('@react-pdf/renderer').then((m) => ({ default: m.PDFDownloadLink })),
@@ -105,24 +119,26 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                     </option>
                   ))}
                 </select>
-                <button
-                  onClick={() => selectedPayAppId && onGenerateAll(selectedPayAppId)}
-                  disabled={!selectedPayAppId || isGenerating}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
-                    padding: `${spacing['1.5']} ${spacing['3']}`,
-                    border: `1px solid ${colors.primaryOrange}`, borderRadius: borderRadius.base,
-                    backgroundColor: selectedPayAppId ? colors.orangeSubtle : colors.surfaceInset,
-                    color: selectedPayAppId ? colors.orangeText : colors.textTertiary,
-                    fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                    fontWeight: typography.fontWeight.medium,
-                    cursor: selectedPayAppId && !isGenerating ? 'pointer' : 'not-allowed',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <Plus size={13} />
-                  {isGenerating ? 'Generating...' : 'Generate All'}
-                </button>
+                <PermissionGate permission="financials.edit">
+                  <button
+                    onClick={() => selectedPayAppId && onGenerateAll(selectedPayAppId)}
+                    disabled={!selectedPayAppId || isGenerating}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
+                      padding: `${spacing['1.5']} ${spacing['3']}`,
+                      border: `1px solid ${colors.primaryOrange}`, borderRadius: borderRadius.base,
+                      backgroundColor: selectedPayAppId ? colors.orangeSubtle : colors.surfaceInset,
+                      color: selectedPayAppId ? colors.orangeText : colors.textTertiary,
+                      fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                      fontWeight: typography.fontWeight.medium,
+                      cursor: selectedPayAppId && !isGenerating ? 'pointer' : 'not-allowed',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Plus size={13} />
+                    {isGenerating ? 'Generating...' : 'Generate All'}
+                  </button>
+                </PermissionGate>
               </>
             )}
           </div>
@@ -212,37 +228,43 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                   </span>
                   <div style={{ display: 'flex', gap: spacing['2'], flexWrap: 'wrap' }}>
                     {waiver.status === 'pending' && (
-                      <button
-                        onClick={() => onMarkReceived(waiver.id)}
-                        disabled={busy}
-                        style={{
-                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
-                          borderRadius: borderRadius.base, backgroundColor: 'transparent',
-                          color: colors.textSecondary, fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                          cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {busy ? 'Saving...' : 'Mark Received'}
-                      </button>
+                      <PermissionGate permission="financials.edit">
+                        <button
+                          onClick={() => onMarkReceived(waiver.id)}
+                          disabled={busy}
+                          style={{
+                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
+                            borderRadius: borderRadius.base, backgroundColor: 'transparent',
+                            color: colors.textSecondary, fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy ? 'Saving...' : 'Mark Received'}
+                        </button>
+                      </PermissionGate>
                     )}
                     {waiver.status === 'received' && (
-                      <button
-                        onClick={() => onMarkExecuted(waiver.id)}
-                        disabled={busy}
-                        style={{
-                          padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
-                          borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
-                          color: colors.statusInfo, fontSize: typography.fontSize.caption,
-                          fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
-                          cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {busy ? 'Saving...' : 'Mark Executed'}
-                      </button>
+                      <PermissionGate permission="financials.edit">
+                        <button
+                          onClick={() => onMarkExecuted(waiver.id)}
+                          disabled={busy}
+                          style={{
+                            padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.statusInfo}`,
+                            borderRadius: borderRadius.base, backgroundColor: colors.statusInfoSubtle,
+                            color: colors.statusInfo, fontSize: typography.fontSize.caption,
+                            fontWeight: typography.fontWeight.medium, fontFamily: typography.fontFamily,
+                            cursor: busy ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {busy ? 'Saving...' : 'Mark Executed'}
+                        </button>
+                      </PermissionGate>
                     )}
                     <Suspense fallback={
                       <button
+                        disabled
+                        aria-label="PDF generator loading"
                         style={{
                           padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.borderDefault}`,
                           borderRadius: borderRadius.base, backgroundColor: 'transparent',
@@ -256,7 +278,7 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                     }>
                       <PDFDownloadLink document={<LienWaiverPDF data={pdfData} />} fileName={pdfFileName}>
                         {({ loading }: { loading: boolean }) => (
-                          <button
+                          <span
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: spacing['1'],
                               padding: `${spacing['1']} ${spacing['2']}`, border: `1px solid ${colors.primaryOrange}`,
@@ -267,7 +289,7 @@ export const LienWaiverPanel = memo<LienWaiverPanelProps>(({
                             }}
                           >
                             <Download size={11} /> {loading ? 'Building...' : 'PDF'}
-                          </button>
+                          </span>
                         )}
                       </PDFDownloadLink>
                     </Suspense>
@@ -339,14 +361,47 @@ interface CashFlowPanelProps {
 
 export const CashFlowPanel = memo<CashFlowPanelProps>(({ payApps, retainage }) => {
   const metrics = useMemo(() => {
-    const totalBilled = payApps.reduce((s, a) => s + ((a.total_completed_and_stored as number) || 0), 0)
-    const totalPaid = payApps.filter((a) => a.status === 'paid').reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
-    const totalRetainage = retainage.reduce((s, r) => s + (((r.amount as number) || 0) - ((r.released_amount as number) || 0)), 0)
-    const outstanding = totalBilled - totalPaid - totalRetainage
+    // Sum on integer cents so the cash-flow rollup reconciles to the cent
+    // across N pay apps + N retainage rows. DB columns are still numeric;
+    // we convert at this boundary.
+    const totalBilledC: Cents = payApps.reduce<Cents>(
+      (s, a) => addCents(s, dollarsToCents((a.total_completed_and_stored as number) || 0)),
+      0 as Cents,
+    )
+    const totalPaidC: Cents = payApps
+      .filter((a) => a.status === 'paid')
+      .reduce<Cents>(
+        (s, a) => addCents(s, dollarsToCents((a.current_payment_due as number) || 0)),
+        0 as Cents,
+      )
+    const totalRetainageC: Cents = retainage.reduce<Cents>(
+      (s, r) =>
+        addCents(
+          s,
+          subtractCents(
+            dollarsToCents((r.amount as number) || 0),
+            dollarsToCents((r.released_amount as number) || 0),
+          ),
+        ),
+      0 as Cents,
+    )
+    const outstandingC: Cents = subtractCents(
+      subtractCents(totalBilledC, totalPaidC),
+      totalRetainageC,
+    )
     const pendingApps = payApps.filter((a) => a.status !== 'paid' && a.status !== 'void' && a.status !== 'draft')
-    const pendingAmount = pendingApps.reduce((s, a) => s + ((a.current_payment_due as number) || 0), 0)
+    const pendingAmountC: Cents = pendingApps.reduce<Cents>(
+      (s, a) => addCents(s, dollarsToCents((a.current_payment_due as number) || 0)),
+      0 as Cents,
+    )
 
-    return { totalBilled, totalPaid, totalRetainage, outstanding, pendingAmount }
+    return {
+      totalBilled: fromCents(totalBilledC) / 100,
+      totalPaid: fromCents(totalPaidC) / 100,
+      totalRetainage: fromCents(totalRetainageC) / 100,
+      outstanding: fromCents(outstandingC) / 100,
+      pendingAmount: fromCents(pendingAmountC) / 100,
+    }
   }, [payApps, retainage])
 
   return (

@@ -26,7 +26,7 @@ import React, {
   useEffect,
   useMemo,
 } from 'react';
-import OpenSeadragon from 'openseadragon';
+import * as OpenSeadragon from 'openseadragon';
 import {
   X,
   ZoomIn,
@@ -37,8 +37,8 @@ import {
   Layers,
   Pencil,
   RotateCw,
-  Grid3X3,
-  Wifi,
+
+
   WifiOff,
   CloudOff,
   MessageSquarePlus,
@@ -46,21 +46,22 @@ import {
 import CreateRFIModal from '../forms/CreateRFIModal';
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useUiStore } from '../../stores';
+
 import { MarkupToolbar, type MarkupTool } from './MarkupToolbar';
 import { STAMP_CONFIGS, type StampType } from './tools/StampTool';
 import type { NormalizedGeometry, AnnotationLayer, AnnotationVisibility } from '../../lib/annotationGeometry';
 import {
-  toNormalized,
-  fromNormalized,
+
+
   denormalizeStrokeWidth,
   generateCloudPath,
   type GeometryType,
   type NormalizedPoint,
-  type PageDimensions,
+
 } from '../../lib/annotationGeometry';
 import { useDrawingMarkups } from '../../hooks/queries/document-management';
 import { useCreateDrawingMarkup, useDeleteDrawingMarkup } from '../../hooks/mutations/documents';
+import { drawingService } from '../../services/drawingService';
 import { MeasurementOverlay, type MeasurementResult } from './MeasurementOverlay';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import { useDrawingPresence, type DrawingPresenceUser } from '../../hooks/useDrawingPresence';
@@ -153,7 +154,7 @@ const ToolHint: React.FC<{ tool: MarkupTool; onDismiss: () => void }> = ({ tool,
 const OsdLoupe: React.FC<{
   screenX: number;
   screenY: number;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   viewerRef: React.RefObject<OpenSeadragon.Viewer | null>;
   /** Optional: when scale is known, render a true-measure bar along the loupe's bottom. */
   scaleLabel?: string | null;
@@ -165,8 +166,19 @@ const OsdLoupe: React.FC<{
   // Throttle repaints to one per animation frame. At 60fps this matches display refresh;
   // without it, high-frequency mousemove events cause needless redraws and jank.
   const rafRef = useRef<number | null>(null);
-  const lastPosRef = useRef({ x: screenX, y: screenY });
-  lastPosRef.current = { x: screenX, y: screenY };
+
+  // Track container size in state via ResizeObserver — refs can't be
+  // read during render, so positioning math below uses the snapshot.
+  const [containerSize, setContainerSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setContainerSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [containerRef]);
 
   useEffect(() => {
     const paint = () => {
@@ -180,12 +192,13 @@ const OsdLoupe: React.FC<{
       const ctx = loupe.getContext('2d');
       if (!ctx) return;
 
-      const { x, y } = lastPosRef.current;
+      // Closure captures the latest screenX/screenY because the effect
+      // re-runs on every position change (deps below).
       const srcSize = SIZE / MAG;
       const scaleX = sourceCanvas.width / container.clientWidth;
       const scaleY = sourceCanvas.height / container.clientHeight;
-      const srcX = x * scaleX - srcSize / 2;
-      const srcY = y * scaleY - srcSize / 2;
+      const srcX = screenX * scaleX - srcSize / 2;
+      const srcY = screenY * scaleY - srcSize / 2;
 
       ctx.save();
       ctx.clearRect(0, 0, SIZE, SIZE);
@@ -219,10 +232,11 @@ const OsdLoupe: React.FC<{
 
   // Position via transform (GPU-accelerated) — no CSS transition so the loupe sticks to the cursor.
   const OFFSET = 64;
-  const containerEl = containerRef.current;
-  const maxRight = (containerEl?.clientWidth ?? window.innerWidth) - SIZE - 16;
+  const containerW = containerSize?.w ?? window.innerWidth;
+  const containerH = containerSize?.h ?? window.innerHeight;
+  const maxRight = containerW - SIZE - 16;
   const leftPos = screenX + OFFSET + SIZE > maxRight ? Math.max(16, screenX - OFFSET - SIZE) : screenX + OFFSET;
-  const topPos = Math.max(16, Math.min((containerEl?.clientHeight ?? window.innerHeight) - SIZE - 16, screenY - SIZE / 2));
+  const topPos = Math.max(16, Math.min(containerH - SIZE - 16, screenY - SIZE / 2));
 
   return (
     <div style={{
@@ -324,12 +338,7 @@ const InlineTextPrompt: React.FC<{
 };
 
 // ── ID generator ───────────────────────────────────────────────────────────
-const genId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `anno_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-};
+const genId = (): string => `anno_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -379,9 +388,8 @@ interface AnnotationOverlayItem {
 
 const VIEWER_ID = 'osd-tiled-viewer';
 const NAVIGATOR_ID = 'osd-navigator';
-const EASING = [0.16, 1, 0.3, 1] as const; // Apple-style spring
 
-const TOOLBAR_HEIGHT = 52;
+
 const HEADER_HEIGHT = 48;
 
 // ── Styles ─────────────────────────────────────────────────────────────────
@@ -939,8 +947,9 @@ const AnnotationSvgOverlay: React.FC<AnnotationSvgOverlayProps> = React.memo(({
               />
             );
           }
-          case 'line':
-          case 'measure': {
+          case 'line': {
+            // 'measure' geometries are short-circuited above (rendered by
+            // MeasurementOverlay instead).
             if (pts.length < 2) return null;
             return wrap(
               <line
@@ -1141,9 +1150,40 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   } | null>(null);
   const [localAnnotations, setLocalAnnotations] = useState<AnnotationOverlayItem[]>([]);
   const undoStack = useRef<AnnotationOverlayItem[][]>([]);
+  // undoStackSize mirrors undoStack.current.length so the toolbar's
+  // canUndo flag can read it during render (refs can't be read in render).
+  // Updated alongside every push/pop/clear of undoStack below.
+  const [undoStackSize, setUndoStackSize] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const activeColor = '#E05252'; // Default red for construction markups
-  const [calibrationScale, setCalibrationScale] = useState<number | null>(null);
+  // Seed from the persisted drawing.scale_ratio so a previously-calibrated
+  // sheet shows real measurements on first open instead of falling through
+  // to "px" output. Local state can still be updated by an in-session
+  // Calibrate action; that path also writes back to the row (see below).
+  const [calibrationScale, setCalibrationScale] = useState<number | null>(
+    () => {
+      const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
+      return typeof persisted === 'number' && persisted > 0 ? persisted : null;
+    },
+  );
+  // When the user navigates between sheets in the same viewer instance, sync
+  // Sync local calibration to the new sheet's persisted ratio when the
+  // drawing changes — render-time prev pattern avoids set-state-in-effect.
+  const [prevDrawing, setPrevDrawing] = useState(drawing);
+  if (prevDrawing !== drawing) {
+    setPrevDrawing(drawing);
+    const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
+    setCalibrationScale(typeof persisted === 'number' && persisted > 0 ? persisted : null);
+  }
+  const persistCalibration = useCallback(
+    (ratio: number) => {
+      setCalibrationScale(ratio);
+      void drawingService.updateDrawing(drawing.id, {
+        scale_ratio: ratio,
+      } as unknown as Partial<typeof drawing>);
+    },
+    [drawing.id],
+  );
   const isMeasureTool = activeTool === 'measure' || activeTool === 'area' || activeTool === 'count' || activeTool === 'calibrate' || activeTool === 'path';
 
   // Viewport tracking for annotation overlay
@@ -1163,7 +1203,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   const posLabel = currentIdx >= 0 ? `${currentIdx + 1} / ${drawings.length}` : '';
 
   // Load markups from DB
-  const { data: dbMarkups } = useDrawingMarkups(drawing.id, projectId);
+  const { data: dbMarkups } = useDrawingMarkups(drawing.id);
   const createMarkup = useCreateDrawingMarkup();
   const deleteMarkup = useDeleteDrawingMarkup();
   // Currently selected annotation (id). Click on a markup while in select tool to highlight it.
@@ -1174,27 +1214,27 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // (which we write into when schema-enhancement migrations aren't applied).
   const annotations: AnnotationOverlayItem[] = useMemo(() => {
     if (!dbMarkups || !showAnnotations) return [];
-    return dbMarkups
-      .map((row: Record<string, unknown>) => {
-        const d = (row.data && typeof row.data === 'object' ? row.data : {}) as Record<string, unknown>;
-        const geometry = (row.normalized_coords as NormalizedGeometry | undefined)
-          ?? (d.normalized_coords as NormalizedGeometry | undefined);
-        if (!geometry) return null;
-        return {
-          id: row.id as string,
-          geometry,
-          layer: ((row.layer as AnnotationLayer | undefined) ?? (d.layer as AnnotationLayer | undefined) ?? 'default') as AnnotationLayer,
-          visibility: ((row.visibility as AnnotationVisibility | undefined) ?? (d.visibility as AnnotationVisibility | undefined) ?? 'team') as AnnotationVisibility,
-          strokeColor: (row.color as string | undefined) || (d.color as string | undefined) || '#E05252',
-          strokeWidth: (d.strokeWidth as number | undefined) ?? 0.002,
-          fillColor: d.fillColor as string | undefined,
-          opacity: (d.opacity as number | undefined) ?? 0.85,
-          text: (row.content as string | undefined) ?? (d.text as string | undefined),
-          stampType: (row.stamp_type as string | undefined) ?? (d.stampType as string | undefined),
-          uiTool: d.uiType as MarkupTool | undefined,
-        };
-      })
-      .filter((a): a is AnnotationOverlayItem => !!a);
+    const rows = dbMarkups as unknown as Array<Record<string, unknown>>;
+    const mapped: Array<AnnotationOverlayItem | null> = rows.map((row): AnnotationOverlayItem | null => {
+      const d = (row.data && typeof row.data === 'object' ? row.data : {}) as unknown as Record<string, unknown>;
+      const geometry = (row.normalized_coords as NormalizedGeometry | undefined)
+        ?? (d.normalized_coords as NormalizedGeometry | undefined);
+      if (!geometry) return null;
+      return {
+        id: row.id as string,
+        geometry,
+        layer: ((row.layer as AnnotationLayer | undefined) ?? (d.layer as AnnotationLayer | undefined) ?? 'default') as AnnotationLayer,
+        visibility: ((row.visibility as AnnotationVisibility | undefined) ?? (d.visibility as AnnotationVisibility | undefined) ?? 'team') as AnnotationVisibility,
+        strokeColor: (row.color as string | undefined) || (d.color as string | undefined) || '#E05252',
+        strokeWidth: (d.strokeWidth as number | undefined) ?? 0.002,
+        fillColor: d.fillColor as string | undefined,
+        opacity: (d.opacity as number | undefined) ?? 0.85,
+        text: (row.content as string | undefined) ?? (d.text as string | undefined),
+        stampType: (row.stamp_type as string | undefined) ?? (d.stampType as string | undefined),
+        uiTool: d.uiType as MarkupTool | undefined,
+      };
+    });
+    return mapped.filter((a): a is AnnotationOverlayItem => a !== null);
   }, [dbMarkups, showAnnotations]);
 
   // ── Tile source — DZI when tiled, simple image when not ────────────────
@@ -1393,10 +1433,13 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     return formatFeetInches(realIn * 0.4);
   }, [viewportBounds, containerSize.width, imageSize.width, calibrationScale, scaleRatioText]);
 
-  // Selection is only meaningful in the select tool — any other tool clears it.
-  useEffect(() => {
+  // Selection is only meaningful in the select tool — render-time
+  // prev pattern avoids set-state-in-effect.
+  const [prevActiveTool, setPrevActiveTool] = useState(activeTool);
+  if (prevActiveTool !== activeTool) {
+    setPrevActiveTool(activeTool);
     if (activeTool !== 'select') setSelectedId(null);
-  }, [activeTool]);
+  }
 
   // Delete/remove the selected annotation. Handles both persisted (DB) and local unsaved items.
   const handleDeleteSelected = useCallback(() => {
@@ -1404,6 +1447,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     const isLocal = localAnnotations.some((a) => a.id === selectedId);
     if (isLocal) {
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => prev.filter((a) => a.id !== selectedId));
     } else {
       // Persisted — delete from DB; react-query invalidation will refresh the list.
@@ -1413,39 +1457,48 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   }, [selectedId, localAnnotations, deleteMarkup, drawing.id]);
 
   // ── First-use tool hints: flash a coach mark once per tool per browser session ──
+  // Compute the next hint synchronously during render via the prev pattern;
+  // sessionStorage reads/writes happen during the same render but are
+  // idempotent (the seen-flag is stable per session).
   const [hintTool, setHintTool] = useState<MarkupTool | null>(null);
-  useEffect(() => {
-    if (activeTool === 'select') { setHintTool(null); return; }
-    try {
-      const key = 'sitesync.tiledViewer.hinted';
-      const raw = sessionStorage.getItem(key);
-      const seen: Record<string, true> = raw ? JSON.parse(raw) : {};
-      if (!seen[activeTool]) {
-        seen[activeTool] = true;
-        sessionStorage.setItem(key, JSON.stringify(seen));
+  const [prevHintTool, setPrevHintTool] = useState(activeTool);
+  if (prevHintTool !== activeTool) {
+    setPrevHintTool(activeTool);
+    if (activeTool === 'select') {
+      setHintTool(null);
+    } else {
+      try {
+        const key = 'sitesync.tiledViewer.hinted';
+        const raw = sessionStorage.getItem(key);
+        const seen: Record<string, true> = raw ? JSON.parse(raw) : {};
+        if (!seen[activeTool]) {
+          seen[activeTool] = true;
+          sessionStorage.setItem(key, JSON.stringify(seen));
+          setHintTool(activeTool);
+        } else {
+          setHintTool(null);
+        }
+      } catch {
         setHintTool(activeTool);
-      } else {
-        setHintTool(null);
       }
-    } catch {
-      setHintTool(activeTool);
     }
-  }, [activeTool]);
+  }
 
   // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
   // Using a ref-held timer avoids recreating the timeout identity every render.
-  // We intentionally don't include `handleSave` in deps to avoid re-debouncing on every render
-  // (React-Query's mutate identity is stable enough for this purpose).
+  // handleSave is forward-declared further down; we route through a ref so the
+  // effect doesn't capture an un-initialized binding (immutability rule). The
+  // ref is populated by an effect immediately below handleSave's definition.
+  const handleSaveRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (localAnnotations.length === 0) return;
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
-      handleSave();
+      handleSaveRef.current();
     }, 1500);
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localAnnotations]);
 
   // ── Interactive drawing event handlers ─────────────────────────────────
@@ -1470,6 +1523,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           stampType: stampTypeSel,
         };
         undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
         setLocalAnnotations((prev) => [...prev, newAnn]);
         return;
       }
@@ -1507,6 +1561,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           uiTool: activeTool,
         };
         undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
         setLocalAnnotations((prev) => [...prev, newAnn]);
         return;
       }
@@ -1581,6 +1636,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       };
 
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => [...prev, newAnn]);
       setDrawingInProgress(null);
     },
@@ -1590,6 +1646,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   // ── Undo ───────────────────────────────────────────────────────────────
   const handleUndo = useCallback(() => {
     const prev = undoStack.current.pop();
+    setUndoStackSize(undoStack.current.length);
     if (prev) setLocalAnnotations(prev);
   }, []);
 
@@ -1611,6 +1668,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         uiTool: 'text',
       };
       undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
       setLocalAnnotations((prev) => [...prev, newAnn]);
     }
     setTextPrompt(null);
@@ -1644,6 +1702,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
         : 'count',
     };
     undoStack.current.push([...localAnnotations]);
+      setUndoStackSize(undoStack.current.length);
     setLocalAnnotations((prev) => [...prev, ann]);
   }, [activeColor, localAnnotations]);
 
@@ -1710,7 +1769,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               project_id: projectId,
               drawing_id: drawing.id,
               page_number: 1,
-              annotation_type: baseData.annotation_type,
+              annotation_type: baseData.type,
               geometry_type: ann.geometry.type,
               normalized_coords: ann.geometry,
               color: ann.strokeColor,
@@ -1729,6 +1788,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       // Drop successful ones from local state; keep failed ones so retry just means clicking Save again.
       setLocalAnnotations(failedAnnotations);
       undoStack.current = [];
+      setUndoStackSize(0);
       if (failedAnnotations.length === 0) {
         setSaveConfirmedAt(Date.now());
         window.setTimeout(() => setSaveConfirmedAt(null), 2200);
@@ -1742,6 +1802,13 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
       setIsSaving(false);
     }
   }, [projectId, drawing.id, localAnnotations, createMarkup, isOnline, enqueueOffline, broadcastMarkup]);
+
+  // Keep the auto-save effect's ref pointed at the latest handleSave so the
+  // debounced fire calls the current closure (not the one captured at
+  // handleSaveRef's first creation).
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
 
   // Combine DB annotations + local unsaved annotations
   const allAnnotations = useMemo(
@@ -2166,7 +2233,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
           viewportBounds={viewportBounds}
           scaleRatioText={scaleRatioText}
           calibrationScale={calibrationScale}
-          onCalibrate={setCalibrationScale}
+          onCalibrate={persistCalibration}
           onMeasurementAdd={handleMeasurementAdd}
           cursor={toolCursor(activeTool)}
           snapPoints={snapPoints}
@@ -2226,7 +2293,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
               activeTool={activeTool}
               onToolChange={(t) => { setExtendedTool(null); setActiveTool(t); }}
               onUndo={handleUndo}
-              canUndo={undoStack.current.length > 0 || localAnnotations.length > 0}
+              canUndo={undoStackSize > 0 || localAnnotations.length > 0}
               canSave={localAnnotations.length > 0}
               unsavedCount={localAnnotations.length}
               onSave={handleSave}
@@ -2305,7 +2372,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
                     fontFamily: typography.fontFamily,
                   }}
                 >
-                  {(Object.keys(STAMP_CONFIGS) as StampType[]).map((key) => (
+                  {(Object.keys(STAMP_CONFIGS) as unknown as StampType[]).map((key) => (
                     <option key={key} value={key}>{STAMP_CONFIGS[key].label}</option>
                   ))}
                 </select>

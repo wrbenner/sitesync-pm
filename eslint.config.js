@@ -57,8 +57,117 @@ export default defineConfig([
         },
       ],
       //
-      // React Refresh: dev convenience, not a production bug.
-      'react-refresh/only-export-components': 'warn',
+      // React Refresh: only-export-components fires on files that mix
+      // React components with non-component exports (constants, hooks,
+      // contexts, types). The cost is a slower HMR cycle on those
+      // specific files — they fall back from fast-refresh to a full
+      // page reload when edited.
+      //
+      // The codebase intentionally colocates hooks + their context +
+      // their provider + the component(s) that consume them in one
+      // file (Primitives.tsx, FormPrimitives.tsx, ContextMenu.tsx /
+      // ToastProvider, ConfirmDialog, EditConflictGuard, etc.). That's
+      // idiomatic React; Vite's HMR rule wants every helper in its
+      // own file, which would mean 24+ structural splits across the
+      // codebase to satisfy a dev-experience optimization that does
+      // not affect production behavior.
+      //
+      // Bugatti decision: weighing the architecture against the rule,
+      // the architecture wins. Off, with rationale.
+      'react-refresh/only-export-components': 'off',
+      //
+      // ── React Compiler signals (eslint-plugin-react-hooks v7+) ──────────
+      // babel-plugin-react-compiler is installed (vite.config.ts wires it
+      // in annotation mode). The 14 Recommended-preset rules promote to
+      // error as their backlog reaches zero — landed in slice B
+      // (feat/react-compiler-slice-b-2026-05-05).
+      //
+      // Promoted to ERROR (Slice B Phase 1+2, 2026-05-05):
+      //   capitalized-calls, static-components       (cleared 790d1fa)
+      //   purity                                      (cleared a458e61)
+      //   no-deriving-state-in-effects                (cleared 59ce638)
+      //   incompatible-library                        (cleared 7edca0e)
+      //   immutability                                (cleared 2a31ca3)
+      //   preserve-manual-memoization                 (cleared 92b5b2e)
+      //   refs                                        (cleared cdd43cc)
+      //   config, error-boundaries, gating, globals,
+      //   set-state-in-render, unsupported-syntax,
+      //   use-memo                                    (already at 0)
+      //
+      // Still at WARN — last Recommended-preset rule, deferred to Phase 3:
+      //   set-state-in-effect (82) → splits into 4 distinct migrations:
+      //     • ~20 fetch-on-mount sites → TanStack Query
+      //     • ~30 reset-on-prop-change sites → react.dev "compare prev
+      //       props during render" pattern
+      //     • ~5 derive-from-props sites → derive in render
+      //     • ~5 subscription/event sites → keep effect, refactor
+      //       per-case
+      //   Each batch deserves its own focused PR for review.
+      //
+      // The remaining non-Recommended-preset rules below stay at WARN —
+      // they cover compiler-internal limitations (todo, invariant) and
+      // advisory signals (memo-dependencies, exhaustive-deps) that need
+      // their own campaigns.
+      //
+      // rules-of-hooks stays at default (error) — it catches real
+      // runtime bugs independent of the compiler.
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/set-state-in-render': 'error',
+      'react-hooks/no-deriving-state-in-effects': 'error',
+      'react-hooks/refs': 'error',
+      'react-hooks/purity': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/preserve-manual-memoization': 'error',
+      'react-hooks/static-components': 'error',
+      'react-hooks/incompatible-library': 'error',
+      'react-hooks/capitalized-calls': 'error',
+      'react-hooks/error-boundaries': 'error',
+      'react-hooks/use-memo': 'error',
+      'react-hooks/void-use-memo': 'warn',
+      'react-hooks/memoized-effect-dependencies': 'warn',
+      'react-hooks/exhaustive-effect-dependencies': 'warn',
+      // memo-dependencies is preset-Off in eslint-plugin-react-hooks
+      // — the React team explicitly chose not to ship it on. The
+      // messages it produces don't identify which specific dep is
+      // extra/missing, only that the dep array shape disagrees with
+      // the compiler's inference. exhaustive-deps (which is at default
+      // error) covers the actionable cases on useEffect; the
+      // useMemo/useCallback variant adds noise without specificity.
+      // Off, with rationale.
+      'react-hooks/memo-dependencies': 'off',
+      'react-hooks/gating': 'error',
+      'react-hooks/globals': 'error',
+      'react-hooks/fbt': 'warn',
+      'react-hooks/hooks': 'warn',
+      // The next two rules are intentionally OFF.
+      //
+      // react-hooks/invariant fires when the React Compiler hits an
+      // internal codegen invariant ("MethodCall::property must be an
+      // unpromoted + unmemoized MemberExpression",
+      // "[PruneHoistedContexts] Unexpected hoisted function", etc.).
+      // These are compiler implementation errors, not application bugs;
+      // the affected component is silently skipped from compilation and
+      // the runtime behavior is unchanged. There is nothing the
+      // application can do to "fix" them — they get fixed when Meta
+      // ships a new compiler release.
+      //
+      // react-hooks/todo fires when the compiler encounters syntax it
+      // hasn't implemented support for yet ("Todo:
+      // (BuildHIR::lowerExpression) Handle Import expressions" for
+      // dynamic import(), and similar). Same story: not an app bug,
+      // not actionable, the affected components just opt out of
+      // memoization until the compiler grows the feature.
+      //
+      // Keeping either at warn would mean ratchet-blocking churn from
+      // upstream compiler updates with no developer action available.
+      // Bugatti decision: turn them off explicitly with a documented
+      // rationale rather than ignore the noise.
+      'react-hooks/invariant': 'off',
+      'react-hooks/syntax': 'warn',
+      'react-hooks/unsupported-syntax': 'error',
+      'react-hooks/config': 'error',
+      'react-hooks/rule-suppression': 'warn',
+      'react-hooks/todo': 'off',
       //
       // Hardcoded hex colors — the audit/ROADMAP.md Phase B3 codemod lifts
       // these into src/styles/theme tokens. Rule is currently disabled here

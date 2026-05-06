@@ -1,0 +1,47 @@
+# Info.plist patch — sitesync:// + Universal Links + Shortcuts
+#
+# This file is NOT consumed by Capacitor automatically. After
+# `npx cap sync ios`, manually copy the contents of
+# `public/sitesync-deeplink.plist` into `ios/App/App/Info.plist`.
+#
+# OR (preferred): add the snippet via a Capacitor plugin config so the
+# sync step preserves it on every iteration. Sample plugin:
+#
+#   ./capacitor.config.ts
+#     ios: {
+#       scheme: 'sitesync',
+#       contentInset: 'always',
+#     },
+#     plugins: {
+#       App: {
+#         deepLinks: {
+#           customSchemes: ['sitesync'],
+#           universalLinks: ['app.sitesync.example'],
+#         },
+#       },
+#     },
+#
+# Native handlers expected on the iOS side:
+#
+#   AppDelegate.swift  — already calls `CAPBridgeViewController.handleOpenUrl`
+#   for incoming deep-links. Verify the override hasn't been removed by a
+#   previous Capacitor sync.
+#
+#   AppDelegate.swift  — register for push notifications via
+#   `UIApplication.shared.registerForRemoteNotifications()` inside
+#   `applicationDidFinishLaunching`. The `@capacitor/push-notifications`
+#   plugin exposes the FCM/APNs token to the SPA via the
+#   `registration` event (handled by src/lib/native/push.ts).
+#
+# After applying the plist block, build via:
+#   npm run build && npx cap sync ios && npx cap open ios
+# In Xcode → Targets → App → Signing & Capabilities, add:
+#   • Associated Domains: applinks:app.sitesync.example
+#   • Push Notifications
+#   • Background Modes: Remote notifications
+#
+# TestFlight ad-hoc rebuild:
+#   xcodebuild -workspace ios/App/App.xcworkspace -scheme App archive
+#   xcodebuild -exportArchive -archivePath … -exportOptionsPlist …
+#
+# These are the only manual steps required between Capacitor syncs.

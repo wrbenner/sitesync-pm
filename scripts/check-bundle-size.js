@@ -50,6 +50,25 @@ const KNOWN_HEAVY_ROUTES = {
   // overlay. Currently ~172 KB gz; allow up to 180 KB while we extract
   // sub-panels and move heavy pdf-viewer plumbing behind a real dynamic import.
   'drawings': 180 * 1024,
+  // BIM viewer page: IFC + Three.js stack. Loads only when /bim/* is visited.
+  // Slim-down path: lazy-load IFC parser separately from Three core; current
+  // single-chunk bundling is intentional to avoid double round-trips on first
+  // BIM open. Re-evaluate when BIM is used by >5% of sessions.
+  'BIMViewerPage': 540 * 1024,
+  // react-pdf engine: heavy PDF.js worker bridge bundled as a single chunk so
+  // we don't pay two round-trips on every PDF preview. Loads only when a PDF
+  // viewer is opened (drawings, submittals, attachments). Slim-down path:
+  // chunk the worker separately once Vite supports nested worker splitting.
+  'react-pdf.browser': 460 * 1024,
+  // Spanish locale bundle. Loads only when user picks ES. Built from the i18n
+  // resource tree; size matches the EN bundle minus shared keys. Slim-down
+  // path: split per-feature locale chunks (deferred — current approach is
+  // honest about full-app translation completeness).
+  'es': 170 * 1024,
+  // XLSX export: SheetJS vendor lib. Loads only when user exports a payment
+  // application or schedule to Excel. No slim-down planned — replacing with a
+  // smaller writer would lose XLSX round-trip fidelity.
+  'xlsx': 140 * 1024,
 }
 
 // ── Helpers ─────────────────────────────────────────────

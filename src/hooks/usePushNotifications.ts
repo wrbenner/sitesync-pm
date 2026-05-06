@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 // ── Notification Types ───────────────────────────────────
 
+
 export type NotificationType = 'assigned' | 'overdue' | 'mentioned' | 'approval_needed' | 'status_changed' | 'comment'
 
 interface PushData {
@@ -47,6 +48,10 @@ function buildDeepLink(data: PushData): string {
 export function usePushNotifications() {
   const { user } = useAuth()
   const registeredRef = useRef(false)
+  // Hoisted so the callback dep is a primitive — the compiler can't
+  // narrow `user?.id` through optional chaining and preserve-manual-
+  // memoization would skip the component otherwise.
+  const userId = user?.id
 
   // Register for push notifications
   const register = useCallback(async () => {
@@ -68,12 +73,12 @@ export function usePushNotifications() {
 
       // Store device token on profiles so it persists across projects
       PushNotifications.addListener('registration', async (token) => {
-        if (user?.id && token.value) {
+        if (userId && token.value) {
           await fromTable('profiles').update({
             push_token: token.value,
             push_platform: getPlatform(),
             push_updated_at: new Date().toISOString(),
-          }).eq('id', user.id)
+          } as never).eq('id', userId)
         }
       })
 
@@ -109,7 +114,7 @@ export function usePushNotifications() {
       // Not running as native app, try web Push API
       registerWebPush()
     }
-  }, [user?.id])
+  }, [userId])
 
   // Update badge count
   const setBadgeCount = useCallback(async (count: number) => {

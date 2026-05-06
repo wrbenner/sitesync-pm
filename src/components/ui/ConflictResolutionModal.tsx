@@ -32,15 +32,23 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
   const current = conflicts[currentIndex];
 
   // Reset field choices whenever the displayed conflict changes
-  useEffect(() => {
-    if (!current) return;
-    const conflictingFields = current.conflict_conflicting_fields ?? [];
-    const initial: Record<string, FieldChoice> = {};
-    for (const f of conflictingFields) {
-      initial[f] = 'local'; // default: prefer your own changes
+  // Reset fieldChoices when the current conflict changes — render-time
+  // prev pattern avoids set-state-in-effect (the prior version queued
+  // through a 0-delay setTimeout to dodge React's warning, which only
+  // moved the cascade off the same tick).
+  const [prevCurrentKey, setPrevCurrentKey] = useState<string | undefined>(undefined);
+  const currentKey = current ? `${currentIndex}|${current.id ?? ''}` : undefined;
+  if (prevCurrentKey !== currentKey) {
+    setPrevCurrentKey(currentKey);
+    if (current) {
+      const conflictingFields = current.conflict_conflicting_fields ?? [];
+      const initial: Record<string, FieldChoice> = {};
+      for (const f of conflictingFields) {
+        initial[f] = 'local';
+      }
+      setFieldChoices(initial);
     }
-    setTimeout(() => setFieldChoices(initial), 0);
-  }, [currentIndex, current?.id]);
+  }
 
   const advanceOrClose = useCallback(
     (resolved: PendingMutation[]) => {
@@ -454,7 +462,7 @@ const ConflictRow: React.FC<ConflictRowProps> = ({
           color: colors.textPrimary,
           wordBreak: 'break-word',
           cursor: showToggle ? 'pointer' : 'default',
-          outline: localChosen && showToggle ? `2px solid ${colors.primaryBlue ?? '#3B82F6'}` : 'none',
+          outline: localChosen && showToggle ? `2px solid ${colors.primaryOrange}` : 'none',
           outlineOffset: '-2px',
           transition: transitions.quick,
         }}
@@ -640,14 +648,17 @@ export const LiveEditConflictModal: React.FC<LiveEditConflictModalProps> = ({
   const autoMergedKeys = diffKeys.filter((k) => !conflictingFields.has(k));
   const trueConflictKeys = diffKeys.filter((k) => conflictingFields.has(k));
 
-  // Initialise field choices to 'local' whenever the modal opens
-  useEffect(() => {
-    if (!open) return;
-    const initial: Record<string, FieldChoice> = {};
-    for (const k of trueConflictKeys) initial[k] = 'local';
-    setFieldChoices(initial);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // Initialise field choices to 'local' whenever the modal opens —
+  // render-time prev pattern.
+  const [prevOpenInit, setPrevOpenInit] = useState(open);
+  if (prevOpenInit !== open) {
+    setPrevOpenInit(open);
+    if (open) {
+      const initial: Record<string, FieldChoice> = {};
+      for (const k of trueConflictKeys) initial[k] = 'local';
+      setFieldChoices(initial);
+    }
+  }
 
   const handleKeepMine = () => {
     onResolve(localState);

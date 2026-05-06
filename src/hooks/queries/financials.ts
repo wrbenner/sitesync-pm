@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import { getPayApplications, createPayApplication, upsertPayApplication, submitPayApplication, approvePayApplication } from '../../api/endpoints/payApplications'
 import type { CreatePayAppPayload } from '../../types/api'
 import { useAuditedMutation } from '../mutations/createAuditedMutation'
@@ -13,7 +14,7 @@ export function useContracts(projectId: string | undefined) {
   return useQuery({
     queryKey: ['contracts', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contracts').select('*').eq('project_id', projectId!).order('created_at', { ascending: false })
+      const { data, error } = await fromTable('contracts').select('*').eq('project_id' as never, projectId!).order('created_at', { ascending: false })
       if (error) throw error
       return data
     },
@@ -108,7 +109,7 @@ export function useDeletePayApplication() {
     entityType: 'pay_application',
     getEntityId: (p) => p.id,
     mutationFn: async (params) => {
-      const { error } = await supabase.from('pay_applications').delete().eq('id', params.id).eq('project_id', params.projectId)
+      const { error } = await fromTable('pay_applications').delete().eq('id' as never, params.id).eq('project_id' as never, params.projectId)
       if (error) throw error
       return { id: params.id, projectId: params.projectId }
     },
@@ -123,7 +124,7 @@ export function useJobCostEntries(projectId: string | undefined) {
   return useQuery({
     queryKey: ['job_cost_entries', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('job_cost_entries').select('*').eq('project_id', projectId!).order('date', { ascending: false })
+      const { data, error } = await fromTable('job_cost_entries').select('*').eq('project_id' as never, projectId!).order('date', { ascending: false })
       if (error) throw error
       return data
     },
@@ -135,7 +136,7 @@ export function useInvoicesPayable(projectId: string | undefined) {
   return useQuery({
     queryKey: ['invoices_payable', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('invoices_payable').select('*').eq('project_id', projectId!).order('due_date', { ascending: true })
+      const { data, error } = await fromTable('invoices_payable').select('*').eq('project_id' as never, projectId!).order('due_date', { ascending: true })
       if (error) throw error
       return data
     },
@@ -147,7 +148,7 @@ export function useWipReports(projectId: string | undefined) {
   return useQuery({
     queryKey: ['wip_reports', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('wip_reports').select('*').eq('project_id', projectId!).order('period_end', { ascending: false })
+      const { data, error } = await fromTable('wip_reports').select('*').eq('project_id' as never, projectId!).order('period_end', { ascending: false })
       if (error) throw error
       return data
     },
@@ -159,7 +160,7 @@ export function useRetainageLedger(projectId: string | undefined) {
   return useQuery({
     queryKey: ['retainage_ledger', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('retainage_ledger').select('*').eq('project_id', projectId!).order('created_at', { ascending: false })
+      const { data, error } = await fromTable('retainage_ledger').select('*').eq('project_id' as never, projectId!).order('created_at', { ascending: false })
       if (error) throw error
       return data
     },

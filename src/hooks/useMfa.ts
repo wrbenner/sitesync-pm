@@ -44,7 +44,7 @@ export function useMfa(): MfaState {
       if (factorsRes.error) throw factorsRes.error
       if (aalRes.error) throw aalRes.error
 
-      const all = (factorsRes.data?.totp ?? []).concat(factorsRes.data?.phone ?? [])
+      const all = [...(factorsRes.data?.totp ?? []), ...(factorsRes.data?.phone ?? [])]
       setVerifiedFactors(
         all
           .filter((f) => f.status === 'verified')
@@ -66,12 +66,11 @@ export function useMfa(): MfaState {
     }
   }, [])
 
-  // We refresh on mount. The setState-in-effect rule flags this even
-  // though it's the canonical "fetch on mount" pattern; refactoring to
-  // TanStack Query is queued as a Phase 2 cleanup. Disabling here with
-  // a clear pointer to that work item.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // Refresh MFA state on mount. Refactoring to TanStack Query is queued as
+  // Phase 3.b in the slice receipt so the canonical "fetch on mount"
+  // pattern can move out of a useEffect.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration
     void refresh()
   }, [refresh])
 

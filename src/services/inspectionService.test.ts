@@ -76,7 +76,7 @@ describe('inspectionService.createInspection', () => {
     const result = await inspectionService.createInspection({
       project_id: 'proj-1',
       title: 'Framing',
-      type: 'framing',
+      type: 'structural',
       priority: 'high',
     });
     expect(result.error).toBeNull();

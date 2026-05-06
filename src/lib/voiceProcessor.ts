@@ -213,8 +213,41 @@ export class AudioRecorder {
 
 // ── Speech Recognition Wrapper ────────────────────────────────
 
+// Minimal types for Web Speech API. lib.dom.d.ts excludes these because
+// the API has only made it into Chrome/Edge/Safari behind a vendor prefix —
+// Firefox does not implement it. We declare just enough here to type the
+// runtime checks below.
+interface SpeechRecognitionResultLike {
+  readonly isFinal: boolean
+  readonly length: number
+  [index: number]: { readonly transcript: string }
+}
+interface SpeechRecognitionResultListLike {
+  readonly length: number
+  [index: number]: SpeechRecognitionResultLike
+}
+interface SpeechRecognitionEventLike {
+  readonly results: SpeechRecognitionResultListLike
+}
+interface SpeechRecognitionErrorEventLike {
+  readonly error: string
+}
+interface SpeechRecognitionLike {
+  continuous: boolean
+  interimResults: boolean
+  maxAlternatives: number
+  lang: string
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null
+  onend: (() => void) | null
+  start(): void
+  stop(): void
+  abort(): void
+}
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike
+
 export class SpeechTranscriber {
-  private recognition: SpeechRecognition | null = null
+  private recognition: SpeechRecognitionLike | null = null
   private fullTranscript = ''
   private onTranscript: ((final: string, interim: string) => void) | null = null
   private onLanguageDetect: ((lang: string) => void) | null = null
@@ -236,12 +269,12 @@ export class SpeechTranscriber {
   ): void {
     this.language = language
     this.onTranscript = onTranscript
-    this.onLanguageDetect = onLanguageDetect
+    this.onLanguageDetect = onLanguageDetect ?? null
     this.fullTranscript = ''
 
     const SpeechRecognitionClass =
-      (window as unknown as Record<string, unknown>).SpeechRecognition as typeof SpeechRecognition ||
-      (window as unknown as Record<string, unknown>).webkitSpeechRecognition as typeof SpeechRecognition
+      ((window as unknown as Record<string, unknown>).SpeechRecognition as SpeechRecognitionConstructor | undefined) ||
+      ((window as unknown as Record<string, unknown>).webkitSpeechRecognition as SpeechRecognitionConstructor | undefined)
 
     if (!SpeechRecognitionClass) {
       onError?.('Speech recognition not supported. Use Chrome or Edge.')
@@ -256,7 +289,7 @@ export class SpeechTranscriber {
     // For auto-detect, start with English and switch if Spanish detected
     this.recognition.lang = language === 'auto' ? 'en-US' : language
 
-    this.recognition.onresult = (event: SpeechRecognitionEvent) => {
+    this.recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let interim = ''
       let finalChunk = ''
 
@@ -286,7 +319,7 @@ export class SpeechTranscriber {
       }
     }
 
-    this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    this.recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
       if (event.error === 'no-speech') return // Normal timeout, auto-restart handles it
       if (event.error === 'aborted') return // We aborted it
       onError?.(`Speech error: ${event.error}`)
@@ -648,7 +681,9 @@ export async function getUnsyncedCaptures(): Promise<OfflineCapture[]> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly')
     const index = tx.objectStore(STORE_NAME).index('synced')
-    const request = index.getAll(false)
+    // IDBValidKey type excludes booleans, but Chrome/Firefox/Safari all
+    // accept boolean keys at runtime. Cast at the boundary.
+    const request = index.getAll(false as unknown as IDBValidKey)
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })
@@ -676,7 +711,7 @@ export async function clearSyncedCaptures(): Promise<void> {
     const tx = db.transaction(STORE_NAME, 'readwrite')
     const store = tx.objectStore(STORE_NAME)
     const index = store.index('synced')
-    const request = index.openCursor(true)
+    const request = index.openCursor(true as unknown as IDBValidKey)
     request.onsuccess = () => {
       const cursor = request.result
       if (cursor) {

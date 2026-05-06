@@ -192,7 +192,10 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
 
   // ── Lifecycle ────────────────────────────────────────────
 
-  useEffect(() => {
+  // Reset state on open/close — render-time prev pattern.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (open) {
       setPhase('capture-photo');
       setPhotoDataUrl(null);
@@ -200,12 +203,22 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       setEditMode(false);
       setError(null);
       setProcessingStep(0);
+    }
+  }
+  // Camera + voice are real side effects — keep in an effect.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- camera/voice subscription effect: voice.reset() dispatches into the voice hook's internal state */
+    if (open) {
       startCamera();
     } else {
       stopCamera();
       voice.reset();
     }
     return () => { stopCamera(); };
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // startCamera/stopCamera/voice deps intentionally excluded — they
+    // close over MediaStream refs and react-tracking them would
+    // restart the camera on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -314,11 +327,11 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
         title: editMode ? editSubject : aiDraft.subject,
         description: editMode ? editQuestion : aiDraft.question,
         priority,
-        assigned_to: aiDraft.suggested_assignee_id,
+        assigned_to: aiDraft.suggested_assignee_id ?? undefined,
       });
 
       if (createError || !rfi) {
-        throw new Error(createError || 'Failed to create RFI');
+        throw new Error(createError?.message || 'Failed to create RFI');
       }
 
       // Transition to open

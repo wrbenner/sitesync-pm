@@ -2,6 +2,14 @@ import { colors } from '../../styles/theme'
 import type { LienWaiverStatus } from '../../types/api'
 import type { G702Data } from '../../machines/paymentMachine'
 import type { WaiverState } from '../../components/export/LienWaiverPDF'
+import {
+  type Cents,
+  addCents,
+  applyRateCents,
+  dollarsToCents,
+  fromCents,
+  subtractCents,
+} from '../../types/money'
 
 export type TabKey = 'applications' | 'lien_waivers' | 'cash_flow' | 'retainage'
 
@@ -39,18 +47,38 @@ export function newBlankRow(index: number): DraftSOVRow {
   }
 }
 
+// Money discipline: input boundary parses UI strings → integer cents; all
+// arithmetic is on Cents (per src/types/money.ts); output boundary returns
+// dollar floats so existing consumers (rendering, paymentMachine.G702Data)
+// keep their current shape. Internal float drift cannot accumulate because
+// every multiplication and sum runs on integers.
 export function computeRowTotals(row: DraftSOVRow, retainageRatePct: number) {
-  const sv = Math.max(0, parseFloat(row.scheduledValue) || 0)
+  const svDollars = Math.max(0, parseFloat(row.scheduledValue) || 0)
   const prevPct = row.prevPct
   const thisPct = Math.min(100, Math.max(0, parseFloat(row.thisPct) || 0))
-  const mats = Math.max(0, parseFloat(row.storedMaterials) || 0)
-  const prevAmt = sv * (prevPct / 100)
-  const thisAmt = sv * (thisPct / 100)
-  const workThisPeriod = thisAmt - prevAmt
-  const totalCompleted = thisAmt + mats
-  const retainage = totalCompleted * (retainageRatePct / 100)
-  const netPayment = totalCompleted - retainage - prevAmt
-  return { sv, prevPct, thisPct, mats, prevAmt, workThisPeriod, thisAmt, totalCompleted, retainage, netPayment }
+  const matsDollars = Math.max(0, parseFloat(row.storedMaterials) || 0)
+
+  const svC: Cents = dollarsToCents(svDollars)
+  const matsC: Cents = dollarsToCents(matsDollars)
+  const prevAmtC: Cents = applyRateCents(svC, prevPct / 100)
+  const thisAmtC: Cents = applyRateCents(svC, thisPct / 100)
+  const workThisPeriodC: Cents = subtractCents(thisAmtC, prevAmtC)
+  const totalCompletedC: Cents = addCents(thisAmtC, matsC)
+  const retainageC: Cents = applyRateCents(totalCompletedC, retainageRatePct / 100)
+  const netPaymentC: Cents = subtractCents(subtractCents(totalCompletedC, retainageC), prevAmtC)
+
+  return {
+    sv: svDollars,
+    prevPct,
+    thisPct,
+    mats: matsDollars,
+    prevAmt: fromCents(prevAmtC) / 100,
+    workThisPeriod: fromCents(workThisPeriodC) / 100,
+    thisAmt: fromCents(thisAmtC) / 100,
+    totalCompleted: fromCents(totalCompletedC) / 100,
+    retainage: fromCents(retainageC) / 100,
+    netPayment: fromCents(netPaymentC) / 100,
+  }
 }
 
 export function computeG702FromRows(
@@ -60,14 +88,21 @@ export function computeG702FromRows(
   netChangeOrders: number,
   lessPrevCerts: number,
 ): G702Data {
-  const totalCompletedAndStored = rows.reduce(
-    (s, r) => s + computeRowTotals(r, retainageRatePct).totalCompleted, 0,
-  )
-  const contractSumToDate = originalContractSum + netChangeOrders
-  const retainageAmount = Math.round(totalCompletedAndStored * (retainageRatePct / 100) * 100) / 100
-  const totalEarnedLessRetainage = totalCompletedAndStored - retainageAmount
-  const currentPaymentDue = totalEarnedLessRetainage - lessPrevCerts
-  const balanceToFinish = contractSumToDate - totalCompletedAndStored
+  const totalCompletedAndStoredC: Cents = rows.reduce<Cents>((acc, r) => {
+    const sv = dollarsToCents(Math.max(0, parseFloat(r.scheduledValue) || 0))
+    const mats = dollarsToCents(Math.max(0, parseFloat(r.storedMaterials) || 0))
+    const thisPct = Math.min(100, Math.max(0, parseFloat(r.thisPct) || 0))
+    const thisAmt = applyRateCents(sv, thisPct / 100)
+    return addCents(acc, addCents(thisAmt, mats))
+  }, 0 as Cents)
+  const originalC: Cents = dollarsToCents(originalContractSum)
+  const netCoC: Cents = dollarsToCents(netChangeOrders)
+  const lessPrevC: Cents = dollarsToCents(lessPrevCerts)
+  const contractSumToDateC: Cents = addCents(originalC, netCoC)
+  const retainageC: Cents = applyRateCents(totalCompletedAndStoredC, retainageRatePct / 100)
+  const totalEarnedLessRetainageC: Cents = subtractCents(totalCompletedAndStoredC, retainageC)
+  const currentPaymentDueC: Cents = subtractCents(totalEarnedLessRetainageC, lessPrevC)
+  const balanceToFinishC: Cents = subtractCents(contractSumToDateC, totalCompletedAndStoredC)
   return {
     applicationNumber: 0,
     periodTo: '',
@@ -75,14 +110,14 @@ export function computeG702FromRows(
     contractorName: '',
     originalContractSum,
     netChangeOrders,
-    contractSumToDate,
-    totalCompletedAndStored,
+    contractSumToDate: fromCents(contractSumToDateC) / 100,
+    totalCompletedAndStored: fromCents(totalCompletedAndStoredC) / 100,
     retainagePercent: retainageRatePct,
-    retainageAmount,
-    totalEarnedLessRetainage,
+    retainageAmount: fromCents(retainageC) / 100,
+    totalEarnedLessRetainage: fromCents(totalEarnedLessRetainageC) / 100,
     lessPreviousCertificates: lessPrevCerts,
-    currentPaymentDue,
-    balanceToFinish,
+    currentPaymentDue: fromCents(currentPaymentDueC) / 100,
+    balanceToFinish: fromCents(balanceToFinishC) / 100,
   }
 }
 
@@ -107,6 +142,7 @@ export const LIEN_WAIVER_STATUS_CONFIG: Record<LienWaiverStatus | 'overdue', { l
   pending:  { label: 'Pending',  color: colors.statusPending,  bg: colors.statusPendingSubtle },
   received: { label: 'Received', color: colors.statusActive,   bg: colors.statusActiveSubtle },
   executed: { label: 'Executed', color: colors.statusInfo,     bg: colors.statusInfoSubtle },
+  missing:  { label: 'Missing',  color: colors.statusCritical, bg: colors.statusCriticalSubtle },
   overdue:  { label: 'Overdue',  color: colors.statusCritical, bg: colors.statusCriticalSubtle },
 }
 

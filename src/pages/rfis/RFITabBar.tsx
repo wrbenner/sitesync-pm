@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { CircleDot, Timer, CheckCircle2, AlertCircle, XCircle, Layers } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
@@ -34,7 +34,7 @@ export const RFITabBar: React.FC<RFITabBarProps> = ({
   const [indicator, setIndicator] = useState({ left: 0, width: 0 })
   const [hovered, setHovered] = useState<RFIStatusFilter | null>(null)
 
-  const updateIndicator = () => {
+  const updateIndicator = useCallback(() => {
     const el = tabRefs.current.get(activeTab)
     const container = containerRef.current
     if (el && container) {
@@ -42,13 +42,13 @@ export const RFITabBar: React.FC<RFITabBarProps> = ({
       const tRect = el.getBoundingClientRect()
       setIndicator({ left: tRect.left - cRect.left, width: tRect.width })
     }
-  }
+  }, [activeTab])
 
-  useLayoutEffect(updateIndicator, [activeTab])
+  useLayoutEffect(updateIndicator, [updateIndicator])
   useEffect(() => {
     window.addEventListener('resize', updateIndicator)
     return () => window.removeEventListener('resize', updateIndicator)
-  }, [activeTab])
+  }, [updateIndicator])
 
   return (
     <div

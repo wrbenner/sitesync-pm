@@ -11,8 +11,25 @@ import {
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { PermissionGate } from '../components/auth/PermissionGate'
+
 import { useCloseoutData, type CloseoutItemRow } from '../hooks/queries/closeout'
 import { usePunchItems } from '../hooks/queries/punch-items'
+import { useProfileNames, displayName } from '../hooks/queries/profiles'
+
+// punch_items.assigned_to is sometimes a UUID (linked auth user) and sometimes
+// a free-text trade name. Resolve only when it looks like a UUID; pass other
+// strings through unchanged so a label like "Atlantic Concrete Co." still
+// renders as itself.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+function resolveAssignee(
+  value: string | null | undefined,
+  profileMap: ReturnType<typeof useProfileNames>['data'],
+  fallback = '—',
+): string {
+  if (!value) return fallback
+  if (UUID_RE.test(value)) return displayName(profileMap, value, fallback)
+  return value
+}
 import { useWarranties, type WarrantyWithStatus } from '../hooks/queries/warranties'
 import {
   useCreateWarranty, useUpdateWarranty, useDeleteWarranty,
@@ -23,6 +40,7 @@ import {
   useUploadOMManual, useRecordSignOff, type SignOffKind,
 } from '../hooks/mutations/closeout'
 import type { PunchItem } from '../types/database'
+import { useConfirm } from '../components/ConfirmDialog'
 
 // ── Tabs ──────────────────────────────────────────────────
 
@@ -54,7 +72,10 @@ export const Closeout: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>('punch')
 
-  const items = closeoutData?.items ?? []
+  // Wrap optional array fallback in useMemo so downstream omItems/
+  // trainingItems memos don't re-compute when closeoutData identity is
+  // stable but `?? []` would mint a new array.
+  const items = useMemo(() => closeoutData?.items ?? [], [closeoutData])
   const totalItems = items.length
   const approvedItems = items.filter(i => i.status === 'approved').length
   const pctComplete = totalItems > 0 ? Math.round((approvedItems / totalItems) * 100) : 0
@@ -76,11 +97,16 @@ export const Closeout: React.FC = () => {
       subtitle="Punch list verification, warranties, O&M manuals, training, and final sign-offs"
     >
       {/* ── Completion bar ───────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'] }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: spacing['3'],
+        marginBottom: spacing['4'],
+      }}>
         <MetricBox label="Total items" value={totalItems} />
         <MetricBox label="Approved" value={approvedItems} colorOverride={approvedItems === totalItems && totalItems > 0 ? 'success' : undefined} />
         <MetricBox label="Outstanding" value={totalItems - approvedItems} colorOverride={totalItems - approvedItems > 0 ? 'warning' : 'success'} />
-        <MetricBox label="Complete" value={`${pctComplete}%`} colorOverride={pctComplete === 100 ? 'success' : pctComplete >= 75 ? 'warning' : 'danger'} />
+        <MetricBox label="Complete" value={pctComplete} unit="%" colorOverride={pctComplete === 100 ? 'success' : pctComplete >= 75 ? 'warning' : 'danger'} />
       </div>
 
       <Card padding={spacing['4']}>
@@ -108,7 +134,20 @@ export const Closeout: React.FC = () => {
       </Card>
 
       {/* ── Tabs ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, margin: `${spacing['4']} 0 ${spacing['4']}` }}>
+      <div
+        role="tablist"
+        aria-label="Closeout sections"
+        style={{
+          display: 'flex',
+          gap: spacing['1'],
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          margin: `${spacing['4']} 0 ${spacing['4']}`,
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+        }}
+      >
         {TABS.map(t => {
           const Icon = t.icon
           const active = activeTab === t.key
@@ -121,6 +160,8 @@ export const Closeout: React.FC = () => {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
+              role="tab"
+              aria-selected={active}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
                 padding: `${spacing['2']} ${spacing['3']}`,
@@ -130,6 +171,8 @@ export const Closeout: React.FC = () => {
                 fontSize: typography.fontSize.sm,
                 fontWeight: active ? typography.fontWeight.semibold : typography.fontWeight.medium,
                 cursor: 'pointer',
+                flex: '0 0 auto',
+                whiteSpace: 'nowrap',
               }}
             >
               <Icon size={14} />
@@ -149,11 +192,24 @@ export const Closeout: React.FC = () => {
         })}
       </div>
 
-      {loading ? (
-        <Skeleton width="100%" height="320px" />
-      ) : !projectId ? (
-        <Card padding={spacing['5']}>
-          <EmptyState icon={<Shield size={48} />} title="No project selected" description="Select a project from the sidebar to manage closeout." />
+      {loading || !projectId ? (
+        // Brief skeleton while the project resolves. ProjectGate in App.tsx
+        // covers the "no project" case; rendering it here too caused the
+        // welcome screen to flash inside an active project. Structured to
+        // mirror the table that follows so a paused screenshot still reads
+        // as "loading content" rather than "broken empty rectangle".
+        <Card padding="0">
+          <div style={{ padding: `${spacing['3']} ${spacing['4']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
+            <Skeleton width="40%" height="14px" />
+          </div>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} style={{ display: 'flex', gap: spacing['3'], padding: `${spacing['3']} ${spacing['4']}`, borderBottom: i < 3 ? `1px solid ${colors.borderSubtle}` : 'none' }}>
+              <Skeleton width="32px" height="14px" />
+              <Skeleton width="35%" height="14px" />
+              <Skeleton width="20%" height="14px" />
+              <Skeleton width="15%" height="14px" />
+            </div>
+          ))}
         </Card>
       ) : (
         <>
@@ -185,6 +241,9 @@ export default Closeout
 // ══════════════════════════════════════════════════════════
 
 const PunchTab: React.FC<{ unresolved: PunchItem[] }> = ({ unresolved }) => {
+  // Resolve assigned_to (UUID OR free-text trade) for every visible row.
+  const { data: punchProfileMap } = useProfileNames(unresolved.map((p) => p.assigned_to ?? null))
+
   if (unresolved.length === 0) {
     return (
       <Card padding={spacing['5']}>
@@ -227,7 +286,7 @@ const PunchTab: React.FC<{ unresolved: PunchItem[] }> = ({ unresolved }) => {
                     textTransform: 'capitalize',
                   }}>{(p.status ?? 'open').replace(/_/g, ' ')}</span>
                 </td>
-                <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{p.assigned_to ?? '—'}</td>
+                <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{resolveAssignee(p.assigned_to, punchProfileMap)}</td>
                 <td style={{ padding: `${spacing['2']} ${spacing['3']}`, color: colors.textSecondary }}>{formatDate(p.due_date)}</td>
               </tr>
             ))}
@@ -248,20 +307,29 @@ const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatu
   const createWarranty = useCreateWarranty()
   const updateWarranty = useUpdateWarranty()
   const deleteWarranty = useDeleteWarranty()
+  const { confirm: confirmWarranty, dialog: warrantyConfirmDialog } = useConfirm()
 
   const active = warranties.filter(w => w.computedStatus === 'active').length
   const expiring = warranties.filter(w => w.computedStatus === 'expiring_soon').length
   const expired = warranties.filter(w => w.computedStatus === 'expired').length
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!window.confirm('Delete this warranty?')) return
+    const target = warranties.find(w => w.id === id)
+    const ok = await confirmWarranty({
+      title: 'Delete warranty?',
+      description: target
+        ? `"${target.item}"${target.manufacturer ? ` from ${target.manufacturer}` : ''} — closeout coverage will be removed.`
+        : 'This warranty record will be removed from the project closeout package.',
+      destructiveLabel: 'Delete warranty',
+    })
+    if (!ok) return
     try {
       await deleteWarranty.mutateAsync({ id, project_id: projectId })
       toast.success('Warranty deleted')
     } catch (err) {
       toast.error('Delete failed: ' + (err as Error).message)
     }
-  }, [deleteWarranty, projectId])
+  }, [deleteWarranty, projectId, confirmWarranty, warranties])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
@@ -332,6 +400,7 @@ const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatu
         }}
         submitting={updateWarranty.isPending}
       />
+      {warrantyConfirmDialog}
     </div>
   )
 }
@@ -431,27 +500,32 @@ const WarrantyFormModal: React.FC<{
 }> = ({ open, initial, onClose, onSubmit, submitting }) => {
   const [form, setForm] = useState<WarrantyFormValues>(blankWarranty)
 
-  React.useEffect(() => {
-    if (!open) return
-    if (initial) {
-      setForm({
-        item: initial.item ?? '',
-        manufacturer: initial.manufacturer ?? '',
-        subcontractor: initial.subcontractor ?? '',
-        trade: initial.trade ?? '',
-        warranty_type: initial.warranty_type ?? '',
-        start_date: initial.start_date ?? '',
-        expiration_date: initial.expiration_date ?? '',
-        duration_years: initial.duration_years != null ? String(initial.duration_years) : '',
-        document_url: initial.document_url ?? '',
-        coverage_description: initial.coverage_description ?? '',
-        contact_name: initial.contact_name ?? '',
-        contact_email: initial.contact_email ?? '',
-      })
-    } else {
-      setForm(blankWarranty)
+  // Sync form to initial when modal opens — render-time prev pattern.
+  const formKey = `${open}|${initial ? (initial as { id?: string }).id ?? 'edit' : 'blank'}`
+  const [prevFormKey, setPrevFormKey] = useState(formKey)
+  if (prevFormKey !== formKey) {
+    setPrevFormKey(formKey)
+    if (open) {
+      if (initial) {
+        setForm({
+          item: initial.item ?? '',
+          manufacturer: initial.manufacturer ?? '',
+          subcontractor: initial.subcontractor ?? '',
+          trade: initial.trade ?? '',
+          warranty_type: initial.warranty_type ?? '',
+          start_date: initial.start_date ?? '',
+          expiration_date: initial.expiration_date ?? '',
+          duration_years: initial.duration_years != null ? String(initial.duration_years) : '',
+          document_url: initial.document_url ?? '',
+          coverage_description: initial.coverage_description ?? '',
+          contact_name: initial.contact_name ?? '',
+          contact_email: initial.contact_email ?? '',
+        })
+      } else {
+        setForm(blankWarranty)
+      }
     }
-  }, [open, initial])
+  }
 
   const setField = (k: keyof WarrantyFormValues) => (v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -518,6 +592,7 @@ const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = 
   const uploadOM = useUploadOMManual()
   const deleteItem = useDeleteCloseoutItem()
   const toggleComplete = useToggleCloseoutItemComplete()
+  const { confirm: confirmManual, dialog: omConfirmDialog } = useConfirm()
 
   const bySub = useMemo(() => {
     const map: Record<string, CloseoutItemRow[]> = {}
@@ -531,10 +606,15 @@ const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = 
 
   const subs = Object.keys(bySub).sort()
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Remove this O&M manual?')) return
+  const handleDelete = async (item: CloseoutItemRow) => {
+    const ok = await confirmManual({
+      title: 'Remove O&M manual?',
+      description: `"${item.description}"${item.trade ? ` from ${item.trade}` : ''} — closeout package will no longer include this manual.`,
+      destructiveLabel: 'Remove manual',
+    })
+    if (!ok) return
     try {
-      await deleteItem.mutateAsync({ id, projectId })
+      await deleteItem.mutateAsync({ id: item.id, projectId })
       toast.success('Removed')
     } catch (err) {
       toast.error('Delete failed: ' + (err as Error).message)
@@ -611,7 +691,7 @@ const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = 
                       {isDone ? 'Approved' : 'Pending'}
                     </button>
                     <PermissionGate permission="project.settings" fallback={null}>
-                      <button onClick={() => handleDelete(item.id)} title="Remove" style={iconButtonStyle}>
+                      <button onClick={() => handleDelete(item)} title="Remove" style={iconButtonStyle}>
                         <Trash2 size={12} />
                       </button>
                     </PermissionGate>
@@ -637,6 +717,7 @@ const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = 
           }
         }}
       />
+      {omConfirmDialog}
     </div>
   )
 }
@@ -653,11 +734,14 @@ const OMUploadModal: React.FC<{
   const [file, setFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  React.useEffect(() => {
+  // Reset form when modal closes — render-time prev pattern.
+  const [prevOpenUploadDoc, setPrevOpenUploadDoc] = useState(open)
+  if (prevOpenUploadDoc !== open) {
+    setPrevOpenUploadDoc(open)
     if (!open) {
       setSubcontractor(''); setDescription(''); setTrade(''); setFile(null)
     }
-  }, [open])
+  }
 
   const handleSubmit = () => {
     if (!file) { toast.error('Pick a file to upload'); return }
@@ -723,6 +807,9 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
   const createItem = useCreateCloseoutItem()
   const toggleComplete = useToggleCloseoutItemComplete()
   const deleteItem = useDeleteCloseoutItem()
+  const { confirm: confirmTraining, dialog: trainingConfirmDialog } = useConfirm()
+  // Resolve assigned_to (UUID OR free-text) for every visible item.
+  const { data: trainingProfileMap } = useProfileNames(items.map((it) => (it.assigned_to as string | null) ?? null))
 
   const [form, setForm] = useState({ description: '', trade: '', assigned_to: '', due_date: '', notes: '' })
 
@@ -747,10 +834,15 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this training entry?')) return
+  const handleDelete = async (item: CloseoutItemRow) => {
+    const ok = await confirmTraining({
+      title: 'Delete training entry?',
+      description: `"${item.description}" — training record will be removed from the project closeout package.`,
+      destructiveLabel: 'Delete entry',
+    })
+    if (!ok) return
     try {
-      await deleteItem.mutateAsync({ id, projectId })
+      await deleteItem.mutateAsync({ id: item.id, projectId })
       toast.success('Deleted')
     } catch (err) {
       toast.error('Delete failed: ' + (err as Error).message)
@@ -807,7 +899,7 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
                     textDecoration: isDone ? 'line-through' : 'none',
                   }}>{item.description}</p>
                   <p style={{ margin: 0, fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
-                    {item.trade}{item.assigned_to ? ` · ${item.assigned_to}` : ''}{item.due_date ? ` · Due ${formatDate(item.due_date)}` : ''}
+                    {item.trade}{item.assigned_to ? ` · ${resolveAssignee(item.assigned_to as string, trainingProfileMap, '')}` : ''}{item.due_date ? ` · Due ${formatDate(item.due_date)}` : ''}
                   </p>
                 </div>
                 {item.completed_date && (
@@ -816,7 +908,7 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
                   </span>
                 )}
                 <PermissionGate permission="project.settings" fallback={null}>
-                  <button onClick={() => handleDelete(item.id)} title="Delete" style={iconButtonStyle}>
+                  <button onClick={() => handleDelete(item)} title="Delete" style={iconButtonStyle}>
                     <Trash2 size={12} />
                   </button>
                 </PermissionGate>
@@ -841,6 +933,7 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
           </div>
         </div>
       </Modal>
+      {trainingConfirmDialog}
     </div>
   )
 }
@@ -989,9 +1082,17 @@ const SignatureModal: React.FC<{
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
 
-  React.useEffect(() => {
+  // Reset signoff form on close — split state reset (render-time prev
+  // pattern) from the canvas-clear side effect (effect).
+  const [prevOpenSignoff, setPrevOpenSignoff] = useState(open)
+  if (prevOpenSignoff !== open) {
+    setPrevOpenSignoff(open)
     if (!open) {
       setName(''); setTitle('')
+    }
+  }
+  React.useEffect(() => {
+    if (!open) {
       drawing.current = false
       const c = canvasRef.current
       if (c) {

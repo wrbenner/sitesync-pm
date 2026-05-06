@@ -5,7 +5,8 @@
 
 import React from 'react'
 import { Document, Page, Text, View, Image, StyleSheet, pdf } from '@react-pdf/renderer'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -218,14 +219,14 @@ const TableOfContentsPage: React.FC<{ items: DiscrepancyItem[] }> = ({ items }) 
     <View
       fixed
       style={styles.pageFooter}
-      render={({ pageNumber, totalPages }) => (
+      render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
         <>
           <Text>SiteSync PM</Text>
           <Text>
             Page {pageNumber} of {totalPages}
           </Text>
         </>
-      )}
+      )) as never}
     />
   </Page>
 )
@@ -262,14 +263,14 @@ const SummaryStatsPage: React.FC<{ data: DiscrepancyReportData }> = ({ data }) =
       <View
         fixed
         style={styles.pageFooter}
-        render={({ pageNumber, totalPages }) => (
+        render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
           <>
             <Text>SiteSync PM</Text>
             <Text>
               Page {pageNumber} of {totalPages}
             </Text>
           </>
-        )}
+        )) as never}
       />
     </Page>
   )
@@ -356,14 +357,14 @@ export const DiscrepancyReport: React.FC<{ data: DiscrepancyReportData }> = ({ d
         <View
           fixed
           style={styles.pageFooter}
-          render={({ pageNumber, totalPages }) => (
+          render={(({ pageNumber, totalPages }: { pageNumber: number; totalPages: number }) => (
             <>
               <Text>SiteSync PM — {data.projectName}</Text>
               <Text>
                 Page {pageNumber} of {totalPages}
               </Text>
             </>
-          )}
+          )) as never}
         />
       </Page>
     )}
@@ -414,18 +415,19 @@ export async function generateDiscrepancyReport(
   opts: DiscrepancyReportOptions = {},
 ): Promise<{ blob: Blob; filename: string; data: DiscrepancyReportData }> {
   const [projectRes, pairsRes, discRes, drawingsRes] = await Promise.all([
-    supabase.from('projects').select('name, location').eq('id', projectId).maybeSingle(),
-    supabase.from('drawing_pairs').select('id, drawing_a_id, drawing_b_id, overlap_image_url').eq('project_id', projectId),
-    supabase.from('drawing_discrepancies').select('id, description, severity, confidence, arch_dimension, struct_dimension, drawing_id, drawing_pair_id, auto_rfi_id').eq('project_id', projectId).eq('is_false_positive', false),
-    supabase.from('drawings').select('id, sheet_number, thumbnail_url').eq('project_id', projectId),
+    fromTable('projects').select('name, location').eq('id' as never, projectId).maybeSingle(),
+    fromTable('drawing_pairs').select('id, drawing_a_id, drawing_b_id, overlap_image_url').eq('project_id' as never, projectId),
+    fromTable('drawing_discrepancies').select('id, description, severity, confidence, arch_dimension, struct_dimension, drawing_id, drawing_pair_id, auto_rfi_id').eq('project_id' as never, projectId).eq('is_false_positive' as never, false),
+    fromTable('drawings').select('id, sheet_number, thumbnail_url').eq('project_id' as never, projectId),
   ])
 
-  const projectName = (projectRes.data?.name as string | undefined) ?? 'Project'
-  const projectAddress = (projectRes.data?.location as string | undefined) ?? undefined
+  const projectRow = projectRes.data as unknown as { name: string | null; location: string | null } | null
+  const projectName = projectRow?.name ?? 'Project'
+  const projectAddress = projectRow?.location ?? undefined
 
-  const pairs: PairRow[] = (pairsRes.data ?? []) as PairRow[]
-  const drawings: DrawingRow[] = (drawingsRes.data ?? []) as DrawingRow[]
-  const rawDiscrepancies: DiscrepancyRow[] = (discRes.data ?? []) as DiscrepancyRow[]
+  const pairs: PairRow[] = (pairsRes.data ?? []) as unknown as PairRow[]
+  const drawings: DrawingRow[] = (drawingsRes.data ?? []) as unknown as DrawingRow[]
+  const rawDiscrepancies: DiscrepancyRow[] = (discRes.data ?? []) as unknown as DiscrepancyRow[]
 
   const drawingById = new Map(drawings.map((d) => [d.id, d]))
   const pairById = new Map(pairs.map((p) => [p.id, p]))
@@ -434,8 +436,8 @@ export async function generateDiscrepancyReport(
   const rfiIds = Array.from(new Set(rawDiscrepancies.map((d) => d.auto_rfi_id).filter(Boolean))) as string[]
   let rfiById = new Map<string, RfiRow>()
   if (rfiIds.length > 0) {
-    const { data: rfis } = await supabase.from('rfis').select('id, number').in('id', rfiIds)
-    rfiById = new Map(((rfis ?? []) as RfiRow[]).map((r) => [r.id, r]))
+    const { data: rfis } = await fromTable('rfis').select('id, number').in('id' as never, rfiIds)
+    rfiById = new Map(((rfis ?? []) as unknown as RfiRow[]).map((r) => [r.id, r]))
   }
 
   const selected = opts.drawingIds && opts.drawingIds !== 'all' ? new Set(opts.drawingIds) : null
@@ -469,7 +471,6 @@ export async function generateDiscrepancyReport(
              (item._structDrawingId && selected.has(item._structDrawingId))
     })
     .map(({ _archDrawingId: _a, _structDrawingId: _b, ...rest }) => {
-      void _a; void _b
       return rest
     })
 

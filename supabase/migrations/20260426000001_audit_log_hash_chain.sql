@@ -69,7 +69,7 @@ BEGIN
        coalesce(NEW.metadata::text, '{}')      || '|' ||
        coalesce(prev_hash, '');
 
-  NEW.entry_hash := encode(digest(payload, 'sha256'), 'hex');
+  NEW.entry_hash := encode(extensions.digest(payload, 'sha256'), 'hex');
 
   RETURN NEW;
 END;
@@ -145,7 +145,7 @@ BEGIN
          coalesce(rec.metadata::text, '{}')      || '|' ||
          coalesce(prev, '');
 
-    this_hash := encode(digest(payload, 'sha256'), 'hex');
+    this_hash := encode(extensions.digest(payload, 'sha256'), 'hex');
 
     -- Direct UPDATE bypasses the block trigger because we ARE postgres
     -- during a migration. The block trigger checks current_user.
@@ -229,7 +229,7 @@ BEGIN
          coalesce(rec.metadata::text, '{}')      || '|' ||
          coalesce(prev, '');
 
-    expected := encode(digest(payload, 'sha256'), 'hex');
+    expected := encode(extensions.digest(payload, 'sha256'), 'hex');
 
     IF rec.entry_hash IS DISTINCT FROM expected THEN
       broken_at_id  := rec.id;

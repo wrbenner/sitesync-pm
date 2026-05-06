@@ -14,6 +14,7 @@ import { useChangeOrders } from '../hooks/useSupabase'
 import { useAuth } from '../hooks/useAuth'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { sovService, type SovItem, type CreateSovItemInput, type UpdateSovItemInput } from '../services/sovService'
 import {
@@ -24,7 +25,8 @@ import {
   type SignatureRequest,
 } from '../hooks/queries/signatures'
 import { getSignerColorPalette } from '../services/signatureService'
-import { supabase } from '../lib/supabase'
+
+import { fromTable } from '../lib/db/queries'
 import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation'
 import { PageInsightBanners } from '../components/ai/PredictiveAlert'
 
@@ -182,8 +184,15 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
     }
   }
 
+  const { confirm: confirmDeleteSovItem, dialog: deleteSovItemDialog } = useConfirm()
+
   const handleDeleteItem = async (itemId: string) => {
-    if (!window.confirm('Delete this line item?')) return
+    const ok = await confirmDeleteSovItem({
+      title: 'Delete SOV line item?',
+      description: 'Schedule of values totals adjust on the next pay-app reconciliation. Linked retainage entries are preserved.',
+      destructiveLabel: 'Delete line',
+    })
+    if (!ok) return
     try {
       await deleteItem.mutateAsync(itemId)
       toast.success('Line item deleted')
@@ -477,6 +486,7 @@ const SovSection: React.FC<SovSectionProps> = ({ contractId, contractTitle, onCl
           </table>
         </div>
       )}
+      {deleteSovItemDialog}
     </Card>
   )
 }
@@ -580,12 +590,12 @@ const SignaturesTab: React.FC<SignaturesTabProps> = ({ projectId }) => {
       return
     }
     try {
-      const request = await createRequest.mutateAsync({
+      const request = (await createRequest.mutateAsync({
         project_id: projectId,
         title: sigTitle.trim(),
         source_file_url: sigUrl.trim(),
         signing_order: sigOrder,
-      })
+      })) as { id: string }
 
       const palette = getSignerColorPalette()
       for (let i = 0; i < validSigners.length; i++) {
@@ -991,8 +1001,15 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
     }
   }
 
+  const { confirm: confirmDeleteCert, dialog: deleteCertDialog } = useConfirm()
+
   const handleDelete = async (cert: InsuranceCertificate) => {
-    if (!window.confirm(`Delete ${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'certificate'} for ${cert.company}?`)) return
+    const ok = await confirmDeleteCert({
+      title: 'Delete insurance certificate?',
+      description: `${POLICY_TYPE_LABELS[cert.policy_type ?? ''] ?? 'Certificate'} for ${cert.company} — pay-app audit will flag this sub as non-compliant if work continues.`,
+      destructiveLabel: 'Delete certificate',
+    })
+    if (!ok) return
     try {
       await deleteCert.mutateAsync({ id: cert.id, projectId })
       toast.success('Certificate deleted')
@@ -1123,6 +1140,7 @@ const InsuranceSection: React.FC<{ projectId: string; contract: Contract; onClos
           </div>
         </div>
       </Modal>
+      {deleteCertDialog}
     </Card>
   )
 }
@@ -1152,16 +1170,15 @@ const PaymentScheduleSection: React.FC<{ contractId: string; contractTitle: stri
   const { data: milestones = [], isLoading: milestonesLoading } = useQuery({
     queryKey: ['payment_milestones', contractId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('payment_milestones')
+      const { data, error } = await fromTable('payment_milestones')
         .select('*')
-        .eq('contract_id', contractId)
+        .eq('contract_id' as never, contractId)
         .order('target_date', { ascending: true })
       if (error) {
         console.warn('[PaymentScheduleSection] Query failed:', error.message)
         return [] as PaymentMilestone[]
       }
-      return (data ?? []) as PaymentMilestone[]
+      return (data ?? []) as unknown as PaymentMilestone[]
     },
     enabled: !!contractId,
   })
@@ -1380,9 +1397,12 @@ interface Contract {
   contract_number: string | null
   title: string
   counterparty_name: string
+  counterparty: string | null
   counterparty_contact: string | null
   counterparty_email: string | null
   contract_amount: number
+  original_value: number | null
+  revised_value: number | null
   status: string
   start_date: string | null
   end_date: string | null
@@ -1624,6 +1644,7 @@ const InsuranceTab: React.FC<{ projectId: string; search: string; userId: string
     try {
       await updateCert.mutateAsync({
         id: cert.id,
+        projectId,
         updates: {
           verified: true,
           verified_by: userId ?? null,
@@ -1640,6 +1661,7 @@ const InsuranceTab: React.FC<{ projectId: string; search: string; userId: string
     try {
       await updateCert.mutateAsync({
         id: cert.id,
+        projectId,
         updates: { verified: false, verified_by: null, verified_at: null },
       })
       toast.success(`Marked ${cert.company} COI as unverified`)
@@ -1928,7 +1950,7 @@ export const Contracts: React.FC = () => {
   useRealtimeInvalidation(projectId ?? undefined)
 
   // Single typed reference — eliminates repeated `as Contract[]` casts (#6)
-  const typedContracts = useMemo<Contract[]>(() => (contracts ?? []) as Contract[], [contracts])
+  const typedContracts = useMemo<Contract[]>(() => (contracts ?? []) as unknown as Contract[], [contracts])
 
   // Roll retainage (from schedule_of_values) up per contract so the
   // list can show actual retained amounts, not just the contract's
@@ -1945,9 +1967,18 @@ export const Contracts: React.FC = () => {
     return typedContracts.find((c) => c.id === selectedContractId) ?? null
   }, [selectedContractId, typedContracts])
 
+  const { confirm: confirmDeleteContract, dialog: deleteContractDialog } = useConfirm()
+  const { confirm: confirmTerminateContract, dialog: terminateContractDialog } = useConfirm()
+
   const handleDeleteContract = async (contract: Contract) => {
     if (!projectId) return
-    if (!window.confirm(`Delete "${contract.title}"? This cannot be undone.`)) return
+    const ok = await confirmDeleteContract({
+      title: 'Delete contract?',
+      description: `"${contract.title}" — pay applications, lien waivers, and insurance certificates referencing this contract will become orphaned. Consider terminating instead of deleting.`,
+      destructiveLabel: 'Delete contract',
+      typeToConfirm: 'DELETE',
+    })
+    if (!ok) return
     try {
       await deleteContract.mutateAsync({ id: contract.id, projectId })
       toast.success('Contract deleted')
@@ -1961,9 +1992,12 @@ export const Contracts: React.FC = () => {
     if (!projectId) return
     // Confirmation for destructive status changes (#9)
     if (status === 'terminated') {
-      const confirmed = window.confirm(
-        `Are you sure you want to terminate "${contract.title}"? This is a destructive action and may have legal implications.`
-      )
+      const confirmed = await confirmTerminateContract({
+        title: 'Terminate contract?',
+        description: `Terminating "${contract.title}" is a destructive contractual action. May have legal implications and triggers downstream notifications. Document the termination reason in the contract notes after.`,
+        destructiveLabel: 'Terminate contract',
+        typeToConfirm: 'TERMINATE',
+      })
       if (!confirmed) return
     }
     try {
@@ -2026,7 +2060,7 @@ export const Contracts: React.FC = () => {
                 <Btn
                   size="sm"
                   variant="ghost"
-                  onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeleteContract(contract) }}
+                  onClick={(e) => { e?.stopPropagation(); handleDeleteContract(contract) }}
                   disabled={deleteContract.isPending}
                   aria-label={`Delete ${contract.title}`}
                   data-testid="delete-contract-button"
@@ -2133,7 +2167,7 @@ export const Contracts: React.FC = () => {
       subtitle="Prime contracts, subcontracts, PSAs, and purchase orders"
       actions={
         <PermissionGate
-          permission="project.settings"
+          permission="financials.edit"
           fallback={<span title="Your role doesn't allow creating contracts. Request access from your admin."><Btn variant="primary" icon={<Plus size={16} />} disabled>New Contract</Btn></span>}
         >
           <Btn variant="primary" icon={<Plus size={16} />} onClick={() => setModalOpen(true)} data-testid="create-contract-button">New Contract</Btn>
@@ -2148,7 +2182,8 @@ export const Contracts: React.FC = () => {
       }}>
         <div style={{
           display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.lg, padding: spacing['1'], overflowX: 'auto',
+          borderRadius: borderRadius.lg, padding: spacing['1'],
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
         }}>
           {topTabs.map((tab) => {
             const isActive = topTab === tab.key
@@ -2166,6 +2201,7 @@ export const Contracts: React.FC = () => {
                   color: isActive ? colors.orangeText : colors.textSecondary,
                   backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                   transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
                 {React.createElement(tab.icon, { size: 14 })}
@@ -2213,7 +2249,8 @@ export const Contracts: React.FC = () => {
       <>
       <div style={{
         display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'], overflowX: 'auto',
+        borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['2xl'],
+        overflowX: 'auto', WebkitOverflowScrolling: 'touch',
       }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
@@ -2230,6 +2267,7 @@ export const Contracts: React.FC = () => {
                 color: isActive ? colors.orangeText : colors.textSecondary,
                 backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
                 transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {React.createElement(tab.icon, { size: 14 })}
@@ -2248,14 +2286,14 @@ export const Contracts: React.FC = () => {
             if (!clause || !contract) return
             try {
               // Persist clause-contract association; table may not exist yet
-              const { error } = await supabase.from('contract_clauses').insert({
+              const { error } = await fromTable('contract_clauses').insert({
                 contract_id: contractId,
                 clause_id: clauseId,
                 clause_title: clause.title,
                 clause_category: clause.category,
                 clause_text: clause.text,
                 clause_version: clause.version,
-              })
+              } as never)
               if (error) {
                 console.warn('[ClauseLibrary] Insert failed (table may not exist):', error.message)
               }
@@ -2300,7 +2338,7 @@ export const Contracts: React.FC = () => {
             {filtered.length > 0 ? (
               <div style={{ marginTop: spacing['3'] }}>
                 <DataTable
-                  columns={columns}
+                  columns={columns as never}
                   data={filtered}
                   onRowClick={handleRowClick}
                 />
@@ -2456,6 +2494,8 @@ export const Contracts: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deleteContractDialog}
+      {terminateContractDialog}
     </PageContainer>
   )
 }

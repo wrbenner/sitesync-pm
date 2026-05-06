@@ -140,6 +140,11 @@ export function VirtualDataTable<T>({
   const gridRef = useRef<HTMLDivElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  // useReactTable returns mutable closures that the React Compiler
+  // cannot safely memoize without risking stale UI — TanStack Table
+  // owns its own internal subscription model. Compilation is skipped
+  // for the surrounding component (intentional opt-out).
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table is intentionally opt-out of compiler memoization
   const table = useReactTable({
     data,
     columns,
@@ -193,7 +198,7 @@ export function VirtualDataTable<T>({
         row?.focus({ preventScroll: false });
       });
     }
-  }, [focusedIndex]);
+  }, [focusedIndex, virtualizer]);
 
   return (
     <div

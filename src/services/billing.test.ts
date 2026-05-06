@@ -234,7 +234,7 @@ describe('checkFeatureAccess', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns true when plan has the feature enabled', async () => {
-    const chain = makeChain([{ plan: { ai_copilot: true } }], null, { plan: { ai_copilot: true } })
+    const chain = makeChain([{ plan: { ai_copilot: true } }], null)
     chain.single = vi.fn().mockResolvedValue({ data: { plan: { ai_copilot: true } }, error: null })
     mockFrom.mockReturnValue(chain)
 

@@ -1,0 +1,12 @@
+{
+  "scanned_files": 711,
+  "findings": [],
+  "by_reason": {
+    "noop_arrow": 0,
+    "undefined_handler": 0,
+    "null_handler": 0,
+    "console_only": 0,
+    "button_no_onclick": 0,
+    "destructured_unused": 0
+  }
+}

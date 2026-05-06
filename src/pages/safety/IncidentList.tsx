@@ -55,7 +55,7 @@ const incidentColumns = [
     id: 'ca_count',
     header: 'Corrective Actions',
     cell: (info) => {
-      const count = (info.row.original as Record<string, unknown>).corrective_action_count as number ?? 0;
+      const count = (info.row.original as unknown as Record<string, unknown>).corrective_action_count as number ?? 0;
       if (count === 0) return <span style={{ color: colors.textTertiary }}>None</span>;
       return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: spacing.xs, padding: `2px ${spacing.sm}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium, color: colors.primaryOrange, backgroundColor: colors.orangeSubtle }}>
@@ -67,7 +67,7 @@ const incidentColumns = [
 ];
 
 interface IncidentListProps {
-  incidents: unknown[];
+  incidents: Record<string, unknown>[];
   onReportIncident: () => void;
 }
 

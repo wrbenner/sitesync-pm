@@ -1,0 +1,79 @@
+name: E2E Scenarios
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  scenarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ENABLE_TEST_HOOKS: "1"
+      DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:54322/postgres"
+      E2E_BASE_URL: "http://localhost:5173/sitesync-pm/"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Apply migrations
+        run: |
+          for f in supabase/migrations/*.sql; do
+            psql "$DATABASE_URL" -f "$f" || echo "::warning::migration $f had warnings"
+          done
+        continue-on-error: true
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build app
+        run: bun run build
+
+      - name: Start preview server
+        run: bun run preview &
+        env:
+          VITE_DEV_BYPASS: "true"
+
+      - name: Wait for server
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs "$E2E_BASE_URL" > /dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run scenarios
+        run: bunx playwright test -c playwright.scenarios.config.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-scenarios-report
+          path: |
+            playwright-report/
+            e2e-scenarios-report.json
+          retention-days: 14

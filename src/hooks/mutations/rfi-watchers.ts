@@ -1,13 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
 import { createOnError } from './createAuditedMutation'
 
+import { fromTable } from '../../lib/db/queries'
 
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── RFI Watchers ─────────────────────────────────────────
 
@@ -15,7 +14,7 @@ export function useAddRFIWatcher() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ rfiId, userId }: { rfiId: string; userId: string }) => {
-      const { error } = await from('rfi_watchers').insert({ rfi_id: rfiId, user_id: userId })
+      const { error } = await from('rfi_watchers').insert({ rfi_id: rfiId, user_id: userId } as never)
       if (error) throw error
       return { rfiId }
     },
@@ -30,7 +29,7 @@ export function useRemoveRFIWatcher() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ rfiId, userId }: { rfiId: string; userId: string }) => {
-      const { error } = await from('rfi_watchers').delete().eq('rfi_id', rfiId).eq('user_id', userId)
+      const { error } = await from('rfi_watchers').delete().eq('rfi_id' as never, rfiId).eq('user_id' as never, userId)
       if (error) throw error
       return { rfiId }
     },

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, Truck, UserPlus, FileEdit, Plus, Trash2, ClipboardList, Search, Wrench, Package, HardHat } from 'lucide-react';
+import { Users, Clock, ShieldCheck, Cloud, ChevronRight, Camera, Send, Sparkles, Calendar, X, Lock, AlertTriangle, RefreshCw, UserPlus, FileEdit, Plus, Trash2, ClipboardList, Search, Wrench, Package, HardHat } from 'lucide-react';
 import { Card, Btn, SectionHeader, useToast, Modal, InputField } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, transitions, shadows, zIndex } from '../../styles/theme';
 import { useCreateDailyLogEntry, useDeleteDailyLogEntry } from '../../hooks/mutations';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProjectId } from '../../hooks/useProjectId';
 import { toast } from 'sonner';
+import { useConfirm } from '../../components/ConfirmDialog';
 import { AutoNarrative } from '../../components/dailylog/AutoNarrative';
 import { DayComparison } from '../../components/dailylog/DayComparison';
 import { PhotoGrid } from '../../components/dailylog/PhotoGrid';
@@ -299,9 +300,16 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
     } catch { toast.error('Failed to add entry'); }
   };
 
+  const { confirm: confirmDeleteEntry, dialog: deleteEntryDialog } = useConfirm();
+
   const handleDeleteEntry = async (entryId: string) => {
     if (!today.id || !projectId) return;
-    if (!window.confirm('Delete this entry?')) return;
+    const ok = await confirmDeleteEntry({
+      title: 'Delete log entry?',
+      description: 'This entry is removed from today\'s daily log. Linked photos and observations remain in the project record.',
+      destructiveLabel: 'Delete entry',
+    });
+    if (!ok) return;
     try {
       await deleteEntry.mutateAsync({ id: entryId, dailyLogId: today.id, projectId });
       toast.success('Entry deleted');
@@ -650,9 +658,11 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
                           </div>
                         </div>
                         {!isLocked && (
-                          <button onClick={() => handleDeleteEntry(entry.id)} title="Delete entry" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: borderRadius.md, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, flexShrink: 0 }}>
-                            <Trash2 size={14} />
-                          </button>
+                          <PermissionGate permission="daily_log.edit">
+                            <button onClick={() => handleDeleteEntry(entry.id)} title="Delete entry" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: borderRadius.md, backgroundColor: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, flexShrink: 0 }}>
+                              <Trash2 size={14} />
+                            </button>
+                          </PermissionGate>
                         )}
                       </div>
                     ))}
@@ -688,7 +698,9 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
             </div>
             <div style={{ display: 'flex', gap: spacing['2'], justifyContent: 'flex-end', marginTop: spacing['2'] }}>
               <Btn variant="secondary" onClick={() => setShowAddEntryModal(false)}>Cancel</Btn>
-              <Btn variant="primary" onClick={handleAddEntry} loading={createEntry.isPending}>Add Entry</Btn>
+              <PermissionGate permission="daily_log.edit">
+                <Btn variant="primary" onClick={handleAddEntry} loading={createEntry.isPending}>Add Entry</Btn>
+              </PermissionGate>
             </div>
           </div>
         </Modal>
@@ -796,12 +808,12 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
             kind="daily_log"
             label="Voice daily log"
             onStructured={(structured, transcript) => {
-              const s = (structured || {}) as Record<string, unknown>;
+              const s = (structured || {}) as unknown as Record<string, unknown>;
               const activities = Array.isArray(s.activities) ? s.activities : [];
               const summaryParts: string[] = [];
               if (typeof s.summary === 'string' && s.summary) summaryParts.push(s.summary);
               activities.forEach((a) => {
-                const obj = a as Record<string, unknown>;
+                const obj = a as unknown as Record<string, unknown>;
                 const desc = typeof obj.description === 'string' ? obj.description : '';
                 const loc = typeof obj.location === 'string' ? obj.location : '';
                 if (desc) summaryParts.push(`• ${desc}${loc ? ` (${loc})` : ''}`);
@@ -811,7 +823,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
               if (aiSummaryGenerated) setAiSummaryGenerated(false);
               const issues = Array.isArray(s.issues) ? s.issues : [];
               if (issues.length > 0) {
-                setIssuesDelays(issues.map((i) => `• ${(i as Record<string, unknown>).description || ''}`).join('\n'));
+                setIssuesDelays(issues.map((i) => `• ${(i as unknown as Record<string, unknown>).description || ''}`).join('\n'));
               }
             }}
           />
@@ -826,6 +838,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
               <span style={{ fontSize: '11px', fontWeight: typography.fontWeight.semibold, color: colors.statusReview, backgroundColor: colors.statusReviewSubtle, padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, letterSpacing: '0.2px' }}>AI Generated</span>
             )}
             {!isLocked && (
+              <PermissionGate permission="ai.use">
               <button
                 onClick={onAiSummary}
                 disabled={aiSummaryLoading || (manpowerRows.length === 0 && logEntries.length === 0)}
@@ -844,6 +857,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
                 <Sparkles size={13} color={colors.primaryOrange} />
                 AI Summary
               </button>
+              </PermissionGate>
             )}
           </div>
         } />
@@ -901,7 +915,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
       </Card>
 
       {/* ── Auto Narrative ─────────────────────────────── */}
-      <AutoNarrative logData={today as Record<string, unknown>} />
+      <AutoNarrative logData={today as unknown as Record<string, unknown>} />
 
       {/* ── Day Comparison ─────────────────────────────── */}
       {showComparison && yesterday && (
@@ -1041,6 +1055,7 @@ export const DailyLogForm: React.FC<DailyLogFormProps> = (props) => {
           </PermissionGate>
         </div>
       )}
+      {deleteEntryDialog}
     </div>
   );
 };

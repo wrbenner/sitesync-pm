@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetSession, mockSingle, mockMaybeSingle, mockFrom, mockInvoke } = vi.hoisted(() => ({
+const { mockGetSession, mockGetUser, mockSingle, mockMaybeSingle, mockFrom, mockInvoke } = vi.hoisted(() => ({
   mockGetSession: vi.fn(),
+  mockGetUser: vi.fn(),
   mockSingle: vi.fn(),
   mockMaybeSingle: vi.fn(),
   mockFrom: vi.fn(),
@@ -10,11 +11,20 @@ const { mockGetSession, mockSingle, mockMaybeSingle, mockFrom, mockInvoke } = vi
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
-    auth: { getSession: mockGetSession },
+    auth: { getSession: mockGetSession, getUser: mockGetUser },
     from: mockFrom,
     functions: { invoke: mockInvoke },
   },
 }))
+
+// Global reset: vi.clearAllMocks() does NOT clear queued mockResolvedValueOnce
+// values, so leftover queued responses from one test would otherwise leak into
+// the next. Reset these explicitly so each test sees a clean queue.
+beforeEach(() => {
+  mockSingle.mockReset()
+  mockMaybeSingle.mockReset()
+  mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
+})
 
 import { projectMemberService } from './projectMemberService'
 import {
@@ -717,7 +727,7 @@ describe('projectMemberService.updatePermissions', () => {
     await projectMemberService.updatePermissions('m-1', { 'rfis.create': true })
 
     // System keys must be preserved
-    expect((capturedUpdate as Record<string, unknown> | null)?.['permissions']).toMatchObject({
+    expect((capturedUpdate as unknown as Record<string, unknown> | null)?.['permissions']).toMatchObject({
       _memberStatus: 'suspended',
       _suspendedReason: 'violation',
       'rfis.create': true,

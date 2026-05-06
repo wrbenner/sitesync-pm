@@ -25,7 +25,7 @@ export function getMemberLifecycleState(member: {
   accepted_at: string | null;
   permissions: Record<string, unknown> | null;
 }): MemberLifecycleState {
-  const status = (member.permissions as Record<string, unknown> | null)?._memberStatus as string | undefined;
+  const status = (member.permissions as unknown as Record<string, unknown> | null)?._memberStatus as string | undefined;
   if (status === 'suspended') return 'suspended';
   if (status === 'removed') return 'removed';
   if (member.accepted_at) return 'active';

@@ -16,6 +16,7 @@ const pulseStyle: React.CSSProperties = {
 export const MetricCardSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
   <div
     aria-hidden="true"
+    data-skeleton="true"
     style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['5'], flexWrap: 'wrap' }}
   >
     {Array.from({ length: count }).map((_, i) => (
@@ -57,6 +58,7 @@ const CELL_WIDTHS = ['60%', '40%', '80%'];
 export const TableRowSkeleton: React.FC<{ columns: number }> = ({ columns }) => (
   <div
     aria-hidden="true"
+    data-skeleton="true"
     style={{
       height: 48,
       display: 'flex',
@@ -92,6 +94,7 @@ export const TableSkeleton: React.FC<{ columns: number; rows?: number }> = ({ co
 export const GanttSkeleton: React.FC = () => (
   <div
     aria-hidden="true"
+    data-skeleton="true"
     style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'], padding: spacing['4'] }}
   >
     <div style={{ ...pulseStyle, width: '85%', height: 28, borderRadius: borderRadius.md }} />
@@ -106,6 +109,7 @@ export const GanttSkeleton: React.FC = () => (
 export const ChatMessageSkeleton: React.FC = () => (
   <div
     aria-hidden="true"
+    data-skeleton="true"
     style={{ display: 'flex', gap: spacing['3'], alignItems: 'flex-start', padding: `${spacing['3']} 0` }}
   >
     <div style={{ ...pulseStyle, width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />

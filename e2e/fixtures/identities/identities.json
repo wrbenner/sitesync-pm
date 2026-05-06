@@ -1,0 +1,38 @@
+{
+  "owner": {
+    "email": "owner@e2e.test",
+    "fullName": "Owner Test User",
+    "role": "owner",
+    "uuid": "e1000001-0000-4000-8000-000000000001"
+  },
+  "pm": {
+    "email": "pm@e2e.test",
+    "fullName": "Project Manager Test User",
+    "role": "admin",
+    "uuid": "e1000001-0000-4000-8000-000000000002"
+  },
+  "super": {
+    "email": "super@e2e.test",
+    "fullName": "Superintendent Test User",
+    "role": "admin",
+    "uuid": "e1000001-0000-4000-8000-000000000003"
+  },
+  "architect": {
+    "email": "architect@e2e.test",
+    "fullName": "Architect Test User",
+    "role": "member",
+    "uuid": "e1000001-0000-4000-8000-000000000004"
+  },
+  "compliance": {
+    "email": "compliance@e2e.test",
+    "fullName": "Compliance Officer Test User",
+    "role": "admin",
+    "uuid": "e1000001-0000-4000-8000-000000000005"
+  },
+  "sub": {
+    "email": "sub@e2e.test",
+    "fullName": "Subcontractor Test User",
+    "role": "member",
+    "uuid": "e1000001-0000-4000-8000-000000000006"
+  }
+}

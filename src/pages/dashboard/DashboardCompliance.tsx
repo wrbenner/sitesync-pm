@@ -40,21 +40,21 @@ function useComplianceData(projectId: string | undefined) {
         supabase
           .from('permits')
           .select('id, type, permit_number, expiration_date')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .not('expiration_date', 'is', null)
           .lte('expiration_date', in30)
           .order('expiration_date', { ascending: true }),
         supabase
           .from('insurance_certificates')
           .select('id, company, policy_type, expiration_date')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .not('expiration_date', 'is', null)
           .lte('expiration_date', in30)
           .order('expiration_date', { ascending: true }),
         supabase
           .from('safety_inspections')
           .select('id, type, date, status')
-          .eq('project_id', projectId)
+          .eq('project_id' as never, projectId)
           .in('status', ['failed', 'corrective_action_required', 'scheduled'])
           .lte('date', today)
           .order('date', { ascending: false })
@@ -62,9 +62,9 @@ function useComplianceData(projectId: string | undefined) {
       ]);
 
       return {
-        permits: (permitsRes.data ?? []) as PermitRow[],
-        certs: (certsRes.data ?? []) as CertRow[],
-        inspections: (inspectionsRes.data ?? []) as InspectionRow[],
+        permits: (permitsRes.data ?? []) as unknown as PermitRow[],
+        certs: (certsRes.data ?? []) as unknown as CertRow[],
+        inspections: (inspectionsRes.data ?? []) as unknown as InspectionRow[],
       };
     },
     enabled: !!projectId,

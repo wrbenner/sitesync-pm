@@ -1,0 +1,41 @@
+name: Monthly Restore Drill
+
+on:
+  schedule:
+    # First Tuesday of each month at 14:00 UTC.
+    - cron: "0 14 1-7 * 2"
+  workflow_dispatch:
+
+jobs:
+  restore-drill:
+    runs-on: ubuntu-latest
+    env:
+      RESTORE_DB_URL: ${{ secrets.RESTORE_TEST_DB_URL }}
+      ALERT_WEBHOOK: ${{ secrets.RESTORE_ALERT_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Verify restore connection
+        run: |
+          if [ -z "$RESTORE_DB_URL" ]; then
+            echo "::error::RESTORE_TEST_DB_URL secret not configured"
+            exit 1
+          fi
+          echo "Restore target ready (full restore steps in docs/DR_RUNBOOK.md)"
+
+      - name: Run schema sanity check
+        run: |
+          echo "Schema sanity check (full impl in scripts/restore-sanity.ts — TODO)"
+
+      - name: Notify ops on failure
+        if: failure()
+        run: |
+          if [ -n "$ALERT_WEBHOOK" ]; then
+            curl -X POST -H 'content-type: application/json' \
+              -d '{"text":"Monthly restore drill FAILED"}' \
+              "$ALERT_WEBHOOK"
+          fi

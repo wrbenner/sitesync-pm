@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, type CSSProperties, type ReactElement } from 'react'
 import { useOfflineStatus } from '../../hooks/useOffline'
 import {
   colors,
@@ -114,20 +114,28 @@ export function OfflineIndicator({ onConflictClick }: OfflineIndicatorProps) {
   // Determine what to show
   const showBanner = !isOnline || status === 'syncing' || conflicts > 0 || status === 'error'
 
-  // Animate in/out with a slight delay for smoother transitions
+  // Animate in/out with a slight delay for smoother transitions —
+  // the show-after-200ms branch is a real timer side effect; the
+  // hide branch sets state directly and is hoisted to render-time.
+  const [prevShowBanner, setPrevShowBanner] = useState(showBanner)
+  if (prevShowBanner !== showBanner && !showBanner) {
+    setPrevShowBanner(showBanner)
+    setVisible(false)
+  } else if (prevShowBanner !== showBanner) {
+    setPrevShowBanner(showBanner)
+  }
   useEffect(() => {
     if (showBanner) {
       // Small delay before showing to avoid flicker on quick reconnections
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- timer-driven 'fade in after 200ms' side effect
       const timer = setTimeout(() => setVisible(true), 200)
       return () => clearTimeout(timer)
-    } else {
-      setVisible(false)
     }
   }, [showBanner])
 
   // Pick the right appearance
   let colorScheme: CSSProperties
-  let content: JSX.Element
+  let content: ReactElement
 
   if (conflicts > 0) {
     colorScheme = conflictColors

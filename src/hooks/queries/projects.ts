@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type {
   Project,
 } from '../../types/database'
@@ -10,12 +11,11 @@ export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
+      const { data, error } = await fromTable('projects')
         .select('*')
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as Project[]
+      return (data ?? []) as unknown as Project[]
     },
   })
 }
@@ -24,10 +24,9 @@ export function useProject(projectId: string | undefined) {
   return useQuery({
     queryKey: ['projects', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
+      const { data, error } = await fromTable('projects')
         .select('*')
-        .eq('id', projectId!)
+        .eq('id' as never, projectId!)
         .maybeSingle()
       if (error) throw error
       return (data ?? null) as Project | null

@@ -4,6 +4,7 @@ import { Sparkles, ChevronDown, AlertTriangle, TrendingUp, Clock } from 'lucide-
 import { useQuery } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
+import { fromTable, asRow } from '../../lib/db/queries';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -28,12 +29,12 @@ function useAIDailySummary(projectId: string | undefined) {
       // Check cache table — silently skip if the table isn't provisioned in
       // this environment (Supabase returns 404/PGRST204).
       try {
-        const { data: cached, error } = await supabase
-          .from('daily_summaries')
+        const { data, error } = await fromTable('daily_summaries')
           .select('summary, highlights, concerns')
-          .eq('project_id', projectId!)
-          .eq('date', today)
+          .eq('project_id' as never, projectId!)
+          .eq('date' as never, today)
           .maybeSingle();
+        const cached = asRow<{ summary: string | null; highlights: string[] | null; concerns: string[] | null }>(data)
 
         if (!error && cached?.summary) {
           return {

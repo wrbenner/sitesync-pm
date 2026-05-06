@@ -72,8 +72,8 @@ const ComponentRow = memo<{
   label: string
   score: number
   detail: string
-
-}>(({ icon: Icon, label, score, detail}) => {
+  weight?: number
+}>(({ icon: Icon, label, score, detail }) => {
   const barColor =
     score >= 80 ? colors.statusActive :
     score >= 60 ? colors.statusPending : colors.statusCritical

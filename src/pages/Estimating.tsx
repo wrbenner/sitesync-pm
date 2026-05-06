@@ -21,6 +21,7 @@ import {
   EmptyState,
 } from '../components/Primitives'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme'
 import { toast } from 'sonner'
 import { useProjectId } from '../hooks/useProjectId'
@@ -210,13 +211,13 @@ export const Estimating: React.FC = () => {
           projectId={projectId ?? undefined}
           items={lineItems}
           loading={liPending}
-          vendors={vendors}
-          bidPackages={bidPackages}
+          vendors={vendors as unknown as Array<{ id: string; company_name: string }>}
+          bidPackages={bidPackages as unknown as Array<Record<string, unknown>>}
         />
       )}
       {tab === 'bid_packages' && (
         <BidPackagesTab
-          packages={bidPackages}
+          packages={bidPackages as unknown as Array<Record<string, unknown>>}
           loading={bpPending}
           allSubmissions={allSubmissions}
           onDrillDown={() => setTab('submissions')}
@@ -225,8 +226,8 @@ export const Estimating: React.FC = () => {
       {tab === 'submissions' && (
         <SubmissionsTab
           projectId={projectId ?? undefined}
-          packages={bidPackages}
-          vendors={vendors}
+          packages={bidPackages as unknown as Array<Record<string, unknown>>}
+          vendors={vendors as unknown as Array<{ id: string; company_name: string }>}
         />
       )}
       {tab === 'rollups' && (
@@ -264,6 +265,7 @@ const LineItemsTab: React.FC<LineItemsTabProps> = ({ projectId, items, loading, 
   const create = useCreateEstimatingItem()
   const update = useUpdateEstimatingItem()
   const del = useDeleteEstimatingItem()
+  const { confirm: confirmDeleteLine, dialog: deleteLineDialog } = useConfirm()
 
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({
@@ -346,7 +348,12 @@ const LineItemsTab: React.FC<LineItemsTabProps> = ({ projectId, items, loading, 
 
   const handleDelete = async (id: string) => {
     if (!projectId) return
-    if (!window.confirm('Delete this line item?')) return
+    const ok = await confirmDeleteLine({
+      title: 'Delete estimate line item?',
+      description: 'Estimating totals adjust on the next recalculation. Linked contract or PO references become orphaned.',
+      destructiveLabel: 'Delete line',
+    })
+    if (!ok) return
     try {
       await del.mutateAsync({ id, projectId })
       toast.success('Line item deleted')
@@ -535,6 +542,7 @@ const LineItemsTab: React.FC<LineItemsTabProps> = ({ projectId, items, loading, 
           </div>
         </div>
       </Modal>
+      {deleteLineDialog}
     </>
   )
 }
@@ -555,7 +563,12 @@ const editableInputStyle: React.CSSProperties = {
 
 const EditableText: React.FC<{ value: string; onSave: (v: string) => void; placeholder?: string }> = ({ value, onSave, placeholder }) => {
   const [v, setV] = useState(value)
-  React.useEffect(() => setV(value), [value])
+  // Sync local draft to upstream value — render-time prev pattern.
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setV(value)
+  }
   return (
     <input
       value={v}
@@ -569,7 +582,12 @@ const EditableText: React.FC<{ value: string; onSave: (v: string) => void; place
 
 const EditableNumber: React.FC<{ value: number; onSave: (v: number) => void }> = ({ value, onSave }) => {
   const [v, setV] = useState(String(value))
-  React.useEffect(() => setV(String(value)), [value])
+  // Sync local draft to upstream value — render-time prev pattern.
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setV(String(value))
+  }
   return (
     <input
       type="number"
@@ -686,13 +704,20 @@ interface SubmissionsTabProps {
 
 const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, vendors }) => {
   const [selectedPackageId, setSelectedPackageId] = useState<string>('')
+  const { confirm: confirmAwardBid, dialog: awardBidDialog } = useConfirm()
+  const { confirm: confirmDeleteSubmission, dialog: deleteSubmissionDialog } = useConfirm()
 
-  // Default to first package once loaded
-  React.useEffect(() => {
+  // Default to first package once loaded — render-time prev pattern.
+  // Triggers exactly once when the package list grows from empty AND
+  // nothing is selected yet.
+  const packageBoundaryKey = `${selectedPackageId}|${packages.length > 0 ? 'has-packages' : 'no-packages'}`
+  const [prevPackageBoundaryKey, setPrevPackageBoundaryKey] = useState(packageBoundaryKey)
+  if (prevPackageBoundaryKey !== packageBoundaryKey) {
+    setPrevPackageBoundaryKey(packageBoundaryKey)
     if (!selectedPackageId && packages.length > 0) {
       setSelectedPackageId((packages[0].id as string) ?? '')
     }
-  }, [packages, selectedPackageId])
+  }
 
   const { data: subs = [], isPending } = useBidSubmissions(selectedPackageId || undefined)
   const createSub = useCreateBidSubmission()
@@ -728,7 +753,13 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, ve
 
   const handleAward = async (id: string) => {
     if (!selectedPackageId) return
-    if (!window.confirm('Award this bid? All other submissions on this package will be marked Declined.')) return
+    const ok = await confirmAwardBid({
+      title: 'Award this bid?',
+      description: 'All other submissions on this package will be marked Declined. Notifications will fire to declined subs.',
+      destructiveLabel: 'Award bid',
+      destructive: false,
+    })
+    if (!ok) return
     try {
       await awardSub.mutateAsync({ id, bid_package_id: selectedPackageId })
       toast.success('Bid awarded')
@@ -739,7 +770,12 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, ve
 
   const handleDelete = async (id: string) => {
     if (!selectedPackageId) return
-    if (!window.confirm('Delete this submission?')) return
+    const ok = await confirmDeleteSubmission({
+      title: 'Delete bid submission?',
+      description: 'The submission record and any attached pricing files will be removed from this package.',
+      destructiveLabel: 'Delete submission',
+    })
+    if (!ok) return
     try {
       await delSub.mutateAsync({ id, bid_package_id: selectedPackageId })
       toast.success('Submission deleted')
@@ -749,6 +785,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, ve
   }
 
   return (
+    <>
     <Card padding="0">
       <div style={{ padding: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing['3'], flexWrap: 'wrap' }}>
         <SectionHeader title="Vendor Submissions" />
@@ -870,6 +907,9 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, ve
         </div>
       )}
     </Card>
+    {awardBidDialog}
+    {deleteSubmissionDialog}
+    </>
   )
 }
 

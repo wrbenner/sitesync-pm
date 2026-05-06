@@ -81,7 +81,7 @@ const CUSTOM_PROPS = ['_annotationType', '_annotationColor', '_annotationId'] as
 // ── Helpers ──────────────────────────────────────────────
 
 function uid(): string {
-  return `ann_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -241,12 +241,14 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
   const [activeTool, setActiveTool] = useState<Tool>('select')
   const [activeColor, setActiveColor] = useState('#EF4444')
   const [zoomLevel, setZoomLevel] = useState(1)
-  // Force re-render when history changes (for button disabled states)
-  const [, setHistoryTick] = useState(0)
 
-  // History for undo / redo
+  // History for undo / redo. The JSON snapshots themselves live in a ref
+  // (no re-render needed when they change), but the index and length are
+  // surfaced as state so the toolbar Undo/Redo buttons can correctly
+  // disable themselves without reading refs during render.
   const historyRef = useRef<string[]>([])
-  const historyIndexRef = useRef(-1)
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [historyLength, setHistoryLength] = useState(0)
   const isRestoringRef = useRef(false)
 
   // Drawing state for shape creation
@@ -261,50 +263,43 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
 
   // ── History helpers ─────────────────────────────────────
 
-  const bumpHistoryTick = useCallback(() => {
-    setHistoryTick((t) => t + 1)
-  }, [])
-
   const saveHistory = useCallback(() => {
     const canvas = fabricRef.current
     if (!canvas || isRestoringRef.current) return
-    const json = JSON.stringify(canvas.toJSON([...CUSTOM_PROPS]))
-    const idx = historyIndexRef.current
-    // Trim future history if we've undone
-    historyRef.current = historyRef.current.slice(0, idx + 1)
-    historyRef.current.push(json)
-    historyIndexRef.current = historyRef.current.length - 1
-    bumpHistoryTick()
-  }, [bumpHistoryTick])
+    const json = JSON.stringify((canvas.toJSON as (props?: string[]) => unknown)([...CUSTOM_PROPS]))
+    setHistoryIndex((idx) => {
+      // Trim future history if we've undone, then push the new snapshot.
+      historyRef.current = historyRef.current.slice(0, idx + 1)
+      historyRef.current.push(json)
+      setHistoryLength(historyRef.current.length)
+      return historyRef.current.length - 1
+    })
+  }, [])
 
-  const restoreHistory = useCallback(
-    (index: number) => {
-      const canvas = fabricRef.current
-      if (!canvas) return
-      const json = historyRef.current[index]
-      if (!json) return
-      isRestoringRef.current = true
-      canvas.loadFromJSON(json).then(() => {
-        canvas.renderAll()
-        historyIndexRef.current = index
-        isRestoringRef.current = false
-        bumpHistoryTick()
-      })
-    },
-    [bumpHistoryTick],
-  )
+  const restoreHistory = useCallback((index: number) => {
+    const canvas = fabricRef.current
+    if (!canvas) return
+    const json = historyRef.current[index]
+    if (!json) return
+    isRestoringRef.current = true
+    canvas.loadFromJSON(json).then(() => {
+      canvas.renderAll()
+      setHistoryIndex(index)
+      isRestoringRef.current = false
+    })
+  }, [])
 
   const undo = useCallback(() => {
-    if (historyIndexRef.current > 0) {
-      restoreHistory(historyIndexRef.current - 1)
+    if (historyIndex > 0) {
+      restoreHistory(historyIndex - 1)
     }
-  }, [restoreHistory])
+  }, [historyIndex, restoreHistory])
 
   const redo = useCallback(() => {
-    if (historyIndexRef.current < historyRef.current.length - 1) {
-      restoreHistory(historyIndexRef.current + 1)
+    if (historyIndex < historyLength - 1) {
+      restoreHistory(historyIndex + 1)
     }
-  }, [restoreHistory])
+  }, [historyIndex, historyLength, restoreHistory])
 
   // ── Serialize annotations ──────────────────────────────
 
@@ -317,7 +312,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
       .map((obj) => ({
         id: getAnnotationId(obj),
         type: getAnnotationType(obj),
-        data: obj.toObject([...CUSTOM_PROPS]) as Record<string, unknown>,
+        data: obj.toObject([...CUSTOM_PROPS]) as unknown as Record<string, unknown>,
         color: getAnnotationColor(obj),
         createdAt: new Date().toISOString(),
       }))
@@ -422,12 +417,13 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
       if (annotations?.length) {
         annotations.forEach((ann) => {
           FabricObject.fromObject(ann.data).then((obj) => {
-            tagObject(obj, ann.type, ann.color, ann.id)
+            const o = obj as never as import('fabric').FabricObject & { selectable: boolean; evented: boolean }
+            tagObject(o, ann.type, ann.color, ann.id)
             if (readOnly) {
-              obj.selectable = false
-              obj.evented = false
+              o.selectable = false
+              o.evented = false
             }
-            canvas.add(obj)
+            canvas.add(o)
             canvas.renderAll()
           }).catch(() => {
             // Skip malformed annotations silently
@@ -728,8 +724,8 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
-            disabled={historyIndexRef.current <= 0}
-            style={btnStyle(false, historyIndexRef.current <= 0)}
+            disabled={historyIndex <= 0}
+            style={btnStyle(false, historyIndex <= 0)}
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -738,8 +734,8 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
-            disabled={historyIndexRef.current >= historyRef.current.length - 1}
-            style={btnStyle(false, historyIndexRef.current >= historyRef.current.length - 1)}
+            disabled={historyIndex >= historyLength - 1}
+            style={btnStyle(false, historyIndex >= historyLength - 1)}
             onClick={redo}
           >
             <Redo2 size={18} />

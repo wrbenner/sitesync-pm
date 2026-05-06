@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type {
   DailyLog,
   Crew,
@@ -11,12 +12,11 @@ export function useCrews(projectId: string | undefined) {
   return useQuery({
     queryKey: ['crews', projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('crews')
+      const { data, error } = await fromTable('crews')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (error) throw error
-      return data as Crew[]
+      return data as unknown as Crew[]
     },
     enabled: !!projectId,
   })
@@ -26,13 +26,12 @@ export function useDailyLog(id: string | undefined) {
   return useQuery({
     queryKey: ['daily_logs', 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('daily_logs')
+      const { data, error } = await fromTable('daily_logs')
         .select('*')
-        .eq('id', id!)
+        .eq('id' as never, id!)
         .single()
       if (error) throw error
-      return data as DailyLog
+      return data as unknown as DailyLog
     },
     enabled: !!id,
   })

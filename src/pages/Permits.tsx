@@ -9,6 +9,7 @@ import { usePermits } from '../hooks/queries/permits'
 import { useCreatePermit, useUpdatePermit, useDeletePermit } from '../hooks/mutations/permits'
 import { toast } from 'sonner'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { useConfirm } from '../components/ConfirmDialog'
 import { EntityFormModal, type FieldConfig } from '../components/forms/EntityFormModal'
 import { permitSchema } from '../components/forms/schemas'
 
@@ -86,8 +87,8 @@ const permitColumns = [
     header: 'Status',
     cell: (info) => {
       const v = info.getValue() as string
-      let statusColor = colors.textTertiary
-      let statusBg = colors.surfaceInset
+      let statusColor: string = colors.textTertiary
+      let statusBg: string = colors.surfaceInset
       if (v === 'not_applied') { statusColor = colors.textTertiary; statusBg = colors.surfaceInset }
       else if (v === 'application_submitted') { statusColor = colors.statusInfo; statusBg = colors.statusInfoSubtle }
       else if (v === 'under_review') { statusColor = colors.statusPending; statusBg = colors.statusPendingSubtle }
@@ -175,6 +176,7 @@ const permitColumns = [
 // ── Main Component ───────────────────────────────────────────
 
 export const Permits: React.FC = () => {
+  const { confirm: confirmDeletePermit, dialog: deletePermitDialog } = useConfirm()
   const [activeTab, setActiveTab] = useState<TabKey>('permits')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPermit, setEditingPermit] = useState<Record<string, unknown> | null>(null)
@@ -220,17 +222,18 @@ export const Permits: React.FC = () => {
     )
   }
 
-  const totalPermits = permits?.length || 0
-  const activePermits = permits?.filter((p: Record<string, unknown>) => p.status === 'approved').length || 0
-  const pendingReview = permits?.filter((p: Record<string, unknown>) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
+  const permitRows = (permits as unknown as Array<Record<string, unknown>> | undefined)
+  const totalPermits = permitRows?.length || 0
+  const activePermits = permitRows?.filter((p) => p.status === 'approved').length || 0
+  const pendingReview = permitRows?.filter((p) => p.status === 'under_review' || p.status === 'application_submitted').length || 0
 
   const now = new Date()
-  const expiringSoonCount = permits?.filter((p: Record<string, unknown>) => {
+  const expiringSoonCount = permitRows?.filter((p) => {
     if (!p.expiration_date) return false
     const daysUntil = (new Date(p.expiration_date as string).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     return daysUntil >= 0 && daysUntil <= 30
   }).length || 0
-  const expiredCount = permits?.filter((p: Record<string, unknown>) => {
+  const expiredCount = permitRows?.filter((p) => {
     if (!p.expiration_date) return false
     return new Date(p.expiration_date as string).getTime() < now.getTime()
   }).length || 0
@@ -257,7 +260,12 @@ export const Permits: React.FC = () => {
   const handleDelete = async (permit: Record<string, unknown>) => {
     if (!projectId) return
     const label = (permit.permit_number as string) || (permit.type as string) || 'this permit'
-    if (!window.confirm(`Delete "${label}"? This cannot be undone.`)) return
+    const ok = await confirmDeletePermit({
+      title: 'Delete permit?',
+      description: `"${label}" — inspections logged against this permit are preserved as orphaned records for compliance audit.`,
+      destructiveLabel: 'Delete permit',
+    })
+    if (!ok) return
     try {
       await deletePermit.mutateAsync({ id: String(permit.id), projectId })
     } catch {
@@ -276,7 +284,7 @@ export const Permits: React.FC = () => {
             <Btn
               size="sm"
               variant="secondary"
-              onClick={() => openEditPermit(info.row.original as Record<string, unknown>)}
+              onClick={() => openEditPermit(info.row.original as unknown as Record<string, unknown>)}
             >
               Edit
             </Btn>
@@ -284,7 +292,7 @@ export const Permits: React.FC = () => {
               <Btn
                 size="sm"
                 variant="ghost"
-                onClick={() => handleDelete(info.row.original as Record<string, unknown>)}
+                onClick={() => handleDelete(info.row.original as unknown as Record<string, unknown>)}
                 disabled={deletePermit.isPending}
                 aria-label="Delete this permit"
                 data-testid="delete-permit-button"
@@ -387,9 +395,9 @@ export const Permits: React.FC = () => {
       {activeTab === 'permits' && !isLoading && (
         <Card padding={spacing['4']}>
           <SectionHeader title="All Permits" />
-          {permits && permits.length > 0 ? (
+          {permitRows && permitRows.length > 0 ? (
             <div style={{ marginTop: spacing['3'] }}>
-              <DataTable columns={permitColumnsWithActions} data={permits} />
+              <DataTable columns={permitColumnsWithActions as never} data={permitRows} />
             </div>
           ) : (
             <p style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm, margin: `${spacing['3']} 0 0` }}>
@@ -404,8 +412,8 @@ export const Permits: React.FC = () => {
         <>
           <SectionHeader title="Upcoming Inspections" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing['4'], marginTop: spacing['3'] }}>
-            {permits && permits.filter((p: Record<string, unknown>) => p.status === 'approved').length > 0 ? (
-              permits.filter((p: Record<string, unknown>) => p.status === 'approved').map((permit: Record<string, unknown>) => (
+            {permitRows && permitRows.filter((p) => p.status === 'approved').length > 0 ? (
+              permitRows.filter((p) => p.status === 'approved').map((permit) => (
                 <Card key={permit.id as string} padding={spacing['4']}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'] }}>
                     <div style={{
@@ -428,11 +436,11 @@ export const Permits: React.FC = () => {
                     <span style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>
                       {(permit.jurisdiction as string) || 'No jurisdiction'}
                     </span>
-                    {permit.expiration_date && (
+                    {permit.expiration_date ? (
                       <span style={{ fontSize: typography.fontSize.caption, color: colors.statusPending }}>
                         Expires {new Date(permit.expiration_date as string).toLocaleDateString()}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </Card>
               ))
@@ -509,6 +517,7 @@ export const Permits: React.FC = () => {
           </div>
         </div>
       </Modal>
+      {deletePermitDialog}
     </PageContainer>
   )
 }

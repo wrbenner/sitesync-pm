@@ -51,12 +51,18 @@ function useDiffDataUrl(prevUrl: string | null, currUrl: string | null) {
   const [diffDataUrl, setDiffDataUrl] = useState<string | null>(null);
   const [changePixels, setChangePixels] = useState(0);
 
-  useEffect(() => {
+  // Reset when either source is missing — render-time prev pattern.
+  const inputsKey = `${prevUrl ?? ''}|${currUrl ?? ''}`;
+  const [prevInputsKey, setPrevInputsKey] = useState(inputsKey);
+  if (prevInputsKey !== inputsKey) {
+    setPrevInputsKey(inputsKey);
     if (!prevUrl || !currUrl) {
       setDiffDataUrl(null);
       setChangePixels(0);
-      return;
     }
+  }
+  useEffect(() => {
+    if (!prevUrl || !currUrl) return;
 
     let cancelled = false;
     const prevImg = new Image();

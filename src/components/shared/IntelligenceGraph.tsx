@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { spacing, typography, borderRadius, zIndex } from '../../styles/theme'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -248,6 +248,11 @@ export function IntelligenceGraph({
   const [hoveredEdge, setHoveredEdge] = useState<SimEdge | null>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(highlightedNodeId ?? null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  // Mirror of dragRef.current.isPanning surfaced to render so the wrapper
+  // can switch the cursor to 'grabbing'. Refs can't be read during
+  // render; the state is updated alongside the ref in the gesture
+  // handlers below.
+  const [isPanning, setIsPanning] = useState(false)
 
   // Transform state
   const transformRef = useRef({ offsetX: 0, offsetY: 0, scale: 1 })
@@ -329,14 +334,6 @@ export function IntelligenceGraph({
     }
   }, [])
 
-  const worldToScreen = useCallback((wx: number, wy: number) => {
-    const t = transformRef.current
-    return {
-      x: wx * t.scale + t.offsetX,
-      y: wy * t.scale + t.offsetY,
-    }
-  }, [])
-
   // ── Find node/edge at position ──
 
   const findNodeAt = useCallback((wx: number, wy: number): SimNode | null => {
@@ -382,6 +379,13 @@ export function IntelligenceGraph({
 
   // ── Physics step ──
 
+  // Physics step mutates the ref-stored simulation objects in place. These
+  // are intentionally not React state — the force-directed layout updates
+  // ~60×/s and immutable copies would dominate the frame budget. The
+  // compiler can't see that the mutations target ref-internal scratch
+  // fields (fx/fy/x/y); flag the whole callback as out-of-scope for the
+  // immutability rule.
+  /* eslint-disable react-hooks/immutability -- physics scratch state lives in refs by design (60Hz force-directed layout) */
   const physicsStep = useCallback(() => {
     const nodes = simNodesRef.current
     const edges = simEdgesRef.current
@@ -446,6 +450,7 @@ export function IntelligenceGraph({
 
     return totalVelocity / Math.max(1, nodes.length)
   }, [])
+  /* eslint-enable react-hooks/immutability */
 
   // ── Draw ──
 
@@ -652,6 +657,7 @@ export function IntelligenceGraph({
       drag.startY = wy
     } else {
       drag.isPanning = true
+      setIsPanning(true)
       drag.startX = e.clientX
       drag.startY = e.clientY
     }
@@ -710,6 +716,7 @@ export function IntelligenceGraph({
     }
     drag.isDragging = false
     drag.isPanning = false
+    setIsPanning(false)
     drag.dragNode = null
     settledRef.current = false
   }, [screenToWorld])
@@ -852,7 +859,7 @@ export function IntelligenceGraph({
         background: '#0F1629',
         borderRadius: borderRadius.lg,
         overflow: 'hidden',
-        cursor: hoveredNode ? 'grab' : dragRef.current.isPanning ? 'grabbing' : 'default',
+        cursor: hoveredNode ? 'grab' : isPanning ? 'grabbing' : 'default',
       }}
     >
       {/* Search box */}

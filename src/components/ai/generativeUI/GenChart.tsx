@@ -123,7 +123,7 @@ export const GenChart: React.FC<Props> = React.memo(({ block }) => {
               outerRadius={90}
               innerRadius={50}
               paddingAngle={2}
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
               labelLine={false}
             >
               {block.data.map((_, i) => (

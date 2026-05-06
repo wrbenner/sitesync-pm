@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../client'
+import { fromTable } from '../../lib/db/queries'
 import { ApiError, transformSupabaseError } from '../errors'
 import { queryKeys } from '../queryKeys'
 import type { EnrichedProject } from '../../types/project'
@@ -15,17 +15,15 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   completionPercentage: number | null
 }> {
   const [criticalResult, completionResult] = await Promise.all([
-    supabase
-      .from('schedule_phases')
+    fromTable('schedule_phases')
       .select('end_date, start_date')
-      .eq('project_id', projectId)
-      .eq('is_critical_path', true)
+      .eq('project_id' as never, projectId)
+      .eq('is_critical_path' as never, true)
       .order('end_date', { ascending: false })
       .limit(1),
-    supabase
-      .from('schedule_phases')
+    fromTable('schedule_phases')
       .select('start_date, end_date, percent_complete')
-      .eq('project_id', projectId),
+      .eq('project_id' as never, projectId),
   ])
 
   if (criticalResult.error) {
@@ -40,7 +38,7 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   // COMPUTED: source = financialEngine
   // schedule_variance_days: days behind on last critical path item (positive = late)
   let scheduleVarianceDays: number | null = null
-  const last = criticalResult.data?.[0]
+  const last = (criticalResult.data?.[0]) as unknown as { end_date?: string } | undefined
   if (last?.end_date) {
     // Use end_date as planned end (baseline columns don't exist in this schema)
     const plannedEnd = new Date(last.end_date)
@@ -55,7 +53,8 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
   // completion_percentage: sum(percent_complete * duration_days) / sum(duration_days)
   let weightedSum = 0
   let totalDuration = 0
-  for (const phase of (completionResult.data ?? [])) {
+  type PhaseRow = { start_date: string | null; end_date: string | null; percent_complete: number | null }
+  for (const phase of ((completionResult.data ?? []) as unknown as PhaseRow[])) {
     if (phase.start_date && phase.end_date && phase.percent_complete != null) {
       const duration = Math.max(
         1,
@@ -73,7 +72,7 @@ async function fetchScheduleMetrics(projectId: string): Promise<{
 export async function getProject(projectId: string): Promise<EnrichedProject> {
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
   const [projectResult, scheduleResult] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
+    fromTable('projects').select('*').eq('id' as never, projectId).maybeSingle(),
     fetchScheduleMetrics(projectId).catch((err) => {
       if (import.meta.env.DEV) console.warn('fetchScheduleMetrics failed, using defaults:', err)
       return { scheduleVarianceDays: null, completionPercentage: null }
@@ -81,7 +80,7 @@ export async function getProject(projectId: string): Promise<EnrichedProject> {
   ])
   const { completionPercentage } = scheduleResult
   if (projectResult.error) throw transformSupabaseError(projectResult.error)
-  const data = projectResult.data
+  const data = projectResult.data as unknown as Record<string, unknown> | null
   if (!data) {
     throw new ApiError(
       `Project ${projectId} not found or not accessible`,
@@ -90,26 +89,28 @@ export async function getProject(projectId: string): Promise<EnrichedProject> {
       'Project not found.',
     )
   }
+  const proj = data as unknown as Record<string, unknown>
+  const targetCompletion = (proj.target_completion as string | null) ?? null
   return {
-    ...data,
-    totalValue: data.contract_value || 0,
+    ...(data as object),
+    totalValue: (proj.contract_value as number | null) || 0,
     // COMPUTED: source = financialEngine
     completionPercentage: completionPercentage ?? 0,
-    daysRemaining: data.target_completion
-      ? Math.max(0, Math.ceil((new Date(data.target_completion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    daysRemaining: targetCompletion
+      ? Math.max(0, Math.ceil((new Date(targetCompletion).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
       : 0,
-    scheduledEndDate: data.target_completion || '',
-    startDate: data.start_date || '',
-    contractor: data.general_contractor || '',
-  }
+    scheduledEndDate: targetCompletion || '',
+    startDate: (proj.start_date as string | null) || '',
+    contractor: (proj.general_contractor as string | null) || '',
+  } as unknown as EnrichedProject
 }
 
 export async function getMetrics(projectId: string): Promise<ProjectMetricsResult> {
   if (!projectId) throw new ApiError('projectId is required to load project data', 400, 'MISSING_PROJECT_ID', 'No project selected.')
 
   const [projectResult, metricsResult, scheduleMetrics, costData] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
-    supabase.from('project_metrics').select('*').eq('project_id', projectId).maybeSingle(),
+    fromTable('projects').select('*').eq('id' as never, projectId).maybeSingle(),
+    fromTable('project_metrics' as never).select('*').eq('project_id' as never, projectId).maybeSingle(),
     fetchScheduleMetrics(projectId).catch(() => ({ scheduleVarianceDays: null, completionPercentage: null })),
     fetchBudgetDivisions(projectId).catch(() => null),
   ])
@@ -117,7 +118,7 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
   if (projectResult.error) throw transformSupabaseError(projectResult.error)
   // metrics view may legitimately be empty for new projects — degrade gracefully.
 
-  const project = projectResult.data
+  const project = projectResult.data as unknown as Record<string, unknown> | null
   if (!project) {
     throw new ApiError(
       `Project ${projectId} not found or not accessible`,
@@ -126,8 +127,8 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
       'Project not found.',
     )
   }
-  const metrics = (metricsResult.data ?? null) as ProjectMetrics | null
-  const contractValue = project.contract_value || 0
+  const metrics = (metricsResult.data ?? null) as unknown as ProjectMetrics | null
+  const contractValue = (project.contract_value as number | null) || 0
 
   // COMPUTED: source = financialEngine
   const budgetVariance: number | null = (() => {
@@ -138,8 +139,9 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
 
   const { scheduleVarianceDays, completionPercentage } = scheduleMetrics
 
-  const daysBeforeSchedule = project.target_completion
-    ? Math.ceil((new Date(project.target_completion).getTime() - Date.now()) / 86400000) - (metrics?.planned_duration_days ?? 0)
+  const projTarget = project.target_completion as string | null
+  const daysBeforeSchedule = projTarget
+    ? Math.ceil((new Date(projTarget).getTime() - Date.now()) / 86400000) - (metrics?.planned_duration_days ?? 0)
     : 0
 
   return {

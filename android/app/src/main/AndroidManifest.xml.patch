@@ -1,0 +1,42 @@
+# AndroidManifest.xml patch — sitesync:// + App Links + Shortcuts
+#
+# Apply: copy the <intent-filter> blocks from `public/intent-filter.xml`
+# into `android/app/src/main/AndroidManifest.xml` inside the existing
+# <activity android:name="com.getcapacitor.MainActivity"> element. Then
+# create `android/app/src/main/res/xml/shortcuts.xml` from the
+# <shortcuts> block in the same file.
+#
+# Alternatively, add the deep-link config via Capacitor's plugin
+# system in capacitor.config.ts so `npx cap sync android` preserves
+# the changes:
+#
+#   plugins: {
+#     App: {
+#       deepLinks: {
+#         customSchemes: ['sitesync'],
+#         appLinks: ['app.sitesync.example'],
+#       },
+#     },
+#   }
+#
+# App Links domain verification:
+#   Host `https://app.sitesync.example/.well-known/assetlinks.json` with:
+#     [{
+#       "relation": ["delegate_permission/common.handle_all_urls"],
+#       "target": {
+#         "namespace": "android_app",
+#         "package_name": "com.sitesync.app",
+#         "sha256_cert_fingerprints": ["<fingerprint>"]
+#       }
+#     }]
+#
+# Push notifications: configure FCM project in google-services.json under
+# android/app/. The @capacitor/push-notifications plugin auto-wires the
+# token registration handler.
+#
+# After applying:
+#   npm run build && npx cap sync android && npx cap open android
+# In Android Studio: build → run on attached device / emulator.
+#
+# Live reload during development:
+#   npx cap run android --livereload --external

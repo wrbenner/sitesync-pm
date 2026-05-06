@@ -1,4 +1,4 @@
-import { Path as FabricPath } from 'fabric';
+import { Path as FabricPath, type Canvas as FabricCanvas } from 'fabric';
 
 interface RevisionCloudOptions {
   strokeColor?: string;
@@ -85,7 +85,7 @@ export function generateCloudSvgPath(
  * defined by (startX, startY) to (endX, endY).
  */
 export function createRevisionCloud(
-  canvas: fabric.Canvas,
+  canvas: FabricCanvas,
   startX: number,
   startY: number,
   endX: number,

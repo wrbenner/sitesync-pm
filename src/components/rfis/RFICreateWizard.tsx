@@ -14,9 +14,9 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Send, Camera, Paperclip, ChevronDown, Search, Loader2,
-  Clock, AlertCircle, Calendar, Hash, BookOpen, FileText
+  Clock, AlertCircle, Calendar, BookOpen, FileText
 } from 'lucide-react'
-import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../../styles/theme'
+import { colors, zIndex } from '../../styles/theme'
 import { Avatar } from '../Primitives'
 import { useRealtimeDirectoryContacts } from '../../hooks/queries/realtime'
 import { useProjectId } from '../../hooks/useProjectId'
@@ -28,7 +28,7 @@ import type { DirectoryContact } from '../../types/database'
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const isoDate = (d: Date) => d.toISOString().split('T')[0]
 
@@ -355,28 +355,38 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const [files, setFiles] = useState<File[]>([])
   const [priority, setPriority] = useState('medium')
   const [dueDate, setDueDate] = useState(defaultDueDate())
-  const [showMore, setShowMore] = useState(false)
+  const [_showMore, setShowMore] = useState(false)
 
   const [sending, setSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const questionRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-fill "from" when user detected
-  useEffect(() => {
+  // Auto-fill "from" when user detected — render-time prev pattern.
+  const [prevAutofillKey, setPrevAutofillKey] = useState<string | null>(null)
+  const autofillKey = currentUserContact ? `${currentUserContact.id ?? ''}` : null
+  if (prevAutofillKey !== autofillKey) {
+    setPrevAutofillKey(autofillKey)
     if (currentUserContact && !fromContact) {
       setFromContact(currentUserContact)
     }
-  }, [currentUserContact, fromContact])
+  }
 
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => questionRef.current?.focus(), 120)
-    } else {
-      // Reset all state
+  // Reset all state on close — render-time prev pattern; focus on open
+  // is a real side-effect and stays in an effect.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (prevOpen !== open) {
+    setPrevOpen(open)
+    if (!open) {
       setQuestion(''); setDetails(''); setAssignee(null); setManualAssignee(''); setFromContact(null)
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())
       setSending(false); setShowMore(false)
+    }
+  }
+  useEffect(() => {
+    if (open) {
+      const id = setTimeout(() => questionRef.current?.focus(), 120)
+      return () => clearTimeout(id)
     }
   }, [open])
 

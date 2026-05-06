@@ -10,7 +10,8 @@ import {
   type OfflineRecord,
   type TableName,
 } from './offlineStore'
-import { supabase } from './supabase'
+
+import { fromTable } from '../lib/db/queries'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -261,9 +262,8 @@ class SyncEngine {
     try {
       switch (record.syncStatus) {
         case 'pending_create': {
-          const { error } = await supabase
-            .from(table)
-            .insert(record.data)
+          const { error } = await fromTable(table as never)
+            .insert(record.data as never)
           if (error) {
             // Check if it already exists (conflict)
             if (error.code === '23505') {
@@ -282,20 +282,18 @@ class SyncEngine {
             return await this.handleConflict(record)
           }
 
-          const { error } = await supabase
-            .from(table)
-            .update(record.data)
-            .eq('id', record.id)
+          const { error } = await fromTable(table as never)
+            .update(record.data as never)
+            .eq('id' as never, record.id)
           if (error) throw error
           await markSynced(table, record.id)
           return 'synced'
         }
 
         case 'pending_delete': {
-          const { error } = await supabase
-            .from(table)
+          const { error } = await fromTable(table)
             .delete()
-            .eq('id', record.id)
+            .eq('id' as never, record.id)
           // Ignore "not found" errors — server already deleted
           if (error && error.code !== 'PGRST116') throw error
           await markSynced(table, record.id)
@@ -315,15 +313,14 @@ class SyncEngine {
    */
   private async detectConflict(record: OfflineRecord): Promise<boolean> {
     try {
-      const { data } = await supabase
-        .from(record.table)
+      const { data } = await fromTable(record.table as never)
         .select('updated_at')
-        .eq('id', record.id)
+        .eq('id' as never, record.id)
         .single()
 
       if (!data) return false
 
-      const serverUpdatedAt = new Date(data.updated_at as string).getTime()
+      const serverUpdatedAt = new Date((data as { updated_at?: string }).updated_at as string).getTime()
       // If the server was updated after our local modification, that's a conflict
       return serverUpdatedAt > record.lastModified
     } catch {
@@ -339,17 +336,16 @@ class SyncEngine {
     record: OfflineRecord,
   ): Promise<'conflict'> {
     try {
-      const { data } = await supabase
-        .from(record.table)
+      const { data } = await fromTable(record.table as never)
         .select('*')
-        .eq('id', record.id)
+        .eq('id' as never, record.id)
         .single()
 
       if (data) {
         await markConflict(
           record.table as TableName,
           record.id,
-          data as Record<string, unknown>,
+          data as unknown as Record<string, unknown>,
         )
       }
     } catch {

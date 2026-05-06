@@ -1,5 +1,10 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { syncManager} from '../lib/syncManager'
+
+// useIsOnline lives in its own file (./useIsOnline) so routes that only need
+// the bare connection state don't transitively pull the syncManager + Dexie
+// chunk onto the cold-open path. Day 30 — Lap 1 acceptance gate.
+export { useIsOnline } from './useIsOnline'
 
 // Subscribe to the SyncManager singleton for real-time offline/sync status
 export function useOfflineStatus() {
@@ -26,18 +31,3 @@ export function useOfflineStatus() {
   }
 }
 
-// Hook for components that just need to know if we're online
-export function useIsOnline(): boolean {
-  const [online, setOnline] = useState(navigator.onLine)
-  useEffect(() => {
-    const on = () => setOnline(true)
-    const off = () => setOnline(false)
-    window.addEventListener('online', on)
-    window.addEventListener('offline', off)
-    return () => {
-      window.removeEventListener('online', on)
-      window.removeEventListener('offline', off)
-    }
-  }, [])
-  return online
-}

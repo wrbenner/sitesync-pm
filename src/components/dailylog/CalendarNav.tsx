@@ -36,9 +36,17 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const CalendarNav: React.FC<CalendarNavProps> = React.memo(({ approvedDates, submittedDates, loggedDates, draftDates, selectedDate, onSelectDate }) => {
-  // Merge legacy loggedDates into approvedDates/submittedDates sets for display
-  const effectiveApproved = approvedDates ?? loggedDates ?? new Set<string>();
-  const effectiveSubmitted = submittedDates ?? new Set<string>();
+  // Wrap optional-fallback Sets in useMemo so the missingCount memo's
+  // deps don't churn on every render (the `?? new Set()` would mint a
+  // fresh Set identity each call).
+  const effectiveApproved = useMemo(
+    () => approvedDates ?? loggedDates ?? new Set<string>(),
+    [approvedDates, loggedDates],
+  );
+  const effectiveSubmitted = useMemo(
+    () => submittedDates ?? new Set<string>(),
+    [submittedDates],
+  );
   const today = new Date();
   const todayStr = formatDate(today.getFullYear(), today.getMonth(), today.getDate());
   const [viewYear, setViewYear] = useState(today.getFullYear());

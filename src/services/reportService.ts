@@ -2,7 +2,10 @@
 // Compiles project data into the owner/OAC meeting report shape.
 // Narrative generation calls the AI edge function; everything else is pure data assembly.
 
-import { supabase } from '../lib/supabase'
+
+import { fromTable } from '../lib/db/queries'
+import { dollarsToCents, fromCents, addCents } from '../types/money'
+import type { Cents } from '../types/money'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -116,31 +119,45 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
     submittalsRes,
     photosRes,
   ] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).single(),
-    supabase.from('schedule_phases').select('*').eq('project_id', projectId).order('start_date', { ascending: true }),
-    supabase.from('budget_items').select('*').eq('project_id', projectId),
-    supabase.from('change_orders').select('*').eq('project_id', projectId),
-    supabase.from('rfis').select('*').eq('project_id', projectId),
-    supabase.from('submittals').select('*').eq('project_id', projectId),
-    supabase.from('field_captures').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(20),
+    fromTable('projects').select('*').eq('id' as never, projectId).single(),
+    fromTable('schedule_phases').select('*').eq('project_id' as never, projectId).order('start_date', { ascending: true }),
+    fromTable('budget_items').select('*').eq('project_id' as never, projectId),
+    fromTable('change_orders').select('*').eq('project_id' as never, projectId),
+    fromTable('rfis').select('*').eq('project_id' as never, projectId),
+    fromTable('submittals').select('*').eq('project_id' as never, projectId),
+    fromTable('field_captures').select('*').eq('project_id' as never, projectId).order('created_at', { ascending: false }).limit(20),
   ])
 
-  const project = projectRes.data as Record<string, unknown> | null
-  const phases = (phasesRes.data ?? []) as Record<string, unknown>[]
-  const budget = (budgetRes.data ?? []) as Record<string, unknown>[]
-  const changeOrders = (changeOrdersRes.data ?? []) as Record<string, unknown>[]
-  const rfis = (rfisRes.data ?? []) as Record<string, unknown>[]
-  const submittals = (submittalsRes.data ?? []) as Record<string, unknown>[]
-  const photos = (photosRes.data ?? []) as Record<string, unknown>[]
+  const project = projectRes.data as unknown as Record<string, unknown> | null
+  const phases = (phasesRes.data ?? []) as unknown as Record<string, unknown>[]
+  const budget = (budgetRes.data ?? []) as unknown as Record<string, unknown>[]
+  const changeOrders = (changeOrdersRes.data ?? []) as unknown as Record<string, unknown>[]
+  const rfis = (rfisRes.data ?? []) as unknown as Record<string, unknown>[]
+  const submittals = (submittalsRes.data ?? []) as unknown as Record<string, unknown>[]
+  const photos = (photosRes.data ?? []) as unknown as Record<string, unknown>[]
 
   const now = new Date()
   const threeWeeksOut = new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)
 
   // ── Schedule Summary ───────────────────────────────────
-  const completedPhases = phases.filter((p) => p.status === 'complete')
-  const inProgressPhases = phases.filter((p) => p.status === 'in_progress')
+  // Status values are constrained by the schedule_phases CHECK constraint:
+  // ('completed', 'active', 'upcoming', 'at_risk', 'delayed'). Filtering on
+  // 'complete' or 'in_progress' (the older convention) silently returned 0
+  // for both, which made Reports show 0 / 247 Remaining while Schedule
+  // showed 219/247 from the same data.
+  //
+  // The "completed" predicate must match the Schedule page's predicate
+  // (src/stores/scheduleStore.ts:61) — `percent_complete >= 100 || status === 'completed'`.
+  // Using only status === 'completed' caused a second drift where Schedule
+  // showed 219/247 milestonesHit but Reports counted 243 phases as "behind"
+  // (a 100%-complete phase whose status still said 'active' was double-counted).
+  const isPhaseComplete = (p: { status?: string | null; percent_complete?: number | null }): boolean => {
+    return p.status === 'completed' || (p.percent_complete ?? 0) >= 100
+  }
+  const completedPhases = phases.filter((p) => isPhaseComplete(p as never))
+  const inProgressPhases = phases.filter((p) => p.status === 'active' && !isPhaseComplete(p as never))
   const behindPhases = phases.filter((p) => {
-    if (p.status === 'complete') return false
+    if (isPhaseComplete(p as never)) return false
     const end = p.end_date ? new Date(p.end_date as string) : null
     return end && end < now
   })
@@ -176,13 +193,31 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
   }
 
   // ── Budget Summary ─────────────────────────────────────
-  const originalContract = budget.reduce((s, b) => s + ((b.original_amount as number) ?? 0), 0)
-  const approvedChanges = changeOrders
+  // Sum money values as integer cents to avoid floating-point drift across
+  // many line items. The DB stores dollars (numeric), so multiply by 100
+  // on read and divide by 100 at the boundary. This matches the convention
+  // used in src/services/pdf/paymentAppPdf.ts and src/lib/projectAnalytics.ts.
+  const ZERO = 0 as Cents
+  const sumCentsBy = <T extends Record<string, unknown>>(
+    rows: readonly T[],
+    field: keyof T,
+  ): Cents =>
+    rows.reduce<Cents>((acc, r) => addCents(acc, dollarsToCents((r[field] as number) ?? 0)), ZERO)
+
+  const originalContractCents = sumCentsBy(budget, 'original_amount')
+  const approvedChangesCents = changeOrders
     .filter((c) => c.status === 'approved')
-    .reduce((s, c) => s + ((c.amount as number) ?? 0), 0)
-  const currentContract = originalContract + approvedChanges
-  const committed = budget.reduce((s, b) => s + ((b.committed_amount as number) ?? 0), 0)
-  const spent = budget.reduce((s, b) => s + ((b.actual_amount as number) ?? 0), 0)
+    .reduce<Cents>((acc, c) => addCents(acc, dollarsToCents((c.amount as number) ?? 0)), ZERO)
+  const currentContractCents = addCents(originalContractCents, approvedChangesCents)
+  const committedCents = sumCentsBy(budget, 'committed_amount')
+  const spentCents = sumCentsBy(budget, 'actual_amount')
+
+  const originalContract = fromCents(originalContractCents) / 100
+  const approvedChanges = fromCents(approvedChangesCents) / 100
+  const currentContract = fromCents(currentContractCents) / 100
+  const committed = fromCents(committedCents) / 100
+  const spent = fromCents(spentCents) / 100
+
   const forecast = currentContract > 0 && spent > 0
     ? currentContract * (1 + (spent / committed - 1) * 0.5 || 0)
     : currentContract
@@ -298,7 +333,7 @@ export async function generateOwnerReport(projectId: string): Promise<OwnerRepor
       const end = p.end_date ? new Date(p.end_date as string) : null
       const pct = (p.percent_complete as number) ?? 0
       let status: MilestoneItem['status'] = 'on_track'
-      if (p.status === 'complete') status = 'complete'
+      if (p.status === 'completed') status = 'complete'
       else if (end && end < now) status = 'behind'
       else if (pct > 0 && pct < 50 && end && daysBetween(now, end) < 14) status = 'at_risk'
       return {
@@ -355,17 +390,11 @@ interface NarrativeInput {
 }
 
 export async function generateNarrative(input: NarrativeInput): Promise<string> {
-  try {
-    const { data, error } = await supabase.functions.invoke('generate-narrative', {
-      body: input,
-    })
-    if (!error && data?.narrative) {
-      return data.narrative as string
-    }
-  } catch {
-    // Fall back to template-based narrative
-  }
-
+  // The `generate-narrative` edge function was scoped but never built —
+  // the frontend was invoking it speculatively, taking a CORS error on
+  // every call, and silently falling back to the template path. Skip
+  // the dead call until the function exists. When it ships, restore
+  // the try/catch + supabase.functions.invoke('generate-narrative') here.
   return buildTemplateNarrative(input)
 }
 
@@ -412,16 +441,15 @@ export async function getProgressPhotos(
   projectId: string,
   dateRange?: { start: Date; end: Date },
 ): Promise<ProgressPhoto[]> {
-  let query = supabase
-    .from('field_captures')
+  let query = fromTable('field_captures')
     .select('*')
-    .eq('project_id', projectId)
+    .eq('project_id' as never, projectId)
     .order('created_at', { ascending: false })
 
   if (dateRange) {
     query = query
-      .gte('created_at', dateRange.start.toISOString())
-      .lte('created_at', dateRange.end.toISOString())
+      .gte('created_at' as never, dateRange.start.toISOString())
+      .lte('created_at' as never, dateRange.end.toISOString())
   }
 
   const { data } = await query.limit(20)

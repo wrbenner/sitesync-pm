@@ -1,6 +1,7 @@
 // Procore Integration: Import projects, RFIs, and submittals
 
 import { supabase } from '../../lib/supabase'
+import { fromTable, asRow } from '../../lib/db/queries'
 import {
   type IntegrationProvider,
   type SyncResult,
@@ -68,9 +69,9 @@ export const procoreProvider: IntegrationProvider = {
       }, user?.id ?? '')
 
       // Store the actual key securely (in production, use edge function + Supabase Vault)
-      await supabase.from('integrations').update({
+      await fromTable('integrations').update({
         config: { companyId, apiKeyPrefix: apiKey.slice(0, 8) + '...' },
-      }).eq('id', integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -89,11 +90,11 @@ export const procoreProvider: IntegrationProvider = {
 
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase
-      .from('integrations')
+    const { data } = await fromTable('integrations')
       .select('config')
-      .eq('id', integrationId)
+      .eq('id' as never, integrationId)
       .single()
+    const integration = asRow<{ config: Record<string, string> | null }>(data)
 
     if (!integration?.config) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Integration config not found'] }
@@ -114,7 +115,7 @@ export const procoreProvider: IntegrationProvider = {
         const procoreRfis: ProcoreRFI[] = await procoreApi(config.apiKey ?? '', config.companyId, `/projects/${config.projectId ?? ''}/rfis`)
         for (const rfi of procoreRfis) {
           try {
-            await supabase.from('rfis').upsert({
+            await fromTable('rfis').upsert({
               title: rfi.subject,
               status: mapProcoreRFIStatus(rfi.status),
               priority: rfi.priority?.toLowerCase() || 'medium',
@@ -122,7 +123,7 @@ export const procoreProvider: IntegrationProvider = {
               assigned_to: rfi.assignee?.name || null,
               due_date: rfi.due_date || null,
               created_at: rfi.created_at,
-            }, { onConflict: 'number,project_id' })
+            } as never, { onConflict: 'number,project_id' })
             synced++
           } catch {
             failed++
@@ -138,13 +139,13 @@ export const procoreProvider: IntegrationProvider = {
         const procoreSubmittals: ProcoreSubmittal[] = await procoreApi(config.apiKey ?? '', config.companyId, `/projects/${config.projectId ?? ''}/submittals`)
         for (const sub of procoreSubmittals) {
           try {
-            await supabase.from('submittals').upsert({
+            await fromTable('submittals').upsert({
               title: sub.title,
               status: mapProcoreSubmittalStatus(sub.status.name),
               number: sub.number,
               due_date: sub.due_date || null,
               created_at: sub.created_at,
-            }, { onConflict: 'number,project_id' })
+            } as never, { onConflict: 'number,project_id' })
             synced++
           } catch {
             failed++
@@ -174,11 +175,12 @@ export const procoreProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

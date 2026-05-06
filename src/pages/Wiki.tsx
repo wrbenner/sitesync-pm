@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import DOMPurify from 'dompurify'
-import { BookOpen, Plus, Search, Sparkles, Trash2, ChevronRight, ChevronDown, FileText, History, RotateCcw, Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Link, Code, Quote, Minus, Table, Paperclip, Image, Users, Save, Eye, EyeOff } from 'lucide-react'
+import { BookOpen, Plus, Search, Sparkles, Trash2, ChevronRight, ChevronDown, FileText, History, Bold, Italic, Heading1, Heading2, Heading3, List, ListOrdered, Link, Code, Quote, Minus, Table, Paperclip, Image, Users, Save, Eye, EyeOff } from 'lucide-react'
 import { PageContainer, Card, Btn, Skeleton, Modal, InputField, EmptyState } from '../components/Primitives'
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
@@ -189,24 +189,38 @@ const Wiki: React.FC = () => {
 
   const selected = (pages ?? []).find((p) => p.id === selectedId)
 
-  // Auto-save indicator
+  // Auto-save indicator. The 'saved' (non-dirty) and 'saving' (dirty)
+  // status is purely derived from editContent/editTitle vs selected.
+  // Move the synchronous 'saved' set into render-time prev pattern;
+  // keep the 'saving' debounce in an effect because it owns a timer.
+  const dirtyKey = selected
+    ? `${editContent === selected.content && editTitle === selected.title ? 'clean' : 'dirty'}|${selected.id}`
+    : 'no-selection'
+  const [prevDirtyKey, setPrevDirtyKey] = useState(dirtyKey)
+  if (prevDirtyKey !== dirtyKey) {
+    setPrevDirtyKey(dirtyKey)
+    if (selected && editContent === selected.content && editTitle === selected.title) {
+      setAutoSaveStatus('saved')
+    }
+  }
   React.useEffect(() => {
     if (!selected) return
-    if (editContent === selected.content && editTitle === selected.title) {
-      setAutoSaveStatus('saved')
-      return
-    }
+    if (editContent === selected.content && editTitle === selected.title) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounce timer effect: 'saving' set on dirty entry, 'saved' on timer fire
     setAutoSaveStatus('saving')
     const timer = setTimeout(() => setAutoSaveStatus('saved'), 1200)
     return () => clearTimeout(timer)
   }, [editContent, editTitle, selected])
 
-  React.useEffect(() => {
+  // Sync editor content to selected page — render-time prev pattern.
+  const [prevSelectedId, setPrevSelectedId] = useState(selected?.id)
+  if (prevSelectedId !== selected?.id) {
+    setPrevSelectedId(selected?.id)
     if (selected) {
       setEditContent(selected.content)
       setEditTitle(selected.title)
     }
-  }, [selected])
+  }
 
   const tree = useMemo(() => {
     const list = pages ?? []
@@ -253,7 +267,7 @@ const Wiki: React.FC = () => {
       setNewTitle('')
       setNewTemplate('')
       setNewParent(null)
-      setSelectedId((created as { id: string }).id)
+      setSelectedId((created as unknown as { id: string }).id)
     } catch (e) {
       toast.error('Failed to create page')
       console.error(e)
@@ -300,7 +314,7 @@ const Wiki: React.FC = () => {
         updated_by: user.id,
       })
       toast.success('Summary page created')
-      setSelectedId((created as { id: string }).id)
+      setSelectedId((created as unknown as { id: string }).id)
     } catch (e) {
       toast.error('Failed to generate summary')
       console.error(e)

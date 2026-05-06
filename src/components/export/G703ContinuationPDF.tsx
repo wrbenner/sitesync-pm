@@ -101,7 +101,7 @@ export const G703ContinuationPDF: React.FC<G703PDFProps> = ({
           {lineItems.map((item, i) => (
             <View key={item.itemNumber} style={i % 2 === 0 ? styles.row : styles.rowAlt}>
               <Text style={[styles.cell, { width: COL.item, textAlign: 'center' }]}>{item.itemNumber}</Text>
-              <Text style={[styles.cellLeft, { width: COL.desc }]} numberOfLines={2}>{item.description}</Text>
+              <Text style={[styles.cellLeft, { width: COL.desc }]}>{item.description}</Text>
               <Text style={[styles.cell, { width: COL.scheduled }]}>{fmt(item.scheduledValue)}</Text>
               <Text style={[styles.cell, { width: COL.prevCompleted }]}>{fmt(item.previousCompleted)}</Text>
               <Text style={[styles.cell, { width: COL.thisPeriod }]}>{fmt(item.thisPeriod)}</Text>

@@ -1,24 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { fromTable } from '../../lib/db/queries'
 import posthog from '../../lib/analytics'
 import { createOnError } from './createAuditedMutation'
 import { invalidateEntity } from '../../api/invalidation'
 import { toast } from 'sonner'
 import Sentry from '../../lib/sentry'
 
-
-
-import type { Database } from '../../types/database'
-type AnyTableName = keyof Database['public']['Tables'] | (string & Record<never, never>)
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
-const from = (table: AnyTableName) => supabase.from(table as keyof Database['public']['Tables'])
+// `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
+const from = (table: string) => fromTable(table as never)
 
 // ── Task Bulk Operations ─────────────────────────────────
 
 export function useBulkUpdateTasks() {
   return useMutation({
     mutationFn: async ({ ids, updates, projectId }: { ids: string[]; updates: Record<string, unknown>; projectId: string }) => {
-      const { error } = await from('tasks').update(updates).in('id', ids).eq('project_id', projectId)
+      const { error } = await from('tasks').update(updates as never).in('id' as never, ids).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, count: ids.length }
     },
@@ -33,7 +31,7 @@ export function useBulkUpdateTasks() {
 export function useBulkDeleteTasks() {
   return useMutation({
     mutationFn: async ({ ids, projectId }: { ids: string[]; projectId: string }) => {
-      const { error } = await from('tasks').delete().in('id', ids).eq('project_id', projectId)
+      const { error } = await from('tasks').delete().in('id' as never, ids).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, count: ids.length }
     },
@@ -52,10 +50,11 @@ export function useReorderTasks() {
     onMutate: async ({ updates, projectId }) => {
       await queryClient.cancelQueries({ queryKey: ['tasks', projectId] })
       const previousTasks = queryClient.getQueryData(['tasks', projectId])
-      queryClient.setQueryData(['tasks', projectId], (old: unknown[]) => {
+      queryClient.setQueryData(['tasks', projectId], (old: unknown) => {
         if (!Array.isArray(old)) return old
         const orderMap = new Map(updates.map((u) => [u.id, u.sort_order]))
-        return old.map((t) => orderMap.has(t.id) ? { ...t, sort_order: orderMap.get(t.id) } : t)
+        const rows = old as Array<{ id: string; sort_order?: number | null }>
+        return rows.map((t) => orderMap.has(t.id) ? { ...t, sort_order: orderMap.get(t.id) } : t)
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       })
       return { previousTasks }
@@ -72,7 +71,7 @@ export function useReorderTasks() {
       } catch {
         // Fallback: individual updates (non-atomic, last resort)
         for (const { id, sort_order } of updates) {
-          const { error } = await from('tasks').update({ sort_order }).eq('id', id).eq('project_id', projectId)
+          const { error } = await from('tasks').update({ sort_order } as never).eq('id' as never, id).eq('project_id' as never, projectId)
           if (error) throw error
         }
       }
@@ -96,7 +95,7 @@ export function useUpdateTaskDependencies() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ taskId, predecessorIds, projectId }: { taskId: string; predecessorIds: string[]; projectId: string }) => {
-      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds }).eq('id', taskId).eq('project_id', projectId)
+      const { error } = await from('tasks').update({ predecessor_ids: predecessorIds } as never).eq('id' as never, taskId).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId }
     },
@@ -113,14 +112,13 @@ export function useApplyTaskTemplate() {
   return useMutation({
     mutationFn: async ({ templateId, projectId }: { templateId: string; projectId: string }) => {
       // task_templates added by migration but not yet in generated DB types
-      const { data: template, error: templateError } = await supabase
-        .from('task_templates' as keyof Database['public']['Tables'])
+      const { data: template, error: templateError } = await fromTable('task_templates' as never)
         .select('*')
-        .eq('id', templateId)
+        .eq('id' as never, templateId)
         .single()
       if (templateError) throw templateError
 
-      const tmpl = template as Record<string, unknown>
+      const tmpl = template as unknown as Record<string, unknown>
       const taskData = (Array.isArray(tmpl.task_data) ? tmpl.task_data : []) as Array<Record<string, unknown>>
 
       // ATOMIC: Batch insert all tasks in a single operation
@@ -135,7 +133,7 @@ export function useApplyTaskTemplate() {
       }))
 
       const { data: created, error: insertError } = await from('tasks')
-        .insert(taskRows)
+        .insert(taskRows as never)
         .select()
       if (insertError) throw insertError
 
@@ -154,7 +152,7 @@ export function useApplyTaskTemplate() {
           const createdId = idMap.get(String(task.id || task.title))
           const predIds = preds.map((p: string) => idMap.get(p)).filter(Boolean)
           if (createdId && predIds.length) {
-            await from('tasks').update({ predecessor_ids: predIds }).eq('id', createdId)
+            await from('tasks').update({ predecessor_ids: predIds } as never).eq('id' as never, createdId)
           }
         }
       }

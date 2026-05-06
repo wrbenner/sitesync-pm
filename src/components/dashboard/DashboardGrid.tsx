@@ -169,8 +169,9 @@ export const DashboardGrid: React.FC = () => {
   const [tipDismissed, setTipDismissed] = useState(() => localStorage.getItem('sitesync-tip-dismissed') === 'true');
 
   const handleLayoutChange = useCallback((_layout: unknown, allLayouts: unknown) => {
-    setLayouts(allLayouts);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts.lg || _layout));
+    const next = allLayouts as Layouts;
+    setLayouts(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next.lg || _layout));
   }, []);
 
   const handleAddWidget = useCallback((type: string) => {

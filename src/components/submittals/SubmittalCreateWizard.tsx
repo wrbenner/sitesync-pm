@@ -14,9 +14,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Upload, FileText, X, Plus, ChevronDown, Calendar, Clock,
-  Send, Paperclip, Image, File, Sparkles, ArrowRight, Check
-} from 'lucide-react'
+  Upload, FileText, X, Plus,
+  Send, Image, File, Sparkles} from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme'
 import { Avatar } from '../Primitives'
 import { useRealtimeDirectoryContacts } from '../../hooks/queries/realtime'
@@ -46,7 +45,7 @@ interface SubmittalCreateWizardProps {
 // ─── Helpers ──────────────────────────────────────────────
 
 const getInitials = (s: string) =>
-  (s || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
 
 const formatFileSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
@@ -147,7 +146,7 @@ const PersonPicker: React.FC<{
   onChange: (c: DirectoryContact | null) => void
   placeholder?: string
   filterTrade?: boolean
-}> = ({ label, projectId, value, onChange, placeholder = 'Select...', filterTrade }) => {
+}> = ({ label, projectId, value, onChange, placeholder = 'Select...' }) => {
   const { data: contacts = [] } = useRealtimeDirectoryContacts(projectId)
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -524,7 +523,7 @@ const SubmittalCreateWizard: React.FC<SubmittalCreateWizardProps> = ({
 
   const handleAddFiles = useCallback((newFiles: File[]) => {
     const mapped: SubmittalFile[] = newFiles.map(f => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: `${Date.now()}-${crypto.randomUUID()}`,
       file: f, name: f.name, size: f.size, type: f.type,
     }))
     setFiles(prev => [...prev, ...mapped])
@@ -621,7 +620,7 @@ const SubmittalCreateWizard: React.FC<SubmittalCreateWizardProps> = ({
               overflowY: 'auto',
               backgroundColor: colors.surfaceRaised,
               borderRadius: borderRadius.xl,
-              boxShadow: shadows.xl,
+              boxShadow: shadows.lg,
               border: `1px solid ${colors.borderSubtle}`,
               pointerEvents: 'auto',
             }}

@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { PageContainer } from '../../components/Primitives';
-import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme';
+import { colors, spacing, typography, borderRadius, transitions } from '../../styles/theme';
 import {
   Play, Pause, SkipBack, SkipForward, Maximize2, Calendar,
   AlertTriangle, TrendingUp, Users, Clock,
@@ -549,7 +549,7 @@ const DigitalTwinPage: React.FC = () => {
 
   // Derive timeline bounds from the real schedule. Fall back to a 180d window
   // starting today when the project has no phases yet.
-  const { scheduleStart, scheduleEnd, totalDays } = useMemo(() => {
+  const { scheduleStart, totalDays } = useMemo(() => {
     if (twinPhases.length === 0) {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
@@ -568,15 +568,14 @@ const DigitalTwinPage: React.FC = () => {
     return { scheduleStart: start, scheduleEnd: end, totalDays: Math.max(1, daysBetween(start, end)) };
   }, [twinPhases]);
 
-  // Jump the scrubber to "today" when the schedule first loads.
-  const initializedScrubberRef = useRef(false);
-  useEffect(() => {
-    if (initializedScrubberRef.current) return;
-    if (twinPhases.length === 0) return;
+  // Jump the scrubber to "today" when the schedule first loads —
+  // render-time prev pattern, fires once when twinPhases gains rows.
+  const [scrubberInitialized, setScrubberInitialized] = useState(false);
+  if (!scrubberInitialized && twinPhases.length > 0) {
+    setScrubberInitialized(true);
     const todayOffset = Math.max(0, Math.min(totalDays, daysBetween(scheduleStart, new Date())));
     setTimelineDay(todayOffset);
-    initializedScrubberRef.current = true;
-  }, [twinPhases.length, scheduleStart, totalDays]);
+  }
 
   const currentDate = useMemo(() => {
     const d = new Date(scheduleStart);
@@ -822,7 +821,7 @@ const DigitalTwinPage: React.FC = () => {
                 backdropFilter: 'blur(8px)',
               }}
             >
-              {(Object.keys(STATUS_COLORS) as PhaseStatus[]).map((status) => (
+              {(Object.keys(STATUS_COLORS) as unknown as PhaseStatus[]).map((status) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                   <div
                     style={{

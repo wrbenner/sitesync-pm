@@ -1,0 +1,24 @@
+{
+  "weekEnding": "2026-04-25",
+  "payrollNumber": 12,
+  "workers": [
+    {
+      "name": "Carlos Ramirez",
+      "ssnLast4": "1234",
+      "classification": "Electrician",
+      "apprenticeLevel": null,
+      "hoursPerDay": [8, 8, 8, 8, 8, 0, 0],
+      "hourlyRatePaid": 38.50,
+      "fringeAllocation": "plan",
+      "fringePerHourPlan": 9.20,
+      "fringePerHourCash": 0,
+      "deductions": [
+        { "label": "Federal Withholding", "amount": 285.00 },
+        { "label": "FICA", "amount": 117.81 }
+      ]
+    }
+  ],
+  "expectedGaps": [],
+  "expectedNetPay": 1505.19,
+  "expectedContentHashShape": "^[0-9a-f]{64}$"
+}

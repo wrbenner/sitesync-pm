@@ -7,101 +7,31 @@ import { PageContainer } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { duration, easing } from '../../styles/animations';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useProjectContext } from '../../stores/projectContextStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { logAuditEntry } from '../../lib/auditLogger';
-import { ensureOrganizationMembership } from '../../lib/ensureOrganizationMembership';
 import { staggerContainer, staggerItem, staggerTransition } from './types';
 
 const CreateProjectModal = lazy(() => import('../../components/forms/CreateProjectModal'));
 
 export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ onProjectCreated }) => {
   const [showModal, setShowModal] = useState(false);
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const reducedMotion = useReducedMotion();
 
-  const handleSubmit = async (data: Record<string, unknown>) => {
-    // Ensure the user has an active organization and is a member of it.
-    // Self-heals users whose onboarding never created an org membership row.
-    const orgId = user?.id ? await ensureOrganizationMembership(user.id) : null;
-    if (!orgId) {
-      toast.error('Failed to create project: no active organization. Please sign out and back in.');
-      return;
-    }
-
-    const { data: newProject, error } = await supabase
-      .from('projects')
-      .insert({
-        name: data.name as string,
-        organization_id: orgId,
-        address: (data.address as string) || null,
-        city: (data.city as string) || null,
-        state: (data.state as string) || null,
-        project_type: (data.project_type as string) || null,
-        contract_value: data.contract_value ? Number(data.contract_value) : null,
-        start_date: (data.start_date as string) || null,
-        target_completion: (data.target_completion as string) || null,
-        description: (data.description as string) || null,
-        status: 'active',
-        owner_id: user?.id ?? null,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      toast.error(`Failed to create project: ${error.message}`);
-      return;
-    }
-
-    // Add creator as project manager — critical for RBAC access
-    if (user?.id && newProject) {
-      const { error: memberError } = await supabase.from('project_members').insert({
-        project_id: newProject.id,
-        user_id: user.id,
-        role: 'project_manager',
-        accepted_at: new Date().toISOString(),
-      });
-      if (memberError) {
-        console.error('Failed to add project member:', memberError);
-        toast.error('Project created but failed to set you as project manager. Please contact support.');
-      }
-    }
-
-    // Audit trail: project creation is a governance event
-    if (newProject) {
-      logAuditEntry({
-        projectId: newProject.id,
-        entityType: 'project',
-        entityId: newProject.id,
-        action: 'create',
-        afterState: {
-          name: newProject.name,
-          status: newProject.status,
-          owner_id: newProject.owner_id,
-          project_type: newProject.project_type,
-          contract_value: newProject.contract_value,
-        },
-      }).catch(() => {})
-    }
-
-    // Set as active project and refresh queries
-    if (newProject) {
-      useProjectContext.getState().setActiveProject(newProject.id);
-      // Update store projects list directly
-      useProjectContext.setState((s) => ({
-        projects: [newProject, ...s.projects],
-        activeProject: newProject,
-        activeProjectId: newProject.id,
-      }));
-      await queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Project created');
-      setShowModal(false);
-      onProjectCreated();
-    }
+  const handleSuccess = (projectId: string) => {
+    useProjectStore.getState().setActiveProject(projectId);
+    logAuditEntry({
+      projectId,
+      entityType: 'project',
+      entityId: projectId,
+      action: 'create',
+      afterState: { id: projectId },
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['projects'] }).catch(() => {});
+    toast.success('Project created');
+    onProjectCreated();
   };
 
   return (
@@ -237,7 +167,7 @@ export const WelcomeOnboarding: React.FC<{ onProjectCreated: () => void }> = ({ 
           <CreateProjectModal
             open={showModal}
             onClose={() => setShowModal(false)}
-            onSubmit={handleSubmit}
+            onSuccess={handleSuccess}
           />
         )}
       </Suspense>

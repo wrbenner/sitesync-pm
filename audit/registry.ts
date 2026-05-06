@@ -108,16 +108,93 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
   },
 
-  // ── Portfolio / dashboard ────────────────────────────────
+  // ── The Nine ─────────────────────────────────────────────
+  // The IA the manifesto promises: nine question-shaped destinations
+  // that absorb 41 of the legacy routes. Each is wired to real query
+  // hooks and acts as the entry point users see in the sidebar.
   {
-    route: '/portfolio',
-    pageFile: 'src/pages/Portfolio.tsx',
-    title: 'Portfolio',
-    entity: 'project',
-    expected: { has_list: true, has_search: true, has_filters: true },
-    permissionModule: 'portfolio',
+    route: '/day',
+    pageFile: 'src/pages/day/index.tsx',
+    title: 'The Day',
+    entity: null,
+    expected: {},
+    permissionModule: 'day',
     status: 'production',
   },
+  {
+    route: '/field',
+    pageFile: 'src/pages/field/index.tsx',
+    title: 'The Field',
+    entity: null,
+    expected: {},
+    permissionModule: 'field',
+    status: 'production',
+  },
+  {
+    route: '/conversation',
+    pageFile: 'src/pages/conversation/index.tsx',
+    title: 'The Conversation',
+    entity: null,
+    expected: { has_list: true, has_filters: true },
+    permissionModule: 'conversation',
+    status: 'production',
+  },
+  {
+    route: '/plan',
+    pageFile: 'src/pages/plan/index.tsx',
+    title: 'The Plan',
+    entity: null,
+    expected: {},
+    permissionModule: 'plan',
+    status: 'production',
+  },
+  {
+    route: '/ledger',
+    pageFile: 'src/pages/ledger/index.tsx',
+    title: 'The Ledger',
+    entity: null,
+    expected: {},
+    permissionModule: 'ledger',
+    status: 'production',
+  },
+  {
+    route: '/crew',
+    pageFile: 'src/pages/crew/index.tsx',
+    title: 'The Crew',
+    entity: null,
+    expected: {},
+    permissionModule: 'crew',
+    status: 'production',
+  },
+  {
+    route: '/set',
+    pageFile: 'src/pages/set/index.tsx',
+    title: 'The Set',
+    entity: null,
+    expected: {},
+    permissionModule: 'set',
+    status: 'production',
+  },
+  {
+    route: '/file',
+    pageFile: 'src/pages/file/index.tsx',
+    title: 'The File',
+    entity: null,
+    expected: {},
+    permissionModule: 'file',
+    status: 'production',
+  },
+  {
+    route: '/iris/inbox',
+    pageFile: 'src/pages/iris/IrisInboxPage.tsx',
+    title: 'Iris Inbox',
+    entity: null,
+    expected: { has_list: true },
+    permissionModule: 'ai',
+    status: 'production',
+  },
+
+  // ── Dashboard ────────────────────────────────────────────
   {
     route: '/',
     pageFile: 'src/pages/dashboard/index.tsx',
@@ -251,21 +328,24 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/punch-list/index.tsx',
     title: 'Punch List',
     entity: 'punch-item',
+    // No standalone export today — the punch-list export route is wired
+    // through the global ExportCenter (route: /reports). Don't double-claim.
     expected: {
       has_list: true,
       has_create: true,
       has_edit: true,
       has_delete: true,
-      has_export: true,
       has_detail_view: true,
       has_filters: true,
     },
     createModal: 'CreatePunchItemModal',
     hooksModule: 'src/hooks/mutations/punch-items.ts',
-    exportReportType: 'punch_list',
     permissionModule: 'punch-list',
     status: 'production',
-    knownIssues: ['Missing useDeletePunchItem hook'],
+    knownIssues: [
+      'Missing useDeletePunchItem hook',
+      'No standalone export — handled by the global ExportCenter',
+    ],
   },
   {
     route: '/meetings',
@@ -328,18 +408,22 @@ export const PAGE_REGISTRY: PageContract[] = [
     pageFile: 'src/pages/schedule/index.tsx',
     title: 'Schedule',
     entity: 'phase',
+    // Today: list + create + ScheduleImportWizard. Export and a per-phase
+    // detail view are not yet implemented — promote when they ship rather
+    // than overpromising in the audit contract.
     expected: {
       has_list: true,
       has_create: true,
       has_import: true,
-      has_detail_view: true,
-      has_export: true,
     },
     createModal: 'AddPhaseModal',
-    exportReportType: 'schedule',
     permissionModule: 'schedule',
     status: 'production',
-    knownIssues: ['Missing useUpdatePhase + useDeletePhase hooks'],
+    knownIssues: [
+      'Missing useUpdatePhase + useDeletePhase hooks',
+      'No phase detail view yet — list-only',
+      'No XLSX export yet — schedule export is a Lap 3 deliverable',
+    ],
   },
   {
     route: '/lookahead',
@@ -367,25 +451,6 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
     knownIssues: ['Create uses inline supabase.insert instead of a mutation hook'],
   },
-  {
-    route: '/financials',
-    pageFile: 'src/pages/Financials.tsx',
-    title: 'Financials',
-    entity: null,
-    expected: { has_list: true, has_export: true },
-    permissionModule: 'financials',
-    status: 'beta',
-  },
-  {
-    route: '/cost-management',
-    pageFile: 'src/pages/CostManagement.tsx',
-    title: 'Cost Management',
-    entity: 'cost-code',
-    expected: { has_list: true, has_create: true },
-    permissionModule: 'cost-management',
-    status: 'beta',
-  },
-
   // ── Drawings / Files / Field ─────────────────────────────
   {
     route: '/drawings',
@@ -636,15 +701,6 @@ export const PAGE_REGISTRY: PageContract[] = [
 
   // ── AI / Intelligence / Activity ─────────────────────────
   {
-    route: '/copilot',
-    pageFile: 'src/pages/AICopilot.tsx',
-    title: 'AI Copilot',
-    entity: null,
-    expected: {},
-    permissionModule: 'copilot',
-    status: 'beta',
-  },
-  {
     route: '/ai-agents',
     pageFile: 'src/pages/AIAgents.tsx',
     title: 'AI Agents',
@@ -716,15 +772,6 @@ export const PAGE_REGISTRY: PageContract[] = [
     entity: null,
     expected: {},
     permissionModule: 'site-map',
-    status: 'beta',
-  },
-  {
-    route: '/carbon',
-    pageFile: 'src/pages/CarbonDashboard.tsx',
-    title: 'Carbon Dashboard',
-    entity: null,
-    expected: {},
-    permissionModule: 'carbon',
     status: 'beta',
   },
   {
@@ -863,6 +910,100 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
   },
 
+  // ── Magic-link surfaces (token-scoped, no auth session) ──
+  {
+    route: '/sub/:token',
+    pageFile: 'src/components/MagicLinkSubRoute.tsx',
+    title: 'Sub Magic-Link Day Stream',
+    entity: null,
+    expected: { has_list: true },
+    status: 'production',
+  },
+  {
+    route: '/owner/:token',
+    pageFile: 'src/components/MagicLinkOwnerRoute.tsx',
+    title: 'Owner Magic-Link Day Stream',
+    entity: null,
+    expected: { has_list: true },
+    status: 'production',
+  },
+  {
+    route: '/share/owner-payapp/:token',
+    pageFile: 'src/pages/share/OwnerPayAppPreview.tsx',
+    title: 'Owner Pay-App Preview (magic link)',
+    entity: 'pay-app',
+    expected: { has_detail_view: true },
+    status: 'production',
+  },
+  // ── Admin & utility ──────────────────────────────────────
+  {
+    route: '/admin/bulk-invite',
+    pageFile: 'src/pages/admin/bulk-invite/index.tsx',
+    title: 'Bulk Invite',
+    entity: null,
+    expected: {},
+    permissionModule: 'settings',
+    status: 'production',
+  },
+  {
+    route: '/admin/cost-code-library',
+    pageFile: 'src/pages/admin/cost-code-library/index.tsx',
+    title: 'Cost Code Library',
+    entity: 'cost-code',
+    // Bulk-import-only today: drops a CSV from supported accounting systems
+    // (Sage, Procore, etc.) and ingests cost codes en masse. Per-row CRUD
+    // happens at the database/integration layer, not the page UI.
+    expected: { has_import: true },
+    permissionModule: 'settings',
+    status: 'production',
+  },
+  {
+    route: '/admin/project-templates',
+    pageFile: 'src/pages/admin/project-templates/index.tsx',
+    title: 'Project Templates',
+    entity: null,
+    // List-only today. The doc-comment mentions "create-from-existing and
+    // materialize" but those flows haven't shipped — promote when they do.
+    expected: { has_list: true },
+    permissionModule: 'settings',
+    status: 'production',
+  },
+  {
+    route: '/admin/procore-import',
+    pageFile: 'src/pages/admin/procore-import/index.tsx',
+    title: 'Procore Import',
+    entity: null,
+    expected: {},
+    permissionModule: 'integrations',
+    status: 'beta',
+  },
+  {
+    route: '/admin/compliance',
+    pageFile: 'src/pages/admin/compliance/index.tsx',
+    title: 'Compliance Cockpit',
+    entity: null,
+    expected: {},
+    permissionModule: 'settings',
+    status: 'production',
+  },
+  {
+    route: '/walkthrough',
+    pageFile: 'src/pages/walkthrough/index.tsx',
+    title: 'Walk-Through Capture',
+    entity: null,
+    expected: {},
+    permissionModule: 'field-capture',
+    status: 'beta',
+  },
+  {
+    route: '/commitments',
+    pageFile: 'src/pages/Commitments.tsx',
+    title: 'Commitments Tracker',
+    entity: null,
+    expected: { has_list: true, has_filters: true },
+    permissionModule: 'commitments',
+    status: 'beta',
+  },
   // ── Catch-all ────────────────────────────────────────────
   {
     route: '*',

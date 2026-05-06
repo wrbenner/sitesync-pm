@@ -84,15 +84,24 @@ jobs:
       - run: npm run build
       - name: Bundle size ratchet
         run: |
+          # Compare TOTAL gzipped JS bundle (matches the floor's bundleSizeKB
+          # definition, which is what scripts/check-bundle-size.js reports).
+          # Previous implementation compared the largest single ungzipped
+          # chunk against this floor — three different tools (this workflow,
+          # check-bundle-size.js, spec-sync.ts) used three different
+          # definitions of bundleSizeKB, so the ratchet was apples-to-oranges.
           if [ -d "dist/assets" ]; then
-            LARGEST=$(find dist/assets -name "*.js" ! -name "*.map" -exec wc -c {} \; 2>/dev/null | sort -rn | head -1 | awk '{printf "%d", $1/1024}')
+            TOTAL=$(find dist/assets -name "*.js" ! -name "*.map" -print0 2>/dev/null \
+              | xargs -0 -I{} sh -c 'gzip -c "{}" | wc -c' \
+              | awk '{s+=$1} END {printf "%d", s/1024}')
             FLOOR=$(jq '.bundleSizeKB // 9999' .quality-floor.json 2>/dev/null || echo "9999")
-            echo "Largest chunk: ${LARGEST}KB (floor: ${FLOOR}KB)"
-            # Allow tiny variance (hashing / bundler reordering) without blocking merges.
-            # We still catch real regressions via the Update Quality Floor job + spec-sync snapshots.
-            ALLOWANCE=10
-            if [ "$LARGEST" -gt "$((FLOOR + ALLOWANCE))" ] && [ "$FLOOR" -lt 9999 ]; then
-              echo "::error::Chunk ${LARGEST}KB exceeds floor ${FLOOR}KB (+${ALLOWANCE}KB allowance)"
+            echo "Total JS (gzipped): ${TOTAL}KB (floor: ${FLOOR}KB)"
+            # Allow small variance (hashing / bundler reordering) without
+            # blocking merges. The Update Quality Floor job ratchets the
+            # actual baseline downward when sizes improve.
+            ALLOWANCE=20
+            if [ "$TOTAL" -gt "$((FLOOR + ALLOWANCE))" ] && [ "$FLOOR" -lt 9999 ]; then
+              echo "::error::Total bundle ${TOTAL}KB exceeds floor ${FLOOR}KB (+${ALLOWANCE}KB allowance)"
               exit 1
             fi
           fi

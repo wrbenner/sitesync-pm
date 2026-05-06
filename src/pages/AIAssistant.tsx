@@ -21,7 +21,8 @@ const indigo = {
   600: '#4F46E5', 700: '#4338CA',
 } as const;
 
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectStore } from '../stores/projectStore';
+import { useIsMobile } from '../hooks/useWindowSize';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -278,13 +279,17 @@ function TypingIndicator() {
 // ── Main Component ────────────────────────────────────────
 
 export default function AIAssistant() {
-  const { currentProject } = useProjectContext();
+  const { activeProject: currentProject } = useProjectStore();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const isMobile = useIsMobile();
+  // Default the conversation rail closed on phones — at 393px wide the
+  // 260px rail leaves Iris with ~130px to render in, which is unusable.
+  // Users can open it from the toolbar button.
+  const [showSidebar, setShowSidebar] = useState(!isMobile);
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   // Agent-tasks side panel.
@@ -483,7 +488,9 @@ export default function AIAssistant() {
     }
   }, [activeConvId]);
 
-  const projectName = currentProject?.name || 'Project';
+  // When no project is loaded, address it generically so the sentence
+  // still scans ("happening on your project") instead of "on Project".
+  const projectName = currentProject?.name ?? 'your project';
 
   return (
     <div style={{ display: 'flex', height: '100%', background: 'white', overflow: 'hidden' }}>
@@ -713,9 +720,11 @@ export default function AIAssistant() {
                 I see everything happening on {projectName}. Budgets, schedules, safety, subs, documents — just ask.
               </p>
 
-              {/* Suggested prompts grid */}
+              {/* Suggested prompts grid — wider min so iPad portrait
+                  resolves to 2 cols (more breathing room) instead of 3
+                  cols squished. */}
               <div style={{
-                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: spacing[3], width: '100%',
               }}>
                 {SUGGESTED_PROMPTS.map((item, i) => (
@@ -743,12 +752,21 @@ export default function AIAssistant() {
                     }}
                   >
                     <item.icon size={18} style={{ color: blue[500], flexShrink: 0, marginTop: '1px' }} />
-                    <div>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: gray[800], marginBottom: '2px' }}>
                         {item.label}
                       </div>
-                      <div style={{ fontSize: '12px', color: gray[500], lineHeight: 1.4 }}>
-                        {item.prompt.slice(0, 60)}…
+                      {/* Two-line clamp — prior `slice(0, 60)…` cut copy
+                          mid-sentence even when the card had room. Lets
+                          the card breathe to its natural height. */}
+                      <div style={{
+                        fontSize: '12px', color: gray[500], lineHeight: 1.4,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical' as React.CSSProperties['WebkitBoxOrient'],
+                        overflow: 'hidden',
+                      }}>
+                        {item.prompt}
                       </div>
                     </div>
                   </button>
@@ -761,6 +779,8 @@ export default function AIAssistant() {
               {activeConversation.messages.map((msg) => (
                 <div
                   key={msg.id}
+                  data-message-role={msg.role}
+                  data-streaming={msg.role === 'assistant' && isStreaming && msg.id === activeConversation.messages[activeConversation.messages.length - 1]?.id ? 'true' : undefined}
                   style={{
                     display: 'flex', gap: spacing[3],
                     padding: `${spacing[4]} ${spacing[6]}`,
@@ -1002,7 +1022,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
             }}
           >
             <option value="all">All domains</option>
-            {(Object.keys(DOMAIN_LABEL) as AgentDomain[]).map((d) => (
+            {(Object.keys(DOMAIN_LABEL) as unknown as AgentDomain[]).map((d) => (
               <option key={d} value={d}>{DOMAIN_LABEL[d]}</option>
             ))}
           </select>
@@ -1019,7 +1039,7 @@ function AgentTasksPanel(props: AgentTasksPanelProps) {
             }}
           >
             <option value="all">All statuses</option>
-            {(Object.keys(STATUS_LABEL) as AgentTaskStatus[]).map((s) => (
+            {(Object.keys(STATUS_LABEL) as unknown as AgentTaskStatus[]).map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
           </select>
@@ -1076,7 +1096,7 @@ function AgentTaskCard({ task, showActions, onApprove, onReject, isApproving, is
   const summary = task.tool_name
     ? `${task.tool_name}`
     : (task.tool_input && typeof task.tool_input === 'object' && 'message' in task.tool_input
-        ? String((task.tool_input as Record<string, unknown>).message).slice(0, 80)
+        ? String((task.tool_input as unknown as Record<string, unknown>).message).slice(0, 80)
         : 'Chat turn');
 
   return (

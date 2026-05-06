@@ -1,4 +1,11 @@
-import { supabase } from '../lib/supabase'
+
+import { fromTable } from '../lib/db/queries'
+import {
+  type Cents,
+  addCents,
+  dollarsToCents,
+  fromCents,
+} from '../types/money'
 
 // ── Change Order Line Items Service ───────────────────────────────────────────
 // Breaks a CO into individual line items by cost code, each with an amount.
@@ -48,10 +55,9 @@ export interface UpdateCOLineItemPayload {
  * Fetch all line items for a change order.
  */
 export async function getCOLineItems(changeOrderId: string): Promise<COLineItem[]> {
-  const { data, error } = await supabase
-    .from('change_order_line_items')
+  const { data, error } = await fromTable('change_order_line_items')
     .select('*')
-    .eq('change_order_id', changeOrderId)
+    .eq('change_order_id' as never, changeOrderId)
     .order('sort_order', { ascending: true })
 
   if (error) {
@@ -66,8 +72,7 @@ export async function getCOLineItems(changeOrderId: string): Promise<COLineItem[
  * Also updates the parent CO's amount to equal the sum of all line items.
  */
 export async function createCOLineItem(payload: CreateCOLineItemPayload): Promise<COLineItem | null> {
-  const { data, error } = await supabase
-    .from('change_order_line_items')
+  const { data, error } = await fromTable('change_order_line_items')
     .insert({
       change_order_id: payload.change_order_id,
       project_id: payload.project_id,
@@ -79,7 +84,7 @@ export async function createCOLineItem(payload: CreateCOLineItemPayload): Promis
       unit_cost: payload.unit_cost ?? null,
       budget_item_id: payload.budget_item_id ?? null,
       sort_order: payload.sort_order ?? 0,
-    })
+    } as never)
     .select()
     .single()
 
@@ -101,10 +106,9 @@ export async function updateCOLineItem(
   lineItemId: string,
   updates: UpdateCOLineItemPayload,
 ): Promise<COLineItem | null> {
-  const { data, error } = await supabase
-    .from('change_order_line_items')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', lineItemId)
+  const { data, error } = await fromTable('change_order_line_items')
+    .update({ ...updates, updated_at: new Date().toISOString() } as never)
+    .eq('id' as never, lineItemId)
     .select()
     .single()
 
@@ -123,10 +127,9 @@ export async function updateCOLineItem(
  * Delete a line item.
  */
 export async function deleteCOLineItem(lineItemId: string, changeOrderId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('change_order_line_items')
+  const { error } = await fromTable('change_order_line_items')
     .delete()
-    .eq('id', lineItemId)
+    .eq('id' as never, lineItemId)
 
   if (error) {
     console.error('[COLineItems] Failed to delete:', error.message)
@@ -142,17 +145,22 @@ export async function deleteCOLineItem(lineItemId: string, changeOrderId: string
  * This ensures the CO total always equals the sum of its breakdown.
  */
 async function syncCOAmountFromLineItems(changeOrderId: string): Promise<void> {
-  const { data: items, error } = await supabase
-    .from('change_order_line_items')
+  const { data: items, error } = await fromTable('change_order_line_items')
     .select('amount')
-    .eq('change_order_id', changeOrderId)
+    .eq('change_order_id' as never, changeOrderId)
 
   if (error || !items) return
 
-  const total = items.reduce((sum, row) => sum + ((row.amount as number) ?? 0), 0)
+  // Sum line items on integer cents via the canonical helpers from
+  // src/types/money.ts so this code uses the same primitives as the rest
+  // of the cents-discipline boundary. DB stores dollars; convert at write.
+  const totalC: Cents = items.reduce<Cents>(
+    (acc, row) => addCents(acc, dollarsToCents((row.amount as number) ?? 0)),
+    0 as Cents,
+  )
+  const total = fromCents(totalC) / 100
 
-  await supabase
-    .from('change_orders')
-    .update({ amount: total, updated_at: new Date().toISOString() })
-    .eq('id', changeOrderId)
+  await fromTable('change_orders')
+    .update({ amount: total, updated_at: new Date().toISOString() } as never)
+    .eq('id' as never, changeOrderId)
 }

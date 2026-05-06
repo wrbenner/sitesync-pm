@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { fromTable, asRow } from '../lib/db/queries'
 import type { TaskState } from '../machines/taskMachine';
 import {
   type Result,
@@ -19,13 +20,12 @@ async function resolveProjectRole(
   userId: string | null,
 ): Promise<string | null> {
   if (!userId) return null;
-  const { data } = await supabase
-    .from('project_members')
+  const { data } = await fromTable('project_members')
     .select('role')
-    .eq('project_id', projectId)
-    .eq('user_id', userId)
+    .eq('project_id' as never, projectId)
+    .eq('user_id' as never, userId)
     .single();
-  return data?.role ?? null;
+  return asRow<{ role: string | null }>(data)?.role ?? null;
 }
 
 /**
@@ -62,11 +62,11 @@ export const taskService = {
     taskId: string,
     newStatus: TaskState,
   ): Promise<Result> {
-    const { data: task, error: fetchError } = await supabase
-      .from('tasks')
+    const { data: taskData, error: fetchError } = await fromTable('tasks')
       .select('status, project_id')
-      .eq('id', taskId)
+      .eq('id' as never, taskId)
       .single();
+    const task = asRow<{ status: string | null; project_id: string }>(taskData)
 
     if (fetchError || !task) {
       return fail(notFoundError('Task', taskId));
@@ -95,10 +95,9 @@ export const taskService = {
     };
     if (newStatus === 'done') updates.percent_complete = 100;
 
-    const { error } = await supabase
-      .from('tasks')
-      .update(updates)
-      .eq('id', taskId);
+    const { error } = await fromTable('tasks')
+      .update(updates as never)
+      .eq('id' as never, taskId);
 
     if (error) return fail(dbError(error.message, { taskId, newStatus }));
     return { data: null, error: null };
@@ -111,15 +110,57 @@ export const taskService = {
     taskId: string,
     updates: Record<string, unknown>,
   ): Promise<Result> {
-     
+
     const { status: _status, ...safeUpdates } = updates;
 
-    const { error } = await supabase
-      .from('tasks')
-      .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-      .eq('id', taskId);
+    // Capture the pre-update end_date so the schedule-slip chain can compute
+    // a meaningful baseline diff after the write completes. Cheap — single
+    // row by primary key.
+    let baselineEndDate: string | null = null;
+    let projectId: string | null = null;
+    if ('end_date' in safeUpdates) {
+      // Generated Database types lag behind live schema; localized any cast.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      const { data: prior } = await sb
+        .from('tasks')
+        .select('end_date, project_id')
+        .eq('id' as never, taskId)
+        .maybeSingle();
+      baselineEndDate = (prior?.end_date as string | null) ?? null;
+      projectId = (prior?.project_id as string | null) ?? null;
+    }
+
+    const { error } = await fromTable('tasks')
+      .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
+      .eq('id' as never, taskId);
 
     if (error) return fail(dbError(error.message, { taskId }));
+
+    // Cross-feature: if end_date changed and the slip is material, draft a
+    // change order. Fire-and-forget — never blocks the task update.
+    const newEndDate = safeUpdates.end_date as string | null | undefined;
+    if (newEndDate && baselineEndDate && projectId && newEndDate !== baselineEndDate) {
+      void import('../lib/crossFeatureWorkflows')
+        .then(({ runScheduleSlipChain }) =>
+          runScheduleSlipChain({
+            taskId,
+            projectId: projectId!,
+            baselineEndDate,
+            newEndDate,
+            estimatedHoursDelta: typeof safeUpdates.estimated_hours === 'number'
+              ? safeUpdates.estimated_hours as number
+              : undefined,
+          }),
+        )
+        .then((result) => {
+          if (result.error) console.warn('[schedule_slip chain]', result.error);
+          else if (result.created) console.info('[schedule_slip chain] created', result.created);
+          else if (result.skipped) console.debug('[schedule_slip chain] skipped:', result.skipped.reason);
+        })
+        .catch((err) => console.warn('[schedule_slip chain] dispatch failed:', err));
+    }
+
     return { data: null, error: null };
   },
 };

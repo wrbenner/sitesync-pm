@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────
 
+
 const TABLE_LABELS: Record<string, string> = {
   rfis: 'RFI', submittals: 'Submittal', tasks: 'Task',
   punch_items: 'Punch Item', daily_logs: 'Daily Log',
@@ -64,6 +65,28 @@ export function useRealtimeQuery<T>(
     ...options.queryOptions,
   })
 
+  // Stabilize the relatedTables list to a string key so the
+  // subscription effect dep is statically checkable and identity-stable.
+  const relatedTablesKey = (options.relatedTables ?? []).join(',')
+  // Capture mutable callback refs so the channel doesn't tear down on
+  // every queryClient/queryKey/options identity change. The handlers
+  // always read the latest closure via the ref; only `projectId`,
+  // `options.table` and the related-tables key drive resubscription.
+  const handlerCtxRef = useRef({
+    queryClient,
+    queryKey,
+    showToasts: options.showToasts !== false,
+    currentUserId,
+  })
+  useEffect(() => {
+    handlerCtxRef.current = {
+      queryClient,
+      queryKey,
+      showToasts: options.showToasts !== false,
+      currentUserId,
+    }
+  }, [queryClient, queryKey, options.showToasts, currentUserId])
+
   useEffect(() => {
     if (!projectId) return
 
@@ -88,15 +111,17 @@ export function useRealtimeQuery<T>(
             clearTimeout(pendingInvalidation.current)
           }
           pendingInvalidation.current = setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey })
+            const ctx = handlerCtxRef.current
+            ctx.queryClient.invalidateQueries({ queryKey: ctx.queryKey })
             pendingInvalidation.current = null
           }, INVALIDATION_DEBOUNCE_MS)
 
           // Toast for changes by OTHER users
-          if (options.showToasts !== false) {
-            const record = (payload.new || payload.old) as Record<string, unknown> | null
+          const ctx = handlerCtxRef.current
+          if (ctx.showToasts) {
+            const record = (payload.new || payload.old) as unknown as Record<string, unknown> | null
             const changedBy = record?.updated_by ?? record?.created_by ?? record?.submitted_by
-            if (changedBy && changedBy !== currentUserId) {
+            if (changedBy && changedBy !== ctx.currentUserId) {
               const label = TABLE_LABELS[table] ?? table
               const event = EVENT_LABELS[payload.eventType] ?? 'changed'
               const title = (record?.title ?? record?.name ?? record?.number ?? '') as string
@@ -116,7 +141,11 @@ export function useRealtimeQuery<T>(
       }
       channels.forEach((ch) => supabase.removeChannel(ch))
     }
-  }, [projectId, options.table, queryKey[0]]) // Re-subscribe when table or primary key changes
+    // relatedTablesKey carries the same content as options.relatedTables
+    // but with a stable string identity. Listing the array directly would
+    // resubscribe on every render even when contents are unchanged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- relatedTablesKey is the stable serialization
+  }, [projectId, options.table, relatedTablesKey, instanceId]) // Re-subscribe only when the subscription topology changes
 
   return query
 }
@@ -128,7 +157,7 @@ export function useRealtimeQuery<T>(
 import { updatePresencePage } from '../lib/realtime'
 
 export function useEntityPresence(page: string, entityId?: string) {
-  const prevEntityRef = useRef<string | undefined>()
+  const prevEntityRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     if (prevEntityRef.current !== entityId) {
@@ -152,12 +181,12 @@ export function useOptimisticLock(
     queryKey: ['optimistic_lock', table, entityId],
     queryFn: async () => {
       if (!entityId) return null
-      const { data, error } = await fromTable(table)
+      const { data, error } = await fromTable(table as never)
         .select('updated_at')
-        .eq('id', entityId)
+        .eq('id' as never, entityId)
         .single()
       if (error) return null
-      return (data as Record<string, unknown>)?.updated_at as string | null
+      return (data as unknown as Record<string, unknown>)?.updated_at as string | null
     },
     enabled: !!entityId && !!loadedUpdatedAt,
     refetchInterval: 10_000, // Check every 10 seconds while editing

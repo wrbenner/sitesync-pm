@@ -272,6 +272,23 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
   const [hoveredItem, setHoveredItem] = useState<BIMLinkedItem | null>(null);
   const [selectedItem, setSelectedItem] = useState<BIMLinkedItem | null>(null);
 
+  // ── Camera update ────────────────────────────────────────────────────
+  // Declared before the scene/init effect so callers don't reference an
+  // un-initialized binding. Operates entirely on refs, hence no deps.
+
+  const updateCameraFromSpherical = useCallback(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    const s = spherical.current;
+    const t = target.current;
+    camera.position.set(
+      t.x + s.radius * Math.sin(s.phi) * Math.cos(s.theta),
+      t.y + s.radius * Math.cos(s.phi),
+      t.z + s.radius * Math.sin(s.phi) * Math.sin(s.theta),
+    );
+    camera.lookAt(t);
+  }, []);
+
   // ── Initialize scene ───────────────────────────────────────────────────
 
   useEffect(() => {
@@ -374,21 +391,6 @@ export const BIMViewer: React.FC<BIMViewerProps> = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ── Camera update ────────────────────────────────────────────────────
-
-  const updateCameraFromSpherical = useCallback(() => {
-    const camera = cameraRef.current;
-    if (!camera) return;
-    const s = spherical.current;
-    const t = target.current;
-    camera.position.set(
-      t.x + s.radius * Math.sin(s.phi) * Math.cos(s.theta),
-      t.y + s.radius * Math.cos(s.phi),
-      t.z + s.radius * Math.sin(s.phi) * Math.sin(s.theta),
-    );
-    camera.lookAt(t);
   }, []);
 
   // ── Load model if URL changes ────────────────────────────────────────

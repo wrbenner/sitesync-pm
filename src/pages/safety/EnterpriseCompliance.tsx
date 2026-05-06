@@ -9,6 +9,7 @@ import { usePermits } from '../../hooks/queries/permits';
 import { useMaterialInventory, useCreateMaterialItem } from '../../hooks/queries/procurement-equipment';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries'
 import { useQueryClient } from '@tanstack/react-query';
 
 /* ================================================================
@@ -204,7 +205,7 @@ export const JhaTab: React.FC<{ onNavigateToPTP?: () => void }> = ({ onNavigateT
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const jhaList: Jha[] = (ptps ?? []).map((p: unknown) => mapPreTaskPlanToJha(p as Record<string, unknown>));
+  const jhaList: Jha[] = (ptps ?? []).map((p: unknown) => mapPreTaskPlanToJha(p as unknown as Record<string, unknown>));
 
   if (isLoading) {
     return (
@@ -395,7 +396,7 @@ export const SdsTab: React.FC = () => {
     quantity: '',
   });
 
-  const chemicals: Chemical[] = (materials ?? []).map((m: unknown) => mapMaterialToChemical(m as Record<string, unknown>));
+  const chemicals: Chemical[] = (materials ?? []).map((m: unknown) => mapMaterialToChemical(m as unknown as Record<string, unknown>));
 
   const filtered = chemicals.filter(c =>
     c.productName.toLowerCase().includes(search.toLowerCase()) ||
@@ -614,7 +615,7 @@ export const PermitsTab: React.FC = () => {
     try {
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;
-      const { error } = await supabase.from('permits').insert({
+      const { error } = await fromTable('permits').insert({
         project_id: projectId,
         permit_type: permitForm.type,
         location: permitForm.location,
@@ -623,7 +624,7 @@ export const PermitsTab: React.FC = () => {
         issued_by: userId,
         issued_date: new Date().toISOString().slice(0, 10),
         expiry_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      });
+      } as never);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['permits'] });
       toast.success(`${permitForm.type} permit created`);
@@ -636,7 +637,7 @@ export const PermitsTab: React.FC = () => {
     }
   };
 
-  const permitList: WorkPermit[] = (permits ?? []).map((p: unknown) => mapPermitRow(p as Record<string, unknown>));
+  const permitList: WorkPermit[] = (permits ?? []).map((p: unknown) => mapPermitRow(p as unknown as Record<string, unknown>));
   const activeCt = permitList.filter(p => p.status === 'active').length;
 
   if (isLoading) {
@@ -669,7 +670,7 @@ export const PermitsTab: React.FC = () => {
         <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setShowCreatePermit(true)}>New Permit</Btn>
       </div>
       {showCreatePermit && (
-        <Modal title="Create Work Permit" onClose={() => setShowCreatePermit(false)}>
+        <Modal open={showCreatePermit} title="Create Work Permit" onClose={() => setShowCreatePermit(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
             <div>
               <label style={{ display: 'block', fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.semibold, color: colors.textSecondary, marginBottom: spacing['1'] }}>Permit Type</label>

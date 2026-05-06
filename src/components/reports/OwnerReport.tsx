@@ -86,6 +86,7 @@ export const OwnerReport: React.FC = () => {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; bootstrap fetch
     loadReport()
   }, [loadReport])
 
@@ -444,7 +445,7 @@ export const OwnerReport: React.FC = () => {
                   tickFormatter={(v: number) => compactDollars(v)}
                 />
                 <Tooltip
-                  formatter={(value: number) => [compactDollars(value), 'Amount']}
+                  formatter={((value: number) => [compactDollars(value), 'Amount']) as never}
                   contentStyle={{
                     backgroundColor: colors.surfaceRaised,
                     border: `1px solid ${colors.borderSubtle}`,
@@ -936,10 +937,10 @@ export const OwnerReportPdfDoc: React.FC<{ data: OwnerReportData }> = ({ data })
         <View
           fixed
           style={pdfStyles.footer}
-          render={({ pageNumber, totalPages }) => (
+          render={({ pageNumber, ...rest }) => (
             <>
               <Text>SiteSync PM — {projectName} — Owner Report {reportDate}</Text>
-              <Text>Page {pageNumber} of {totalPages}</Text>
+              <Text>Page {pageNumber} of {(rest as { totalPages?: number }).totalPages ?? '?'}</Text>
             </>
           )}
         />

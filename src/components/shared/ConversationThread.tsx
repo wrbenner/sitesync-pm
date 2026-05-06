@@ -79,14 +79,22 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
   const attachPopoverRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
+  // Extract the comma-joined ID key so the dep array is statically
+  // checkable, and route the messages read through a ref so the effect
+  // doesn't re-fire when message bodies change but IDs don't.
+  const messageIdsKey = messages.map((m) => m.id).join(',');
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   // Load reactions for all messages from DB
   useEffect(() => {
-    const messageIds = messages.map((m) => m.id);
+    const currentMessages = messagesRef.current;
+    const messageIds = currentMessages.map((m) => m.id);
     if (messageIds.length === 0) return;
 
     // Seed from prop data first
     const seed: ReactionState = {};
-    messages.forEach((m) => {
+    currentMessages.forEach((m) => {
       if (m.reactions && m.reactions.length > 0) seed[m.id] = m.reactions;
     });
     setTimeout(() => setReactions(seed), 0);
@@ -94,7 +102,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     // Then fetch live from DB
     Promise.all(
       messageIds.map(async (id) => {
-        const rows = await fetchReactions(id);
+        const rows = await fetchReactions(String(id));
         const grouped: { emoji: string; userIds: string[] }[] = [];
         rows.forEach(({ emoji, userId }) => {
           const existing = grouped.find((g) => g.emoji === emoji);
@@ -112,7 +120,7 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
         return next;
       });
     });
-  }, [messages.map((m) => m.id).join(',')]);
+  }, [messageIdsKey]);
 
   // Close popovers on outside click
   useEffect(() => {
@@ -174,9 +182,9 @@ export const ConversationThread: React.FC<ConversationThreadProps> = ({
     const existing = reactions[messageId]?.find((g) => g.emoji === emoji);
     const hasReacted = existing?.userIds.includes(currentUserId) ?? false;
     if (hasReacted) {
-      await removeReaction(messageId, currentUserId, emoji);
+      await removeReaction(String(messageId), currentUserId, emoji);
     } else {
-      await addReaction(messageId, currentUserId, emoji);
+      await addReaction(String(messageId), currentUserId, emoji);
     }
   };
 

@@ -1,0 +1,205 @@
+name: Lap 2 Acceptance Gate
+
+# Spec:    docs/audits/LAP_2_ACCEPTANCE_GATE_SPEC_2026-05-04.md
+# Receipt: docs/audits/DAY_30_75_LAP_2_GATE_RECEIPT_2026-05-04.md (after first run)
+#
+# Four programmatic gates (Gate 5 — "I don't want to go back" — is captured
+# manually by Walker, not in CI):
+#   1. Approved-draft count >= 100 in pilot window
+#   2. Acceptance rate >= 70%
+#   3. Avg time-to-approve <= 90s (90-120s = soft fail / warning; > 120s = hard fail)
+#   4. Zero open high/critical incidents AND audit chain intact
+#
+# All metrics come from lap_2_gate_metrics_daily (see telemetry migration).
+# Audit-chain integrity verified by verify_audit_chain(NULL).
+# Open incidents via lap_2_open_incident_count() helper.
+#
+# Required secrets:
+#   STAGING_DB_URL   — Postgres connection string with read access to the
+#                      lap_2_gate_metrics_daily view + EXECUTE on the two
+#                      SECURITY DEFINER functions. Service-role typically.
+#
+# Security note: this workflow consumes only step-outputs and secrets via
+# env: → $VAR in shell — the GitHub Actions safe pattern. No github.event.*
+# fields reach a run: block, so command injection via untrusted GitHub
+# event payloads is not a risk surface here.
+
+on:
+  schedule:
+    # Daily at 18:00 UTC (~1 PM Central, after pilot's morning rush).
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    # On-demand for the Day 60 close ceremony.
+  push:
+    branches: [main]
+    paths:
+      - 'docs/audits/LAP_2_ACCEPTANCE_GATE_SPEC_2026-05-04.md'
+      - 'supabase/migrations/*_drafted_actions_telemetry.sql'
+      - 'supabase/migrations/*_audit_incidents.sql'
+      - 'src/hooks/useRecordDraftView.ts'
+      - 'src/hooks/useInboxSession.ts'
+      - 'src/components/iris/IrisApprovalGate.tsx'
+      - '.github/workflows/lap-2-acceptance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance-gate:
+    name: Lap 2 acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install psql
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client bc
+
+      - name: Refresh metrics view
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_DB_URL:-}" ]; then
+            echo "::error::STAGING_DB_URL secret is not configured"
+            exit 1
+          fi
+          psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -c \
+            "REFRESH MATERIALIZED VIEW CONCURRENTLY public.lap_2_gate_metrics_daily;"
+
+      - name: Read gate metrics
+        id: metrics
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          # -t (tuple-only) -A (no-align) -F (field separator) for robust parsing.
+          # COALESCE keeps numeric outputs non-empty for the bash arith below.
+          ROW=$(psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -t -A -F'|' -c "
+            SELECT
+              COALESCE(approved_count, 0)::text,
+              COALESCE(acceptance_rate_pct, 0)::text,
+              COALESCE(avg_time_to_approve_sec, 0)::text,
+              COALESCE(ghost_approval_count, 0)::text,
+              COALESCE(approved_today, 0)::text
+            FROM public.lap_2_gate_metrics_daily
+            WHERE metric_date = CURRENT_DATE;
+          ")
+          if [ -z "$ROW" ]; then
+            echo "::error::lap_2_gate_metrics_daily has no row for today; refresh failed"
+            exit 1
+          fi
+          IFS='|' read -r COUNT RATE LATENCY GHOSTS TODAY <<< "$ROW"
+          # Persist to step outputs for downstream steps.
+          {
+            echo "count=$COUNT"
+            echo "rate=$RATE"
+            echo "latency=$LATENCY"
+            echo "ghosts=$GHOSTS"
+            echo "today=$TODAY"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::Lap 2 metrics — approved=$COUNT  rate=$RATE%  latency=${LATENCY}s  ghosts=$GHOSTS  today=$TODAY"
+
+      - name: Verify audit-chain integrity
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          # verify_audit_chain returns rows ONLY when the chain is broken.
+          BROKEN=$(psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -t -A -c \
+            "SELECT COUNT(*)::text FROM public.verify_audit_chain(NULL);")
+          if [ "${BROKEN:-1}" != "0" ]; then
+            echo "::error::Audit chain broken at $BROKEN row(s)"
+            psql "$STAGING_DB_URL" -c \
+              "SELECT broken_at_id, broken_at_seq, expected_hash, actual_hash
+                 FROM public.verify_audit_chain(NULL) LIMIT 5;" || true
+            exit 1
+          fi
+
+      - name: Check for open high/critical incidents
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          OPEN=$(psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -t -A -c \
+            "SELECT public.lap_2_open_incident_count();")
+          if [ "${OPEN:-1}" != "0" ]; then
+            echo "::error::$OPEN unresolved high/critical incidents"
+            psql "$STAGING_DB_URL" -c \
+              "SELECT id, detected_at, severity, category, description
+                 FROM public.audit_incidents
+                WHERE resolved_at IS NULL
+                  AND severity IN ('high','critical')
+                ORDER BY detected_at DESC LIMIT 10;" || true
+            exit 1
+          fi
+
+      - name: Assert thresholds
+        env:
+          COUNT: ${{ steps.metrics.outputs.count }}
+          RATE: ${{ steps.metrics.outputs.rate }}
+          LATENCY: ${{ steps.metrics.outputs.latency }}
+          GHOSTS: ${{ steps.metrics.outputs.ghosts }}
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          # Gate 1: approved >= 100
+          if [ "$(echo "$COUNT < 100" | bc -l)" = "1" ]; then
+            echo "::error::Gate 1 — approved_count=$COUNT < 100"
+            FAIL=1
+          fi
+
+          # Gate 2: rate >= 70
+          if [ "$(echo "$RATE < 70" | bc -l)" = "1" ]; then
+            echo "::error::Gate 2 — acceptance_rate=$RATE% < 70%"
+            FAIL=1
+          fi
+
+          # Gate 3: latency <= 90 (warn 90-120; fail > 120)
+          if [ "$(echo "$LATENCY > 120" | bc -l)" = "1" ]; then
+            echo "::error::Gate 3 — avg_time_to_approve=${LATENCY}s > 120s (hard fail)"
+            FAIL=1
+          elif [ "$(echo "$LATENCY > 90" | bc -l)" = "1" ]; then
+            echo "::warning::Gate 3 — avg_time_to_approve=${LATENCY}s in soft-fail band [90, 120]; Walker sign-off required for Day 60 pass"
+          fi
+
+          # Gate 4 supplement: ghost approvals
+          if [ "$(echo "$GHOSTS > 0" | bc -l)" = "1" ]; then
+            echo "::error::Gate 4 — $GHOSTS ghost approvals (status approved/executed without first_viewed_at)"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" = "0" ]; then
+            echo "::notice::Lap 2 gate PASS — count=$COUNT, rate=$RATE%, latency=${LATENCY}s"
+          fi
+          exit $FAIL
+
+      - name: Write gate report artifact
+        if: always()
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p gate-report
+          psql "$STAGING_DB_URL" -A -F',' -c "
+            SELECT *
+              FROM public.lap_2_gate_metrics_daily
+              WHERE metric_date = CURRENT_DATE;
+          " > gate-report/lap_2_gate_metrics_daily.csv || true
+          psql "$STAGING_DB_URL" -A -F',' -c "
+            SELECT id, detected_at, severity, category, description, resolved_at
+              FROM public.audit_incidents
+              ORDER BY detected_at DESC LIMIT 50;
+          " > gate-report/recent_incidents.csv || true
+
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lap-2-gate-report
+          path: gate-report/
+          retention-days: 30

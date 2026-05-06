@@ -17,6 +17,9 @@ export const DISCIPLINE_COLORS: Record<string, string> = {
   mechanical: '#F47820',           // orange
   electrical: '#F5A623',           // amber
   telecommunications: '#06B6D4',   // cyan
+  food_service: '#A855F7',         // purple (kitchen / FF&E)
+  laundry: '#0EA5E9',              // sky
+  vertical_transportation: '#475569', // slate (elevators / conveyance)
   unclassified: '#6B7280',         // gray
 };
 
@@ -36,6 +39,9 @@ export const DISCIPLINE_LABELS: Record<string, string> = {
   mechanical: 'Mechanical',
   electrical: 'Electrical',
   telecommunications: 'Telecommunications',
+  food_service: 'Food Service',
+  laundry: 'Laundry',
+  vertical_transportation: 'Vertical Transportation',
   unclassified: 'Unclassified',
 };
 
@@ -55,6 +61,9 @@ export const DISCIPLINE_ABBREV: Record<string, string> = {
   mechanical: 'M',
   electrical: 'E',
   telecommunications: 'T',
+  food_service: 'FS',
+  laundry: 'LD',
+  vertical_transportation: 'VT',
   unclassified: '?',
 };
 
@@ -101,6 +110,9 @@ export function groupByDiscipline<T extends { discipline?: string; setNumber?: s
     'mechanical',
     'electrical',
     'telecommunications',
+    'food_service',
+    'laundry',
+    'vertical_transportation',
     'unclassified',
   ];
 

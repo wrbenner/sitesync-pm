@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
@@ -178,12 +178,18 @@ export function usePresence(
     setOnlineUsers(users)
   }, [setOnlineUsers])
 
+  // currentPage is captured via ref so the subscription doesn't tear
+  // down on every navigation; the separate updatePresencePage effect
+  // below handles live page changes without reconnecting the channel.
+  const currentPageRef = useRef(currentPage)
+  useEffect(() => { currentPageRef.current = currentPage }, [currentPage])
+
   // Subscribe to presence
   useEffect(() => {
     if (!projectId || !userId) return
-    const unsubscribe = subscribeToPresence(projectId, userId, userName, userInitials, currentPage, handlePresenceChange)
+    const unsubscribe = subscribeToPresence(projectId, userId, userName, userInitials, currentPageRef.current, handlePresenceChange)
     return () => unsubscribe()
-  }, [projectId, userId, userName, userInitials]) // Don't include currentPage to avoid reconnect
+  }, [projectId, userId, userName, userInitials, handlePresenceChange])
 
   // Update presence page without reconnecting
   useEffect(() => {

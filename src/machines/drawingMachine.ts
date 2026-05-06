@@ -100,13 +100,18 @@ export function getValidTransitions(
   const isAdminOrOwner = userRole === 'admin' || userRole === 'owner';
   const isReviewer = isAdminOrOwner || userRole === 'reviewer' || userRole === 'project_manager';
 
-  const base: Record<DrawingStatus, string[]> = {
+  const base: Partial<Record<DrawingStatus, string[]>> = {
     draft: ['Submit for Review'],
     under_review: isReviewer ? ['Approve', 'Reject'] : [],
     approved: isAdminOrOwner ? ['Publish', 'Revise'] : [],
     rejected: ['Revise'],
     published: isAdminOrOwner ? ['Supersede'] : [],
     archived: [],
+    // Legacy statuses from original schema — treat like draft
+    current: ['Submit for Review'],
+    superseded: ['Submit for Review'],
+    void: [],
+    for_review: isReviewer ? ['Approve', 'Reject'] : [],
   };
 
   const result = [...(base[status] ?? [])];
@@ -131,6 +136,11 @@ export function getNextStatus(
     rejected: { Revise: 'draft', Archive: 'archived' },
     published: { Supersede: 'draft', Archive: 'archived' },
     archived: {},
+    // Legacy statuses — behave like draft or under_review
+    current: { 'Submit for Review': 'under_review', Archive: 'archived' },
+    superseded: { 'Submit for Review': 'under_review', Archive: 'archived' },
+    void: {},
+    for_review: { Approve: 'approved', Reject: 'rejected', Archive: 'archived' },
   };
   return map[currentStatus]?.[action] ?? null;
 }
@@ -138,7 +148,7 @@ export function getNextStatus(
 // ── Status Display ───────────────────────────────────────────────────────────
 
 export function getDrawingStatusConfig(status: DrawingStatus) {
-  const config: Record<DrawingStatus, { label: string; color: string; bg: string }> = {
+  const config: Partial<Record<DrawingStatus, { label: string; color: string; bg: string }>> = {
     draft: { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
     under_review: {
       label: 'Under Review',
@@ -149,8 +159,14 @@ export function getDrawingStatusConfig(status: DrawingStatus) {
     rejected: { label: 'Rejected', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
     published: { label: 'Published', color: colors.statusInfo, bg: colors.statusInfoSubtle },
     archived: { label: 'Archived', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    // Legacy statuses from original schema
+    current: { label: 'Current', color: colors.statusActive, bg: colors.statusActiveSubtle },
+    superseded: { label: 'Superseded', color: colors.statusNeutral, bg: colors.statusNeutralSubtle },
+    void: { label: 'Void', color: colors.statusCritical, bg: colors.statusCriticalSubtle },
+    for_review: { label: 'For Review', color: colors.statusPending, bg: colors.statusPendingSubtle },
   };
-  return config[status] ?? config.draft;
+  const fallback = { label: 'Draft', color: colors.statusNeutral, bg: colors.statusNeutralSubtle };
+  return config[status] ?? fallback;
 }
 
 // ── Days Since Issued ────────────────────────────────────────────────────────

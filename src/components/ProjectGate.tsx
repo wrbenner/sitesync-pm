@@ -10,10 +10,10 @@
  */
 
 import React, { useState } from 'react';
-import { HardHat, Plus, MapPin, Calendar, Building2, ArrowRight, Search } from 'lucide-react';
+import { HardHat, Plus, MapPin, Calendar, ArrowRight, Search } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, transitions } from '../styles/theme';
 import { useProjects } from '../hooks/queries';
-import { useProjectContext } from '../stores/projectContextStore';
+import { useProjectStore } from '../stores/projectStore';
 import { CreateProjectModal } from './forms/CreateProjectModal';
 
 /* ── Helpers ────────────────────────────────────────────── */
@@ -38,18 +38,20 @@ const PROJECT_TYPE_LABELS: Record<string, string> = {
   infrastructure: 'Infrastructure',
 };
 
+// Project lifecycle status colors — use semantic tokens so dark mode and
+// future theme changes flow through automatically.
 const STATUS_COLORS: Record<string, string> = {
-  active: '#10B981',
-  planning: '#6366F1',
-  completed: '#6B7280',
-  on_hold: '#F59E0B',
+  active:    colors.statusActive,
+  planning:  colors.indigo,
+  completed: colors.textTertiary,
+  on_hold:   colors.statusPending,
 };
 
 /* ── Main Component ─────────────────────────────────────── */
 
 export const ProjectGate: React.FC = () => {
   const { data: projects, isLoading } = useProjects();
-  const setActiveProject = useProjectContext((s) => s.setActiveProject);
+  const setActiveProject = useProjectStore((s) => s.setActiveProject);
   const [createOpen, setCreateOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export const ProjectGate: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{
+      <div data-testid="dashboard-hero" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         minHeight: '80vh',
       }}>
@@ -91,7 +93,7 @@ export const ProjectGate: React.FC = () => {
   if (!hasProjects) {
     return (
       <>
-        <div style={{
+        <div data-testid="dashboard-hero" style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           minHeight: '80vh', padding: spacing['6'], textAlign: 'center',
         }}>
@@ -147,7 +149,7 @@ export const ProjectGate: React.FC = () => {
   /* ── Has projects: Selection grid ── */
   return (
     <>
-      <div style={{
+      <div data-testid="dashboard-hero" style={{
         maxWidth: 900, margin: '0 auto', padding: `${spacing['8']} ${spacing['6']}`,
       }}>
         {/* Header */}
@@ -230,10 +232,10 @@ export const ProjectGate: React.FC = () => {
                 key={project.id}
                 onClick={() => {
                   // Sync into store first, then set active
-                  useProjectContext.setState((s) => ({
+                  useProjectStore.setState((s) => ({
                     projects: s.projects.some((p) => p.id === project.id)
                       ? s.projects
-                      : [...s.projects, project as any],
+                      : [...s.projects, project as unknown as typeof s.projects[number]],
                   }));
                   setActiveProject(project.id);
                 }}

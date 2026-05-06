@@ -1,0 +1,11 @@
+{
+  "projectId": "e2000001-0000-4000-8000-000000000002",
+  "name": "E2E Mid — Multi-team",
+  "address": "200 Test Blvd, Austin, TX",
+  "size": "mid",
+  "memberCount": 12,
+  "rfiCount": 35,
+  "submittalCount": 22,
+  "punchCount": 180,
+  "expectedFastLoadMs": 1500
+}

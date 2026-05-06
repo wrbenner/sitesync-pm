@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { Plus, Save, CheckCircle } from 'lucide-react'
+import { Plus, Save } from 'lucide-react'
 import { Whiteboard } from '../../components/shared/Whiteboard'
 import type { WhiteboardData } from '../../components/shared/Whiteboard'
 import { PageContainer, Btn, useToast } from '../../components/Primitives'
@@ -8,7 +8,7 @@ import {
   spacing,
   typography,
   borderRadius,
-  shadows,
+
   transitions,
   layout,
 } from '../../styles/theme'
@@ -23,7 +23,7 @@ interface SavedBoard {
 }
 
 function generateBoardId(): string {
-  return `board_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  return `board_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
 const EMPTY_DATA: WhiteboardData = {
@@ -42,7 +42,10 @@ export const WhiteboardPage: React.FC = () => {
   const [isEditingName, setIsEditingName] = useState(false)
   const [boardData, setBoardData] = useState<WhiteboardData>(EMPTY_DATA)
   const nameInputRef = useRef<HTMLInputElement>(null)
-  const whiteboardKeyRef = useRef(0)
+  // whiteboardKey doubles as a remount trigger — bumping it forces
+  // React to drop the inner Whiteboard's state. State, not ref, because
+  // the value is read during render to position on the JSX `key` prop.
+  const [whiteboardKey, setWhiteboardKey] = useState(0)
 
   // ── Handlers ──────────────────────────────────────────────
 
@@ -60,7 +63,7 @@ export const WhiteboardPage: React.FC = () => {
 
     // Store in localStorage
     try {
-      const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as SavedBoard[]
+      const existing = JSON.parse(localStorage.getItem('sitesync_whiteboards') ?? '[]') as unknown as SavedBoard[]
       const idx = existing.findIndex(b => b.id === boardId)
       if (idx >= 0) existing[idx] = saved
       else existing.push(saved)
@@ -69,13 +72,13 @@ export const WhiteboardPage: React.FC = () => {
       // Silently fail on storage quota
     }
 
-    if (toast?.showToast) {
-      toast.showToast('Board saved successfully', 'success')
+    if (toast?.addToast) {
+      toast.addToast('success', 'Board saved successfully')
     }
   }, [boardId, boardName, boardData, toast])
 
   const handleNewBoard = useCallback(() => {
-    whiteboardKeyRef.current += 1
+    setWhiteboardKey((k) => k + 1)
     setBoardId(generateBoardId())
     setBoardName('Untitled Whiteboard')
     setBoardData(EMPTY_DATA)
@@ -185,7 +188,7 @@ export const WhiteboardPage: React.FC = () => {
       {/* Whiteboard at full remaining height */}
       <div style={{ height: `calc(100vh - ${layout.topbarHeight} - 140px)` }}>
         <Whiteboard
-          key={whiteboardKeyRef.current}
+          key={whiteboardKey}
           initialData={boardData}
           onSave={setBoardData}
           height="100%"

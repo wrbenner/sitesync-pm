@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useOrganizationStore } from '../stores/organizationStore'
+import { useAuthStore } from '../stores/authStore'
 import { getUserOrganizations } from '../api/endpoints/organizations'
 import { queryKeys } from '../api/queryKeys'
-import type { Organization, OrgRole } from '../types/tenant'
+import type { OrgRole } from '../types/tenant'
+import type { Organization } from '../types/database'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 
 interface OrganizationContextValue {
   currentOrg: Organization | null
@@ -24,18 +26,18 @@ const OrganizationContext = createContext<OrganizationContextValue>({
 
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
   const {
-    currentOrg,
+    organization: currentOrg,
     organizations,
     currentOrgRole,
-    loading,
     setCurrentOrg,
     setOrganizations,
     setCurrentOrgRole,
-    setLoading,
     clearOrganization,
-  } = useOrganizationStore()
+  } = useAuthStore()
 
-  const { data: orgs, isLoading } = useQuery({
+  // OrganizationProvider drives its own loading flag from React Query;
+  // authStore.loading covers auth itself and is not exposed here.
+  const { data: orgs, isLoading: loading } = useQuery({
     queryKey: queryKeys.organizations.all,
     queryFn: getUserOrganizations,
     staleTime: 5 * 60 * 1000,
@@ -43,12 +45,8 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
 
   // Sync fetched orgs into the store (handles auto-selection too)
   useEffect(() => {
-    if (orgs) setOrganizations(orgs)
+    if (orgs) setOrganizations(orgs as never)
   }, [orgs, setOrganizations])
-
-  useEffect(() => {
-    setLoading(isLoading)
-  }, [isLoading, setLoading])
 
   // Fetch current user's role in the active org
   useEffect(() => {
@@ -59,11 +57,10 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     let cancelled = false
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user || cancelled) return
-      supabase
-        .from('organization_members')
+      fromTable('organization_members')
         .select('role')
-        .eq('organization_id', currentOrg.id)
-        .eq('user_id', user.id)
+        .eq('organization_id' as never, currentOrg.id)
+        .eq('user_id' as never, user.id)
         .maybeSingle()
         .then(({ data }) => {
           if (!cancelled) setCurrentOrgRole((data?.role as OrgRole) ?? null)
@@ -72,7 +69,8 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     return () => { cancelled = true }
   }, [currentOrg, setCurrentOrgRole])
 
-  // Clear org context when user signs out
+  // Clear org context when user signs out (authStore.signOut already clears
+  // organizations/currentOrgRole, but this keeps the context in sync too)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') clearOrganization()

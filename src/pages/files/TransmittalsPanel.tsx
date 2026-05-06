@@ -56,7 +56,9 @@ export const TransmittalsPanel: React.FC = () => {
     status: 'draft',
   })
 
-  const list = (data ?? []) as TransmittalRow[]
+  // Wrap optional-fallback cast in useMemo so the stats memo doesn't
+  // churn when data identity is stable.
+  const list = useMemo(() => (data ?? []) as unknown as TransmittalRow[], [data])
 
   const stats = useMemo(() => {
     const total = list.length

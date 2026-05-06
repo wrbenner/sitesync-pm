@@ -249,7 +249,6 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
     setAnnotations((prev) => [...prev, shape]);
     if (!drawingId || !projectId) return;
     const { id: _id, type, ...rest } = shape;
-    void _id;
     // Only write the columns guaranteed by the base schema (00019). Everything else —
     // including the full UI type — is stuffed into the `data` jsonb blob. This keeps the
     // insert working across all migration vintages; rowToShape already reads type from data.
@@ -1046,7 +1045,7 @@ export function PdfViewer({ file, title, onClose, onNextDrawing, onPrevDrawing, 
 }
 
 // ─── Loupe: circular magnified view of the PDF canvas around the cursor ──
-const Loupe: React.FC<{ x: number; y: number; sourceRef: React.RefObject<HTMLDivElement>; pageWidth: number; pageHeight: number }> = ({ x, y, sourceRef, pageWidth, pageHeight }) => {
+const Loupe: React.FC<{ x: number; y: number; sourceRef: React.RefObject<HTMLDivElement | null>; pageWidth: number; pageHeight: number }> = ({ x, y, sourceRef, pageWidth, pageHeight }) => {
   const LOUPE_SIZE = 140;
   const MAG = 3;
   const canvasRef = useRef<HTMLCanvasElement>(null);

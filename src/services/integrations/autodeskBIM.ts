@@ -1,7 +1,8 @@
 // Autodesk Construction Cloud / BIM 360 Integration
 // OAuth2 via Autodesk Forge. Syncs model versions, issues, and markups.
 
-import { supabase } from '../../lib/supabase'
+
+import { fromTable, asRow } from '../../lib/db/queries'
 import { rateLimitedFetch } from './rateLimiter'
 import {
   type IntegrationProvider,
@@ -39,14 +40,15 @@ async function accApi(accessToken: string, path: string, options?: RequestInit) 
 export const autodeskBIMProvider: IntegrationProvider = {
   type: 'autodesk_bim360',
 
-  async connect(projectId, credentials) {
+  async connect(_projectId, credentials) {
     const { integrationId, accProjectId } = credentials as { integrationId: string; accProjectId?: string }
     if (!integrationId) {
       return { integrationId: '', error: 'Integration ID required (OAuth flow must complete first)' }
     }
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = asRow<{ config: Record<string, string> | null }>(data)
+    const config = integration?.config ?? null
 
     if (!config?.accessToken) {
       return { integrationId: '', error: 'No access token. Complete OAuth flow first.' }
@@ -61,17 +63,17 @@ export const autodeskBIMProvider: IntegrationProvider = {
 
         const projects = await accApi(config.accessToken, `/project/v1/hubs/${hubId}/projects`)
         // Store available projects for user to select
-        await supabase.from('integrations').update({
-          config: { ...config, hubId, availableProjects: projects.data?.map((p: Record<string, unknown>) => ({ id: p.id, name: (p.attributes as Record<string, unknown>)?.name ?? '' })) ?? [] },
-        }).eq('id', integrationId)
+        await fromTable('integrations').update({
+          config: { ...config, hubId, availableProjects: projects.data?.map((p: Record<string, unknown>) => ({ id: p.id, name: (p.attributes as unknown as Record<string, unknown>)?.name ?? '' })) ?? [] },
+        } as never).eq('id' as never, integrationId)
 
         return { integrationId }
       }
 
       // Project selected, store it
-      await supabase.from('integrations').update({
+      await fromTable('integrations').update({
         config: { ...config, accProjectId },
-      }).eq('id', integrationId)
+      } as never).eq('id' as never, integrationId)
 
       return { integrationId }
     } catch (err) {
@@ -86,8 +88,9 @@ export const autodeskBIMProvider: IntegrationProvider = {
   async sync(integrationId, direction) {
     await updateIntegrationStatus(integrationId, 'syncing')
 
-    const { data: integration } = await supabase.from('integrations').select('config').eq('id', integrationId).single()
-    const config = integration?.config as Record<string, string> | null
+    const { data } = await fromTable('integrations').select('config').eq('id' as never, integrationId).single()
+    const integration = asRow<{ config: Record<string, string> | null }>(data)
+    const config = integration?.config ?? null
 
     if (!config?.accessToken || !config?.accProjectId) {
       const result: SyncResult = { success: false, recordsSynced: 0, recordsFailed: 0, errors: ['Not configured. Select an Autodesk project.'] }
@@ -117,13 +120,13 @@ export const autodeskBIMProvider: IntegrationProvider = {
             try {
               // Map ACC issues to SiteSync punch items or RFIs based on type
               const attrs = issue.attributes ?? issue
-              await supabase.from('punch_items').upsert({
+              await fromTable('punch_items').upsert({
                 title: attrs.title ?? attrs.displayId ?? '',
                 description: attrs.description ?? '',
                 status: mapACCIssueStatus(attrs.status ?? ''),
                 external_id: issue.id,
                 external_source: 'autodesk_bim360',
-              }, { onConflict: 'external_id,external_source' })
+              } as never, { onConflict: 'external_id,external_source' })
               synced++
             } catch {
               failed++
@@ -136,10 +139,9 @@ export const autodeskBIMProvider: IntegrationProvider = {
 
       if (direction === 'export' || direction === 'bidirectional') {
         // Export: push SiteSync issues back to ACC
-        const { data: items } = await supabase
-          .from('punch_items')
+        const { data: items } = await fromTable('punch_items')
           .select('*')
-          .is('external_id', null)
+          .is('external_id' as never, null)
           .limit(50)
 
         details.pendingExports = items?.length ?? 0
@@ -162,11 +164,12 @@ export const autodeskBIMProvider: IntegrationProvider = {
   },
 
   async getStatus(integrationId) {
-    const { data } = await supabase.from('integrations').select('status, last_sync, error_log').eq('id', integrationId).single()
+    const { data } = await fromTable('integrations').select('status, last_sync, error_log').eq('id' as never, integrationId).single()
+    const row = asRow<{ status: string | null; last_sync: string | null; error_log: unknown }>(data)
     return {
-      status: (data?.status as IntegrationStatus) ?? 'disconnected',
-      lastSync: data?.last_sync ?? null,
-      error: Array.isArray(data?.error_log) ? (data.error_log as string[])[0] : undefined,
+      status: (row?.status as IntegrationStatus) ?? 'disconnected',
+      lastSync: row?.last_sync ?? null,
+      error: Array.isArray(row?.error_log) ? (row.error_log as string[])[0] : undefined,
     }
   },
 

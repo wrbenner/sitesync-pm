@@ -13,8 +13,7 @@
  *  - Calibrate: Two-point scale definition with smooth reveal
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { colors, typography, borderRadius } from '../../styles/theme';
+import React, { useState, useCallback, useMemo } from 'react';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -68,7 +67,7 @@ const WITNESS_GAP = 6;
 const TICK_SIZE = 5;
 /** Frosted label pill padding */
 const PILL_PAD_X = 10;
-const PILL_PAD_Y = 5;
+
 
 // Architectural orange — warm, confident, reads on any background
 const DIM_COLOR = '#F47820';
@@ -80,7 +79,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${Date.now()}_${crypto.randomUUID().slice(0, 5)}`;
 
 function normalizedDistance(
   a: NormalizedPoint,
@@ -230,6 +229,7 @@ const ArchDimensionLine: React.FC<{
           {label}
         </text>
         {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
+        {/* eslint-disable-next-line no-constant-binary-expression */}
         {false && sublabel && (
           <text
             x={0} y={14}
@@ -458,17 +458,23 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   }, [snapPoints]);
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [inProgressPoints, setInProgressPoints] = useState<NormalizedPoint[]>([]);
-  const [countIndex, setCountIndex] = useState(1);
+  // countIndex value is never read — the count label is computed from
+  // existingCounts + 1 on each click. setCountIndex is kept only because
+  // legacy state-machine wiring referenced it; safe to leave the setter.
+  const [, setCountIndex] = useState(1);
   const [calibratePoints, setCalibratePoints] = useState<NormalizedPoint[]>([]);
 
   // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
   // Without this, switching tools and coming back would resume a half-drawn measurement.
-  useEffect(() => {
+  // Render-time prev pattern avoids set-state-in-effect.
+  const [prevActiveTool, setPrevActiveTool] = useState(activeTool);
+  if (prevActiveTool !== activeTool) {
+    setPrevActiveTool(activeTool);
     if (!isMeasureTool(activeTool)) {
       setInProgressPoints([]);
       setCalibratePoints([]);
     }
-  }, [activeTool]);
+  }
 
   const scaleParsed = useMemo(() => parseScaleRatio(scaleRatioText), [scaleRatioText]);
 
@@ -623,7 +629,11 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         setInProgressPoints(newPts);
       }
     },
-    [activeTool, inProgressPoints, calibratePoints, imageSize, countIndex, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, calibrationScale, scaleParsed, onMeasurementAdd, snapTo, externalMeasurements, measurements],
+    // calibrationScale, countIndex, scaleParsed are read via closure
+    // through the formatArea/pixelsToRealInches callbacks (which list
+    // them as their own deps). Including them here is unnecessary and
+    // the rule correctly flags it.
+    [activeTool, inProgressPoints, calibratePoints, imageSize, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, onMeasurementAdd, snapTo, externalMeasurements, measurements],
   );
 
   // Detect snap range on cursor move so the parent can pulse the loupe.

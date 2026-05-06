@@ -168,12 +168,14 @@ const DetailsView: React.FC<DetailsViewProps> = ({ file, previewUrl, resolving, 
   const [textBody, setTextBody] = useState<string | null>(null);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: textBody mirrors fetched preview content */
     let cancelled = false;
     if (!isText || !previewUrl) { setTextBody(null); return; }
     fetch(previewUrl).then(r => r.text()).then(body => {
       if (!cancelled) setTextBody(body.slice(0, 20_000));
     }).catch(() => { if (!cancelled) setTextBody(null); });
     return () => { cancelled = true; };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [previewUrl, isText]);
 
   const size = (file as unknown as Record<string, unknown>).file_size_bytes as number

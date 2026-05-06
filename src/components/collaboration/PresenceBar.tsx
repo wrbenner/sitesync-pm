@@ -101,8 +101,8 @@ const STATUS_COLOR: Record<PresenceStatus, string> = {
 
 const STATUS_BORDER: Record<PresenceStatus, string> = {
   active: colors.statusActive,
-  idle: colors.statusPending,
-  away: '#C0C4CC',
+  idle:   colors.statusPending,
+  away:   colors.textTertiary,
 };
 
 // ── Role category ─────────────────────────────────────────────────────────────
@@ -119,13 +119,18 @@ function getRoleCategory(role?: string): RoleCategory {
   return 'unknown';
 }
 
+// Role-category accents map to semantic tokens. Architect/Engineer get
+// the `indigo` accent reserved for design-side stakeholders; owner takes
+// the brand orange (they are who SiteSync ultimately serves); GC gets
+// statusInfo blue; subcontractors fade to textTertiary so cursors don't
+// dominate when many subs are present at once.
 const ROLE_CATEGORY_COLOR: Record<RoleCategory, string> = {
-  gc: '#3B82F6',
-  architect: '#8B5CF6',
-  owner: '#F47820',
-  subcontractor: '#9CA3AF',
-  unknown: '#9CA3AF',
-};
+  gc:            colors.statusInfo,
+  architect:     colors.indigo,
+  owner:         colors.primaryOrange,
+  subcontractor: colors.textTertiary,
+  unknown:       colors.textTertiary,
+}
 
 // ── Drawing presence data (Liveblocks presence may include extra fields) ──────
 
@@ -282,9 +287,9 @@ interface AvatarProps {
 
 function getActivityDotColor(user: PresenceUserWithAction): string {
   const isIdle = (Date.now() - user.lastSeen) / 60_000 > 5;
-  if (isIdle) return '#9CA3AF';
-  if (user.action === 'editing') return '#4EC896';
-  return '#3B82F6';
+  if (isIdle) return colors.textTertiary;
+  if (user.action === 'editing') return colors.statusActive;
+  return colors.statusInfo;
 }
 
 const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
@@ -398,11 +403,18 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
     return `${users[0].displayName}, ${users[1].displayName}, and ${users.length - 2} others are all viewing ${pageLabel}. Coordinate to avoid duplicate edits.`;
   })();
 
-  useEffect(() => {
+  // Mirror users.length into the announce string — render-time prev pattern.
+  const [prevUsersLen, setPrevUsersLen] = useState(users.length);
+  if (prevUsersLen !== users.length) {
+    setPrevUsersLen(users.length);
     setViewerCountText(`${users.length} ${users.length === 1 ? 'person' : 'people'} viewing this page`);
-  }, [users.length]);
+  }
 
+  // Diff users to announce join/leave — keep in an effect because this
+  // is a real side effect (announcement text is consumed by an aria-live
+  // region) AND it has to read from the prevUsersRef ref.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- announce-on-diff effect: announcement text feeds an aria-live region */
     const prev = prevUsersRef.current;
     const curr = new Map(users.map(u => [u.userId, u.displayName]));
 
@@ -425,7 +437,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
 
     prevUsersRef.current = curr;
   // Only re-run when the user list identity changes
-   
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [users]);
 
   if (users.length === 0) return null;
@@ -701,7 +713,9 @@ const DrawingPresenceBarContent: React.FC = () => {
         role: p.role,
         company: p.company,
         color: p.color || colors.statusInfo,
-        initials: p.initials || '?',
+        // Derive a safe initial from the displayName when the presence
+        // payload didn't ship one. "?" reads as a missing person.
+        initials: p.initials || ((p.displayName || p.name || 'S').trim()[0]?.toUpperCase() ?? 'S'),
       });
     } catch {
       // skip malformed presence entry

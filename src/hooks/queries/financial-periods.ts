@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 
 export type FinancialPeriodStatus = 'open' | 'pending_close' | 'closed' | 'reopened'
 
@@ -33,13 +34,12 @@ export function useFinancialPeriods(projectId: string | undefined) {
     queryKey: financialPeriodsKey(projectId),
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('financial_periods')
+      const { data, error } = await fromTable('financial_periods')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('period_month', { ascending: false })
       if (error) throw error
-      return (data ?? []) as FinancialPeriod[]
+      return (data ?? []) as unknown as FinancialPeriod[]
     },
   })
 }
@@ -61,11 +61,10 @@ export function useActivePeriod(projectId: string | undefined) {
     enabled: !!projectId,
     queryFn: async () => {
       const firstOfThisMonth = firstOfMonth(new Date()).toISOString().slice(0, 10)
-      const { data, error } = await supabase
-        .from('financial_periods')
+      const { data, error } = await fromTable('financial_periods')
         .select('*')
-        .eq('project_id', projectId!)
-        .eq('period_month', firstOfThisMonth)
+        .eq('project_id' as never, projectId!)
+        .eq('period_month' as never, firstOfThisMonth)
         .maybeSingle()
       if (error) throw error
       return (data as FinancialPeriod | null) ?? null

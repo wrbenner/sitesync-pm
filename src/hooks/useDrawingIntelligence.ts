@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { fromTable } from '../lib/db/queries'
 import type { DrawingPair, DrawingDiscrepancy } from '../types/ai'
 
 // ── Pipeline Stages ─────────────────────────────────────────
@@ -43,10 +44,9 @@ export function useProjectDrawingPairs(projectId: string | undefined) {
     queryKey: pairsKey(projectId ?? ''),
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_pairs')
+      const { data, error } = await fromTable('drawing_pairs')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingPair[]
@@ -59,10 +59,9 @@ export function useProjectDiscrepancies(projectId: string | undefined) {
     queryKey: discrepanciesKey(projectId ?? ''),
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
+      const { data, error } = await fromTable('drawing_discrepancies')
         .select('*')
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingDiscrepancy[]
@@ -79,18 +78,16 @@ export function useDiscrepanciesForDrawing(
     enabled: !!drawingId && !!projectId,
     retry: false,
     queryFn: async () => {
-      const { data: pairs, error: pairErr } = await supabase
-        .from('drawing_pairs')
+      const { data: pairs, error: pairErr } = await fromTable('drawing_pairs')
         .select('id')
         .or(`arch_drawing_id.eq.${drawingId!},struct_drawing_id.eq.${drawingId!}`)
-        .eq('project_id', projectId!)
+        .eq('project_id' as never, projectId!)
       if (pairErr) throw pairErr
-      const pairIds = (pairs ?? []).map((p: { id: string }) => p.id)
+      const pairIds = ((pairs ?? []) as unknown as Array<{ id: string }>).map((p) => p.id)
       if (pairIds.length === 0) return []
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
+      const { data, error } = await fromTable('drawing_discrepancies')
         .select('*')
-        .in('pair_id', pairIds)
+        .in('pair_id' as never, pairIds)
         .order('severity', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as DrawingDiscrepancy[]
@@ -142,12 +139,13 @@ async function getDrawingFileUrls(pairId: string, supabaseClient = supabase) {
     .select(
       'id, arch_drawing_id, struct_drawing_id, arch:arch_drawing_id(file_url), struct:struct_drawing_id(file_url)',
     )
-    .eq('id', pairId)
+    .eq('id' as never, pairId)
     .single()
   if (error) throw error
   type DrawingRef = { file_url: string | null } | { file_url: string | null }[] | null
-  const archRef = data?.arch as DrawingRef
-  const structRef = data?.struct as DrawingRef
+  const row = data as unknown as { arch: DrawingRef; struct: DrawingRef } | null
+  const archRef = row?.arch ?? null
+  const structRef = row?.struct ?? null
   const archRow = Array.isArray(archRef) ? archRef[0] : archRef
   const structRow = Array.isArray(structRef) ? structRef[0] : structRef
   return {
@@ -161,10 +159,9 @@ export function useConfirmDiscrepancy() {
   const qc = useQueryClient()
   return useMutation<DrawingDiscrepancy, Error, { id: string; projectId: string; drawingId?: string }>({
     mutationFn: async ({ id }) => {
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
-        .update({ user_confirmed: true, is_false_positive: false })
-        .eq('id', id)
+      const { data, error } = await fromTable('drawing_discrepancies')
+        .update({ user_confirmed: true, is_false_positive: false } as never)
+        .eq('id' as never, id)
         .select('*')
         .single()
       if (error) throw error
@@ -183,10 +180,9 @@ export function useDismissDiscrepancy() {
   const qc = useQueryClient()
   return useMutation<DrawingDiscrepancy, Error, { id: string; projectId: string; drawingId?: string }>({
     mutationFn: async ({ id }) => {
-      const { data, error } = await supabase
-        .from('drawing_discrepancies')
-        .update({ is_false_positive: true, user_confirmed: false })
-        .eq('id', id)
+      const { data, error } = await fromTable('drawing_discrepancies')
+        .update({ is_false_positive: true, user_confirmed: false } as never)
+        .eq('id' as never, id)
         .select('*')
         .single()
       if (error) throw error
@@ -276,6 +272,35 @@ export function useDrawingIntelligence(projectId: string | undefined) {
 
       qc.invalidateQueries({ queryKey: pairsKey(projectId) })
       qc.invalidateQueries({ queryKey: discrepanciesKey(projectId) })
+
+      // Cross-feature: for each fresh high-severity discrepancy detected
+      // during this run, draft an RFI to the architect via ai-rfi-draft.
+      // Chain is idempotent (skips discrepancies that already have an RFI),
+      // so a re-run is safe. Fire-and-forget — never blocks the pipeline.
+      if (totalDiscrepancies > 0) {
+        void (async () => {
+          // Strict generated Database types fight us on .in() with computed
+          // string arrays; cast locally — this is best-effort observability.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sb = supabase as any
+          const pairIds = (pairs as Array<{ id: string }>).map((p) => p.id)
+          const { data: highSev } = await sb
+            .from('drawing_discrepancies')
+            .select('id, severity, created_at')
+            .in('pair_id' as never, pairIds)
+            .in('severity' as never, ['high', 'critical'])
+            .order('created_at', { ascending: false })
+            .limit(20)
+          if (!highSev || highSev.length === 0) return
+          const { runDiscrepancyDetectedChain } = await import('../lib/crossFeatureWorkflows')
+          const ids = (highSev as Array<{ id: string }>).map((d) => d.id)
+          for (const id of ids) {
+            const result = await runDiscrepancyDetectedChain(id)
+            if (result.created) console.info('[discrepancy_detected chain] drafted RFI', result.created)
+            else if (result.error) console.warn('[discrepancy_detected chain]', result.error)
+          }
+        })().catch((err) => console.warn('[discrepancy_detected chain] dispatch failed:', err))
+      }
     } catch (err) {
       setState((s) => ({
         ...s,

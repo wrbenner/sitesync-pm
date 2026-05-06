@@ -102,7 +102,7 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
         <button
           onClick={() => toast.success('Access request sent to your project administrator')}
           style={{
-            backgroundColor: colors.primary,
+            backgroundColor: colors.primaryOrange,
             color: 'white',
             padding: `${spacing['2']} ${spacing['4']}`,
             borderRadius: borderRadius.md,
@@ -122,7 +122,7 @@ export const RequestAccessPage: React.FC<{ moduleName?: string }> = ({ moduleNam
             margin: `${spacing['3']} auto 0`,
             background: 'none',
             border: 'none',
-            color: colors.primary,
+            color: colors.primaryOrange,
             fontSize: typography.fontSize.sm,
             cursor: 'pointer',
             textDecoration: 'underline',

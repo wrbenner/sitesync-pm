@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+
+import { fromTable } from '../../lib/db/queries'
 import type { WarrantyRow } from '../queries/warranties'
 
 export interface CreateWarrantyInput {
@@ -26,9 +27,8 @@ export function useCreateWarranty() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: CreateWarrantyInput) => {
-      const { data, error } = await supabase
-        .from('warranties')
-        .insert({ status: 'active', ...input })
+      const { data, error } = await fromTable('warranties')
+        .insert({ status: 'active', ...input } as never)
         .select()
         .single()
       if (error) throw error
@@ -50,10 +50,9 @@ export function useUpdateWarranty() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates }: UpdateWarrantyInput) => {
-      const { data, error } = await supabase
-        .from('warranties')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const { data, error } = await fromTable('warranties')
+        .update({ ...updates, updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, id)
         .select()
         .single()
       if (error) throw error
@@ -69,7 +68,7 @@ export function useDeleteWarranty() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id }: { id: string; project_id: string }) => {
-      const { error } = await supabase.from('warranties').delete().eq('id', id)
+      const { error } = await fromTable('warranties').delete().eq('id' as never, id)
       if (error) throw error
     },
     onSuccess: (_d, vars) => {
