@@ -10,6 +10,10 @@ import { useAuth } from '../hooks/useAuth'
 import { useWorkforceMembers, useTimeEntries, useCreateWorkforceMember, useDeleteWorkforceMember, useCreateTimeEntry, useApproveTimeEntry } from '../hooks/queries'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
+import type { TableRow } from '../types/database'
+
+type WorkforceDisplayRow = TableRow<'workforce_members'> & { crew?: string | null }
+type TimeDisplayRow = TableRow<'time_entries'> & { worker_name: string }
 
 type TabKey = 'roster' | 'time' | 'forecast' | 'credentials' | 'productivity' | 'dispatch'
 
@@ -173,7 +177,7 @@ const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 500, display
 
 // ── Column helpers ───────────────────────────────────────
 
-const rosterCol = createColumnHelper<unknown>()
+const rosterCol = createColumnHelper<WorkforceDisplayRow>()
 const rosterColumns = [
   rosterCol.accessor('name', {
     header: 'Name',
@@ -245,7 +249,7 @@ const rosterColumns = [
   }),
 ]
 
-const timeCol = createColumnHelper<unknown>()
+const timeCol = createColumnHelper<TimeDisplayRow>()
 const timeColumns = [
   timeCol.accessor('date', {
     header: 'Date',
@@ -320,16 +324,16 @@ export const Workforce: React.FC = () => {
   const approveEntry = useApproveTimeEntry()
 
   const totalWorkers = members?.length || 0
-  const activeToday = members?.filter((m: unknown) => (m as any).status === 'active').length || 0 // type-safe-ok (workforce_members columns not in strict generated type)
-  const totalRegularHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).regular_hours || 0), 0) || 0 // type-safe-ok
-  const totalOTHrs = timeEntries?.reduce((s: number, e: unknown) => s + ((e as any).overtime_hours || 0), 0) || 0 // type-safe-ok
+  const activeToday = members?.filter((m) => m.status === 'active').length || 0
+  const totalRegularHrs = timeEntries?.reduce((s, e) => s + (e.regular_hours || 0), 0) || 0
+  const totalOTHrs = timeEntries?.reduce((s, e) => s + (e.overtime_hours || 0), 0) || 0
 
   const isLoading = loadingMembers || loadingTime
 
   // Group members by trade for forecast
   const tradeGroups: Record<string, number> = {}
-  members?.forEach((m: unknown) => {
-    const trade = (m as any).trade || 'Unassigned' // type-safe-ok (workforce_members columns)
+  members?.forEach((m) => {
+    const trade = m.trade || 'Unassigned'
     tradeGroups[trade] = (tradeGroups[trade] || 0) + 1
   })
 
@@ -340,7 +344,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any // type-safe-ok (display columns lose row type)
+        const row = info.row.original
         return (
           <PermissionGate permission="project.settings">
             <button
@@ -363,7 +367,7 @@ export const Workforce: React.FC = () => {
       id: 'actions',
       header: '',
       cell: (info) => {
-        const row = info.row.original as any // type-safe-ok (display columns lose row type)
+        const row = info.row.original
         if (row.approved) return null
         return (
           <PermissionGate permission="project.settings">
@@ -1054,7 +1058,7 @@ const AddWorkerModal: React.FC<AddWorkerModalProps> = ({ projectId, onClose, onC
 
 interface LogTimeModalProps {
   projectId: string
-  members: any[]
+  members: WorkforceDisplayRow[]
   onClose: () => void
   onCreate: ReturnType<typeof useCreateTimeEntry>
 }
@@ -1104,7 +1108,7 @@ const LogTimeModal: React.FC<LogTimeModalProps> = ({ projectId, members, onClose
         <label style={labelStyle}>Worker *</label>
         <select style={inputStyle} value={form.workforce_member_id} onChange={set('workforce_member_id')}>
           <option value="">Select worker...</option>
-          {members.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
 
         <label style={labelStyle}>Date *</label>

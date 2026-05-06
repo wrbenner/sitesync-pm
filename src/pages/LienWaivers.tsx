@@ -6,6 +6,9 @@ import { useProjectId } from '../hooks/useProjectId';
 import { useNavigate } from 'react-router-dom';
 import { useLienWaivers, useCreateLienWaiver, useDeleteLienWaiver } from '../hooks/queries/lien-waivers';
 import { toast } from 'sonner';
+import type { TableRow } from '../types/database';
+
+type LienWaiverRow = TableRow<'lien_waivers'>;
 import {
   useCreateSignatureRequest,
   useSendForSignature,
@@ -52,7 +55,7 @@ export function LienWaivers() {
   const sendForSignature = useSendForSignature();
   const addSignerMutation = useAddSigner();
 
-  const waivers = (rawWaivers ?? []) as any[]; // type-safe-ok (API maps columns to different names — column mapping breaks generated types)
+  const waivers: LienWaiverRow[] = rawWaivers ?? [];
   const [sendingSignatureId, setSendingSignatureId] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState<WaiverFilterType>('all');

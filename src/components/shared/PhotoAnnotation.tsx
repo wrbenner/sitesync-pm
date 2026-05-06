@@ -85,11 +85,11 @@ function uid(): string {
 }
 
 function getMeta(obj: FabricObject, key: string): unknown {
-  return (obj as any)[key] // type-safe-ok (FabricJS doesn't type arbitrary metadata properties)
+  return (obj as Record<string, unknown>)[key]
 }
 
 function setMeta(obj: FabricObject, key: string, value: unknown) {
-  ;(obj as any)[key] = value // type-safe-ok (FabricJS doesn't type arbitrary metadata properties)
+  ;(obj as Record<string, unknown>)[key] = value
 }
 
 function getAnnotationType(obj: FabricObject): AnnotationData['type'] {

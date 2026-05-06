@@ -646,7 +646,7 @@ export function SubmittalDetailPage() {
   useEffect(() => {
     let cancelled = false
     if (!submittal) { setResolvedFiles([]); return }
-    const attachments = ((submittal as any).attachments || []) as unknown[] // type-safe-ok (attachments is a JSONB column not in generated Row type)
+    const attachments = ((submittal as Record<string, unknown>).attachments as unknown[] | undefined) ?? []
     const normalized = attachments.map((att: unknown, i: number) => {
       if (typeof att === 'string') {
         return { name: att.split('/').pop() || `Document ${i + 1}`, path: att, url: '' }
@@ -694,7 +694,7 @@ export function SubmittalDetailPage() {
       addToast('error', 'Failed to upload: ' + uploadErr.message)
       return
     }
-    const currentAttachments = ((submittal as any).attachments || []) as unknown[] // type-safe-ok (JSONB column)
+    const currentAttachments = ((submittal as Record<string, unknown>).attachments as unknown[] | undefined) ?? []
     const newAttachment = {
       path: storagePath,
       name: file.name,

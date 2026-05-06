@@ -1212,7 +1212,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
 
     const viewer = new OpenSeadragon.Viewer({
       id: VIEWER_ID,
-      tileSources: osdTileSource as any, // type-safe-ok (OpenSeadragon TileSource union is not fully typed in @types/openseadragon)
+      tileSources: osdTileSource as unknown as OpenSeadragon.Options['tileSources'],
       prefixUrl: '', // We use custom controls
       showNavigationControl: false,
       showNavigator: true,

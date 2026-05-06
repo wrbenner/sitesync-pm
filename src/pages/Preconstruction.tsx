@@ -23,6 +23,21 @@ import {
   type PreconBidPackage,
   type PreconBidSubmission,
 } from '../hooks/queries/precon-enterprise'
+
+type AIBidAnalysis = {
+  bids: PreconBidSubmission[]
+  avg: number
+  median: number
+  lowest: PreconBidSubmission
+  highest: PreconBidSubmission
+  spread: number
+  variancePct: number
+  stdDev: number
+  coeffVar: number
+  unusuallyLow: PreconBidSubmission[]
+  unusuallyHigh: PreconBidSubmission[]
+  insights: { type: 'warning' | 'info' | 'success'; text: string }[]
+}
 import {
   usePreconSubcontractors,
   useCreatePreconSubcontractor,
@@ -980,7 +995,7 @@ function PackagesView({
   invitationList: PreconBidInvitation[]
   searchQuery: string
   statusFilter: string
-  aiAnalysis: ReturnType<typeof Object> | null
+  aiAnalysis: AIBidAnalysis | null
   onSearch: (v: string) => void
   onFilterStatus: (v: string) => void
   onSelectPackage: (id: string | null) => void
@@ -992,8 +1007,7 @@ function PackagesView({
   onNavigateToLeveling: () => void
 }) {
   const [detailTab, setDetailTab] = useState<'overview' | 'bids' | 'invitations'>('overview')
-  // type-safe-ok: aiAnalysis prop is typed as ReturnType<typeof Object> — extract fields here to avoid as-any in JSX
-  const aiAvg: number = aiAnalysis ? ((aiAnalysis as any).avg || 0) : 0 // type-safe-ok
+  const aiAvg: number = aiAnalysis?.avg ?? 0
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: selectedPackage ? '380px 1fr' : '1fr', gap: spacing['4'], minHeight: 500 }}>
@@ -1127,14 +1141,14 @@ function PackagesView({
           {detailTab === 'overview' && (
             <div>
               {/* AI Analysis */}
-              {aiAnalysis && (aiAnalysis as any).insights && ( // type-safe-ok (prop typed as ReturnType<typeof Object> — structural fix out of scope)
+              {aiAnalysis?.insights && aiAnalysis.insights.length > 0 && (
                 <div style={{ marginBottom: spacing['4'] }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], marginBottom: spacing['3'] }}>
                     <Sparkles size={16} style={{ color: colors.indigo }} />
                     <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.indigo }}>AI Analysis</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['2'] }}>
-                    {((aiAnalysis as any).insights as { type: string; text: string }[]).map((insight, i) => ( // type-safe-ok
+                    {aiAnalysis.insights.map((insight, i) => (
                       <div key={i} style={{
                         display: 'flex', gap: spacing['2'], padding: spacing['3'],
                         borderRadius: borderRadius.base, fontSize: typography.fontSize.sm,
@@ -1279,7 +1293,7 @@ function LevelingView({
   selectedSubmissions: PreconBidSubmission[]
   scopeItemList: PreconScopeItem[]
   scopeResponseList: PreconBidScopeResponse[]
-  aiAnalysis: ReturnType<typeof Object> | null
+  aiAnalysis: AIBidAnalysis | null
   onSelectPackage: (id: string | null) => void
   onScopeResponse: (scopeItemId: string, bidSubmissionId: string, response: string) => void
   onAddScope: () => void
