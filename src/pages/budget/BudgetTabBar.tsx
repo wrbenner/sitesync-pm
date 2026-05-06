@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { Layers, GitCompare, TrendingUp, BarChart3 } from 'lucide-react'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
@@ -33,7 +33,7 @@ export const BudgetTabBar: React.FC<BudgetTabBarProps> = ({
   const [hovered, setHovered] = useState<BudgetTab | null>(null)
 
   // Measure active tab position for sliding indicator
-  const updateIndicator = () => {
+  const updateIndicator = useCallback(() => {
     const el = tabRefs.current.get(activeTab)
     const container = containerRef.current
     if (el && container) {
@@ -41,13 +41,13 @@ export const BudgetTabBar: React.FC<BudgetTabBarProps> = ({
       const tRect = el.getBoundingClientRect()
       setIndicator({ left: tRect.left - cRect.left, width: tRect.width })
     }
-  }
+  }, [activeTab])
 
-  useLayoutEffect(updateIndicator, [activeTab])
+  useLayoutEffect(updateIndicator, [updateIndicator])
   useEffect(() => {
     window.addEventListener('resize', updateIndicator)
     return () => window.removeEventListener('resize', updateIndicator)
-  }, [activeTab])
+  }, [updateIndicator])
 
   return (
     <div
