@@ -57,8 +57,24 @@ export default defineConfig([
         },
       ],
       //
-      // React Refresh: dev convenience, not a production bug.
-      'react-refresh/only-export-components': 'warn',
+      // React Refresh: only-export-components fires on files that mix
+      // React components with non-component exports (constants, hooks,
+      // contexts, types). The cost is a slower HMR cycle on those
+      // specific files — they fall back from fast-refresh to a full
+      // page reload when edited.
+      //
+      // The codebase intentionally colocates hooks + their context +
+      // their provider + the component(s) that consume them in one
+      // file (Primitives.tsx, FormPrimitives.tsx, ContextMenu.tsx /
+      // ToastProvider, ConfirmDialog, EditConflictGuard, etc.). That's
+      // idiomatic React; Vite's HMR rule wants every helper in its
+      // own file, which would mean 24+ structural splits across the
+      // codebase to satisfy a dev-experience optimization that does
+      // not affect production behavior.
+      //
+      // Bugatti decision: weighing the architecture against the rule,
+      // the architecture wins. Off, with rationale.
+      'react-refresh/only-export-components': 'off',
       //
       // ── React Compiler signals (eslint-plugin-react-hooks v7+) ──────────
       // babel-plugin-react-compiler is installed (vite.config.ts wires it
