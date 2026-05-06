@@ -14,6 +14,11 @@ import { supabase } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 import { logAuditEntry } from '../../lib/auditLogger'
 
+// rfi_assignees was added by 20260507000001_rfi_p1b_workflow_depth.sql.
+// Until db-types regenerates, collapse the table-name union via `as never`
+// (same pattern as src/hooks/mutations/rfis.ts).
+const from = (table: string) => fromTable(table as never)
+
 export interface RFIAssignee {
   id: string
   rfi_id: string
@@ -32,7 +37,7 @@ export function useRFIAssignees(rfiId: string | undefined) {
     queryKey: queryKey(rfiId),
     queryFn: async () => {
       if (!rfiId) return []
-      const { data, error } = await fromTable('rfi_assignees')
+      const { data, error } = await from('rfi_assignees')
         .select('*')
         .eq('rfi_id' as never, rfiId)
         .order('created_at' as never, { ascending: true })
@@ -48,7 +53,7 @@ export function useAddRFIAssignee() {
   return useMutation({
     mutationFn: async (params: { rfiId: string; projectId: string; userId: string; role?: string | null }) => {
       const { data: { user } } = await supabase.auth.getUser()
-      const { error } = await fromTable('rfi_assignees')
+      const { error } = await from('rfi_assignees')
         .insert({
           rfi_id: params.rfiId,
           user_id: params.userId,
@@ -78,7 +83,7 @@ export function useRemoveRFIAssignee() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: { rfiId: string; projectId: string; userId: string }) => {
-      const { error } = await fromTable('rfi_assignees')
+      const { error } = await from('rfi_assignees')
         .delete()
         .eq('rfi_id' as never, params.rfiId)
         .eq('user_id' as never, params.userId)
@@ -114,7 +119,7 @@ export function useToggleRFIAssigneeResponded() {
       const patch = params.responded
         ? { responded_at: new Date().toISOString(), response_id: params.responseId ?? null }
         : { responded_at: null, response_id: null }
-      const { error } = await fromTable('rfi_assignees')
+      const { error } = await from('rfi_assignees')
         .update(patch as never)
         .eq('id' as never, params.assigneeId)
       if (error) throw error

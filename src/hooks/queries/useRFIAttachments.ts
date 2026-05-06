@@ -15,6 +15,11 @@ import { supabase } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 import { logAuditEntry } from '../../lib/auditLogger'
 
+// rfi_attachments was added by 20260507000001_rfi_p1b_workflow_depth.sql.
+// Until db-types regenerates, collapse the table-name union via `as never`
+// (same pattern as src/hooks/mutations/rfis.ts).
+const from = (table: string) => fromTable(table as never)
+
 export interface RFIAttachment {
   id: string
   rfi_id: string
@@ -51,14 +56,21 @@ export function useRFIAttachments(rfiId: string | undefined, responseId?: string
     queryKey: queryKey(rfiId, responseId),
     queryFn: async () => {
       if (!rfiId) return []
-      let q = fromTable('rfi_attachments').select('*').eq('rfi_id' as never, rfiId)
+      // Loosen the chain to `unknown` so the per-table-name `eq`/`is`
+      // overloads (which collapse to `never` after our `as never` cast)
+      // don't reject `null` for the `is` predicate.
+      let q = from('rfi_attachments').select('*').eq('rfi_id' as never, rfiId) as unknown as {
+        is: (col: string, val: unknown) => typeof q
+        eq: (col: string, val: unknown) => typeof q
+        order: (col: string, opts: { ascending: boolean }) => Promise<{ data: unknown[] | null; error: { message: string } | null }>
+      }
       // When responseId is undefined, return all RFI-level (response_id IS NULL).
       if (responseId === undefined || responseId === null) {
-        q = q.is('response_id' as never, null)
+        q = q.is('response_id', null)
       } else {
-        q = q.eq('response_id' as never, responseId)
+        q = q.eq('response_id', responseId)
       }
-      const { data, error } = await q.order('position' as never, { ascending: true })
+      const { data, error } = await q.order('position', { ascending: true })
       if (error) throw error
       return (data ?? []).map((row) => attachUrl(row as unknown as RFIAttachment))
     },
@@ -92,13 +104,15 @@ export function useAddRFIAttachment() {
       if (uploadErr) throw uploadErr
 
       // Append to the end of the parent's list.
-      const { count } = await fromTable('rfi_attachments')
+      const { count } = await (from('rfi_attachments')
         .select('id' as never, { count: 'exact', head: true })
-        .eq('rfi_id' as never, rfiId)
-        .is('response_id' as never, responseId ?? null)
+        .eq('rfi_id' as never, rfiId) as unknown as {
+          is: (column: string, value: unknown) => Promise<{ count: number | null }>
+        })
+        .is('response_id', responseId ?? null)
 
       const { data: { user } } = await supabase.auth.getUser()
-      const { data: row, error: insertErr } = await fromTable('rfi_attachments')
+      const { data: row, error: insertErr } = await from('rfi_attachments')
         .insert({
           rfi_id: rfiId,
           response_id: responseId ?? null,
@@ -144,7 +158,7 @@ export function useUpdateRFIAttachment() {
   return useMutation({
     mutationFn: async (params: UpdateAttachmentParams) => {
       const { attachmentId, rfiId, projectId, patch } = params
-      const { error } = await fromTable('rfi_attachments')
+      const { error } = await from('rfi_attachments')
         .update(patch as never)
         .eq('id' as never, attachmentId)
       if (error) throw error
@@ -177,7 +191,7 @@ export function useDeleteRFIAttachment() {
   return useMutation({
     mutationFn: async (params: DeleteAttachmentParams) => {
       const { attachmentId, rfiId, projectId, storagePath } = params
-      const { error } = await fromTable('rfi_attachments')
+      const { error } = await from('rfi_attachments')
         .delete()
         .eq('id' as never, attachmentId)
       if (error) throw error
@@ -215,7 +229,7 @@ export function useReorderRFIAttachments() {
       // Per-row update so the audit chain stays intact.
       const results = await Promise.allSettled(
         orderedIds.map((id, idx) =>
-          fromTable('rfi_attachments')
+          from('rfi_attachments')
             .update({ position: idx } as never)
             .eq('id' as never, id),
         ),
@@ -261,7 +275,7 @@ export function useReplaceRFIAttachment() {
         .upload(newStoragePath, newFile, { cacheControl: '3600', upsert: false })
       if (uploadErr) throw uploadErr
 
-      const { error: updateErr } = await fromTable('rfi_attachments')
+      const { error: updateErr } = await from('rfi_attachments')
         .update({
           storage_path: newStoragePath,
           filename: newFile.name,

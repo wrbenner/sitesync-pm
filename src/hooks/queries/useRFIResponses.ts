@@ -16,6 +16,11 @@ import { supabase } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 import { logAuditEntry } from '../../lib/auditLogger'
 
+// rfi_responses_versions was added by 20260507000001_rfi_p1b_workflow_depth.sql.
+// Until db-types regenerates, collapse the table-name union via `as never`
+// (same pattern as src/hooks/mutations/rfis.ts).
+const from = (table: string) => fromTable(table as never)
+
 export type RFIResponseType =
   | 'answered'
   | 'approved_as_noted'
@@ -71,7 +76,7 @@ export function useRFIResponsesList(rfiId: string | undefined) {
     queryKey: queryKey(rfiId),
     queryFn: async () => {
       if (!rfiId) return []
-      const { data, error } = await fromTable('rfi_responses')
+      const { data, error } = await from('rfi_responses')
         .select('*')
         .eq('rfi_id' as never, rfiId)
         .order('created_at' as never, { ascending: true })
@@ -106,7 +111,7 @@ export function useCreateRFIResponseFull() {
         is_internal: params.isInternal ?? false,
         mentioned_user_ids: params.mentionedUserIds ?? [],
       }
-      const { data, error } = await fromTable('rfi_responses')
+      const { data, error } = await from('rfi_responses')
         .insert(payload as never)
         .select()
         .single()
@@ -150,7 +155,7 @@ export function useEditRFIResponse() {
       if (params.responseType != null) patch.response_type = params.responseType
       if (params.isOfficial != null) patch.is_official = params.isOfficial
       if (params.isInternal != null) patch.is_internal = params.isInternal
-      const { error } = await fromTable('rfi_responses')
+      const { error } = await from('rfi_responses')
         .update(patch as never)
         .eq('id' as never, params.responseId)
       if (error) throw error
@@ -181,7 +186,7 @@ export function useSoftDeleteRFIResponse() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (params: DeleteResponseParams) => {
-      const { error } = await fromTable('rfi_responses')
+      const { error } = await from('rfi_responses')
         .update({ deleted_at: new Date().toISOString() } as never)
         .eq('id' as never, params.responseId)
       if (error) throw error
@@ -207,7 +212,7 @@ export function useRFIResponseVersions(responseId: string | undefined) {
     queryKey: ['rfi_response_versions', responseId],
     queryFn: async () => {
       if (!responseId) return []
-      const { data, error } = await fromTable('rfi_responses_versions')
+      const { data, error } = await from('rfi_responses_versions')
         .select('*')
         .eq('response_id' as never, responseId)
         .order('edited_at' as never, { ascending: false })
