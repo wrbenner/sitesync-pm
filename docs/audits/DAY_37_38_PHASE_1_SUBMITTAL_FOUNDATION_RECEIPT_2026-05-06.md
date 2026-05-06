@@ -255,16 +255,43 @@ is the guided path; this modal is the inline-quick path.
 ## Verification
 
 ```
-npm run typecheck     ✅  (tsconfig.app.json + tsconfig.node.json both green)
-npm run db-types:check ⚠️  (intentionally not regen'd in this PR — see deferrals)
+npm run typecheck       ✅  (tsconfig.app.json + tsconfig.node.json both green)
+npm run db-types:check  ⚠️  (intentionally not regen'd in this PR — see deferrals)
+npm test -- submittals  ✅  46 / 46 pass (5 test files)
+npm test                ✅  3163 pass / 10 skipped (no regressions)
 ```
 
-Test runs not executed — the existing
-`src/test/services/submittalService.test.ts` and
-`src/test/machines/submittalMachine.test.ts` cover the legacy code paths
-that the D38 refactor preserves (signature-compatible). The new D37
-RPCs need integration tests against a real Postgres which is the
-follow-up.
+Test alignment commit (`5407c0b`) updated three test files to match the
+D38 RPC-backed service:
+  * `src/services/submittalService.test.ts` — added `rpc` mock; rewrote
+    transitionStatus / addApproval / createRevision tests to assert on
+    `mockRpc('submittal_advance_status'|'submittal_create_revision', ...)`
+    instead of `chain.update` calls.
+  * `src/test/services/submittalService.test.ts` — same RPC-assertion
+    shift; collapsed the two lifecycle-timestamp tests (submitted_date /
+    approved_date — both server-side now) into one `p_to forwarded` test.
+  * `src/test/hooks/mutations/submittals.test.ts > useCreateSubmittal >
+    inserts and invalidates` — dropped the legacy `type: 'shop_drawing'`
+    assertion. After D38 the hook routes through
+    submittalService.createSubmittal; the canonical column is `kind`;
+    the form's `type` field is dropped at the service boundary.
+
+The new D37 RPCs (`submittal_record_disposition`, `submittal_distribute`,
+`submittal_close`, `submittal_compute_required_on_site`,
+`submittal_replace_user`) need integration tests against a real Postgres
+once the migration applies to staging — that's the follow-up.
+
+### Migration apply (separate operational follow-up)
+
+`npx supabase db push --linked` against the staging project surfaced a
+pre-existing local-vs-remote migration history drift unrelated to this
+PR (~200 missing migration entries; first failure on
+`20250402200000_add_missing_rls_policies.sql > equipment_maintenance >
+project_id`). Repair the migration history with the CLI's suggested
+`supabase migration repair --status applied <ts>` chain (the CLI prints
+every required entry) before pushing the D36 + D37 migrations. After
+that succeeds, run `npm run db-types:write` and the follow-up PR removes
+the `as never` casts on `submittals_log_mv` / `submittal_settings`.
 
 ---
 
