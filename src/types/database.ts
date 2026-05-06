@@ -15415,6 +15415,47 @@ export type Database = {
           },
         ]
       }
+      project_role_groups: {
+        Row: {
+          id: string
+          project_id: string
+          name: string
+          member_emails: string[]
+          member_names: string[]
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          name: string
+          member_emails?: string[]
+          member_names?: string[]
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          name?: string
+          member_emails?: string[]
+          member_names?: string[]
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_role_groups_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
@@ -16505,6 +16546,44 @@ export type Database = {
           },
         ]
       }
+      rfi_distributions: {
+        Row: {
+          id: string
+          rfi_id: string
+          recipient_email: string
+          recipient_name: string | null
+          message: string | null
+          sent_by: string | null
+          sent_at: string
+        }
+        Insert: {
+          id?: string
+          rfi_id: string
+          recipient_email: string
+          recipient_name?: string | null
+          message?: string | null
+          sent_by?: string | null
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          rfi_id?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          message?: string | null
+          sent_by?: string | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_distributions_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfi_watchers: {
         Row: {
           created_at: string | null
@@ -16541,6 +16620,7 @@ export type Database = {
           ball_in_court: string | null
           closed_date: string | null
           cost_impact: number | null
+          cost_impact_cents: number | null
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -16553,11 +16633,15 @@ export type Database = {
           external_ids: Json | null
           id: string
           is_auto_generated: boolean | null
+          is_private: boolean
           legacy_payload: Json | null
           number: number
           priority: string | null
           project_id: string
+          question: string | null
+          reference: string | null
           response_due_date: string | null
+          schedule_days_impact: number | null
           schedule_impact: string | null
           sla_paused_at: string | null
           sla_paused_by: string | null
@@ -16578,6 +16662,7 @@ export type Database = {
           ball_in_court?: string | null
           closed_date?: string | null
           cost_impact?: number | null
+          cost_impact_cents?: number | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -16590,11 +16675,15 @@ export type Database = {
           external_ids?: Json | null
           id?: string
           is_auto_generated?: boolean | null
+          is_private?: boolean
           legacy_payload?: Json | null
           number?: number
           priority?: string | null
           project_id: string
+          question?: string | null
+          reference?: string | null
           response_due_date?: string | null
+          schedule_days_impact?: number | null
           schedule_impact?: string | null
           sla_paused_at?: string | null
           sla_paused_by?: string | null
@@ -16615,6 +16704,7 @@ export type Database = {
           ball_in_court?: string | null
           closed_date?: string | null
           cost_impact?: number | null
+          cost_impact_cents?: number | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -16627,11 +16717,15 @@ export type Database = {
           external_ids?: Json | null
           id?: string
           is_auto_generated?: boolean | null
+          is_private?: boolean
           legacy_payload?: Json | null
           number?: number
           priority?: string | null
           project_id?: string
+          question?: string | null
+          reference?: string | null
           response_due_date?: string | null
+          schedule_days_impact?: number | null
           schedule_impact?: string | null
           sla_paused_at?: string | null
           sla_paused_by?: string | null
@@ -21628,6 +21722,14 @@ export type Database = {
       iris_call_count_recent: {
         Args: { p_user_id: string; p_window_seconds: number }
         Returns: number
+      }
+      list_deleted_rfis: {
+        Args: { p_project_id: string }
+        Returns: Database["public"]["Tables"]["rfis"]["Row"][]
+      }
+      restore_rfi: {
+        Args: { p_rfi_id: string }
+        Returns: Database["public"]["Tables"]["rfis"]["Row"]
       }
       is_org_admin_or_empty: {
         Args: { org_id: string; uid: string }

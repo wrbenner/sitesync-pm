@@ -12,15 +12,18 @@ import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertCircle, AlertTriangle, ChevronRight, Download, Flag, Loader2,
-  MessageSquare, Plus, RefreshCw, Search, Send, Sparkles, UserCheck,
-  Wand2, X, XCircle,
+  AlertCircle, AlertTriangle, ChevronRight, Download, Loader2,
+  MessageSquare, Pencil, Plus, RefreshCw, RotateCcw, Search, Send,
+  Sparkles, Trash2, Trash, Wand2, X,
 } from 'lucide-react';
 
 import { ProjectGate } from '../components/ProjectGate';
 import { supabase } from '../lib/supabase';
 import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
+import { RFIEditPanel } from '../components/rfi/RFIEditPanel';
+import { RFIBulkEditPanel } from '../components/rfi/RFIBulkEditPanel';
+import { useDeletedRFIs, useSoftDeleteRFI, useRestoreRFI } from '../hooks/queries/useDeletedRFIs';
 import {
   Avatar, Btn, DetailPanel, RelatedItems, useToast,
 } from '../components/Primitives';
@@ -81,12 +84,13 @@ type RFIRow = RFI & {
   dueDate: string;
 };
 
-type FilterChip = 'all' | 'open' | 'overdue' | 'awaiting_response' | 'closed';
+type FilterChip = 'all' | 'open' | 'overdue' | 'awaiting_response' | 'closed' | 'recycle_bin';
 
 interface ChipDef {
   id: FilterChip;
   label: string;
   isAlert?: boolean;
+  isMuted?: boolean;
 }
 
 const CHIPS: ChipDef[] = [
@@ -95,6 +99,9 @@ const CHIPS: ChipDef[] = [
   { id: 'overdue', label: 'Overdue', isAlert: true },
   { id: 'awaiting_response', label: 'Awaiting response' },
   { id: 'closed', label: 'Closed' },
+  // Recycle bin sits at the end so the active-status flow reads
+  // left-to-right uninterrupted.
+  { id: 'recycle_bin', label: 'Recycle Bin', isMuted: true },
 ];
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -264,6 +271,22 @@ const Chip: React.FC<{
 
 const colHelper = createColumnHelper<RFIRow>();
 
+const editBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '4px 8px',
+  fontSize: 11,
+  fontWeight: 600,
+  color: INK_2,
+  backgroundColor: '#FFFFFF',
+  border: `1px solid ${BORDER}`,
+  borderRadius: 4,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+  fontFamily: typography.fontFamily,
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const RFIsPage: React.FC = () => {
@@ -283,6 +306,8 @@ const RFIsPage: React.FC = () => {
   const createRFI = useCreateRFI();
   const updateRFI = useUpdateRFI();
   const deleteRFI = useDeleteRFI();
+  const softDeleteRFI = useSoftDeleteRFI();
+  const restoreRFI = useRestoreRFI();
   const createRFIResponse = useCreateRFIResponse();
   const { addToast } = useToast();
   const { confirm: confirmDeleteRfi, dialog: deleteRfiDialog } = useConfirm();
@@ -353,6 +378,22 @@ const RFIsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedRfi, setSelectedRfi] = useState<RFIRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // P1a — Edit panel for the per-row [Edit] button + Bulk Edit Values
+  const [editPanelRfiId, setEditPanelRfiId] = useState<string | null>(null);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  // Recycle bin contents — only fetched while the tab is active.
+  const { data: deletedRfisRaw = [] } = useDeletedRFIs(activeChip === 'recycle_bin' ? projectId : null);
+  const deletedRfis: RFIRow[] = useMemo(() => deletedRfisRaw.map((r) => {
+    const rec = r as unknown as Record<string, unknown>;
+    return {
+      ...(rec as object),
+      rfiNumber: rec.number ? `RFI-${String(rec.number).padStart(3, '0')}` : String(rec.id ?? '').slice(0, 8),
+      from: (rec.created_by as string) || '',
+      to: (rec.assigned_to as string) || '',
+      submitDate: typeof rec.created_at === 'string' ? (rec.created_at as string).slice(0, 10) : '',
+      dueDate: (rec.due_date as string) || '',
+    } as unknown as RFIRow;
+  }), [deletedRfisRaw]);
   const [editingDetail, setEditingDetail] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -400,9 +441,21 @@ const RFIsPage: React.FC = () => {
     overdue: rfis.filter((r) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate)).length,
     awaiting_response: rfis.filter((r) => r.status === 'under_review' || r.status === 'submitted').length,
     closed: rfis.filter((r) => r.status === 'closed').length,
-  }), [rfis]);
+    recycle_bin: deletedRfis.length,
+  }), [rfis, deletedRfis.length]);
 
   const filteredRfis = useMemo(() => {
+    // Recycle Bin shows soft-deleted RFIs (independent dataset). All other
+    // chips filter the active dataset.
+    if (activeChip === 'recycle_bin') {
+      const q = search.trim().toLowerCase();
+      if (!q) return deletedRfis;
+      return deletedRfis.filter((r) => {
+        const title = (r.title ?? '').toLowerCase();
+        const num = r.rfiNumber.toLowerCase();
+        return title.includes(q) || num.includes(q);
+      });
+    }
     let out = rfis;
     if (activeChip === 'open') out = out.filter((r) => r.status === 'open');
     else if (activeChip === 'closed') out = out.filter((r) => r.status === 'closed');
@@ -419,7 +472,7 @@ const RFIsPage: React.FC = () => {
       });
     }
     return out;
-  }, [rfis, activeChip, search]);
+  }, [rfis, deletedRfis, activeChip, search]);
 
   useEffect(() => {
     if (!announcedLoadRef.current) return;
@@ -725,7 +778,56 @@ const RFIsPage: React.FC = () => {
         );
       },
     }),
-  ] as ColumnDef<RFIRow, unknown>[]), [selectedIds, filteredRfis, draftRfiIds, navigate, profileMap]);
+    // P1a — per-row [Edit] button (Procore parity). When the recycle bin
+    // tab is active, the same column hosts a [Restore] action — saves a
+    // column slot and keeps the row signature consistent.
+    colHelper.display({
+      id: 'edit',
+      header: '',
+      size: 100,
+      cell: (info) => {
+        const id = String(info.row.original.id);
+        if (activeChip === 'recycle_bin') {
+          return (
+            <PermissionGate permission="rfis.edit">
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (!projectId) return;
+                  try {
+                    await restoreRFI.mutateAsync({ id, projectId });
+                    toast.success('RFI restored');
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to restore');
+                  }
+                }}
+                aria-label="Restore RFI"
+                style={editBtnStyle}
+              >
+                <RotateCcw size={12} /> Restore
+              </button>
+            </PermissionGate>
+          );
+        }
+        return (
+          <PermissionGate permission="rfis.edit">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditPanelRfiId(id);
+              }}
+              aria-label="Edit RFI"
+              style={editBtnStyle}
+            >
+              <Pencil size={12} /> Edit
+            </button>
+          </PermissionGate>
+        );
+      },
+    }),
+  ] as ColumnDef<RFIRow, unknown>[]), [selectedIds, filteredRfis, draftRfiIds, navigate, profileMap, activeChip, projectId, restoreRFI]);
 
   // ── Early returns ────────────────────────────────────────────────────────
   if (!projectId) return <ProjectGate />;
@@ -952,81 +1054,95 @@ const RFIsPage: React.FC = () => {
       </main>
 
       {/* ── Bulk actions ──────────────────────────────────────────────── */}
+      {/* Procore-parity: pencil icon "Edit Values" opens a side panel with
+           bulk-applicable fields. Per-entity audit_log row per applied
+           change (Chain Audit Prep Check 5; never one row for the batch).
+           In recycle bin mode, the bar swaps to Restore + Delete Permanently. */}
       <BulkActionBar
         selectedIds={Array.from(selectedIds)}
         onClearSelection={() => setSelectedIds(new Set())}
         entityLabel="RFIs"
-        actions={[
-          {
-            label: 'Reassign',
-            icon: <UserCheck size={14} />,
-            variant: 'secondary',
-            onClick: async (ids) => {
-              if (!projectId) { addToast('error', 'No project selected'); return; }
-              const assignee = window.prompt('Enter the name of the new assignee:');
-              if (!assignee?.trim()) return;
-              try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { assigned_to: assignee.trim() }, projectId })));
-                addToast('success', `${ids.length} RFI${ids.length > 1 ? 's' : ''} reassigned`);
-              } catch {
-                addToast('error', 'Failed to reassign');
-              }
-            },
-          },
-          {
-            label: 'Priority',
-            icon: <Flag size={14} />,
-            variant: 'secondary',
-            onClick: async (ids) => {
-              if (!projectId) { addToast('error', 'No project selected'); return; }
-              const VALID_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
-              const priority = window.prompt(`Enter priority (${VALID_PRIORITIES.join(', ')}):`)?.trim().toLowerCase();
-              if (!priority) return;
-              if (!VALID_PRIORITIES.includes(priority as typeof VALID_PRIORITIES[number])) {
-                addToast('error', `Invalid: use ${VALID_PRIORITIES.join(', ')}`);
-                return;
-              }
-              try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { priority }, projectId })));
-                addToast('success', `Priority updated for ${ids.length} RFIs`);
-              } catch {
-                addToast('error', 'Failed to update priority');
-              }
-            },
-          },
-          {
-            label: 'Export',
-            icon: <Download size={14} />,
-            variant: 'secondary',
-            onClick: async (ids) => {
-              const selected = rfis.filter((r) => ids.includes(String(r.id)));
-              const csv = ['RFI #,Title,From,Priority,Status,Due Date',
-                ...selected.map((r) => `${r.rfiNumber},"${String(r.title ?? '')}",${r.from},${r.priority},${r.status},${r.dueDate}`),
-              ].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url; a.download = 'rfis-export.csv'; a.click();
-              URL.revokeObjectURL(url);
-            },
-          },
-          {
-            label: 'Close',
-            icon: <XCircle size={14} />,
-            variant: 'danger',
-            confirm: true,
-            confirmMessage: `Close ${selectedIds.size} selected RFI${selectedIds.size > 1 ? 's' : ''}?`,
-            onClick: async (ids) => {
-              if (!projectId) { addToast('error', 'No project selected'); return; }
-              try {
-                await Promise.all(ids.map((id) => updateRFI.mutateAsync({ id, updates: { status: 'closed' }, projectId })));
-                addToast('success', `${ids.length} RFIs closed`);
-              } catch {
-                addToast('error', 'Failed to close RFIs');
-              }
-            },
-          },
-        ]}
+        actions={
+          activeChip === 'recycle_bin'
+            ? [
+                {
+                  label: 'Restore',
+                  icon: <RotateCcw size={14} />,
+                  variant: 'primary',
+                  onClick: async (ids) => {
+                    if (!projectId) { addToast('error', 'No project selected'); return; }
+                    const results = await Promise.allSettled(
+                      ids.map((id) => restoreRFI.mutateAsync({ id, projectId })),
+                    );
+                    const failed = results.filter((r) => r.status === 'rejected').length;
+                    if (failed === 0) addToast('success', `Restored ${ids.length} RFI${ids.length > 1 ? 's' : ''}`);
+                    else addToast('error', `${failed} could not be restored`);
+                  },
+                },
+                {
+                  label: 'Delete Permanently',
+                  icon: <Trash size={14} />,
+                  variant: 'danger',
+                  confirm: true,
+                  confirmMessage: `Permanently delete ${selectedIds.size} RFI${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`,
+                  onClick: async (ids) => {
+                    if (!projectId) { addToast('error', 'No project selected'); return; }
+                    const results = await Promise.allSettled(
+                      ids.map((id) => deleteRFI.mutateAsync({ id, projectId })),
+                    );
+                    const failed = results.filter((r) => r.status === 'rejected').length;
+                    if (failed === 0) addToast('success', `Permanently deleted ${ids.length} RFI${ids.length > 1 ? 's' : ''}`);
+                    else addToast('error', `${failed} could not be deleted`);
+                  },
+                },
+              ]
+            : [
+                {
+                  label: 'Edit Values',
+                  icon: <Pencil size={14} />,
+                  variant: 'primary',
+                  onClick: async () => {
+                    if (!projectId) { addToast('error', 'No project selected'); return; }
+                    setBulkEditOpen(true);
+                  },
+                },
+                {
+                  label: 'Export',
+                  icon: <Download size={14} />,
+                  variant: 'secondary',
+                  onClick: async (ids) => {
+                    const selected = rfis.filter((r) => ids.includes(String(r.id)));
+                    const csv = ['RFI #,Title,From,Priority,Status,Due Date',
+                      ...selected.map((r) => `${r.rfiNumber},"${String(r.title ?? '')}",${r.from},${r.priority},${r.status},${r.dueDate}`),
+                    ].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'rfis-export.csv'; a.click();
+                    URL.revokeObjectURL(url);
+                  },
+                },
+                {
+                  label: 'Delete',
+                  icon: <Trash2 size={14} />,
+                  variant: 'danger',
+                  confirm: true,
+                  confirmMessage: `Move ${selectedIds.size} RFI${selectedIds.size > 1 ? 's' : ''} to Recycle Bin?`,
+                  onClick: async (ids) => {
+                    if (!projectId) { addToast('error', 'No project selected'); return; }
+                    const results = await Promise.allSettled(
+                      ids.map((id) => softDeleteRFI.mutateAsync({ id, projectId })),
+                    );
+                    const failed = results.filter((r) => r.status === 'rejected').length;
+                    if (failed === 0) {
+                      addToast('success', `Moved ${ids.length} RFI${ids.length > 1 ? 's' : ''} to Recycle Bin`);
+                    } else {
+                      addToast('error', `${failed} could not be deleted`);
+                    }
+                  },
+                },
+              ]
+        }
       />
 
       {/* ── Detail Panel (preserved) ─────────────────────────────────── */}
@@ -1538,6 +1654,28 @@ const RFIsPage: React.FC = () => {
       <Suspense fallback={null}>
         <QuickRFIButton />
       </Suspense>
+
+      {/* ── P1a — per-row Edit slide-in panel ────────────────────────── */}
+      {projectId && (
+        <RFIEditPanel
+          open={!!editPanelRfiId}
+          onClose={() => setEditPanelRfiId(null)}
+          rfiId={editPanelRfiId}
+          projectId={projectId}
+        />
+      )}
+
+      {/* ── P1a — Bulk Edit Values side panel ────────────────────────── */}
+      {projectId && (
+        <RFIBulkEditPanel
+          open={bulkEditOpen}
+          onClose={() => setBulkEditOpen(false)}
+          selectedIds={Array.from(selectedIds)}
+          projectId={projectId}
+          onApplied={() => setSelectedIds(new Set())}
+        />
+      )}
+
       {deleteRfiDialog}
     </PageShell>
   );

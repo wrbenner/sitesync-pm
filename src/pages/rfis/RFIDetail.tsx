@@ -18,7 +18,7 @@ import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
   AlertTriangle, MessageSquare, FileText,
   Image, ChevronDown, User, Eye, EyeOff,
-  Paperclip, Flag, Timer, Zap,
+  Paperclip, Flag, Pencil, Timer, Zap,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
 import { colors, spacing, borderRadius } from '../../styles/theme'
@@ -35,6 +35,7 @@ import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
 import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
 import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
+import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { usePermissions } from '../../hooks/usePermissions'
 import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
@@ -587,6 +588,7 @@ export function RFIDetail() {
   ])
   const [transitioning, setTransitioning] = useState<string | null>(null)
   const [distributeOpen, setDistributeOpen] = useState(false)
+  const [editPanelOpen, setEditPanelOpen] = useState(false)
 
   // Track "last viewed" for unread indicator
   const lastViewedKey = rfiId ? `rfi_viewed_${rfiId}` : null
@@ -770,6 +772,27 @@ export function RFIDetail() {
                 projectId={rfi.project_id}
               />
               <WatchButton rfiId={rfi.id} watchers={watchers} userId={user?.id} />
+              {/* P1a — Edit panel button. Watcher list editor lives inside.
+                  Clicking opens the same slide-in panel users see from the
+                  list page's [Edit] column, with all RFI fields editable,
+                  including the multi-select watcher + distribution chips. */}
+              <PermissionGate permission="rfis.edit">
+                <button
+                  type="button"
+                  onClick={() => setEditPanelOpen(true)}
+                  title="Edit all RFI fields, watchers, and distribution"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 12px', borderRadius: 8,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    backgroundColor: 'transparent',
+                    color: colors.textSecondary,
+                    fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  <Pencil size={12} /> Edit
+                </button>
+              </PermissionGate>
               {/* Distribute / Forward to sub — P0 #8. Permission-gated to
                   rfis.edit so read-only users see no affordance. The
                   dialog itself persists to rfi_distributions and the
@@ -1058,6 +1081,16 @@ export function RFIDetail() {
         rfiNumber={rfi.number}
         open={distributeOpen}
         onClose={() => setDistributeOpen(false)}
+      />
+
+      {/* ── P1a — Full Edit panel. Hosts the watcher + distribution chip
+          editors so the detail-page Edit click reaches the same surface
+          users see from the list page. ─────────────────────────────── */}
+      <RFIEditPanel
+        open={editPanelOpen}
+        onClose={() => setEditPanelOpen(false)}
+        rfiId={rfi.id}
+        projectId={rfi.project_id}
       />
     </PageContainer>
   )
