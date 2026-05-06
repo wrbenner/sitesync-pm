@@ -175,7 +175,7 @@ export const filterSubmittals = async (
   await assertProjectAccess(projectId)
   return buildPaginatedQuery<Record<string, unknown>, Record<string, unknown>>(
     (from, to) => {
-      let q = fromTable('submittals_log_mv')
+      let q = fromTable('submittals_log_mv' as never)
         .select('*', { count: 'exact' })
         .eq('project_id' as never, projectId)
       if (filter.status?.length) q = q.in('status' as never, filter.status)
@@ -213,7 +213,7 @@ export const searchSubmittals = async (
   if (!q) return filterSubmittals(projectId, {}, pagination)
   return buildPaginatedQuery<Record<string, unknown>, Record<string, unknown>>(
     (from, to) =>
-      fromTable('submittals_log_mv')
+      fromTable('submittals_log_mv' as never)
         .select('*', { count: 'exact' })
         .eq('project_id' as never, projectId)
         .or(`title.ilike.%${q}%,csi_section.ilike.%${q}%,number.ilike.%${q}%,sub_name.ilike.%${q}%`)
@@ -273,7 +273,7 @@ export const generateCloseoutIndex = async (
   projectId: string,
 ): Promise<Array<{ csi_division: string | null; items: Record<string, unknown>[] }>> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await fromTable('submittals_log_mv')
+  const { data, error } = await fromTable('submittals_log_mv' as never)
     .select('*')
     .eq('project_id' as never, projectId)
     .in('kind' as never, ['warranty', 'closeout', 'maintenance'])

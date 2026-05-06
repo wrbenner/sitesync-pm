@@ -39,7 +39,10 @@ export function useSubmittalSettings(projectId: string | null | undefined) {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (!projectId) return { ...SUBMITTAL_SETTINGS_DEFAULTS }
-      const { data, error } = await fromTable('submittal_settings')
+      // submittal_settings ships in the D36 canonical migration; database.ts
+      // is regenerated against the live schema by db-types:write. Cast through
+      // never until that regen lands so this hook compiles either way.
+      const { data, error } = await fromTable('submittal_settings' as never)
         .select('*')
         .eq('project_id' as never, projectId)
         .maybeSingle()

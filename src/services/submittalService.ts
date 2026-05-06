@@ -57,13 +57,17 @@ export const submittalService = {
 
   /** D37: read from the materialised log view (denormalised + risk_band). */
   async loadSubmittalsLogView(projectId: string): Promise<Result<Array<Record<string, unknown>>>> {
-    const { data, error } = await fromTable('submittals_log_mv')
+    // The materialised view is added in the D37 migration; database.ts is
+    // regenerated against the live schema on db-types:write. Cast through
+    // never until that regen lands so this service can compile against
+    // either pre- or post-D37 type bundles.
+    const { data, error } = await fromTable('submittals_log_mv' as never)
       .select('*')
       .eq('project_id' as never, projectId)
       .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
-    return ok((data ?? []) as unknown as Array<Record<string, unknown>>);
+    return ok(((data as unknown) as Array<Record<string, unknown>>) ?? []);
   },
 
   async createSubmittal(input: CreateSubmittalInput): Promise<Result<Submittal>> {
@@ -130,9 +134,13 @@ export const submittalService = {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = submittalRow.status as SubmittalStatus;
+    // The 9-state canonical set introduces values (in_review, sent_to_reviewer,
+    // distribute, void, etc.) that the legacy state-machine type doesn't yet
+    // know about — the machine rewrite is part of P0-D40+. Until then, cast
+    // through to keep the validation functioning for legacy states.
+    const currentStatus = submittalRow.status as unknown as Parameters<typeof getValidSubmittalStatusTransitions>[0];
     const validTransitions = getValidSubmittalStatusTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
+    if (!validTransitions.includes(newStatus as unknown as Parameters<typeof getValidSubmittalStatusTransitions>[0])) {
       return fail(
         validationError(
           `Invalid transition: ${currentStatus} to ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
@@ -186,10 +194,21 @@ export const submittalService = {
     return { data: null, error: null };
   },
 
-  /** D38: bulk update — restricted to a small allow-list of columns. */
+  /** D38: bulk update — restricted to a small allow-list of columns.
+   *  The new columns (responsible_sub_id, submittal_package_id, is_private,
+   *  is_critical_path) land in the D36 migration; until db-types:write
+   *  regenerates database.ts, the Submittal row type doesn't yet expose
+   *  them — so the input type here is a hand-written subset rather than
+   *  Pick<Submittal, …>. */
   async bulkUpdate(
     ids: string[],
-    updates: Partial<Pick<Submittal, 'current_reviewer_id' | 'responsible_sub_id' | 'submittal_package_id' | 'is_private' | 'is_critical_path'>>,
+    updates: Partial<{
+      current_reviewer_id: string | null
+      responsible_sub_id: string | null
+      submittal_package_id: string | null
+      is_private: boolean
+      is_critical_path: boolean
+    }>,
   ): Promise<Result<{ count: number }>> {
     if (ids.length === 0) return ok({ count: 0 });
     const { error, count } = await fromTable('submittals')

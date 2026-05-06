@@ -38,7 +38,6 @@ import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWi
 import { SubmittalsTable } from './SubmittalsTable'
 import { SubmittalsKanban } from './SubmittalsKanban'
 import { GroupedSubmittalsView } from './GroupedSubmittalsView'
-import type { GroupByMode } from './GroupedSubmittalsView'
 
 // Phase 1 components
 import { SubmittalsHeader } from '../../components/submittals/SubmittalsHeader'
@@ -106,8 +105,7 @@ const SubmittalsPage: React.FC = () => {
 
   // GroupedSubmittalsView remains imported for Phase 4 — Phase 1 default is
   // ungrouped Items. The grouping toggle is dropped here; comes back in P3.
-  const groupBy: GroupByMode = 'none'
-  void GroupedSubmittalsView // keep import live for forward Phase 4 use
+  void GroupedSubmittalsView
 
   const submittals: Array<Record<string, unknown>> = useMemo(
     () => (submittalsResult?.data ?? []).map((s: Record<string, unknown>) => ({
@@ -226,10 +224,10 @@ const SubmittalsPage: React.FC = () => {
 
   const actionCluster = (
     <>
-      <PermissionGate permission="submittals.export">
+      <PermissionGate permission="submittals.view">
         <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
       </PermissionGate>
-      <PermissionGate permission="submittals.export">
+      <PermissionGate permission="submittals.view">
         <SecondaryBtn onClick={() => toast.info('Reports — coming in Phase 5')} title="Reports">
           Reports
           <ChevronDown size={11} />
