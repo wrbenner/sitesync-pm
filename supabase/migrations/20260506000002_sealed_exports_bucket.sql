@@ -20,6 +20,16 @@
 -- ═══════════════════════════════════════════════════════════════
 
 -- ── Bucket ───────────────────────────────────────────────────
+-- public=false + no explicit storage.objects RLS policy granting user
+-- access means Supabase Storage default-denies direct user reads. All
+-- legitimate access flows through service-role-issued signed URLs from
+-- the sealed-entity-export edge function, which gates on
+-- verifyProjectMembership() before upload.
+--
+-- We do NOT add an explicit storage.objects policy here: hosted Supabase
+-- denies CREATE POLICY on storage.objects via the migration API (the
+-- migration role lacks ownership). The default-deny posture is
+-- equivalent for our threat model.
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'sealed-exports',
@@ -29,17 +39,3 @@ VALUES (
   ARRAY['text/html', 'application/pdf']
 )
 ON CONFLICT (id) DO NOTHING;
-
--- ── Storage RLS ──────────────────────────────────────────────
--- All access goes through service-role-issued signed URLs.
--- We deny direct user reads/writes; the function uses the service
--- role and is responsible for membership enforcement before upload.
-DROP POLICY IF EXISTS sealed_exports_no_user_access ON storage.objects;
-CREATE POLICY sealed_exports_no_user_access ON storage.objects
-  FOR ALL
-  USING (bucket_id <> 'sealed-exports')
-  WITH CHECK (bucket_id <> 'sealed-exports');
-
-COMMENT ON POLICY sealed_exports_no_user_access ON storage.objects IS
-  'sealed-exports is service-role-only. Users access via signed URLs '
-  'returned by supabase/functions/sealed-entity-export — never directly.';
