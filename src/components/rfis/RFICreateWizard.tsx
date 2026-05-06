@@ -24,6 +24,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useRFIs } from '../../hooks/queries'
 import { supabase } from '../../lib/supabase'
 import type { DirectoryContact } from '../../types/database'
+import { RFIRichTextEditor } from '../rfi/RFIRichTextEditor'
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -416,6 +417,11 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       await onSubmit({
         title: question.trim(),
         description: descWithAssignee,
+        // P1b: when the user formatted the body in TipTap, persist the HTML
+        // into the rich `question` column. Plain-text duplication into
+        // `description` keeps backward compatibility for read paths still
+        // looking at the legacy field.
+        question: details.trim() ? details : null,
         assigned_to: null,          // uuid FK — directory contacts aren't auth users
         // ball_in_court omitted — DB trigger handles it from created_by/assigned_to
         created_by: user?.id || null, // auth user UUID
@@ -541,23 +547,17 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             )}
           </div>
 
-          {/* Details — expandable context area */}
+          {/* Details — rich text per RFI P1b spec deliverable #1.
+              Persists into `question TEXT` (HTML/Markdown). The DB-side
+              column was added in P1a so the wire-up here doesn't need a
+              fresh migration. */}
           <div>
-            <textarea
+            <RFIRichTextEditor
               value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="Add background, context, or what you've already checked... (optional)"
-              rows={2}
-              style={{
-                width: '100%', padding: '10px 12px',
-                fontSize: '13px', color: colors.textPrimary,
-                backgroundColor: colors.surfaceInset, border: `1.5px solid transparent`,
-                borderRadius: '10px', outline: 'none', resize: 'vertical',
-                fontFamily: 'inherit', minHeight: 56, boxSizing: 'border-box',
-                lineHeight: 1.6, transition: 'border-color 0.15s',
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = colors.primaryOrange)}
-              onBlur={(e) => (e.currentTarget.style.borderColor = 'transparent')}
+              onChange={setDetails}
+              placeholder="Add background, context, or what you've already checked… (optional)"
+              ariaLabel="Details"
+              minHeight={120}
             />
           </div>
 

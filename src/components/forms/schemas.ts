@@ -24,8 +24,14 @@ export const rfiSchema = z.object({
   drawing_reference: z.string().nullable().default(null),
   due_date: z.string().nullable().default(null),
   response_due_date: z.string().nullable().default(null),
-  cost_impact: z.string().nullable().default(null),
+  // P1b: legacy `cost_impact NUMERIC` is dropped at the DB. The form
+  // still accepts a dollar string from CreateRFIModal; the create path
+  // converts to `cost_impact_cents` on save (see CreateRFIModal +
+  // useUpdateRFI). The cents column stays here so passthrough callers
+  // that already speak cents (RFIEditPanel) validate cleanly.
+  cost_impact_cents: z.union([z.number(), z.null()]).default(null),
   schedule_impact: z.string().nullable().default(null),
+  schedule_days_impact: z.union([z.number(), z.null()]).default(null),
   related_submittal_id: z.string().nullable().default(null),
 }).passthrough()
 
