@@ -486,7 +486,12 @@ const MetadataSection: React.FC<{ rfi: RFI; assignedName?: string | null }> = ({
   const items = [
     { icon: <User size={13} />, label: 'Assigned', value: assignedName ?? null },
     { icon: <Calendar size={13} />, label: 'Due', value: formatDate(rfi.due_date ?? null), color: urgency?.color },
-    { icon: <DollarSign size={13} />, label: 'Cost', value: rfi.cost_impact != null && rfi.cost_impact !== 0 ? `$${Number(rfi.cost_impact).toLocaleString()}` : null },
+    { icon: <DollarSign size={13} />, label: 'Cost', value: (() => {
+        // P1b: cost_impact is dropped; read from cost_impact_cents.
+        const cents = (rfi as unknown as { cost_impact_cents?: number | null }).cost_impact_cents
+        if (cents == null || Number(cents) === 0) return null
+        return `$${(Number(cents) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`
+      })() },
     { icon: <Clock size={13} />, label: 'Schedule', value: rfi.schedule_impact ? `${rfi.schedule_impact} days` : null },
     { icon: <FileText size={13} />, label: 'Spec', value: rfi.spec_section },
     { icon: <Image size={13} />, label: 'Drawing', value: rfi.drawing_reference },

@@ -369,8 +369,13 @@ const RFIsPage: React.FC = () => {
       sum + daysSince(r.created_at as string, r.closed_date as string), 0);
     return Math.round(total / closed.length);
   }, [rfis]);
+  // P1b: rfis.cost_impact NUMERIC is dropped — money lives in
+  // cost_impact_cents BIGINT and reads through src/types/money.ts.
   const totalCostImpact = useMemo(() =>
-    rfis.reduce((sum, r) => sum + Number(r.cost_impact ?? 0), 0),
+    rfis.reduce((sum, r) => {
+      const cents = (r as unknown as { cost_impact_cents?: number | null }).cost_impact_cents
+      return cents != null ? sum + Number(cents) / 100 : sum
+    }, 0),
   [rfis]);
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -727,11 +732,15 @@ const RFIsPage: React.FC = () => {
         );
       },
     }),
-    colHelper.accessor('cost_impact', {
+    colHelper.display({
+      // P1b — money lives in cost_impact_cents; the column accessor
+      // reads cents and formats compact USD.
+      id: 'cost_impact',
       header: '$ Impact',
       size: 110,
       cell: (info) => {
-        const val = Number(info.getValue() ?? 0);
+        const cents = (info.row.original as unknown as { cost_impact_cents?: number | null }).cost_impact_cents
+        const val = cents != null ? Number(cents) / 100 : 0
         if (!val) return <span style={{ color: INK_3, fontSize: 12 }}>—</span>;
         return (
           <span style={{
@@ -1277,28 +1286,46 @@ const RFIsPage: React.FC = () => {
               />
               <EditableDetailField
                 label="Cost Impact"
-                value={selectedRfi.cost_impact != null ? String(selectedRfi.cost_impact) : ''}
+                /* P1b: read/write through cost_impact_cents BIGINT.
+                   Display in dollars; persist in cents. Legacy NUMERIC
+                   column is dropped in 20260507000001. */
+                value={(() => {
+                  const cents = (selectedRfi as unknown as { cost_impact_cents?: number | null }).cost_impact_cents
+                  return cents != null ? (Number(cents) / 100).toFixed(2) : ''
+                })()}
                 editing={editingDetail}
                 type="text"
                 onSave={async (val) => {
                   if (!projectId) { toast.error('No project selected'); return; }
-                  const numVal = val ? parseFloat(val) : null;
-                  await updateRFI.mutateAsync({ id: String(selectedRfi.id), updates: { cost_impact: numVal }, projectId });
-                  setSelectedRfi((prev) => prev ? { ...prev, cost_impact: numVal } : prev);
+                  const dollars = val ? parseFloat(val) : null
+                  const cents = dollars != null && Number.isFinite(dollars) ? Math.round(dollars * 100) : null
+                  await updateRFI.mutateAsync({
+                    id: String(selectedRfi.id),
+                    updates: { cost_impact_cents: cents },
+                    projectId,
+                  });
+                  setSelectedRfi((prev) => (
+                    prev
+                      ? ({ ...prev, cost_impact_cents: cents } as unknown as typeof prev)
+                      : prev
+                  ));
                   toast.success('Updated');
                 }}
-                displayContent={
-                  selectedRfi.cost_impact != null && Number(selectedRfi.cost_impact) !== 0 ? (
+                displayContent={(() => {
+                  const cents = (selectedRfi as unknown as { cost_impact_cents?: number | null }).cost_impact_cents
+                  if (cents == null || Number(cents) === 0) return undefined
+                  const dollars = Number(cents) / 100
+                  return (
                     <span style={{
-                      color: Number(selectedRfi.cost_impact) > 0 ? STATUS.critical : STATUS.onTrack,
+                      color: dollars > 0 ? STATUS.critical : STATUS.onTrack,
                       fontWeight: 600, fontSize: 13,
                     }}>
-                      {Number(selectedRfi.cost_impact) > 0 ? '+' : ''}
+                      {dollars > 0 ? '+' : ''}
                       {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })
-                        .format(Number(selectedRfi.cost_impact))}
+                        .format(dollars)}
                     </span>
-                  ) : undefined
-                }
+                  )
+                })()}
               />
             </div>
 
