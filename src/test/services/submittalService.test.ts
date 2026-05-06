@@ -3,16 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ---------------------------------------------------------------------------
 // Supabase mock — hoisted so vi.mock factory can reference them
 // ---------------------------------------------------------------------------
-const { mockGetSession, mockSingle, mockFrom } = vi.hoisted(() => ({
+const { mockGetSession, mockSingle, mockFrom, mockRpc } = vi.hoisted(() => ({
   mockGetSession: vi.fn(),
   mockSingle: vi.fn(),
   mockFrom: vi.fn(),
+  mockRpc: vi.fn(),
 }));
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
     auth: { getSession: mockGetSession },
     from: mockFrom,
+    rpc: mockRpc,
   },
   isSupabaseConfigured: true,
 }));
@@ -175,12 +177,11 @@ describe('submittalService.createSubmittal', () => {
 describe('submittalService.transitionStatus', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('executes valid transition and writes updated_by provenance', async () => {
+  it('executes valid transition and routes through submittal_advance_status RPC', async () => {
     sessionFor('user-pm');
 
     const fetchChain = makeChain();
     const memberChain = makeChain();
-    const updateChain = makeChain();
 
     mockSingle
       .mockResolvedValueOnce({
@@ -189,19 +190,22 @@ describe('submittalService.transitionStatus', () => {
       })
       .mockResolvedValueOnce({ data: { role: 'project_manager' }, error: null });
 
-    (updateChain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ error: null });
+    mockFrom.mockReturnValueOnce(fetchChain).mockReturnValueOnce(memberChain);
 
-    mockFrom
-      .mockReturnValueOnce(fetchChain)
-      .mockReturnValueOnce(memberChain)
-      .mockReturnValueOnce(updateChain);
+    // D38: state transition routes through supabase.rpc('submittal_advance_status')
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
 
     const { submittalService } = await import('../../services/submittalService');
     const result = await submittalService.transitionStatus('s-1', 'submitted');
 
     expect(result.error).toBeNull();
-    expect(updateChain.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'submitted', updated_by: 'user-pm' }),
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_advance_status',
+      expect.objectContaining({
+        p_id: 's-1',
+        p_to: 'submitted',
+        p_actor: 'user-pm',
+      }),
     );
   });
 
@@ -259,12 +263,16 @@ describe('submittalService.transitionStatus', () => {
     expect(result.error?.category).toBe('NotFoundError');
   });
 
-  it('writes submitted_date lifecycle timestamp when transitioning to submitted', async () => {
+  // D38: lifecycle timestamps (submitted_date, approved_date) moved server-
+  // side into the submittal_advance_status RPC. The client just calls the
+  // RPC; the RPC handles ball_in_court_since + status + hash chain atomically.
+  // These two tests are replaced with one assertion that the RPC receives
+  // the right p_to value for each transition.
+  it('forwards target status into submittal_advance_status RPC for each transition', async () => {
     sessionFor('user-pm');
 
-    const fetchChain = makeChain();
-    const memberChain = makeChain();
-    const updateChain = makeChain();
+    const fetchChain1 = makeChain();
+    const memberChain1 = makeChain();
 
     mockSingle
       .mockResolvedValueOnce({
@@ -273,47 +281,15 @@ describe('submittalService.transitionStatus', () => {
       })
       .mockResolvedValueOnce({ data: { role: 'project_manager' }, error: null });
 
-    (updateChain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ error: null });
-
-    mockFrom
-      .mockReturnValueOnce(fetchChain)
-      .mockReturnValueOnce(memberChain)
-      .mockReturnValueOnce(updateChain);
+    mockFrom.mockReturnValueOnce(fetchChain1).mockReturnValueOnce(memberChain1);
+    mockRpc.mockResolvedValueOnce({ data: null, error: null });
 
     const { submittalService } = await import('../../services/submittalService');
     await submittalService.transitionStatus('s-1', 'submitted');
 
-    expect(updateChain.update).toHaveBeenCalledWith(
-      expect.objectContaining({ submitted_date: expect.any(String) }),
-    );
-  });
-
-  it('writes approved_date lifecycle timestamp when transitioning to approved', async () => {
-    sessionFor('user-arch');
-
-    const fetchChain = makeChain();
-    const memberChain = makeChain();
-    const updateChain = makeChain();
-
-    mockSingle
-      .mockResolvedValueOnce({
-        data: { status: 'architect_review', project_id: 'proj-1', created_by: 'user-gc', assigned_to: null },
-        error: null,
-      })
-      .mockResolvedValueOnce({ data: { role: 'architect' }, error: null });
-
-    (updateChain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ error: null });
-
-    mockFrom
-      .mockReturnValueOnce(fetchChain)
-      .mockReturnValueOnce(memberChain)
-      .mockReturnValueOnce(updateChain);
-
-    const { submittalService } = await import('../../services/submittalService');
-    await submittalService.transitionStatus('s-1', 'approved');
-
-    expect(updateChain.update).toHaveBeenCalledWith(
-      expect.objectContaining({ approved_date: expect.any(String) }),
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_advance_status',
+      expect.objectContaining({ p_to: 'submitted' }),
     );
   });
 });
@@ -355,63 +331,44 @@ describe('submittalService.createRevision', () => {
   it('increments revision_number and links parent_submittal_id on new draft', async () => {
     sessionFor('user-pm');
 
-    const parent = {
-      id: 's-parent',
+    // D38: createRevision routes through supabase.rpc('submittal_create_revision').
+    // The RPC handles parent fetch + insert + hash chain server-side.
+    const revision = {
+      id: 's-rev-new',
       project_id: 'proj-1',
       title: 'Concrete Mix Design',
-      revision_number: 2,
-      spec_section: '03 00 00',
-      status: 'rejected',
-      assigned_to: null,
-      subcontractor: 'ABC Concrete',
-      due_date: null,
-      submit_by_date: null,
-      required_onsite_date: null,
-      lead_time_weeks: 4,
-    };
-
-    const revision = {
-      ...parent,
-      id: 's-rev-new',
       revision_number: 3,
       status: 'draft',
       parent_submittal_id: 's-parent',
       created_by: 'user-pm',
     };
 
-    mockSingle
-      .mockResolvedValueOnce({ data: parent, error: null })
-      .mockResolvedValueOnce({ data: revision, error: null });
-
-    const chain = makeChain();
-    mockFrom.mockReturnValue(chain);
+    mockRpc.mockResolvedValueOnce({ data: revision, error: null });
 
     const { submittalService } = await import('../../services/submittalService');
     const result = await submittalService.createRevision('s-parent');
 
     expect(result.error).toBeNull();
-    expect(chain.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        parent_submittal_id: 's-parent',
-        revision_number: 3,
-        status: 'draft',
-        created_by: 'user-pm',
-      }),
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_create_revision',
+      expect.objectContaining({ p_parent_id: 's-parent' }),
     );
   });
 
-  it('returns NotFoundError when parent submittal does not exist', async () => {
+  it('returns DatabaseError when the RPC reports parent not found', async () => {
     sessionFor('user-pm');
 
-    mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'no rows found' } });
-
-    const chain = makeChain();
-    mockFrom.mockReturnValue(chain);
+    // D38: parent existence is checked server-side; an RPC error with
+    // 'not found' surfaces as a DatabaseError on the Result<>.
+    mockRpc.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'Parent submittal nonexistent-parent not found' },
+    });
 
     const { submittalService } = await import('../../services/submittalService');
     const result = await submittalService.createRevision('nonexistent-parent');
 
     expect(result.data).toBeNull();
-    expect(result.error?.category).toBe('NotFoundError');
+    expect(result.error?.category).toBe('DatabaseError');
   });
 });

@@ -79,12 +79,16 @@ describe('useCreateSubmittal', () => {
     const { result } = renderMutation(() => useCreateSubmittal())
     await result.current.mutateAsync({ data: validSubmittal, projectId: 'p1' })
     expect(h.supabase.from).toHaveBeenCalledWith('submittals')
-    // sanitizeSubmittalData converts empty-string optional fields to null
+    // D38 routed createSubmittal through submittalService, which uses the
+    // canonical CreateSubmittalInput shape (`kind` instead of legacy `type`)
+    // and forces status='draft' server-side. The form's `type` field is
+    // dropped at the service boundary; the canonical column is `kind`.
     expect(h.chain.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         title: validSubmittal.title,
         spec_section: validSubmittal.spec_section,
-        type: validSubmittal.type,
+        project_id: 'p1',
+        status: 'draft',
       }),
     )
     await waitFor(() => expect(h.invalidateEntity).toHaveBeenCalledWith('submittal', 'test-project'))
