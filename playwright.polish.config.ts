@@ -16,6 +16,10 @@ import path from 'path'
 const BASE_URL = process.env.POLISH_BASE_URL ?? 'http://localhost:5173/sitesync-pm/'
 const SCREENSHOT_DIR = path.resolve('polish-review/pages')
 
+// Use storageState only when real credentials exist and the auth files are present.
+const hasCredentials = !!(process.env.POLISH_USER && process.env.POLISH_PASS)
+const storageState = (file: string) => (hasCredentials ? file : undefined)
+
 export default defineConfig({
   testDir: './e2e/polish',
   fullyParallel: false,
@@ -41,7 +45,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1440, height: 900 },
-        storageState: process.env.CI ? undefined : '.auth/desktop.json',
+        storageState: storageState('.auth/desktop.json'),
       },
       testMatch: /page-.*\.spec\.ts/,
     },
@@ -50,7 +54,7 @@ export default defineConfig({
       use: {
         ...devices['iPad Pro'],
         viewport: { width: 1024, height: 1366 },
-        storageState: process.env.CI ? undefined : '.auth/ipad.json',
+        storageState: storageState('.auth/ipad.json'),
       },
       testMatch: /page-.*\.spec\.ts/,
     },
@@ -59,7 +63,7 @@ export default defineConfig({
       use: {
         ...devices['iPhone 14 Pro'],
         viewport: { width: 393, height: 852 },
-        storageState: process.env.CI ? undefined : '.auth/iphone.json',
+        storageState: storageState('.auth/iphone.json'),
       },
       testMatch: /page-.*\.spec\.ts/,
     },

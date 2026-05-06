@@ -4,11 +4,18 @@ import type { Database, Profile } from '../types/database'
 import { UserRole } from '../types/enums'
 
 // Supabase config: env vars are injected at build time by Vite.
-// Required — no source-level fallbacks. If either is missing the client
-// creation below will throw, which is what we want: a silently-running
-// build pointed at the wrong project is worse than a hard failure.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? ''
+// Required in production — no source-level fallbacks. If either is missing the
+// client creation below will throw (silently-running builds pointed at the wrong
+// project are worse than a hard failure). Exception: VITE_DEV_BYPASS=true mode
+// intentionally runs without Supabase; use placeholder values so the module loads.
+const isDevBypassMode =
+  import.meta.env.DEV === true &&
+  import.meta.env.VITE_DEV_BYPASS === 'true' &&
+  !import.meta.env.VITE_SUPABASE_URL &&
+  !import.meta.env.VITE_SUPABASE_ANON_KEY
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? (isDevBypassMode ? 'http://localhost:54321' : '')
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? (isDevBypassMode ? 'dev-bypass-placeholder' : '')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +

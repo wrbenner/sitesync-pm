@@ -524,7 +524,7 @@ const SubmittalCreateWizard: React.FC<SubmittalCreateWizardProps> = ({
 
   const handleAddFiles = useCallback((newFiles: File[]) => {
     const mapped: SubmittalFile[] = newFiles.map(f => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: `${Date.now()}-${crypto.randomUUID().replace(/-/g, '')}`,
       file: f, name: f.name, size: f.size, type: f.type,
     }))
     setFiles(prev => [...prev, ...mapped])
