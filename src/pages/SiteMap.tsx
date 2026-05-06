@@ -738,6 +738,7 @@ export default function SiteMap() {
   }, [projectId, safeQuery]);
 
   // ── Initial data load ──
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; bootstrap fetches feed multiple state slices in parallel
   useEffect(() => { loadPins(); loadZones(); loadSitePlans(); loadLinkedEntities(); }, [loadPins, loadZones, loadSitePlans, loadLinkedEntities]);
 
   // ── Realtime subscription ──

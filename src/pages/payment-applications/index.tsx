@@ -301,9 +301,17 @@ const PaymentApplicationsPage: React.FC = () => {
       })
   }, [g702ModalApp, g702ModalAppId, retainage])
 
-  // Populate retainageItems from the retainage ledger when data arrives
-  useEffect(() => {
-    const retainageArr = (retainage ?? []) as unknown as Array<Record<string, unknown>>
+  // Populate retainageItems from the retainage ledger on first arrival —
+  // render-time prev pattern keyed on the first-load boundary. Triggers
+  // once when retainage gains rows AND retainageItems is still empty.
+  const retainageArr = useMemo(
+    () => (retainage ?? []) as unknown as Array<Record<string, unknown>>,
+    [retainage],
+  )
+  const retainageBoundaryKey = `${retainageArr.length > 0 ? 'has' : 'empty'}|${retainageItems.length === 0 ? 'untouched' : 'seeded'}`
+  const [prevRetainageBoundaryKey, setPrevRetainageBoundaryKey] = useState(retainageBoundaryKey)
+  if (prevRetainageBoundaryKey !== retainageBoundaryKey) {
+    setPrevRetainageBoundaryKey(retainageBoundaryKey)
     if (retainageArr.length > 0 && retainageItems.length === 0) {
       setRetainageItems(retainageArr.map((r) => ({
         id: (r.id as string) || crypto.randomUUID(),
@@ -316,7 +324,7 @@ const PaymentApplicationsPage: React.FC = () => {
         coNumber: (r.co_number as number) || undefined,
       })))
     }
-  }, [retainage]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const approvePayAppMutation = useMutation({
     mutationFn: async (app: Record<string, unknown>) => {

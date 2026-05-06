@@ -376,15 +376,20 @@ const MeetingDetailView: React.FC<{
   const [meetingLink, setMeetingLink] = useState('');
   const [showLinkEdit, setShowLinkEdit] = useState(false);
 
-  // Sync notes and meeting link when detail loads
-  React.useEffect(() => {
+  // Sync notes and meeting link when detail loads — render-time
+  // prev pattern keyed on the joined detail string so changes to
+  // either field re-sync.
+  const detailKey = `${meetingDetail?.notes ?? ''}|${meetingDetail?.video_conference_url ?? ''}`
+  const [prevDetailKey, setPrevDetailKey] = useState(detailKey)
+  if (prevDetailKey !== detailKey) {
+    setPrevDetailKey(detailKey)
     if (meetingDetail?.notes !== undefined) {
       setMeetingNotes(meetingDetail.notes ?? '');
     }
     if (meetingDetail?.video_conference_url !== undefined) {
       setMeetingLink(meetingDetail.video_conference_url ?? '');
     }
-  }, [meetingDetail?.notes, meetingDetail?.video_conference_url]);
+  }
 
   const totalAgendaDuration = agendaItems.reduce((sum, item) => sum + (item.duration_minutes ?? 0), 0);
   const meetingDuration = meetingDetail?.duration_minutes ?? 0;

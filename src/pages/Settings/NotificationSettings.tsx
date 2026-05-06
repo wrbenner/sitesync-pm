@@ -195,6 +195,7 @@ const NotificationSettings: React.FC = () => {
   // ── Fetch on mount ─────────────────────────────────────────────────────────
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the async fetch + form hydration */
     if (!user) {
       setLoading(false);
       return;
@@ -232,6 +233,7 @@ const NotificationSettings: React.FC = () => {
     };
 
     fetchPreferences();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [user]);
 
   // ── Handle trigger preference change ──────────────────────────────────────

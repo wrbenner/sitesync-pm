@@ -568,15 +568,14 @@ const DigitalTwinPage: React.FC = () => {
     return { scheduleStart: start, scheduleEnd: end, totalDays: Math.max(1, daysBetween(start, end)) };
   }, [twinPhases]);
 
-  // Jump the scrubber to "today" when the schedule first loads.
-  const initializedScrubberRef = useRef(false);
-  useEffect(() => {
-    if (initializedScrubberRef.current) return;
-    if (twinPhases.length === 0) return;
+  // Jump the scrubber to "today" when the schedule first loads —
+  // render-time prev pattern, fires once when twinPhases gains rows.
+  const [scrubberInitialized, setScrubberInitialized] = useState(false);
+  if (!scrubberInitialized && twinPhases.length > 0) {
+    setScrubberInitialized(true);
     const todayOffset = Math.max(0, Math.min(totalDays, daysBetween(scheduleStart, new Date())));
     setTimelineDay(todayOffset);
-    initializedScrubberRef.current = true;
-  }, [twinPhases.length, scheduleStart, totalDays]);
+  }
 
   const currentDate = useMemo(() => {
     const d = new Date(scheduleStart);

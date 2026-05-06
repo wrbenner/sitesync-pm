@@ -673,6 +673,7 @@ export function SubmittalDetailPage() {
   const [resolvedFiles, setResolvedFiles] = useState<Array<{ name: string; url: string; path?: string }>>([])
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: resolves storage paths to signed URLs and mirrors them into resolvedFiles */
     let cancelled = false
     if (!submittal) { setResolvedFiles([]); return }
     const attachments = (submittalRow?.attachments ?? []) as unknown[]
@@ -705,6 +706,7 @@ export function SubmittalDetailPage() {
     })()
 
     return () => { cancelled = true }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [submittal, submittalRow?.attachments])
 
   const viewerFiles = resolvedFiles

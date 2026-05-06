@@ -285,12 +285,17 @@ export const PunchListPlanView: React.FC<PunchListPlanViewProps> = ({
   const viewportRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
 
-  // Auto-select first drawing
-  useEffect(() => {
+  // Auto-select first drawing — render-time prev pattern keyed on
+  // the first-load boundary. Triggers exactly once when drawings
+  // populates and nothing is selected yet.
+  const drawingsBoundaryKey = `${selectedDrawingId}|${drawings.length > 0 ? 'has-drawings' : 'no-drawings'}`
+  const [prevDrawingsBoundaryKey, setPrevDrawingsBoundaryKey] = useState(drawingsBoundaryKey)
+  if (prevDrawingsBoundaryKey !== drawingsBoundaryKey) {
+    setPrevDrawingsBoundaryKey(drawingsBoundaryKey)
     if (drawings.length > 0 && !selectedDrawingId) {
       setSelectedDrawingId(drawings[0].id)
     }
-  }, [drawings, selectedDrawingId])
+  }
 
   const selectedDrawing = drawings.find(d => d.id === selectedDrawingId)
 

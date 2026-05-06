@@ -206,6 +206,7 @@ const Wiki: React.FC = () => {
   React.useEffect(() => {
     if (!selected) return
     if (editContent === selected.content && editTitle === selected.title) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- debounce timer effect: 'saving' set on dirty entry, 'saved' on timer fire
     setAutoSaveStatus('saving')
     const timer = setTimeout(() => setAutoSaveStatus('saved'), 1200)
     return () => clearTimeout(timer)

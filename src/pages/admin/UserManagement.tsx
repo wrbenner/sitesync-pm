@@ -88,6 +88,7 @@ export function UserManagement() {
   }, [organizationId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; bootstrap fetch on mount
     loadMembers();
   }, [loadMembers]);
 

@@ -563,7 +563,12 @@ const editableInputStyle: React.CSSProperties = {
 
 const EditableText: React.FC<{ value: string; onSave: (v: string) => void; placeholder?: string }> = ({ value, onSave, placeholder }) => {
   const [v, setV] = useState(value)
-  React.useEffect(() => setV(value), [value])
+  // Sync local draft to upstream value — render-time prev pattern.
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setV(value)
+  }
   return (
     <input
       value={v}
@@ -577,7 +582,12 @@ const EditableText: React.FC<{ value: string; onSave: (v: string) => void; place
 
 const EditableNumber: React.FC<{ value: number; onSave: (v: number) => void }> = ({ value, onSave }) => {
   const [v, setV] = useState(String(value))
-  React.useEffect(() => setV(String(value)), [value])
+  // Sync local draft to upstream value — render-time prev pattern.
+  const [prevValue, setPrevValue] = useState(value)
+  if (prevValue !== value) {
+    setPrevValue(value)
+    setV(String(value))
+  }
   return (
     <input
       type="number"
@@ -697,12 +707,17 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({ projectId, packages, ve
   const { confirm: confirmAwardBid, dialog: awardBidDialog } = useConfirm()
   const { confirm: confirmDeleteSubmission, dialog: deleteSubmissionDialog } = useConfirm()
 
-  // Default to first package once loaded
-  React.useEffect(() => {
+  // Default to first package once loaded — render-time prev pattern.
+  // Triggers exactly once when the package list grows from empty AND
+  // nothing is selected yet.
+  const packageBoundaryKey = `${selectedPackageId}|${packages.length > 0 ? 'has-packages' : 'no-packages'}`
+  const [prevPackageBoundaryKey, setPrevPackageBoundaryKey] = useState(packageBoundaryKey)
+  if (prevPackageBoundaryKey !== packageBoundaryKey) {
+    setPrevPackageBoundaryKey(packageBoundaryKey)
     if (!selectedPackageId && packages.length > 0) {
       setSelectedPackageId((packages[0].id as string) ?? '')
     }
-  }, [packages, selectedPackageId])
+  }
 
   const { data: subs = [], isPending } = useBidSubmissions(selectedPackageId || undefined)
   const createSub = useCreateBidSubmission()

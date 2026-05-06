@@ -251,23 +251,38 @@ const CreateProjectPage: React.FC = () => {
   const createProject = useCreateOnboardingProject();
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState<FormState>(() => ({
-    name: '',
-    number: autoProjectNumber(),
-    numberAuto: true,
-    type: '',
-    address: '',
-    startDate: '',
-    endDate: '',
-    contractValue: '',
-    squareFeet: '',
-    ownerName: '',
-    gcName: '',
-    architectName: '',
-    template: 'blank',
-    irisAutoImport: true,
-    irisProviders: ['procore'],
-  }));
+  const [form, setForm] = useState<FormState>(() => {
+    const blank: FormState = {
+      name: '',
+      number: autoProjectNumber(),
+      numberAuto: true,
+      type: '',
+      address: '',
+      startDate: '',
+      endDate: '',
+      contractValue: '',
+      squareFeet: '',
+      ownerName: '',
+      gcName: '',
+      architectName: '',
+      template: 'blank',
+      irisAutoImport: true,
+      irisProviders: ['procore'],
+    };
+    // Hydrate any saved draft from localStorage during initialization
+    // — synchronous read, no re-render cascade. Previously did this in
+    // a useEffect which the compiler flagged as set-state-in-effect.
+    try {
+      const raw = localStorage.getItem('siteSync:project-draft');
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<FormState>;
+        if (parsed && typeof parsed === 'object' && parsed.name) {
+          return { ...blank, ...parsed, numberAuto: parsed.numberAuto ?? false };
+        }
+      }
+    } catch { /* ignore */ }
+    return blank;
+  });
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const [irisDismissed, setIrisDismissed] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -375,17 +390,10 @@ const CreateProjectPage: React.FC = () => {
     }
   }, [form]);
 
-  // Hydrate any saved draft on mount.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('siteSync:project-draft');
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<FormState>;
-      if (parsed && typeof parsed === 'object' && parsed.name) {
-        setForm((prev) => ({ ...prev, ...parsed, numberAuto: parsed.numberAuto ?? false }));
-      }
-    } catch { /* ignore */ }
-  }, []);
+  // (Draft hydration moved to the useState lazy initializer above —
+  // synchronous and runs exactly once at mount, eliminating the
+  // set-state-in-effect cascade the previous useEffect-based version
+  // triggered.)
 
   return (
     <PageShell>

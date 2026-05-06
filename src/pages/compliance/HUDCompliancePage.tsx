@@ -192,6 +192,7 @@ const HUDCompliancePage: React.FC = () => {
 
   // ── Fetch compliance programs from compliance_reports ────
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the async fetch + program-list hydration */
     if (!projectId) { setLoading(false); return; }
     const pid: string = projectId;
     let cancelled = false;
@@ -397,6 +398,7 @@ const HUDCompliancePage: React.FC = () => {
 
     fetchData();
     return () => { cancelled = true; };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [projectId]);
 
   const mainTabs: { key: MainTab; label: string; icon: React.ElementType }[] = [

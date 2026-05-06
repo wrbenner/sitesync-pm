@@ -35,6 +35,7 @@ export const MagicLinkEntity: React.FC = () => {
   const [validation, setValidation] = useState<ValidationResult | null>(null);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async validation effect: state mirrors the magic-link fetch result */
     let cancelled = false;
     if (!token || !entityType || !entityId) {
       setValidation({ ok: false, scope: null, project_id: null, expires_at: null, error: 'Missing token or entity reference.' });
@@ -75,6 +76,7 @@ export const MagicLinkEntity: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [token, entityType, entityId]);
 
   if (!validation) {
