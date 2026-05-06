@@ -1294,7 +1294,7 @@ export const Meetings: React.FC = () => {
         <EmptyState
           icon={<Calendar size={32} color={colors.textTertiary} />}
           title="No project selected"
-          description="Select a project from the sidebar to view meetings."
+          description="Select a project to view meetings."
         />
       </PageContainer>
     );

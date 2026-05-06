@@ -121,7 +121,7 @@ const DashboardPage: React.FC = () => {
   const [loadTimedOut, setLoadTimedOut] = useState(false);
   useEffect(() => {
     if (!projectsLoading) return;
-    const timer = setTimeout(() => setLoadTimedOut(true), 4_000);
+    const timer = setTimeout(() => setLoadTimedOut(true), 2_000);
     return () => clearTimeout(timer);
   }, [projectsLoading]);
 
