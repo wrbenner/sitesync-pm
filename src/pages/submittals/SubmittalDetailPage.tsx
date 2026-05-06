@@ -705,7 +705,7 @@ export function SubmittalDetailPage() {
     })()
 
     return () => { cancelled = true }
-  }, [submittal])
+  }, [submittal, submittalRow?.attachments])
 
   const viewerFiles = resolvedFiles
 
@@ -741,7 +741,7 @@ export function SubmittalDetailPage() {
     } catch (e) {
       addToast('error', 'Upload saved to storage but attachment record failed: ' + (e as Error).message)
     }
-  }, [submittal, projectId, updateSubmittal, addToast])
+  }, [submittal, projectId, updateSubmittal, addToast, submittalRow])
 
   // ── Transition handler ─────────────────────────────────
   // DB check constraint allows: draft,pending,submitted,under_review,approved,
@@ -769,7 +769,7 @@ export function SubmittalDetailPage() {
     } finally {
       setTransitioning(null)
     }
-  }, [submittal, projectId, currentStatus, updateSubmittal, addToast])
+  }, [submittal, projectId, currentStatus, updateSubmittal, addToast, submittalRow])
 
   // ── Loading ─────────────────────────────────────────────
   if (isLoading) {

@@ -179,7 +179,7 @@ export const PayAppList: React.FC<PayAppListProps> = ({
         },
       }),
     ]
-  }, [onEditApp, submitMutation, projectId])
+  }, [onEditApp, submitMutation, markPaidMutation])
 
   return (
     <>

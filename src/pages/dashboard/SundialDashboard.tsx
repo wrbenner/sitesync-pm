@@ -226,7 +226,7 @@ function MarginaliaCard({
     }
 
     return parts.length > 0 ? parts : [{ text: body, bold: false }];
-  }, [body, boldValues]);
+  }, [body]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

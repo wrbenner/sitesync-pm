@@ -309,22 +309,19 @@ export const Vendors: React.FC = () => {
   /* ── Derived diversity goals with actual percentages from vendor data ── */
   const diversityGoals = useMemo(() => {
     // Since there is no diversity_certification column in the vendors table yet,
-    // actual percentages are 0. When a certification_type field is added to
-    // the vendors table, this computation will populate real numbers.
+    // actual percentages are 0. When a certification_type field is added,
+    // restore `vendors` to the dep list so the memo recomputes from real data.
     return DIVERSITY_GOAL_TARGETS.map((g) => ({
       category: g.category,
       targetPct: g.targetPct,
       actualPct: 0, // No certification type data in DB yet
     }))
-  }, [vendors])
+  }, [])
 
   /* ── Derived vendor diversity records from real vendor data ── */
-  const vendorDiversityRecords = useMemo((): VendorDiversity[] => {
-    // No diversity certification data in DB yet — return empty
-    // When a diversity_certifications table or certification_type column
-    // is added, this will derive real VendorDiversity records.
-    return []
-  }, [vendors])
+  // Returns empty until diversity_certifications data exists. Restore `vendors`
+  // to deps when the schema lands so the memo recomputes from real data.
+  const vendorDiversityRecords = useMemo<VendorDiversity[]>(() => [], [])
 
   const handleCreate = async () => {
     if (!form.company_name) {

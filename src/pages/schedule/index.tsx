@@ -191,6 +191,20 @@ const SchedulePage: React.FC = () => {
 
   const status = useMemo(() => projectStatusFor(phases), [phases]);
 
+  const handleEditPhase = useCallback(
+    (phase: SchedulePhase) => {
+      // Wave 1 inline edit: bump %-complete to next 25%-step. Full edit modal
+      // lands when the schedule mutation surface is unified (out of scope here).
+      const current = Number(phase.percent_complete ?? 0);
+      const next = current >= 100 ? 100 : Math.min(100, Math.floor(current / 25) * 25 + 25);
+      updatePhase(phase.id, { percent_complete: next }).then((r) => {
+        if (r.error) toast.error(`Couldn't update progress: ${r.error}`);
+        else toast.success(`${phase.name} → ${next}% complete`);
+      });
+    },
+    [updatePhase],
+  );
+
   // ── Keyboard nav: j/k/Enter/e ──
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -219,21 +233,7 @@ const SchedulePage: React.FC = () => {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [focusedId, visiblePhases]);
-
-  const handleEditPhase = useCallback(
-    (phase: SchedulePhase) => {
-      // Wave 1 inline edit: bump %-complete to next 25%-step. Full edit modal
-      // lands when the schedule mutation surface is unified (out of scope here).
-      const current = Number(phase.percent_complete ?? 0);
-      const next = current >= 100 ? 100 : Math.min(100, Math.floor(current / 25) * 25 + 25);
-      updatePhase(phase.id, { percent_complete: next }).then((r) => {
-        if (r.error) toast.error(`Couldn't update progress: ${r.error}`);
-        else toast.success(`${phase.name} → ${next}% complete`);
-      });
-    },
-    [updatePhase],
-  );
+  }, [focusedId, visiblePhases, handleEditPhase]);
 
   const handleAddPhase = useCallback(
     async (data: PhaseData) => {

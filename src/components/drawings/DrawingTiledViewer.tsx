@@ -1154,7 +1154,7 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   useEffect(() => {
     const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
     setCalibrationScale(typeof persisted === 'number' && persisted > 0 ? persisted : null);
-  }, [drawing.id]);
+  }, [drawing]);
   const persistCalibration = useCallback(
     (ratio: number) => {
       setCalibrationScale(ratio);

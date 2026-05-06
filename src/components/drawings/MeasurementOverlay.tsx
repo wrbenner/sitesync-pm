@@ -14,6 +14,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { colors, typography, borderRadius } from '../../styles/theme';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -67,7 +68,7 @@ const WITNESS_GAP = 6;
 const TICK_SIZE = 5;
 /** Frosted label pill padding */
 const PILL_PAD_X = 10;
-
+const PILL_PAD_Y = 5;
 
 // Architectural orange — warm, confident, reads on any background
 const DIM_COLOR = '#F47820';
@@ -79,7 +80,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${crypto.randomUUID().slice(0, 5)}`;
+const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
 function normalizedDistance(
   a: NormalizedPoint,
@@ -229,7 +230,6 @@ const ArchDimensionLine: React.FC<{
           {label}
         </text>
         {/* Sublabel (metric) hidden — reveal with a dedicated metric-toggle in the future. */}
-        {/* eslint-disable-next-line no-constant-binary-expression */}
         {false && sublabel && (
           <text
             x={0} y={14}
@@ -623,7 +623,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         setInProgressPoints(newPts);
       }
     },
-    [activeTool, inProgressPoints, calibratePoints, imageSize, countIndex, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, calibrationScale, scaleParsed, onMeasurementAdd, snapTo, externalMeasurements, measurements],
+    [activeTool, inProgressPoints, calibratePoints, imageSize, pixelsToRealInches, formatArea, screenToNorm, onCalibrate, onMeasurementAdd, snapTo, externalMeasurements, measurements],
   );
 
   // Detect snap range on cursor move so the parent can pulse the loupe.

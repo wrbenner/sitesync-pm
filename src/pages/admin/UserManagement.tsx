@@ -1,5 +1,5 @@
 import { fromTable } from '../../lib/db/queries'
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
 
@@ -63,7 +63,7 @@ export function UserManagement() {
   // Search focus
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     // Without an organization, there's nothing to fetch — but we still
     // need to exit the loading state so the page renders the empty state
     // instead of pulsing skeleton cards forever.
@@ -80,11 +80,11 @@ export function UserManagement() {
       .order('created_at');
     if (data) setMembers(data as unknown as Profile[]);
     setLoading(false);
-  };
+  }, [organization?.id]);
 
   useEffect(() => {
     loadMembers();
-  }, [organization?.id]);
+  }, [loadMembers]);
 
   const handleInvite = async () => {
     if (!inviteEmail || !organization?.id) return;

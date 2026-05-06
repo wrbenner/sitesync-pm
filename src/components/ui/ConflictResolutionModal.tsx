@@ -40,7 +40,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
       initial[f] = 'local'; // default: prefer your own changes
     }
     setTimeout(() => setFieldChoices(initial), 0);
-  }, [currentIndex, current?.id]);
+  }, [currentIndex, current]);
 
   const advanceOrClose = useCallback(
     (resolved: PendingMutation[]) => {
@@ -454,7 +454,7 @@ const ConflictRow: React.FC<ConflictRowProps> = ({
           color: colors.textPrimary,
           wordBreak: 'break-word',
           cursor: showToggle ? 'pointer' : 'default',
-          outline: localChosen && showToggle ? `2px solid ${colors.primaryOrange}` : 'none',
+          outline: localChosen && showToggle ? `2px solid ${colors.primaryBlue ?? '#3B82F6'}` : 'none',
           outlineOffset: '-2px',
           transition: transitions.quick,
         }}

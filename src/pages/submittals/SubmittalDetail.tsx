@@ -195,7 +195,7 @@ export const SubmittalDetail: React.FC<SubmittalDetailProps> = ({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete submittal');
     }
-  }, [selected, projectId, deleteSubmittalMutateAsync, onClose]);
+  }, [selected, projectId, deleteSubmittalMutateAsync, onClose, confirmDeleteSubmittal]);
 
   const dueDate = selected?.dueDate as string | undefined;
 
