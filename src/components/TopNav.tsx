@@ -259,6 +259,7 @@ export const TopNav: React.FC<TopNavProps> = ({ activeView, onNavigate }) => {
                 type="text" placeholder="Search..." value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onBlur={() => { setSearchOpen(false); setSearchValue(''); }}
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                 autoFocus
                 aria-label="Search"
                 style={{ flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, color: colors.textPrimary }}

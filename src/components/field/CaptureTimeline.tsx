@@ -40,12 +40,14 @@ export const CaptureTimeline: React.FC<CaptureTimelineProps> = ({ events, onSele
         const Icon = typeIcons[event.type];
         const dotColor = typeColors[event.type];
         return (
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- listitem element is clickable via onSelect; key handler also defined
           <div
             key={event.id}
             role="listitem"
             aria-label={`${event.type} capture: ${event.title}, ${event.time}`}
             onClick={() => onSelect?.(event)}
             onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onSelect) { e.preventDefault(); onSelect(event); } }}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- listitem becomes interactive when onSelect is provided
             tabIndex={onSelect ? 0 : undefined}
             style={{
               display: 'flex', alignItems: 'flex-start', gap: spacing['4'],

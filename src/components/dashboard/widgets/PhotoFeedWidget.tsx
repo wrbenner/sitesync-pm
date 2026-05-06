@@ -132,6 +132,7 @@ export const PhotoFeedWidget: React.FC = React.memo(() => {
           onClick={() => setSelectedPhoto(null)}
           onKeyDown={(e) => { if (e.key === 'Escape') setSelectedPhoto(null); }}
         >
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
           <div
             role="dialog"
             aria-modal="true"

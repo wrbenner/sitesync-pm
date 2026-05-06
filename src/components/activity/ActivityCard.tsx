@@ -92,10 +92,12 @@ export const ActivityCard: React.FC<ActivityCardProps> = React.memo(({ item, onC
   const groupedPaddingLeft = `calc(${spacing['5']} + ${avatarWidth}px + ${avatarGap}px)`;
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
     <div
       onClick={onClick}
       role="article"
-      tabIndex={0}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- card is clickable when onClick is provided; key handler defined below
+      tabIndex={onClick ? 0 : -1}
       aria-label={`Activity: ${item.user} ${item.action} ${item.target}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
       onFocus={() => { if (onClick) setFocused(true); }}

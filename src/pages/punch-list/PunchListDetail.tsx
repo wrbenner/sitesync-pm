@@ -522,6 +522,7 @@ export const PunchListDetail: React.FC<PunchListDetailProps> = ({
                     {showRejectNote ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <textarea
+                          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                           autoFocus value={rejectNote}
                           onChange={(e) => setRejectNote(e.target.value)}
                           placeholder="What needs to be fixed? (required for the sub)"

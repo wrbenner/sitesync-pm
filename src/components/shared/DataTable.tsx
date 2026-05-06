@@ -389,6 +389,7 @@ export function DataTable<T>({
       {/* Table */}
       <div
         ref={gridRef}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- grid wrapper handles arrow-key row navigation; aria-activedescendant tracks focus
         tabIndex={0}
         className="sitesync-grid"
         onKeyDown={handleKeyDown}

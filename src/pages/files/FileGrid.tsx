@@ -370,7 +370,16 @@ export const FileGrid: React.FC<FileGridProps> = ({
             {displayFiles.length === 0 && !currentFolderId && !searchQuery ? (
               <EmptyState icon={FileText} title="No files uploaded yet" description="Upload project documents, drawings, and photos to keep everything organized in one place." action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }} />
             ) : (
-              <div ref={listRef} tabIndex={0} onKeyDown={handleKeyDown} role="list" aria-label="Project files" style={{ outline: 'none' }}>
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
+              <div
+                ref={listRef}
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- file list handles arrow-key navigation between items
+                tabIndex={0}
+                onKeyDown={handleKeyDown}
+                role="list"
+                aria-label="Project files"
+                style={{ outline: 'none' }}
+              >
                 <DataTable data={displayFiles} columns={fileTableColumns} enableSorting selectable onSelectionChange={setSelectedIds} onRowClick={handleFileClick} emptyMessage={searchQuery ? 'No files match your search' : 'This folder is empty'} />
               </div>
             )}

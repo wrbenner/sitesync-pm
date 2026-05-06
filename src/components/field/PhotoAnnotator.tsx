@@ -173,6 +173,7 @@ export const PhotoAnnotator: React.FC<PhotoAnnotatorProps> = ({ onClose, onSave 
           {textPos && (
             <div style={{ position: 'absolute', left: `${textPos.x}%`, top: `${textPos.y}%`, zIndex: 5 }}>
               <input
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                 autoFocus
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}

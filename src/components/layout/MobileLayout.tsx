@@ -243,6 +243,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       {searchOpen && (
         <div style={{ padding: `${spacing['2']} ${spacing['4']}`, backgroundColor: colors.surfaceRaised, borderBottom: `1px solid ${colors.borderSubtle}` }}>
           <input
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
             autoFocus
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

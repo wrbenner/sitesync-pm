@@ -807,10 +807,12 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
           </div>
 
           {/* Canvas area */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
           <div
             ref={canvasOuterRef}
             role="application"
             aria-label="Drawing viewer - use arrow keys to pan, plus/minus to zoom"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- application widget with keyboard handlers below
             tabIndex={0}
             style={{ flex: 1, position: 'relative', overflow: 'hidden', touchAction: 'manipulation', width: '100%' }}
             onMouseLeave={handleMouseLeave}
@@ -940,6 +942,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
               {/* Text input overlay (non-fabric fallback when isEditable is false) */}
               {textPos && (
                 <div style={{ position: 'absolute', left: `${textPos.x}%`, top: `${textPos.y}%`, zIndex: 20 }}>
+                  {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when text annotation opens in response to user action */}
                   <input autoFocus value={textInput} onChange={(e) => setTextInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleTextSubmit(); if (e.key === 'Escape') setTextPos(null); }} onBlur={handleTextSubmit} placeholder="Add note..." style={{ padding: `${spacing['0.5']} ${spacing['1.5']}`, backgroundColor: colors.primaryOrange, color: colors.white, border: 'none', borderRadius: borderRadius.sm, outline: 'none', fontSize: typography.fontSize.caption, fontFamily: typography.fontFamily, fontWeight: typography.fontWeight.semibold, minWidth: '80px' }} />
                 </div>
               )}

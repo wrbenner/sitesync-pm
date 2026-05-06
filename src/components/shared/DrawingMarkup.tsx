@@ -1303,6 +1303,7 @@ export default function DrawingMarkup({
           }}
         >
           <input
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
             autoFocus
             type="text"
             value={textValue}

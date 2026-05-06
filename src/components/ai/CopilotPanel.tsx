@@ -349,6 +349,7 @@ export const CopilotPanel: React.FC = () => {
       />
 
       {/* Slide-in panel */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
       <div
         role="dialog"
         aria-label="AI Copilot"
@@ -612,6 +613,7 @@ export const CopilotPanel: React.FC = () => {
           aria-live="polite"
           aria-relevant="additions"
           aria-label="AI Copilot conversation"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable conversation log needs keyboard focus to scroll
           tabIndex={0}
           style={{
             flex: 1,

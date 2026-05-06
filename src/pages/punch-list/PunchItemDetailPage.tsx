@@ -425,6 +425,7 @@ const ActionButtons: React.FC<{
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="What needs to be fixed? (required for the sub)"
               rows={2}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               autoFocus
               style={{
                 width: '100%', padding: '10px 14px',

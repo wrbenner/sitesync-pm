@@ -172,7 +172,7 @@ export const AnnotationListPanel: React.FC<AnnotationListPanelProps> = ({
                     onClick={() => onSelect(a.id)}
                     role="button"
                     tabIndex={0}
-                    aria-selected={selectedId === a.id}
+                    aria-pressed={selectedId === a.id}
                     style={{
                       padding: spacing.sm,
                       marginBottom: spacing.xs,

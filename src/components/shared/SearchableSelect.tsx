@@ -333,6 +333,7 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
                   <div
                     key={String(opt.value)}
                     role="option"
+                    tabIndex={-1}
                     aria-selected={selected}
                     aria-disabled={opt.disabled}
                     onMouseEnter={() => setActiveIdx(idx)}

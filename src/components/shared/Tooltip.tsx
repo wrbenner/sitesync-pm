@@ -169,6 +169,7 @@ export function Tooltip({
         onMouseLeave={hide}
         onFocus={show}
         onBlur={hide}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- tooltip trigger needs focus to show on keyboard navigation
         tabIndex={0}
         style={{ display: 'inline-flex' }}
       >

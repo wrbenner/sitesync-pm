@@ -82,6 +82,7 @@ const PremiumInput: React.FC<{
           id={id} type={type} value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder} required={required}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
           autoComplete={autoComplete} autoFocus={autoFocus}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -350,6 +351,7 @@ export function Register() {
                         id="reg-first" label="First name"
                         value={firstName} onChange={setFirstName}
                         placeholder="John" icon={<User size={16} />}
+                        // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                         required autoFocus
                       />
                       <PremiumInput
@@ -420,6 +422,7 @@ export function Register() {
                       id="reg-company" label="Company name"
                       value={companyName} onChange={setCompanyName}
                       placeholder="Turner Construction"
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                       icon={<Building2 size={16} />} required autoFocus
                     />
                     <p style={{

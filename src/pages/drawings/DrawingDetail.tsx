@@ -432,6 +432,7 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
               {/* Inline-edit sheet number */}
               {editing === 'sheet_number' ? (
                 <input
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                   autoFocus
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
@@ -452,6 +453,7 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
                   }}
                 />
               ) : (
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
                 <p
                   style={{
                     ...S.sheetNum,
@@ -471,6 +473,7 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
               {/* Inline-edit title */}
               {editing === 'title' ? (
                 <input
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                   autoFocus
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
@@ -492,6 +495,7 @@ export const DrawingDetail: React.FC<DrawingDetailProps> = ({
                   }}
                 />
               ) : (
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
                 <h3
                   style={{
                     ...S.title,

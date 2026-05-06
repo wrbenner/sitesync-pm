@@ -20,13 +20,16 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ capture, isSelected = false, onSe
   const hasAiFlag = !!capture.ai_category;
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
     <div
       role="article"
       aria-label={`Field capture: ${capture.content || 'Photo'}`}
-      tabIndex={0}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- card is clickable when onSelect is provided
+      tabIndex={onSelect ? 0 : -1}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => onSelect && onSelect(capture.id)}
+      onKeyDown={(e) => { if (onSelect && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect(capture.id); } }}
       style={{
         position: 'relative',
         backgroundColor: colors.white,

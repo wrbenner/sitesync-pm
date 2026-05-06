@@ -136,6 +136,7 @@ export const WhiteboardPage: React.FC = () => {
             onChange={e => setBoardName(e.target.value)}
             onBlur={handleNameBlur}
             onKeyDown={handleNameKeyDown}
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
             autoFocus
             style={{
               fontSize: typography.fontSize.large,
@@ -152,6 +153,7 @@ export const WhiteboardPage: React.FC = () => {
             }}
           />
         ) : (
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
           <h1
             onClick={handleNameClick}
             title="Click to rename"

@@ -415,6 +415,7 @@ const CreateLookaheadTaskModal: React.FC<CreateLookaheadTaskModalProps> = ({
   };
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
     <div
       role="dialog"
       aria-modal="true"

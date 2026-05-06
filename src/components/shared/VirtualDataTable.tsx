@@ -196,12 +196,14 @@ export function VirtualDataTable<T>({
   }, [focusedIndex]);
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
     <div
       ref={gridRef}
       role="table"
       aria-label={ariaLabel}
       aria-rowcount={data.length}
       aria-colcount={columns.length}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- table wrapper handles arrow-key navigation between rows
       tabIndex={0}
       className="sitesync-grid"
       onKeyDown={handleKeyDown}
@@ -224,6 +226,7 @@ export function VirtualDataTable<T>({
               <div
                 key={header.id}
                 role="columnheader"
+                tabIndex={header.column.getCanSort() ? 0 : -1}
                 aria-sort={
                   header.column.getCanSort()
                     ? header.column.getIsSorted() === 'asc'
@@ -234,6 +237,13 @@ export function VirtualDataTable<T>({
                     : undefined
                 }
                 onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                onKeyDown={header.column.getCanSort() ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const handler = header.column.getToggleSortingHandler();
+                    if (handler) handler(e);
+                  }
+                } : undefined}
                 style={{
                   padding: `${spacing['2.5']} ${spacing['4']}`,
                   fontSize: typography.fontSize.label,

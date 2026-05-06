@@ -1102,6 +1102,7 @@ const DailyLogPage: React.FC = () => {
               value={returnToDraftNote}
               onChange={e => setReturnToDraftNote(e.target.value)}
               placeholder="Reason for returning to draft..."
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               autoFocus
               style={{ width: '100%', padding: spacing['3'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', minHeight: '96px', boxSizing: 'border-box' }}
             />
@@ -1123,6 +1124,7 @@ const DailyLogPage: React.FC = () => {
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
               placeholder="Reason for returning this log..."
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               autoFocus
               style={{ width: '100%', padding: spacing['3'], fontSize: typography.fontSize.body, fontFamily: typography.fontFamily, border: 'none', backgroundColor: colors.surfaceInset, borderRadius: borderRadius.md, outline: 'none', resize: 'vertical', minHeight: '96px', boxSizing: 'border-box' }}
             />

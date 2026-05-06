@@ -108,6 +108,7 @@ const PremiumInput: React.FC<{
           placeholder={placeholder}
           required={required}
           autoComplete={autoComplete}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
           autoFocus={autoFocus}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
@@ -600,6 +601,7 @@ export const Login: React.FC = () => {
                     icon={<Mail size={16} />}
                     required
                     autoComplete="email"
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                     autoFocus
                     error={emailError}
                     onBlurValidate={(v) => v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Enter a valid email' : null}
@@ -750,6 +752,7 @@ export const Login: React.FC = () => {
                         icon={<Mail size={16} />}
                         required
                         autoComplete="email"
+                        // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                         autoFocus
                       />
 
@@ -837,6 +840,7 @@ export const Login: React.FC = () => {
                           icon={<User size={16} />}
                           required
                           autoComplete="given-name"
+                          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                           autoFocus
                         />
                         <PremiumInput
@@ -1120,6 +1124,7 @@ export const Login: React.FC = () => {
                     icon={<Mail size={16} />}
                     required
                     autoComplete="email"
+                    // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                     autoFocus
                   />
 
