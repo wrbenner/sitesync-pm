@@ -185,8 +185,10 @@ describe('Submittal State Machine', () => {
       actor.stop()
     })
 
-    // BUG #1 FIX TEST: Full industry-standard review chain
-    it('full review chain: draft → submit → GC → architect → approve → close', () => {
+    // Full industry-standard review chain. Per the spec Part 4 chart, the
+    // gc_review → architect_review transmittal is a deliberate
+    // FORWARD_TO_REVIEWER event, NOT an auto-advance from GC_APPROVE.
+    it('full review chain: draft → submit → GC → forward → architect → approve → close', () => {
       const actor = createActor(submittalMachine)
       actor.start()
       actor.send({ type: 'SUBMIT' })
@@ -195,8 +197,8 @@ describe('Submittal State Machine', () => {
       actor.send({ type: 'GC_APPROVE' })
       expect(actor.getSnapshot().value).toBe('gc_review')
 
-      // GC_APPROVE from gc_review now goes to architect_review (BUG #1 FIX)
-      actor.send({ type: 'GC_APPROVE' })
+      // Explicit transmittal to architect — distinct event from GC_APPROVE.
+      actor.send({ type: 'FORWARD_TO_REVIEWER' })
       expect(actor.getSnapshot().value).toBe('architect_review')
 
       actor.send({ type: 'ARCHITECT_APPROVE' })
@@ -208,14 +210,30 @@ describe('Submittal State Machine', () => {
       actor.stop()
     })
 
-    // BUG #1 FIX TEST: architect_review is now reachable
-    it('architect_review is reachable from gc_review', () => {
+    it('architect_review is reachable from gc_review via FORWARD_TO_REVIEWER', () => {
       const actor = createActor(submittalMachine)
       actor.start()
       actor.send({ type: 'SUBMIT' })
       actor.send({ type: 'GC_APPROVE' })
-      actor.send({ type: 'GC_APPROVE' }) // Forward to architect
+      actor.send({ type: 'FORWARD_TO_REVIEWER' })
       expect(actor.getSnapshot().value).toBe('architect_review')
+      actor.stop()
+    })
+
+    // Regression guard: GC_APPROVE inside gc_review must NOT auto-advance
+    // to architect_review. This was the original BUG #1 (a misnomer — the
+    // earlier "BUG #1 FIX" comment locked the bug in instead of fixing it).
+    // Sending GC_APPROVE from gc_review is a no-op; the GC PE has to
+    // explicitly transmit via FORWARD_TO_REVIEWER.
+    it('GC_APPROVE from gc_review is a no-op — does NOT auto-advance to architect_review', () => {
+      const actor = createActor(submittalMachine)
+      actor.start()
+      actor.send({ type: 'SUBMIT' })
+      actor.send({ type: 'GC_APPROVE' })
+      expect(actor.getSnapshot().value).toBe('gc_review')
+
+      actor.send({ type: 'GC_APPROVE' })
+      expect(actor.getSnapshot().value).toBe('gc_review')
       actor.stop()
     })
 
@@ -224,7 +242,7 @@ describe('Submittal State Machine', () => {
       actor.start()
       actor.send({ type: 'SUBMIT' })
       actor.send({ type: 'GC_APPROVE' })
-      actor.send({ type: 'GC_APPROVE' })
+      actor.send({ type: 'FORWARD_TO_REVIEWER' })
       actor.send({ type: 'ARCHITECT_REJECT' })
       expect(actor.getSnapshot().value).toBe('rejected')
       actor.stop()
@@ -235,7 +253,7 @@ describe('Submittal State Machine', () => {
       actor.start()
       actor.send({ type: 'SUBMIT' })
       actor.send({ type: 'GC_APPROVE' })
-      actor.send({ type: 'GC_APPROVE' })
+      actor.send({ type: 'FORWARD_TO_REVIEWER' })
       actor.send({ type: 'ARCHITECT_REVISE' })
       expect(actor.getSnapshot().value).toBe('resubmit')
       actor.stop()
