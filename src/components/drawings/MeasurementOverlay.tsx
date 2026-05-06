@@ -13,7 +13,7 @@
  *  - Calibrate: Two-point scale definition with smooth reveal
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -466,12 +466,15 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
 
   // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
   // Without this, switching tools and coming back would resume a half-drawn measurement.
-  useEffect(() => {
+  // Render-time prev pattern avoids set-state-in-effect.
+  const [prevActiveTool, setPrevActiveTool] = useState(activeTool);
+  if (prevActiveTool !== activeTool) {
+    setPrevActiveTool(activeTool);
     if (!isMeasureTool(activeTool)) {
       setInProgressPoints([]);
       setCalibratePoints([]);
     }
-  }, [activeTool]);
+  }
 
   const scaleParsed = useMemo(() => parseScaleRatio(scaleRatioText), [scaleRatioText]);
 

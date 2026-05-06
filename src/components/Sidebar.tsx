@@ -128,9 +128,15 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
   }, [projects, filter])
 
   // Reset the search whenever the dropdown closes so the next open starts fresh.
-  useEffect(() => {
+  // Use the react.dev "compare prev props during render" pattern instead
+  // of an effect — the compiler flags the effect-based version as
+  // set-state-in-effect (cascading render).
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (prevOpen !== open) {
+    setPrevOpen(open)
     if (!open) setFilter('')
-  }, [open])
+  }
 
   if (collapsed) {
     return (

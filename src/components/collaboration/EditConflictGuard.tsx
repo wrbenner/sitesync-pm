@@ -43,14 +43,17 @@ export function useOptimisticLock(
   const [lockedStatus, setLockedStatus] = useState<string | null>(null);
   const retryCountRef = useRef(0);
 
-  // Reset conflict state when the entity changes to avoid stale state from a previous entity
-  useEffect(() => {
+  // Reset conflict state when the entity changes — react.dev "compare
+  // prev" pattern avoids set-state-in-effect cascading renders.
+  const [prevEntityId, setPrevEntityId] = useState(entityId);
+  if (prevEntityId !== entityId) {
+    setPrevEntityId(entityId);
     setConflictDetected(false);
     setServerUpdatedAt(null);
     setCheckFailed(false);
     setIsStatusLocked(false);
     setLockedStatus(null);
-  }, [entityId]);
+  }
 
   const checkConflict = useCallback(async () => {
     if (!table || !entityId || !lastKnownUpdatedAt) return false;

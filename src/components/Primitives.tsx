@@ -1601,7 +1601,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items }) => {
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 
-  useEffect(() => { setSelectedIndex(0); }, [query]);
+  // Reset selected index when query changes — react.dev "compare prev
+  // during render" pattern avoids set-state-in-effect cascading renders.
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (prevQuery !== query) {
+    setPrevQuery(query);
+    setSelectedIndex(0);
+  }
 
   if (!open) return null;
 

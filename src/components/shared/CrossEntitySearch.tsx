@@ -96,13 +96,22 @@ export const CrossEntitySearch: React.FC<CrossEntitySearchProps> = ({ onSelect, 
     return () => clearTimeout(t);
   }, [query]);
 
-  // Focus on open
-  useEffect(() => {
+  // Focus on open — react.dev "compare prev" pattern avoids
+  // set-state-in-effect cascading renders. The setTimeout focus call
+  // stays inline because focus is a real side-effect, not state.
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setQuery('');
       setDebouncedQuery('');
       setActiveIndex(-1);
-      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }
+  useEffect(() => {
+    if (isOpen) {
+      const id = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(id);
     }
   }, [isOpen]);
 

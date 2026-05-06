@@ -137,11 +137,15 @@ export const IrisDraftDrawer: React.FC<IrisDraftDrawerProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item, draft])
 
-  // Reset edit-mode when the item changes.
-  useEffect(() => {
+  // Reset edit-mode when the item changes — react.dev "compare prev"
+  // pattern avoids set-state-in-effect cascading renders.
+  const itemId = item?.id
+  const [prevItemId, setPrevItemId] = useState(itemId)
+  if (prevItemId !== itemId) {
+    setPrevItemId(itemId)
     setEditing(false)
     setEditValue('')
-  }, [item?.id])
+  }
 
   function startEdit() {
     if (!draft) return

@@ -285,10 +285,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, on
   const markAllRead = useMarkAllNotificationsRead();
   const navigate = useNavigate();
 
-  // Reset to first page whenever the panel reopens.
-  useEffect(() => {
+  // Reset to first page whenever the panel reopens — react.dev
+  // "compare prev" pattern avoids set-state-in-effect cascading renders.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (open) setPage(1);
-  }, [open]);
+  }
 
   const notifications = data?.data ?? EMPTY_LIST;
   const total = data?.total ?? 0;

@@ -519,10 +519,13 @@ function AppContent() {
 
   useProjectCache(isAuthPage ? undefined : projectId);
 
-  // Auto-open conflict modal when conflicts appear
-  useEffect(() => {
+  // Auto-open conflict modal when conflicts appear — react.dev
+  // "compare prev" pattern avoids set-state-in-effect cascading renders.
+  const [prevConflictCount, setPrevConflictCount] = useState(conflictCount);
+  if (prevConflictCount !== conflictCount) {
+    setPrevConflictCount(conflictCount);
     if (conflictCount > 0) setConflictModalOpen(true);
-  }, [conflictCount]);
+  }
 
   // Move focus to main content on route change for keyboard and screen reader users
   useEffect(() => {

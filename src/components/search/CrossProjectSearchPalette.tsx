@@ -65,8 +65,16 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
     return () => clearTimeout(t)
   }, [open])
 
+  // Clear results when input is empty/too-short — render-time prev
+  // pattern avoids set-state-in-effect.
+  const [prevParsedKey, setPrevParsedKey] = useState(`${parsed.empty}|${parsed.tooShort}`)
+  const parsedKey = `${parsed.empty}|${parsed.tooShort}`
+  if (prevParsedKey !== parsedKey) {
+    setPrevParsedKey(parsedKey)
+    if (parsed.empty || parsed.tooShort) setResults([])
+  }
   useEffect(() => {
-    if (parsed.empty || parsed.tooShort) { setResults([]); return }
+    if (parsed.empty || parsed.tooShort) return
     let cancelled = false
     setLoading(true)
     runSearch(parsed.tsqueryInput).then(rows => {

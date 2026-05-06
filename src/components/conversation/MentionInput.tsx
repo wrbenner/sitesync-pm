@@ -9,7 +9,7 @@
 // link table). The notification fan-out reads the ids and enqueues
 // notification_queue rows for each.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { colors, typography } from '../../styles/theme';
@@ -80,10 +80,13 @@ export const MentionInput: React.FC<MentionInputProps> = ({
     [query, contacts],
   );
 
-  // Reset highlight when candidate list changes.
-  useEffect(() => {
+  // Reset highlight when candidate list changes — react.dev "compare
+  // prev" pattern avoids set-state-in-effect cascading renders.
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (prevQuery !== query) {
+    setPrevQuery(query);
     setActiveIndex(0);
-  }, [query]);
+  }
 
   // Emit typing heartbeat. Throttled to once per 4 seconds.
   const lastHeartbeat = useRef(0);

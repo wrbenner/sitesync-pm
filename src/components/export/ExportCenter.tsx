@@ -68,12 +68,16 @@ export const ExportCenter: React.FC<ExportCenterProps> = ({ open, onClose, initi
   // Re-sync if the modal is opened with a different initialReport
   // after having been closed. Without this, a second "Generate Daily
   // Log" click after closing on "RFI Log" would still show RFI Log.
-  React.useEffect(() => {
+  // Re-sync on open / initialReport change — render-time prev pattern.
+  const initialReportKey = `${open}|${initialReport ?? ''}`;
+  const [prevInitialReportKey, setPrevInitialReportKey] = useState(initialReportKey);
+  if (prevInitialReportKey !== initialReportKey) {
+    setPrevInitialReportKey(initialReportKey);
     if (open && initialReport) {
       setSelectedReport(initialReport);
       setStep('configure');
     }
-  }, [open, initialReport]);
+  }
   const [format, setFormat] = useState<ExportFormat>('pdf');
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);

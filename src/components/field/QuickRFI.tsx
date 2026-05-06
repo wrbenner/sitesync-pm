@@ -192,7 +192,10 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
 
   // ── Lifecycle ────────────────────────────────────────────
 
-  useEffect(() => {
+  // Reset state on open/close — render-time prev pattern.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (open) {
       setPhase('capture-photo');
       setPhotoDataUrl(null);
@@ -200,12 +203,20 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       setEditMode(false);
       setError(null);
       setProcessingStep(0);
+    }
+  }
+  // Camera + voice are real side effects — keep in an effect.
+  useEffect(() => {
+    if (open) {
       startCamera();
     } else {
       stopCamera();
       voice.reset();
     }
     return () => { stopCamera(); };
+    // startCamera/stopCamera/voice deps intentionally excluded — they
+    // close over MediaStream refs and react-tracking them would
+    // restart the camera on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 

@@ -32,15 +32,23 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
   const current = conflicts[currentIndex];
 
   // Reset field choices whenever the displayed conflict changes
-  useEffect(() => {
-    if (!current) return;
-    const conflictingFields = current.conflict_conflicting_fields ?? [];
-    const initial: Record<string, FieldChoice> = {};
-    for (const f of conflictingFields) {
-      initial[f] = 'local'; // default: prefer your own changes
+  // Reset fieldChoices when the current conflict changes — render-time
+  // prev pattern avoids set-state-in-effect (the prior version queued
+  // through a 0-delay setTimeout to dodge React's warning, which only
+  // moved the cascade off the same tick).
+  const [prevCurrentKey, setPrevCurrentKey] = useState<string | undefined>(undefined);
+  const currentKey = current ? `${currentIndex}|${current.id ?? ''}` : undefined;
+  if (prevCurrentKey !== currentKey) {
+    setPrevCurrentKey(currentKey);
+    if (current) {
+      const conflictingFields = current.conflict_conflicting_fields ?? [];
+      const initial: Record<string, FieldChoice> = {};
+      for (const f of conflictingFields) {
+        initial[f] = 'local';
+      }
+      setFieldChoices(initial);
     }
-    setTimeout(() => setFieldChoices(initial), 0);
-  }, [currentIndex, current]);
+  }
 
   const advanceOrClose = useCallback(
     (resolved: PendingMutation[]) => {

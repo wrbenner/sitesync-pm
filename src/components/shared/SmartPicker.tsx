@@ -220,8 +220,13 @@ export function SmartPicker<T = unknown>({
     }
   }
 
-  // Reset activeIdx when query changes
-  useEffect(() => { setActiveIdx(0) }, [query])
+  // Reset activeIdx when query changes — react.dev "compare prev"
+  // pattern avoids set-state-in-effect cascading renders.
+  const [prevQuery, setPrevQuery] = useState(query)
+  if (prevQuery !== query) {
+    setPrevQuery(query)
+    setActiveIdx(0)
+  }
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>

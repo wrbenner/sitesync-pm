@@ -305,14 +305,12 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
   }, [location.pathname])
 
   // ---- Debounced Orama search ----
+  // The empty-query branch was setting state synchronously inside the
+  // effect (set-state-in-effect). Lifted that into the render-time
+  // prev-pattern below so the effect only runs the actual fetch.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-
-    if (!query.trim()) {
-      setSearchResults([])
-      setSearching(false)
-      return
-    }
+    if (!query.trim()) return
 
     setSearching(true)
     debounceRef.current = setTimeout(async () => {
@@ -331,13 +329,24 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
     }
   }, [query])
 
-  // ---- Reset query when closing ----
-  useEffect(() => {
+  // Reset results when query goes empty OR when the palette closes.
+  // react.dev "compare prev" pattern avoids set-state-in-effect.
+  const [prevQuery, setPrevQuery] = useState(query)
+  if (prevQuery !== query) {
+    setPrevQuery(query)
+    if (!query.trim()) {
+      setSearchResults([])
+      setSearching(false)
+    }
+  }
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (prevOpen !== open) {
+    setPrevOpen(open)
     if (!open) {
       setQuery('')
       setSearchResults([])
     }
-  }, [open])   
+  }
 
   // ---- Helpers ----
   const goTo = useCallback((path: string) => {
