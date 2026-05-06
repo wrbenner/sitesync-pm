@@ -361,22 +361,32 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const fileInputRef = useRef<HTMLInputElement>(null)
   const questionRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-fill "from" when user detected
-  useEffect(() => {
+  // Auto-fill "from" when user detected — render-time prev pattern.
+  const [prevAutofillKey, setPrevAutofillKey] = useState<string | null>(null)
+  const autofillKey = currentUserContact ? `${currentUserContact.id ?? ''}` : null
+  if (prevAutofillKey !== autofillKey) {
+    setPrevAutofillKey(autofillKey)
     if (currentUserContact && !fromContact) {
       setFromContact(currentUserContact)
     }
-  }, [currentUserContact, fromContact])
+  }
 
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => questionRef.current?.focus(), 120)
-    } else {
-      // Reset all state
+  // Reset all state on close — render-time prev pattern; focus on open
+  // is a real side-effect and stays in an effect.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (prevOpen !== open) {
+    setPrevOpen(open)
+    if (!open) {
       setQuestion(''); setDetails(''); setAssignee(null); setManualAssignee(''); setFromContact(null)
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())
       setSending(false); setShowMore(false)
+    }
+  }
+  useEffect(() => {
+    if (open) {
+      const id = setTimeout(() => questionRef.current?.focus(), 120)
+      return () => clearTimeout(id)
     }
   }, [open])
 

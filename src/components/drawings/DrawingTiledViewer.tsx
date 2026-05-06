@@ -1167,11 +1167,14 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     },
   );
   // When the user navigates between sheets in the same viewer instance, sync
-  // the local calibration to the new sheet's persisted ratio.
-  useEffect(() => {
+  // Sync local calibration to the new sheet's persisted ratio when the
+  // drawing changes — render-time prev pattern avoids set-state-in-effect.
+  const [prevDrawing, setPrevDrawing] = useState(drawing);
+  if (prevDrawing !== drawing) {
+    setPrevDrawing(drawing);
     const persisted = (drawing as { scale_ratio?: number | null }).scale_ratio;
     setCalibrationScale(typeof persisted === 'number' && persisted > 0 ? persisted : null);
-  }, [drawing]);
+  }
   const persistCalibration = useCallback(
     (ratio: number) => {
       setCalibrationScale(ratio);
@@ -1430,10 +1433,13 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
     return formatFeetInches(realIn * 0.4);
   }, [viewportBounds, containerSize.width, imageSize.width, calibrationScale, scaleRatioText]);
 
-  // Selection is only meaningful in the select tool — any other tool clears it.
-  useEffect(() => {
+  // Selection is only meaningful in the select tool — render-time
+  // prev pattern avoids set-state-in-effect.
+  const [prevActiveTool, setPrevActiveTool] = useState(activeTool);
+  if (prevActiveTool !== activeTool) {
+    setPrevActiveTool(activeTool);
     if (activeTool !== 'select') setSelectedId(null);
-  }, [activeTool]);
+  }
 
   // Delete/remove the selected annotation. Handles both persisted (DB) and local unsaved items.
   const handleDeleteSelected = useCallback(() => {
@@ -1451,24 +1457,32 @@ export const DrawingTiledViewer: React.FC<DrawingTiledViewerProps> = ({
   }, [selectedId, localAnnotations, deleteMarkup, drawing.id]);
 
   // ── First-use tool hints: flash a coach mark once per tool per browser session ──
+  // Compute the next hint synchronously during render via the prev pattern;
+  // sessionStorage reads/writes happen during the same render but are
+  // idempotent (the seen-flag is stable per session).
   const [hintTool, setHintTool] = useState<MarkupTool | null>(null);
-  useEffect(() => {
-    if (activeTool === 'select') { setHintTool(null); return; }
-    try {
-      const key = 'sitesync.tiledViewer.hinted';
-      const raw = sessionStorage.getItem(key);
-      const seen: Record<string, true> = raw ? JSON.parse(raw) : {};
-      if (!seen[activeTool]) {
-        seen[activeTool] = true;
-        sessionStorage.setItem(key, JSON.stringify(seen));
+  const [prevHintTool, setPrevHintTool] = useState(activeTool);
+  if (prevHintTool !== activeTool) {
+    setPrevHintTool(activeTool);
+    if (activeTool === 'select') {
+      setHintTool(null);
+    } else {
+      try {
+        const key = 'sitesync.tiledViewer.hinted';
+        const raw = sessionStorage.getItem(key);
+        const seen: Record<string, true> = raw ? JSON.parse(raw) : {};
+        if (!seen[activeTool]) {
+          seen[activeTool] = true;
+          sessionStorage.setItem(key, JSON.stringify(seen));
+          setHintTool(activeTool);
+        } else {
+          setHintTool(null);
+        }
+      } catch {
         setHintTool(activeTool);
-      } else {
-        setHintTool(null);
       }
-    } catch {
-      setHintTool(activeTool);
     }
-  }, [activeTool]);
+  }
 
   // ── Auto-save: debounce saves after 1.5s of inactivity ────────────────
   // Using a ref-held timer avoids recreating the timeout identity every render.

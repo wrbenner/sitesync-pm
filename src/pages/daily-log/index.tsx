@@ -184,10 +184,14 @@ const EditableCell: React.FC<EditableCellProps> = ({
   const [draft, setDraft] = useState<string>(value == null ? '' : String(value));
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Keep draft in sync if upstream value changes while not editing.
-  useEffect(() => {
-    if (!editing) setDraft(value == null ? '' : String(value));
-  }, [value, editing]);
+  // Keep draft in sync if upstream value changes while not editing —
+  // render-time prev pattern.
+  const valueKey = value == null ? '' : String(value);
+  const [prevValueKey, setPrevValueKey] = useState(valueKey);
+  if (prevValueKey !== valueKey) {
+    setPrevValueKey(valueKey);
+    if (!editing) setDraft(valueKey);
+  }
 
   useEffect(() => {
     if (editing) {

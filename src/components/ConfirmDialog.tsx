@@ -80,12 +80,21 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   // Lock body scroll while open. Auto-focus Cancel (safer default —
   // hitting Enter accidentally cancels rather than confirms).
+  // Reset typed/submitting on open transition — render-time prev
+  // pattern avoids set-state-in-effect; the body-overflow lock and
+  // focus side-effects stay in the effect.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (prevOpen !== open) {
+    setPrevOpen(open)
+    if (open) {
+      setTyped('')
+      setSubmitting(false)
+    }
+  }
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    setTyped('')
-    setSubmitting(false)
     const t = setTimeout(() => cancelRef.current?.focus(), 60)
     return () => {
       document.body.style.overflow = prev

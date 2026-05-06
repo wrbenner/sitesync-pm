@@ -217,13 +217,16 @@ const CaptureOverlay: React.FC<CaptureOverlayProps> = ({ open, onClose, projectI
   const [busy, setBusy] = useState(false);
   const createCapture = useCreateFieldCapture();
 
-  // Reset on open
-  useEffect(() => {
-    if (!open) return;
-    setStage('idle');
-    setPreview(null); setFile(null); setCaption('');
-    setAiCategory(''); setAiTags([]); setEditTag(null);
-  }, [open]);
+  // Reset on open — render-time prev pattern.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (open) {
+      setStage('idle');
+      setPreview(null); setFile(null); setCaption('');
+      setAiCategory(''); setAiTags([]); setEditTag(null);
+    }
+  }
 
   const onPickFile = (f: File) => {
     setFile(f);

@@ -60,12 +60,15 @@ function AddCrewModal({ open, onClose, projectId, onCreated }: AddCrewModalProps
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Reset form on close — render-time prev pattern.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (!open) {
       setForm({ name: '', trade: '', size: '' });
       setErr(null);
     }
-  }, [open]);
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

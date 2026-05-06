@@ -2,7 +2,7 @@
 // Per-org brand surface for emails, magic-link pages, and sealed PDFs.
 // Logo URL, primary/secondary color, support contacts, sender identity.
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
@@ -45,7 +45,12 @@ export const BrandingAdminPage: React.FC<Props> = ({ organizationId }) => {
   });
 
   const [draft, setDraft] = useState<Partial<BrandingRow>>({});
-  useEffect(() => { if (row) setDraft(row); }, [row]);
+  // Sync draft to fetched row — render-time prev pattern.
+  const [prevRow, setPrevRow] = useState(row);
+  if (prevRow !== row) {
+    setPrevRow(row);
+    if (row) setDraft(row);
+  }
 
   const errs: Partial<Record<keyof BrandingRow, string>> = {};
   if (draft.primary_color && !HEX_RE.test(draft.primary_color)) errs.primary_color = 'Use #RRGGBB';

@@ -2,7 +2,7 @@
 // IT director / org admin pastes IdP metadata, picks attribute mappings,
 // runs in test mode against a single user, then enables org-wide.
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
@@ -52,7 +52,12 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
   });
 
   const [draft, setDraft] = useState<Partial<SsoConfigRow>>({});
-  useEffect(() => { if (cfg) setDraft(cfg); }, [cfg]);
+  // Sync draft to fetched cfg — render-time prev pattern.
+  const [prevCfg, setPrevCfg] = useState(cfg);
+  if (prevCfg !== cfg) {
+    setPrevCfg(cfg);
+    if (cfg) setDraft(cfg);
+  }
 
   const protocol = draft.protocol ?? 'saml';
   const samlUrlCheck = draft.saml_sso_url

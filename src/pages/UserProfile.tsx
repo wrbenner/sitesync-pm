@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Mail, Phone, Building2, Briefcase, Shield, Camera,
@@ -272,7 +272,10 @@ export default function UserProfile() {
   const [pushNotifs, setPushNotifs] = useState(true);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
-  useEffect(() => {
+  // Sync form state to fetched profile — render-time prev pattern.
+  const [prevProfile, setPrevProfile] = useState(profile);
+  if (prevProfile !== profile) {
+    setPrevProfile(profile);
     if (profile) {
       setFirstName(profile.first_name || '');
       setLastName(profile.last_name || '');
@@ -280,7 +283,7 @@ export default function UserProfile() {
       setJobTitle(profile.job_title || '');
       setCompany(profile.company || '');
     }
-  }, [profile]);
+  }
 
   const handleSave = useCallback(async (field: string) => {
     if (!user?.id) return;

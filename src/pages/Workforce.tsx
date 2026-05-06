@@ -6,7 +6,7 @@
  * mount + window-focus; check-ins materialize through `time_entries` rows.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -223,7 +223,10 @@ function AddMemberModal({ open, onClose, projectId, knownCrews }: AddMemberModal
   const [hourlyRate, setHourlyRate] = useState('');
   const [company, setCompany] = useState('');
 
-  useEffect(() => {
+  // Reset form on close — render-time prev pattern.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
     if (!open) {
       setName('');
       setTrade('');
@@ -231,7 +234,7 @@ function AddMemberModal({ open, onClose, projectId, knownCrews }: AddMemberModal
       setHourlyRate('');
       setCompany('');
     }
-  }, [open]);
+  }
 
   if (!open) return null;
 

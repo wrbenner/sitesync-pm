@@ -500,27 +500,32 @@ const WarrantyFormModal: React.FC<{
 }> = ({ open, initial, onClose, onSubmit, submitting }) => {
   const [form, setForm] = useState<WarrantyFormValues>(blankWarranty)
 
-  React.useEffect(() => {
-    if (!open) return
-    if (initial) {
-      setForm({
-        item: initial.item ?? '',
-        manufacturer: initial.manufacturer ?? '',
-        subcontractor: initial.subcontractor ?? '',
-        trade: initial.trade ?? '',
-        warranty_type: initial.warranty_type ?? '',
-        start_date: initial.start_date ?? '',
-        expiration_date: initial.expiration_date ?? '',
-        duration_years: initial.duration_years != null ? String(initial.duration_years) : '',
-        document_url: initial.document_url ?? '',
-        coverage_description: initial.coverage_description ?? '',
-        contact_name: initial.contact_name ?? '',
-        contact_email: initial.contact_email ?? '',
-      })
-    } else {
-      setForm(blankWarranty)
+  // Sync form to initial when modal opens — render-time prev pattern.
+  const formKey = `${open}|${initial ? (initial as { id?: string }).id ?? 'edit' : 'blank'}`
+  const [prevFormKey, setPrevFormKey] = useState(formKey)
+  if (prevFormKey !== formKey) {
+    setPrevFormKey(formKey)
+    if (open) {
+      if (initial) {
+        setForm({
+          item: initial.item ?? '',
+          manufacturer: initial.manufacturer ?? '',
+          subcontractor: initial.subcontractor ?? '',
+          trade: initial.trade ?? '',
+          warranty_type: initial.warranty_type ?? '',
+          start_date: initial.start_date ?? '',
+          expiration_date: initial.expiration_date ?? '',
+          duration_years: initial.duration_years != null ? String(initial.duration_years) : '',
+          document_url: initial.document_url ?? '',
+          coverage_description: initial.coverage_description ?? '',
+          contact_name: initial.contact_name ?? '',
+          contact_email: initial.contact_email ?? '',
+        })
+      } else {
+        setForm(blankWarranty)
+      }
     }
-  }, [open, initial])
+  }
 
   const setField = (k: keyof WarrantyFormValues) => (v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -729,11 +734,14 @@ const OMUploadModal: React.FC<{
   const [file, setFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  React.useEffect(() => {
+  // Reset form when modal closes — render-time prev pattern.
+  const [prevOpenUploadDoc, setPrevOpenUploadDoc] = useState(open)
+  if (prevOpenUploadDoc !== open) {
+    setPrevOpenUploadDoc(open)
     if (!open) {
       setSubcontractor(''); setDescription(''); setTrade(''); setFile(null)
     }
-  }, [open])
+  }
 
   const handleSubmit = () => {
     if (!file) { toast.error('Pick a file to upload'); return }
@@ -1074,9 +1082,17 @@ const SignatureModal: React.FC<{
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
 
-  React.useEffect(() => {
+  // Reset signoff form on close — split state reset (render-time prev
+  // pattern) from the canvas-clear side effect (effect).
+  const [prevOpenSignoff, setPrevOpenSignoff] = useState(open)
+  if (prevOpenSignoff !== open) {
+    setPrevOpenSignoff(open)
     if (!open) {
       setName(''); setTitle('')
+    }
+  }
+  React.useEffect(() => {
+    if (!open) {
       drawing.current = false
       const c = canvasRef.current
       if (c) {

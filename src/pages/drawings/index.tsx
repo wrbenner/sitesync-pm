@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Upload, ScanSearch, FolderOpen, MessageSquare, Ruler } from 'lucide-react';
@@ -282,17 +282,22 @@ const DrawingsPage: React.FC = () => {
   // run after a user-initiated close so the panel can't immediately re-open
   // while the URL update is still in flight (react-router v7 may commit
   // the navigate in a transition, separate from the state batch).
-  const userJustClosedRef = useRef(false);
-  React.useEffect(() => {
-    if (userJustClosedRef.current) {
-      userJustClosedRef.current = false;
-      return;
+  // Use state (not ref) for the user-just-closed one-shot so the
+  // sync logic can read it during render without triggering
+  // react-hooks/refs.
+  const [userJustClosed, setUserJustClosed] = useState(false);
+  // Sync selectedDrawing to deep-link target — render-time prev pattern.
+  const deepLinkKey = `${deepLinkedId ?? ''}|${selectedDrawing?.id ?? ''}`;
+  const [prevDeepLinkKey, setPrevDeepLinkKey] = useState(deepLinkKey);
+  if (prevDeepLinkKey !== deepLinkKey) {
+    setPrevDeepLinkKey(deepLinkKey);
+    if (userJustClosed) {
+      setUserJustClosed(false);
+    } else if (deepLinkedId && drawings && selectedDrawing?.id !== deepLinkedId) {
+      const target = drawings.find((d) => String(d.id) === deepLinkedId);
+      if (target) setSelectedDrawing(target as unknown as DrawingItem);
     }
-    if (!deepLinkedId || !drawings) return;
-    if (selectedDrawing?.id === deepLinkedId) return;
-    const target = drawings.find((d) => String(d.id) === deepLinkedId);
-    if (target) setSelectedDrawing(target as unknown as DrawingItem);
-  }, [deepLinkedId, drawings, selectedDrawing?.id]);
+  }
 
   // Keep URL in sync with the active detail panel so links are shareable.
   React.useEffect(() => {
@@ -418,11 +423,15 @@ const DrawingsPage: React.FC = () => {
     { enabled: !!selectedDrawing?.id },
   );
 
-  // Reset revision view when selecting a different drawing
-  React.useEffect(() => {
+  // Reset revision view when selecting a different drawing —
+  // render-time prev pattern.
+  const selectedDrawingId = selectedDrawing?.id;
+  const [prevSelectedDrawingId, setPrevSelectedDrawingId] = useState(selectedDrawingId);
+  if (prevSelectedDrawingId !== selectedDrawingId) {
+    setPrevSelectedDrawingId(selectedDrawingId);
     setViewingRevisionNum(null);
     setViewRevPdfUrl(null);
-  }, [selectedDrawing?.id]);
+  }
 
   // ── Backfill disciplines from sheet prefix ──────────────
   const backfillRan = React.useRef(false);
@@ -1721,7 +1730,7 @@ const DrawingsPage: React.FC = () => {
             // we set a ref so the deep-link reader skips one run while
             // the URL clears, otherwise the panel re-opens mid-frame and
             // looks like it's "glitching".
-            userJustClosedRef.current = true;
+            setUserJustClosed(true);
             setSelectedDrawing(null);
             setSearchParams((prev) => {
               const next = new URLSearchParams(prev);

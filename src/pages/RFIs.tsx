@@ -375,14 +375,18 @@ const RFIsPage: React.FC = () => {
   const [aiSuggestionLoading, setAiSuggestionLoading] = useState(false);
   const [aiSuggestionError, setAiSuggestionError] = useState(false);
 
-  // Reset response state when detail panel switches
-  useEffect(() => {
+  // Reset response state when detail panel switches — render-time
+  // prev pattern.
+  const selectedRfiId = selectedRfi?.id;
+  const [prevSelectedRfiId, setPrevSelectedRfiId] = useState(selectedRfiId);
+  if (prevSelectedRfiId !== selectedRfiId) {
+    setPrevSelectedRfiId(selectedRfiId);
     setAiSuggestion(null);
     setAiSuggestionLoading(false);
     setAiSuggestionError(false);
     setResponseText('');
     setResponseSubmitting(false);
-  }, [selectedRfi?.id]);
+  }
 
   useEffect(() => {
     if (!rfisLoading && !announcedLoadRef.current) {

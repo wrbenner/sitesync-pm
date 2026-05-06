@@ -140,7 +140,13 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const firstFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(null)
 
-  // Load draft on open
+  // Reset draftLoaded flag on close — render-time prev pattern; the
+  // async draft fetch stays in the effect because it's a real I/O.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (prevOpen !== open) {
+    setPrevOpen(open)
+    if (!open) setDraftLoaded(false)
+  }
   useEffect(() => {
     if (open && draftKey && !draftLoaded) {
       loadDraft(draftKey).then((draft) => {
@@ -149,9 +155,6 @@ export function EntityFormModal<T extends z.ZodObject<z.ZodRawShape>>({
         }
         setDraftLoaded(true)
       })
-    }
-    if (!open) {
-      setDraftLoaded(false)
     }
   }, [open, draftKey, draftLoaded])
 
