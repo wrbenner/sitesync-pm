@@ -45,7 +45,7 @@ export function useCreateLienWaiver() {
     }) => {
       const { data, error } = await supabase
         .from('lien_waivers')
-        .insert(payload as any)
+        .insert(payload)
         .select()
         .single()
       if (error) throw error
