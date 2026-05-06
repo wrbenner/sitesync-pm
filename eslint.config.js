@@ -126,7 +126,15 @@ export default defineConfig([
       'react-hooks/void-use-memo': 'warn',
       'react-hooks/memoized-effect-dependencies': 'warn',
       'react-hooks/exhaustive-effect-dependencies': 'warn',
-      'react-hooks/memo-dependencies': 'warn',
+      // memo-dependencies is preset-Off in eslint-plugin-react-hooks
+      // — the React team explicitly chose not to ship it on. The
+      // messages it produces don't identify which specific dep is
+      // extra/missing, only that the dep array shape disagrees with
+      // the compiler's inference. exhaustive-deps (which is at default
+      // error) covers the actionable cases on useEffect; the
+      // useMemo/useCallback variant adds noise without specificity.
+      // Off, with rationale.
+      'react-hooks/memo-dependencies': 'off',
       'react-hooks/gating': 'error',
       'react-hooks/globals': 'error',
       'react-hooks/fbt': 'warn',
