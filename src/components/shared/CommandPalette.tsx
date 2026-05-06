@@ -309,6 +309,7 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
   // effect (set-state-in-effect). Lifted that into the render-time
   // prev-pattern below so the effect only runs the actual fetch.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- debounced async-fetch effect: searching/searchResults mirror the searchAll lifecycle */
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (!query.trim()) return
 
@@ -327,6 +328,7 @@ export function CommandPalette({ open: controlledOpen, onClose }: CommandPalette
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [query])
 
   // Reset results when query goes empty OR when the palette closes.

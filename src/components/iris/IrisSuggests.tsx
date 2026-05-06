@@ -23,6 +23,7 @@ export const IrisSuggests: React.FC<IrisSuggestsProps> = ({ entityType, entityId
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: suggestions/loading mirror the iris-suggest fetch lifecycle */
     let mounted = true
     setLoading(true)
     ;(async () => {
@@ -47,6 +48,7 @@ export const IrisSuggests: React.FC<IrisSuggestsProps> = ({ entityType, entityId
     return () => {
       mounted = false
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [entityType, entityId, projectId])
 
   if (loading) return null

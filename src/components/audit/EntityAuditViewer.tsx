@@ -78,6 +78,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
   }, [rows]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async verification effect: chain/verifying mirror the verifyChain promise lifecycle */
     let cancelled = false;
     if (orderedRows.length === 0) {
       setChain({ ok: true, total: 0, gaps: [] });
@@ -89,6 +90,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
       .then((r) => { if (!cancelled) { setChain(r); setVerifying(false); } })
       .catch(() => { if (!cancelled) setVerifying(false); });
     return () => { cancelled = true; };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [orderedRows]);
 
   const exportSealed = async () => {

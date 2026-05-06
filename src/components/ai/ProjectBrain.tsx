@@ -527,10 +527,12 @@ export const ProjectBrain: React.FC = () => {
   }, [projectId]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; bootstrap fetches when drawer opens */
     if (open && projectId) {
       refreshStats();
       refreshDocuments();
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, projectId, refreshStats, refreshDocuments]);
 
   useEffect(() => {

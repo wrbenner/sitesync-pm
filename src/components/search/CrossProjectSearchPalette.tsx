@@ -74,6 +74,7 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
     if (parsed.empty || parsed.tooShort) setResults([])
   }
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: results/loading/activeIdx mirror the runSearch fetch lifecycle */
     if (parsed.empty || parsed.tooShort) return
     let cancelled = false
     setLoading(true)
@@ -83,6 +84,7 @@ export const CrossProjectSearchPalette: React.FC<Props> = ({
       setActiveIdx(0)
     }).finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [parsed.tsqueryInput, parsed.empty, parsed.tooShort, runSearch])
 
   if (!open) return null

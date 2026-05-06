@@ -207,6 +207,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
   }
   // Camera + voice are real side effects — keep in an effect.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- camera/voice subscription effect: voice.reset() dispatches into the voice hook's internal state */
     if (open) {
       startCamera();
     } else {
@@ -214,6 +215,7 @@ const QuickRFI: React.FC<QuickRFIProps> = ({ open, onClose }) => {
       voice.reset();
     }
     return () => { stopCamera(); };
+    /* eslint-enable react-hooks/set-state-in-effect */
     // startCamera/stopCamera/voice deps intentionally excluded — they
     // close over MediaStream refs and react-tracking them would
     // restart the camera on every render.

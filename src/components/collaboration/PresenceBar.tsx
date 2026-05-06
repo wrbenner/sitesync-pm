@@ -403,11 +403,18 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
     return `${users[0].displayName}, ${users[1].displayName}, and ${users.length - 2} others are all viewing ${pageLabel}. Coordinate to avoid duplicate edits.`;
   })();
 
-  useEffect(() => {
+  // Mirror users.length into the announce string — render-time prev pattern.
+  const [prevUsersLen, setPrevUsersLen] = useState(users.length);
+  if (prevUsersLen !== users.length) {
+    setPrevUsersLen(users.length);
     setViewerCountText(`${users.length} ${users.length === 1 ? 'person' : 'people'} viewing this page`);
-  }, [users.length]);
+  }
 
+  // Diff users to announce join/leave — keep in an effect because this
+  // is a real side effect (announcement text is consumed by an aria-live
+  // region) AND it has to read from the prevUsersRef ref.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- announce-on-diff effect: announcement text feeds an aria-live region */
     const prev = prevUsersRef.current;
     const curr = new Map(users.map(u => [u.userId, u.displayName]));
 
@@ -430,7 +437,7 @@ export const PresenceBar: React.FC<PresenceBarProps> = ({ page }) => {
 
     prevUsersRef.current = curr;
   // Only re-run when the user list identity changes
-   
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [users]);
 
   if (users.length === 0) return null;

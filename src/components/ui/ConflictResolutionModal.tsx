@@ -648,14 +648,17 @@ export const LiveEditConflictModal: React.FC<LiveEditConflictModalProps> = ({
   const autoMergedKeys = diffKeys.filter((k) => !conflictingFields.has(k));
   const trueConflictKeys = diffKeys.filter((k) => conflictingFields.has(k));
 
-  // Initialise field choices to 'local' whenever the modal opens
-  useEffect(() => {
-    if (!open) return;
-    const initial: Record<string, FieldChoice> = {};
-    for (const k of trueConflictKeys) initial[k] = 'local';
-    setFieldChoices(initial);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // Initialise field choices to 'local' whenever the modal opens —
+  // render-time prev pattern.
+  const [prevOpenInit, setPrevOpenInit] = useState(open);
+  if (prevOpenInit !== open) {
+    setPrevOpenInit(open);
+    if (open) {
+      const initial: Record<string, FieldChoice> = {};
+      for (const k of trueConflictKeys) initial[k] = 'local';
+      setFieldChoices(initial);
+    }
+  }
 
   const handleKeepMine = () => {
     onResolve(localState);

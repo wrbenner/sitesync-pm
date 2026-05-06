@@ -111,7 +111,7 @@ export default defineConfig([
       //
       // rules-of-hooks stays at default (error) — it catches real
       // runtime bugs independent of the compiler.
-      'react-hooks/set-state-in-effect': 'warn', // Phase 3 — see breakdown above
+      'react-hooks/set-state-in-effect': 'error',
       'react-hooks/set-state-in-render': 'error',
       'react-hooks/no-deriving-state-in-effects': 'error',
       'react-hooks/refs': 'error',

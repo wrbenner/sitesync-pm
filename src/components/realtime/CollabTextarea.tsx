@@ -37,7 +37,7 @@ export const CollabTextarea: React.FC<Props> = ({
   const [liveblocksReady, setLiveblocksReady] = useState<boolean | null>(null);
 
   useEffect(() => {
-     
+    /* eslint-disable react-hooks/set-state-in-effect -- async dynamic-import effect: liveblocksReady mirrors the import() probe result */
     let cancelled = false;
     if (!liveblocksRoomId) {
       setLiveblocksReady(false);
@@ -49,6 +49,7 @@ export const CollabTextarea: React.FC<Props> = ({
       .then(() => { if (!cancelled) setLiveblocksReady(true); })
       .catch(() => { if (!cancelled) setLiveblocksReady(false); });
     return () => { cancelled = true; };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [liveblocksRoomId]);
 
   return (

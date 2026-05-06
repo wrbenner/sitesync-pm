@@ -545,16 +545,19 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
 
   // Track mobile viewport
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- matchMedia subscription effect: isMobile mirrors a live device breakpoint */
     const mq = window.matchMedia('(max-width: 767px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     setIsMobile(mq.matches)
     return () => mq.removeEventListener('change', handler)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
 
   // Auto-fetch weather on modal open (and when date changes) using project coordinates.
   // Uses Open-Meteo (free, no API key). Results are cached in localStorage.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: weather state mirrors fetch result; spans line ~590 fallback effect too */
     if (!open || isSubmittedView) return
     if (!projectLat || !projectLon) return
     setWeatherLoading(true)
@@ -580,11 +583,13 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         setAutoFilledFields(new Set(['weather_condition', 'temperature_high', 'temperature_low', 'wind_speed', 'precipitation_inches']))
       }
     }).finally(() => setWeatherLoading(false))
+    /* eslint-enable react-hooks/set-state-in-effect */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form.date, projectLat, projectLon])
 
   // Fallback: no coordinates provided — use fetchWeather() cache for current conditions
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O fallback effect: weather state mirrors fetchWeather() result */
     if (!open || isSubmittedView) return
     if (projectLat && projectLon) return
     setWeatherLoading(true)
@@ -605,7 +610,7 @@ const CreateDailyLogModal: React.FC<CreateDailyLogModalProps> = ({
         setAutoFilledFields(new Set(['weather_condition', 'temperature_high', 'temperature_low', 'wind_speed']))
       }
     }).finally(() => setWeatherLoading(false))
-   
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, isSubmittedView, projectLat, projectLon])
 
   const set =<K extends keyof CreateDailyLogFormData>(k: K, v: CreateDailyLogFormData[K]) =>
