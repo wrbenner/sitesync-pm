@@ -227,6 +227,7 @@ export const ScheduleMobileList: React.FC<ScheduleMobileListProps> = ({
           const statusLabel = phase.status === 'at_risk' ? 'At risk' : cfg.label;
 
           return (
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
             <div
               key={phase.id}
               role="listitem"

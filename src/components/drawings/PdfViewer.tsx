@@ -1107,6 +1107,7 @@ const CalibrationModal: React.FC<{ pxDistance: number; onSubmit: (inches: number
     onSubmit(totalInches);
   };
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
     <div
       role="dialog"
       aria-modal="true"
@@ -1137,6 +1138,7 @@ const CalibrationModal: React.FC<{ pxDistance: number; onSubmit: (inches: number
           <label style={{ flex: 1 }}>
             <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Feet</span>
             <input
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               autoFocus
               type="number"
               inputMode="numeric"

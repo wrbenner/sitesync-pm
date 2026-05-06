@@ -1172,6 +1172,7 @@ const AddEquipmentModal: React.FC<AddEquipmentModalProps> = ({ projectId, onClos
   }
   const input: React.CSSProperties = { width: '100%', padding: '8px 12px', border: `1px solid ${colors.borderDefault}`, borderRadius: borderRadius.base, marginBottom: 12, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' };
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
     <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)' }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ backgroundColor: '#fff', borderRadius: borderRadius.lg, padding: 24, width: '100%', maxWidth: 480 }}>
         <h2 style={{ margin: 0, marginBottom: 16, fontSize: 18 }}>Add Equipment</h2>

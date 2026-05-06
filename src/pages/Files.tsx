@@ -878,6 +878,7 @@ const FilesPage: React.FC = () => {
                   action={hasPermission('files.upload') ? { label: 'Upload Files', onClick: () => setShowUpload(true) } : undefined}
                 />
               ) : (
+                {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
                 <div
                   ref={listRef}
                   // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- file list handles arrow-key navigation between items

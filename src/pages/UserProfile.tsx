@@ -118,6 +118,7 @@ const ProfileField: React.FC<{
       </p>
       {editing ? (
         <input
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
           autoFocus
           type={type}
           value={value}

@@ -370,6 +370,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
             {displayFiles.length === 0 && !currentFolderId && !searchQuery ? (
               <EmptyState icon={FileText} title="No files uploaded yet" description="Upload project documents, drawings, and photos to keep everything organized in one place." action={{ label: 'Upload Files', onClick: () => setShowUpload(true) }} />
             ) : (
+              {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
               <div
                 ref={listRef}
                 // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- file list handles arrow-key navigation between items

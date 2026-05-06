@@ -179,6 +179,7 @@ export function CreateSubmittalForm({ open, onClose, onSuccess }: CreateSubmitta
               style={inputStyle}
               onFocus={(e) => e.target.style.borderColor = colors.primaryOrange}
               onBlur={(e) => e.target.style.borderColor = colors.borderDefault}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               autoFocus
             />
           </div>

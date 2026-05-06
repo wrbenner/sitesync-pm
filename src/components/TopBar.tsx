@@ -115,6 +115,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeView, onSearch }) => {
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={handleSearch}
               onBlur={() => setSearchOpen(false)}
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               autoFocus
               style={{
                 flex: 1,

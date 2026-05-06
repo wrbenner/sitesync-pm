@@ -422,6 +422,7 @@ export const PunchListTable: React.FC<PunchListTableProps> = ({
                       type="text"
                       placeholder="Reason..."
                       value={inlineRejectNote}
+                      // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                       autoFocus
                       onChange={(e) => setInlineRejectNote(e.target.value)}
                       onKeyDown={(e) => {

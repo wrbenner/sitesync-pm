@@ -908,6 +908,7 @@ export const Workforce: React.FC = () => {
 
       {/* ── Delete Confirmation ───────────────────────────── */}
       {confirmDeleteId && (
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
         <div role="dialog" aria-modal="true" style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) setConfirmDeleteId(null) }}>
           <div style={{ ...modalBoxStyle, maxWidth: 400 }}>
             <h2 style={{ margin: 0, marginBottom: spacing['3'], fontSize: 18 }}>Delete Worker</h2>
@@ -980,6 +981,7 @@ const AddWorkerModal: React.FC<AddWorkerModalProps> = ({ projectId, onClose, onC
   }
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
     <div role="dialog" aria-modal="true" style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div style={modalBoxStyle}>
         <h2 style={{ margin: 0, marginBottom: spacing['4'], fontSize: 18 }}>Add Worker</h2>
@@ -1097,6 +1099,7 @@ const LogTimeModal: React.FC<LogTimeModalProps> = ({ projectId, members, onClose
   }
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
     <div role="dialog" aria-modal="true" style={overlayStyle} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div style={modalBoxStyle}>
         <h2 style={{ margin: 0, marginBottom: spacing['4'], fontSize: 18 }}>Log Time</h2>

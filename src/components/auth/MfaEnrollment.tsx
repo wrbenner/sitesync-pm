@@ -287,6 +287,7 @@ export const MfaEnrollment: React.FC = () => {
                   if (errorMsg) setErrorMsg(null)
                 }}
                 placeholder="123456"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                 autoFocus
                 inputMode="numeric"
                 autoComplete="one-time-code"

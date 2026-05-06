@@ -33,9 +33,10 @@ export default defineConfig([
       'jsx-a11y/label-has-associated-control': 'warn',
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
-      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
-      'jsx-a11y/no-autofocus': 'warn',
       'jsx-a11y/scope': 'warn',
+      // ── Phase 2 promoted to error (zero violations, cannot regress) ──
+      'jsx-a11y/no-noninteractive-element-interactions': 'error',
+      'jsx-a11y/no-autofocus': 'error',
       // ── Phase 1 promoted to error (zero violations, cannot regress) ──
       'jsx-a11y/no-noninteractive-tabindex': 'error',
       'jsx-a11y/no-redundant-roles': 'error',

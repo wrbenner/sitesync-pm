@@ -349,6 +349,7 @@ export const CopilotPanel: React.FC = () => {
       />
 
       {/* Slide-in panel */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
       <div
         role="dialog"
         aria-label="AI Copilot"

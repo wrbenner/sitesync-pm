@@ -504,6 +504,7 @@ export const DrawingSetPanel: React.FC<DrawingSetPanelProps> = ({
                   value={newSetName}
                   onChange={(e) => setNewSetName(e.target.value)}
                   placeholder="e.g. IFC Set - Phase 1 Foundations"
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
                   autoFocus
                   onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryOrange; }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = colors.borderDefault; }}

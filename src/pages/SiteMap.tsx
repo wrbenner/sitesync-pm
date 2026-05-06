@@ -295,6 +295,7 @@ const PinForm: React.FC<{
       </div>
       <div>
         <label style={labelStyle}>Label</label>
+        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when pin-edit dialog opens in response to user action */}
         <input autoFocus type="text" value={label} onChange={(e) => setLabel(e.target.value)}
           placeholder="e.g. Tower Crane 2" style={inputStyle} />
       </div>

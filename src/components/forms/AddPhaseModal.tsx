@@ -160,6 +160,7 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
     : colors.borderDefault;
 
   return (
+    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
     <div
       role="dialog" aria-modal="true" aria-labelledby="add-phase-title"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
@@ -211,6 +212,7 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
             <input
               type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="e.g. Foundation, Structural Steel, MEP Rough-In"
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- focus lands here when dialog/popover opens in response to user action
               disabled={submitting} required autoFocus
               style={inputBase}
               onFocus={focusHandler} onBlur={blurHandler}
