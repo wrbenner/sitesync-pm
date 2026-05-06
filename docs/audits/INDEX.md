@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-05 (Slice D + E parallel push receipt landed; 339 lib tests + 47 exhaustive-deps fixes; polish-push receipt; quality floor v3→v5)
+**Last updated:** 2026-05-05 (Bugatti close-out: typecheck 0 / eslint 0 / vitest 0-fail; tail-truncated regressions surfaced & fixed; iCloud-dup ignore unified across .gitignore + eslint + tsconfig + vitest)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -39,7 +39,7 @@ entries before starting work. Update this file when you add a new doc.
 | 50–60 | Soft pilot playbook substrate | `DAYS_50_60_PILOT_PLAYBOOK_RECEIPT_2026-05-04.md` | pilot_agreements migration + is_pilot_user() helper + agreement template v1 + standup template + provision-pilot-org.ts + ADR-006 standalone. Code substrate complete; Walker-side recruit/onboard/run pilot remains. |
 | 39+45+60 | Citations dedicated panels + voice linter wiring + pilot data export | `DAYS_39_45_60_FOLLOWUP_RECEIPT_2026-05-04.md` | 4 dedicated citation panels (daily_log/CO/spec/schedule_phase) + iris-call voice linter post-process with iris_voice_diffs logging + 11-case Deno/src parity tests + scripts/export-pilot-data.ts. 29 new tests; 170 total session tests green. |
 | Lap 2 close | Polish push (close-out + ESLint zero) | `POLISH_PUSH_2026-05-05_RECEIPT.md` | All gates green: typecheck 0; **lint 0 errors (Bugatti zero)**; tests 2781 passed / 0 failed (+19 fixed, +1 honest skip); bundle 3229 KB (under floor by 320). Floor v3→v5: bundleSizeKB 3550→3230, eslintErrors 480→0, testCount 1416→2781. |
-| Lap 2 pre-flight | Slice D + E parallel push (4-worktree session) | `SLICE_D_E_PARALLEL_PUSH_RECEIPT_2026-05-05.md` | Slice E: 339 lib tests across 12 files (riskEngine/safetyScoring/budgetComputations/criticalPath/hudCompliance/predictions/scheduleHealth/scheduleExport/conflictResolver/projectAnalytics/annotationGeometry/routeContext, all green in 2.29s). Slice D: 47 `react-hooks/exhaustive-deps` correctness sites across hooks/components/pages. Gitignore generalized for all single-digit iCloud duplicates. Typecheck held at 0. Did not auto-PR the 240-commit integration. |
+| Lap 2 pre-flight | Slice D + E parallel push + Bugatti close-out | `SLICE_D_E_PARALLEL_PUSH_RECEIPT_2026-05-05.md` | Slice E: 339 lib tests across 12 files. Slice D: 47 exhaustive-deps fixes. **Bugatti close-out** drove all gates to zero: typecheck 12→0 (real TS errors had been hidden by `tail`-truncated runs), eslint 8→0 (real bugs incl. unfinished `boldValues` feature, dead state, dead JSX, theme-token typo), vitest 12→0-fail (TZ-flake fix + iCloud test exclusion). Unified iCloud-duplicate ignore across `.gitignore` + `eslint.config.js` + `tsconfig.app.json` + `vitest.config.ts`. Did not auto-PR the 241-commit integration. |
 
 ---
 
