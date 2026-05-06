@@ -153,7 +153,7 @@ export const WhiteboardPage: React.FC = () => {
             }}
           />
         ) : (
-          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support
           <h1
             onClick={handleNameClick}
             title="Click to rename"

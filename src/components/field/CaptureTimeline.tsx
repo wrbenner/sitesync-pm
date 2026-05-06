@@ -40,7 +40,7 @@ export const CaptureTimeline: React.FC<CaptureTimelineProps> = ({ events, onSele
         const Icon = typeIcons[event.type];
         const dotColor = typeColors[event.type];
         return (
-          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- region/dialog/article/listitem element handles user-driven interaction with appropriate keyboard support */}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- listitem element is clickable via onSelect; key handler also defined
           <div
             key={event.id}
             role="listitem"
