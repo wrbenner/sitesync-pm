@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { PageContainer } from '../../components/Primitives';
+import { PageState } from '../../components/shared/PageState';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { fetchWeather, fetchWeatherForecast5Day } from '../../lib/weather';
 import type { WeatherData, WeatherDay } from '../../lib/weather';
@@ -95,7 +96,7 @@ const skel: React.CSSProperties = { ...skeletonStyle, borderRadius: borderRadius
 function DashboardSkeleton() {
   return (
     <PageContainer>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: `${spacing['12']} 0` }}>
+      <div role="status" aria-busy="true" aria-label="Loading dashboard" style={{ maxWidth: 1000, margin: '0 auto', padding: `${spacing['12']} 0` }}>
         <div style={{ ...skel, height: 32, width: 260, marginBottom: spacing['3'] }} />
         <div style={{ ...skel, height: 14, width: 180, marginBottom: spacing['12'], animationDelay: '0.08s' }} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['10'] }}>
@@ -112,7 +113,17 @@ function DashboardSkeleton() {
 const DashboardPage: React.FC = () => {
   const projectId = useProjectId();
   const setActiveProject = useProjectContext((s) => s.setActiveProject);
-  const { data: allProjects, isPending: projectsLoading } = useProjects();
+  const { data: allProjects, isPending: projectsLoading, isError: projectsError, refetch: refetchProjects } = useProjects();
+
+  // Fallback: if still loading after 4s, force-show the error/empty state so the
+  // skeleton never sticks. Covers environments where Supabase requests hang rather
+  // than fail fast (e.g. non-routable localhost URLs in containerised dev setups).
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+  useEffect(() => {
+    if (!projectsLoading) return;
+    const timer = setTimeout(() => setLoadTimedOut(true), 4_000);
+    return () => clearTimeout(timer);
+  }, [projectsLoading]);
 
   // Ensure a valid project is selected — but guard against infinite loops.
   // allProjects is a new array reference on every react-query refetch, so we
@@ -134,7 +145,23 @@ const DashboardPage: React.FC = () => {
     setActiveProject(fallbackId);
   }, [projectId, allProjects, setActiveProject]);
 
-  if (projectsLoading) return <DashboardSkeleton />;
+  if (projectsLoading && !loadTimedOut) return <DashboardSkeleton />;
+  if (projectsError) {
+    return (
+      <PageContainer>
+        <div style={{ maxWidth: 600, margin: '0 auto', paddingTop: spacing['12'] }}>
+          <PageState
+            status="error"
+            error={{
+              title: 'Could not load projects',
+              message: 'Check your internet connection and try again.',
+              onRetry: () => void refetchProjects(),
+            }}
+          />
+        </div>
+      </PageContainer>
+    );
+  }
   if (!allProjects || allProjects.length === 0) return <WelcomeOnboarding onProjectCreated={() => {}} />;
   return <DashboardInner />;
 };

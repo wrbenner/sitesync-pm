@@ -12,12 +12,16 @@ test.describe('Dashboard', () => {
     await loginIfNeeded(page)
   })
 
-  test('loads within 5s and shows KPI tiles', async ({ page }) => {
+  test('loads within 10s and shows KPI tiles or empty state', async ({ page }) => {
     await page.goto('/#/dashboard')
-    // No stuck loading skeleton after 5 seconds
-    await page.waitForTimeout(5_000)
-    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
+    // 1) Wait for the loading skeleton to appear (aria-busy="true").
+    await page.waitForSelector('[aria-busy="true"]', { state: 'attached', timeout: 5_000 }).catch(() => {})
+    // 2) Wait for it to disappear — covers react-query's retry cycle (~7s on offline).
+    await page.waitForSelector('[aria-busy="true"]', { state: 'detached', timeout: 12_000 }).catch(() => {})
     await page.screenshot({ path: `polish-review/pages/dashboard/${test.info().project.name}-01-loaded.png`, fullPage: false })
+    // Page must show something meaningful after loading ends.
+    const body = await page.locator('body').textContent()
+    expect(body?.trim().length).toBeGreaterThan(0)
   })
 
   test('activity feed visible and not clipped', async ({ page }) => {

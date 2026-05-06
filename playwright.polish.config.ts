@@ -59,11 +59,11 @@ export default defineConfig({
       testMatch: /page-.*\.spec\.ts/,
     },
     {
-      name: 'iphone',
+      name: 'mobile',
       use: {
-        ...devices['iPhone 14 Pro'],
+        ...devices['Pixel 5'],
         viewport: { width: 393, height: 852 },
-        storageState: storageState('.auth/iphone.json'),
+        storageState: storageState('.auth/mobile.json'),
       },
       testMatch: /page-.*\.spec\.ts/,
     },
