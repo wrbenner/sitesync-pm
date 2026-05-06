@@ -115,12 +115,35 @@ export default defineConfig([
       'react-hooks/globals': 'error',
       'react-hooks/fbt': 'warn',
       'react-hooks/hooks': 'warn',
-      'react-hooks/invariant': 'warn', // compiler-internal codegen errors, not app bugs
+      // The next two rules are intentionally OFF.
+      //
+      // react-hooks/invariant fires when the React Compiler hits an
+      // internal codegen invariant ("MethodCall::property must be an
+      // unpromoted + unmemoized MemberExpression",
+      // "[PruneHoistedContexts] Unexpected hoisted function", etc.).
+      // These are compiler implementation errors, not application bugs;
+      // the affected component is silently skipped from compilation and
+      // the runtime behavior is unchanged. There is nothing the
+      // application can do to "fix" them — they get fixed when Meta
+      // ships a new compiler release.
+      //
+      // react-hooks/todo fires when the compiler encounters syntax it
+      // hasn't implemented support for yet ("Todo:
+      // (BuildHIR::lowerExpression) Handle Import expressions" for
+      // dynamic import(), and similar). Same story: not an app bug,
+      // not actionable, the affected components just opt out of
+      // memoization until the compiler grows the feature.
+      //
+      // Keeping either at warn would mean ratchet-blocking churn from
+      // upstream compiler updates with no developer action available.
+      // Bugatti decision: turn them off explicitly with a documented
+      // rationale rather than ignore the noise.
+      'react-hooks/invariant': 'off',
       'react-hooks/syntax': 'warn',
       'react-hooks/unsupported-syntax': 'error',
       'react-hooks/config': 'error',
       'react-hooks/rule-suppression': 'warn',
-      'react-hooks/todo': 'warn', // compiler-internal "BuildHIR can't lower this expression yet"
+      'react-hooks/todo': 'off',
       //
       // Hardcoded hex colors — the audit/ROADMAP.md Phase B3 codemod lifts
       // these into src/styles/theme tokens. Rule is currently disabled here
