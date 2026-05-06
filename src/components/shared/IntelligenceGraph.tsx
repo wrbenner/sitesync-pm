@@ -292,8 +292,8 @@ export function IntelligenceGraph({
 
       return {
         ...n,
-        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40,
-        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40,
+        x: existing?.x ?? Math.cos(angle) * spread + (Math.random() - 0.5) * 40, // immune-ok
+        y: existing?.y ?? Math.sin(angle) * spread + (Math.random() - 0.5) * 40, // immune-ok
         vx: existing?.vx ?? 0,
         vy: existing?.vy ?? 0,
         fx: 0,
@@ -400,7 +400,7 @@ export function IntelligenceGraph({
         let dx = b.x - a.x
         let dy = b.y - a.y
         let dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 }
+        if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5 } // immune-ok
         const force = REPULSION_STRENGTH / (dist * dist)
         const fx = (dx / dist) * force
         const fy = (dy / dist) * force
