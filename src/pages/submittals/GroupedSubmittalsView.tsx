@@ -40,7 +40,7 @@ interface SubmittalGroup {
 
 function getCSIDivisionCode(specSection: string | null | undefined): string {
   if (!specSection) return '00';
-  const digits = specSection.replace(/[\s\-]/g, '');
+  const digits = specSection.replace(/[\s-]/g, '');
   return digits.slice(0, 2);
 }
 

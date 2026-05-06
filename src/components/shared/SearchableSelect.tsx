@@ -211,7 +211,7 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
           alignItems: 'center',
           gap: spacing.sm,
           padding: '8px 12px',
-          minHeight: 40,
+          minHeight: 56,
           border: `1px solid ${open ? colors.borderFocus : colors.borderDefault}`,
           borderRadius: borderRadius.md,
           background: disabled ? colors.surfaceDisabled : colors.surfaceRaised,
@@ -346,7 +346,7 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
                       background: active ? colors.surfaceHover : 'transparent',
                       color: opt.disabled ? colors.textTertiary : colors.textPrimary,
                       fontSize: typography.fontSize.body,
-                      minHeight: 36,
+                      minHeight: 44,
                     }}
                   >
                     {props.multi && (
