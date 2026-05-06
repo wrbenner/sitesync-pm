@@ -183,6 +183,7 @@ function ToastEntry({ toast, onClose }: { toast: ToastItem; onClose: (id: string
     >
     <div
       ref={containerRef}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- toast container is focusable so Escape dismisses; aria role is alert/status
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Escape') handleClose(toast.id); }}
       onMouseEnter={handleMouseEnter}

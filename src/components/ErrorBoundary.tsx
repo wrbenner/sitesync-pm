@@ -265,6 +265,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </div>
             {import.meta.env.DEV && this.state.error && (
               <pre
+                // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable code region needs keyboard focus to scroll
                 tabIndex={0}
                 role="region"
                 aria-label="Error details and stack trace"

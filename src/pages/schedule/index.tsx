@@ -532,7 +532,7 @@ const SchedulePage: React.FC = () => {
       `}</style>
 
       {/* ── 1. Tab Navigation ── */}
-      <nav
+      <div
         role="tablist" aria-label="Schedule views"
         style={{
           display: 'flex', alignItems: 'center', gap: 2,
@@ -564,7 +564,7 @@ const SchedulePage: React.FC = () => {
             {tab.label}
           </button>
         ))}
-      </nav>
+      </div>
 
       {/* ── KPI Strip ── */}
       {schedulePhases.length > 0 && (

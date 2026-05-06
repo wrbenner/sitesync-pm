@@ -615,19 +615,18 @@ export const TableHeader: React.FC<TableHeaderProps> = React.memo(({ columns }) 
     }}
   >
     {columns.map((col, i) => (
-      <p
+      <div
         key={i}
         role="columnheader"
         style={{
           fontSize: typography.fontSize.label,
           fontWeight: typography.fontWeight.medium,
           color: colors.textTertiary,
-          margin: 0,
           letterSpacing: typography.letterSpacing.wide,
         }}
       >
         {col.label}
-      </p>
+      </div>
     ))}
   </div>
 ));

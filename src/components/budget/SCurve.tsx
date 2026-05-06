@@ -65,11 +65,14 @@ export const SCurve: React.FC<SCurveProps> = ({
   return (
     <div>
       <div
+        role="application"
+        aria-label="S-Curve chart, use arrow keys to inspect points"
         style={{
           position: 'relative',
           outline: focused ? '2px solid ' + colors.primaryOrange : 'none',
           outlineOffset: '2px',
         }}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- application widget with arrow-key handlers below
         tabIndex={0}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}

@@ -237,7 +237,7 @@ export const AIPhotoAnalysis: React.FC = () => {
           <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
             <img loading="lazy"
               src={imagePreview}
-              alt="Uploaded site photo"
+              alt="Uploaded site"
               style={{
                 width: '100%', maxHeight: 400, objectFit: 'cover',
                 borderRadius: borderRadius.lg,

@@ -1172,6 +1172,7 @@ export default function SiteMap() {
           {!sidebarCollapsed && (
             <aside
               aria-label="Site map controls"
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable sidebar needs keyboard focus to scroll
               tabIndex={0}
               style={{
               width: 260, flexShrink: 0,

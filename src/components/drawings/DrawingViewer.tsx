@@ -811,6 +811,7 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
             ref={canvasOuterRef}
             role="application"
             aria-label="Drawing viewer - use arrow keys to pan, plus/minus to zoom"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- application widget with keyboard handlers below
             tabIndex={0}
             style={{ flex: 1, position: 'relative', overflow: 'hidden', touchAction: 'manipulation', width: '100%' }}
             onMouseLeave={handleMouseLeave}

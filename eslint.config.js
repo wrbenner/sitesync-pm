@@ -27,21 +27,24 @@ export default defineConfig([
       // be fixed, but they should not block the quality floor at 0.
       //
       // Accessibility: important for field workers with gloves/glare.
-      // Tracking as warnings while we systematically fix them.
+      // Phase 1 of the a11y campaign (2026-05-06) cleared 8 rules to zero
+      // and promoted them to error. The remaining rules below stay at warn
+      // pending Phase 2 / Phase 3 fixes.
       'jsx-a11y/label-has-associated-control': 'warn',
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
       'jsx-a11y/no-noninteractive-element-interactions': 'warn',
       'jsx-a11y/no-autofocus': 'warn',
-      'jsx-a11y/no-noninteractive-tabindex': 'warn',
       'jsx-a11y/scope': 'warn',
-      'jsx-a11y/no-redundant-roles': 'warn',
-      'jsx-a11y/no-interactive-element-to-noninteractive-role': 'warn',
-      'jsx-a11y/img-redundant-alt': 'warn',
-      'jsx-a11y/role-supports-aria-props': 'warn',
-      'jsx-a11y/interactive-supports-focus': 'warn',
-      'jsx-a11y/no-noninteractive-element-to-interactive-role': 'warn',
-      'jsx-a11y/role-has-required-aria-props': 'warn',
+      // ── Phase 1 promoted to error (zero violations, cannot regress) ──
+      'jsx-a11y/no-noninteractive-tabindex': 'error',
+      'jsx-a11y/no-redundant-roles': 'error',
+      'jsx-a11y/no-interactive-element-to-noninteractive-role': 'error',
+      'jsx-a11y/img-redundant-alt': 'error',
+      'jsx-a11y/role-supports-aria-props': 'error',
+      'jsx-a11y/interactive-supports-focus': 'error',
+      'jsx-a11y/no-noninteractive-element-to-interactive-role': 'error',
+      'jsx-a11y/role-has-required-aria-props': 'error',
       //
       // TypeScript any: real issue, tracked as warning while we add types.
       '@typescript-eslint/no-explicit-any': 'warn',

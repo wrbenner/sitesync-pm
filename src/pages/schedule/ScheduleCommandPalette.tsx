@@ -246,6 +246,7 @@ export const ScheduleCommandPalette: React.FC<ScheduleCommandPaletteProps> = ({
               <div
                 key={item.id}
                 role="option"
+                tabIndex={-1}
                 aria-selected={isSelected}
                 onClick={() => handleSelect(item)}
                 onMouseEnter={() => setSelectedIdx(idx)}

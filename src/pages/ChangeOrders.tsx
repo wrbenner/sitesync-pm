@@ -801,6 +801,8 @@ const ChangeOrdersPage: React.FC = () => {
                 {/* Main row */}
                 <div
                   role="row"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '72px 56px 2fr 120px 100px 120px 140px 100px',
@@ -810,6 +812,7 @@ const ChangeOrdersPage: React.FC = () => {
                     cursor: 'pointer',
                   }}
                   onClick={() => setExpandedRow(isExpanded ? null : co.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedRow(isExpanded ? null : co.id); } }}
                 >
                   <span style={{ fontSize: 11, fontFamily: typography.fontFamilyMono, fontWeight: 600, color: colors.orangeText, letterSpacing: '0.02em' }}>
                     {co.number ?? co.id.slice(0, 6)}

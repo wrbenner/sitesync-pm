@@ -302,6 +302,7 @@ export const DrawingList: React.FC<DrawingListProps> = ({
             <div
               key={drawing.id}
               role="listitem"
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- list item is clickable; key handler defined below
               tabIndex={0}
               aria-label={`${drawing.setNumber} ${drawing.title}`}
               onClick={() => onSelectDrawing(drawing)}

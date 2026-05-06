@@ -106,6 +106,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
       <style>{`@keyframes sitesync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
       {showMentions && (
         <div
+          id="mention-listbox"
           role="listbox"
           style={{
             position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
@@ -155,6 +156,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
               <button
                 key={person.userId}
                 role="option"
+                aria-selected={false}
                 onClick={() => handleMention(person)}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: spacing['2'],
@@ -189,7 +191,9 @@ export const MentionInput: React.FC<MentionInputProps> = ({
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSend(); }
           }}
           placeholder={placeholder}
+          role="combobox"
           aria-expanded={showMentions}
+          aria-controls="mention-listbox"
           aria-haspopup="listbox"
           style={{
             flex: 1, border: 'none', backgroundColor: 'transparent', outline: 'none',

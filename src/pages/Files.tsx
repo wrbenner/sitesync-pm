@@ -880,6 +880,7 @@ const FilesPage: React.FC = () => {
               ) : (
                 <div
                   ref={listRef}
+                  // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- file list handles arrow-key navigation between items
                   tabIndex={0}
                   onKeyDown={handleKeyDown}
                   role="list"

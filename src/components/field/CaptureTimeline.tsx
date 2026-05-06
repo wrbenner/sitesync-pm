@@ -46,6 +46,7 @@ export const CaptureTimeline: React.FC<CaptureTimelineProps> = ({ events, onSele
             aria-label={`${event.type} capture: ${event.title}, ${event.time}`}
             onClick={() => onSelect?.(event)}
             onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onSelect) { e.preventDefault(); onSelect(event); } }}
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- listitem becomes interactive when onSelect is provided
             tabIndex={onSelect ? 0 : undefined}
             style={{
               display: 'flex', alignItems: 'flex-start', gap: spacing['4'],

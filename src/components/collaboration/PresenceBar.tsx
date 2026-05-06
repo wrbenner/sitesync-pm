@@ -296,8 +296,6 @@ const PresenceAvatar: React.FC<AvatarProps> = ({ user, index, total }) => {
       <Tooltip.Trigger asChild>
         <button
           className="presence-avatar-btn"
-          tabIndex={0}
-          role="img"
           aria-label={`${user.displayName} is ${status}`}
           style={{
             width: 44,
@@ -730,8 +728,6 @@ const DrawingPresenceBarContent: React.FC = () => {
                   <Tooltip.Trigger asChild>
                     <button
                       className="presence-avatar-btn"
-                      tabIndex={0}
-                      role="img"
                       aria-label={`${displayName} is ${getPresenceStatus(lastSeen)}`}
                       style={{
                         width: 44,
@@ -792,7 +788,6 @@ const DrawingPresenceBarContent: React.FC = () => {
                 <Tooltip.Trigger asChild>
                   <button
                     className="presence-avatar-btn"
-                    role="status"
                     aria-label={`${overflow} more people viewing`}
                     style={{
                       width: 44,
