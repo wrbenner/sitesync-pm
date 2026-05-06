@@ -108,11 +108,14 @@ export function SearchableSelect<T extends string | number>(props: SearchableSel
     )
   }, [asyncOptions, staticOptions, loadOptions, query])
 
-  const selectedValues: T[] = props.multi
-    ? (props.value as T[])
-    : props.value !== null && props.value !== undefined
-      ? [props.value as T]
-      : []
+  const selectedValues = useMemo<T[]>(
+    () => (props.multi
+      ? (props.value as T[])
+      : props.value !== null && props.value !== undefined
+        ? [props.value as T]
+        : []),
+    [props.multi, props.value],
+  )
 
   const displayLabel = (() => {
     if (props.multi) {

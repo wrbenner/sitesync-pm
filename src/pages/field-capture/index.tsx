@@ -824,7 +824,7 @@ const PhotosPage: React.FC = () => {
   const { addToast } = useToast();
   const { data: capturesData, isLoading, refetch } = useFieldCaptures(projectId);
   const { data: dailyLogsData } = useDailyLogs(projectId);
-  const captures = (capturesData ?? []) as unknown as FieldCaptureRow[];
+  const captures = useMemo(() => (capturesData ?? []) as unknown as FieldCaptureRow[], [capturesData]);
 
   const [filter, setFilter] = useState<FilterChip>('all');
   const [group, setGroup] = useState<GroupMode>('flat');
@@ -882,14 +882,19 @@ const PhotosPage: React.FC = () => {
   const orderedFlat = useMemo(() => grouped.flatMap((g) => g.items), [grouped]);
 
   // ── Counts ──────────────────────────────────────────────────────────────
+  // nowMs is captured at mount; today/week buckets only matter at
+  // day-crossing granularity — Date.now() during render is impure.
+  const [nowMs] = useState(() => Date.now());
   const counts = useMemo(() => {
+    const todayStr = new Date(nowMs).toDateString();
+    const weekAgoMs = nowMs - 7 * 24 * 60 * 60 * 1000;
     const todayCount = captures.filter((c) => {
       if (!c.created_at) return false;
-      return new Date(c.created_at).toDateString() === new Date().toDateString();
+      return new Date(c.created_at).toDateString() === todayStr;
     }).length;
     const weekCount = captures.filter((c) => {
       if (!c.created_at) return false;
-      return new Date(c.created_at).getTime() >= Date.now() - 7 * 24 * 60 * 60 * 1000;
+      return new Date(c.created_at).getTime() >= weekAgoMs;
     }).length;
     const linked = captures.filter((c) => linkedCount(c) > 0).length;
     const located = captures.filter((c) => !!c.location).length;
@@ -902,7 +907,7 @@ const PhotosPage: React.FC = () => {
       trade: tradeKnown,
       linked,
     };
-  }, [captures]);
+  }, [captures, nowMs]);
 
   // ── Add-to-daily-log ────────────────────────────────────────────────────
   const handleAddToDailyLog = useCallback(async (photo: FieldCaptureRow) => {

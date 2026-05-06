@@ -461,7 +461,7 @@ const DailyLogPage: React.FC = () => {
   const isLocked = logStatus === 'submitted' || logStatus === 'approved';
 
   const { data: rawEntries = [] } = useDailyLogEntries(todayLog?.id);
-  const entries = (rawEntries ?? []) as unknown as DailyLogEntry[];
+  const entries = useMemo(() => (rawEntries ?? []) as unknown as DailyLogEntry[], [rawEntries]);
 
   // Pending Iris draft for the selected date.
   const irisDraftForDate = useMemo(() => {

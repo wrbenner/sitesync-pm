@@ -395,7 +395,7 @@ const DrawingsPage: React.FC = () => {
     }
   }, [projectId, addToast, refetchSets]);
 
-  const allDrawings: DrawingItem[] = (drawings || []) as unknown as DrawingItem[];
+  const allDrawings = useMemo<DrawingItem[]>(() => (drawings || []) as unknown as DrawingItem[], [drawings]);
 
   const handleOpenDrawingFromSet = useCallback((drawingId: string) => {
     const drawing = allDrawings.find((d) => d.id === drawingId);

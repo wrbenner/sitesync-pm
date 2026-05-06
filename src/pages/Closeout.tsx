@@ -72,7 +72,7 @@ export const Closeout: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>('punch')
 
-  const items = closeoutData?.items ?? []
+  const items = useMemo(() => closeoutData?.items ?? [], [closeoutData])
   const totalItems = items.length
   const approvedItems = items.filter(i => i.status === 'approved').length
   const pctComplete = totalItems > 0 ? Math.round((approvedItems / totalItems) * 100) : 0
@@ -326,7 +326,7 @@ const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatu
     } catch (err) {
       toast.error('Delete failed: ' + (err as Error).message)
     }
-  }, [deleteWarranty, projectId])
+  }, [confirmWarranty, deleteWarranty, projectId, warranties])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>

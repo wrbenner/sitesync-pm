@@ -276,7 +276,7 @@ const RFIsPage: React.FC = () => {
   const { data: drafts } = useIrisDrafts(projectId, { status: ['pending'] });
   useRealtimeInvalidation(projectId);
 
-  const rfisRaw = rfisResult?.data ?? [];
+  const rfisRaw = useMemo(() => rfisResult?.data ?? [], [rfisResult]);
 
   const navigate = useNavigate();
   const appNavigate = useAppNavigate();
@@ -328,12 +328,15 @@ const RFIsPage: React.FC = () => {
     rfis.filter((r) => r.status !== 'closed' && r.dueDate && isOverdue(r.dueDate)).length,
   [rfis]);
   const closedCount = useMemo(() => rfis.filter((r) => r.status === 'closed').length, [rfis]);
-  const closedThisWeek = useMemo(() => {
-    const weekAgo = Date.now() - 7 * 86400000;
-    return rfis.filter((r) =>
-      r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgo,
-    ).length;
-  }, [rfis]);
+  // weekAgoMs is captured at mount; "closed this week" granularity is daily
+  // and a long-running tab refreshes by reload — Date.now() during render
+  // is impure (forbidden by react-hooks/purity).
+  const [weekAgoMs] = useState(() => Date.now() - 7 * 86400000);
+  const closedThisWeek = useMemo(() =>
+    rfis.filter((r) =>
+      r.status === 'closed' && r.closed_date && new Date(r.closed_date).getTime() >= weekAgoMs,
+    ).length,
+  [rfis, weekAgoMs]);
   const avgDaysToClose = useMemo(() => {
     const closed = rfis.filter((r) => r.status === 'closed' && r.closed_date && r.created_at);
     if (!closed.length) return 0;

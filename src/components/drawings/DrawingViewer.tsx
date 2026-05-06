@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Canvas as FabricCanvas, PencilBrush, Circle as FabricCircle, Line as FabricLine, IText as FabricIText, Rect as FabricRect } from 'fabric';
 import { ZoomIn, ZoomOut, X, Eye, EyeOff, Maximize2, ChevronUp, ChevronDown } from 'lucide-react';
 import { colors, spacing, typography, borderRadius, shadows, transitions, vizColors } from '../../styles/theme';
@@ -193,8 +193,8 @@ const DrawingViewerInner: React.FC<DrawingViewerInnerProps> = ({
   const others = LIVEBLOCKS_CONFIGURED ? useOthers() : [];
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const _broadcastEvent = LIVEBLOCKS_CONFIGURED ? useBroadcastEvent() : null;
-  const updateMyPresence = _updatePresence ?? (() => {});
-  const broadcastEvent = _broadcastEvent ?? (() => {});
+  const updateMyPresence = useMemo(() => _updatePresence ?? (() => {}), [_updatePresence]);
+  const broadcastEvent = useMemo(() => _broadcastEvent ?? (() => {}), [_broadcastEvent]);
 
   // Update presence name/color once on mount
   useEffect(() => {

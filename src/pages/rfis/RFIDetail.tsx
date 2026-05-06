@@ -596,7 +596,7 @@ export function RFIDetail() {
   }, [lastViewedKey])
 
   const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
-  const responses = rfi?.responses ?? []
+  const responses = useMemo(() => rfi?.responses ?? [], [rfi?.responses])
 
   const userIdsToResolve = useMemo(
     () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.author_id)],
