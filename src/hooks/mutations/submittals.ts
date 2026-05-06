@@ -63,7 +63,7 @@ export function useCreateSubmittal() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getNewValue: (p) => p.data,
     mutationFn: async (params) => {
-      const insertData = sanitizeSubmittalData(params.data)
+      const insertData = { ...sanitizeSubmittalData(params.data), project_id: params.projectId }
       const { data, error } = await from('submittals').insert(insertData).select().single()
       if (error) throw error
       return { data, projectId: params.projectId }

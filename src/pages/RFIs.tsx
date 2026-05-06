@@ -544,9 +544,12 @@ const RFIsPage: React.FC = () => {
             background-size: 200% 100%;
             animation: rfi-shimmer 1.8s ease-in-out infinite;
           }
+          .rfi-kpi-skeleton-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+          @media (max-width: 1100px) { .rfi-kpi-skeleton-grid { grid-template-columns: repeat(2, 1fr); } }
+          @media (max-width: 580px) { .rfi-kpi-skeleton-grid { grid-template-columns: 1fr; } }
         `}</style>
         {/* KPI Skeleton */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+        <div className="rfi-kpi-skeleton-grid">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} style={{
               backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
