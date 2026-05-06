@@ -28,6 +28,19 @@ import { toast } from 'sonner';
 
 export type AuditEntityType = 'rfi' | 'submittal' | 'change_order' | 'punch_item';
 
+// Module-scope stable references. These exist to prevent the chain-verify
+// effect from re-firing on every render: a JS default destructure default
+// (`{ data: rows = [] }`) re-allocates the array on every render whenever
+// `data` is undefined, and a fresh `{ ok, total, gaps }` literal in setChain
+// would re-trigger the effect via state change. Both are frozen constants
+// so React's Object.is check returns true and the effect/setState short-circuit.
+const EMPTY_ROWS: AuditLogRow[] = Object.freeze([] as AuditLogRow[]) as AuditLogRow[];
+const EMPTY_CHAIN: ChainVerificationResult = Object.freeze({
+  ok: true,
+  total: 0,
+  gaps: Object.freeze([] as ChainVerificationResult['gaps']) as ChainVerificationResult['gaps'],
+}) as ChainVerificationResult;
+
 interface EntityAuditViewerProps {
   entityType: AuditEntityType;
   entityId: string;
@@ -47,7 +60,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
   const [chain, setChain] = useState<ChainVerificationResult | undefined>();
   const [showGapDetail, setShowGapDetail] = useState(false);
 
-  const { data: rows = [], isPending } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['audit-log', entityType, entityId],
     queryFn: async (): Promise<AuditLogRow[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,19 +81,26 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
     },
   });
 
-  const orderedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
+  // useMemo recomputes only when `data` reference changes (react-query keeps
+  // it stable across renders via structural sharing). Returns the frozen
+  // module-scope EMPTY_ROWS for the no-rows case so reference equality holds
+  // through loading/error states and `useEffect([orderedRows])` does not loop.
+  const orderedRows = useMemo<AuditLogRow[]>(() => {
+    if (!data || data.length === 0) return EMPTY_ROWS;
+    return [...data].sort((a, b) => {
       const ta = new Date(a.created_at).getTime();
       const tb = new Date(b.created_at).getTime();
       if (ta !== tb) return ta - tb;
       return a.id.localeCompare(b.id);
     });
-  }, [rows]);
+  }, [data]);
 
   useEffect(() => {
     let cancelled = false;
     if (orderedRows.length === 0) {
-      setChain({ ok: true, total: 0, gaps: [] });
+      // Frozen module constant — Object.is(prev, EMPTY_CHAIN) returns true on
+      // repeat calls, so React skips the state update and the render.
+      setChain(EMPTY_CHAIN);
       setVerifying(false);
       return;
     }

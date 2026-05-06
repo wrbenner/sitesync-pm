@@ -62,7 +62,12 @@ export function useCreateSubmittal() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const insertData = sanitizeSubmittalData(params.data)
+      // project_id is required by the submittals table (NOT NULL) but lives
+      // on params.projectId, not params.data. Without this merge the live
+      // path posts a row missing project_id and PostgREST returns 400. The
+      // offline-queue branch (below) already does this — the live branch
+      // had drifted out of sync.
+      const insertData = { ...sanitizeSubmittalData(params.data), project_id: params.projectId }
       const { data, error } = await from('submittals').insert(insertData as never).select().single()
       if (error) throw error
       return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }

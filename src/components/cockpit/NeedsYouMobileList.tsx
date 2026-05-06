@@ -57,7 +57,7 @@ const URGENCY_DOT: Record<Urgency, string> = {
   critical: '#C93B3B',
   high: '#B8472E',
   medium: '#C4850C',
-  low: '#8C857E',
+  low: '#6F6862',
 }
 
 function formatDollars(n: number | undefined): string | null {

@@ -46,10 +46,15 @@ export function useSubmittalReviewers(submittalId: string | undefined) {
   return useQuery({
     queryKey: ['submittal_approvals', submittalId],
     queryFn: async () => {
+      // Order by chain_order (the deliberate workflow position) which is
+      // what the UI actually wants to display in approval-history order.
+      // Earlier code ordered by `created_at`, which does not exist on the
+      // submittal_approvals table — that produced a PostgREST 400 every
+      // time a submittal detail page mounted.
       const { data, error } = await fromTable('submittal_approvals')
         .select('*')
         .eq('submittal_id' as never, submittalId!)
-        .order('created_at', { ascending: true })
+        .order('chain_order' as never, { ascending: true, nullsFirst: false })
       if (error) throw error
       return (data ?? []) as Array<{
         id: string

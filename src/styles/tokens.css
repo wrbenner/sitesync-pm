@@ -48,7 +48,13 @@
   --color-parchment-3: #EFE9DD;
   --color-ink:    #1A1613;
   --color-ink-2:  #5C5550;
-  --color-ink-3:  #8C857E;
+  /* ink-3 darkened from #8C857E → #6F6862 to clear WCAG AA 4.5:1 on the
+     light surfaces (#F4F4F2, #F6F6F4) used throughout the app. The old
+     value produced 3.3–3.4:1 contrast at 13 px / 10 px (axe-core flagged
+     it on tab-strip secondary labels). #6F6862 lands at ~5.25:1, keeps
+     the warm-gray tertiary feel, and preserves the ink-2 / ink-3 / ink-4
+     hierarchy step size. */
+  --color-ink-3:  #6F6862;
   --color-ink-4:  #C4BDB4;
   --color-ink-5:  #E5DFD4;
   --color-rust:   #B8472E;
@@ -83,7 +89,9 @@
   /* ── Text (ink hierarchy from manifesto) ──────────── */
   --color-textPrimary: #1A1613;
   --color-textSecondary: #5C5550;
-  --color-textTertiary: #8C857E;
+  /* textTertiary darkened from #8C857E → #6F6862 — see --color-ink-3
+     above for the contrast-ratio explanation. */
+  --color-textTertiary: #6F6862;
   --color-textDisabled: #C4BDB4;
   --color-textOnDark: rgba(255, 255, 255, 0.92);
   --color-textOnDarkMuted: rgba(255, 255, 255, 0.5);

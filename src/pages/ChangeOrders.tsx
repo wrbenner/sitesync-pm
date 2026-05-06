@@ -52,7 +52,7 @@ const C = {
   borderSubtle: 'rgba(26, 22, 19, 0.05)',
   ink: '#1A1613',
   ink2: '#5C5550',
-  ink3: '#8C857E',
+  ink3: '#6F6862',
   ink4: '#C4BDB4',
   brandOrange: '#F47820',
   critical: '#C93B3B',

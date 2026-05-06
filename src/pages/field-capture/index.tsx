@@ -63,7 +63,7 @@ const SafeImage: React.FC<{
       <div style={{
         ...style,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: '#F5F4F1', color: '#8C857E',
+        backgroundColor: '#F5F4F1', color: '#6F6862',
       }}>
         <Camera size={iconSize} />
       </div>
@@ -89,7 +89,7 @@ const BORDER = '#E8E5DF';
 const BORDER_STRONG = '#D9D5CD';
 const INK = '#1A1613';
 const INK_2 = '#5C5550';
-const INK_3 = '#8C857E';
+const INK_3 = '#6F6862';
 
 const STATUS = {
   critical: '#C93B3B',

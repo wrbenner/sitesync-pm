@@ -65,7 +65,7 @@ function calcScheduleRiskDays(sub: Record<string, unknown>): number | null {
 const TONE_RUST = '#B8472E';      // DESIGN-RESET high / at-risk
 const TONE_CRITICAL = '#C93B3B';  // DESIGN-RESET critical / overdue
 const TONE_TRACK = '#2D8A6E';     // DESIGN-RESET on track
-const TONE_INK3 = '#8C857E';
+const TONE_INK3 = '#6F6862';
 
 /**
  * Count approvers still pending AFTER the current ball-in-court.

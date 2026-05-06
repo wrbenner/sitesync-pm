@@ -87,7 +87,7 @@ function handleDecisionAnswer(
 const PARCHMENT = '#FAF7F0';
 const INK       = '#1A1613';
 const INK_2     = '#5C5550';
-const INK_3     = '#8C857E';
+const INK_3     = '#6F6862';
 const INK_4     = '#C4BDB4';
 const HAIRLINE  = 'rgba(26,22,19,0.10)';
 const HAIRLINE2 = 'rgba(26,22,19,0.05)';
