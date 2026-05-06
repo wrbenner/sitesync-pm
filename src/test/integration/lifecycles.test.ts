@@ -162,8 +162,10 @@ describe('Submittal Lifecycle Integration', () => {
     actor.send({ type: 'GC_APPROVE' })
     expect(actor.getSnapshot().value).toBe('gc_review')
 
-    // GC forwards to architect (BUG #1 FIX: proper review chain)
-    actor.send({ type: 'GC_APPROVE' })
+    // GC forwards to architect via the explicit transmittal event. Per
+    // SUBMITTALS_MODULE_BUILD_SPEC_2026-05-06.md Part 4, this is a manual
+    // hand-off, not a side effect of GC_APPROVE.
+    actor.send({ type: 'FORWARD_TO_REVIEWER' })
     expect(actor.getSnapshot().value).toBe('architect_review')
 
     actor.send({ type: 'ARCHITECT_APPROVE' })
@@ -192,7 +194,7 @@ describe('Submittal Lifecycle Integration', () => {
     // Second try goes all the way through the full review chain
     actor.send({ type: 'SUBMIT' })
     actor.send({ type: 'GC_APPROVE' })
-    actor.send({ type: 'GC_APPROVE' }) // Forward to architect
+    actor.send({ type: 'FORWARD_TO_REVIEWER' })
     actor.send({ type: 'ARCHITECT_APPROVE' })
     expect(actor.getSnapshot().value).toBe('approved')
     actor.stop()
@@ -204,7 +206,7 @@ describe('Submittal Lifecycle Integration', () => {
 
     actor.send({ type: 'SUBMIT' })
     actor.send({ type: 'GC_APPROVE' })
-    actor.send({ type: 'GC_APPROVE' }) // Forward to architect_review
+    actor.send({ type: 'FORWARD_TO_REVIEWER' })
     actor.send({ type: 'ARCHITECT_REVISE' })
     expect(actor.getSnapshot().value).toBe('resubmit')
 

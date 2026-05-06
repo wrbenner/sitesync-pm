@@ -26,6 +26,7 @@ export const submittalMachine = setup({
       | { type: 'SUBMIT' }
       | { type: 'GC_APPROVE' }
       | { type: 'GC_REJECT' }
+      | { type: 'FORWARD_TO_REVIEWER' }
       | { type: 'ARCHITECT_APPROVE' }
       | { type: 'ARCHITECT_REJECT' }
       | { type: 'ARCHITECT_REVISE' }
@@ -54,9 +55,16 @@ export const submittalMachine = setup({
       },
     },
     gc_review: {
+      // gc_review is the GC PE's internal-review hold. The transmittal to
+      // the architect is a deliberate, manual hand-off (the PE confirms
+      // distribution list, attachments, AIA §4.2.7 disclaimer, etc.) — it
+      // is NOT a side effect of approving the package internally. Per
+      // SUBMITTALS_MODULE_BUILD_SPEC_2026-05-06.md Part 4 chart, the
+      // forward to architect_review is its own event (FORWARD_TO_REVIEWER)
+      // and GC_APPROVE in gc_review is intentionally a no-op until the
+      // larger Part 4 chart lands in P0-D36+.
       on: {
-        // GC_APPROVE from gc_review forwards to architect (BUG #1 FIX)
-        GC_APPROVE: { target: 'architect_review' },
+        FORWARD_TO_REVIEWER: { target: 'architect_review' },
         GC_REJECT: { target: 'rejected' },
         ARCHITECT_REVISE: { target: 'resubmit' },
       },
