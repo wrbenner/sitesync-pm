@@ -36,6 +36,9 @@ import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
 import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
 import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
 import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
+import { RFIResponseThread } from '../../components/rfi/RFIResponseThread'
+import { RFIResponseComposer } from '../../components/rfi/RFIResponseComposer'
+import { useRFIResponsesList, type RFIResponseRow } from '../../hooks/queries/useRFIResponses'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { usePermissions } from '../../hooks/usePermissions'
 import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
@@ -611,6 +614,17 @@ export function RFIDetail() {
   const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
   const responses = useMemo(() => rfi?.responses ?? [], [rfi?.responses])
 
+  // P1b: live thread query — picks up edits/deletes/official toggles
+  // without requiring a full RFI re-fetch. Falls back to whatever the
+  // RFI detail bundle returned for the first paint (preserves current
+  // mark-as-read + skeleton timing).
+  const { data: liveResponses } = useRFIResponsesList(rfiId)
+  const detailedResponses = useMemo<RFIResponseRow[]>(() => {
+    const fromLive = liveResponses ?? null
+    if (fromLive && fromLive.length >= 0) return fromLive
+    return (responses as unknown as RFIResponseRow[]) ?? []
+  }, [liveResponses, responses])
+
   const userIdsToResolve = useMemo(
     () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.author_id)],
     [rfi?.created_by, rfi?.assigned_to, responses],
@@ -1007,53 +1021,19 @@ export function RFIDetail() {
             <MetadataSection rfi={rfi} assignedName={assignedName} />
           </div>
 
-          {/* ── Response Thread ─────────────────────────── */}
-          {responses.length > 0 && (
-            <div style={{
-              padding: '16px 24px 20px',
-              borderTop: `1px solid ${colors.borderSubtle}`,
-              display: 'flex', flexDirection: 'column', gap: '14px',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <span style={{
-                  fontSize: '12px', color: colors.textTertiary,
-                  fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
-                }}>
-                  {responses.length} {responses.length === 1 ? 'Response' : 'Responses'}
-                </span>
-                {newResponseCount > 0 && (
-                  <span style={{
-                    fontSize: '11px', fontWeight: 600, color: colors.primaryOrange,
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                  }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      backgroundColor: colors.primaryOrange,
-                    }} />
-                    {newResponseCount} new
-                  </span>
-                )}
-              </div>
-
-              {responses.map((r, i) => (
-                <React.Fragment key={r.id}>
-                  {i === firstNewIndex && <NewActivityBanner count={newResponseCount} />}
-                  <ResponseBubble
-                    response={r}
-                    index={i}
-                    isNew={lastViewed ? (r.created_at != null && r.created_at > lastViewed) : false}
-                    profileMap={profileMap}
-                  />
-                </React.Fragment>
-              ))}
-              <div ref={threadEndRef} />
-            </div>
+          {/* ── Response Thread (P1b) — pinned Official answer + per-card
+                kebab + edit/delete + response_type badges + internal
+                styling. Pulls live data so edits land without refresh. */}
+          {detailedResponses.length > 0 && (
+            <RFIResponseThread
+              rfiId={rfi.id}
+              projectId={rfi.project_id}
+              responses={detailedResponses}
+            />
           )}
 
           {/* Empty state */}
-          {responses.length === 0 && (currentStatus === 'open' || currentStatus === 'under_review') && (
+          {detailedResponses.length === 0 && (currentStatus === 'open' || currentStatus === 'under_review') && (
             <div style={{
               padding: '32px 24px', borderTop: `1px solid ${colors.borderSubtle}`,
               textAlign: 'center',
@@ -1070,9 +1050,13 @@ export function RFIDetail() {
             </div>
           )}
 
-          {/* ── Compose ────────────────────────────────── */}
+          {/* ── Compose (P1b composer w/ response type, internal toggle, @-mentions) */}
           {currentStatus !== 'closed' && currentStatus !== 'void' && (
-            <ComposeBox rfiId={rfi.id} projectId={projectId || ''} />
+            <RFIResponseComposer
+              rfiId={rfi.id}
+              projectId={rfi.project_id}
+              rfiNumber={rfi.number}
+            />
           )}
         </div>
 

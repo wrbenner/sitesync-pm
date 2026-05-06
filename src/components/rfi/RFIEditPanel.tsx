@@ -34,6 +34,7 @@ import { PermissionGate } from '../auth/PermissionGate'
 import { UserChipEditor, type UserChipOption } from './UserChipEditor'
 import { RFIRichTextEditor } from './RFIRichTextEditor'
 import { RFIAttachmentManager } from './RFIAttachmentManager'
+import { RFIAssigneePicker } from './RFIAssigneePicker'
 import { useRFI } from '../../hooks/queries'
 import { useUpdateRFI } from '../../hooks/mutations'
 import { useProjectDirectory } from '../../hooks/queries/useProjectDirectory'
@@ -368,6 +369,10 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
               />
             </FieldRow>
           </FieldGrid>
+
+          <FieldRow label="Assignees" hint="Each gets a checkbox; ball-in-court tracks the first unresponded.">
+            {rfiId && <RFIAssigneePicker rfiId={rfiId} projectId={projectId} />}
+          </FieldRow>
 
           <FieldRow label="Watchers" hint="Watchers receive every status change.">
             <UserChipEditor

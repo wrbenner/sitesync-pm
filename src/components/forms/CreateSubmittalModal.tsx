@@ -1,3 +1,12 @@
+// Quick-create surface (canonical, NOT legacy — see
+// SUBMITTALS_MODULE_BUILD_SPEC_2026-05-06.md Part 13). Consumed by the
+// Conversation page via CreateSubmittalModalWrapper, paralleling the RFI /
+// ChangeOrder / PunchItem quick-create pattern. The wizard at
+// src/components/submittals/SubmittalCreateWizard.tsx is the guided path;
+// this modal is the inline-quick path. Both flow through useCreateSubmittal,
+// which (D38) writes through submittalService.createSubmittal so the
+// quick-create and wizard-create paths stay consistent on top of the new
+// canonical schema.
 import React from 'react'
 import { EntityFormModal } from './EntityFormModal'
 import { submittalSchema } from './schemas'

@@ -3,6 +3,8 @@ import { useAuditedMutation } from './createAuditedMutation'
 import { submittalSchema,
 } from '../../components/forms/schemas'
 import { validateSubmittalStatusTransition } from './state-machine-validation-helpers'
+import { submittalService } from '../../services/submittalService'
+import type { CreateSubmittalInput } from '../../types/submittal'
 
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 // `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
@@ -62,10 +64,22 @@ export function useCreateSubmittal() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const insertData = sanitizeSubmittalData(params.data)
-      const { data, error } = await from('submittals').insert(insertData as never).select().single()
-      if (error) throw error
-      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
+      // Route through the canonical service path so quick-create (modal) and
+      // wizard-create stay consistent with the D38 refactor. The service
+      // accepts a typed CreateSubmittalInput which is a strict subset of the
+      // sanitised form data — extra keys are silently dropped at the type
+      // boundary, mirroring the previous SUBMITTAL_COLUMNS allow-list.
+      const sanitized = sanitizeSubmittalData(params.data)
+      const input: CreateSubmittalInput = {
+        ...(sanitized as Partial<CreateSubmittalInput>),
+        project_id: params.projectId,
+        title: (sanitized.title as string) ?? (params.data.title as string) ?? 'Untitled submittal',
+      }
+      const result = await submittalService.createSubmittal(input)
+      if (result.error || !result.data) {
+        throw new Error(result.error?.message ?? 'Failed to create submittal')
+      }
+      return { data: result.data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'submittal_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),
