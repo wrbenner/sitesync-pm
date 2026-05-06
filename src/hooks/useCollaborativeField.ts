@@ -50,8 +50,10 @@ export function useCollaborativeField(fieldName: string): UseCollaborativeFieldR
   const [remoteValue, setRemoteValue] = useState<unknown>(undefined)
   const isEditingRef = useRef(false)
 
-  // Sync initial lock state
-  useEffect(() => {
+  // Sync initial lock state — render-time prev pattern.
+  const [prevFieldName, setPrevFieldName] = useState(fieldName)
+  if (prevFieldName !== fieldName) {
+    setPrevFieldName(fieldName)
     const lockState = isFieldLocked(fieldName)
     if (lockState.locked && lockState.userId) {
       setIsLocked(true)
@@ -59,7 +61,7 @@ export function useCollaborativeField(fieldName: string): UseCollaborativeFieldR
       setLockedBy(owner?.displayName)
       setRemoteCursorColor(owner?.color)
     }
-  }, [fieldName])
+  }
 
   // Subscribe to lock changes for this field
   useEffect(() => {

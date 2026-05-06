@@ -141,6 +141,7 @@ export function useMultiAgentChat(
     if (!initialConversationId || !isSupabaseConfigured) return
 
     conversationIdRef.current = initialConversationId
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- bootstrap on prop change; the rest of the effect is async I/O
     setConversationIdState(initialConversationId)
     isLoadingHistoryRef.current = true
 

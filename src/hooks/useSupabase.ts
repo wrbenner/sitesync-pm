@@ -442,6 +442,7 @@ export function useAICopilot(projectId: string) {
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; this is a fetch-on-mount bootstrap
     loadConversations()
   }, [loadConversations])
 

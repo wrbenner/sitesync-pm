@@ -110,6 +110,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
 
   // Initial count load
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; bootstrap fetch
     refreshCount();
   }, [refreshCount]);
 

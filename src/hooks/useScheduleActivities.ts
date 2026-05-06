@@ -85,6 +85,7 @@ export function useScheduleActivities(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
 
     const channel = supabase

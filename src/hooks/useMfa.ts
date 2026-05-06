@@ -66,10 +66,11 @@ export function useMfa(): MfaState {
     }
   }, [])
 
-  // Refresh MFA state on mount. Refactoring to TanStack Query is queued as a
-  // Phase 2 cleanup so the canonical "fetch on mount" pattern can move out of
-  // a useEffect.
+  // Refresh MFA state on mount. Refactoring to TanStack Query is queued as
+  // Phase 3.b in the slice receipt so the canonical "fetch on mount"
+  // pattern can move out of a useEffect.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration
     void refresh()
   }, [refresh])
 

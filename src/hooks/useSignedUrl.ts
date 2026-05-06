@@ -27,6 +27,7 @@ export function useSignedUrl(
   })
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async I/O effect: state mirrors signed-URL fetch + module-level cache */
     if (!storagePath) {
       setUrl(null)
       return
@@ -59,6 +60,7 @@ export function useSignedUrl(
       })
 
     return () => { cancelled = true }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [storagePath, bucket])
 
   return url

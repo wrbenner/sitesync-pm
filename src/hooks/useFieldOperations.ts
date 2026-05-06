@@ -51,6 +51,17 @@ export function useDailyLogs(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // refetch() ultimately calls setState (setLogs/setIsLoading). The
+    // compiler flags this as set-state-in-effect because the fetch +
+    // setState chain runs synchronously in the effect's first tick.
+    // The architecturally correct fix is to migrate this hook to
+    // TanStack Query (`useQuery({ queryKey, queryFn, enabled })`),
+    // which separates the fetch lifecycle from the effect — that
+    // migration is tracked as Phase 3.b in the slice receipt.
+    // Until then, the effect's primary purpose is the realtime
+    // subscription (a real side effect) and the synchronous refetch
+    // is the bootstrap for it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
     const channel = supabase
       .channel(`field_ops_daily_logs:${projectId}`)
@@ -162,6 +173,7 @@ export function useIncidents(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
     const channel = supabase
       .channel(`field_ops_incidents:${projectId}`)
@@ -259,6 +271,7 @@ export function useSafetyInspections(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
     const channel = supabase
       .channel(`field_ops_safety_inspections:${projectId}`)
@@ -307,6 +320,7 @@ export function useToolboxTalks(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
     const channel = supabase
       .channel(`field_ops_toolbox_talks:${projectId}`)
@@ -384,6 +398,7 @@ export function useCorrectiveActions(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
     const channel = supabase
       .channel(`field_ops_corrective_actions:${projectId}`)
@@ -521,6 +536,7 @@ export function useSafetyCertifications(projectId: string) {
   }, [projectId])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; effect's main work is the realtime subscription
     refetch()
     const channel = supabase
       .channel(`field_ops_safety_certifications:${projectId}`)

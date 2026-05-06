@@ -348,6 +348,7 @@ export function useAuth(): AuthState {
 
   // Enforce session expiry: if we have a user but the session has expired, sign out.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- session validity has to be recomputed each render against the live clock; the impure Date.now() check forbids derived-during-render */
     const expiresAt = session?.expires_at
     if (!session || !expiresAt) {
       setIsSessionValid(false)
@@ -358,6 +359,7 @@ export function useAuth(): AuthState {
     if (user && !valid) {
       supabase.auth.signOut()
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [user, session])
 
   return { user, session, loading, error, signIn, signUp, signOut, resetPassword, isAuthenticated, isSessionValid }

@@ -180,6 +180,7 @@ export function useFieldCapture(): UseFieldCapture {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Phase 3.b: pending TanStack Query migration; bootstrap fetch
     refreshPendingCount();
   }, [refreshPendingCount]);
 
@@ -198,6 +199,12 @@ export function useFieldCapture(): UseFieldCapture {
   // Kick off GPS as soon as the hook mounts — the modal opens faster if the
   // first location fix is already in flight before the user frames a photo.
   useEffect(() => {
+    // The set-state-in-effect lint hits the no-geolocation early branch
+    // and the watchPosition callbacks. The effect is fundamentally a
+    // GPS-watch subscription — refactoring to TanStack Query etc. would
+    // not improve it (this isn't a fetch, it's a long-lived watcher).
+    // The setState calls drive the UI from real device events.
+    /* eslint-disable react-hooks/set-state-in-effect -- subscription effect: state mirrors device GPS events */
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGpsError('Geolocation not supported on this device');
       return;
@@ -219,6 +226,7 @@ export function useFieldCapture(): UseFieldCapture {
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   const startCamera = useCallback(async () => {
