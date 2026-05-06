@@ -1,6 +1,8 @@
 import { transformSupabaseError, buildPaginatedQuery, supabaseMutation } from '../client'
 import { fromTable } from '../../lib/db/queries'
+import { supabase } from '../../lib/supabase'
 import { assertProjectAccess, validateProjectId } from '../middleware/projectScope'
+import { submittalService } from '../../services/submittalService'
 import type {
   SubmittalRow,
   PaginationParams,
@@ -10,6 +12,11 @@ import type {
   CreateSubmittalRevisionPayload,
 } from '../../types/api'
 import type { Database } from '../../types/database'
+import type {
+  SubmittalFilter,
+  BulkUpdateInput,
+  SubmittalDisposition,
+} from '../../types/submittal'
 
 function mapSubmittal(s: SubmittalRow) {
   return {
@@ -138,4 +145,148 @@ export function getBallInCourt(revisions: SubmittalRevision[]): 'gc' | 'architec
     .sort((a, b) => b.revision_number - a.revision_number)
     .find(r => r.review_status === 'pending')
   return latestPending?.reviewer_role ?? null
+}
+
+// ── D38: bulk + filter + search + spec-import + closeout ─────────────────────
+// Each endpoint is a thin wrapper that delegates to submittalService (RPC-
+// backed) or composes a typed Supabase query against the D37 log view.
+// assertProjectAccess gates every read; mutations rely on RLS for the wall.
+
+export const bulkUpdateSubmittals = async (
+  projectId: string,
+  input: BulkUpdateInput,
+): Promise<{ count: number }> => {
+  await assertProjectAccess(projectId)
+  const result = await submittalService.bulkUpdate(input.ids, input.updates)
+  if (result.error) throw new Error(result.error.message)
+  return result.data ?? { count: 0 }
+}
+
+/**
+ * Filter + search across submittals_log_mv. Server-side filters; client
+ * gets the denormalised log shape (sub_name, current_reviewer_name,
+ * days_in_court, risk_band).
+ */
+export const filterSubmittals = async (
+  projectId: string,
+  filter: SubmittalFilter,
+  pagination?: PaginationParams,
+): Promise<PaginatedResult<Record<string, unknown>>> => {
+  await assertProjectAccess(projectId)
+  return buildPaginatedQuery<Record<string, unknown>, Record<string, unknown>>(
+    (from, to) => {
+      let q = fromTable('submittals_log_mv')
+        .select('*', { count: 'exact' })
+        .eq('project_id' as never, projectId)
+      if (filter.status?.length) q = q.in('status' as never, filter.status)
+      if (filter.kind?.length) q = q.in('kind' as never, filter.kind)
+      if (filter.csi_section?.length) q = q.in('csi_section' as never, filter.csi_section)
+      if (filter.responsible_sub_id?.length)
+        q = q.in('responsible_sub_id' as never, filter.responsible_sub_id)
+      if (filter.current_reviewer_id?.length)
+        q = q.in('current_reviewer_id' as never, filter.current_reviewer_id)
+      if (filter.is_critical_path !== undefined)
+        q = q.eq('is_critical_path' as never, filter.is_critical_path)
+      if (filter.is_overdue) q = q.eq('risk_band' as never, 'overdue')
+      if (filter.required_on_site_within_days !== undefined) {
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() + filter.required_on_site_within_days)
+        q = q.lte('required_on_site_date' as never, cutoff.toISOString().slice(0, 10))
+      }
+      if (filter.has_iris_preflight_finding === true)
+        q = q.not('iris_preflight_findings' as never, 'is', null)
+      if (filter.has_iris_preflight_finding === false)
+        q = q.is('iris_preflight_findings' as never, null)
+      return q.order('number', { ascending: false }).range(from, to)
+    },
+    pagination,
+  )
+}
+
+export const searchSubmittals = async (
+  projectId: string,
+  query: string,
+  pagination?: PaginationParams,
+): Promise<PaginatedResult<Record<string, unknown>>> => {
+  await assertProjectAccess(projectId)
+  const q = query.trim()
+  if (!q) return filterSubmittals(projectId, {}, pagination)
+  return buildPaginatedQuery<Record<string, unknown>, Record<string, unknown>>(
+    (from, to) =>
+      fromTable('submittals_log_mv')
+        .select('*', { count: 'exact' })
+        .eq('project_id' as never, projectId)
+        .or(`title.ilike.%${q}%,csi_section.ilike.%${q}%,number.ilike.%${q}%,sub_name.ilike.%${q}%`)
+        .order('number', { ascending: false })
+        .range(from, to),
+    pagination,
+  )
+}
+
+export const recordDisposition = async (
+  reviewerId: string,
+  disposition: SubmittalDisposition,
+  comment?: string,
+  stampUrl?: string,
+): Promise<void> => {
+  const result = await submittalService.recordDisposition(reviewerId, disposition, comment, stampUrl)
+  if (result.error) throw new Error(result.error.message)
+}
+
+export const distributeSubmittal = async (
+  submittalId: string,
+  toUserIds: string[],
+): Promise<void> => {
+  const result = await submittalService.distribute(submittalId, toUserIds)
+  if (result.error) throw new Error(result.error.message)
+}
+
+export const closeSubmittal = async (
+  submittalId: string,
+  reason?: string,
+): Promise<void> => {
+  const result = await submittalService.close(submittalId, reason)
+  if (result.error) throw new Error(result.error.message)
+}
+
+/**
+ * Stage a spec-book PDF for the spec-import flow (P1-D43+). Thin wrapper
+ * around storage upload; chunking + Iris extraction live in a separate
+ * edge function (not in this PR).
+ */
+export const stageSpecImport = async (
+  projectId: string,
+  file: File,
+): Promise<{ storage_path: string }> => {
+  validateProjectId(projectId)
+  const storagePath = `${projectId}/${Date.now()}_${file.name}`
+  const { error } = await supabase.storage.from('submittal-specs').upload(storagePath, file)
+  if (error) throw new Error(error.message)
+  return { storage_path: storagePath }
+}
+
+/**
+ * Closeout binder index (P4). Returns items grouped by CSI division. The
+ * PDF + COBie ZIP generation lives in a separate edge function (P4-D66).
+ */
+export const generateCloseoutIndex = async (
+  projectId: string,
+): Promise<Array<{ csi_division: string | null; items: Record<string, unknown>[] }>> => {
+  await assertProjectAccess(projectId)
+  const { data, error } = await fromTable('submittals_log_mv')
+    .select('*')
+    .eq('project_id' as never, projectId)
+    .in('kind' as never, ['warranty', 'closeout', 'maintenance'])
+  if (error) throw transformSupabaseError(error)
+
+  const groups = new Map<string, Record<string, unknown>[]>()
+  for (const row of (data ?? []) as unknown as Array<Record<string, unknown>>) {
+    const div = (row.csi_division as string | null) ?? '00'
+    const list = groups.get(div) ?? []
+    list.push(row)
+    groups.set(div, list)
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([csi_division, items]) => ({ csi_division, items }))
 }
