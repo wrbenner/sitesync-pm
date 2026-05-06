@@ -628,7 +628,7 @@ describe('RFI DB Persistence Lifecycle', () => {
 
     // Verify createRfi and updateRfi are the right API functions for each step
     expect(getRFINext('draft', 'Submit')).toBe('open')
-    expect(getRFINext('open', 'Assign for Review')).toBe('under_review')
+    expect(getRFINext('open', 'Send for Review')).toBe('under_review')
     expect(getRFINext('under_review', 'Respond')).toBe('answered')
     expect(getRFINext('answered', 'Close')).toBe('closed')
 

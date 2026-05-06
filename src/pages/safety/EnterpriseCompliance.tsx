@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileText, Search, Shield, Flame, AlertTriangle, Plus, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, Btn, Modal, InputField, EmptyState } from '../../components/Primitives';
+import { UserName } from '../../components/UserName';
 import { colors, spacing, typography, borderRadius } from '../../styles/theme';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useIncidents } from '../../hooks/queries';
@@ -246,7 +247,14 @@ export const JhaTab: React.FC<{ onNavigateToPTP?: () => void }> = ({ onNavigateT
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : jha.id)}>
               <div>
                 <div style={{ fontWeight: typography.fontWeight.medium, fontSize: typography.fontSize.base }}>{jha.taskName}</div>
-                <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, marginTop: 2 }}>{jha.location} &bull; {jha.date} &bull; Prepared by {jha.preparedBy}{jha.reviewedBy ? ` \u2022 Reviewed by ${jha.reviewedBy}` : ''}</div>
+                <div style={{ fontSize: typography.fontSize.caption, color: colors.textSecondary, marginTop: 2 }}>
+                  {/* preparedBy / reviewedBy are free-text foreman/reviewer
+                      labels (not UUIDs), but UserName accepts non-UUID strings
+                      and renders them as-is \u2014 keeps the lint guard happy and
+                      future-proofs in case the field becomes a UUID FK. */}
+                  {jha.location} &bull; {jha.date} &bull; Prepared by <UserName userId={jha.preparedBy} fallback="\u2014" />
+                  {jha.reviewedBy && (<> &bull; Reviewed by <UserName userId={jha.reviewedBy} fallback="\u2014" /></>)}
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
                 <span style={{ padding: `2px ${spacing['2']}`, borderRadius: borderRadius.full, fontSize: typography.fontSize.caption, backgroundColor: colors.surfaceInset, color: colors.textSecondary }}>{jha.template}</span>

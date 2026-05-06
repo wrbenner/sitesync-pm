@@ -170,6 +170,14 @@ export function invalidateEntity(entityType: EntityType, projectId: string): voi
   keys.forEach((key) => {
     queryClient.invalidateQueries({ queryKey: key as unknown[] })
   })
+  // Always invalidate the entity-history view for this project. The DB
+  // audit-log trigger writes a row on every rfis / submittals / etc.
+  // mutation, but useEntityHistory's react-query cache is opaque to the
+  // INSERT — so without this call the History panel sits stale until
+  // the user manually refreshes. Prefix-match invalidation is cheap:
+  // react-query only refetches active subscriptions, which on a detail
+  // page is just the open entity.
+  queryClient.invalidateQueries({ queryKey: ['entity_history'] })
   triggerNotificationsForMutation(entityType, projectId, 'update', {}).catch(() => {})
 }
 

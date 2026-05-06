@@ -25,6 +25,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { colors, typography, spacing } from '../../styles/theme'
+import { UserName } from '../UserName'
 import type { StreamItem, StreamItemType, Urgency } from '../../types/stream'
 
 interface NeedsYouTableProps {
@@ -417,7 +418,14 @@ function Row({
             textOverflow: 'ellipsis',
           }}
         >
-          {(resolveName ? resolveName(item.assignedTo ?? item.party) : (item.assignedTo ?? item.party)) ?? '—'}
+          {/* assignedTo / party may be a UUID (RFI/Submittal/Task assignee)
+              or a plain trade-name string (sub company). UserName handles
+              both: looks UUID up, passes plain strings through. */}
+          {resolveName ? (
+            (resolveName(item.assignedTo ?? item.party) ?? '—')
+          ) : (
+            <UserName userId={item.assignedTo ?? item.party ?? null} fallback="—" />
+          )}
         </span>
       </Td>
       <Td style={{ textAlign: 'right' }}>

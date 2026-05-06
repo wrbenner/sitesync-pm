@@ -33,7 +33,7 @@ const moreNav = [
   { id: 'directory', label: 'Directory', icon: Users },
   { id: 'meetings', label: 'Meetings', icon: Calendar },
   { id: 'files', label: 'Files', icon: FileText },
-  { id: 'copilot', label: 'AI Copilot', icon: Zap },
+  { id: 'copilot', label: 'Iris', icon: Zap },
   { id: 'vision', label: 'Vision', icon: Eye },
 ];
 

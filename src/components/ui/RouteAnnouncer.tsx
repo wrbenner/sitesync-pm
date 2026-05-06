@@ -17,7 +17,7 @@ const pageNames: Record<string, string> = {
   '/meetings': 'Meetings',
   '/files': 'Files',
   '/activity': 'Activity',
-  '/copilot': 'AI Copilot',
+  '/copilot': 'Iris',
   '/iris/inbox': 'Iris Inbox',
   '/field-capture': 'Field Capture',
   '/vision': 'Vision',

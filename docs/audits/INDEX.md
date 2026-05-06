@@ -40,6 +40,9 @@ entries before starting work. Update this file when you add a new doc.
 | 39+45+60 | Citations dedicated panels + voice linter wiring + pilot data export | `DAYS_39_45_60_FOLLOWUP_RECEIPT_2026-05-04.md` | 4 dedicated citation panels (daily_log/CO/spec/schedule_phase) + iris-call voice linter post-process with iris_voice_diffs logging + 11-case Deno/src parity tests + scripts/export-pilot-data.ts. 29 new tests; 170 total session tests green. |
 | Lap 2 close | Polish push (close-out + ESLint zero) | `POLISH_PUSH_2026-05-05_RECEIPT.md` | All gates green: typecheck 0; **lint 0 errors (Bugatti zero)**; tests 2781 passed / 0 failed (+19 fixed, +1 honest skip); bundle 3229 KB (under floor by 320). Floor v3→v5: bundleSizeKB 3550→3230, eslintErrors 480→0, testCount 1416→2781. |
 | Lap 2 pre-flight | Slice D + E parallel push + Bugatti close-out | `SLICE_D_E_PARALLEL_PUSH_RECEIPT_2026-05-05.md` | Slice E: 339 lib tests across 12 files. Slice D: 47 exhaustive-deps fixes. **Bugatti close-out** drove all gates to zero: typecheck 12→0 (real TS errors had been hidden by `tail`-truncated runs), eslint 8→0 (real bugs incl. unfinished `boldValues` feature, dead state, dead JSX, theme-token typo), vitest 12→0-fail (TZ-flake fix + iCloud test exclusion). Unified iCloud-duplicate ignore across `.gitignore` + `eslint.config.js` + `tsconfig.app.json` + `vitest.config.ts`. Did not auto-PR the 241-commit integration. |
+| 2026-05-06 | RFI module P0 — 11 Tier-1 demo blockers | `DAY_X_RFI_P0_RECEIPT_2026-05-06.md` | Shipped: UserName + ESLint rule + entity_history invalidation + status-pill normalization + RFI/RFIs sweep + InlineEditField (6 fields) + Distribute dialog + PermissionGate two-layer + /iris route + Iris rebrand + Avery Oaks Day-30 seed reset. 4 migrations live. Bugatti grade. |
+| 2026-05-06 | RFI module P0 — verification | `DAY_X_RFI_P0_VERIFICATION_RECEIPT_2026-05-06.md` | Code-level walkthrough at commit `341ff9e`: 11 / 11 PASS. Surfaced one P1 caveat — Avery Oaks dashboard schedule rollup still shows 0% (closed by hotfix below). |
+| 2026-05-06 | RFI module P0 — schedule rollup hotfix | `DAY_X_RFI_P0_HOTFIX_RECEIPT_2026-05-06.md` | `project_metrics` MV was empty + `schedule_variance_days` hardcoded `0`. Migration `20260506000004_project_metrics_real_variance.sql` adds duration-weighted variance; seed appends a `REFRESH MATERIALIZED VIEW` block. Avery Oaks 0% / On schedule → 32% / +11d ahead. |
 
 ---
 
@@ -153,6 +156,14 @@ entries before starting work. Update this file when you add a new doc.
 | Date | File | Topic |
 |---|---|---|
 | 2026-04-24 | `../SECURITY_AUDIT_2026_04_24.md` | Security audit (lives under `docs/`, not `docs/audits/`) |
+| 2026-05-04 | `UX_BUGATTI_AUDIT_FRAMEWORK_2026-05-04.md` | Methodology + heuristics for the UX Bugatti audit pass. |
+| 2026-05-04 | `UX_BUGATTI_AUDIT_FINDINGS_2026-05-04.md` | UX Bugatti findings (batches A/B/demo/immersive). |
+| 2026-05-04 | `IMMERSIVE_UX_AUDIT_2026-05-04.md` | Immersive walkthrough audit feeding the RFI/Submittals deep dives. |
+| 2026-05-04 | `RFI_DEEP_DIVE_2026-05-04.md` | Live RFI workflow audit + verdict — drove the P0 demo-blocker list. |
+| 2026-05-04 | `RFI_INDUSTRY_RESEARCH_2026-05-04.md` | Enterprise GC RFI workflow research (research subagent output). |
+| 2026-05-04 | `RFI_MODULE_BUILD_SPEC_2026-05-04.md` | Bugatti-grade RFI build spec — Part 17 P0 list shipped 2026-05-06. P1 / P2 sections still queued. |
+| 2026-05-06 | `RFI_EDIT_MANIPULATE_AUDIT_2026-05-06.md` | Procore vs SiteSync edit/manipulate parity audit (live walkthrough). |
+| 2026-05-06 | `SUBMITTALS_MODULE_BUILD_SPEC_2026-05-06.md` | Submittals build spec — P0-D35 cleanup shipped via PR #324; D38+ refactor queued. |
 
 ---
 

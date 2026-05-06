@@ -477,6 +477,14 @@ function AppRoutes() {
             <Route path="/portal/owner" element={<Navigate to="/reports" replace />} />
             <Route path="/ai-agents" element={<Navigate to="/ai" replace />} />
             <Route path="/copilot" element={<Navigate to="/ai" replace />} />
+            {/* /iris resolves — when the irisInbox flag is on, send users
+                straight to the inbox; otherwise to /ai which is the
+                Iris/AI surface fallback. Documented in P0 #10 of the RFI
+                Module Build Spec. */}
+            <Route
+              path="/iris"
+              element={<Navigate to={FLAGS.irisInbox ? '/iris/inbox' : '/ai'} replace />}
+            />
 
             {/* ── Redirects: legacy aliases ── */}
             <Route path="/activity" element={<Navigate to="/dashboard" replace />} />

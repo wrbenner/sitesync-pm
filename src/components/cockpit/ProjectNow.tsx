@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowUpRight, ImageIcon, AlertTriangle } from 'lucide-react'
 import { colors, typography, spacing } from '../../styles/theme'
+import { UserName } from '../UserName'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useProject, useWorkforceMembers } from '../../hooks/queries'
 import { useScheduleActivities } from '../../hooks/useScheduleActivities'
@@ -479,7 +480,14 @@ export const ProjectNow: React.FC<ProjectNowProps> = ({ items, role, resolveName
                     }}
                   >
                     <span style={{ color: colors.ink2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {(resolveName ? resolveName(c.party ?? c.assignedTo) : (c.party ?? c.assignedTo)) ?? '—'} · {c.commitment ?? c.title}
+                      {/* party / assignedTo may be a UUID or a free-text label.
+                          UserName handles both cases — UUIDs go through profile
+                          lookup (skeleton during load), plain strings pass through. */}
+                      {resolveName ? (
+                        (resolveName(c.party ?? c.assignedTo) ?? '—')
+                      ) : (
+                        <UserName userId={c.party ?? c.assignedTo ?? null} fallback="—" />
+                      )} · {c.commitment ?? c.title}
                     </span>
                     <span style={{ color: c.overdue ? '#C93B3B' : colors.ink3, fontSize: '12px', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                       {c.dueDate ? formatDateShort(c.dueDate) : '—'}

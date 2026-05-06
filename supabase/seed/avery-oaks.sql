@@ -348,8 +348,13 @@ INSERT INTO projects (
   owner_id, general_contractor, contract_value,
   start_date, target_completion, status
 ) VALUES (
+  -- Demo project window — start_date 30 days before today, target ~12mo
+  -- out. Anchored to a fixed date (NOT now()) so re-seeding produces a
+  -- deterministic snapshot. Update annually as the demo cycle moves.
+  -- See P0 #11 (RFI Module Build Spec). Schedule phases below align to
+  -- this window — keep them in sync when bumping these dates.
   v_project_id, 'Avery Oaks Apartments', '9019 North Lake Creek Pkwy', 'Austin', 'TX', '78717',
-  walker_id, 'Journeyman', 58400000.00, '2020-09-15', '2027-04-30', 'active'
+  walker_id, 'Journeyman', 58400000.00, '2026-04-06', '2027-04-06', 'active'
 )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name, address = EXCLUDED.address, city = EXCLUDED.city,
@@ -1085,19 +1090,23 @@ INSERT INTO directory_contacts (project_id, name, company, role, trade, email, p
 -- Break the self-referencing depends_on chain before deletion
 UPDATE schedule_phases SET depends_on = NULL WHERE id IN (sp_01, sp_02, sp_03, sp_04, sp_05, sp_06, sp_07, sp_08, sp_09, sp_10, sp_11, sp_12) OR project_id = v_project_id;
 DELETE FROM schedule_phases WHERE id IN (sp_01, sp_02, sp_03, sp_04, sp_05, sp_06, sp_07, sp_08, sp_09, sp_10, sp_11, sp_12) OR project_id = v_project_id;
+-- Phases compressed into the 2026-04-06 → 2027-04-06 demo window (P0 #11).
+-- Mix: 2 completed (Days 1–25), 4 active (Days 20–180 with progress), 6
+-- upcoming (Days 60–365). Keeps the cockpit dashboard alive — overall
+-- percent reads as a partial number, not 0%.
 INSERT INTO schedule_phases (id, project_id, name, start_date, end_date, percent_complete, status, depends_on, is_critical_path, assigned_crew_id, created_at) VALUES
-  (sp_01, v_project_id, 'Mobilization and Site Preparation',          '2020-09-15', '2020-12-15', 100, 'completed', NULL,  true,  NULL,            '2020-09-15'),
-  (sp_02, v_project_id, 'Site Civil and Underground Utilities',       '2020-11-01', '2021-06-30', 100, 'completed', sp_01, true,  NULL,            '2020-09-15'),
-  (sp_03, v_project_id, 'Podium Concrete Building A',                  '2021-04-01', '2022-02-28', 100, 'completed', sp_02, true,  NULL,            '2020-09-15'),
-  (sp_04, v_project_id, 'Podium Concrete Building B',                  '2021-09-01', '2022-08-31', 100, 'completed', sp_02, true,  NULL,            '2020-09-15'),
-  (sp_05, v_project_id, 'Podium Concrete Building C',                  '2022-02-01', '2023-01-31', 100, 'completed', sp_02, true,  NULL,            '2020-09-15'),
-  (sp_06, v_project_id, 'Wood Framing All Buildings',                  '2022-05-01', '2026-06-30',  85, 'active',    sp_03, true,  crew_frame,      '2020-09-15'),
-  (sp_07, v_project_id, 'MEP Rough-In',                                '2023-01-01', '2026-09-30',  72, 'active',    sp_06, true,  crew_mep,        '2020-09-15'),
-  (sp_08, v_project_id, 'Roofing All Buildings',                       '2024-06-01', '2026-08-31',  65, 'active',    sp_06, true,  NULL,            '2020-09-15'),
-  (sp_09, v_project_id, 'Drywall and Interior Finishes',                '2024-09-01', '2026-12-15',  45, 'active',    sp_07, false, crew_finish,    '2020-09-15'),
-  (sp_10, v_project_id, 'Site Hardscape, Landscape, Paving',            '2026-03-01', '2026-09-30',  20, 'active',    sp_02, false, NULL,            '2020-09-15'),
-  (sp_11, v_project_id, 'Pool and Amenity Build-Out',                   '2026-03-01', '2026-08-31',  15, 'active',    sp_05, false, NULL,            '2020-09-15'),
-  (sp_12, v_project_id, 'Final Inspections and TCO',                    '2026-12-01', '2027-04-30',   0, 'upcoming',  sp_09, true,  NULL,            '2020-09-15');
+  (sp_01, v_project_id, 'Mobilization and Site Preparation',          '2026-04-06', '2026-04-15', 100, 'completed', NULL,  true,  NULL,            '2026-04-06'),
+  (sp_02, v_project_id, 'Site Civil and Underground Utilities',       '2026-04-10', '2026-04-30', 100, 'completed', sp_01, true,  NULL,            '2026-04-10'),
+  (sp_03, v_project_id, 'Podium Concrete Building A',                  '2026-04-25', '2026-05-25',  80, 'active',    sp_02, true,  NULL,            '2026-04-25'),
+  (sp_04, v_project_id, 'Podium Concrete Building B',                  '2026-05-01', '2026-06-25',  55, 'active',    sp_02, true,  NULL,            '2026-05-01'),
+  (sp_05, v_project_id, 'Podium Concrete Building C',                  '2026-05-01', '2026-07-10',  35, 'active',    sp_02, true,  NULL,            '2026-05-01'),
+  (sp_06, v_project_id, 'Wood Framing All Buildings',                  '2026-05-04', '2026-10-03',  15, 'active',    sp_03, true,  crew_frame,      '2026-05-04'),
+  (sp_07, v_project_id, 'MEP Rough-In',                                '2026-06-05', '2026-12-02',   0, 'upcoming',  sp_06, true,  crew_mep,        '2026-04-06'),
+  (sp_08, v_project_id, 'Roofing All Buildings',                       '2026-07-15', '2027-01-11',   0, 'upcoming',  sp_06, true,  NULL,            '2026-04-06'),
+  (sp_09, v_project_id, 'Drywall and Interior Finishes',                '2026-08-24', '2027-02-10',   0, 'upcoming',  sp_07, false, crew_finish,    '2026-04-06'),
+  (sp_10, v_project_id, 'Site Hardscape, Landscape, Paving',            '2026-10-23', '2027-03-02',   0, 'upcoming',  sp_02, false, NULL,            '2026-04-06'),
+  (sp_11, v_project_id, 'Pool and Amenity Build-Out',                   '2026-11-12', '2027-03-12',   0, 'upcoming',  sp_05, false, NULL,            '2026-04-06'),
+  (sp_12, v_project_id, 'Final Inspections and TCO',                    '2027-02-20', '2027-04-06',   0, 'upcoming',  sp_09, true,  NULL,            '2026-04-06');
 
 -- =========================================================================
 -- 15. ACTIVITY FEED (30)
@@ -2052,3 +2061,15 @@ END $$;
 
 -- Restore normal trigger firing for everything else in the database.
 SET session_replication_role = origin;
+
+-- Refresh the dashboard rollup so the demo project picks up its new
+-- schedule_phases / budget / RFI counts immediately, instead of waiting for
+-- the 5-minute pg_cron tick. Without this, a fresh seed shows "0% / On
+-- schedule" until the next refresh fires.
+DO $refresh$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class WHERE relname = 'project_metrics' AND relkind = 'm'
+  ) THEN
+    REFRESH MATERIALIZED VIEW project_metrics;
+  END IF;
+END $refresh$;

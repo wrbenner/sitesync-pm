@@ -18,20 +18,30 @@ import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
   AlertTriangle, MessageSquare, FileText,
   Image, ChevronDown, User, Eye, EyeOff,
-  Paperclip, Flag, Timer, Zap,
+  Flag, Pencil, Timer,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
 import { colors, spacing, borderRadius } from '../../styles/theme'
 import { fromTable } from '../../lib/db/queries'
 import { useAuth } from '../../hooks/useAuth'
 import { useRFI } from '../../hooks/queries/rfis'
-import { useUpdateRFI, useCreateRFIResponse } from '../../hooks/mutations/rfis'
+import { useUpdateRFI } from '../../hooks/mutations/rfis'
 import { useProjectId } from '../../hooks/useProjectId'
 import { useRealtimeRowInvalidation } from '../../hooks/useRealtimeInvalidation'
-import { useProfileNames, displayName, type ProfileMap } from '../../hooks/queries/profiles'
+import { useProfileNames, displayName } from '../../hooks/queries/profiles'
+import { UserName } from '../../components/UserName'
 import { ApprovalPanel } from '../../components/workflows/ApprovalPanel'
 import { WorkflowTimeline } from '../../components/WorkflowTimeline'
 import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
+import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
+import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
+import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
+import { RFIResponseThread } from '../../components/rfi/RFIResponseThread'
+import { RFIResponseComposer } from '../../components/rfi/RFIResponseComposer'
+import { RFIEmailReviewBanner } from '../../components/rfi/RFIEmailReviewBanner'
+import { useRFIResponsesList, type RFIResponseRow } from '../../hooks/queries/useRFIResponses'
+import { PermissionGate } from '../../components/auth/PermissionGate'
+import { usePermissions } from '../../hooks/usePermissions'
 import { AuditTrailButton } from '../../components/audit/AuditTrailButton'
 import { SpecExcerptPanel } from '../../components/specifications/SpecExcerptPanel'
 import { RfiSlaPanel } from '../../components/conversation/RfiSlaPanel'
@@ -67,23 +77,11 @@ const formatDateTime = (d: string | null) => {
   })
 }
 
-const formatShortDate = (d: string | null) => {
-  if (!d) return ''
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
+// formatShortDate helper removed under P1b — unused after RFIResponseThread
+// took over response date rendering.
 
-const relativeTime = (d: string | null) => {
-  if (!d) return ''
-  const diff = Date.now() - new Date(d).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  if (days < 7) return `${days}d ago`
-  return formatShortDate(d)
-}
+// relativeTime helper removed under P1b — RFIResponseThread owns
+// its own date formatting now.
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -244,182 +242,6 @@ const StatusControl: React.FC<{
   )
 }
 
-// ─── Response Bubble ──────────────────────────────────────
-
-const ResponseBubble: React.FC<{
-  response: RFIResponse
-  index: number
-  isNew?: boolean
-  profileMap?: ProfileMap
-}> = ({ response, index, isNew, profileMap }) => {
-  const authorName = displayName(profileMap, response.author_id)
-  return (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.03, type: 'spring', stiffness: 500, damping: 35 }}
-    style={{
-      display: 'flex', gap: '10px', alignItems: 'flex-start',
-      position: 'relative', padding: '2px 0',
-    }}
-  >
-    {/* New indicator */}
-    {isNew && (
-      <div style={{
-        position: 'absolute', left: -12, top: 14,
-        width: 5, height: 5, borderRadius: '50%',
-        backgroundColor: colors.primaryOrange,
-      }} />
-    )}
-
-    <Avatar initials={getInitials(authorName)} size={30} />
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-        <span style={{
-          fontSize: '13px', fontWeight: 600,
-          color: colors.textPrimary,
-        }}>
-          {authorName}
-        </span>
-        {(response as RFIResponse & { company?: string }).company && (
-          <span style={{
-            fontSize: '10px', color: colors.textTertiary,
-            padding: '1px 6px', borderRadius: '10px',
-            backgroundColor: colors.surfaceInset,
-          }}>
-            {(response as RFIResponse & { company?: string }).company}
-          </span>
-        )}
-        <span style={{ fontSize: '11px', color: colors.textTertiary }}>
-          {relativeTime(response.created_at)}
-        </span>
-      </div>
-      <div style={{
-        padding: '12px 16px',
-        backgroundColor: colors.surfaceInset,
-        borderRadius: '4px 14px 14px 14px',
-        fontSize: '14px', color: colors.textPrimary,
-        lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-      }}>
-        {response.content || ''}
-      </div>
-      {/* Attachments */}
-      {response.attachments && Array.isArray(response.attachments) && (response.attachments as unknown[]).length > 0 && (
-        <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-          {(response.attachments as unknown[]).map((att: unknown, i: number) => (
-            <span key={i} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px',
-              fontSize: '11px', color: colors.primaryOrange,
-              padding: '3px 8px', borderRadius: '6px',
-              backgroundColor: colors.orangeSubtle, cursor: 'pointer',
-            }}>
-              <Paperclip size={10} />
-              {typeof att === 'string' ? att : `File ${i + 1}`}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  </motion.div>
-  )
-}
-
-// ─── Compose Box ──────────────────────────────────────────
-
-const ComposeBox: React.FC<{
-  rfiId: string
-  projectId: string
-}> = ({ rfiId, projectId }) => {
-  const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
-  const createResponse = useCreateRFIResponse()
-  const ref = useRef<HTMLTextAreaElement>(null)
-
-  const handleSend = useCallback(async () => {
-    if (!text.trim() || sending) return
-    setSending(true)
-    try {
-      await createResponse.mutateAsync({
-        data: { rfi_id: rfiId, content: text.trim() },
-        rfiId, projectId,
-      })
-      setText('')
-    } catch {
-      // handled by mutation
-    } finally {
-      setSending(false)
-    }
-  }, [text, sending, rfiId, projectId, createResponse])
-
-  // Auto-grow textarea
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = 'auto'
-      ref.current.style.height = Math.min(ref.current.scrollHeight, 180) + 'px'
-    }
-  }, [text])
-
-  return (
-    <div style={{
-      display: 'flex', gap: '10px', alignItems: 'flex-end',
-      padding: '16px 20px',
-      borderTop: `1px solid ${colors.borderSubtle}`,
-      backgroundColor: colors.surfaceInset,
-      borderRadius: '0 0 16px 16px',
-    }}>
-      <textarea
-        ref={ref}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Write a response… (⌘+Enter to send)"
-        rows={1}
-        style={{
-          flex: 1, padding: '11px 14px',
-          fontSize: '14px', color: colors.textPrimary,
-          backgroundColor: colors.surfaceRaised,
-          border: `1.5px solid ${colors.borderSubtle}`,
-          borderRadius: '12px',
-          outline: 'none', resize: 'none',
-          fontFamily: 'inherit', lineHeight: 1.5,
-          minHeight: 44, maxHeight: 180,
-          transition: 'border-color 0.15s, box-shadow 0.15s',
-          boxSizing: 'border-box',
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = colors.primaryOrange
-          e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.primaryOrange}10`
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = colors.borderSubtle
-          e.currentTarget.style.boxShadow = 'none'
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault()
-            handleSend()
-          }
-        }}
-      />
-      <button
-        onClick={handleSend}
-        disabled={!text.trim() || sending}
-        title="Send (⌘+Enter)"
-        style={{
-          width: 42, height: 42, borderRadius: '12px', border: 'none',
-          backgroundColor: text.trim() && !sending ? colors.primaryOrange : colors.surfaceDisabled,
-          color: text.trim() && !sending ? colors.white : colors.textDisabled,
-          cursor: text.trim() && !sending ? 'pointer' : 'not-allowed',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, transition: 'all 0.15s',
-          boxShadow: text.trim() && !sending ? '0 2px 8px rgba(244,120,32,0.25)' : 'none',
-        }}
-      >
-        <Send size={16} />
-      </button>
-    </div>
-  )
-}
-
 // ─── Watch Button ────────────────────────────────────────
 
 const WatchButton: React.FC<{
@@ -480,7 +302,12 @@ const MetadataSection: React.FC<{ rfi: RFI; assignedName?: string | null }> = ({
   const items = [
     { icon: <User size={13} />, label: 'Assigned', value: assignedName ?? null },
     { icon: <Calendar size={13} />, label: 'Due', value: formatDate(rfi.due_date ?? null), color: urgency?.color },
-    { icon: <DollarSign size={13} />, label: 'Cost', value: rfi.cost_impact != null && rfi.cost_impact !== 0 ? `$${Number(rfi.cost_impact).toLocaleString()}` : null },
+    { icon: <DollarSign size={13} />, label: 'Cost', value: (() => {
+        // P1b: cost_impact is dropped; read from cost_impact_cents.
+        const cents = (rfi as unknown as { cost_impact_cents?: number | null }).cost_impact_cents
+        if (cents == null || Number(cents) === 0) return null
+        return `$${(Number(cents) / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })}`
+      })() },
     { icon: <Clock size={13} />, label: 'Schedule', value: rfi.schedule_impact ? `${rfi.schedule_impact} days` : null },
     { icon: <FileText size={13} />, label: 'Spec', value: rfi.spec_section },
     { icon: <Image size={13} />, label: 'Drawing', value: rfi.drawing_reference },
@@ -534,28 +361,6 @@ const MetadataSection: React.FC<{ rfi: RFI; assignedName?: string | null }> = ({
   )
 }
 
-// ─── New Activity Banner ─────────────────────────────────
-
-const NewActivityBanner: React.FC<{ count: number }> = ({ count }) => {
-  if (count === 0) return null
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '8px',
-      padding: '6px 0',
-    }}>
-      <div style={{ flex: 1, height: 1, backgroundColor: `${colors.primaryOrange}25` }} />
-      <span style={{
-        fontSize: '11px', fontWeight: 600,
-        color: colors.primaryOrange, textTransform: 'uppercase',
-        letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '4px',
-      }}>
-        <Zap size={10} />
-        {count} new
-      </span>
-      <div style={{ flex: 1, height: 1, backgroundColor: `${colors.primaryOrange}25` }} />
-    </div>
-  )
-}
 
 // ─── Main Page ────────────────────────────────────────────
 
@@ -581,6 +386,8 @@ export function RFIDetail() {
     ['rfis', projectId],
   ])
   const [transitioning, setTransitioning] = useState<string | null>(null)
+  const [distributeOpen, setDistributeOpen] = useState(false)
+  const [editPanelOpen, setEditPanelOpen] = useState(false)
 
   // Track "last viewed" for unread indicator
   const lastViewedKey = rfiId ? `rfi_viewed_${rfiId}` : null
@@ -598,6 +405,17 @@ export function RFIDetail() {
   const rfi = rfiData as (RFI & { responses?: RFIResponse[] }) | undefined
   const responses = useMemo(() => rfi?.responses ?? [], [rfi?.responses])
 
+  // P1b: live thread query — picks up edits/deletes/official toggles
+  // without requiring a full RFI re-fetch. Falls back to whatever the
+  // RFI detail bundle returned for the first paint (preserves current
+  // mark-as-read + skeleton timing).
+  const { data: liveResponses } = useRFIResponsesList(rfiId)
+  const detailedResponses = useMemo<RFIResponseRow[]>(() => {
+    const fromLive = liveResponses ?? null
+    if (fromLive && fromLive.length >= 0) return fromLive
+    return (responses as unknown as RFIResponseRow[]) ?? []
+  }, [liveResponses, responses])
+
   const userIdsToResolve = useMemo(
     () => [rfi?.created_by, rfi?.assigned_to, ...responses.map(r => r.author_id)],
     [rfi?.created_by, rfi?.assigned_to, responses],
@@ -608,7 +426,12 @@ export function RFIDetail() {
 
   const currentStatus = (rfi?.status as RFIState) || 'draft'
   const statusConfig = getRFIStatusConfig(currentStatus)
-  const transitions = getValidTransitions(currentStatus, 'admin')
+  // Pass the real user role so getValidTransitions can hide Void from
+  // non-admin/non-owner users (per PermissionGate audit + Build Spec
+  // Part 5). Falls back to 'viewer' which yields the safest minimum
+  // transition set while permissions are loading.
+  const { role: userRole } = usePermissions()
+  const transitions = getValidTransitions(currentStatus, userRole ?? 'viewer')
   const daysOpen = getDaysOpen(rfi?.created_at ?? null)
 
   const newResponseCount = useMemo(() => {
@@ -616,10 +439,9 @@ export function RFIDetail() {
     return responses.filter(r => r.created_at && r.created_at > lastViewed).length
   }, [lastViewed, responses])
 
-  const firstNewIndex = useMemo(() => {
-    if (!lastViewed || newResponseCount === 0) return -1
-    return responses.findIndex(r => r.created_at && r.created_at > lastViewed)
-  }, [lastViewed, newResponseCount, responses])
+  // firstNewIndex deprecated under P1b — RFIResponseThread owns
+  // ordering + new-since indicators inside its own cards.
+  void newResponseCount
 
   const handleTransition = useCallback(async (action: string) => {
     if (!rfi || !projectId) return
@@ -759,12 +581,73 @@ export function RFIDetail() {
                 projectId={rfi.project_id}
               />
               <WatchButton rfiId={rfi.id} watchers={watchers} userId={user?.id} />
-              <StatusControl
-                currentStatus={currentStatus}
-                transitions={transitions}
-                onTransition={handleTransition}
-                loading={transitioning}
-              />
+              {/* P1a — Edit panel button. Watcher list editor lives inside.
+                  Clicking opens the same slide-in panel users see from the
+                  list page's [Edit] column, with all RFI fields editable,
+                  including the multi-select watcher + distribution chips. */}
+              <PermissionGate permission="rfis.edit">
+                <button
+                  type="button"
+                  onClick={() => setEditPanelOpen(true)}
+                  title="Edit all RFI fields, watchers, and distribution"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 12px', borderRadius: 8,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    backgroundColor: 'transparent',
+                    color: colors.textSecondary,
+                    fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  <Pencil size={12} /> Edit
+                </button>
+              </PermissionGate>
+              {/* Distribute / Forward to sub — P0 #8. Permission-gated to
+                  rfis.edit so read-only users see no affordance. The
+                  dialog itself persists to rfi_distributions and the
+                  audit trigger surfaces the event in History. */}
+              <PermissionGate permission="rfis.edit">
+                <button
+                  type="button"
+                  onClick={() => setDistributeOpen(true)}
+                  title="Forward this RFI to a sub or other recipient"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 12px', borderRadius: 8,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    backgroundColor: 'transparent',
+                    color: colors.textSecondary,
+                    fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  <Send size={12} /> Distribute
+                </button>
+              </PermissionGate>
+              {/* PermissionGate around the entire StatusControl (P0 #9):
+                  Close, Void, Send for Review, Reopen, Submit all live
+                  here. Read-only / viewer role sees only the static pill.
+                  Void is further filtered to admin/owner inside
+                  getValidTransitions(role) — defense in depth. */}
+              <PermissionGate
+                permission="rfis.edit"
+                fallback={
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px', borderRadius: '20px',
+                    backgroundColor: statusConfig.bg, color: statusConfig.color,
+                    fontSize: '12px', fontWeight: 600,
+                  }}>
+                    {statusConfig.label}
+                  </span>
+                }
+              >
+                <StatusControl
+                  currentStatus={currentStatus}
+                  transitions={transitions}
+                  onTransition={handleTransition}
+                  loading={transitioning}
+                />
+              </PermissionGate>
             </div>
           </div>
 
@@ -788,7 +671,10 @@ export function RFIDetail() {
               fontSize: '12px', color: colors.primaryOrange, fontWeight: 600,
             }}>
               <Flag size={11} />
-              Ball in court: {displayName(profileMap, rfi.ball_in_court)}
+              {/* The literal site of Walker's "code in activity" complaint —
+                  this used to render a raw UUID. UserName guarantees skeleton
+                  during load, then a name; never the UUID. */}
+              Ball in court: <UserName userId={rfi.ball_in_court} fallback="—" />
             </div>
           )}
         </div>
@@ -821,10 +707,21 @@ export function RFIDetail() {
           <ApprovalPanel entityType="rfi" entityId={rfi.id} />
         </div>
 
+        {/* ── Inline-editable metadata (P0 #7: subject, ball-in-court,
+            due date, priority, drawing ref, spec section) ───────── */}
+        <div style={{ marginBottom: '24px' }}>
+          <RFIInlineMetadata rfi={rfi as RFI} />
+        </div>
+
         {/* ── Audit timeline (the moat) ──────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <EntityHistoryPanel entityType="rfi" entityId={rfi.id} />
         </div>
+
+        {/* ── P1c — Iris email review banner. Surfaces low-confidence
+              inbound matches for Walker to Accept/Reject before they
+              join the legal record. ─────────────────────────────── */}
+        <RFIEmailReviewBanner rfiId={rfi.id} projectId={rfi.project_id} />
 
         {/* ── The Question + Thread Card ──────────────────── */}
         <div style={{
@@ -919,53 +816,19 @@ export function RFIDetail() {
             <MetadataSection rfi={rfi} assignedName={assignedName} />
           </div>
 
-          {/* ── Response Thread ─────────────────────────── */}
-          {responses.length > 0 && (
-            <div style={{
-              padding: '16px 24px 20px',
-              borderTop: `1px solid ${colors.borderSubtle}`,
-              display: 'flex', flexDirection: 'column', gap: '14px',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <span style={{
-                  fontSize: '12px', color: colors.textTertiary,
-                  fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em',
-                }}>
-                  {responses.length} {responses.length === 1 ? 'Response' : 'Responses'}
-                </span>
-                {newResponseCount > 0 && (
-                  <span style={{
-                    fontSize: '11px', fontWeight: 600, color: colors.primaryOrange,
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                  }}>
-                    <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      backgroundColor: colors.primaryOrange,
-                    }} />
-                    {newResponseCount} new
-                  </span>
-                )}
-              </div>
-
-              {responses.map((r, i) => (
-                <React.Fragment key={r.id}>
-                  {i === firstNewIndex && <NewActivityBanner count={newResponseCount} />}
-                  <ResponseBubble
-                    response={r}
-                    index={i}
-                    isNew={lastViewed ? (r.created_at != null && r.created_at > lastViewed) : false}
-                    profileMap={profileMap}
-                  />
-                </React.Fragment>
-              ))}
-              <div ref={threadEndRef} />
-            </div>
+          {/* ── Response Thread (P1b) — pinned Official answer + per-card
+                kebab + edit/delete + response_type badges + internal
+                styling. Pulls live data so edits land without refresh. */}
+          {detailedResponses.length > 0 && (
+            <RFIResponseThread
+              rfiId={rfi.id}
+              projectId={rfi.project_id}
+              responses={detailedResponses}
+            />
           )}
 
           {/* Empty state */}
-          {responses.length === 0 && (currentStatus === 'open' || currentStatus === 'under_review') && (
+          {detailedResponses.length === 0 && (currentStatus === 'open' || currentStatus === 'under_review') && (
             <div style={{
               padding: '32px 24px', borderTop: `1px solid ${colors.borderSubtle}`,
               textAlign: 'center',
@@ -982,13 +845,37 @@ export function RFIDetail() {
             </div>
           )}
 
-          {/* ── Compose ────────────────────────────────── */}
+          {/* ── Compose (P1b composer w/ response type, internal toggle, @-mentions) */}
           {currentStatus !== 'closed' && currentStatus !== 'void' && (
-            <ComposeBox rfiId={rfi.id} projectId={projectId || ''} />
+            <RFIResponseComposer
+              rfiId={rfi.id}
+              projectId={rfi.project_id}
+              rfiNumber={rfi.number}
+            />
           )}
         </div>
 
       </div>
+
+      {/* ── Distribute / Forward dialog (P0 #8). Mounted here so it
+          overlays the whole detail page when open. ───────────────── */}
+      <RFIDistributeDialog
+        rfiId={rfi.id}
+        projectId={rfi.project_id}
+        rfiNumber={rfi.number}
+        open={distributeOpen}
+        onClose={() => setDistributeOpen(false)}
+      />
+
+      {/* ── P1a — Full Edit panel. Hosts the watcher + distribution chip
+          editors so the detail-page Edit click reaches the same surface
+          users see from the list page. ─────────────────────────────── */}
+      <RFIEditPanel
+        open={editPanelOpen}
+        onClose={() => setEditPanelOpen(false)}
+        rfiId={rfi.id}
+        projectId={rfi.project_id}
+      />
     </PageContainer>
   )
 }

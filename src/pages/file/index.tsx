@@ -12,6 +12,7 @@ import React, { useEffect, useMemo } from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { ProjectGate } from '../../components/ProjectGate';
 import { PageState } from '../../components/shared/PageState';
+import { UserName } from '../../components/UserName';
 import { useCopilotStore } from '../../stores/copilotStore';
 import { useProjectId } from '../../hooks/useProjectId';
 import { useProject, useFiles } from '../../hooks/queries';
@@ -627,7 +628,8 @@ const FileRow: React.FC<{ file: ProjectFile }> = ({ file }) => {
                 color: colors.ink4,
               }}
             >
-              {file.uploaded_by}
+              {/* uploaded_by is a uuid — never render raw. */}
+              <UserName userId={file.uploaded_by} fallback="—" />
             </span>
           )}
         </div>

@@ -18,7 +18,7 @@ const routeLabels: Record<string, string> = {
   directory: 'Directory',
   meetings: 'Meetings',
   files: 'Files',
-  copilot: 'AI Copilot',
+  copilot: 'Iris',
   vision: 'Vision',
   safety: 'Safety',
   'change-orders': 'Change Orders',
