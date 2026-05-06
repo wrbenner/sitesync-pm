@@ -41,6 +41,11 @@ interface FileItem {
   content_type?: string | null;
 }
 
+// Hoisted to module scope: createColumnHelper has no runtime dependencies, so a
+// stable identity here keeps the columns useMemo deps as []. Otherwise a fresh
+// helper object every render would invalidate the memo each pass.
+const fileColumnHelper = createColumnHelper<FileItem>();
+
 const formatBytes = (bytes: number): string => {
   if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
@@ -397,13 +402,14 @@ const FilesPage: React.FC = () => {
     } catch {
       addToast('error', `Failed to delete ${file.name}`);
     }
-  }, [addToast, deleteFile, projectId]);
+  }, [addToast, deleteFile, projectId, confirmDeleteFile]);
 
   // ── Columns ───────────────────────────────────────────
-  const columnHelper = createColumnHelper<FileItem>();
+  // columnHelper is hoisted to module scope (see fileColumnHelper above) for
+  // stable identity across renders, so the columns memo deps stay [].
 
   const fileTableColumns = useMemo(() => [
-    columnHelper.accessor('name', {
+    fileColumnHelper.accessor('name', {
       header: 'Name',
       cell: (info) => {
         const file = info.row.original;
@@ -417,7 +423,7 @@ const FilesPage: React.FC = () => {
         );
       },
     }),
-    columnHelper.accessor('type', {
+    fileColumnHelper.accessor('type', {
       header: 'Type',
       size: 100,
       cell: (info) => (
@@ -426,7 +432,7 @@ const FilesPage: React.FC = () => {
         </span>
       ),
     }),
-    columnHelper.display({
+    fileColumnHelper.display({
       id: 'sizeCount',
       header: 'Size / Count',
       size: 150,
@@ -448,7 +454,7 @@ const FilesPage: React.FC = () => {
         );
       },
     }),
-    columnHelper.display({
+    fileColumnHelper.display({
       id: 'modified',
       header: 'Modified',
       size: 120,
@@ -460,7 +466,7 @@ const FilesPage: React.FC = () => {
         return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>{date || '\u2014'}</span>;
       },
     }),
-    columnHelper.display({
+    fileColumnHelper.display({
       id: 'status',
       header: 'Status',
       size: 110,

@@ -24,6 +24,12 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'requisitions', label: 'Requisitions', icon: ClipboardList },
 ]
 
+// Hoisted to module scope: createColumnHelper has no runtime dependencies, so a
+// stable identity here keeps the inventory columns useMemo deps as []. The
+// other column helpers in this file scope over render-local state (mutations,
+// confirms) so they remain inside the component body.
+const procInventoryCol = createColumnHelper<Record<string, unknown>>()
+
 // ── Helpers ──────────────────────────────────────────────────
 
 function formatCurrency(value: number | null | undefined): string {
@@ -770,17 +776,18 @@ export const Procurement: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [deleteDelivery.isPending, projectId])
 
-  const inventoryCol = createColumnHelper<Record<string, unknown>>()
+  // inventoryCol is hoisted to module scope (see procInventoryCol below) so
+  // its identity is stable and the inventory columns useMemo deps stay [].
   const inventoryColumns = useMemo(() => [
-    inventoryCol.accessor('name', {
+    procInventoryCol.accessor('name', {
       header: 'Name',
       cell: (info) => <span style={{ fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{info.getValue() as string}</span>,
     }),
-    inventoryCol.accessor('category', {
+    procInventoryCol.accessor('category', {
       header: 'Category',
       cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() as string}</span>,
     }),
-    inventoryCol.accessor('quantity_on_hand', {
+    procInventoryCol.accessor('quantity_on_hand', {
       header: 'Quantity',
       cell: (info) => {
         const row = info.row.original
@@ -794,19 +801,19 @@ export const Procurement: React.FC = () => {
         )
       },
     }),
-    inventoryCol.accessor('unit', {
+    procInventoryCol.accessor('unit', {
       header: 'Unit',
       cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() as string}</span>,
     }),
-    inventoryCol.accessor('location', {
+    procInventoryCol.accessor('location', {
       header: 'Location',
       cell: (info) => <span style={{ color: colors.textSecondary }}>{info.getValue() as string}</span>,
     }),
-    inventoryCol.accessor('minimum_quantity', {
+    procInventoryCol.accessor('minimum_quantity', {
       header: 'Min Qty',
       cell: (info) => <span style={{ color: colors.textTertiary }}>{(info.getValue() as number) ?? 'N/A'}</span>,
     }),
-    inventoryCol.accessor('last_counted_date', {
+    procInventoryCol.accessor('last_counted_date', {
       header: 'Last Counted',
       cell: (info) => (
         <span style={{ color: colors.textSecondary }}>

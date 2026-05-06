@@ -12,6 +12,11 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useTableKeyboardNavigation } from '../../hooks/useTableKeyboardNavigation';
 import { type FileItem, getGradient, getApprovalStatus, getFileTypeIcon, formatBytes } from './fileTypes';
 
+// Hoisted to module scope: createColumnHelper has no runtime dependencies, so a
+// stable identity here keeps the columns useMemo deps as []. Otherwise a fresh
+// helper object every render would invalidate the memo each pass.
+const fileGridColumnHelper = createColumnHelper<FileItem>();
+
 type ViewMode = 'list' | 'grid';
 
 interface FileGridProps {
@@ -156,10 +161,9 @@ export const FileGrid: React.FC<FileGridProps> = ({
     if (row && listRef.current.contains(document.activeElement)) row.focus({ preventScroll: false });
   }, [focusedIndex, viewMode]);
 
-  // Column helper for list view
-  const columnHelper = createColumnHelper<FileItem>();
+  // Column helper for list view (see fileGridColumnHelper at module scope)
   const fileTableColumns = React.useMemo(() => [
-    columnHelper.accessor('name', {
+    fileGridColumnHelper.accessor('name', {
       header: 'Name',
       cell: (info) => {
         const file = info.row.original;
@@ -171,12 +175,12 @@ export const FileGrid: React.FC<FileGridProps> = ({
         );
       },
     }),
-    columnHelper.accessor('type', {
+    fileGridColumnHelper.accessor('type', {
       header: 'Type',
       size: 100,
       cell: (info) => <span style={{ fontSize: typography.fontSize.sm, color: colors.textSecondary, textTransform: 'capitalize' }}>{info.getValue()}</span>,
     }),
-    columnHelper.display({
+    fileGridColumnHelper.display({
       id: 'sizeCount',
       header: 'Size / Count',
       size: 150,
@@ -192,7 +196,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
         );
       },
     }),
-    columnHelper.display({
+    fileGridColumnHelper.display({
       id: 'modified',
       header: 'Modified',
       size: 120,
@@ -202,7 +206,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
         return <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>{date || '—'}</span>;
       },
     }),
-    columnHelper.display({
+    fileGridColumnHelper.display({
       id: 'status',
       header: 'Status',
       size: 110,
