@@ -5,11 +5,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ---------------------------------------------------------------------------
 const mockFrom = vi.fn()
 const mockGetSession = vi.fn()
+// D38 added supabase.rpc(...) calls for transitionStatus / createRevision /
+// recordDisposition / distribute / close / replaceUser. Default RPC mock
+// resolves success; individual tests can re-mock per assertion.
+const mockRpc = vi.fn().mockResolvedValue({ data: null, error: null })
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: (...args: unknown[]) => mockFrom(...args),
     auth: { getSession: () => mockGetSession() },
+    rpc: (...args: unknown[]) => mockRpc(...args),
   },
 }))
 
@@ -160,7 +165,12 @@ describe('submittalService.createSubmittal', () => {
 })
 
 describe('submittalService.transitionStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Restore default rpc behavior (vi.clearAllMocks resets implementations
+    // on .mockResolvedValue declared in module scope).
+    mockRpc.mockResolvedValue({ data: null, error: null })
+  })
 
   it('transitions draft to submitted for gc_member role', async () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } } })
@@ -169,18 +179,25 @@ describe('submittalService.transitionStatus', () => {
     const submittalChain = makeChain([SUBMITTAL], null, SUBMITTAL)
     // Fetch project member role
     const roleChain = makeChain([{ role: 'gc_member' }], null, { role: 'gc_member' })
-    // Update
-    const updateChain = makeChain(null, null)
-    updateChain.update = vi.fn().mockReturnValue(updateChain)
-    updateChain.eq = vi.fn().mockResolvedValue({ data: null, error: null })
 
     mockFrom
       .mockReturnValueOnce(submittalChain)
       .mockReturnValueOnce(roleChain)
-      .mockReturnValueOnce(updateChain)
+
+    // D38: state transition routes through supabase.rpc('submittal_advance_status')
+    mockRpc.mockResolvedValueOnce({ data: null, error: null })
 
     const result = await submittalService.transitionStatus('sub-1', 'submitted')
     expect(result.error).toBeNull()
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_advance_status',
+      expect.objectContaining({
+        p_id: 'sub-1',
+        p_to: 'submitted',
+        p_actor: 'user-1',
+        p_reason: null,
+      }),
+    )
   })
 
   it('rejects invalid transition', async () => {
@@ -223,24 +240,24 @@ describe('submittalService.transitionStatus', () => {
     expect(result.error).toBeTruthy()
   })
 
-  it('writes submitted_date provenance when transitioning to submitted', async () => {
+  // D38: lifecycle timestamp setting (submitted_date / approved_date) moved
+  // server-side into the submittal_advance_status RPC. The client just calls
+  // the RPC; the server writes the timestamp atomically inside the same tx.
+  it('forwards target status into the submittal_advance_status RPC', async () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } } })
 
     const submittalChain = makeChain([SUBMITTAL], null, SUBMITTAL)
     const roleChain = makeChain([{ role: 'gc_member' }], null, { role: 'gc_member' })
-    const updateChain: Record<string, unknown> = {}
-    updateChain.update = vi.fn().mockReturnValue(updateChain)
-    updateChain.eq = vi.fn().mockResolvedValue({ data: null, error: null })
 
-    mockFrom
-      .mockReturnValueOnce(submittalChain)
-      .mockReturnValueOnce(roleChain)
-      .mockReturnValueOnce(updateChain)
+    mockFrom.mockReturnValueOnce(submittalChain).mockReturnValueOnce(roleChain)
+    mockRpc.mockResolvedValueOnce({ data: null, error: null })
 
     await submittalService.transitionStatus('sub-1', 'submitted')
 
-    const updateCall = (updateChain.update as ReturnType<typeof vi.fn>).mock.calls[0][0]
-    expect(updateCall).toHaveProperty('submitted_date')
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_advance_status',
+      expect.objectContaining({ p_to: 'submitted' }),
+    )
   })
 })
 
@@ -320,37 +337,46 @@ describe('submittalService.loadApprovals', () => {
 })
 
 describe('submittalService.addApproval', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRpc.mockResolvedValue({ data: null, error: null })
+  })
 
   it('approved stamp inserts approval and transitions to approved', async () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-2' } } } })
 
-    // Fetch submittal project_id
+    // addApproval:
+    //   1. fetch project_id from submittals
+    //   2. resolveProjectRole → project_members
+    //   3. insert into submittal_approvals
+    // transitionStatus (D38):
+    //   4. fetch submittal status
+    //   5. resolveProjectRole again
+    //   6. supabase.rpc('submittal_advance_status', ...)
     const fetchChain = makeChain([{ project_id: 'proj-1' }], null, { project_id: 'proj-1' })
-    // Resolve role
     const roleChain = makeChain([{ role: 'architect' }], null, { role: 'architect' })
-    // Insert approval
     const insertChain: Record<string, unknown> = {}
     insertChain.insert = vi.fn().mockResolvedValue({ data: null, error: null })
-    // transitionStatus calls: fetchSubmittal, fetchRole, update
     const archReviewSubmittal = { ...SUBMITTAL, status: 'architect_review' }
     const tsSubmittalChain = makeChain([archReviewSubmittal], null, archReviewSubmittal)
     const tsRoleChain = makeChain([{ role: 'architect' }], null, { role: 'architect' })
-    const tsUpdateChain: Record<string, unknown> = {}
-    tsUpdateChain.update = vi.fn().mockReturnValue(tsUpdateChain)
-    tsUpdateChain.eq = vi.fn().mockResolvedValue({ data: null, error: null })
 
     mockFrom
-      .mockReturnValueOnce(fetchChain)     // addApproval: fetch project_id
-      .mockReturnValueOnce(roleChain)      // addApproval: resolve role
-      .mockReturnValueOnce(insertChain)    // addApproval: insert approval
-      .mockReturnValueOnce(tsSubmittalChain) // transitionStatus: fetch submittal
-      .mockReturnValueOnce(tsRoleChain)    // transitionStatus: resolve role
-      .mockReturnValueOnce(tsUpdateChain)  // transitionStatus: update
+      .mockReturnValueOnce(fetchChain)
+      .mockReturnValueOnce(roleChain)
+      .mockReturnValueOnce(insertChain)
+      .mockReturnValueOnce(tsSubmittalChain)
+      .mockReturnValueOnce(tsRoleChain)
+
+    mockRpc.mockResolvedValueOnce({ data: null, error: null })
 
     const result = await submittalService.addApproval('sub-1', 'approved', 'Looks good')
 
     expect(result.error).toBeNull()
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_advance_status',
+      expect.objectContaining({ p_to: 'approved' }),
+    )
   })
 
   it('revise_and_resubmit stamp targets resubmit status', async () => {
@@ -363,9 +389,6 @@ describe('submittalService.addApproval', () => {
     const gcReviewSubmittal = { ...SUBMITTAL, status: 'gc_review' }
     const tsSubmittalChain = makeChain([gcReviewSubmittal], null, gcReviewSubmittal)
     const tsRoleChain = makeChain([{ role: 'gc_member' }], null, { role: 'gc_member' })
-    const tsUpdateChain: Record<string, unknown> = {}
-    tsUpdateChain.update = vi.fn().mockReturnValue(tsUpdateChain)
-    tsUpdateChain.eq = vi.fn().mockResolvedValue({ data: null, error: null })
 
     mockFrom
       .mockReturnValueOnce(fetchChain)
@@ -373,43 +396,49 @@ describe('submittalService.addApproval', () => {
       .mockReturnValueOnce(insertChain)
       .mockReturnValueOnce(tsSubmittalChain)
       .mockReturnValueOnce(tsRoleChain)
-      .mockReturnValueOnce(tsUpdateChain)
+
+    mockRpc.mockResolvedValueOnce({ data: null, error: null })
 
     const result = await submittalService.addApproval('sub-1', 'revise_and_resubmit')
     expect(result.error).toBeNull()
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_advance_status',
+      expect.objectContaining({ p_to: 'resubmit' }),
+    )
   })
 })
 
 describe('submittalService.createRevision', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRpc.mockResolvedValue({ data: null, error: null })
+  })
 
   it('creates revision with incremented revision_number', async () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } } })
 
-    const parent = { ...SUBMITTAL, revision_number: 1 }
     const newRevision = { ...SUBMITTAL, id: 'sub-2', revision_number: 2, parent_submittal_id: 'sub-1' }
 
-    const parentChain = makeChain([parent], null, parent)
-    const insertChain = makeChain([newRevision], null, newRevision)
-    insertChain.insert = vi.fn().mockReturnValue(insertChain)
-
-    mockFrom
-      .mockReturnValueOnce(parentChain)
-      .mockReturnValueOnce(insertChain)
+    // D38: createRevision routes through supabase.rpc('submittal_create_revision').
+    // The RPC handles parent fetch + insert + hash chain server-side.
+    mockRpc.mockResolvedValueOnce({ data: newRevision, error: null })
 
     const result = await submittalService.createRevision('sub-1')
 
     expect(result.error).toBeNull()
     expect(result.data).not.toBeNull()
+    expect(mockRpc).toHaveBeenCalledWith(
+      'submittal_create_revision',
+      expect.objectContaining({ p_parent_id: 'sub-1' }),
+    )
   })
 
   it('returns error when parent submittal not found', async () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'user-1' } } } })
-    const chain = makeChain(null, null)
-    chain.single = vi.fn().mockResolvedValue({ data: null, error: { message: 'not found' } })
-    mockFrom.mockReturnValue(chain)
+    mockRpc.mockResolvedValueOnce({ data: null, error: { message: 'Parent submittal sub-missing not found' } })
 
     const result = await submittalService.createRevision('sub-missing')
     expect(result.error).toBeTruthy()
+    expect(result.error?.category).toBe('DatabaseError')
   })
 })
