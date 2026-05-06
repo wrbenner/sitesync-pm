@@ -90,13 +90,13 @@ export function useTakeoffItems(projectId: string | undefined) {
 export function useCreateEstimate() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
+    mutationFn: async (payload: { project_id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from('estimates').insert(payload).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['estimates', (vars as any).project_id] })
+      qc.invalidateQueries({ queryKey: ['estimates', vars.project_id] })
     },
   })
 }
@@ -117,13 +117,13 @@ export function useDeleteEstimate() {
 export function useCreateEstimateLineItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
+    mutationFn: async (payload: { estimate_id: string; [key: string]: unknown }) => {
       const { data, error } = await supabase.from('estimate_line_items').insert(payload).select().single()
       if (error) throw error
       return data
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ['estimate_line_items', (vars as any).estimate_id] })
+      qc.invalidateQueries({ queryKey: ['estimate_line_items', vars.estimate_id] })
     },
   })
 }
