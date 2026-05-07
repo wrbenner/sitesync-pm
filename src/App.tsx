@@ -103,6 +103,8 @@ const Schedule = lazyWithRetry(() => import('./pages/schedule').then((m) => ({ d
 const Budget = lazy(() => import('./pages/Budget').then((m) => ({ default: m.Budget })));
 const RFIs = lazyWithRetry(() => import('./pages/RFIs').then((m) => ({ default: m.RFIs })));
 const RFIDetail = lazy(() => import('./pages/rfis/RFIDetail').then((m) => ({ default: m.RFIDetail })));
+const RFISettingsPage = lazy(() => import('./pages/rfis/RFISettingsPage').then((m) => ({ default: m.RFISettingsPage })));
+const RFIReportsPage = lazy(() => import('./pages/rfis/RFIReportsPage').then((m) => ({ default: m.RFIReportsPage })));
 const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
 const SubmittalDetailPage = lazy(() => import('./pages/submittals/SubmittalDetailPage'));
 const SpecParserPage = lazy(() => import('./pages/submittals/SpecParserPage'));
@@ -399,6 +401,8 @@ function AppRoutes() {
             <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
             <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
             <Route path="/rfis" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute></PageSuspense>} />
+            <Route path="/rfis/settings" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Settings"><RFISettingsPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/rfis/reports" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Reports"><RFIReportsPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/settings" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Settings"><SubmittalSettingsPage /></ProtectedRoute></PageSuspense>} />
