@@ -163,7 +163,10 @@ export const CHIP_BALL_IN_COURT: ChipDefinition<string[]> = {
   group: 'people',
   inputKind: 'people-multi',
   procoreParity: true,
-  decode: (raw) => splitCsv(raw),
+  decode: (raw) => {
+    const items = splitCsv(raw)
+    return items.length ? items : undefined
+  },
   encode: (v) => joinCsv(v),
   matches: (row, val) => {
     if (!val.length) return true
@@ -255,7 +258,10 @@ export const CHIP_SPEC_SECTION: ChipDefinition<string[]> = {
   group: 'taxonomy',
   inputKind: 'csi-section-multi',
   procoreParity: true,
-  decode: (raw) => splitCsv(raw),
+  decode: (raw) => {
+    const items = splitCsv(raw)
+    return items.length ? items : undefined
+  },
   encode: (v) => joinCsv(v),
   matches: (row, val) => {
     if (!val.length) return true

@@ -45,6 +45,8 @@ export interface BulkActionsMenuProps {
   onClose: () => void
   /** Open the bulk edit modal. Page-level — composes with BulkEditModal. */
   onOpenEdit: () => void
+  /** Open the bulk distribute dialog. Page mounts BulkDistributeDialog. */
+  onOpenDistribute: () => void
   /** Open the workflow apply modal. Phase 4 wires the modal; Phase 3 stubs. */
   onOpenApplyWorkflow?: () => void
   /** Selection cleared by the page after a successful bulk action. */
@@ -55,6 +57,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
   selectedIds,
   onClose,
   onOpenEdit,
+  onOpenDistribute,
   onOpenApplyWorkflow,
   onClearSelection,
 }) => {
@@ -92,30 +95,9 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
     }
   }
 
-  const handleDistribute = async () => {
-    if (!window.confirm(
-      `Distribute ${count} submittal${count === 1 ? '' : 's'} to the field? Each will be marked as distributed.`,
-    )) {
-      return
-    }
-    setBusy('distribute')
-    try {
-      let ok = 0
-      let failed = 0
-      for (const id of selectedIds) {
-        // Empty toUserIds = a structural distribute (no specific recipients;
-        // distribution-list resolution lives in Phase 4 with proper picker).
-        const result = await submittalService.distribute(id, [])
-        if (result.error) failed += 1
-        else ok += 1
-      }
-      if (failed === 0) toast.success(`Distributed ${ok}.`)
-      else toast.warning(`Distributed ${ok}; ${failed} failed.`)
-      onClearSelection()
-      onClose()
-    } finally {
-      setBusy(null)
-    }
+  const handleDistribute = () => {
+    onClose()
+    onOpenDistribute()
   }
 
   return (
@@ -192,10 +174,9 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
         </MenuItem>
         <MenuItem
           icon={<Send size={12} />}
-          disabled={busy === 'distribute'}
           onClick={handleDistribute}
         >
-          {busy === 'distribute' ? 'Distributing…' : 'Distribute to Field'}
+          Distribute to Field…
         </MenuItem>
         <MenuItem
           icon={<FileSignature size={12} />}

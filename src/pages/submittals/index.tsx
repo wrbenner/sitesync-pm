@@ -60,6 +60,7 @@ import { AddFilterDropdown, FilterPillRail } from '../../components/submittals/F
 import { applyChipFilters } from '../../components/submittals/FilterChips/filterDefinitions'
 import { BulkActionsMenu } from '../../components/submittals/BulkActionsMenu'
 import { BulkEditModal } from '../../components/submittals/BulkEditModal'
+import { BulkDistributeDialog } from '../../components/submittals/BulkDistributeDialog'
 import { SavedViewsSidebar } from '../../components/submittals/SavedViews/SavedViewsSidebar'
 import { useSubmittalFilters } from '../../hooks/useSubmittalFilters'
 
@@ -131,6 +132,7 @@ const SubmittalsPage: React.FC = () => {
   const submittalFilters = useSubmittalFilters()
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false)
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
+  const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false)
   const [selectionClearToken, setSelectionClearToken] = useState(0)
 
   // GroupedSubmittalsView remains imported for Phase 4 — Phase 1 default is
@@ -327,6 +329,7 @@ const SubmittalsPage: React.FC = () => {
                   onClose={() => setBulkMenuOpen(false)}
                   selectedIds={Array.from(selectedIds)}
                   onOpenEdit={() => { setBulkMenuOpen(false); setBulkEditOpen(true) }}
+                  onOpenDistribute={() => { setBulkMenuOpen(false); setBulkDistributeOpen(true) }}
                   onClearSelection={() => {
                     setSelectedIds(new Set())
                     setSelectionClearToken((t) => t + 1)
@@ -424,6 +427,18 @@ const SubmittalsPage: React.FC = () => {
                 onClose={() => setBulkEditOpen(false)}
                 onComplete={() => {
                   setBulkEditOpen(false)
+                  setSelectedIds(new Set())
+                  setSelectionClearToken((t) => t + 1)
+                  refetch()
+                }}
+              />
+              <BulkDistributeDialog
+                open={bulkDistributeOpen}
+                projectId={projectId}
+                selectedIds={Array.from(selectedIds)}
+                onClose={() => setBulkDistributeOpen(false)}
+                onComplete={() => {
+                  setBulkDistributeOpen(false)
                   setSelectedIds(new Set())
                   setSelectionClearToken((t) => t + 1)
                   refetch()
@@ -581,6 +596,7 @@ interface BulkActionsTriggerProps {
   onToggle: () => void
   onClose: () => void
   onOpenEdit: () => void
+  onOpenDistribute: () => void
   onClearSelection: () => void
 }
 
@@ -591,6 +607,7 @@ const BulkActionsTrigger: React.FC<BulkActionsTriggerProps> = ({
   onToggle,
   onClose,
   onOpenEdit,
+  onOpenDistribute,
   onClearSelection,
 }) => {
   const disabled = selectedCount === 0
@@ -631,6 +648,7 @@ const BulkActionsTrigger: React.FC<BulkActionsTriggerProps> = ({
             selectedIds={selectedIds}
             onClose={onClose}
             onOpenEdit={onOpenEdit}
+            onOpenDistribute={onOpenDistribute}
             onClearSelection={onClearSelection}
           />
         </div>
