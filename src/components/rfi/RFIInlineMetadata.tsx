@@ -159,13 +159,17 @@ export const RFIInlineMetadata: React.FC<RFIInlineMetadataProps> = ({
 
       {/* ── Row 2 ──────────────────────────────── */}
       <Cell label="Received From">
-        {rfi.assigned_to ? (
-          <ReadOnly>
-            <UserName userId={rfi.assigned_to} fallback="—" />
-          </ReadOnly>
-        ) : (
-          <ReadOnly>—</ReadOnly>
-        )}
+        {(() => {
+          const receivedFrom =
+            ((r.received_from_user_id as string | null) ?? null) ?? rfi.assigned_to
+          return receivedFrom ? (
+            <ReadOnly>
+              <UserName userId={receivedFrom} fallback="—" />
+            </ReadOnly>
+          ) : (
+            <ReadOnly>—</ReadOnly>
+          )
+        })()}
       </Cell>
       <Cell label="Created By">
         {rfi.created_by ? (
@@ -305,8 +309,31 @@ export const RFIInlineMetadata: React.FC<RFIInlineMetadataProps> = ({
       <Cell label="Reopen Reason">
         {reopenReason ? <ReadOnly>{reopenReason}</ReadOnly> : <ReadOnly>—</ReadOnly>}
       </Cell>
-      <div />
-      <div />
+      {/* Info-density PR #4 — fill the prior 2 filler cells with the new
+          Procore-parity inputs (cost code + RFI stage). Both inline-editable
+          so PMs can backfill old RFIs without leaving the detail page. */}
+      <Cell label="Cost Code">
+        <InlineEditField
+          value={(r.cost_code as string | null) ?? ''}
+          onSave={(v) => save({ cost_code: v || null })}
+          label="Cost code"
+          type="text"
+          permission="rfis.edit"
+          maxLength={32}
+          placeholder="e.g. 03-30-00"
+        />
+      </Cell>
+      <Cell label="RFI Stage">
+        <InlineEditField
+          value={(r.rfi_stage as string | null) ?? ''}
+          onSave={(v) => save({ rfi_stage: v || null })}
+          label="RFI stage"
+          type="text"
+          permission="rfis.edit"
+          maxLength={32}
+          placeholder="Construction"
+        />
+      </Cell>
     </section>
   )
 }
