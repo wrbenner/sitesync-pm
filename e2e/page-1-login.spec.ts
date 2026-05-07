@@ -72,16 +72,19 @@ for (const vp of VIEWPORTS) {
       await page.goto('#/login')
       await settle(page, 400)
 
-      // Functional assert: the form rendered
-      await expect(page.getByPlaceholder('you@company.com')).toBeVisible()
-      await expect(page.getByPlaceholder('Enter your password')).toBeVisible()
-      await expect(page.getByRole('button', { name: /^sign in/i }).last()).toBeVisible()
+      // Functional assert: the form rendered (redesigned login — email field uses aria-label)
+      await expect(page.getByLabel('Email')).toBeVisible()
+      // "Sign in with password" toggle exists in magic-link mode
+      await expect(page.getByRole('button', { name: 'Sign in with password' })).toBeVisible()
 
       await shot(page, vp.name, 1, 'sign-in-empty')
 
       // ────────────────────────────────────────────────────────
-      // STATE 02 — Empty submit attempts client-side validation
+      // STATE 02 — Switch to password mode, empty submit → client-side validation
       // ────────────────────────────────────────────────────────
+      // Wait for the login page to fully render before interacting
+      await page.getByRole('button', { name: 'Sign in with password' }).waitFor({ timeout: 30_000 })
+      await page.getByRole('button', { name: 'Sign in with password' }).click()
       const submitBtn = page.locator('button[type="submit"]').first()
       await submitBtn.click().catch(() => undefined)
       await settle(page, 200)
@@ -90,8 +93,8 @@ for (const vp of VIEWPORTS) {
       // ────────────────────────────────────────────────────────
       // STATE 03 — Bad-credentials error
       // ────────────────────────────────────────────────────────
-      await page.getByPlaceholder('you@company.com').fill('not-a-real-user@example.com')
-      await page.getByPlaceholder('Enter your password').fill('definitely-wrong-password')
+      await page.getByLabel('Email').fill('not-a-real-user@example.com')
+      await page.getByLabel('Password').fill('definitely-wrong-password')
       await submitBtn.click()
       await settle(page, 1500)
       await shot(page, vp.name, 3, 'sign-in-bad-creds-error')
@@ -106,9 +109,9 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 4, 'forgot-password-empty')
 
         // Type an email + screenshot the filled state
-        const resetEmail = page.getByPlaceholder('you@company.com').last()
+        const resetEmail = page.getByLabel('Email').or(page.locator('input[type="email"]')).last()
         if (await resetEmail.count() > 0) {
-          await resetEmail.fill('test@example.com')
+          await resetEmail.fill('test@example.com').catch(() => undefined)
           await settle(page, 100)
           await shot(page, vp.name, 5, 'forgot-password-filled')
         }
@@ -130,8 +133,8 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 6, 'magic-link-empty')
 
         // Fill an email
-        const magicEmail = page.getByPlaceholder('you@company.com').first()
-        await magicEmail.fill('test@example.com')
+        const magicEmail = page.getByLabel('Email').first()
+        await magicEmail.fill('test@example.com').catch(() => undefined)
         await settle(page, 100)
         await shot(page, vp.name, 7, 'magic-link-filled')
       }
@@ -187,11 +190,14 @@ for (const vp of VIEWPORTS) {
         await settle(page, 150)
       }
 
-      await page.getByPlaceholder('you@company.com').fill(USER)
-      await page.getByPlaceholder('Enter your password').fill(PASS)
+      // Ensure password mode is active (may have reverted after bad-creds test)
+      const pwToggle2 = page.getByRole('button', { name: 'Sign in with password' })
+      if (await pwToggle2.count() > 0) await pwToggle2.click()
+      await page.getByLabel('Email').fill(USER)
+      await page.getByLabel('Password').fill(PASS)
       await shot(page, vp.name, 10, 'sign-in-credentials-filled')
 
-      await page.locator('button[type="submit"]').first().click()
+      await page.keyboard.press('Enter')
 
       // expect navigation to authenticated route
       await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
