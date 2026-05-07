@@ -10,7 +10,7 @@
  *   - Cmd+Enter sends. Always.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Send, Camera, Paperclip, ChevronDown, Search, Loader2,
@@ -301,11 +301,16 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
 }) => {
   const { data: costCodeOptions = [] } = useProjectCostCodes(projectId)
   const { data: stageOptions = [] } = useProjectRFIStages(projectId)
+  const uid = useId()
+  const costCodeId = `${uid}-cost-code`
+  const stageId = `${uid}-rfi-stage`
+  const receivedFromId = `${uid}-received-from`
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
       <div>
         <label
+          htmlFor={costCodeId}
           style={{
             display: 'block',
             fontSize: '11px',
@@ -319,15 +324,16 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
           Cost Code
         </label>
         <RFITypeAhead
+          id={costCodeId}
           value={costCode}
           onChange={onCostCodeChange}
           options={costCodeOptions}
           placeholder="e.g. 03-30-00"
-          ariaLabel="Cost code"
         />
       </div>
       <div>
         <label
+          htmlFor={stageId}
           style={{
             display: 'block',
             fontSize: '11px',
@@ -341,15 +347,16 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
           RFI Stage
         </label>
         <RFITypeAhead
+          id={stageId}
           value={rfiStage}
           onChange={onRfiStageChange}
           options={stageOptions}
           placeholder="Construction"
-          ariaLabel="RFI stage"
         />
       </div>
       <div>
         <label
+          htmlFor={receivedFromId}
           style={{
             display: 'block',
             fontSize: '11px',
@@ -363,9 +370,9 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
           Received From
         </label>
         <select
+          id={receivedFromId}
           value={receivedFromUserId}
           onChange={(e) => onReceivedFromChange(e.target.value)}
-          aria-label="Received from"
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -608,8 +615,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       filled.add('specRef')
     }
     if (filled.size > 0) setIrisFilledFields(filled)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-    // one-shot fill on draft arrival; we don't re-fill if the user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot fill; skip re-fill when user edits
   }, [irisDraft])
 
   // Auto-fill "from" when user detected
@@ -764,7 +770,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setSending(false)
       setSavingMode(null)
     }
-  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher, scheduleImpactStatus, scheduleDays, costImpactStatus, costImpactDollars, isPrivate])
+  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher, scheduleImpactStatus, scheduleDays, costImpactStatus, costImpactDollars, isPrivate, costCode, rfiStage, receivedFromUserId])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSend) {
