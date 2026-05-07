@@ -104,12 +104,13 @@ describe('useRecordDraftView', () => {
     expect(mockRpc).toHaveBeenCalledTimes(1)
   })
 
-  it('passes a null session id when rendered outside InboxSessionProvider', async () => {
+  it('skips the RPC entirely when rendered outside InboxSessionProvider', async () => {
+    // Behavior change post-PR-#350: record_draft_view now requires a
+    // non-null p_session_id (database.ts regen surfaced the contract).
+    // Without a session id, the only honest path is to skip the call —
+    // synthesising a fake session would corrupt the dedupe set + audit.
     render(<ProbeCard draftId="00000000-0000-0000-0000-000000000004" />)
     await act(async () => lastObserver!.fire(0.7))
-    expect(mockRpc).toHaveBeenCalledWith('record_draft_view', {
-      p_draft_id: '00000000-0000-0000-0000-000000000004',
-      p_session_id: null,
-    })
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 })
