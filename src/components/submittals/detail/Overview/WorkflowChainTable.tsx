@@ -57,6 +57,11 @@ export interface WorkflowChainRow {
   version: number | null
   parallel_group: number | null
   is_current: boolean
+  /** Phase 7c-1: per-step Iris-augmented thread summary (LLM via 7c-2). */
+  iris_thread_summary?: string | null
+  /** Phase 7c-1: count of (collapsed) step comments — drives the deterministic
+   *  fallback summary chip when iris_thread_summary is null. */
+  thread_comment_count?: number
 }
 
 export interface WorkflowChainTableProps {
@@ -64,6 +69,11 @@ export interface WorkflowChainTableProps {
   onDelegate?: (rowId: string) => void
   onForward?: (rowId: string) => void
   onMarkReceived?: (rowId: string) => void
+  /** Phase 7c-1: click a comments cell → open the StepThreadPanel for that step. */
+  onOpenThread?: (rowId: string) => void
+  /** Phase 7c-1: open the SendBackDialog with this step pre-flagged as the source.
+   *  The dialog itself filters priorSteps; this just kicks the page-level state. */
+  onOpenSendBack?: (rowId: string) => void
 }
 
 export const WorkflowChainTable: React.FC<WorkflowChainTableProps> = ({
@@ -71,6 +81,8 @@ export const WorkflowChainTable: React.FC<WorkflowChainTableProps> = ({
   onDelegate,
   onForward,
   onMarkReceived,
+  onOpenThread,
+  onOpenSendBack,
 }) => {
   // Group by sequence so parallel reviewers (same sequence number) collapse
   // into a single step header with multiple sub-rows.
@@ -146,6 +158,8 @@ export const WorkflowChainTable: React.FC<WorkflowChainTableProps> = ({
                   onDelegate={onDelegate}
                   onForward={onForward}
                   onMarkReceived={onMarkReceived}
+                  onOpenThread={onOpenThread}
+                  onOpenSendBack={onOpenSendBack}
                 />
               )),
             )}
@@ -165,6 +179,8 @@ interface RowViewProps {
   onDelegate?: (rowId: string) => void
   onForward?: (rowId: string) => void
   onMarkReceived?: (rowId: string) => void
+  onOpenThread?: (rowId: string) => void
+  onOpenSendBack?: (rowId: string) => void
 }
 
 const RowView: React.FC<RowViewProps> = ({
@@ -174,6 +190,8 @@ const RowView: React.FC<RowViewProps> = ({
   onDelegate,
   onForward,
   onMarkReceived,
+  onOpenThread,
+  onOpenSendBack,
 }) => {
   const [expanded, setExpanded] = useState(false)
   const hasLongComments = (row.comments?.length ?? 0) > 100
@@ -241,11 +259,15 @@ const RowView: React.FC<RowViewProps> = ({
         <DispositionBadge status={status} tone={tone} disposition={row.disposition} />
       </Td>
       <Td>
-        {row.comments ? (
-          <CommentsCell text={row.comments} expanded={expanded} onToggle={() => setExpanded((e) => !e)} hasLong={hasLongComments} />
-        ) : (
-          <span style={{ color: C.ink3 }}>—</span>
-        )}
+        <CommentsCell
+          text={row.comments}
+          expanded={expanded}
+          onToggle={() => setExpanded((e) => !e)}
+          hasLong={hasLongComments}
+          irisSummary={row.iris_thread_summary ?? null}
+          threadCount={row.thread_comment_count ?? 0}
+          onOpenThread={onOpenThread ? () => onOpenThread(row.id) : undefined}
+        />
       </Td>
       <Td align="center">
         <AttachmentsCell attachments={row.attachments} />
@@ -260,6 +282,7 @@ const RowView: React.FC<RowViewProps> = ({
           onDelegate={onDelegate}
           onForward={onForward}
           onMarkReceived={onMarkReceived}
+          onSendBack={onOpenSendBack}
         />
       </Td>
     </tr>
@@ -407,43 +430,113 @@ const DispositionBadge: React.FC<{ status: RowStatus; tone: 'success' | 'pending
 }
 
 const CommentsCell: React.FC<{
-  text: string
+  /** The disposition's "verdict" comment (legacy `submittal_reviewers.comments`). */
+  text: string | null
   expanded: boolean
   onToggle: () => void
   hasLong: boolean
-}> = ({ text, expanded, onToggle, hasLong }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, lineHeight: 1.4 }}>
-    {hasLong && (
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={expanded ? 'Collapse comments' : 'Expand comments'}
-        style={{
-          border: 'none',
-          backgroundColor: 'transparent',
-          color: C.ink3,
-          cursor: 'pointer',
-          padding: 0,
-          marginTop: 1,
-        }}
-      >
-        {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-      </button>
-    )}
-    <span
-      style={{
-        color: C.ink2,
-        whiteSpace: hasLong && !expanded ? 'nowrap' : 'normal',
-        overflow: hasLong && !expanded ? 'hidden' : 'visible',
-        textOverflow: hasLong && !expanded ? 'ellipsis' : 'clip',
-        maxWidth: hasLong && !expanded ? 320 : undefined,
-        wordBreak: 'break-word',
-      }}
-    >
-      {text}
-    </span>
-  </div>
-)
+  /** Phase 7c-1: Iris-augmented thread summary. */
+  irisSummary: string | null
+  /** Phase 7c-1: total comments on the threaded discussion (collapsed view). */
+  threadCount: number
+  /** Phase 7c-1: when set, "Open thread" link fires this. Without it, no link. */
+  onOpenThread?: () => void
+}> = ({ text, expanded, onToggle, hasLong, irisSummary, threadCount, onOpenThread }) => {
+  const hasVerdict = !!(text && text.trim())
+  const hasThread = threadCount > 0 || !!irisSummary
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, lineHeight: 1.4 }}>
+      {/* Iris summary chip (or deterministic fallback when threadCount > 0). */}
+      {hasThread && (
+        <button
+          type="button"
+          onClick={onOpenThread}
+          disabled={!onOpenThread}
+          title={irisSummary ?? `${threadCount} comment${threadCount === 1 ? '' : 's'} on this step`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '2px 6px',
+            fontSize: 10,
+            fontWeight: 500,
+            color: C.brandOrange,
+            backgroundColor: 'rgba(244, 120, 32, 0.06)',
+            border: 'none',
+            borderRadius: 3,
+            cursor: onOpenThread ? 'pointer' : 'default',
+            fontFamily: FONT,
+            whiteSpace: 'nowrap',
+            maxWidth: 320,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            alignSelf: 'flex-start',
+            letterSpacing: '0.02em',
+          }}
+        >
+          ✨ {irisSummary ?? `${threadCount} comment${threadCount === 1 ? '' : 's'}`}
+        </button>
+      )}
+
+      {/* Disposition verdict (legacy single field). */}
+      {hasVerdict ? (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+          {hasLong && (
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label={expanded ? 'Collapse comments' : 'Expand comments'}
+              style={{
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: C.ink3,
+                cursor: 'pointer',
+                padding: 0,
+                marginTop: 1,
+              }}
+            >
+              {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+            </button>
+          )}
+          <span
+            style={{
+              color: C.ink2,
+              whiteSpace: hasLong && !expanded ? 'nowrap' : 'normal',
+              overflow: hasLong && !expanded ? 'hidden' : 'visible',
+              textOverflow: hasLong && !expanded ? 'ellipsis' : 'clip',
+              maxWidth: hasLong && !expanded ? 320 : undefined,
+              wordBreak: 'break-word',
+            }}
+          >
+            {text}
+          </span>
+        </div>
+      ) : !hasThread ? (
+        <span style={{ color: C.ink3 }}>—</span>
+      ) : null}
+
+      {hasThread && onOpenThread && !hasVerdict && (
+        <button
+          type="button"
+          onClick={onOpenThread}
+          style={{
+            alignSelf: 'flex-start',
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: C.ink3,
+            fontSize: 10,
+            cursor: 'pointer',
+            padding: 0,
+            fontFamily: FONT,
+          }}
+        >
+          Open thread →
+        </button>
+      )}
+    </div>
+  )
+}
 
 const AttachmentsCell: React.FC<{ attachments: WorkflowChainRow['attachments'] }> = ({ attachments }) => {
   if (attachments.length === 0) return <span style={{ color: C.ink3 }}>—</span>
@@ -480,11 +573,12 @@ interface RowMenuProps {
   onDelegate?: (rowId: string) => void
   onForward?: (rowId: string) => void
   onMarkReceived?: (rowId: string) => void
+  onSendBack?: (rowId: string) => void
 }
 
-const RowMenu: React.FC<RowMenuProps> = ({ rowId, status, onDelegate, onForward, onMarkReceived }) => {
+const RowMenu: React.FC<RowMenuProps> = ({ rowId, status, onDelegate, onForward, onMarkReceived, onSendBack }) => {
   const [open, setOpen] = useState(false)
-  const hasAny = onDelegate || onForward || onMarkReceived
+  const hasAny = onDelegate || onForward || onMarkReceived || onSendBack
   if (!hasAny) return <span style={{ color: C.ink3 }}>—</span>
 
   return (
@@ -539,6 +633,11 @@ const RowMenu: React.FC<RowMenuProps> = ({ rowId, status, onDelegate, onForward,
           {onMarkReceived && status === 'pending' && (
             <MenuItem onClick={() => { onMarkReceived(rowId); setOpen(false) }}>
               <ExternalLink size={11} /> Mark received
+            </MenuItem>
+          )}
+          {onSendBack && (
+            <MenuItem onClick={() => { onSendBack(rowId); setOpen(false) }}>
+              <ExternalLink size={11} style={{ transform: 'scaleX(-1)' }} /> Send back…
             </MenuItem>
           )}
         </div>

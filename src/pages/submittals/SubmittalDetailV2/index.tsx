@@ -44,6 +44,8 @@ import { VoiceReviewOverlay } from '../../../components/submittals/detail/VoiceR
 import { MarkupCanvas } from '../../../components/submittals/detail/Markup/MarkupCanvas'
 import { RevDiffView } from '../../../components/submittals/detail/Revisions/RevDiffView'
 import { DistributeAction } from '../../../components/submittals/detail/Distribute/DistributeAction'
+import { StepThreadPanel } from '../../../components/submittals/detail/MultiApproval/StepThreadPanel'
+import { SendBackDialog, type PriorStep } from '../../../components/submittals/detail/MultiApproval/SendBackDialog'
 import { submittalService } from '../../../services/submittalService'
 import type { SubmittalDisposition } from '../../../types/submittal'
 import { toast } from 'sonner'
@@ -73,6 +75,29 @@ const SubmittalDetailV2Page: React.FC = () => {
   const [voiceTranscriptSeed, setVoiceTranscriptSeed] = useState<string | null>(null)
   void voiceTranscriptSeed
   void setVoiceTranscriptSeed
+
+  // Phase 7c-1 — multi-approval thread panel + send-back dialog state.
+  const [threadStepId, setThreadStepId] = useState<string | null>(null)
+  const [sendBackOpen, setSendBackOpen] = useState(false)
+
+  // Phase 7c-1 — `B` keyboard shortcut opens the send-back dialog. Skipped
+  // when typing in input/textarea/contentEditable. ⌘/⌃ modifiers exempt.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName.toLowerCase()
+        if (tag === 'input' || tag === 'textarea' || target.isContentEditable) return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        setSendBackOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const [copilotOpen, setCopilotOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     const raw = window.localStorage.getItem(COPILOT_OPEN_STORAGE)
@@ -253,7 +278,11 @@ const SubmittalDetailV2Page: React.FC = () => {
           {tab === 'overview' && (
             <>
               <GeneralInfoCard submittal={submittal} />
-              <WorkflowChainTable rows={reviewersQuery.data ?? []} />
+              <WorkflowChainTable
+                rows={reviewersQuery.data ?? []}
+                onOpenThread={(stepId) => setThreadStepId(stepId)}
+                onOpenSendBack={() => setSendBackOpen(true)}
+              />
             </>
           )}
           {tab === 'citations' && (
@@ -295,6 +324,30 @@ const SubmittalDetailV2Page: React.FC = () => {
         open={citationsOpen}
         onClose={() => setCitationsOpen(false)}
         citations={buildCitationsFromSubmittal(submittal)}
+      />
+
+      {/* Phase 7c-1 — Step thread panel + send-back dialog. */}
+      <StepThreadPanel
+        open={threadStepId != null}
+        onClose={() => setThreadStepId(null)}
+        reviewerStepId={threadStepId}
+        stepLabel={buildStepLabel(threadStepId, reviewersQuery.data ?? [])}
+        irisSummary={threadStepId
+          ? (reviewersQuery.data ?? []).find((r) => r.id === threadStepId)?.iris_thread_summary ?? null
+          : null}
+        canComment
+        canModerate
+        currentUserId={null /* page-level user id resolution lives in Phase 7c-2 */}
+      />
+      <SendBackDialog
+        open={sendBackOpen}
+        onClose={() => setSendBackOpen(false)}
+        priorSteps={buildPriorSteps(reviewersQuery.data ?? [])}
+        onSent={() => {
+          void submittalQuery.refetch()
+          void reviewersQuery.refetch()
+          setSendBackOpen(false)
+        }}
       />
     </div>
   )
@@ -806,6 +859,33 @@ function mapDispositionLabelToCode(label: string): SubmittalDisposition {
   if (l.includes('specified')) return 'F_submit_specified_item' as SubmittalDisposition
   // Default fallback — treat unknown labels as approved.
   return 'A_no_exceptions_taken' as SubmittalDisposition
+}
+
+// ── Phase 7c-1 helpers ─────────────────────────────────────────────────────
+
+function buildStepLabel(stepId: string | null, rows: WorkflowChainRow[]): string {
+  if (!stepId) return ''
+  const r = rows.find((x) => x.id === stepId)
+  if (!r) return 'Step'
+  const role = r.reviewer_role ? ` · ${r.reviewer_role}` : ''
+  return `Step ${r.sequence}${role}`
+}
+
+function buildPriorSteps(rows: WorkflowChainRow[]): PriorStep[] {
+  // The "current" step is the smallest-sequence open step; if none open,
+  // fall back to the highest sequence with a responded_at (unusual). The
+  // SendBackDialog only shows steps with sequence < current.
+  const openSeq = rows.find((r) => r.is_current)?.sequence
+  const currentSeq = openSeq ?? Math.max(0, ...rows.filter((r) => r.responded_at).map((r) => r.sequence))
+  return rows
+    .filter((r) => r.sequence < currentSeq)
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((r) => ({
+      id: r.id,
+      sequence: r.sequence,
+      reviewer_name: r.reviewer_name,
+      reviewer_role: r.reviewer_role,
+    }))
 }
 
 // ── Boundary ───────────────────────────────────────────────────────────────
