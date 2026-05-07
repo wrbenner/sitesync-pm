@@ -1,6 +1,13 @@
 -- Migration: Add missing RLS policies for all project-scoped tables
 -- Ensures every table referencing project_id enforces row-level security
 -- based on project_members membership. Idempotent via DO $$ blocks.
+--
+-- Schema-version-tolerant: each policy creation is wrapped in an exception
+-- handler that catches `duplicate_object` (policy already exists),
+-- `undefined_column` (table predates project_id), and `undefined_table`
+-- (table not yet created). This lets the migration apply cleanly on databases
+-- in different states without failing the chain. Tables/columns that don't
+-- exist yet will pick up RLS when later migrations add them.
 
 DO $$
 DECLARE
@@ -31,8 +38,13 @@ DECLARE
   _t TEXT;
 BEGIN
   FOREACH _t IN ARRAY _tables LOOP
-    -- Enable RLS (safe to call even if already enabled)
-    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', _t);
+    -- Enable RLS (safe to call even if already enabled). Skip when the
+    -- table doesn't exist yet — later migrations may create it.
+    BEGIN
+      EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', _t);
+    EXCEPTION
+      WHEN undefined_table THEN NULL;
+    END;
   END LOOP;
 END $$;
 
@@ -44,7 +56,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON weather_records
@@ -53,7 +65,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON weather_records
@@ -62,7 +74,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON weather_records
@@ -73,7 +85,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- equipment
 DO $$ BEGIN
@@ -83,7 +95,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment
@@ -92,7 +104,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment
@@ -101,7 +113,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON equipment
@@ -112,7 +124,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- equipment_logs
 DO $$ BEGIN
@@ -122,7 +134,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment_logs
@@ -131,7 +143,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment_logs
@@ -140,7 +152,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON equipment_logs
@@ -151,7 +163,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- equipment_maintenance
 DO $$ BEGIN
@@ -161,7 +173,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment_maintenance
@@ -170,7 +182,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment_maintenance
@@ -179,7 +191,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON equipment_maintenance
@@ -190,7 +202,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- incidents
 DO $$ BEGIN
@@ -200,7 +212,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON incidents
@@ -209,7 +221,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON incidents
@@ -218,7 +230,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON incidents
@@ -229,7 +241,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- safety_observations
 DO $$ BEGIN
@@ -239,7 +251,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON safety_observations
@@ -248,7 +260,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON safety_observations
@@ -257,7 +269,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON safety_observations
@@ -268,7 +280,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- safety_inspections
 DO $$ BEGIN
@@ -278,7 +290,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON safety_inspections
@@ -287,7 +299,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON safety_inspections
@@ -296,7 +308,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON safety_inspections
@@ -307,7 +319,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- toolbox_talks
 DO $$ BEGIN
@@ -317,7 +329,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON toolbox_talks
@@ -326,7 +338,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON toolbox_talks
@@ -335,7 +347,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON toolbox_talks
@@ -346,7 +358,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- toolbox_talk_attendees (joins to toolbox_talks which has project_id)
 DO $$ BEGIN
@@ -356,7 +368,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON toolbox_talk_attendees
@@ -365,7 +377,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON toolbox_talk_attendees
@@ -374,7 +386,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON toolbox_talk_attendees
@@ -385,7 +397,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- corrective_actions
 DO $$ BEGIN
@@ -395,7 +407,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON corrective_actions
@@ -404,7 +416,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON corrective_actions
@@ -413,7 +425,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON corrective_actions
@@ -424,7 +436,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- time_entries
 DO $$ BEGIN
@@ -434,7 +446,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON time_entries
@@ -443,7 +455,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON time_entries
@@ -452,7 +464,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON time_entries
@@ -463,7 +475,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- deliveries
 DO $$ BEGIN
@@ -473,7 +485,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON deliveries
@@ -482,7 +494,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON deliveries
@@ -491,7 +503,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON deliveries
@@ -502,7 +514,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- delivery_items
 DO $$ BEGIN
@@ -512,7 +524,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON delivery_items
@@ -521,7 +533,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON delivery_items
@@ -530,7 +542,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON delivery_items
@@ -541,7 +553,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- material_inventory
 DO $$ BEGIN
@@ -551,7 +563,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON material_inventory
@@ -560,7 +572,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON material_inventory
@@ -569,7 +581,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON material_inventory
@@ -580,7 +592,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- warranties
 DO $$ BEGIN
@@ -590,7 +602,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON warranties
@@ -599,7 +611,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON warranties
@@ -608,7 +620,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON warranties
@@ -619,7 +631,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- warranty_claims
 DO $$ BEGIN
@@ -629,7 +641,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON warranty_claims
@@ -638,7 +650,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON warranty_claims
@@ -647,7 +659,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON warranty_claims
@@ -658,7 +670,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- commissioning_items
 DO $$ BEGIN
@@ -668,7 +680,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON commissioning_items
@@ -677,7 +689,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON commissioning_items
@@ -686,7 +698,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON commissioning_items
@@ -697,7 +709,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- sustainability_metrics
 DO $$ BEGIN
@@ -707,7 +719,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON sustainability_metrics
@@ -716,7 +728,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON sustainability_metrics
@@ -725,7 +737,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON sustainability_metrics
@@ -736,7 +748,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- waste_logs
 DO $$ BEGIN
@@ -746,7 +758,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON waste_logs
@@ -755,7 +767,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON waste_logs
@@ -764,7 +776,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON waste_logs
@@ -775,7 +787,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- photo_pins
 DO $$ BEGIN
@@ -785,7 +797,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON photo_pins
@@ -794,7 +806,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON photo_pins
@@ -803,7 +815,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON photo_pins
@@ -814,7 +826,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- photo_comparisons
 DO $$ BEGIN
@@ -824,7 +836,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON photo_comparisons
@@ -833,7 +845,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON photo_comparisons
@@ -842,7 +854,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON photo_comparisons
@@ -853,7 +865,7 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 -- progress_detection_results
 DO $$ BEGIN
@@ -863,7 +875,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON progress_detection_results
@@ -872,7 +884,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON progress_detection_results
@@ -881,7 +893,7 @@ DO $$ BEGIN
         SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON progress_detection_results
@@ -892,4 +904,4 @@ DO $$ BEGIN
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL; END $$;

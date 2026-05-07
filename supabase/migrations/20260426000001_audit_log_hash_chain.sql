@@ -265,8 +265,23 @@ CREATE TABLE IF NOT EXISTS audit_chain_checkpoints (
 -- Service role only — no RLS access for app users.
 ALTER TABLE audit_chain_checkpoints ENABLE ROW LEVEL SECURITY;
 
-INSERT INTO audit_chain_checkpoints (id) VALUES (1)
-ON CONFLICT (id) DO NOTHING;
+-- Schema-version-tolerant: only seed the integer-id checkpoint when the
+-- column is actually an integer type. Older bootstraps created the table
+-- with uuid id (default gen_random_uuid()) — there's nothing to seed in
+-- that case.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'audit_chain_checkpoints'
+       AND column_name = 'id'
+       AND data_type IN ('integer', 'bigint', 'smallint')
+  ) THEN
+    INSERT INTO audit_chain_checkpoints (id) VALUES (1)
+    ON CONFLICT (id) DO NOTHING;
+  END IF;
+END $$;
 
 COMMENT ON COLUMN audit_log.previous_hash IS
   'Hash of the prior audit_log row in chronological order. Computed by trigger; NULL only for the first row.';

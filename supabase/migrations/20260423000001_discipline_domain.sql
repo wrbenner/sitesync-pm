@@ -50,6 +50,24 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Schema-version-tolerant: when a downstream view (org_search_index in
+-- 20260502120005_org_search_index.sql) was applied before this migration
+-- in some environments and now depends on drawings.discipline, drop it
+-- (whether view or materialized view) before the type alter and let its
+-- defining migration re-create it on next push.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class WHERE relname = 'org_search_index' AND relkind = 'm'
+  ) THEN
+    DROP MATERIALIZED VIEW public.org_search_index;
+  ELSIF EXISTS (
+    SELECT 1 FROM pg_class WHERE relname = 'org_search_index' AND relkind = 'v'
+  ) THEN
+    DROP VIEW public.org_search_index;
+  END IF;
+END $$;
+
 ALTER TABLE drawings
   ALTER COLUMN discipline TYPE construction_discipline
   USING discipline::construction_discipline;

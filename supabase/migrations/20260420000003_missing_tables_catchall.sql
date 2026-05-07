@@ -510,7 +510,14 @@ VALUES
   ('reports', 'reports', false, 104857600)
 ON CONFLICT (id) DO NOTHING;
 
--- Storage RLS: allow authenticated users to use these buckets
+-- Storage RLS: allow authenticated users to use these buckets.
+-- Wrapped in an outer EXCEPTION handler so the migration succeeds in
+-- environments where the running role doesn't have ownership over
+-- storage.objects (e.g. local-dev psql connections that aren't
+-- supabase_storage_admin). In Supabase Cloud + the default local stack the
+-- service-role apply path has the right grants and the policies attach
+-- normally; in restricted environments the storage policies are managed
+-- separately and we silently skip rather than failing the migration chain.
 DO $$
 DECLARE
   bkt text;
@@ -526,7 +533,10 @@ BEGIN
         'storage_' || replace(bkt, '-', '_') || '_access',
         bkt
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+      WHEN insufficient_privilege THEN NULL;  -- restricted role; skip cleanly
+      WHEN undefined_table THEN NULL;          -- storage.objects unavailable
     END;
   END LOOP;
 END $$;

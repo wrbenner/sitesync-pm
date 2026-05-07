@@ -144,7 +144,11 @@ END $do$;
 
 DO $do$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname IN ('pg_cron', 'pg_net')) THEN
+  -- Schema-version-tolerant: BOTH extensions required (the earlier
+  -- `extname IN (...)` pattern would pass when only one was installed
+  -- and then crash on `cron.job` reference).
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron')
+     OR NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_net') THEN
     RAISE NOTICE 'pg_cron and/or pg_net missing — skipping insights-worker-invoke schedule.';
     RETURN;
   END IF;

@@ -12,9 +12,12 @@
 
 do $do$
 begin
-  if not exists (
-    select 1 from pg_extension where extname in ('pg_cron', 'pg_net')
-  ) then
+  -- Schema-version-tolerant: BOTH pg_cron and pg_net are required. The
+  -- earlier `extname in (...)` check returned rows when only one of the
+  -- two was installed, letting execution reach `cron.job` and crash. Now
+  -- requires both explicitly.
+  if not exists (select 1 from pg_extension where extname = 'pg_cron')
+     or not exists (select 1 from pg_extension where extname = 'pg_net') then
     raise notice 'pg_cron and/or pg_net not installed — skipping schedule. Enable extensions and re-run this migration.';
     return;
   end if;

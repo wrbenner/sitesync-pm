@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS public.submittal_emails (
   UNIQUE (message_id)
 );
 
+-- Schema-version-tolerant: when an older submittal_emails was created by
+-- the canonical migration (which omitted thread_id / iris_diff_text /
+-- created_at), add those columns now so the indexes below succeed.
+ALTER TABLE public.submittal_emails
+  ADD COLUMN IF NOT EXISTS thread_id      text,
+  ADD COLUMN IF NOT EXISTS iris_diff_text text,
+  ADD COLUMN IF NOT EXISTS created_at     timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS idx_submittal_emails_submittal
   ON public.submittal_emails (submittal_id, received_at DESC);
 

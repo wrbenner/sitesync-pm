@@ -9,6 +9,17 @@
 -- Idempotent re-apply via OR REPLACE.
 -- =============================================================================
 
+-- Phase 5b is self-contained: ensures `is_open` column exists on
+-- submittal_reviewers so the chain initialization works even when the
+-- Phase 7c-1 multi-approval migration hasn't landed yet. ALTER ADD COLUMN
+-- IF NOT EXISTS makes this safe to re-apply alongside P7c-1.
+ALTER TABLE public.submittal_reviewers
+  ADD COLUMN IF NOT EXISTS is_open boolean NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_submittal_reviewers_open
+  ON public.submittal_reviewers (submittal_id)
+  WHERE is_open = true;
+
 CREATE OR REPLACE FUNCTION public.submittal_initialize_chain(
   p_submittal_id uuid,
   p_steps        jsonb  -- [{ sequence, reviewer_role, reviewer_name, parallel_group?, due_date_offset_days? }, ...]
@@ -18,12 +29,14 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_actor    uuid := auth.uid();
-  v_project  uuid;
-  v_count    int := 0;
-  v_step     jsonb;
-  v_due      date;
-  v_offset   int;
+  v_actor       uuid := auth.uid();
+  v_project     uuid;
+  v_count       int := 0;
+  v_step        jsonb;
+  v_due         date;
+  v_offset      int;
+  v_first_role  text;
+  v_first_email text;
 BEGIN
   IF v_actor IS NULL THEN
     RAISE EXCEPTION 'Auth required';
@@ -61,10 +74,32 @@ BEGIN
     v_count := v_count + 1;
   END LOOP;
 
-  -- Flip is_open on the first step + set submittals.current_reviewer_role.
-  -- (submittal_advance_chain is from Phase 7c-1 migration.)
+  -- Flip is_open on the first step in the chain (lowest sequence). Inline
+  -- here so the migration is self-contained — Phase 7c-1's
+  -- submittal_advance_chain helper handles the post-disposition advances
+  -- but at create time there's no chain to advance from, just an open flag.
   IF v_count > 0 THEN
-    PERFORM public.submittal_advance_chain(p_submittal_id);
+    UPDATE public.submittal_reviewers SET is_open = false WHERE submittal_id = p_submittal_id;
+
+    UPDATE public.submittal_reviewers
+       SET is_open = true
+     WHERE id = (
+       SELECT id FROM public.submittal_reviewers
+        WHERE submittal_id = p_submittal_id
+        ORDER BY sequence ASC, COALESCE(parallel_group, -1) ASC
+        LIMIT 1
+     )
+    RETURNING reviewer_role, reviewer_email INTO v_first_role, v_first_email;
+
+    -- Mirror to the submittals row so the log + detail header reflect
+    -- ball-in-court immediately. We use reviewer_email as the BIC label
+    -- (Phase 5b stores the typed name there until the typeahead picker
+    -- resolves it to a real user_id in 5b-2).
+    UPDATE public.submittals
+       SET current_reviewer_role = v_first_role,
+           ball_in_court_since   = now(),
+           updated_at            = now()
+     WHERE id = p_submittal_id;
   END IF;
 
   RETURN v_count;

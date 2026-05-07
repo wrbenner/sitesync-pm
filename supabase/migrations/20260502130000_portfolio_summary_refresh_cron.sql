@@ -12,9 +12,9 @@
 
 do $do$
 begin
-  if not exists (
-    select 1 from pg_extension where extname in ('pg_cron', 'pg_net')
-  ) then
+  -- Schema-version-tolerant: BOTH extensions required.
+  if not exists (select 1 from pg_extension where extname = 'pg_cron')
+     or not exists (select 1 from pg_extension where extname = 'pg_net') then
     raise notice 'pg_cron and/or pg_net not installed — skipping portfolio-summary-refresh schedule.';
     return;
   end if;

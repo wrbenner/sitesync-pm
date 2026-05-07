@@ -18,6 +18,16 @@ CREATE TABLE IF NOT EXISTS crew_checkins (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- Schema-version-tolerant: when an older crew_checkins existed without
+-- these columns, add them now so the index creation below succeeds.
+ALTER TABLE crew_checkins
+  ADD COLUMN IF NOT EXISTS user_id        text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS location_id    text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS checked_in_at  timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS checked_out_at timestamptz,
+  ADD COLUMN IF NOT EXISTS created_at     timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at     timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS idx_crew_checkins_project_time
   ON crew_checkins (project_id, checked_in_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crew_checkins_user

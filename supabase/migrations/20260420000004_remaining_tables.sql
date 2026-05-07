@@ -204,7 +204,10 @@ BEGIN
         'storage_' || replace(bkt, '-', '_') || '_access',
         bkt
       );
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+      WHEN insufficient_privilege THEN NULL;  -- restricted role; skip cleanly
+      WHEN undefined_table THEN NULL;          -- storage.objects unavailable
     END;
   END LOOP;
 END $$;

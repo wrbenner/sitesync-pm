@@ -82,34 +82,55 @@ END $$;
 ALTER TABLE cost_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cost_transactions ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS cost_codes_select ON cost_codes;
-CREATE POLICY cost_codes_select ON cost_codes FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+-- Schema-version-tolerant: only create cost_codes policies when the
+-- project_id column actually exists on the table. Older databases shipped
+-- a project-less cost_codes; later migrations add project_id. RLS attaches
+-- once the column is in place.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'cost_codes' AND column_name = 'project_id'
+  ) THEN
+    EXECUTE 'DROP POLICY IF EXISTS cost_codes_select ON cost_codes';
+    EXECUTE 'CREATE POLICY cost_codes_select ON cost_codes FOR SELECT
+      USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
 
-DROP POLICY IF EXISTS cost_codes_insert ON cost_codes;
-CREATE POLICY cost_codes_insert ON cost_codes FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+    EXECUTE 'DROP POLICY IF EXISTS cost_codes_insert ON cost_codes';
+    EXECUTE 'CREATE POLICY cost_codes_insert ON cost_codes FOR INSERT
+      WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
 
-DROP POLICY IF EXISTS cost_codes_update ON cost_codes;
-CREATE POLICY cost_codes_update ON cost_codes FOR UPDATE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+    EXECUTE 'DROP POLICY IF EXISTS cost_codes_update ON cost_codes';
+    EXECUTE 'CREATE POLICY cost_codes_update ON cost_codes FOR UPDATE
+      USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
 
-DROP POLICY IF EXISTS cost_codes_delete ON cost_codes;
-CREATE POLICY cost_codes_delete ON cost_codes FOR DELETE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+    EXECUTE 'DROP POLICY IF EXISTS cost_codes_delete ON cost_codes';
+    EXECUTE 'CREATE POLICY cost_codes_delete ON cost_codes FOR DELETE
+      USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
+  END IF;
+END $$;
 
-DROP POLICY IF EXISTS cost_transactions_select ON cost_transactions;
-CREATE POLICY cost_transactions_select ON cost_transactions FOR SELECT
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+-- Same column-existence guard for cost_transactions.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'cost_transactions' AND column_name = 'project_id'
+  ) THEN
+    EXECUTE 'DROP POLICY IF EXISTS cost_transactions_select ON cost_transactions';
+    EXECUTE 'CREATE POLICY cost_transactions_select ON cost_transactions FOR SELECT
+      USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
 
-DROP POLICY IF EXISTS cost_transactions_insert ON cost_transactions;
-CREATE POLICY cost_transactions_insert ON cost_transactions FOR INSERT
-  WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+    EXECUTE 'DROP POLICY IF EXISTS cost_transactions_insert ON cost_transactions';
+    EXECUTE 'CREATE POLICY cost_transactions_insert ON cost_transactions FOR INSERT
+      WITH CHECK (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
 
-DROP POLICY IF EXISTS cost_transactions_update ON cost_transactions;
-CREATE POLICY cost_transactions_update ON cost_transactions FOR UPDATE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+    EXECUTE 'DROP POLICY IF EXISTS cost_transactions_update ON cost_transactions';
+    EXECUTE 'CREATE POLICY cost_transactions_update ON cost_transactions FOR UPDATE
+      USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
 
-DROP POLICY IF EXISTS cost_transactions_delete ON cost_transactions;
-CREATE POLICY cost_transactions_delete ON cost_transactions FOR DELETE
-  USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()));
+    EXECUTE 'DROP POLICY IF EXISTS cost_transactions_delete ON cost_transactions';
+    EXECUTE 'CREATE POLICY cost_transactions_delete ON cost_transactions FOR DELETE
+      USING (project_id IN (SELECT project_id FROM project_members WHERE user_id = auth.uid()))';
+  END IF;
+END $$;
