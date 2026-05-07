@@ -49,7 +49,18 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
+  await page.goto('#/')
+  await page.waitForTimeout(800)
+  if (!page.url().includes('/login') && !page.url().includes('login')) {
+    await settle(page, 1500)
+    return
+  }
   await page.goto('#/login')
+  const passwordModeBtn = page.getByRole('button', { name: 'Sign in with password' })
+  if (await passwordModeBtn.count().catch(() => 0) > 0) {
+    await passwordModeBtn.click()
+    await page.waitForTimeout(150)
+  }
   await page.getByPlaceholder('you@company.com').fill(USER)
   await page.getByPlaceholder('Enter your password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
