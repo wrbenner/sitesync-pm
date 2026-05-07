@@ -45,7 +45,6 @@ import { useRFIDistributions } from '../../hooks/queries/useRFIDistributions'
 import { dollarsToCents, fromCents } from '../../types/money'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { entityLabel } from '../../lib/entityLabel'
-import { RFIDistributionStatusList } from './RFIDistributionStatusList'
 
 interface RFIEditPanelProps {
   open: boolean
