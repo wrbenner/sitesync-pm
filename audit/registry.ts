@@ -810,7 +810,7 @@ export const PAGE_REGISTRY: PageContract[] = [
     entity: 'submittal',
     expected: { has_detail_view: false, has_edit: false },
     permissionModule: 'submittals',
-    status: 'placeholder',
+    status: 'stub',
   },
   {
     route: '/punch-list/:itemId',

@@ -39,6 +39,7 @@ import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
 import { RFIResponseThread } from '../../components/rfi/RFIResponseThread'
 import { RFIResponseComposer } from '../../components/rfi/RFIResponseComposer'
 import { RFIEmailReviewBanner } from '../../components/rfi/RFIEmailReviewBanner'
+import { RFIIrisTriage } from '../../components/rfi/RFIIrisTriage'
 import { useRFIResponsesList, type RFIResponseRow } from '../../hooks/queries/useRFIResponses'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -820,11 +821,19 @@ export function RFIDetail() {
                 kebab + edit/delete + response_type badges + internal
                 styling. Pulls live data so edits land without refresh. */}
           {detailedResponses.length > 0 && (
-            <RFIResponseThread
-              rfiId={rfi.id}
-              projectId={rfi.project_id}
-              responses={detailedResponses}
-            />
+            <>
+              {/* P2b — Iris triage banner above the latest response. */}
+              <RFIIrisTriage
+                rfiId={rfi.id}
+                projectId={rfi.project_id}
+                responses={detailedResponses}
+              />
+              <RFIResponseThread
+                rfiId={rfi.id}
+                projectId={rfi.project_id}
+                responses={detailedResponses}
+              />
+            </>
           )}
 
           {/* Empty state */}
