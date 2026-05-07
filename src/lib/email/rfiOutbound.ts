@@ -55,6 +55,14 @@ export interface RFIOutboundContext {
 export interface RFIOutboundRecipient {
   email: string
   name?: string | null
+  /** Procore-parity per-chip role (architect, mep_engineer, etc). */
+  recipient_role?: string | null
+  /** Per-recipient override of the RFI due_date. */
+  needs_response_by?: string | null
+  /** to | cc | bcc — defaults to 'to' on insert. */
+  distribution_kind?: 'to' | 'cc' | 'bcc' | null
+  /** Selection of rfi_attachments.id values sent with this distribution. */
+  attachment_ids?: string[]
 }
 
 export interface RFIOutboundResult {
@@ -169,6 +177,12 @@ export async function sendRFIOutboundEmail({
       sent_by: ctx.senderUserId,
       delivery_status: 'sent',
       delivery_status_at: new Date().toISOString(),
+      // Info-density wave PR #3 — per-chip Procore parity columns. Each
+      // optional; defaults preserve the legacy single-recipient shape.
+      recipient_role: recipient.recipient_role ?? null,
+      needs_response_by: recipient.needs_response_by ?? null,
+      distribution_kind: recipient.distribution_kind ?? 'to',
+      attachment_ids: recipient.attachment_ids ?? [],
     } as never)
     .select('id')
     .single()
