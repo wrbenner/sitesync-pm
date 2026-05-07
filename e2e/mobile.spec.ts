@@ -1,7 +1,9 @@
 import { test, expect, devices } from '@playwright/test'
 
+const { defaultBrowserType: _bt1, ...iphone14 } = devices['iPhone 14']
+
 test.describe('Mobile Experience', () => {
-  test.use({ ...devices['iPhone 14'] })
+  test.use(iphone14)
 
   test('shows mobile layout with bottom tabs', async ({ page }) => {
     await page.goto('#/dashboard')

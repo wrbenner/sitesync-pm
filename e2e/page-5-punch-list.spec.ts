@@ -29,14 +29,14 @@ async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
   await page.waitForTimeout(ms)
 }
 
 async function waitLoad(page: Page) {
   await page.waitForFunction(
     () => !document.body.textContent?.match(/Loading\.\.\./),
-    { timeout: 15_000 },
+    undefined,
+    { timeout: 8_000 },
   ).catch(() => undefined)
 }
 
@@ -49,11 +49,23 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  await page.route('http://localhost:59999/**', (route) => route.abort()).catch(() => undefined)
+  await page.goto('')
+  await page.waitForLoadState('domcontentloaded')
+  if (!page.url().includes('#/login')) {
+    await page.goto('#/day')
+    await settle(page, 1500)
+    return
+  }
+  const toggle = page.getByRole('button', { name: /sign in with password/i }).first()
+  if (await toggle.count() > 0) {
+    await toggle.click()
+    await page.waitForTimeout(200)
+  }
+  await page.getByLabel('Email').fill(USER)
+  await page.getByLabel('Password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
+  await page.waitForURL(/#\/(day|dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
 }
 
