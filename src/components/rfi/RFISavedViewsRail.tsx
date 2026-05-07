@@ -6,8 +6,8 @@
 // The rail itself is collapsible (mobile + small screens). The default
 // open state is desktop-wide.
 
-import React, { useState } from 'react'
-import { ChevronRight, ChevronDown, Building2, FolderOpen, User, Trash2, Plus } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { ChevronRight, ChevronDown, Building2, FolderOpen, User, Trash2, Plus, PanelLeftClose, PanelLeftOpen, Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { PermissionGate } from '../auth/PermissionGate'
 import { useRFISavedViews, useDeleteRFISavedView, type RFISavedView, type RFIViewScope } from '../../hooks/queries/useRFISavedViews'
@@ -43,6 +43,11 @@ const SCOPE_META: Record<
   },
 }
 
+// localStorage key for the rail's collapsed state. Per-user persistence
+// via the browser; the choice survives reload and follows the user across
+// projects (one preference, not per-project).
+const COLLAPSED_STORAGE_KEY = 'sitesync.rfiSavedViewsRail.collapsed'
+
 export const RFISavedViewsRail: React.FC<RFISavedViewsRailProps> = ({
   projectId,
   activeViewId,
@@ -53,6 +58,30 @@ export const RFISavedViewsRail: React.FC<RFISavedViewsRailProps> = ({
   const deleteView = useDeleteRFISavedView()
   const { user } = useAuth()
 
+  // Top-level collapsed state. Default = expanded. When collapsed, the
+  // rail shrinks to a 36px strip with just a Bookmark icon + chevron;
+  // clicking the chevron expands it back. Procore parity: the saved-
+  // views rail there is permanently visible; SiteSync gives users the
+  // choice so list-page real estate is theirs to spend.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? '1' : '0')
+    } catch {
+      // localStorage may be unavailable (Safari private mode); state still
+      // works in-memory for the session.
+    }
+  }, [collapsed])
+
   const [open, setOpen] = useState<Record<RFIViewScope, boolean>>({
     company: true,
     project: true,
@@ -60,6 +89,74 @@ export const RFISavedViewsRail: React.FC<RFISavedViewsRailProps> = ({
   })
 
   const grouped = (scope: RFIViewScope) => views.filter((v) => v.scope === scope)
+
+  if (collapsed) {
+    return (
+      <aside
+        aria-label="Saved Views (collapsed)"
+        style={{
+          width: 36,
+          flexShrink: 0,
+          padding: `${spacing['3']} 0`,
+          backgroundColor: colors.surfaceInset,
+          borderRight: `1px solid ${colors.borderSubtle}`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: spacing['2'],
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          aria-label="Expand Saved Views rail"
+          aria-expanded={false}
+          title="Expand Saved Views"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            padding: 0,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 6,
+            color: colors.textSecondary,
+            cursor: 'pointer',
+          }}
+        >
+          <PanelLeftOpen size={14} />
+        </button>
+        <div
+          aria-hidden
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            color: colors.textTertiary,
+          }}
+          title={`${views.length} saved view${views.length === 1 ? '' : 's'}`}
+        >
+          <Bookmark size={14} />
+        </div>
+        {views.length > 0 ? (
+          <span
+            aria-hidden
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: colors.textTertiary,
+            }}
+          >
+            {views.length}
+          </span>
+        ) : null}
+      </aside>
+    )
+  }
 
   return (
     <aside
@@ -78,14 +175,45 @@ export const RFISavedViewsRail: React.FC<RFISavedViewsRailProps> = ({
     >
       <div
         style={{
-          fontSize: 11,
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-          color: colors.textTertiary,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: spacing['2'],
         }}
       >
-        Saved Views
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            color: colors.textTertiary,
+          }}
+        >
+          Saved Views
+        </div>
+        <button
+          type="button"
+          onClick={() => setCollapsed(true)}
+          aria-label="Collapse Saved Views rail"
+          aria-expanded={true}
+          title="Collapse rail"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 22,
+            height: 22,
+            padding: 0,
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 5,
+            color: colors.textTertiary,
+            cursor: 'pointer',
+          }}
+        >
+          <PanelLeftClose size={12} />
+        </button>
       </div>
 
       {(['company', 'project', 'personal'] as RFIViewScope[]).map((scope) => {
