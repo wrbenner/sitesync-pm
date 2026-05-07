@@ -1,13 +1,168 @@
 {
   "totals": {
-    "as_any": 2,
+    "as_any": 69,
     "ts_ignore": 0,
-    "files": 1
+    "files": 32
   },
   "files": [
     {
-      "file": "src/lib/supabase.ts",
+      "file": "src/pages/admin/webhooks/index.tsx",
+      "as_any": 6,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/lib/native/share.ts",
+      "as_any": 6,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/admin/sso/index.tsx",
+      "as_any": 4,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/lib/crossFeatureWorkflows.ts",
+      "as_any": 4,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/audit/EntityAuditViewer.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/conversation/RfiSlaPanel.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/conversation/MentionInput.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/dailylog/CrewExpectedVsActual.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/admin/custom-roles/index.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/admin/api-tokens/index.tsx",
+      "as_any": 3,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/realtime/EditingIndicator.tsx",
       "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/shared/PhotoAnnotation.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/conversation/TypingIndicator.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/share/MagicLinkEntity.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/admin/branding/index.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/conversation/index.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/dashboard/SundialDashboard.tsx",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/lib/walkthrough/voiceParser.ts",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/lib/db/queries.ts",
+      "as_any": 2,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/walkthrough/CaptureButton.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/drawings/DrawingTiledViewer.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/realtime/LiveCursorOverlay.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/realtime/PresenceLayer.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/components/specifications/SpecExcerptPanel.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/site-intelligence/SiteIntelligencePage.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/drawings/index.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/admin/audit-posture/index.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/pages/crew/index.tsx",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/lib/native/push.ts",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/services/taskService.ts",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/useDrawingIntelligence.ts",
+      "as_any": 1,
+      "ts_ignore": 0
+    },
+    {
+      "file": "src/hooks/mutations/draw-reports.ts",
+      "as_any": 1,
       "ts_ignore": 0
     }
   ]
