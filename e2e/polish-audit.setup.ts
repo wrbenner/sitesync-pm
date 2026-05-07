@@ -31,17 +31,18 @@ setup('authenticate polish-audit user', async ({ page }) => {
 
   await page.goto('#/login')
 
-  // The login form uses placeholder-based inputs; locate by role/type.
-  await page.getByPlaceholder('you@company.com').fill(email)
-  await page.getByPlaceholder('Enter your password').fill(password)
-
-  // Two "Sign In" buttons exist — the tab control and the form submit.
-  // Target the submit button by type to avoid the ambiguity.
+  // The redesigned login starts in magic-link mode. Switch to password mode.
+  const toggle = page.getByRole('button', { name: /sign in with password/i }).first()
+  if (await toggle.count() > 0) {
+    await toggle.click()
+    await page.waitForTimeout(200)
+  }
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
   await page.locator('button[type="submit"]').first().click()
 
-  // Successful login can land on any of these depending on whether the
-  // user has a project yet. Accept any of them as proof of auth.
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
+  // After login the app redirects to / (→ /day), /dashboard, /onboarding, or /profile.
+  await page.waitForURL(/#\/(day|dashboard|onboarding|profile|$)/, { timeout: 20_000 })
 
   // Belt-and-suspenders: confirm we're not still on /login.
   expect(page.url()).not.toMatch(/#\/login/)
