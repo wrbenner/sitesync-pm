@@ -166,13 +166,13 @@
 ### Files touched
 
 - `src/components/submittals/FilterChips/` — new directory.
-- `src/components/submittals/FilterChips/AddFilterDropdown.tsx`
-- `src/components/submittals/FilterChips/FilterPill.tsx`
-- `src/components/submittals/FilterChips/filterDefinitions.ts` — the 20 chip definitions.
-- `src/components/submittals/BulkActionsMenu.tsx`
+- `src/components/submittals/FilterChips/AddFilterDropdown.tsx` (planned)
+- `src/components/submittals/FilterChips/FilterPill.tsx` (planned)
+- `src/components/submittals/FilterChips/filterDefinitions.ts` — the 20 chip definitions. (planned)
+- `src/components/submittals/BulkActionsMenu.tsx` (planned)
 - `src/components/submittals/SavedViews/` — new directory.
-- `src/components/submittals/SavedViews/SavedViewsSidebar.tsx`
-- `src/services/submittalsSavedViews.ts` — CRUD against `submittal_saved_views` table (new in this PR's migration).
+- `src/components/submittals/SavedViews/SavedViewsSidebar.tsx` (planned)
+- `src/services/submittalsSavedViews.ts` — CRUD against `submittal_saved_views` table (new in this PR's migration). (planned)
 - New migration: `20260507XXXXX_submittal_saved_views.sql`.
 
 ### Acceptance criteria
@@ -214,10 +214,10 @@
 
 ### Files touched
 
-- `src/components/submittals/PackagesView.tsx`
-- `src/components/submittals/SpecSectionsView.tsx`
-- `src/components/submittals/BallInCourtView.tsx`
-- `src/components/submittals/GroupHeader.tsx` — shared component.
+- `src/components/submittals/PackagesView.tsx` (planned)
+- `src/components/submittals/SpecSectionsView.tsx` (planned)
+- `src/components/submittals/BallInCourtView.tsx` (planned)
+- `src/components/submittals/GroupHeader.tsx` — shared component. (planned)
 - `src/components/submittals/PackageCRUD/` — create/edit/delete dialogs.
 - API: package endpoints already in spec Part 3.2 schema; verify `submittal_packages` table exists from D36 migration.
 - New migration if needed for `spec_sections` reference table (CSI MasterFormat lookup).
@@ -259,10 +259,10 @@
 
 ### Files touched
 
-- `src/components/submittals/KanbanView.tsx`
-- `src/components/submittals/TimelineView.tsx`
-- `src/components/submittals/ScheduleLinkedView.tsx`
-- `src/components/submittals/SubmittalCard.tsx` — kanban card.
+- `src/components/submittals/KanbanView.tsx` (planned)
+- `src/components/submittals/TimelineView.tsx` (planned)
+- `src/components/submittals/ScheduleLinkedView.tsx` (planned)
+- `src/components/submittals/SubmittalCard.tsx` — kanban card. (planned)
 - Drag-and-drop: use `@dnd-kit/core` (already in package.json).
 
 ### Acceptance criteria
@@ -312,14 +312,14 @@
 ### Files touched
 
 - `src/pages/submittals/SubmittalDetailPage.tsx` — full rewrite of the shell.
-- `src/components/submittals/detail/Breadcrumb.tsx`
-- `src/components/submittals/detail/StatusBanners.tsx`
-- `src/components/submittals/detail/ActionCluster.tsx`
-- `src/components/submittals/detail/DetailTabs.tsx`
-- `src/components/submittals/detail/Overview/DistributionSummary.tsx`
-- `src/components/submittals/detail/Overview/GeneralInformation.tsx`
-- `src/components/submittals/detail/Overview/WorkflowResponseCards.tsx`
-- `src/components/submittals/detail/Overview/DeliveryInformation.tsx`
+- `src/components/submittals/detail/Breadcrumb.tsx` (planned)
+- `src/components/submittals/detail/StatusBanners.tsx` (planned)
+- `src/components/submittals/detail/ActionCluster.tsx` (planned)
+- `src/components/submittals/detail/DetailTabs.tsx` (planned)
+- `src/components/submittals/detail/Overview/DistributionSummary.tsx` (planned)
+- `src/components/submittals/detail/Overview/GeneralInformation.tsx` (planned)
+- `src/components/submittals/detail/Overview/WorkflowResponseCards.tsx` (planned)
+- `src/components/submittals/detail/Overview/DeliveryInformation.tsx` (planned)
 
 ### Acceptance criteria
 
@@ -366,10 +366,10 @@
 
 ### Files touched
 
-- `src/components/submittals/detail/Overview/WorkflowChainTable.tsx` — the new dense table.
-- `src/components/submittals/detail/CitationsSidePanel.tsx` — the right-rail dock.
-- `src/components/submittals/detail/CitationsSidePanel/CitationCard.tsx` — per citation.
-- `src/components/submittals/detail/CitationsSidePanel/CitationPreview.tsx` — PDF preview with highlight rect.
+- `src/components/submittals/detail/Overview/WorkflowChainTable.tsx` — the new dense table. (planned)
+- `src/components/submittals/detail/CitationsSidePanel.tsx` — the right-rail dock. (planned)
+- `src/components/submittals/detail/CitationsSidePanel/CitationCard.tsx` — per citation. (planned)
+- `src/components/submittals/detail/CitationsSidePanel/CitationPreview.tsx` — PDF preview with highlight rect. (planned)
 - Reuses existing `react-pdf` setup.
 
 ### Acceptance criteria
@@ -420,8 +420,8 @@
 
 ### Files touched
 
-- `src/router/submittalRoutes.ts` — route guards for the login bounce fix.
-- `src/components/submittals/RecycleBinView.tsx`
+- `src/router/submittalRoutes.ts` — route guards for the login bounce fix. (planned)
+- `src/components/submittals/RecycleBinView.tsx` (planned)
 - All view components — responsive media queries.
 - `src/hooks/useKeyboardShortcuts.ts` — extend for submittals.
 
