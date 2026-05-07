@@ -35,11 +35,13 @@ import { UserChipEditor, type UserChipOption } from './UserChipEditor'
 import { RFIRichTextEditor } from './RFIRichTextEditor'
 import { RFIAttachmentManager } from './RFIAttachmentManager'
 import { RFIAssigneePicker } from './RFIAssigneePicker'
+import { RFIDistributionStatusList } from './RFIDistributionStatusList'
+import { sendRFIOutboundEmailFanout } from '../../lib/email/rfiOutbound'
 import { useRFI } from '../../hooks/queries'
 import { useUpdateRFI } from '../../hooks/mutations'
 import { useProjectDirectory } from '../../hooks/queries/useProjectDirectory'
 import { useRFIWatchers, useAddRFIWatcher } from '../../hooks/queries/useRFIWatchers'
-import { useRFIDistributions, useAddRFIDistribution } from '../../hooks/queries/useRFIDistributions'
+import { useRFIDistributions } from '../../hooks/queries/useRFIDistributions'
 import { dollarsToCents, fromCents } from '../../types/money'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { entityLabel } from '../../lib/entityLabel'
@@ -86,7 +88,9 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
   const { data: distributions = [] } = useRFIDistributions(rfiId ?? undefined)
   const updateRFI = useUpdateRFI()
   const addWatcher = useAddRFIWatcher()
-  const addDistribution = useAddRFIDistribution()
+  // P1c: distribution sends now flow through sendRFIOutboundEmailFanout.
+  // The legacy useAddRFIDistribution hook only inserted a row without
+  // sending — superseded.
 
   const [draft, setDraft] = useState<EditDraft>(EMPTY_DRAFT)
   const [pickedWatchers, setPickedWatchers] = useState<string[]>([])
@@ -219,23 +223,34 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
       }
 
       // 3. Add new distribution recipients (append-only — existing rows
-      //    are preserved by definition).
+      //    are preserved by definition). P1c — each new recipient now
+      //    actually receives an email through the send-email pipeline.
+      //    The helper handles the durable rfi_distributions row, the
+      //    Message-ID stamping, the outbound_email_log link for
+      //    In-Reply-To threading, and the per-row audit log.
       const existingEmails = new Set(distributions.map((d) => d.recipient_email))
       const newRecipients = pickedRecipients.filter((e) => !existingEmails.has(e))
       if (newRecipients.length > 0) {
-        const results = await Promise.allSettled(
-          newRecipients.map((email) =>
-            addDistribution.mutateAsync({
-              rfiId,
-              projectId,
-              recipient_email: email,
-              recipient_name: null,
-              message: null,
-            }),
-          ),
+        const detailUrl = `${window.location.origin}/rfis/${rfiId}`
+        const r = rfi as Record<string, unknown> | undefined
+        const fanout = await sendRFIOutboundEmailFanout(
+          {
+            rfiId,
+            projectId,
+            rfiNumber: (r?.number as number | undefined) ?? null,
+            rfiTitle: ((r?.title as string | undefined) ?? draft.title) || 'RFI',
+            rfiQuestion:
+              (r?.question as string | undefined) ?? (r?.description as string | undefined) ?? draft.question,
+            projectName: null,
+            detailUrl,
+            senderUserId: (r?.created_by as string | undefined) ?? null,
+            message: null,
+          },
+          newRecipients.map((email) => ({ email })),
         )
-        const failed = results.filter((r) => r.status === 'rejected').length
-        if (failed > 0) toast.warning(`${failed} distribution${failed > 1 ? 's' : ''} could not be sent`)
+        if (fanout.failed > 0) {
+          toast.warning(`${fanout.failed} distribution${fanout.failed > 1 ? 's' : ''} could not be sent`)
+        }
       }
 
       toast.success(`${entityLabel('rfi')} updated`)
@@ -385,19 +400,23 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
           </FieldRow>
 
           <FieldRow label="Distribution" hint="Type an email or pick a role group.">
-            <UserChipEditor
-              value={pickedRecipients}
-              onChange={setPickedRecipients}
-              options={distributionOptions}
-              roleGroups={directory?.roleGroups}
-              placeholder="email@example.com"
-              ariaLabel="Distribution"
-              onFreeText={(raw) => {
-                const trimmed = raw.trim()
-                if (!trimmed.includes('@')) return null
-                return { value: trimmed, label: trimmed }
-              }}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <UserChipEditor
+                value={pickedRecipients}
+                onChange={setPickedRecipients}
+                options={distributionOptions}
+                roleGroups={directory?.roleGroups}
+                placeholder="email@example.com"
+                ariaLabel="Distribution"
+                onFreeText={(raw) => {
+                  const trimmed = raw.trim()
+                  if (!trimmed.includes('@')) return null
+                  return { value: trimmed, label: trimmed }
+                }}
+              />
+              {/* P1c — delivery status dots from Resend webhook events. */}
+              {rfiId && <RFIDistributionStatusList rfiId={rfiId} />}
+            </div>
           </FieldRow>
 
           <FieldRow label="Attachments" hint="Drag-drop, paste, or click to upload. Mark Official with the star.">

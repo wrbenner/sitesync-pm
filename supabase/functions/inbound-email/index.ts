@@ -25,10 +25,64 @@
 
 import { serve } from 'https://deno.land/std@0.192.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { decode as base64Decode } from 'https://deno.land/std@0.192.0/encoding/base64.ts'
+
+// ── Resend webhook signature verification ───────────────────────────────
+// Resend signs every webhook request with a secret. Reject any request
+// whose signature doesn't validate before reading any state from it.
+async function verifyResendSignature(req: Request, rawBody: string): Promise<boolean> {
+  const secret = Deno.env.get('RESEND_WEBHOOK_SECRET')
+  if (!secret) {
+    // Unconfigured — fail closed in production. For local dev, set
+    // RESEND_WEBHOOK_DEV_BYPASS=1 to skip verification.
+    return Deno.env.get('RESEND_WEBHOOK_DEV_BYPASS') === '1'
+  }
+
+  // Resend sends headers svix-id, svix-timestamp, svix-signature in the
+  // Svix format: "v1,<base64sig> v1,<base64sig> ...". Spec at
+  // https://docs.svix.com/receiving/verifying-payloads/how-manual.
+  const svixId = req.headers.get('svix-id')
+  const svixTimestamp = req.headers.get('svix-timestamp')
+  const svixSignature = req.headers.get('svix-signature')
+  if (!svixId || !svixTimestamp || !svixSignature) return false
+
+  // Reject replays older than 5 minutes (Svix recommendation).
+  const ts = Number(svixTimestamp)
+  if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 300) return false
+
+  const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`
+  // The secret is "whsec_<base64>" — strip prefix, base64-decode.
+  const secretBytes = secret.startsWith('whsec_')
+    ? base64Decode(secret.slice('whsec_'.length))
+    : new TextEncoder().encode(secret)
+  const key = await crypto.subtle.importKey(
+    'raw',
+    secretBytes,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedContent))
+  const computed = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
+
+  // svix-signature format: "v1,<sig> v1,<sig2> ..." — match any.
+  const candidates = svixSignature.split(' ').map((s) => s.split(',')[1]).filter(Boolean)
+  return candidates.includes(computed)
+}
 
 // ── Types ────────────────────────────────────────────────────────────────
 
 type EntityType = 'rfi' | 'submittal' | 'change_order'
+
+interface InboundAttachment {
+  filename?: string
+  // Either a URL the provider hosts the file at, or inline base64
+  // content. Resend currently sends URLs.
+  url?: string
+  content?: string  // base64
+  content_type?: string
+  size?: number
+}
 
 interface InboundPayload {
   // Resend's inbound webhook shape (subset we care about). Keep this
@@ -42,6 +96,7 @@ interface InboundPayload {
   message_id?: string
   in_reply_to?: string
   references?: string
+  attachments?: InboundAttachment[]
   // Some providers nest the above under `email` or `data`. We handle that.
   email?: InboundPayload
   data?: InboundPayload
@@ -200,12 +255,75 @@ async function resolveEntity(ctx: ResolutionContext): Promise<{ entityType: Enti
   return null
 }
 
+// ── Attachment extraction (P1c) ─────────────────────────────────────────
+// Resend's inbound payload includes attachments as either inline base64
+// or hosted URLs. Walk the array, upload each into the project bucket,
+// and insert one rfi_attachments row per file with source='email_inbound'.
+async function persistAttachments(opts: {
+  attachments: InboundAttachment[]
+  projectId: string
+  rfiId: string
+  responseId: string
+}): Promise<{ persisted: number; failed: number }> {
+  let persisted = 0
+  let failed = 0
+  for (const att of opts.attachments) {
+    try {
+      const filename = (att.filename ?? `attachment-${Date.now()}`).replace(/[^a-zA-Z0-9._-]/g, '_')
+      const ts = Date.now()
+      const storagePath = `${opts.projectId}/rfis/${opts.rfiId}/responses/${opts.responseId}/${ts}-${filename}`
+
+      let bytes: Uint8Array | null = null
+      let contentType = att.content_type ?? 'application/octet-stream'
+      if (att.content) {
+        bytes = base64Decode(att.content)
+      } else if (att.url) {
+        const res = await fetch(att.url)
+        if (!res.ok) throw new Error(`fetch ${res.status}`)
+        bytes = new Uint8Array(await res.arrayBuffer())
+        contentType = res.headers.get('content-type') ?? contentType
+      }
+      if (!bytes) {
+        failed++
+        continue
+      }
+
+      const { error: uploadErr } = await sb.storage
+        .from('project-files')
+        .upload(storagePath, bytes, { cacheControl: '3600', upsert: false, contentType })
+      if (uploadErr) throw uploadErr
+
+      const { error: insertErr } = await sb.from('rfi_attachments').insert({
+        rfi_id: opts.rfiId,
+        response_id: opts.responseId,
+        storage_path: storagePath,
+        filename: att.filename ?? filename,
+        content_type: contentType,
+        size_bytes: att.size ?? bytes.byteLength,
+        source: 'email_inbound',
+        position: 0,
+      })
+      if (insertErr) throw insertErr
+      persisted++
+    } catch {
+      failed++
+    }
+  }
+  return { persisted, failed }
+}
+
 serve(async (req) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 })
 
+  // Read raw body once so we can both verify signature and JSON-parse.
+  const rawBody = await req.text()
+
+  const sigOk = await verifyResendSignature(req, rawBody)
+  if (!sigOk) return new Response('invalid signature', { status: 401 })
+
   let payload: InboundPayload
   try {
-    payload = await req.json()
+    payload = JSON.parse(rawBody) as InboundPayload
   } catch {
     return new Response('invalid json', { status: 400 })
   }
@@ -217,6 +335,7 @@ serve(async (req) => {
   const subject = (flat.subject ?? '').slice(0, 500)
   const text = (flat.text ?? '').slice(0, 50000)
   const inboundMessageId = flat.message_id ?? null
+  const attachments = flat.attachments ?? payload.attachments ?? []
 
   // Try to resolve project from sender's directory_contact (if we have
   // them in our address book, we know which project they belong to).
@@ -263,8 +382,7 @@ serve(async (req) => {
     })
   }
 
-  // Insert as a comment on the entity. Generic table — Tab A's
-  // rfi_escalations is for outbound; this is inbound.
+  // Always log to inbound_email_replies — that's the legal record.
   await sb.from('inbound_email_replies').insert({
     entity_type: resolved.entityType,
     entity_id: resolved.entityId,
@@ -278,21 +396,139 @@ serve(async (req) => {
     received_at: new Date().toISOString(),
   })
 
-  // Suggest status transition. Only auto-apply at high confidence (plus-tag
-  // route + clear approval/rejection keyword). Otherwise leave as Iris draft.
+  // P1c — for RFI matches, also insert into rfi_responses so the reply
+  // shows up in the live thread on the detail page. Confidence drives
+  // the persistence path:
+  //   high   → real response, source='email_inbound'
+  //   medium → real response, source='email_inbound' (verified via
+  //            In-Reply-To which is high-fidelity in practice)
+  //   low    → drafted_actions only — Iris asks the GC to confirm
+  //            before adding to the legal record.
+  let insertedResponseId: string | null = null
+  let attachmentSummary: { persisted: number; failed: number } | null = null
+  let projectIdForResponse: string | null = null
+
+  if (resolved.entityType === 'rfi' && (resolved.confidence === 'high' || resolved.confidence === 'medium')) {
+    const { data: rfiRow } = await sb
+      .from('rfis')
+      .select('project_id')
+      .eq('id', resolved.entityId)
+      .maybeSingle()
+    projectIdForResponse = (rfiRow?.project_id as string | undefined) ?? null
+
+    const { data: responseRow, error: responseErr } = await sb
+      .from('rfi_responses')
+      .insert({
+        rfi_id: resolved.entityId,
+        author_id: null,
+        content: text || subject || '(empty reply)',
+        response_type: 'answered',
+        is_official: false,
+        is_internal: false,
+        source: 'email_inbound',
+        source_email: sender,
+        inbound_message_id: inboundMessageId,
+      })
+      .select('id')
+      .single()
+    if (!responseErr && responseRow) {
+      insertedResponseId = (responseRow as { id: string }).id
+
+      // Attachments — best-effort; failures don't break the response insert.
+      if (projectIdForResponse && attachments.length > 0 && insertedResponseId) {
+        attachmentSummary = await persistAttachments({
+          attachments,
+          projectId: projectIdForResponse,
+          rfiId: resolved.entityId,
+          responseId: insertedResponseId,
+        })
+      }
+
+      // Audit row — Chain Audit Prep Check 5.
+      if (projectIdForResponse) {
+        await sb.from('audit_log').insert({
+          project_id: projectIdForResponse,
+          user_id: null,
+          user_email: sender,
+          user_name: sender,
+          entity_type: 'rfi',
+          entity_id: resolved.entityId,
+          action: 'update',
+          before_state: null,
+          after_state: {
+            response_id: insertedResponseId,
+            source: 'email_inbound',
+            inbound_message_id: inboundMessageId,
+          },
+          changed_fields: ['response'],
+          metadata: {
+            kind: 'rfi_response_email_inbound',
+            via: resolved.via,
+            confidence: resolved.confidence,
+            attachments_persisted: attachmentSummary?.persisted ?? 0,
+            attachments_failed: attachmentSummary?.failed ?? 0,
+          },
+        })
+      }
+    }
+  } else if (resolved.entityType === 'rfi' && resolved.confidence === 'low') {
+    // Low-confidence subject-only match — surface to Iris instead of
+    // inserting straight into the thread. The detail page renders a
+    // yellow "Iris received an email…" banner with Accept / Reject.
+    // Resolve the project_id off the RFI for drafted_actions FK.
+    const { data: rfiRow } = await sb
+      .from('rfis')
+      .select('project_id')
+      .eq('id', resolved.entityId)
+      .maybeSingle()
+    const projectIdForDraft = (rfiRow?.project_id as string | undefined) ?? null
+    if (projectIdForDraft) {
+      await sb.from('drafted_actions').insert({
+        project_id: projectIdForDraft,
+        action_type: 'rfi.email_inbound_review',
+        title: `Email may belong to RFI: ${subject.slice(0, 80)}`,
+        summary: text.slice(0, 200),
+        payload: {
+          rfi_id: resolved.entityId,
+          body: text,
+          subject,
+          from_email: sender,
+          inbound_message_id: inboundMessageId,
+          source: 'email_inbound_iris_review',
+          via: resolved.via,
+        },
+        citations: [{ kind: 'rfi_reference', text: subject.slice(0, 200) }],
+        confidence: 0.4,
+        status: 'pending',
+        drafted_by: 'inbound-email',
+        draft_reason: 'low-confidence subject-only match',
+        related_resource_type: 'rfi',
+        related_resource_id: resolved.entityId,
+      })
+    }
+  }
+
+  // Status-transition Iris draft (separate from response surfacing).
+  // Only at high confidence + clear keyword. Surface via approval gate.
   const sug = suggestStatusTransition(text, resolved.entityType)
-  if (sug.suggested && resolved.confidence === 'high' && sug.confidence === 'medium') {
-    // Iris draft — not auto-apply. The page renders an approval gate.
+  if (sug.suggested && resolved.confidence === 'high' && sug.confidence === 'medium' && projectIdForResponse) {
     await sb.from('drafted_actions').insert({
-      target_entity_type: resolved.entityType,
-      target_entity_id: resolved.entityId,
-      action_type: 'transition_status',
-      action_payload: { to_status: sug.suggested },
+      project_id: projectIdForResponse,
+      action_type: `${resolved.entityType}.transition_status`,
+      title: `Suggested ${resolved.entityType} status: ${sug.suggested}`,
+      summary: `Architect reply suggests "${sug.suggested}" — confirm before applying.`,
+      payload: {
+        entity_id: resolved.entityId,
+        to_status: sug.suggested,
+        excerpt: text.slice(0, 500),
+      },
+      citations: [{ kind: 'rfi_reference', text: text.slice(0, 200) }],
+      confidence: 0.6,
+      status: 'pending',
       drafted_by: 'inbound-email',
-      drafted_at: new Date().toISOString(),
-      status: 'pending_approval',
-      confidence: sug.confidence,
-      citation_text: text.slice(0, 500),
+      draft_reason: 'inbound reply approval/rejection keyword',
+      related_resource_type: resolved.entityType,
+      related_resource_id: resolved.entityId,
     })
   }
 
@@ -312,6 +548,8 @@ serve(async (req) => {
       entity_id: resolved.entityId,
       confidence: resolved.confidence,
       via: resolved.via,
+      response_id: insertedResponseId,
+      attachments: attachmentSummary,
       suggested_status: sug.suggested,
     }),
     { headers: { 'content-type': 'application/json' } },

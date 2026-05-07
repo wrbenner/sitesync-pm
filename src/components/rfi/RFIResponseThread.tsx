@@ -17,7 +17,7 @@
 import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Pencil, Trash2, MoreVertical, Star, Lock, Check, X, AtSign,
+  Pencil, Trash2, MoreVertical, Star, Lock, Check, X, AtSign, Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Avatar } from '../Primitives'
@@ -247,6 +247,32 @@ const ResponseCard: React.FC<ResponseCardProps> = ({
               }}
             >
               <Lock size={9} /> Internal
+            </span>
+          )}
+
+          {response.source === 'email_inbound' && (
+            <span
+              title={`Replied via email${response.source_email ? ` from ${response.source_email}` : ''}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                padding: '1px 8px',
+                borderRadius: 10,
+                backgroundColor: '#4F46E512',
+                color: '#4F46E5',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <Mail size={9} /> Replied via email
+              {response.source_email && (
+                <span style={{ textTransform: 'none', fontWeight: 500, color: '#4F46E5', opacity: 0.8 }}>
+                  · {response.source_email}
+                </span>
+              )}
             </span>
           )}
 

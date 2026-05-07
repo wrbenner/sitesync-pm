@@ -16,11 +16,12 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { Send, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { invalidateEntity } from '../../api/invalidation'
 import { Modal } from '../Primitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
+import { useRFI, useProject } from '../../hooks/queries'
+import { sendRFIOutboundEmail } from '../../lib/email/rfiOutbound'
 
 interface RFIDistributeDialogProps {
   rfiId: string
@@ -40,23 +41,48 @@ const distributeSchema = z.object({
   message: z.string().trim().max(2000).optional(),
 })
 
-type DistributePayload = z.infer<typeof distributeSchema>
+// DistributePayload type was inferred from distributeSchema in P0 — the
+// P1c rewrite uses ForwardParams below which carries the inferred shape
+// inline. Type kept for grep-ability but unused now.
+
+// P1c — distribute now actually sends the email through the existing
+// send-email edge function. The rfi_distributions row is the durable
+// record AND the threading anchor; the helper sets `message_id` on
+// insert so inbound replies thread back via In-Reply-To even when the
+// sender's client doesn't preserve plus-tag.
+interface ForwardParams {
+  rfiId: string
+  projectId: string
+  recipient_email: string
+  recipient_name?: string
+  message?: string
+  rfi: { id: string; number: number | null; title: string; question: string | null } | null
+  project: { id: string; name: string | null } | null
+}
 
 function useForwardRFI() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   return useMutation({
-    mutationFn: async (params: { rfiId: string; projectId: string } & DistributePayload) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any
-      const { error } = await sb.from('rfi_distributions').insert({
-        rfi_id: params.rfiId,
-        recipient_email: params.recipient_email,
-        recipient_name: params.recipient_name || null,
-        message: params.message || null,
-        sent_by: user?.id ?? null,
+    mutationFn: async (params: ForwardParams) => {
+      const detailUrl = `${window.location.origin}/rfis/${params.rfiId}`
+      const result = await sendRFIOutboundEmail({
+        ctx: {
+          rfiId: params.rfiId,
+          projectId: params.projectId,
+          rfiNumber: params.rfi?.number ?? null,
+          rfiTitle: params.rfi?.title ?? 'RFI',
+          rfiQuestion: params.rfi?.question ?? null,
+          projectName: params.project?.name ?? null,
+          detailUrl,
+          senderUserId: user?.id ?? null,
+          message: params.message ?? null,
+        },
+        recipient: { email: params.recipient_email, name: params.recipient_name ?? null },
       })
-      if (error) throw error
+      if (!result.ok) {
+        throw new Error(result.error ?? 'Distribution failed')
+      }
       return { rfiId: params.rfiId, projectId: params.projectId }
     },
     onSuccess: ({ rfiId, projectId }) => {
@@ -76,6 +102,24 @@ export const RFIDistributeDialog: React.FC<RFIDistributeDialogProps> = ({
   const [message, setMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
   const forward = useForwardRFI()
+  // RFI + project lookups for the email body. These are cached so the
+  // dialog doesn't add network round-trips on open.
+  const { data: rfi } = useRFI(rfiId)
+  const { data: project } = useProject(projectId)
+  const rfiCtx = rfi
+    ? {
+        id: (rfi as { id: string }).id,
+        number: (rfi as { number?: number | null }).number ?? null,
+        title: (rfi as { title?: string }).title ?? 'RFI',
+        question:
+          (rfi as { question?: string | null }).question ??
+          (rfi as { description?: string | null }).description ??
+          null,
+      }
+    : null
+  const projectCtx = project
+    ? { id: (project as { id: string }).id, name: (project as { name?: string | null }).name ?? null }
+    : null
 
   const reset = () => {
     setEmail('')
@@ -103,7 +147,13 @@ export const RFIDistributeDialog: React.FC<RFIDistributeDialogProps> = ({
       return
     }
     try {
-      await forward.mutateAsync({ rfiId, projectId, ...parsed.data })
+      await forward.mutateAsync({
+        rfiId,
+        projectId,
+        ...parsed.data,
+        rfi: rfiCtx,
+        project: projectCtx,
+      })
       toast.success(`RFI${rfiNumber ? ` #${rfiNumber}` : ''} distributed to ${parsed.data.recipient_email}`)
       reset()
       onClose()

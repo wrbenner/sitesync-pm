@@ -19,6 +19,11 @@ export interface RFIDistributionRow {
   message: string | null
   sent_by: string | null
   sent_at: string
+  // P1c — delivery telemetry projected from the Resend webhook handler.
+  message_id: string | null
+  delivery_status: 'sent' | 'delivered' | 'bounced' | 'complained' | 'unknown' | null
+  delivery_status_at: string | null
+  bounce_reason: string | null
 }
 
 export function useRFIDistributions(rfiId: string | null | undefined) {
@@ -29,7 +34,9 @@ export function useRFIDistributions(rfiId: string | null | undefined) {
     queryFn: async (): Promise<RFIDistributionRow[]> => {
       if (!rfiId) return []
       const { data } = await fromTable('rfi_distributions')
-        .select('id, rfi_id, recipient_email, recipient_name, message, sent_by, sent_at')
+        .select(
+          'id, rfi_id, recipient_email, recipient_name, message, sent_by, sent_at, message_id, delivery_status, delivery_status_at, bounce_reason',
+        )
         .eq('rfi_id', rfiId)
         .order('sent_at', { ascending: false })
       return (data ?? []) as unknown as RFIDistributionRow[]
