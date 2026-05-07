@@ -16,8 +16,8 @@ export async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
-  await page.waitForTimeout(ms)
+  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
+  await page.waitForTimeout(ms).catch(() => undefined)
 }
 
 /**
@@ -64,10 +64,16 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 
 export async function signIn(page: Page, user: string, pass: string) {
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  // Login.tsx defaults to magic-link mode — switch to password mode first.
+  await page.getByRole('button', { name: 'Sign in with password', exact: true })
+    .click({ timeout: 10_000 }).catch(() => undefined)
+  // Use exact labels to avoid partial-matching the form's own aria-label.
+  await page.getByLabel('Email', { exact: true }).fill(user)
+  await page.getByLabel('Password', { exact: true }).fill(pass)
   await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
+  // After login the app navigates to /day (primary) or /dashboard → /day.
+  await page.waitForURL(/#\/(day|dashboard|onboarding|profile)/, { timeout: 20_000 })
+    .catch(() => undefined)
   await settle(page, 1500)
 }
 
