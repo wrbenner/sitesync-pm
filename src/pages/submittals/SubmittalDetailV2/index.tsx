@@ -30,11 +30,20 @@ import { useQuery } from '@tanstack/react-query'
 import { StoryBanner } from '../../../components/submittals/detail/StoryBanner'
 import { DetailTabs, EmptyDetailTab, type DetailTab, DETAIL_TABS } from '../../../components/submittals/detail/DetailTabs'
 import { GeneralInfoCard } from '../../../components/submittals/detail/Overview/GeneralInfoCard'
-import { CompactWorkflowChain, type WorkflowChainStep } from '../../../components/submittals/detail/Overview/CompactWorkflowChain'
+import {
+  WorkflowChainTable,
+  type WorkflowChainRow,
+} from '../../../components/submittals/detail/Overview/WorkflowChainTable'
 import {
   IrisCoPilotPanel,
   type IrisCoPilotData,
 } from '../../../components/submittals/detail/IrisCoPilotPanel'
+import { CitationsPanel } from '../../../components/submittals/detail/Citations/CitationsPanel'
+import type { CitationBase } from '../../../components/submittals/detail/Citations/citationKinds'
+import { VoiceReviewOverlay } from '../../../components/submittals/detail/VoiceReviewOverlay'
+import { submittalService } from '../../../services/submittalService'
+import type { SubmittalDisposition } from '../../../types/submittal'
+import { toast } from 'sonner'
 
 const C = {
   ink: '#1A1613',
@@ -57,6 +66,10 @@ const SubmittalDetailV2Page: React.FC = () => {
   const projectId = useProjectId()
 
   const [tab, setTab] = useState<DetailTab>('overview')
+  const [citationsOpen, setCitationsOpen] = useState(false)
+  const [voiceTranscriptSeed, setVoiceTranscriptSeed] = useState<string | null>(null)
+  void voiceTranscriptSeed
+  void setVoiceTranscriptSeed
   const [copilotOpen, setCopilotOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
     const raw = window.localStorage.getItem(COPILOT_OPEN_STORAGE)
@@ -83,7 +96,7 @@ const SubmittalDetailV2Page: React.FC = () => {
     },
   })
 
-  const reviewersQuery = useQuery<WorkflowChainStep[]>({
+  const reviewersQuery = useQuery<WorkflowChainRow[]>({
     queryKey: ['submittal_reviewers', submittalId],
     enabled: !!submittalId,
     staleTime: 30_000,
@@ -102,15 +115,25 @@ const SubmittalDetailV2Page: React.FC = () => {
       const rows = (data as unknown as Array<Record<string, unknown>>) ?? []
       // Decorate with is_current — first un-responded step in the chain.
       const firstPendingIdx = rows.findIndex((r) => !r.responded_at)
-      return rows.map((r, idx): WorkflowChainStep => ({
+      return rows.map((r, idx): WorkflowChainRow => ({
         id: String(r.id),
         sequence: Number(r.sequence ?? idx + 1),
         reviewer_name: (r.reviewer_name as string | null) ?? null,
+        reviewer_company: (r.reviewer_company as string | null) ?? null,
         reviewer_role: (r.reviewer_role as string | null) ?? null,
+        reviewer_email: (r.reviewer_email as string | null) ?? null,
+        sent_at: (r.sent_at as string | null) ?? null,
+        due_date: (r.due_date as string | null) ?? null,
+        returned_at: (r.returned_at as string | null) ?? null,
         responded_at: (r.responded_at as string | null) ?? null,
         disposition: (r.disposition as string | null) ?? null,
+        comments: (r.comments as string | null) ?? null,
+        attachments: Array.isArray(r.attachments)
+          ? (r.attachments as Array<{ id: string; name: string; url?: string; isCurrent?: boolean }>)
+          : [],
+        version: (r.version as number | null) ?? null,
+        parallel_group: (r.parallel_group as number | null) ?? null,
         is_current: idx === firstPendingIdx,
-        is_parallel: r.parallel_group != null,
       }))
     },
   })
@@ -196,6 +219,11 @@ const SubmittalDetailV2Page: React.FC = () => {
         <ActionCluster
           copilotOpen={copilotOpen}
           onToggleCoPilot={() => setCopilotOpen((o) => !o)}
+          submittalId={submittalId ?? ''}
+          onAfterDisposition={() => {
+            void submittalQuery.refetch()
+            void reviewersQuery.refetch()
+          }}
         />
       </header>
 
@@ -222,8 +250,14 @@ const SubmittalDetailV2Page: React.FC = () => {
           {tab === 'overview' && (
             <>
               <GeneralInfoCard submittal={submittal} />
-              <CompactWorkflowChain steps={reviewersQuery.data ?? []} />
+              <WorkflowChainTable rows={reviewersQuery.data ?? []} />
             </>
+          )}
+          {tab === 'citations' && (
+            <CitationsTabContent
+              submittal={submittal}
+              onOpenPanel={() => setCitationsOpen(true)}
+            />
           )}
           {tab === 'history' && <HistoryTabPlaceholder />}
           {tab === 'markup' && (
@@ -231,9 +265,6 @@ const SubmittalDetailV2Page: React.FC = () => {
           )}
           {tab === 'revisions' && (
             <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'revisions')!.phase} tabLabel="Revisions" />
-          )}
-          {tab === 'citations' && (
-            <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'citations')!.phase} tabLabel="Citations" />
           )}
           {tab === 'distribute' && (
             <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'distribute')!.phase} tabLabel="Distribute" />
@@ -247,9 +278,16 @@ const SubmittalDetailV2Page: React.FC = () => {
           open={copilotOpen}
           data={copilotData}
           onClose={() => setCopilotOpen(false)}
-          attribution="Iris co-pilot — Phase 6 deterministic shell. LLM augmentation ships in Phase 7."
+          attribution="Iris co-pilot — deterministic shell. LLM augmentation ships in Phase 7b."
         />
       </div>
+
+      {/* Phase 7 — Citations side panel (right-rail dock per ADR-004). */}
+      <CitationsPanel
+        open={citationsOpen}
+        onClose={() => setCitationsOpen(false)}
+        citations={buildCitationsFromSubmittal(submittal)}
+      />
     </div>
   )
 }
@@ -259,10 +297,43 @@ const SubmittalDetailV2Page: React.FC = () => {
 interface ActionClusterProps {
   copilotOpen: boolean
   onToggleCoPilot: () => void
+  submittalId: string
+  onAfterDisposition?: () => void
 }
 
-const ActionCluster: React.FC<ActionClusterProps> = ({ copilotOpen, onToggleCoPilot }) => (
+const ActionCluster: React.FC<ActionClusterProps> = ({
+  copilotOpen,
+  onToggleCoPilot,
+  submittalId,
+  onAfterDisposition,
+}) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    {/* Phase 7 — voice review codes overlay. PermissionGate gates the
+     *  underlying overlay via canApprove. The orange Approve button below
+     *  is now wired to fire the overlay too. */}
+    <PermissionGate permission="submittals.approve">
+      <VoiceReviewOverlay
+        canApprove
+        onConfirm={async (pick) => {
+          try {
+            const dispositionCode = mapDispositionLabelToCode(pick.disposition)
+            const result = await submittalService.recordDisposition(
+              submittalId,
+              dispositionCode,
+              pick.comments || undefined,
+            )
+            if (result.error) {
+              toast.error('Could not record disposition: ' + result.error.message)
+              return
+            }
+            toast.success(`Disposition recorded: ${pick.disposition}`)
+            onAfterDisposition?.()
+          } catch (err) {
+            toast.error('Could not record disposition: ' + (err as Error).message)
+          }
+        }}
+      />
+    </PermissionGate>
     <button
       type="button"
       onClick={onToggleCoPilot}
@@ -468,6 +539,137 @@ function buildCoPilotData(s: Record<string, unknown>): IrisCoPilotData {
     whatIdAsk,
     pastSimilar: [], // Phase 7 wires the vector-similarity lookup.
   }
+}
+
+// ── Citations tab content (Phase 7) ───────────────────────────────────────
+
+const CitationsTabContent: React.FC<{
+  submittal: Record<string, unknown>
+  onOpenPanel: () => void
+}> = ({ submittal, onOpenPanel }) => {
+  const citations = buildCitationsFromSubmittal(submittal)
+  return (
+    <section
+      aria-label="Citations"
+      style={{
+        backgroundColor: '#fff',
+        border: `1px solid ${C.border}`,
+        borderRadius: 6,
+        padding: '14px 18px',
+        fontFamily: FONT,
+      }}
+    >
+      <h3
+        style={{
+          margin: '0 0 10px',
+          fontSize: 11,
+          fontWeight: 600,
+          color: C.ink3,
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+        }}
+      >
+        Citations
+      </h3>
+      <p style={{ margin: '0 0 10px', fontSize: 13, color: C.ink2, lineHeight: 1.5 }}>
+        {citations.length === 0
+          ? 'No citations on this submittal yet. Iris adds them as it pre-flights and as reviewers respond.'
+          : `${citations.length} citation${citations.length === 1 ? '' : 's'} across ${
+              new Set(citations.map((c) => c.kind)).size
+            } kind${new Set(citations.map((c) => c.kind)).size === 1 ? '' : 's'}.`}
+      </p>
+      <button
+        type="button"
+        onClick={onOpenPanel}
+        disabled={citations.length === 0}
+        style={{
+          padding: '7px 12px',
+          backgroundColor: citations.length === 0 ? '#fff' : C.brandOrange,
+          color: citations.length === 0 ? C.ink3 : '#fff',
+          border: `1px solid ${citations.length === 0 ? C.border : C.brandOrange}`,
+          borderRadius: 4,
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: citations.length === 0 ? 'not-allowed' : 'pointer',
+          fontFamily: FONT,
+        }}
+      >
+        Open citations panel →
+      </button>
+      <p style={{ margin: '12px 0 0', fontSize: 11, color: C.ink3, lineHeight: 1.4 }}>
+        The panel opens from the right rail (per ADR-004 — never modal,
+        never full-page nav). Phase 7 ships 8 citation kinds with PDF
+        preview where applicable. LLM augmentation in Phase 7b.
+      </p>
+    </section>
+  )
+}
+
+// Build a deterministic citation set from the submittal's columns. Phase 7b
+// replaces this with the Iris LLM-driven citation graph (real spec hits,
+// related RFIs/COs from the project, similar-past lookup).
+function buildCitationsFromSubmittal(submittal: Record<string, unknown>): CitationBase[] {
+  const out: CitationBase[] = []
+
+  const csiSection = (submittal.csi_section as string | null) ?? null
+  const paragraph = (submittal.spec_section_paragraph as string | null) ?? null
+  const pdfPage = (submittal.spec_pdf_page as number | null) ?? null
+  if (csiSection) {
+    out.push({
+      id: 'spec_section_self',
+      kind: 'spec_section',
+      label: paragraph ? `${csiSection} ${paragraph}` : csiSection,
+      subtitle: pdfPage != null ? `Spec book p. ${pdfPage}` : 'Linked spec section',
+      preview: pdfPage != null
+        ? { kind: 'pdf', pdfUrl: '#spec-book', page: pdfPage, highlightRect: [10, 20, 70, 8] }
+        : { kind: 'text', body: 'Spec section linked but PDF page not yet captured. Iris will fill in the highlight rectangle on next pre-flight.' },
+    })
+  }
+
+  const scheduleId = (submittal.schedule_activity_id as string | null) ?? null
+  if (scheduleId) {
+    out.push({
+      id: `schedule_${scheduleId}`,
+      kind: 'schedule_activity',
+      label: 'Linked schedule activity',
+      subtitle: 'Drives the required-on-site walkback',
+      preview: {
+        kind: 'schedule_activity_summary',
+        activity_id: scheduleId,
+        name: 'Schedule activity (Phase 7b: live join)',
+        start_date: null,
+        end_date: null,
+      },
+    })
+  }
+
+  const packageId = (submittal.submittal_package_id as string | null) ?? null
+  if (packageId) {
+    out.push({
+      id: `package_${packageId}`,
+      kind: 'package_item',
+      label: 'Submittal package',
+      subtitle: 'This submittal belongs to a package',
+      preview: { kind: 'text', body: 'Package detail loads in Phase 7b once the package join is wired.' },
+    })
+  }
+
+  return out
+}
+
+// Map a disposition string ("Approved as noted") back to a SubmittalDisposition
+// codeset value. Phase 7 uses a coarse-grained mapping; the project's codeset
+// (EJCDC / AIA / UFGS / custom) is read from settings in Phase 7b.
+function mapDispositionLabelToCode(label: string): SubmittalDisposition {
+  const l = label.toLowerCase()
+  if (l.includes('no exceptions')) return 'A_no_exceptions_taken' as SubmittalDisposition
+  if (l.includes('as noted') || l.includes('make corrections')) return 'B_make_corrections_noted' as SubmittalDisposition
+  if (l.includes('revise')) return 'C_revise_and_resubmit' as SubmittalDisposition
+  if (l.includes('reject')) return 'D_rejected' as SubmittalDisposition
+  if (l.includes('reference')) return 'E_for_reference_only' as SubmittalDisposition
+  if (l.includes('specified')) return 'F_submit_specified_item' as SubmittalDisposition
+  // Default fallback — treat unknown labels as approved.
+  return 'A_no_exceptions_taken' as SubmittalDisposition
 }
 
 // ── Boundary ───────────────────────────────────────────────────────────────
