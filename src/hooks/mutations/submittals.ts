@@ -3,6 +3,8 @@ import { useAuditedMutation } from './createAuditedMutation'
 import { submittalSchema,
 } from '../../components/forms/schemas'
 import { validateSubmittalStatusTransition } from './state-machine-validation-helpers'
+import { submittalService } from '../../services/submittalService'
+import type { CreateSubmittalInput } from '../../types/submittal'
 
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 // `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
@@ -62,10 +64,23 @@ export function useCreateSubmittal() {
     getEntityTitle: (p) => (p.data.title as string) || undefined,
     getAfterState: (p) => p.data,
     mutationFn: async (params) => {
-      const insertData = sanitizeSubmittalData(params.data)
-      const { data, error } = await from('submittals').insert(insertData as never).select().single()
-      if (error) throw error
-      return { data: data as unknown as Record<string, unknown>, projectId: params.projectId }
+      // D38: route through the canonical service path so quick-create
+      // (CreateSubmittalModal via Conversation page) and wizard-create stay
+      // consistent on top of the new RPC-backed schema. The sanitiser keeps
+      // the same allow-list as before (extra keys silently dropped); the
+      // service insert covers the canonical column set (kind, csi_*, etc.)
+      // when the form provides them.
+      const sanitized = sanitizeSubmittalData(params.data)
+      const input: CreateSubmittalInput = {
+        ...(sanitized as Partial<CreateSubmittalInput>),
+        project_id: params.projectId,
+        title: (sanitized.title as string) ?? (params.data.title as string) ?? 'Untitled submittal',
+      }
+      const result = await submittalService.createSubmittal(input)
+      if (result.error || !result.data) {
+        throw new Error(result.error?.message ?? 'Failed to create submittal')
+      }
+      return { data: result.data as unknown as Record<string, unknown>, projectId: params.projectId }
     },
     analyticsEvent: 'submittal_created',
     getAnalyticsProps: (p) => ({ project_id: p.projectId }),

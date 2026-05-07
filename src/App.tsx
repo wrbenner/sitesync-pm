@@ -106,6 +106,7 @@ const RFIDetail = lazy(() => import('./pages/rfis/RFIDetail').then((m) => ({ def
 const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
 const SubmittalDetailPage = lazy(() => import('./pages/submittals/SubmittalDetailPage'));
 const SpecParserPage = lazy(() => import('./pages/submittals/SpecParserPage'));
+const SubmittalSettingsPage = lazy(() => import('./pages/submittals/SubmittalSettingsPage'));
 const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => ({ default: m.PunchList })));
 const PunchItemDetailPage = lazy(() => import('./pages/punch-list/PunchItemDetailPage'));
 const Drawings = lazy(() => import('./pages/drawings/index').then((m) => ({ default: m.Drawings })));
@@ -400,6 +401,7 @@ function AppRoutes() {
             <Route path="/rfis" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFIs"><RFIs /></ProtectedRoute></PageSuspense>} />
             <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/settings" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Settings"><SubmittalSettingsPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/spec-parser" element={FLAGS.specParser ? <PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense> : <Navigate to="/submittals" replace />} />
             <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />

@@ -804,6 +804,15 @@ export const PAGE_REGISTRY: PageContract[] = [
     status: 'production',
   },
   {
+    route: '/submittals/settings',
+    pageFile: 'src/pages/submittals/SubmittalSettingsPage.tsx',
+    title: 'Submittal Settings',
+    entity: 'submittal',
+    expected: { has_detail_view: false, has_edit: false },
+    permissionModule: 'submittals',
+    status: 'placeholder',
+  },
+  {
     route: '/punch-list/:itemId',
     pageFile: 'src/pages/punch-list/PunchItemDetailPage.tsx',
     title: 'Punch Item Detail',

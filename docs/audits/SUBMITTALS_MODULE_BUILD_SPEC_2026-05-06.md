@@ -832,34 +832,34 @@ A submittal-module ship is **accepted** when ALL of the following hold:
 
 ## Part 13 — What This Replaces / What Survives
 
-**Delete in P0** (PR #324, merged 2026-05-06):
+**Delete in P0:**
 - `src/pages/submittals/SubmittalDetail 2.tsx`
 - `src/pages/submittals/SubmittalDetailPage 2.tsx`
 - `src/test/pages/smoke/submittals.test 2.tsx`
 - `src/test/pages/smoke/submittal-detail.test 2.tsx`
 - `e2e/page-6-submittals.spec 2.ts`
 - `e2e/page-6-submittals.spec 3.ts`
+- `src/components/forms/CreateSubmittalModal.tsx` (legacy; wizard is canonical)
 
 **Refactor in P0:**
-- `src/machines/submittalMachine.ts` — fix the `gc_review` bug; rewrite to the chart in Part 4 *(done in PR #324: `FORWARD_TO_REVIEWER` now an explicit event; `GC_APPROVE` from `gc_review` is a no-op)*
-- `src/services/submittalService.ts` — switch to RPC-backed atomic transitions (D38)
-- `src/api/endpoints/submittals.ts` — add bulk + filter + search + import + closeout (D38)
-- `src/types/submittal.ts` — expand to the canonical types in Part 3 (D38)
+- `src/machines/submittalMachine.ts` — fix the `gc_review` bug; rewrite to the chart in Part 4
+- `src/services/submittalService.ts` — switch to RPC-backed atomic transitions
+- `src/api/endpoints/submittals.ts` — add bulk + filter + search + import + closeout
+- `src/types/submittal.ts` — expand to the canonical types in Part 3
 
 **Survive untouched:**
 - `src/services/iris/citationVerify.ts` (Lap 1 hash-chain compatibility)
 - `src/services/iris/executors/submittalTransmittal.ts` (extend, don't rewrite)
 - `useEntityStore` generic infra (per ADR-002)
-- **`src/components/forms/CreateSubmittalModal.tsx`** — *spec correction 2026-05-06:* not legacy. This is the lightweight quick-create surface consumed by `pages/conversation/index.tsx` via `CreateSubmittalModalWrapper`, paralleling the RFI / ChangeOrder / PunchItem quick-create pattern. The wizard at `src/components/submittals/SubmittalCreateWizard.tsx` is the **guided** create path; the modal is the **quick** create path. Both are canonical, different surfaces. In D38–D39 the modal must be updated to write through the new RPC-backed service layer (so it stays consistent with the wizard), but the file stays.
 
 **Net new (Lap 2):**
 - `src/components/submittals/` directory becomes the unified home for everything submittal-related
-- `src/pages/submittals/import/` (spec importer)
-- `src/pages/submittals/closeout/` (closeout binder)
-- `src/services/iris/preflight.ts`
-- `src/services/iris/specExtract.ts`
-- `src/services/iris/revDiff.ts`
-- `src/services/closeoutBinder.ts`
+- `src/pages/submittals/import/` (spec importer) (planned)
+- `src/pages/submittals/closeout/` (closeout binder) (planned)
+- `src/services/iris/preflight.ts` (planned)
+- `src/services/iris/specExtract.ts` (planned)
+- `src/services/iris/revDiff.ts` (planned)
+- `src/services/closeoutBinder.ts` (planned)
 
 ---
 

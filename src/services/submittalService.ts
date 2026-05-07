@@ -2,7 +2,12 @@ import { supabase } from '../lib/supabase';
 import { fromTable } from '../lib/db/queries';
 import type { Submittal } from '../types/database';
 import type { SubmittalApproval } from '../types/entities';
-import type { SubmittalStatus, CreateSubmittalInput } from '../types/submittal';
+import type {
+  SubmittalStatus,
+  CreateSubmittalInput,
+  SubmittalDisposition,
+  SubmittalRequiredOnSiteCalc,
+} from '../types/submittal';
 import { getValidSubmittalStatusTransitions } from '../machines/submittalMachine';
 import {
   type Result,
@@ -21,10 +26,6 @@ async function getCurrentUserId(): Promise<string | null> {
   return data.session?.user?.id ?? null;
 }
 
-/**
- * Resolve the user's authoritative project role from the database.
- * Does NOT trust caller-supplied role values.
- */
 async function resolveProjectRole(
   projectId: string,
   userId: string | null,
@@ -54,6 +55,21 @@ export const submittalService = {
     return ok((data ?? []) as unknown as Submittal[]);
   },
 
+  /** D37: read from the materialised log view (denormalised + risk_band). */
+  async loadSubmittalsLogView(projectId: string): Promise<Result<Array<Record<string, unknown>>>> {
+    // The materialised view is added in the D37 migration; database.ts is
+    // regenerated against the live schema on db-types:write. Cast through
+    // never until that regen lands so this service can compile against
+    // either pre- or post-D37 type bundles.
+    const { data, error } = await fromTable('submittals_log_mv' as never)
+      .select('*')
+      .eq('project_id' as never, projectId)
+      .order('number', { ascending: false });
+
+    if (error) return fail(dbError(error.message, { projectId }));
+    return ok(((data as unknown) as Array<Record<string, unknown>>) ?? []);
+  },
+
   async createSubmittal(input: CreateSubmittalInput): Promise<Result<Submittal>> {
     const userId = await getCurrentUserId();
 
@@ -63,14 +79,26 @@ export const submittalService = {
         title: input.title,
         status: 'draft' as SubmittalStatus,
         spec_section: input.spec_section ?? null,
+        csi_division: input.csi_division ?? null,
+        csi_section: input.csi_section ?? null,
+        spec_section_paragraph: input.spec_section_paragraph ?? null,
+        spec_pdf_page: input.spec_pdf_page ?? null,
+        kind: input.kind ?? null,
         assigned_to: input.assigned_to ?? null,
         subcontractor: input.subcontractor ?? null,
+        responsible_sub_id: input.responsible_sub_id ?? null,
         due_date: input.due_date ?? null,
         submit_by_date: input.submit_by_date ?? null,
         required_onsite_date: input.required_onsite_date ?? null,
+        required_on_site_date: input.required_on_site_date ?? input.required_onsite_date ?? null,
         lead_time_weeks: input.lead_time_weeks ?? null,
+        schedule_activity_id: input.schedule_activity_id ?? null,
+        is_critical_path: input.is_critical_path ?? false,
+        is_federal: input.is_federal ?? false,
+        is_private: input.is_private ?? false,
         parent_submittal_id: input.parent_submittal_id ?? null,
         revision_number: input.parent_submittal_id ? null : 1,
+        rev_number: 0,
         created_by: userId,
       } as never)
       .select()
@@ -81,15 +109,9 @@ export const submittalService = {
   },
 
   /**
-   * Transition submittal status with lifecycle enforcement.
-   *
-   * IMPORTANT: Resolves the user's authoritative role from the database.
-   * Does NOT accept caller-supplied roles.
-   *
-   * Validates that:
-   *   1. The submittal exists and is not deleted
-   *   2. The user has a project role
-   *   3. The transition is valid per submittalMachine for that role
+   * D37/D38: state transition through the hash-chained, audit-logged RPC.
+   * Client-side machine validation runs first so the UI surfaces a clear
+   * message before the server round-trip.
    */
   async transitionStatus(
     submittalId: string,
@@ -104,7 +126,7 @@ export const submittalService = {
     if (fetchError || !submittal) {
       return fail(notFoundError('Submittal', submittalId));
     }
-    const submittalRow = submittal as unknown as { status: string | null; created_by: string | null; assigned_to: string | null; project_id: string }
+    const submittalRow = submittal as unknown as { status: string | null; created_by: string | null; assigned_to: string | null; project_id: string };
 
     const userId = await getCurrentUserId();
     const role = await resolveProjectRole(submittalRow.project_id, userId);
@@ -112,9 +134,13 @@ export const submittalService = {
       return fail(permissionError('User is not a member of this project'));
     }
 
-    const currentStatus = submittalRow.status as SubmittalStatus;
+    // The 9-state canonical set introduces values (in_review, sent_to_reviewer,
+    // distribute, void, etc.) that the legacy state-machine type doesn't yet
+    // know about — the machine rewrite is part of P0-D40+. Until then, cast
+    // through to keep the validation functioning for legacy states.
+    const currentStatus = submittalRow.status as unknown as Parameters<typeof getValidSubmittalStatusTransitions>[0];
     const validTransitions = getValidSubmittalStatusTransitions(currentStatus, role);
-    if (!validTransitions.includes(newStatus)) {
+    if (!validTransitions.includes(newStatus as unknown as Parameters<typeof getValidSubmittalStatusTransitions>[0])) {
       return fail(
         validationError(
           `Invalid transition: ${currentStatus} to ${newStatus} (role: ${role}). Valid: ${validTransitions.join(', ')}`,
@@ -123,27 +149,15 @@ export const submittalService = {
       );
     }
 
-    const updates: Record<string, unknown> = {
-      status: newStatus,
-      updated_at: new Date().toISOString(),
-      updated_by: userId,
-    };
-
-    if (newStatus === 'submitted') {
-      updates.submitted_date = new Date().toISOString();
-    }
-    if (newStatus === 'approved') {
-      updates.approved_date = new Date().toISOString();
-    }
-
-    const { error } = await fromTable('submittals')
-      .update(updates as never)
-      .eq('id' as never, submittalId);
+    const { error } = await supabase.rpc('submittal_advance_status' as never, {
+      p_id: submittalId,
+      p_to: newStatus,
+      p_actor: userId,
+      p_reason: null,
+    } as never);
 
     if (error) return fail(dbError(error.message, { submittalId, newStatus }));
 
-    // Cross-feature workflows: a rejected submittal drafts an RFI; an
-    // approved submittal posts a procurement suggestion. Fire-and-forget.
     if (newStatus === 'rejected') {
       void import('../lib/crossFeatureWorkflows')
         .then(({ runSubmittalRejectedChain }) => runSubmittalRejectedChain(submittalId))
@@ -165,15 +179,12 @@ export const submittalService = {
     return { data: null, error: null };
   },
 
-  /**
-   * Update submittal fields (non-status). Strips status to prevent state machine bypass.
-   * Use transitionStatus() for status changes.
-   */
   async updateSubmittal(
     submittalId: string,
     updates: Partial<Submittal>,
   ): Promise<Result> {
     const { status: _status, ...safeUpdates } = updates as unknown as Record<string, unknown>;
+    void _status;
 
     const { error } = await fromTable('submittals')
       .update({ ...safeUpdates, updated_at: new Date().toISOString() } as never)
@@ -181,6 +192,31 @@ export const submittalService = {
 
     if (error) return fail(dbError(error.message, { submittalId }));
     return { data: null, error: null };
+  },
+
+  /** D38: bulk update — restricted to a small allow-list of columns.
+   *  The new columns (responsible_sub_id, submittal_package_id, is_private,
+   *  is_critical_path) land in the D36 migration; until db-types:write
+   *  regenerates database.ts, the Submittal row type doesn't yet expose
+   *  them — so the input type here is a hand-written subset rather than
+   *  Pick<Submittal, …>. */
+  async bulkUpdate(
+    ids: string[],
+    updates: Partial<{
+      current_reviewer_id: string | null
+      responsible_sub_id: string | null
+      submittal_package_id: string | null
+      is_private: boolean
+      is_critical_path: boolean
+    }>,
+  ): Promise<Result<{ count: number }>> {
+    if (ids.length === 0) return ok({ count: 0 });
+    const { error, count } = await fromTable('submittals')
+      .update({ ...updates, updated_at: new Date().toISOString() } as never, { count: 'exact' })
+      .in('id' as never, ids);
+
+    if (error) return fail(dbError(error.message, { ids: ids.length }));
+    return ok({ count: count ?? 0 });
   },
 
   async deleteSubmittal(submittalId: string): Promise<Result> {
@@ -208,11 +244,9 @@ export const submittalService = {
   },
 
   /**
-   * Record an approval stamp and atomically transition submittal status.
-   *
-   * IMPORTANT: If the approval inserts but the status transition fails, the
-   * caller receives an error describing the partial failure. The approval
-   * record will exist (no cross-table transactions in Supabase client).
+   * Legacy entry — writes the approval row + transitions status. The newer
+   * recordDisposition() routes through the hash-chained D37 RPC against the
+   * canonical submittal_reviewers table.
    */
   async addApproval(
     submittalId: string,
@@ -229,7 +263,7 @@ export const submittalService = {
     if (fetchError || !submittal) {
       return fail(notFoundError('Submittal', submittalId));
     }
-    const submittalRow = submittal as unknown as { project_id: string }
+    const submittalRow = submittal as unknown as { project_id: string };
 
     const role = await resolveProjectRole(submittalRow.project_id, userId);
 
@@ -268,42 +302,64 @@ export const submittalService = {
     return { data: null, error: null };
   },
 
-  /**
-   * Create a new revision of a rejected or revise-and-resubmit submittal.
-   * Links to parent via parent_submittal_id and increments revision_number.
-   */
+  /** D38: write a disposition through the D37 RPC against submittal_reviewers. */
+  async recordDisposition(
+    reviewerId: string,
+    disposition: SubmittalDisposition,
+    comment?: string,
+    stampUrl?: string,
+  ): Promise<Result> {
+    const { error } = await supabase.rpc('submittal_record_disposition' as never, {
+      p_reviewer_id: reviewerId,
+      p_disposition: disposition,
+      p_comment: comment ?? null,
+      p_stamp_url: stampUrl ?? null,
+    } as never);
+
+    if (error) return fail(dbError(error.message, { reviewerId }));
+    return { data: null, error: null };
+  },
+
+  async distribute(submittalId: string, toUserIds: string[]): Promise<Result> {
+    const { error } = await supabase.rpc('submittal_distribute' as never, {
+      p_id: submittalId,
+      p_to_user_ids: toUserIds,
+    } as never);
+    if (error) return fail(dbError(error.message, { submittalId }));
+    return { data: null, error: null };
+  },
+
+  async close(submittalId: string, reason?: string): Promise<Result> {
+    const { error } = await supabase.rpc('submittal_close' as never, {
+      p_id: submittalId,
+      p_reason: reason ?? null,
+    } as never);
+    if (error) return fail(dbError(error.message, { submittalId }));
+    return { data: null, error: null };
+  },
+
+  async computeRequiredOnSite(submittalId: string): Promise<Result<SubmittalRequiredOnSiteCalc>> {
+    const { data, error } = await supabase.rpc('submittal_compute_required_on_site' as never, {
+      p_id: submittalId,
+    } as never);
+    if (error) return fail(dbError(error.message, { submittalId }));
+    return ok(data as unknown as SubmittalRequiredOnSiteCalc);
+  },
+
+  async replaceUser(oldUserId: string, newUserId: string): Promise<Result<{ count: number }>> {
+    const { data, error } = await supabase.rpc('submittal_replace_user' as never, {
+      p_old: oldUserId,
+      p_new: newUserId,
+    } as never);
+    if (error) return fail(dbError(error.message, { oldUserId, newUserId }));
+    return ok({ count: (data as unknown as number) ?? 0 });
+  },
+
+  /** D37/D38: revision creation through the hash-chained RPC. */
   async createRevision(parentSubmittalId: string): Promise<Result<Submittal>> {
-    const { data: parent, error: fetchError } = await fromTable('submittals')
-      .select('*')
-      .eq('id' as never, parentSubmittalId)
-      .single();
-
-    if (fetchError || !parent) {
-      return fail(notFoundError('Submittal', parentSubmittalId));
-    }
-    const parentRow = parent as unknown as Submittal
-
-    const userId = await getCurrentUserId();
-    const nextRevision = (parentRow.revision_number ?? 1) + 1;
-
-    const { data, error } = await fromTable('submittals')
-      .insert({
-        project_id: parentRow.project_id,
-        title: parentRow.title,
-        status: 'draft' as SubmittalStatus,
-        spec_section: parentRow.spec_section,
-        assigned_to: parentRow.assigned_to,
-        subcontractor: parentRow.subcontractor,
-        due_date: parentRow.due_date,
-        submit_by_date: parentRow.submit_by_date,
-        required_onsite_date: parentRow.required_onsite_date,
-        lead_time_weeks: parentRow.lead_time_weeks,
-        parent_submittal_id: parentSubmittalId,
-        revision_number: nextRevision,
-        created_by: userId,
-      } as never)
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('submittal_create_revision' as never, {
+      p_parent_id: parentSubmittalId,
+    } as never);
 
     if (error) return fail(dbError(error.message, { parentSubmittalId }));
     return ok(data as unknown as Submittal);

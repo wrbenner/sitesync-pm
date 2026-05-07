@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Card, PriorityTag } from '../../components/Primitives';
+import { Card } from '../../components/Primitives';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
 import { ChevronRight, ChevronDown, AlertTriangle, Package } from 'lucide-react';
 import { CSI_DIVISIONS } from '../../machines/submittalMachine';
@@ -247,7 +247,7 @@ const SubmittalRow: React.FC<{
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'grid',
-        gridTemplateColumns: '80px 1fr 140px 100px 130px 100px 80px',
+        gridTemplateColumns: '80px 1fr 140px 130px 100px 80px',
         alignItems: 'center',
         gap: spacing['3'],
         padding: `${spacing['2.5']} ${spacing['4']}`,
@@ -307,8 +307,10 @@ const SubmittalRow: React.FC<{
       {/* Status */}
       <SubmittalStatusTag status={submittal.status as string} />
 
-      {/* Priority */}
-      <PriorityTag priority={(submittal.priority as 'low' | 'medium' | 'high' | 'critical') || 'medium'} />
+      {/* Priority column dropped per Phase 1 — coordinators think in
+          critical-path / schedule risk, not Priority. is_critical_path
+          may return as a "Critical" badge in Phase 2 if tied to schedule
+          data; otherwise it stays out per the rebuild plan. */}
 
       {/* Due / Lead time */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -476,7 +478,7 @@ const ColumnHeaders: React.FC<{ showSpecSection: boolean }> = ({ showSpecSection
     top: 0,
     zIndex: 3,
   }}>
-    {['#', showSpecSection ? 'Title / Spec' : 'Title / Sub', 'Status', 'Priority', 'Due', 'Ball in Court', 'Chain'].map((h) => (
+    {['#', showSpecSection ? 'Title / Spec' : 'Title / Sub', 'Status', 'Due', 'Ball in Court', 'Chain'].map((h) => (
       <span key={h} style={{
         fontSize: typography.fontSize.caption,
         fontWeight: typography.fontWeight.semibold,

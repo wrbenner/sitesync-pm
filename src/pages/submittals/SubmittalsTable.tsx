@@ -14,6 +14,7 @@ import {
 import { useIrisDraftStore } from '../../stores/irisDraftStore';
 import { useProfileNames, displayName } from '../../hooks/queries/profiles';
 import type { ScheduleActivity } from '../../hooks/useScheduleActivities';
+import { formatSubmittalNumber } from '../../components/submittals/SubmittalNumberDisplay';
 
 // `assigned_to` is a uuid FK to auth.users; `current_reviewer` is text and
 // can either be a free-form name or (legacy) a uuid copy. Detect the uuid
@@ -36,6 +37,8 @@ interface SubmittalsTableProps {
   // Optional — surfaces the dependent activity countdown if a downstream
   // matcher exists. Wave 1 falls through to required_onsite_date heuristics.
   scheduleActivities?: ScheduleActivity[];
+  /** CSI numbering format from submittal_settings.numbering_format (Phase 1). */
+  numberingFormat?: string;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -151,6 +154,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
   clearFilters,
   projectId,
   updateSubmittalMutateAsync,
+  numberingFormat = '{spec_section}-{seq}',
 }) => {
   const { addToast } = useToast();
 
@@ -179,7 +183,16 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       cell: (info) => {
         const val = info.getValue() as string;
         const sub = info.row.original as unknown as Record<string, unknown>;
-        const number = sub.number ? `SUB-${String(sub.number).padStart(3, '0')}` : null;
+        // CSI-aligned numbering display per Phase 1. Database submittals.number
+        // is unchanged — this is presentation only. Falls back to SUB-NNN if
+        // the row has no csi_section / csi_division (legacy rows).
+        const number = formatSubmittalNumber({
+          number: sub.number as number | string | null | undefined,
+          csiSection: (sub.csi_section as string | null) ?? (sub.spec_section as string | null) ?? undefined,
+          csiDivision: (sub.csi_division as string | null) ?? undefined,
+          format: numberingFormat,
+          revNumber: (sub.rev_number as number | null) ?? undefined,
+        }) || null;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12, fontFamily: typography.fontFamilyMono, color: colors.textPrimary, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
@@ -367,7 +380,7 @@ export const SubmittalsTable: React.FC<SubmittalsTableProps> = ({
       size: 110,
       cell: (info) => <IrisCell submittalId={info.getValue() as string} projectId={projectId} />,
     }),
-  ], [projectId, profileMap]);
+  ], [projectId, profileMap, numberingFormat]);
 
   const checkboxColumn = useMemo(() => subColHelper.display({
     id: 'select',

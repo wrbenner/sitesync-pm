@@ -13,7 +13,6 @@ import type { PunchItemState } from '../../machines/punchItemMachine'
 import type { DailyLogState } from '../../machines/dailyLogMachine'
 import type { ChangeOrderState } from '../../machines/changeOrderMachine'
 import type { RfiStatus } from '../../types/database'
-import type { SubmittalStatus } from '../../types/submittal'
 
 // ── State machine validation helpers ─────────────────────
 
@@ -75,8 +74,15 @@ export async function validateSubmittalStatusTransition(
   if (!submittal) return // Let DB handle missing entity
   const submittalRow = submittal as unknown as { status: string | null }
   const userRole = await resolveUserRole(projectId)
-  const validNext = getValidSubmittalStatusTransitions(submittalRow.status as SubmittalStatus, userRole)
-  if (!validNext.includes(newStatus as SubmittalStatus)) {
+  // The 9-state canonical SubmittalStatus introduces values not yet in the
+  // legacy XState machine union; cast through Parameters<…> until the
+  // machine rewrite (P0-D40+) lands.
+  type MachineStatus = Parameters<typeof getValidSubmittalStatusTransitions>[0]
+  const validNext = getValidSubmittalStatusTransitions(
+    submittalRow.status as unknown as MachineStatus,
+    userRole,
+  )
+  if (!validNext.includes(newStatus as unknown as MachineStatus)) {
     throw new Error(
       `Invalid submittal status transition: ${submittalRow.status} → ${newStatus} (role: ${userRole}). Valid: ${validNext.join(', ')}`,
     )

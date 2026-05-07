@@ -1,10 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Submittals — PM review queue (investor-readiness push)
+// Submittals — Phase 1 page shell reset
 // ─────────────────────────────────────────────────────────────────────────────
-// Mission: PM submittal queue. Procurement chain visible. Reviewer ball-in-
-// court. Schedule-risk tag on items whose target activity is approaching.
-// Dense, full-viewport, sticky header with filter chips and "+ New Submittal".
-// Detail navigation, create flow, approve/reject mutations all preserved.
+// SUBMITTALS_PAGE_REBUILD_PLAN_2026-05-06.md Phase 1 — drop the 4 KPI cards,
+// replace with a slim inline strip; tighten header with Settings gear; add
+// the 8-tab view strip (only Items live, others render EmptyTabPlaceholder);
+// add the toolbar shell (Search · Add Filter ▾ stub · Bulk Actions ▾ stub +
+// 1-N of M counter); top-right action cluster (+ New Submittal · Export ▾ ·
+// Reports ▾ stub) wrapped in PermissionGate per Sprint Invariant #5.
+//
+// What this PR keeps from the old shell:
+//   * existing useEntityStore('submittals') data path (Sprint Invariant #3)
+//   * legacy SubmittalsTable + SubmittalsKanban renderers (Phase 2 rebuilds)
+//   * status-filter chips, light/dark theme, Cmd-K, Iris button, sidebar
+//   * the create flow (wizard + modal + spec-import) — wizard is canonical
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -19,24 +27,33 @@ import { useRealtimeInvalidation } from '../../hooks/useRealtimeInvalidation'
 import { useNavigate } from 'react-router-dom'
 import { useScheduleActivities } from '../../hooks/useScheduleActivities'
 import { useCopilotStore } from '../../stores/copilotStore'
+import { useAuthStore } from '../../stores/authStore'
 import { exportSubmittalLogXlsx } from '../../lib/exportXlsx'
 import { supabase } from '../../lib/supabase'
-import { AlertTriangle, RefreshCw, Search, Plus, Upload, LayoutGrid, List } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Plus, Upload, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal'
 import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard'
 
 import { SubmittalsTable } from './SubmittalsTable'
 import { SubmittalsKanban } from './SubmittalsKanban'
-import { GroupedSubmittalsView, GroupBySelector } from './GroupedSubmittalsView'
-import type { GroupByMode } from './GroupedSubmittalsView'
-import { SubmittalTabBar } from './SubmittalTabBar'
-import type { SubmittalStatusFilter } from './SubmittalTabBar'
+import { GroupedSubmittalsView } from './GroupedSubmittalsView'
 
-// CreateSubmittalModal is imported above for type continuity but the live
-// create surface is the wizard. Reference the import so eslint-no-unused
-// stays quiet without affecting the bundle (the wizard is the canonical
-// flow; the modal is kept for any consumer still importing it from here).
+// Phase 1 components
+import { SubmittalsHeader } from '../../components/submittals/SubmittalsHeader'
+import { SubmittalsToolbar } from '../../components/submittals/SubmittalsToolbar'
+import {
+  SubmittalsViewTabs,
+  EmptyTabPlaceholder,
+  SUBMITTAL_TABS,
+  type SubmittalViewTab,
+} from '../../components/submittals/SubmittalsViewTabs'
+import { useSubmittalSettings } from '../../hooks/useSubmittalSettings'
+
+// CreateSubmittalModal is the quick-create surface consumed by the
+// Conversation page (see CreateSubmittalModalWrapper); reference the import
+// here so eslint-no-unused stays quiet without affecting the bundle. The
+// canonical wizard is the in-page create flow.
 void CreateSubmittalModal
 
 // Page-local design tokens — see specs/homepage-redesign/DESIGN-RESET.md.
@@ -60,6 +77,8 @@ const C = {
 
 const FONT = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
+const PAGE_SIZE = 50
+
 const SubmittalsPage: React.FC = () => {
   const setPageContext = useCopilotStore((s) => s.setPageContext)
   useEffect(() => { setPageContext('submittals') }, [setPageContext])
@@ -68,24 +87,32 @@ const SubmittalsPage: React.FC = () => {
   const navigate = useNavigate()
   const createSubmittal = useCreateSubmittal()
   const updateSubmittal = useUpdateSubmittal()
+  const currentUserId = useAuthStore((s) => s.user?.id)
 
   const { data: submittalsResult, isPending: loading, error, refetch } = useSubmittals(projectId)
   const { data: project } = useProject(projectId)
   const { data: scheduleActivities } = useScheduleActivities(projectId ?? '')
+  const { data: settings } = useSubmittalSettings(projectId)
 
   useRealtimeInvalidation(projectId)
 
-  const [statusFilter, setStatusFilter] = useState<SubmittalStatusFilter>('all')
+  const [activeTab, setActiveTab] = useState<SubmittalViewTab>('items')
   const [searchQuery, setSearchQuery] = useState('')
-  const [groupBy, setGroupBy] = useState<GroupByMode>('none')
-  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table')
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(0)
   const specFileInputRef = useRef<HTMLInputElement>(null)
+
+  // GroupedSubmittalsView remains imported for Phase 4 — Phase 1 default is
+  // ungrouped Items. The grouping toggle is dropped here; comes back in P3.
+  void GroupedSubmittalsView
 
   const submittals: Array<Record<string, unknown>> = useMemo(
     () => (submittalsResult?.data ?? []).map((s: Record<string, unknown>) => ({
       ...s,
+      // Legacy SUB-NNN derived field — kept for non-Phase-1 consumers
+      // (Kanban card, exports). The Items table now renders via
+      // formatSubmittalNumber for CSI-aligned display.
       submittalNumber: s.number ? `SUB-${String(s.number).padStart(3, '0')}` : String(s.id ?? '').slice(0, 8),
       from: (s.subcontractor as string) || (s.created_by as string) || '',
       dueDate: (s.due_date as string) || '',
@@ -93,35 +120,46 @@ const SubmittalsPage: React.FC = () => {
     [submittalsResult?.data],
   )
 
+  // Phase 1 inline-strip counts. Replaces the 4-KPI-card pattern.
+  //
+  //   active            = anything not closed/approved/void
+  //   overdue           = past required_on_site_date AND still in flight
+  //   awaiting your
+  //                       response = current_reviewer_id matches the user
+  //   architect-late    = BIC role looks like architect AND days_in_court
+  //                       exceeds the SLA from settings.default_sla_days
   const counts = useMemo(() => {
-    const c = { all: submittals.length, pending: 0, in_review: 0, approved: 0, rejected: 0, revise_resubmit: 0 }
+    let active = 0
+    let overdue = 0
+    let awaitingMine = 0
+    let architectLate = 0
+    const sla = settings?.default_sla_days ?? 10
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     for (const s of submittals) {
-      const st = (s.status as string) ?? ''
-      if (st === 'submitted' || st === 'review_in_progress') c.pending++
-      if (st === 'submitted' || st === 'review_in_progress' || st === 'under_review') c.in_review++
-      if (st === 'approved' || st === 'approved_as_noted') c.approved++
-      if (st === 'rejected') c.rejected++
-      if (st === 'revise_resubmit') c.revise_resubmit++
+      const status = (s.status as string) ?? ''
+      const closedSet = ['approved', 'approved_as_noted', 'closed', 'void']
+      const isActive = !closedSet.includes(status)
+      if (isActive) active += 1
+      const onSite = (s.required_on_site_date as string | null) ?? (s.required_onsite_date as string | null)
+      if (onSite && isActive && new Date(onSite) < today) overdue += 1
+      const reviewerId = (s.current_reviewer_id as string | null) ?? null
+      if (currentUserId && reviewerId === currentUserId) awaitingMine += 1
+      const reviewerRole = ((s.current_reviewer_role as string | null) ?? '').toLowerCase()
+      const ballSince = s.ball_in_court_since as string | null
+      if (
+        reviewerRole.includes('arch') &&
+        ballSince &&
+        Math.floor((Date.now() - new Date(ballSince).getTime()) / 86400000) > sla
+      ) {
+        architectLate += 1
+      }
     }
-    return c
-  }, [submittals])
-
-  const overdueCount = useMemo(() =>
-    submittals.filter((s) => {
-      const due = (s.due_date as string | undefined) || (s.dueDate as string | undefined)
-      if (!due) return false
-      return s.status !== 'approved' && s.status !== 'approved_as_noted' && new Date(due) < new Date()
-    }).length,
-    [submittals],
-  )
+    return { active, overdue, awaitingMine, architectLate }
+  }, [submittals, settings?.default_sla_days, currentUserId])
 
   const filteredSubmittals = useMemo(() => {
     let rows = submittals
-    if (statusFilter === 'in_review') {
-      rows = rows.filter((s) => s.status === 'submitted' || s.status === 'review_in_progress' || s.status === 'under_review')
-    } else if (statusFilter !== 'all') {
-      rows = rows.filter((s) => s.status === statusFilter)
-    }
     const q = searchQuery.trim().toLowerCase()
     if (q) {
       rows = rows.filter((s) => {
@@ -130,6 +168,7 @@ const SubmittalsPage: React.FC = () => {
           String(r.title ?? '').toLowerCase().includes(q) ||
           String(r.number ?? '').toLowerCase().includes(q) ||
           String(r.spec_section ?? '').toLowerCase().includes(q) ||
+          String(r.csi_section ?? '').toLowerCase().includes(q) ||
           String(r.subcontractor ?? '').toLowerCase().includes(q) ||
           String(r.assigned_to ?? '').toLowerCase().includes(q) ||
           String(r.current_reviewer ?? '').toLowerCase().includes(q)
@@ -137,7 +176,22 @@ const SubmittalsPage: React.FC = () => {
       })
     }
     return rows
-  }, [submittals, statusFilter, searchQuery])
+  }, [submittals, searchQuery])
+
+  // Pagination — Phase 1 ships a thin client-side page nav. Phase 2 wires
+  // server-side virtualization.
+  const totalCount = filteredSubmittals.length
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const pageClamped = Math.min(page, pageCount - 1)
+  const rangeFrom = totalCount === 0 ? 0 : pageClamped * PAGE_SIZE + 1
+  const rangeTo = Math.min(totalCount, (pageClamped + 1) * PAGE_SIZE)
+  const pagedSubmittals = useMemo(
+    () => filteredSubmittals.slice(pageClamped * PAGE_SIZE, (pageClamped + 1) * PAGE_SIZE),
+    [filteredSubmittals, pageClamped],
+  )
+  useEffect(() => {
+    setPage(0)
+  }, [searchQuery])
 
   const handleExportXlsx = useCallback(() => {
     const projectName = project?.name ?? 'Project'
@@ -164,27 +218,79 @@ const SubmittalsPage: React.FC = () => {
     e.target.value = ''
   }, [projectId])
 
+  const handleOpenSettings = useCallback(() => navigate('/submittals/settings'), [navigate])
+
   if (!projectId) return <ProjectGate />
 
-  if (loading) {
-    return (
-      <Shell projectName={project?.name} viewMode={viewMode} setViewMode={setViewMode} groupBy={groupBy} setGroupBy={setGroupBy} statusFilter={statusFilter} setStatusFilter={setStatusFilter} counts={counts} overdueCount={overdueCount} searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-        actions={
-          <PermissionGate permission="submittals.create">
-            <PrimaryBtn onClick={() => setShowCreate(true)}>
-              <Plus size={14} /> New Submittal
-            </PrimaryBtn>
-          </PermissionGate>
-        }
-      >
-        <SkeletonRows />
-      </Shell>
-    )
-  }
+  const actionCluster = (
+    <>
+      <PermissionGate permission="submittals.view">
+        <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
+      </PermissionGate>
+      <PermissionGate permission="submittals.view">
+        <SecondaryBtn onClick={() => toast.info('Reports — coming in Phase 5')} title="Reports">
+          Reports
+          <ChevronDown size={11} />
+        </SecondaryBtn>
+      </PermissionGate>
+      <PermissionGate permission="submittals.create">
+        <PrimaryBtn onClick={() => setShowCreate(true)}>
+          <Plus size={14} /> New Submittal
+        </PrimaryBtn>
+      </PermissionGate>
+    </>
+  )
 
-  if (error) {
-    return (
-      <Shell projectName={project?.name} viewMode={viewMode} setViewMode={setViewMode} groupBy={groupBy} setGroupBy={setGroupBy} statusFilter={statusFilter} setStatusFilter={setStatusFilter} counts={counts} overdueCount={overdueCount} searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        width: '100%',
+        backgroundColor: C.surface,
+        color: C.ink,
+        fontFamily: FONT,
+      }}
+    >
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          backgroundColor: C.surface,
+          borderBottom: `1px solid ${C.border}`,
+        }}
+      >
+        <SubmittalsHeader
+          projectName={project?.name}
+          activeCount={counts.active}
+          overdueCount={counts.overdue}
+          awaitingMineCount={counts.awaitingMine}
+          architectLateCount={counts.architectLate}
+          actions={actionCluster}
+          onOpenSettings={handleOpenSettings}
+        />
+        <SubmittalsViewTabs active={activeTab} onChange={setActiveTab} />
+        {activeTab === 'items' && (
+          <SubmittalsToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            rangeFrom={rangeFrom}
+            rangeTo={rangeTo}
+            totalCount={totalCount}
+            selectedCount={selectedIds.size}
+            hasPrev={pageClamped > 0}
+            hasNext={pageClamped < pageCount - 1}
+            onPagePrev={() => setPage((p) => Math.max(0, p - 1))}
+            onPageNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+          />
+        )}
+      </header>
+
+      {loading ? (
+        <SkeletonRows />
+      ) : error ? (
         <div
           role="alert"
           style={{
@@ -201,26 +307,12 @@ const SubmittalsPage: React.FC = () => {
           }}
         >
           <AlertTriangle size={14} />
-          <span style={{ flex: 1 }}>Couldn’t load submittals. Check your connection and try again.</span>
+          <span style={{ flex: 1 }}>Couldn't load submittals. Check your connection and try again.</span>
           <SecondaryBtn onClick={() => refetch()}>
             <RefreshCw size={12} /> Retry
           </SecondaryBtn>
         </div>
-      </Shell>
-    )
-  }
-
-  if (submittals.length === 0 && statusFilter === 'all' && !searchQuery.trim()) {
-    return (
-      <Shell projectName={project?.name} viewMode={viewMode} setViewMode={setViewMode} groupBy={groupBy} setGroupBy={setGroupBy} statusFilter={statusFilter} setStatusFilter={setStatusFilter} counts={counts} overdueCount={overdueCount} searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-        actions={
-          <PermissionGate permission="submittals.create">
-            <PrimaryBtn onClick={() => setShowCreate(true)}>
-              <Plus size={14} /> New Submittal
-            </PrimaryBtn>
-          </PermissionGate>
-        }
-      >
+      ) : submittals.length === 0 && !searchQuery.trim() && activeTab === 'items' ? (
         <EmptyState
           title="No submittals yet"
           body="Track material approvals to keep procurement on schedule."
@@ -236,70 +328,37 @@ const SubmittalsPage: React.FC = () => {
             </>
           }
         />
-        <SubmittalCreateWizard
-          projectId={projectId}
-          open={showCreate}
-          onClose={() => setShowCreate(false)}
-          onSubmit={async (data) => {
-            await createSubmittal.mutateAsync({ projectId, data: { ...data, project_id: projectId } })
-            toast.success('Submittal created: ' + (data.title || 'New Submittal'))
-          }}
-        />
-      </Shell>
-    )
-  }
-
-  return (
-    <Shell
-      projectName={project?.name}
-      viewMode={viewMode}
-      setViewMode={setViewMode}
-      groupBy={groupBy}
-      setGroupBy={setGroupBy}
-      statusFilter={statusFilter}
-      setStatusFilter={setStatusFilter}
-      counts={counts}
-      overdueCount={overdueCount}
-      searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
-      actions={
-        <>
-          <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_Submittal_Log" />
-          <PermissionGate permission="submittals.create">
-            <PrimaryBtn onClick={() => setShowCreate(true)}>
-              <Plus size={14} /> New Submittal
-            </PrimaryBtn>
-          </PermissionGate>
-        </>
-      }
-    >
-      <div style={{ flex: 1, overflow: 'auto', backgroundColor: C.surface }}>
-        {viewMode === 'table' && groupBy !== 'none' ? (
-          <GroupedSubmittalsView
-            filteredSubmittals={filteredSubmittals}
-            groupBy={groupBy}
-            onRowClick={(sub) => navigate(`/submittals/${(sub as unknown as Record<string, unknown>).id}`)}
-          />
-        ) : viewMode === 'table' ? (
-          <SubmittalsTable
-            filteredSubmittals={filteredSubmittals}
-            allSubmittals={submittals}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-            loading={loading}
-            onRowClick={(sub) => navigate(`/submittals/${(sub as unknown as Record<string, unknown>).id}`)}
-            clearFilters={() => { setStatusFilter('all'); setSearchQuery('') }}
-            projectId={projectId}
-            updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
-            scheduleActivities={scheduleActivities ?? []}
-          />
-        ) : (
-          <SubmittalsKanban
-            allSubmittals={filteredSubmittals}
-            onSelectSubmittal={(id) => navigate(`/submittals/${id}`)}
-          />
-        )}
-      </div>
+      ) : (
+        <main style={{ flex: 1, overflow: 'auto', backgroundColor: C.surface }}>
+          {activeTab === 'items' ? (
+            <SubmittalsTable
+              filteredSubmittals={pagedSubmittals}
+              allSubmittals={submittals}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+              loading={loading}
+              onRowClick={(sub) => navigate(`/submittals/${(sub as unknown as Record<string, unknown>).id}`)}
+              clearFilters={() => setSearchQuery('')}
+              projectId={projectId}
+              updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
+              scheduleActivities={scheduleActivities ?? []}
+              numberingFormat={settings?.numbering_format}
+            />
+          ) : activeTab === 'kanban' ? (
+            // Kanban dedicated rebuild ships in Phase 5; Phase 1 keeps the
+            // legacy view available so the tab is never broken when clicked.
+            <SubmittalsKanban
+              allSubmittals={filteredSubmittals}
+              onSelectSubmittal={(id) => navigate(`/submittals/${id}`)}
+            />
+          ) : (
+            <EmptyTabPlaceholder
+              phase={SUBMITTAL_TABS.find((t) => t.id === activeTab)?.phase ?? 8}
+              tabLabel={SUBMITTAL_TABS.find((t) => t.id === activeTab)?.label ?? 'View'}
+            />
+          )}
+        </main>
+      )}
 
       <SubmittalCreateWizard
         projectId={projectId}
@@ -312,252 +371,11 @@ const SubmittalsPage: React.FC = () => {
       />
 
       <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
-    </Shell>
+    </div>
   )
 }
 
-// ── Shell — sticky header + body slot ───────────────────────────────────────
-
-interface ShellProps {
-  children: React.ReactNode
-  actions?: React.ReactNode
-  projectName?: string
-  viewMode: 'table' | 'kanban'
-  setViewMode: (v: 'table' | 'kanban') => void
-  groupBy: GroupByMode
-  setGroupBy: (m: GroupByMode) => void
-  statusFilter: SubmittalStatusFilter
-  setStatusFilter: (f: SubmittalStatusFilter) => void
-  counts: Record<SubmittalStatusFilter, number>
-  overdueCount: number
-  searchQuery: string
-  setSearchQuery: (q: string) => void
-}
-
-const Shell: React.FC<ShellProps> = ({
-  children,
-  actions,
-  projectName,
-  viewMode,
-  setViewMode,
-  groupBy,
-  setGroupBy,
-  statusFilter,
-  setStatusFilter,
-  counts,
-  overdueCount,
-  searchQuery,
-  setSearchQuery,
-}) => (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      width: '100%',
-      backgroundColor: C.surface,
-      color: C.ink,
-      fontFamily: FONT,
-    }}
-  >
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        backgroundColor: C.surface,
-        borderBottom: `1px solid ${C.border}`,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-          padding: '14px 24px 12px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flex: 1, minWidth: 0 }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 700,
-              letterSpacing: '-0.01em',
-              color: C.ink,
-            }}
-          >
-            Submittals
-          </h1>
-          <CountChip count={counts.all} />
-          {overdueCount > 0 && <OverdueChip count={overdueCount} />}
-          {projectName && (
-            <span
-              style={{
-                fontSize: 13,
-                color: C.ink3,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                maxWidth: 320,
-              }}
-            >
-              {projectName}
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-          {actions}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '0 24px 12px',
-          flexWrap: 'wrap',
-        }}
-      >
-        <SubmittalTabBar activeTab={statusFilter} onTabChange={setStatusFilter} counts={counts} />
-
-        <div style={{ flex: 1 }} />
-
-        <div style={{ position: 'relative', width: 260 }}>
-          <Search
-            size={14}
-            style={{
-              position: 'absolute',
-              left: 10,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: C.ink3,
-              pointerEvents: 'none',
-            }}
-          />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search submittals…"
-            aria-label="Search submittals"
-            style={{
-              width: '100%',
-              padding: '6px 12px 6px 30px',
-              minHeight: 32,
-              border: `1px solid ${C.border}`,
-              borderRadius: 6,
-              fontSize: 13,
-              fontFamily: FONT,
-              backgroundColor: '#fff',
-              color: C.ink,
-              outline: 'none',
-            }}
-          />
-        </div>
-
-        {viewMode === 'table' && <GroupBySelector value={groupBy} onChange={setGroupBy} />}
-      </div>
-    </header>
-
-    {children}
-  </div>
-)
-
 // ── Bits ────────────────────────────────────────────────────────────────────
-
-const CountChip: React.FC<{ count: number }> = ({ count }) => (
-  <span
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minWidth: 22,
-      height: 22,
-      padding: '0 8px',
-      borderRadius: 999,
-      backgroundColor: '#fff',
-      border: `1px solid ${C.border}`,
-      color: C.ink2,
-      fontSize: 11,
-      fontWeight: 600,
-      fontVariantNumeric: 'tabular-nums',
-    }}
-  >
-    {count}
-  </span>
-)
-
-const OverdueChip: React.FC<{ count: number }> = ({ count }) => (
-  <span
-    title={`${count} submittals past their due-back date`}
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 4,
-      padding: '2px 8px',
-      borderRadius: 999,
-      backgroundColor: 'rgba(201, 59, 59, 0.08)',
-      color: C.critical,
-      fontSize: 11,
-      fontWeight: 600,
-      fontVariantNumeric: 'tabular-nums',
-    }}
-  >
-    <AlertTriangle size={11} />
-    {count} overdue
-  </span>
-)
-
-const ViewToggle: React.FC<{ value: 'table' | 'kanban'; onChange: (v: 'table' | 'kanban') => void }> = ({ value, onChange }) => (
-  <div
-    role="tablist"
-    aria-label="View mode"
-    style={{
-      display: 'inline-flex',
-      padding: 2,
-      backgroundColor: C.surfaceAlt,
-      borderRadius: 6,
-      border: `1px solid ${C.borderSubtle}`,
-    }}
-  >
-    {[
-      { v: 'table' as const, label: 'List', Icon: List },
-      { v: 'kanban' as const, label: 'Board', Icon: LayoutGrid },
-    ].map(({ v, label, Icon }) => {
-      const active = value === v
-      return (
-        <button
-          key={v}
-          role="tab"
-          aria-selected={active}
-          aria-label={label}
-          title={label}
-          onClick={() => onChange(v)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: 32,
-            minHeight: 28,
-            padding: '0 8px',
-            border: 'none',
-            backgroundColor: active ? '#fff' : 'transparent',
-            color: active ? C.ink : C.ink2,
-            borderRadius: 4,
-            cursor: 'pointer',
-            boxShadow: active ? '0 1px 1px rgba(0,0,0,0.03)' : 'none',
-          }}
-        >
-          <Icon size={14} />
-        </button>
-      )
-    })}
-  </div>
-)
 
 const PrimaryBtn: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
   <button
@@ -583,9 +401,10 @@ const PrimaryBtn: React.FC<{ onClick: () => void; children: React.ReactNode }> =
   </button>
 )
 
-const SecondaryBtn: React.FC<{ onClick: () => void; children: React.ReactNode }> = ({ onClick, children }) => (
+const SecondaryBtn: React.FC<{ onClick: () => void; children: React.ReactNode; title?: string }> = ({ onClick, children, title }) => (
   <button
     onClick={onClick}
+    title={title}
     style={{
       display: 'inline-flex',
       alignItems: 'center',
