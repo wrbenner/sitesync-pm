@@ -14,7 +14,7 @@ import type { ProjectRole } from '../types/database'
 
 export type Permission =
   | 'dashboard.view' | 'tasks.view' | 'tasks.create' | 'tasks.edit' | 'tasks.delete' | 'tasks.assign'
-  | 'rfis.view' | 'rfis.create' | 'rfis.edit' | 'rfis.respond' | 'rfis.delete' | 'rfis.void'
+  | 'rfis.view' | 'rfis.create' | 'rfis.edit' | 'rfis.respond' | 'rfis.delete' | 'rfis.void' | 'rfis.admin_edit'
   | 'submittals.view' | 'submittals.create' | 'submittals.edit' | 'submittals.approve' | 'submittals.delete'
   | 'budget.view' | 'budget.edit' | 'budget.approve'
   | 'change_orders.view' | 'change_orders.create' | 'change_orders.edit' | 'change_orders.approve' | 'change_orders.delete' | 'change_orders.promote'
@@ -71,6 +71,7 @@ export const PERMISSION_MATRIX: Record<Permission, ProjectRole[]> = {
   'rfis.respond': ['owner', 'admin', 'project_manager', 'superintendent', 'subcontractor'],
   'rfis.delete': ['owner', 'admin', 'project_manager'],
   'rfis.void': ['owner', 'admin'],
+  'rfis.admin_edit': ['owner', 'admin', 'project_manager'],
   'submittals.view': ['owner', 'admin', 'project_manager', 'superintendent', 'subcontractor', 'viewer'],
   'submittals.create': ['owner', 'admin', 'project_manager', 'subcontractor'],
   'submittals.edit': ['owner', 'admin', 'project_manager'],
