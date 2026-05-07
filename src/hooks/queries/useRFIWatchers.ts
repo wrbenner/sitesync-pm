@@ -6,6 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fromTable } from '../../lib/db/queries'
 import { invalidateEntity } from '../../api/invalidation'
+import { logAuditEntry } from '../../lib/auditLogger'
 import posthog from '../../lib/analytics'
 
 export function useRFIWatchers(rfiId: string | null | undefined) {
@@ -34,6 +35,14 @@ export function useAddRFIWatcher() {
         user_id: params.userId,
       } as never)
       if (error) throw error
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'rfi',
+        entityId: params.rfiId,
+        action: 'update',
+        afterState: { watcher_added: params.userId },
+        metadata: { kind: 'rfi_watcher_add' },
+      })
       return params
     },
     onSuccess: (params) => {
@@ -53,6 +62,15 @@ export function useRemoveRFIWatcher() {
         .eq('rfi_id', params.rfiId)
         .eq('user_id', params.userId)
       if (error) throw error
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'rfi',
+        entityId: params.rfiId,
+        action: 'update',
+        beforeState: { watcher: params.userId },
+        afterState: { watcher_removed: params.userId },
+        metadata: { kind: 'rfi_watcher_remove' },
+      })
       return params
     },
     onSuccess: (params) => {

@@ -109,7 +109,7 @@ export const RFIIrisDraftPreview: React.FC<RFIIrisDraftPreviewProps> = ({
     if (!draft) return
     try {
       await accept.mutateAsync({ draft, projectId })
-      toast.success('Iris draft accepted — review and finalize the RFI.')
+      toast.success('Iris draft accepted. Review and finalize the RFI.')
       onAccepted(draft.rfi_id)
       onClose()
     } catch (err) {

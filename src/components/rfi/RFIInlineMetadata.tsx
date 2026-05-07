@@ -50,7 +50,7 @@ export const RFIInlineMetadata: React.FC<RFIInlineMetadataProps> = ({
 
   return (
     <section
-      aria-label="RFI metadata — inline editable"
+      aria-label="RFI metadata. Inline editable."
       style={{
         display: 'grid',
         gridTemplateColumns: '120px 1fr',

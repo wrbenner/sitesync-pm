@@ -198,7 +198,7 @@ export const RFIDistributeDialog: React.FC<RFIDistributeDialogProps> = ({
             id="rfi-distribute-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Loop in MEP — please review section 09 21 16."
+            placeholder="Loop in MEP. Please review section 09 21 16."
             maxLength={2000}
             rows={3}
             style={{ ...inputStyle, resize: 'vertical', minHeight: 72 }}

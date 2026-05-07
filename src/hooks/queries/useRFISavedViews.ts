@@ -57,6 +57,11 @@ export function useRFISavedViews(projectId: string | undefined | null) {
 
 export function useCreateRFISavedView() {
   const qc = useQueryClient()
+  // AUDIT-EXEMPT: A saved view stores filter + column + sort + view-mode
+  // configuration, not RFI data. It changes how a list is presented to
+  // the owner; it does not change what data is accessible. Personal-scope
+  // views are user-private; team/project-scope views affect default
+  // presentation only — the underlying RLS still controls visibility.
   return useMutation({
     mutationFn: async (params: {
       projectId: string
@@ -95,6 +100,7 @@ export function useCreateRFISavedView() {
 
 export function useUpdateRFISavedView() {
   const qc = useQueryClient()
+  // AUDIT-EXEMPT: Saved-view patch — see useCreateRFISavedView rationale.
   return useMutation({
     mutationFn: async (params: {
       id: string
@@ -115,6 +121,7 @@ export function useUpdateRFISavedView() {
 
 export function useDeleteRFISavedView() {
   const qc = useQueryClient()
+  // AUDIT-EXEMPT: Saved-view delete — see useCreateRFISavedView rationale.
   return useMutation({
     mutationFn: async (params: { id: string; projectId: string }) => {
       const { error } = await from('rfi_saved_views')

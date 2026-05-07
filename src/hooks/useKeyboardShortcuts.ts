@@ -257,10 +257,13 @@ export const globalShortcuts: GlobalShortcutEntry[] = [
   { key: 'k', description: 'Move up in list', category: 'list' },
   { key: 'Enter', description: 'Open selected item', category: 'list' },
   { key: 'x', description: 'Select/deselect item', category: 'list' },
-  { key: 'e', description: 'Edit', category: 'detail' },
+  // RFI list-page actions (Phase 5.5 — Bugatti polish)
+  { key: 'c', description: 'New RFI (on RFI list)', category: 'actions' },
+  { key: 'e', description: 'Export RFIs (on RFI list)', category: 'actions' },
+  { key: 'f', description: 'Open filter panel (on RFI list)', category: 'actions' },
+  { key: 'g i', description: 'Iris draft (on RFI list)', category: 'actions', chord: ['G', 'I'] },
   { key: 'a', description: 'Approve', category: 'detail' },
   { key: 'r', description: 'Reject', category: 'detail' },
-  { key: 'c', description: 'Comment', category: 'detail' },
   { key: 'Enter', meta: true, description: 'Save and close', category: 'detail' },
 ]
 

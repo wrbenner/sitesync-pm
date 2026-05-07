@@ -36,6 +36,12 @@ jobs:
       - name: Static audit
         run: npx tsx scripts/audit.ts
 
+      - name: RFI audit-chain coverage gate
+        run: npm run validate:rfi-audit
+
+      - name: RFI voice linter gate
+        run: npx -y tsx scripts/lint-rfi-voice.ts
+
       - name: Page-test drift guard
         run: |
           npx tsx scripts/generate-page-tests.ts

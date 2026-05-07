@@ -34,6 +34,59 @@ import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 
 type Tab = 'workflows' | 'response_types' | 'custom_fields' | 'permissions' | 'numbering' | 'notifications' | 'spec_book'
 
+interface TabStateProps {
+  isLoading?: boolean
+  error?: unknown
+  isEmpty?: boolean
+  emptyTitle?: string
+  emptyHint?: string
+  emptyAction?: React.ReactNode
+  children: React.ReactNode
+}
+
+const TabState: React.FC<TabStateProps> = ({ isLoading, error, isEmpty, emptyTitle, emptyHint, emptyAction, children }) => {
+  if (isLoading) {
+    return (
+      <div role="status" aria-live="polite" style={stateBoxStyle}>
+        <span style={{ color: colors.textTertiary, fontSize: typography.fontSize.sm }}>Loading…</span>
+      </div>
+    )
+  }
+  if (error) {
+    const message = error instanceof Error ? error.message : 'Could not load this tab.'
+    return (
+      <div role="alert" style={{ ...stateBoxStyle, borderColor: '#DC2626', background: '#FEF2F2' }}>
+        <strong style={{ color: '#991B1B', fontSize: typography.fontSize.sm }}>Could not load</strong>
+        <p style={{ margin: 0, color: '#7F1D1D', fontSize: typography.fontSize.xs }}>{message}</p>
+      </div>
+    )
+  }
+  if (isEmpty) {
+    return (
+      <div style={stateBoxStyle}>
+        <strong style={{ color: colors.textPrimary, fontSize: typography.fontSize.sm }}>{emptyTitle ?? 'Nothing here yet'}</strong>
+        {emptyHint && (
+          <p style={{ margin: 0, color: colors.textTertiary, fontSize: typography.fontSize.xs, maxWidth: 420 }}>{emptyHint}</p>
+        )}
+        {emptyAction}
+      </div>
+    )
+  }
+  return <>{children}</>
+}
+
+const stateBoxStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  padding: '40px 24px',
+  border: `1px dashed ${colors.borderSubtle}`,
+  borderRadius: 8,
+  textAlign: 'center',
+}
+
 const TABS: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: 'workflows', label: 'Workflows', icon: <Link2 size={13} /> },
   { id: 'response_types', label: 'Response Types', icon: <FileType2 size={13} /> },
@@ -67,7 +120,10 @@ export function RFISettingsPage() {
               key={t.id}
               type="button"
               role="tab"
+              id={`rfi-settings-tab-${t.id}`}
               aria-selected={tab === t.id}
+              aria-controls={`rfi-settings-panel-${t.id}`}
+              tabIndex={tab === t.id ? 0 : -1}
               onClick={() => setTab(t.id)}
               style={{
                 display: 'inline-flex',
@@ -95,13 +151,15 @@ export function RFISettingsPage() {
             </p>
           }
         >
-          {tab === 'workflows' && <WorkflowsTab projectId={projectId} />}
-          {tab === 'response_types' && <ResponseTypesTab projectId={projectId} />}
-          {tab === 'custom_fields' && <CustomFieldsTab projectId={projectId} />}
-          {tab === 'permissions' && <PermissionsTab projectId={projectId} />}
-          {tab === 'numbering' && <NumberingTab projectId={projectId} />}
-          {tab === 'notifications' && <NotificationsTab projectId={projectId} />}
-          {tab === 'spec_book' && <SpecBookTab projectId={projectId} />}
+          <div role="tabpanel" id={`rfi-settings-panel-${tab}`} aria-labelledby={`rfi-settings-tab-${tab}`}>
+            {tab === 'workflows' && <WorkflowsTab projectId={projectId} />}
+            {tab === 'response_types' && <ResponseTypesTab projectId={projectId} />}
+            {tab === 'custom_fields' && <CustomFieldsTab projectId={projectId} />}
+            {tab === 'permissions' && <PermissionsTab projectId={projectId} />}
+            {tab === 'numbering' && <NumberingTab projectId={projectId} />}
+            {tab === 'notifications' && <NotificationsTab projectId={projectId} />}
+            {tab === 'spec_book' && <SpecBookTab projectId={projectId} />}
+          </div>
         </PermissionGate>
       </div>
     </PageContainer>
@@ -110,13 +168,30 @@ export function RFISettingsPage() {
 
 // ── Workflows ─────────────────────────────────────────────────────────
 const WorkflowsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
-  const { data: workflows = [] } = useRFIWorkflows(projectId)
+  const wq = useRFIWorkflows(projectId)
+  const workflows = wq.data ?? []
   const save = useSaveRFIWorkflow()
   const [editing, setEditing] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [draftStages, setDraftStages] = useState<WorkflowStage[]>([])
 
   return (
+    <TabState
+      isLoading={wq.isLoading}
+      error={wq.error}
+      isEmpty={!wq.isLoading && workflows.length === 0 && !editing}
+      emptyTitle="No workflow templates yet"
+      emptyHint="Workflow templates define the stages and SLAs an RFI moves through. Add one to get started."
+      emptyAction={
+        <button
+          type="button"
+          onClick={() => { setEditing('new'); setDraftName('New Workflow'); setDraftStages([{ name: 'Draft', sla_days: 5, ball_in_court_role: 'member' }]) }}
+          style={primaryBtn}
+        >
+          <Plus size={12} /> New workflow
+        </button>
+      }
+    >
     <section>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {workflows.map((w) => (
@@ -185,13 +260,22 @@ const WorkflowsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
         </div>
       )}
     </section>
+    </TabState>
   )
 }
 
 // ── Response types (read-only catalog for MVP) ──────────────────────
 const ResponseTypesTab: React.FC<{ projectId: string }> = ({ projectId }) => {
-  const { data: types = [] } = useRFIResponseTypes(projectId)
+  const tq = useRFIResponseTypes(projectId)
+  const types = tq.data ?? []
   return (
+    <TabState
+      isLoading={tq.isLoading}
+      error={tq.error}
+      isEmpty={!tq.isLoading && types.length === 0}
+      emptyTitle="No response types configured"
+      emptyHint="Default response types should seed automatically when the project's RFI module is initialized. If this list stays empty, re-run the migration or contact support."
+    >
     <section>
       <p style={subTextStyle}>Configurable response types. Edit support ships in a follow-up.</p>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -206,12 +290,14 @@ const ResponseTypesTab: React.FC<{ projectId: string }> = ({ projectId }) => {
         ))}
       </ul>
     </section>
+    </TabState>
   )
 }
 
 // ── Custom fields ───────────────────────────────────────────────────
 const CustomFieldsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
-  const { data: fields = [] } = useRFICustomFields(projectId)
+  const fq = useRFICustomFields(projectId)
+  const fields = fq.data ?? []
   const save = useSaveRFICustomField()
   const [editing, setEditing] = useState<CustomFieldDef | null>(null)
   const [draftLabel, setDraftLabel] = useState('')
@@ -230,6 +316,18 @@ const CustomFieldsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
   }
 
   return (
+    <TabState
+      isLoading={fq.isLoading}
+      error={fq.error}
+      isEmpty={!fq.isLoading && fields.length === 0 && !editing}
+      emptyTitle="No custom fields yet"
+      emptyHint="Custom fields capture project-specific data on every RFI (permit numbers, owner reference IDs, county codes). Add a field to get started."
+      emptyAction={
+        <button type="button" onClick={startNew} style={primaryBtn}>
+          <Plus size={12} /> New custom field
+        </button>
+      }
+    >
     <section>
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {fields.map((f) => (
@@ -299,12 +397,14 @@ const CustomFieldsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
         </div>
       )}
     </section>
+    </TabState>
   )
 }
 
 // ── Permissions matrix ──────────────────────────────────────────────
 const PermissionsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
-  const { data: perms = [] } = useRFIPermissions(projectId)
+  const pq = useRFIPermissions(projectId)
+  const perms = pq.data ?? []
   const set = useSetRFIPermission()
   const lookup = (role: string, action: string): boolean => {
     const row = perms.find((p) => p.role === role && p.action === action)
@@ -312,9 +412,13 @@ const PermissionsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
   }
 
   return (
+    <TabState
+      isLoading={pq.isLoading}
+      error={pq.error}
+    >
     <section>
       <p style={subTextStyle}>
-        Per-role × per-action matrix. Changes take effect immediately. Audit row written per cell change.
+        Per-role x per-action matrix. Changes take effect immediately. Audit row written per cell change.
       </p>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: typography.fontSize.caption, minWidth: 720 }}>
@@ -352,12 +456,14 @@ const PermissionsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
         </table>
       </div>
     </section>
+    </TabState>
   )
 }
 
 // ── Numbering ───────────────────────────────────────────────────────
 const NumberingTab: React.FC<{ projectId: string }> = ({ projectId }) => {
-  const { data } = useRFINumberingSettings(projectId)
+  const nq = useRFINumberingSettings(projectId)
+  const data = nq.data
   const save = useSaveRFINumberingSettings()
   const [prefix, setPrefix] = useState(data?.number_prefix ?? 'RFI-')
   const [suffix, setSuffix] = useState(data?.number_suffix ?? '')
@@ -374,6 +480,7 @@ const NumberingTab: React.FC<{ projectId: string }> = ({ projectId }) => {
   const preview = `${prefix}${'0'.repeat(Math.max(0, padding - 1))}1${suffix}`
 
   return (
+    <TabState isLoading={nq.isLoading} error={nq.error}>
     <section>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.md }}>
         <Field label="Prefix">
@@ -417,12 +524,14 @@ const NumberingTab: React.FC<{ projectId: string }> = ({ projectId }) => {
         </button>
       </div>
     </section>
+    </TabState>
   )
 }
 
 // ── Notifications ───────────────────────────────────────────────────
 const NotificationsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
-  const { data: prefs = [] } = useRFINotificationPrefs(projectId)
+  const npq = useRFINotificationPrefs(projectId)
+  const prefs = npq.data ?? []
   const set = useSetRFINotificationPref()
   const events = ['created', 'assigned', 'responded', 'closed', 'overdue', 'mention', 'distribute_delivered', 'distribute_bounced']
   const channels = ['email', 'in_app', 'sms']
@@ -431,8 +540,9 @@ const NotificationsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
     return row?.enabled ?? (channel !== 'sms')
   }
   return (
+    <TabState isLoading={npq.isLoading} error={npq.error}>
     <section>
-      <p style={subTextStyle}>Per-event × per-channel matrix. Defaults: in-app + email enabled, SMS off.</p>
+      <p style={subTextStyle}>Per-event x per-channel matrix. Defaults: in-app + email enabled, SMS off.</p>
       <table style={{ borderCollapse: 'collapse', fontSize: typography.fontSize.caption, minWidth: 480 }}>
         <thead>
           <tr>
@@ -465,13 +575,15 @@ const NotificationsTab: React.FC<{ projectId: string }> = ({ projectId }) => {
         </tbody>
       </table>
     </section>
+    </TabState>
   )
 }
 
 // ── Spec Book uploader ──────────────────────────────────────────────
 const SpecBookTab: React.FC<{ projectId: string }> = ({ projectId }) => {
   const { addToast } = useToast()
-  const { data: specs = [] } = useSpecBook(projectId)
+  const sq = useSpecBook(projectId)
+  const specs = sq.data ?? []
   const importRows = useImportSpecBookRows()
   const [errors, setErrors] = useState<Array<{ row: number; message: string }>>([])
 
@@ -480,7 +592,7 @@ const SpecBookTab: React.FC<{ projectId: string }> = ({ projectId }) => {
     const result = parseSpecBookCsv(text)
     setErrors(result.errors)
     if (result.errors.length > 0) {
-      addToast('warning', `${result.errors.length} rows skipped — see error list below`)
+      addToast('warning', `${result.errors.length} rows skipped. See error list below.`)
     }
     if (result.rows.length === 0) return
     try {
@@ -492,6 +604,10 @@ const SpecBookTab: React.FC<{ projectId: string }> = ({ projectId }) => {
   }
 
   return (
+    <TabState
+      isLoading={sq.isLoading}
+      error={sq.error}
+    >
     <section>
       <p style={subTextStyle}>
         Upload a CSV with columns: <code>section_code, section_title, division, responsible_party, responsible_email, notes</code>.
@@ -518,16 +634,23 @@ const SpecBookTab: React.FC<{ projectId: string }> = ({ projectId }) => {
       <h3 style={{ marginTop: spacing.lg, fontSize: typography.fontSize.sm, color: colors.textSecondary }}>
         Current spec book ({specs.length} sections)
       </h3>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 280, overflowY: 'auto' }}>
-        {specs.map((s) => (
-          <li key={s.id} style={listRowStyle}>
-            <code style={{ fontFamily: typography.fontFamilyMono, color: colors.primaryOrange, minWidth: 80 }}>{s.section_code}</code>
-            <span style={{ flex: 1 }}>{s.section_title}</span>
-            {s.responsible_party && <span style={subBadge}>{s.responsible_party}</span>}
-          </li>
-        ))}
-      </ul>
+      {specs.length === 0 ? (
+        <p style={{ marginTop: spacing.md, color: colors.textTertiary, fontSize: typography.fontSize.sm }}>
+          No spec sections imported yet. Upload a CSV above to populate the project's spec book and unlock the Spec Section typeahead on RFIs.
+        </p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 280, overflowY: 'auto' }}>
+          {specs.map((s) => (
+            <li key={s.id} style={listRowStyle}>
+              <code style={{ fontFamily: typography.fontFamilyMono, color: colors.primaryOrange, minWidth: 80 }}>{s.section_code}</code>
+              <span style={{ flex: 1 }}>{s.section_title}</span>
+              {s.responsible_party && <span style={subBadge}>{s.responsible_party}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
+    </TabState>
   )
 }
 

@@ -40,6 +40,9 @@ export function useRFIColumnPrefs(projectId: string | undefined | null) {
 
 export function useSaveRFIColumnPrefs() {
   const qc = useQueryClient()
+  // AUDIT-EXEMPT: Per-user column visibility preference, scoped to a
+  // (user_id, project_id) row. No project-level chain-of-custody value;
+  // changing column order has no effect on what data was visible to whom.
   return useMutation({
     mutationFn: async (params: { projectId: string; columns: RFIColumnPref[] }) => {
       const { data: { user } } = await supabase.auth.getUser()
