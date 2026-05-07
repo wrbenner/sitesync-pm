@@ -32,10 +32,12 @@ interface TabDef {
 }
 
 export const SUBMITTAL_TABS: TabDef[] = [
+  // Tabs whose `phase` is ≤ the current shipping phase render without a
+  // "P{N}" badge — they're considered live. Phase 4 is the latest live wave.
   { id: 'items',         label: 'Items',         phase: 1 },
-  { id: 'packages',      label: 'Packages',      phase: 4 },
-  { id: 'spec_sections', label: 'Spec Sections', phase: 4 },
-  { id: 'ball_in_court', label: 'Ball in Court', phase: 4 },
+  { id: 'packages',      label: 'Packages',      phase: 1 },
+  { id: 'spec_sections', label: 'Spec Sections', phase: 1 },
+  { id: 'ball_in_court', label: 'Ball in Court', phase: 1 },
   { id: 'kanban',        label: 'Kanban',        phase: 5 },
   { id: 'timeline',      label: 'Timeline',      phase: 5 },
   { id: 'schedule',      label: 'Schedule',      phase: 5 },

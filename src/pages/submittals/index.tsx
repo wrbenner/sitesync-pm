@@ -64,6 +64,12 @@ import { BulkDistributeDialog } from '../../components/submittals/BulkDistribute
 import { SavedViewsSidebar } from '../../components/submittals/SavedViews/SavedViewsSidebar'
 import { useSubmittalFilters } from '../../hooks/useSubmittalFilters'
 
+// Phase 4 components — Grouping Views
+import { PackagesView } from '../../components/submittals/PackagesView/PackagesView'
+import { SpecSectionsView } from '../../components/submittals/SpecSectionsView/SpecSectionsView'
+import { BallInCourtView } from '../../components/submittals/BallInCourtView/BallInCourtView'
+import type { SubmittalListRow } from '../../hooks/useSubmittalsList'
+
 // CreateSubmittalModal is the quick-create surface consumed by the
 // Conversation page (see CreateSubmittalModalWrapper); reference the import
 // here so eslint-no-unused stays quiet without affecting the bundle. The
@@ -134,6 +140,10 @@ const SubmittalsPage: React.FC = () => {
   const [bulkEditOpen, setBulkEditOpen] = useState(false)
   const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false)
   const [selectionClearToken, setSelectionClearToken] = useState(0)
+
+  // Phase 4 — Create Package dialog driven from BulkActionsMenu.
+  const [createPackageOpen, setCreatePackageOpen] = useState(false)
+  const [createPackageIds, setCreatePackageIds] = useState<string[]>([])
 
   // GroupedSubmittalsView remains imported for Phase 4 — Phase 1 default is
   // ungrouped Items. The grouping toggle is dropped here; comes back in P3.
@@ -255,6 +265,38 @@ const SubmittalsPage: React.FC = () => {
 
   const handleOpenSettings = useCallback(() => navigate('/submittals/settings'), [navigate])
 
+  // Phase 4 — shared row filter for all 4 data views (Items + 3 grouped).
+  // Identity stable via useCallback so child memoization holds.
+  const sharedFilterFn = useCallback((row: SubmittalListRow) => {
+    const r = row as unknown as Record<string, unknown>
+    if (submittalFilters.hasAny) {
+      const passed = applyChipFilters([r], submittalFilters.filters)
+      if (passed.length === 0) return false
+    }
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+    return (
+      String(r.title ?? '').toLowerCase().includes(q) ||
+      String(r.number ?? '').toLowerCase().includes(q) ||
+      String(r.csi_section ?? r.spec_section ?? '').toLowerCase().includes(q) ||
+      String(r.sub_name ?? r.subcontractor ?? '').toLowerCase().includes(q) ||
+      String(r.current_reviewer_name ?? r.current_reviewer ?? '').toLowerCase().includes(q)
+    )
+  }, [submittalFilters.hasAny, submittalFilters.filters, searchQuery])
+
+  const handleSelectionIdsChange = useCallback((ids: string[]) => {
+    setSelectedIds((prev) => {
+      if (prev.size === ids.length && ids.every((id) => prev.has(id))) return prev
+      return new Set(ids)
+    })
+  }, [])
+
+  const sharedResetToken = JSON.stringify({
+    tab: activeTab,
+    q: searchQuery,
+    f: submittalFilters.filtersToken,
+  })
+
   if (!projectId) return <ProjectGate />
 
   const actionCluster = (
@@ -330,6 +372,12 @@ const SubmittalsPage: React.FC = () => {
                   selectedIds={Array.from(selectedIds)}
                   onOpenEdit={() => { setBulkMenuOpen(false); setBulkEditOpen(true) }}
                   onOpenDistribute={() => { setBulkMenuOpen(false); setBulkDistributeOpen(true) }}
+                  onOpenCreatePackage={() => {
+                    setBulkMenuOpen(false)
+                    setCreatePackageIds(Array.from(selectedIds))
+                    setCreatePackageOpen(true)
+                    setActiveTab('packages')
+                  }}
                   onClearSelection={() => {
                     setSelectedIds(new Set())
                     setSelectionClearToken((t) => t + 1)
@@ -390,35 +438,11 @@ const SubmittalsPage: React.FC = () => {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <SubmittalsItemsView
                   projectId={projectId}
-                  resetToken={JSON.stringify({
-                    tab: activeTab,
-                    q: searchQuery,
-                    f: submittalFilters.filtersToken,
-                  })}
+                  resetToken={sharedResetToken}
                   selectionClearToken={selectionClearToken}
                   numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
-                  filterFn={(row) => {
-                    const r = row as unknown as Record<string, unknown>
-                    if (submittalFilters.hasAny) {
-                      const passed = applyChipFilters([r], submittalFilters.filters)
-                      if (passed.length === 0) return false
-                    }
-                    const q = searchQuery.trim().toLowerCase()
-                    if (!q) return true
-                    return (
-                      String(r.title ?? '').toLowerCase().includes(q) ||
-                      String(r.number ?? '').toLowerCase().includes(q) ||
-                      String(r.csi_section ?? r.spec_section ?? '').toLowerCase().includes(q) ||
-                      String(r.sub_name ?? r.subcontractor ?? '').toLowerCase().includes(q) ||
-                      String(r.current_reviewer_name ?? r.current_reviewer ?? '').toLowerCase().includes(q)
-                    )
-                  }}
-                  onSelectionIdsChange={(ids) => {
-                    setSelectedIds((prev) => {
-                      if (prev.size === ids.length && ids.every((id) => prev.has(id))) return prev
-                      return new Set(ids)
-                    })
-                  }}
+                  filterFn={sharedFilterFn}
+                  onSelectionIdsChange={handleSelectionIdsChange}
                 />
               </div>
               <BulkEditModal
@@ -444,6 +468,56 @@ const SubmittalsPage: React.FC = () => {
                   refetch()
                 }}
               />
+            </>
+          ) : activeTab === 'packages' && projectId ? (
+            <>
+              <SavedViewsSidebar projectId={projectId} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <PackagesView
+                  projectId={projectId}
+                  resetToken={sharedResetToken}
+                  numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
+                  filterFn={sharedFilterFn}
+                  selectionClearToken={selectionClearToken}
+                  onSelectionIdsChange={handleSelectionIdsChange}
+                  createDialogOpen={createPackageOpen}
+                  createDialogSelectedIds={createPackageIds}
+                  onCreateDialogClose={() => {
+                    setCreatePackageOpen(false)
+                    setCreatePackageIds([])
+                    setSelectedIds(new Set())
+                    setSelectionClearToken((t) => t + 1)
+                  }}
+                />
+              </div>
+            </>
+          ) : activeTab === 'spec_sections' && projectId ? (
+            <>
+              <SavedViewsSidebar projectId={projectId} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <SpecSectionsView
+                  projectId={projectId}
+                  resetToken={sharedResetToken}
+                  numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
+                  filterFn={sharedFilterFn}
+                  selectionClearToken={selectionClearToken}
+                  onSelectionIdsChange={handleSelectionIdsChange}
+                />
+              </div>
+            </>
+          ) : activeTab === 'ball_in_court' && projectId ? (
+            <>
+              <SavedViewsSidebar projectId={projectId} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <BallInCourtView
+                  projectId={projectId}
+                  resetToken={sharedResetToken}
+                  numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
+                  filterFn={sharedFilterFn}
+                  selectionClearToken={selectionClearToken}
+                  onSelectionIdsChange={handleSelectionIdsChange}
+                />
+              </div>
             </>
           ) : activeTab === 'kanban' ? (
             // Kanban dedicated rebuild ships in Phase 5; Phase 1 keeps the
@@ -597,6 +671,7 @@ interface BulkActionsTriggerProps {
   onClose: () => void
   onOpenEdit: () => void
   onOpenDistribute: () => void
+  onOpenCreatePackage?: () => void
   onClearSelection: () => void
 }
 
@@ -608,6 +683,7 @@ const BulkActionsTrigger: React.FC<BulkActionsTriggerProps> = ({
   onClose,
   onOpenEdit,
   onOpenDistribute,
+  onOpenCreatePackage,
   onClearSelection,
 }) => {
   const disabled = selectedCount === 0
@@ -649,6 +725,7 @@ const BulkActionsTrigger: React.FC<BulkActionsTriggerProps> = ({
             onClose={onClose}
             onOpenEdit={onOpenEdit}
             onOpenDistribute={onOpenDistribute}
+            onOpenCreatePackage={onOpenCreatePackage}
             onClearSelection={onClearSelection}
           />
         </div>

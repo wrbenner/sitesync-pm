@@ -21,6 +21,7 @@ import {
   Sparkles,
   Send,
   FileSignature,
+  Package,
 } from 'lucide-react'
 import { PermissionGate } from '../auth/PermissionGate'
 import { submittalService } from '../../services/submittalService'
@@ -49,6 +50,8 @@ export interface BulkActionsMenuProps {
   onOpenDistribute: () => void
   /** Open the workflow apply modal. Phase 4 wires the modal; Phase 3 stubs. */
   onOpenApplyWorkflow?: () => void
+  /** Open the Create Package dialog with the current selection (Phase 4). */
+  onOpenCreatePackage?: () => void
   /** Selection cleared by the page after a successful bulk action. */
   onClearSelection: () => void
 }
@@ -59,6 +62,7 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
   onOpenEdit,
   onOpenDistribute,
   onOpenApplyWorkflow,
+  onOpenCreatePackage,
   onClearSelection,
 }) => {
   const [busy, setBusy] = useState<string | null>(null)
@@ -138,6 +142,16 @@ export const BulkActionsMenu: React.FC<BulkActionsMenuProps> = ({
       <PermissionGate permission="submittals.edit">
         <MenuItem icon={<Pencil size={12} />} onClick={() => { onOpenEdit(); onClose() }}>
           Edit
+        </MenuItem>
+        <MenuItem
+          icon={<Package size={12} />}
+          onClick={() => {
+            if (onOpenCreatePackage) onOpenCreatePackage()
+            else toast.info('Create Package — Phase 4 not wired')
+            onClose()
+          }}
+        >
+          Create Package from Selected
         </MenuItem>
         <MenuItem
           icon={<GitBranch size={12} />}
