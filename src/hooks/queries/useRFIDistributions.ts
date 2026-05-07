@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 import { invalidateEntity } from '../../api/invalidation'
+import { logAuditEntry } from '../../lib/auditLogger'
 import posthog from '../../lib/analytics'
 
 export interface RFIDistributionRow {
@@ -63,6 +64,17 @@ export function useAddRFIDistribution() {
         sent_by: user?.id ?? null,
       } as never)
       if (error) throw error
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'rfi',
+        entityId: params.rfiId,
+        action: 'update',
+        afterState: {
+          distributed_to: params.recipient_email.trim(),
+          recipient_name: params.recipient_name?.trim() || null,
+        },
+        metadata: { kind: 'rfi_distribution_send' },
+      })
       return params
     },
     onSuccess: (params) => {

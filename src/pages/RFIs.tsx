@@ -37,6 +37,7 @@ import { PresenceAvatars } from '../components/shared/PresenceAvatars';
 import { EditingLockBanner } from '../components/ui/EditingLockBanner';
 import { EditableDetailField } from '../components/forms/EditableField';
 import RFICreateWizard from '../components/rfis/RFICreateWizard';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { RFIKPIs } from './rfis/RFIKPIs';
 
 import { useRFIs, useRFI, useProject } from '../hooks/queries';
@@ -246,7 +247,7 @@ const BicCell: React.FC<{
 const IrisDraftPill: React.FC<{ onClick?: (e: React.MouseEvent) => void }> = ({ onClick }) => (
   <button
     onClick={(e) => { e.stopPropagation(); onClick?.(e); }}
-    aria-label="Iris drafted a response — review before sending"
+    aria-label="Iris drafted a response. Review before sending."
     style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
       padding: '2px 8px', borderRadius: 999,
@@ -568,6 +569,63 @@ const RFIsPage: React.FC = () => {
     if (!announcedLoadRef.current) return;
     setAnnouncement(`Showing ${filteredRfis.length} of ${rfis.length} RFIs`);
   }, [filteredRfis.length, rfis.length]);
+
+  // ── Keyboard shortcuts (Phase 5.5 — Bugatti polish) ─────────────────────
+  // Page-scoped: j/k move focus, Enter opens, c new, e export, f filter,
+  // g i opens create wizard with Iris voice mode. The `?` help overlay is
+  // wired globally in App.tsx — no duplicate component needed.
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  useEffect(() => {
+    if (focusedIndex >= filteredRfis.length) setFocusedIndex(filteredRfis.length - 1);
+  }, [filteredRfis.length, focusedIndex]);
+  useKeyboardShortcuts([
+    {
+      key: 'j',
+      description: 'Focus next RFI',
+      category: 'list',
+      action: () => setFocusedIndex((i) => Math.min(filteredRfis.length - 1, i < 0 ? 0 : i + 1)),
+    },
+    {
+      key: 'k',
+      description: 'Focus previous RFI',
+      category: 'list',
+      action: () => setFocusedIndex((i) => Math.max(0, i - 1)),
+    },
+    {
+      key: 'Enter',
+      description: 'Open focused RFI',
+      category: 'list',
+      action: () => {
+        const row = filteredRfis[focusedIndex];
+        if (row) navigate(`/rfis/${row.id}`);
+      },
+    },
+    {
+      key: 'c',
+      description: 'New RFI',
+      category: 'actions',
+      action: () => setShowCreateModal(true),
+    },
+    {
+      key: 'e',
+      description: 'Export RFIs',
+      category: 'actions',
+      action: () => { void handleExportXlsx(); },
+    },
+    {
+      key: 'f',
+      description: 'Open filter panel',
+      category: 'actions',
+      action: () => setFilterPanelOpen(true),
+    },
+    {
+      keys: ['g', 'i'],
+      sequential: true,
+      description: 'Iris draft (open create wizard)',
+      category: 'actions',
+      action: () => setShowCreateModal(true),
+    },
+  ]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const handleExportXlsx = useCallback(() => {
@@ -1361,13 +1419,19 @@ const RFIsPage: React.FC = () => {
               rowHeight={44}
               containerHeight={Math.max(220, Math.min(720, filteredRfis.length * 44 + 48))}
               onRowClick={(rfi) => navigate(`/rfis/${rfi.id}`)}
-              selectedRowId={null}
+              selectedRowId={focusedIndex >= 0 && focusedIndex < filteredRfis.length ? String(filteredRfis[focusedIndex].id) : null}
               getRowId={(row) => String(row.id)}
               getRowAriaLabel={(rfi) => `RFI ${rfi.rfiNumber}: ${rfi.title}, status ${rfi.status}`}
               getRowStyle={(rfi) => {
                 const overdue = rfi.dueDate && isOverdue(rfi.dueDate) && rfi.status !== 'closed';
-                if (!overdue) return {};
-                return { boxShadow: `inset 3px 0 0 0 ${STATUS.critical}` };
+                const isFocused = focusedIndex >= 0 && filteredRfis[focusedIndex]?.id === rfi.id;
+                const style: React.CSSProperties = {};
+                if (overdue) style.boxShadow = `inset 3px 0 0 0 ${STATUS.critical}`;
+                if (isFocused) {
+                  style.outline = `2px solid ${STATUS.brandAction}`;
+                  style.outlineOffset = '-2px';
+                }
+                return style;
               }}
               loading={rfisLoading}
               emptyMessage={

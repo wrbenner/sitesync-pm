@@ -161,6 +161,14 @@ export function useSaveRFICustomField() {
         const { error } = await from('project_rfi_custom_fields').insert(payload as never)
         if (error) throw error
       }
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'project',
+        entityId: params.projectId,
+        action: 'update',
+        afterState: { custom_field: params.field_code, label: params.label },
+        metadata: { kind: 'rfi_custom_field_save', is_create: !params.id },
+      })
       return params
     },
     onSuccess: (_data, vars) => {
@@ -193,7 +201,7 @@ export function useRFICustomValues(rfiId: string | undefined) {
 export function useSaveRFICustomValue() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (params: { rfiId: string; field_code: string; value: unknown }) => {
+    mutationFn: async (params: { projectId: string; rfiId: string; field_code: string; value: unknown }) => {
       const { data: { user } } = await supabase.auth.getUser()
       const { error } = await from('rfi_custom_values').upsert({
         rfi_id: params.rfiId,
@@ -202,6 +210,14 @@ export function useSaveRFICustomValue() {
         updated_by: user?.id ?? null,
       } as never, { onConflict: 'rfi_id,field_code' })
       if (error) throw error
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'rfi',
+        entityId: params.rfiId,
+        action: 'update',
+        afterState: { [params.field_code]: params.value },
+        metadata: { kind: 'rfi_custom_value_save', field_code: params.field_code },
+      })
       return params
     },
     onSuccess: (_data, vars) => {
@@ -317,6 +333,14 @@ export function useSaveRFINumberingSettings() {
         ...params.patch,
       } as never, { onConflict: 'project_id' })
       if (error) throw error
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'project',
+        entityId: params.projectId,
+        action: 'update',
+        afterState: { rfi_numbering: params.patch },
+        metadata: { kind: 'rfi_numbering_save' },
+      })
       return params
     },
     onSuccess: (_data, vars) => {
@@ -359,6 +383,14 @@ export function useSetRFINotificationPref() {
         enabled: params.enabled,
       } as never, { onConflict: 'project_id,event,channel' })
       if (error) throw error
+      await logAuditEntry({
+        projectId: params.projectId,
+        entityType: 'project',
+        entityId: params.projectId,
+        action: 'update',
+        afterState: { event: params.event, channel: params.channel, enabled: params.enabled },
+        metadata: { kind: 'rfi_notification_pref_change' },
+      })
       return params
     },
     onSuccess: (_data, vars) => {

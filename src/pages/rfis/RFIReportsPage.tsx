@@ -81,7 +81,10 @@ function useScheduleReport() {
 
 export function RFIReportsPage() {
   const projectId = useProjectId()
-  const { data: rfisResult } = useRFIs(projectId)
+  const rfisQuery = useRFIs(projectId)
+  const rfisResult = rfisQuery.data
+  const rfisLoading = rfisQuery.isLoading
+  const rfisError = rfisQuery.error
   const rfis = useMemo(() => (rfisResult?.data ?? []) as unknown as RFIRowForReport[], [rfisResult])
   // Responses across the project — single bulk fetch is fine for
   // moderate-size datasets; switch to MV when row count > 5K.
@@ -111,11 +114,14 @@ export function RFIReportsPage() {
           Six canned reports + scheduled email delivery. Custom report builder ships in a follow-up.
         </p>
 
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: spacing.lg }}>
+        <div role="tablist" aria-label="RFI report types" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: spacing.lg }}>
           {CANNED_REPORT_KEYS.map((key) => (
             <button
               key={key}
               type="button"
+              role="tab"
+              aria-selected={activeReport === key}
+              aria-controls={`report-panel-${key}`}
               onClick={() => setActiveReport(key)}
               style={{
                 display: 'inline-flex',
@@ -144,16 +150,47 @@ export function RFIReportsPage() {
             borderRadius: borderRadius.base,
             minHeight: 360,
           }}
+          role="tabpanel"
+          id={`report-panel-${activeReport}`}
+          aria-live="polite"
+          aria-busy={rfisLoading}
         >
-          {activeReport === 'avg_response_time_per_firm' && (
-            <AvgResponseTimeChart rfis={rfis} responses={responses} firmLookup={firmLookup} />
+          {rfisLoading && (
+            <div role="status" style={{ padding: 60, textAlign: 'center', color: colors.textTertiary, fontSize: typography.fontSize.sm }}>
+              Loading RFI data...
+            </div>
           )}
-          {activeReport === 'on_time_close_pct' && <OnTimeCloseChart rfis={rfis} />}
-          {activeReport === 'cost_at_risk' && <CostAtRiskChart rfis={rfis} />}
-          {activeReport === 'schedule_at_risk' && <ScheduleAtRiskChart rfis={rfis} />}
-          {activeReport === 'rfi_count_by_trade' && <RFICountByTradeChart rfis={rfis} />}
-          {activeReport === 'designer_scorecard' && (
-            <DesignerScorecardTable rfis={rfis} responses={responses} firmLookup={firmLookup} />
+          {!rfisLoading && rfisError && (
+            <div role="alert" style={{ padding: 60, textAlign: 'center', color: '#991B1B', fontSize: typography.fontSize.sm }}>
+              <strong style={{ display: 'block', marginBottom: 8 }}>Could not load RFI data</strong>
+              <span style={{ color: '#7F1D1D', fontSize: typography.fontSize.xs }}>
+                {rfisError instanceof Error ? rfisError.message : 'Unknown error'}
+              </span>
+            </div>
+          )}
+          {!rfisLoading && !rfisError && rfis.length === 0 && (
+            <div style={{ padding: 60, textAlign: 'center' }}>
+              <strong style={{ display: 'block', color: colors.textPrimary, fontSize: typography.fontSize.sm }}>
+                No RFIs on this project yet
+              </strong>
+              <p style={{ marginTop: 8, color: colors.textTertiary, fontSize: typography.fontSize.xs, maxWidth: 360, margin: '8px auto 0' }}>
+                Reports populate after RFIs are created. Open the RFI list to add your first one.
+              </p>
+            </div>
+          )}
+          {!rfisLoading && !rfisError && rfis.length > 0 && (
+            <>
+              {activeReport === 'avg_response_time_per_firm' && (
+                <AvgResponseTimeChart rfis={rfis} responses={responses} firmLookup={firmLookup} />
+              )}
+              {activeReport === 'on_time_close_pct' && <OnTimeCloseChart rfis={rfis} />}
+              {activeReport === 'cost_at_risk' && <CostAtRiskChart rfis={rfis} />}
+              {activeReport === 'schedule_at_risk' && <ScheduleAtRiskChart rfis={rfis} />}
+              {activeReport === 'rfi_count_by_trade' && <RFICountByTradeChart rfis={rfis} />}
+              {activeReport === 'designer_scorecard' && (
+                <DesignerScorecardTable rfis={rfis} responses={responses} firmLookup={firmLookup} />
+              )}
+            </>
           )}
         </div>
 
@@ -229,7 +266,7 @@ void useRFIResponsesList
 
 const AvgResponseTimeChart: React.FC<{ rfis: RFIRowForReport[]; responses: ResponseRowForReport[]; firmLookup: (uid: string) => string }> = ({ rfis, responses, firmLookup }) => {
   const data = useMemo(() => avgResponseTimePerFirm(rfis, responses, firmLookup), [rfis, responses, firmLookup])
-  if (data.length === 0) return <Empty label="No firm-level data yet — once Iris drafts have been responded to, this chart populates." />
+  if (data.length === 0) return <Empty label="No firm-level data yet. Once Iris drafts have been responded to, this chart populates." />
   return (
     <ResponsiveContainer width="100%" height={360}>
       <BarChart data={data}>
@@ -264,7 +301,7 @@ const OnTimeCloseChart: React.FC<{ rfis: RFIRowForReport[] }> = ({ rfis }) => {
             <Line type="monotone" dataKey="pct" stroke={colors.primaryOrange} strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
-      ) : <Empty label="No closed RFIs yet — chart populates after the first close." />}
+      ) : <Empty label="No closed RFIs yet. Chart populates after the first close." />}
     </div>
   )
 }

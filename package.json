@@ -28,6 +28,8 @@
     "audit:static": "tsx scripts/audit.ts",
     "audit:gen": "tsx scripts/generate-e2e.ts",
     "bundle:check": "node scripts/check-bundle-size.js",
+    "validate:rfi-audit": "node scripts/validate-rfi-audit-coverage.mjs",
+    "lint:rfi-voice": "tsx scripts/lint-rfi-voice.ts",
     "build:analyze": "ANALYZE=true vite build",
     "cap:build:ios": "npm run build && npx cap sync ios",
     "cap:build:android": "npm run build && npx cap sync android",

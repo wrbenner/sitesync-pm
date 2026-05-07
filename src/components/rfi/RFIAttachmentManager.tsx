@@ -232,7 +232,7 @@ export const RFIAttachmentManager: React.FC<RFIAttachmentManagerProps> = ({
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          aria-label="Upload attachments — drop, click, or paste"
+          aria-label="Upload attachments. Drop, click, or paste."
           style={{
             width: '100%',
             display: 'flex',

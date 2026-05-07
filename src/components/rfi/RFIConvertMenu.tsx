@@ -104,7 +104,7 @@ export const RFIConvertMenu: React.FC<RFIConvertMenuProps> = ({
           afterState: { converted_to: 'field_directive', notes: rfiQuestion?.slice(0, 200) },
           metadata: { kind: 'rfi_convert_stub', target: 'field_directive' },
         })
-        toast('Field directive logged — wired creation flow ships in a follow-up.')
+        toast('Field directive logged. Wired creation flow ships in a follow-up.')
         return
       }
 
