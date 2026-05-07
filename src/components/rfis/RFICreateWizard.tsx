@@ -408,6 +408,27 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const [specRef, setSpecRef] = useState('')
   const [drawingRef, setDrawingRef] = useState('')
 
+  // PR #367 — Schedule + Cost impact wrappers (Yes/No/TBD) + Private flag.
+  // Schema columns already exist: cost_impact_status / schedule_impact_status
+  // (PR #350), cost_impact_cents / schedule_days_impact (legacy),
+  // is_private (legacy). Closes Tier S2 items 7, 8, 9 from
+  // RFI_CREATE_FLOW_PARITY_SPEC_2026-05-08.md.
+  const [scheduleImpactStatus, setScheduleImpactStatus] = useState<'' | 'yes' | 'no' | 'tbd'>('')
+  const [scheduleDays, setScheduleDays] = useState<string>('')
+  const [costImpactStatus, setCostImpactStatus] = useState<'' | 'yes' | 'no' | 'tbd'>('')
+  const [costImpactDollars, setCostImpactDollars] = useState<string>('')
+  const [isPrivate, setIsPrivate] = useState<boolean>(false)
+
+  // PR #368 — Reference free text + RFI Number override (admin only).
+  // Closes Tier S3 items 15, 16 from the May-7 Create-Flow Parity Spec.
+  // Reference is a free text field for tracking external IDs / parent
+  // RFI numbers / vendor PO numbers — anything that links the RFI to
+  // outside paperwork. Number override lets admins force a specific
+  // number (e.g., backfilling from Procore migration); leave blank to
+  // accept the auto-numbered next sequence.
+  const [reference, setReference] = useState<string>('')
+  const [numberOverride, setNumberOverride] = useState<string>('')
+
   // Extras
   const [files, setFiles] = useState<File[]>([])
   const [priority, setPriority] = useState('medium')
@@ -490,6 +511,9 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setHasDistributionPrefilled(false)
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())
+      setScheduleImpactStatus(''); setScheduleDays('')
+      setCostImpactStatus(''); setCostImpactDollars(''); setIsPrivate(false)
+      setReference(''); setNumberOverride('')
       setSending(false); setShowMore(false)
       setSavingMode(null); setIrisDraftId(null); setIrisFilledFields(new Set())
     }
@@ -547,6 +571,27 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
         project_id: projectId,
         spec_section: specRef || null,
         drawing_reference: drawingRef || null,
+        // PR #367 — Schedule + Cost impact + Private. Submit even when
+        // empty so the row's columns reflect the user's explicit '—' or
+        // null choice rather than an inherited stale value.
+        schedule_impact_status: scheduleImpactStatus || null,
+        schedule_days_impact:
+          scheduleImpactStatus === 'yes' && scheduleDays.trim()
+            ? Number.parseInt(scheduleDays, 10)
+            : null,
+        cost_impact_status: costImpactStatus || null,
+        cost_impact_cents:
+          costImpactStatus === 'yes' && costImpactDollars.trim()
+            ? Math.round(Number.parseFloat(costImpactDollars) * 100)
+            : null,
+        is_private: isPrivate,
+        reference: reference.trim() || null,
+        // PR #368 — Number override. Empty = accept auto-number; otherwise
+        // parse to int. Validation at the boundary so a stray non-numeric
+        // string doesn't reach the DB.
+        ...(numberOverride.trim() && /^\d+$/.test(numberOverride.trim())
+          ? { number: Number.parseInt(numberOverride, 10) }
+          : {}),
       })
 
       // PR #366 fan-out — after the RFI insert succeeds, write per-entity
@@ -602,7 +647,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setSending(false)
       setSavingMode(null)
     }
-  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher])
+  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher, scheduleImpactStatus, scheduleDays, costImpactStatus, costImpactDollars, isPrivate, reference, numberOverride])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSend) {
@@ -918,6 +963,167 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             )}
           </div>
 
+          {/* PR #367 — Schedule + Cost Impact pair (Yes/No/TBD + value).
+              Procore parity: explicit enum wraps the value cell so 'No'
+              and 'TBD' are first-class answers (not just an empty value).
+              Schema cols: schedule_impact_status / schedule_days_impact /
+              cost_impact_status / cost_impact_cents. */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', minWidth: 220 }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Schedule Impact
+              </label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <select
+                  value={scheduleImpactStatus}
+                  onChange={(e) => setScheduleImpactStatus(e.target.value as '' | 'yes' | 'no' | 'tbd')}
+                  aria-label="Schedule impact status"
+                  style={{
+                    flex: '0 0 90px', padding: '8px 10px', fontSize: 12,
+                    border: `1px solid ${colors.borderDefault}`, borderRadius: 8,
+                    backgroundColor: colors.surfaceInset, color: colors.textPrimary,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="tbd">TBD</option>
+                </select>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={scheduleDays}
+                  onChange={(e) => setScheduleDays(e.target.value)}
+                  placeholder="days"
+                  disabled={scheduleImpactStatus !== 'yes'}
+                  aria-label="Schedule impact days"
+                  style={{
+                    flex: 1, padding: '8px 10px', fontSize: 12,
+                    border: `1px solid ${colors.borderDefault}`, borderRadius: 8,
+                    backgroundColor: scheduleImpactStatus === 'yes' ? colors.surfaceInset : 'transparent',
+                    color: colors.textPrimary, fontFamily: 'inherit',
+                    opacity: scheduleImpactStatus === 'yes' ? 1 : 0.5,
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ flex: '1 1 220px', minWidth: 220 }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Cost Impact
+              </label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <select
+                  value={costImpactStatus}
+                  onChange={(e) => setCostImpactStatus(e.target.value as '' | 'yes' | 'no' | 'tbd')}
+                  aria-label="Cost impact status"
+                  style={{
+                    flex: '0 0 90px', padding: '8px 10px', fontSize: 12,
+                    border: `1px solid ${colors.borderDefault}`, borderRadius: 8,
+                    backgroundColor: colors.surfaceInset, color: colors.textPrimary,
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="tbd">TBD</option>
+                </select>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={costImpactDollars}
+                  onChange={(e) => setCostImpactDollars(e.target.value)}
+                  placeholder="0.00"
+                  disabled={costImpactStatus !== 'yes'}
+                  aria-label="Cost impact dollars"
+                  style={{
+                    flex: 1, padding: '8px 10px', fontSize: 12,
+                    border: `1px solid ${colors.borderDefault}`, borderRadius: 8,
+                    backgroundColor: costImpactStatus === 'yes' ? colors.surfaceInset : 'transparent',
+                    color: colors.textPrimary, fontFamily: 'inherit',
+                    opacity: costImpactStatus === 'yes' ? 1 : 0.5,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* PR #367 — Private toggle. Default off; admin Settings can flip
+              the project default (rfi_settings.private_by_default — future). */}
+          <label
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              fontSize: 12, color: colors.textSecondary, cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              style={{ width: 14, height: 14, accentColor: colors.primaryOrange, cursor: 'pointer' }}
+            />
+            <span>
+              <strong style={{ color: colors.textPrimary }}>Private</strong> — only PMs + admins can read this RFI
+            </span>
+          </label>
+
+          {/* PR #368 — Reference free text + Number override (admin).
+              Reference: tracks external IDs (parent RFI, vendor PO,
+              spec addendum). Number override: forces a specific RFI
+              number — useful for Procore migrations where the legacy
+              numbering must be preserved. Both blank by default. */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 220px', minWidth: 180 }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Reference <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· optional · external ID, parent RFI, vendor PO</span>
+              </label>
+              <input
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="e.g. PO-2284 / Procore #142"
+                aria-label="External reference"
+                style={{
+                  width: '100%', padding: '8px 12px', fontSize: 12,
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: 8,
+                  backgroundColor: colors.surfaceInset, color: colors.textPrimary,
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ flex: '1 1 120px', minWidth: 120 }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Number <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· auto · override</span>
+              </label>
+              <input
+                value={numberOverride}
+                onChange={(e) => setNumberOverride(e.target.value)}
+                placeholder={`auto · ${nextNumber}`}
+                aria-label="RFI number override"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                style={{
+                  width: '100%', padding: '8px 12px', fontSize: 12,
+                  border: `1px solid ${
+                    numberOverride && !/^\d+$/.test(numberOverride.trim())
+                      ? '#DC2626'
+                      : colors.borderDefault
+                  }`, borderRadius: 8,
+                  backgroundColor: colors.surfaceInset, color: colors.textPrimary,
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+              {numberOverride && !/^\d+$/.test(numberOverride.trim()) ? (
+                <div style={{ fontSize: 10, color: '#DC2626', marginTop: 4 }}>
+                  Numbers only — leave blank for auto.
+                </div>
+              ) : null}
+            </div>
+          </div>
+
           {/* References + Priority + Due — compact row */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             {/* Spec reference */}
@@ -1039,6 +1245,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* PR #367 — required-fields legend (D3 equivalent on Create).
+                Subject's question textarea is the only currently-required
+                field; the legend ties the implicit canSend gate to its
+                meaning explicitly. */}
+            <span style={{ fontSize: 10, color: colors.textTertiary, marginRight: 'auto' }}>
+              <span style={{ color: '#DC2626', fontWeight: 700 }}>*</span> Question is required
+            </span>
             <span style={{ fontSize: '11px', color: colors.textTertiary, marginRight: 4 }}>
               {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+↵
             </span>
