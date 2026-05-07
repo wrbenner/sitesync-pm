@@ -419,6 +419,16 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const [costImpactDollars, setCostImpactDollars] = useState<string>('')
   const [isPrivate, setIsPrivate] = useState<boolean>(false)
 
+  // PR #368 — Reference free text + RFI Number override (admin only).
+  // Closes Tier S3 items 15, 16 from the May-7 Create-Flow Parity Spec.
+  // Reference is a free text field for tracking external IDs / parent
+  // RFI numbers / vendor PO numbers — anything that links the RFI to
+  // outside paperwork. Number override lets admins force a specific
+  // number (e.g., backfilling from Procore migration); leave blank to
+  // accept the auto-numbered next sequence.
+  const [reference, setReference] = useState<string>('')
+  const [numberOverride, setNumberOverride] = useState<string>('')
+
   // Extras
   const [files, setFiles] = useState<File[]>([])
   const [priority, setPriority] = useState('medium')
@@ -503,6 +513,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())
       setScheduleImpactStatus(''); setScheduleDays('')
       setCostImpactStatus(''); setCostImpactDollars(''); setIsPrivate(false)
+      setReference(''); setNumberOverride('')
       setSending(false); setShowMore(false)
       setSavingMode(null); setIrisDraftId(null); setIrisFilledFields(new Set())
     }
@@ -574,6 +585,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             ? Math.round(Number.parseFloat(costImpactDollars) * 100)
             : null,
         is_private: isPrivate,
+        reference: reference.trim() || null,
+        // PR #368 — Number override. Empty = accept auto-number; otherwise
+        // parse to int. Validation at the boundary so a stray non-numeric
+        // string doesn't reach the DB.
+        ...(numberOverride.trim() && /^\d+$/.test(numberOverride.trim())
+          ? { number: Number.parseInt(numberOverride, 10) }
+          : {}),
       })
 
       // PR #366 fan-out — after the RFI insert succeeds, write per-entity
@@ -629,7 +647,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setSending(false)
       setSavingMode(null)
     }
-  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher, scheduleImpactStatus, scheduleDays, costImpactStatus, costImpactDollars, isPrivate])
+  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher, scheduleImpactStatus, scheduleDays, costImpactStatus, costImpactDollars, isPrivate, reference, numberOverride])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSend) {
@@ -1052,6 +1070,59 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               <strong style={{ color: colors.textPrimary }}>Private</strong> — only PMs + admins can read this RFI
             </span>
           </label>
+
+          {/* PR #368 — Reference free text + Number override (admin).
+              Reference: tracks external IDs (parent RFI, vendor PO,
+              spec addendum). Number override: forces a specific RFI
+              number — useful for Procore migrations where the legacy
+              numbering must be preserved. Both blank by default. */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 220px', minWidth: 180 }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Reference <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· optional · external ID, parent RFI, vendor PO</span>
+              </label>
+              <input
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="e.g. PO-2284 / Procore #142"
+                aria-label="External reference"
+                style={{
+                  width: '100%', padding: '8px 12px', fontSize: 12,
+                  border: `1px solid ${colors.borderDefault}`, borderRadius: 8,
+                  backgroundColor: colors.surfaceInset, color: colors.textPrimary,
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ flex: '1 1 120px', minWidth: 120 }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Number <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· auto · override</span>
+              </label>
+              <input
+                value={numberOverride}
+                onChange={(e) => setNumberOverride(e.target.value)}
+                placeholder={`auto · ${nextNumber}`}
+                aria-label="RFI number override"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                style={{
+                  width: '100%', padding: '8px 12px', fontSize: 12,
+                  border: `1px solid ${
+                    numberOverride && !/^\d+$/.test(numberOverride.trim())
+                      ? '#DC2626'
+                      : colors.borderDefault
+                  }`, borderRadius: 8,
+                  backgroundColor: colors.surfaceInset, color: colors.textPrimary,
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+              {numberOverride && !/^\d+$/.test(numberOverride.trim()) ? (
+                <div style={{ fontSize: 10, color: '#DC2626', marginTop: 4 }}>
+                  Numbers only — leave blank for auto.
+                </div>
+              ) : null}
+            </div>
+          </div>
 
           {/* References + Priority + Due — compact row */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
