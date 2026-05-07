@@ -44,7 +44,7 @@ export function useOpenCitationPanel(): (
         p_citation_index: citationIndex,
         p_citation_kind: citationKind,
         p_interaction_type: 'open_panel',
-        p_session_id: sessionId,
+        p_session_id: sessionId ?? undefined,
       })
     },
     [searchParams, setSearchParams, sessionId],

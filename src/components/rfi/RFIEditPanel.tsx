@@ -53,6 +53,8 @@ interface RFIEditPanelProps {
   projectId: string
 }
 
+type ImpactStatus = '' | 'yes' | 'no' | 'tbd'
+
 interface EditDraft {
   title: string
   question: string
@@ -61,7 +63,9 @@ interface EditDraft {
   priority: string
   drawing_reference: string
   spec_section: string
+  schedule_impact_status: ImpactStatus
   schedule_days_impact: string
+  cost_impact_status: ImpactStatus
   cost_impact_dollars: string
   reference: string
   is_private: boolean
@@ -75,7 +79,9 @@ const EMPTY_DRAFT: EditDraft = {
   priority: 'medium',
   drawing_reference: '',
   spec_section: '',
+  schedule_impact_status: '',
   schedule_days_impact: '',
+  cost_impact_status: '',
   cost_impact_dollars: '',
   reference: '',
   is_private: false,
@@ -109,8 +115,10 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
       priority: (r.priority as string | null) ?? 'medium',
       drawing_reference: (r.drawing_reference as string | null) ?? '',
       spec_section: (r.spec_section as string | null) ?? '',
+      schedule_impact_status: ((r.schedule_impact_status as string | null) ?? '') as ImpactStatus,
       schedule_days_impact:
         r.schedule_days_impact != null ? String(r.schedule_days_impact) : '',
+      cost_impact_status: ((r.cost_impact_status as string | null) ?? '') as ImpactStatus,
       cost_impact_dollars:
         r.cost_impact_cents != null
           ? fromCents(Number(r.cost_impact_cents) as never).toFixed(2)
@@ -165,7 +173,9 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
       draft.priority !== ((r.priority as string | null) ?? 'medium') ||
       draft.drawing_reference !== ((r.drawing_reference as string | null) ?? '') ||
       draft.spec_section !== ((r.spec_section as string | null) ?? '') ||
+      draft.schedule_impact_status !== ((r.schedule_impact_status as string | null) ?? '') ||
       draft.schedule_days_impact !== (r.schedule_days_impact != null ? String(r.schedule_days_impact) : '') ||
+      draft.cost_impact_status !== ((r.cost_impact_status as string | null) ?? '') ||
       draft.cost_impact_dollars !==
         (r.cost_impact_cents != null
           ? fromCents(Number(r.cost_impact_cents) as never).toFixed(2)
@@ -199,9 +209,11 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
         priority: draft.priority,
         drawing_reference: draft.drawing_reference.trim() || null,
         spec_section: draft.spec_section.trim() || null,
+        schedule_impact_status: draft.schedule_impact_status || null,
         schedule_days_impact: draft.schedule_days_impact.trim()
           ? Number.parseInt(draft.schedule_days_impact, 10)
           : null,
+        cost_impact_status: draft.cost_impact_status || null,
         cost_impact_cents: draft.cost_impact_dollars.trim()
           ? dollarsToCents(Number.parseFloat(draft.cost_impact_dollars))
           : null,
@@ -360,28 +372,57 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
                 placeholder="09 21 16"
               />
             </FieldRow>
-            <FieldRow label="Schedule Impact (days)">
-              <input
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={draft.schedule_days_impact}
-                onChange={(e) => setField('schedule_days_impact', e.target.value)}
-                style={inputStyle}
-                aria-label="Schedule Impact"
-              />
+            <FieldRow label="Schedule Impact" hint="Yes/No/TBD wraps the day count, matching Procore's enum.">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  value={draft.schedule_impact_status}
+                  onChange={(e) => setField('schedule_impact_status', e.target.value as ImpactStatus)}
+                  style={{ ...inputStyle, flex: '0 0 100px' }}
+                  aria-label="Schedule Impact status"
+                >
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="tbd">TBD</option>
+                </select>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={draft.schedule_days_impact}
+                  onChange={(e) => setField('schedule_days_impact', e.target.value)}
+                  style={{ ...inputStyle, flex: 1 }}
+                  aria-label="Schedule Impact (days)"
+                  placeholder="days"
+                  disabled={draft.schedule_impact_status === 'no'}
+                />
+              </div>
             </FieldRow>
-            <FieldRow label="Cost Impact ($)">
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                value={draft.cost_impact_dollars}
-                onChange={(e) => setField('cost_impact_dollars', e.target.value)}
-                style={inputStyle}
-                aria-label="Cost Impact"
-                placeholder="0.00"
-              />
+            <FieldRow label="Cost Impact" hint="Yes/No/TBD wraps the dollar amount.">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select
+                  value={draft.cost_impact_status}
+                  onChange={(e) => setField('cost_impact_status', e.target.value as ImpactStatus)}
+                  style={{ ...inputStyle, flex: '0 0 100px' }}
+                  aria-label="Cost Impact status"
+                >
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="tbd">TBD</option>
+                </select>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  value={draft.cost_impact_dollars}
+                  onChange={(e) => setField('cost_impact_dollars', e.target.value)}
+                  style={{ ...inputStyle, flex: 1 }}
+                  aria-label="Cost Impact ($)"
+                  placeholder="0.00"
+                  disabled={draft.cost_impact_status === 'no'}
+                />
+              </div>
             </FieldRow>
           </FieldGrid>
 
@@ -444,6 +485,24 @@ export const RFIEditPanel: React.FC<RFIEditPanelProps> = ({ open, onClose, rfiId
             />
             <span>Private — only owner / admin / RFI manager can read</span>
           </label>
+
+          {/* Required-field legend (May-7 audit item D3 / Procore parity).
+              Procore puts a bold "* required fields" line at the bottom of
+              its edit form. Subject is the only currently-required field
+              on RFIs; flagging it explicitly removes ambiguity. */}
+          <div
+            style={{
+              fontSize: 11,
+              color: colors.textTertiary,
+              paddingTop: spacing['2'],
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <span style={{ color: colors.statusCritical, fontWeight: 700 }}>*</span>
+            <span>required fields — Subject must be filled before save</span>
+          </div>
 
           {/* Save bar */}
           <div
