@@ -50,18 +50,21 @@ export function useRecordDraftView(
             return
           }
           recordedKeys.add(dedupeKey)
-          // record_draft_view requires a non-null session_id. If we
-          // don't have one, skip the call rather than synthesising one.
-          if (sessionId) {
-            void supabase
-              .rpc('record_draft_view', {
-                p_draft_id: draftId,
-                p_session_id: sessionId,
-              })
-              .then(({ error }) => {
-                if (error) recordedKeys.delete(dedupeKey)
-              })
+          if (sessionId == null) {
+            // Pre-D38: anonymous draft views aren't recorded. Skip rather
+            // than error, so the IntersectionObserver still mark-once works.
+            recordedKeys.delete(dedupeKey)
+            observer.disconnect()
+            return
           }
+          void supabase
+            .rpc('record_draft_view', {
+              p_draft_id: draftId,
+              p_session_id: sessionId,
+            })
+            .then(({ error }) => {
+              if (error) recordedKeys.delete(dedupeKey)
+            })
           observer.disconnect()
         },
         { threshold: VIEW_INTERSECTION_THRESHOLD },
