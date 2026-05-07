@@ -208,7 +208,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
             whiteSpace: 'nowrap',
           }}
         >
-          {activeProject?.name ?? 'Select project'}
+          {activeProject?.name ?? (hasProjects ? 'Select project' : 'Create project')}
         </span>
         <ChevronDown
           size={14}
