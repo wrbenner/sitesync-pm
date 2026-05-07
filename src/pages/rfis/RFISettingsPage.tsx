@@ -61,31 +61,36 @@ export function RFISettingsPage() {
         <p style={{ marginTop: 4, marginBottom: spacing.lg, fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
           Configure workflows, response types, custom fields, permissions, numbering, and notifications for this project's RFI module.
         </p>
-        <div role="tablist" aria-label="RFI Settings tabs" style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${colors.borderSubtle}`, marginBottom: spacing.lg, flexWrap: 'wrap' }}>
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                fontSize: typography.fontSize.sm,
-                fontWeight: 600,
-                background: 'transparent',
-                border: 'none',
-                borderBottom: `2px solid ${tab === t.id ? colors.primaryOrange : 'transparent'}`,
-                color: tab === t.id ? colors.primaryOrange : colors.textSecondary,
-                cursor: 'pointer',
-              }}
-            >
-              {t.icon} {t.label}
-            </button>
-          ))}
+        <div style={{ position: 'relative', marginBottom: spacing.lg }}>
+          <div role="tablist" aria-label="RFI Settings tabs" style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${colors.borderSubtle}`, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '8px 14px',
+                  fontSize: typography.fontSize.sm,
+                  fontWeight: 600,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: `2px solid ${tab === t.id ? colors.primaryOrange : 'transparent'}`,
+                  color: tab === t.id ? colors.primaryOrange : colors.textSecondary,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flex: '0 0 auto',
+                }}
+              >
+                {t.icon} {t.label}
+              </button>
+            ))}
+          </div>
+          <div aria-hidden style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 32, background: `linear-gradient(to left, ${colors.surfacePage}, transparent)`, pointerEvents: 'none' }} />
         </div>
         <PermissionGate
           permission="rfis.edit"
