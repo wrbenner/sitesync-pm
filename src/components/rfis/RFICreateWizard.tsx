@@ -29,6 +29,12 @@ import {
   useCreateIrisRFIDraftV2,
   useIrisRFIDraftV2,
 } from '../../hooks/queries/useIrisRFIDraftV2'
+import { useProjectDirectory } from '../../hooks/queries/useProjectDirectory'
+import { useAddRFIAssignee } from '../../hooks/queries/useRFIAssignees'
+import { useAddRFIDistribution } from '../../hooks/queries/useRFIDistributions'
+import { useAddRFIWatcher } from '../../hooks/queries/useRFIWatchers'
+import { fromTable } from '../../lib/db/queries'
+import { UserChipEditor } from '../rfi/UserChipEditor'
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -316,7 +322,13 @@ const AttachmentStrip: React.FC<{
 interface RFICreateWizardProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: Record<string, unknown>) => Promise<void> | void
+  /**
+   * Persists the RFI and returns the new row's id so the wizard can
+   * fan out per-entity inserts (rfi_assignees / rfi_distributions /
+   * rfi_watchers) after creation. Returning void is allowed for
+   * legacy callers but disables the multi-assignee fan-out.
+   */
+  onSubmit: (data: Record<string, unknown>) => Promise<{ id: string } | void> | { id: string } | void
   initialValues?: Record<string, unknown>
 }
 
@@ -348,9 +360,49 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   // Core fields
   const [question, setQuestion] = useState('')
   const [details, setDetails] = useState('')
-  const [assignee, setAssignee] = useState<DirectoryContact | null>(null)
-  const [manualAssignee, setManualAssignee] = useState('')
   const [fromContact, setFromContact] = useState<DirectoryContact | null>(null)
+
+  // PR #366 — multi-assignee + distribution + watchers on Create.
+  // Closes the Tier S1 gap from RFI_CREATE_FLOW_PARITY_SPEC_2026-05-08.md:
+  // Walker's "i still cant assign multiple people and check certain people
+  // when creating an rfi" — replaces the previous single-select assignee
+  // with three multi-chip editors (assignees, distribution, watchers) and
+  // wires submit-time fan-out into rfi_assignees / rfi_distributions /
+  // rfi_watchers (each fan-out hook is audit-aware).
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
+  const [distributionEmails, setDistributionEmails] = useState<string[]>([])
+  const [watcherIds, setWatcherIds] = useState<string[]>([])
+  const [showWatchers, setShowWatchers] = useState<boolean>(false)
+  // Project directory for the chip editors. Members carry user_id values
+  // (auth users); raw emails for distribution come from project_members
+  // emails plus free-typed values via UserChipEditor.onFreeText.
+  const { data: directory } = useProjectDirectory(projectId)
+  const addAssignee = useAddRFIAssignee()
+  const addDistribution = useAddRFIDistribution()
+  const addWatcher = useAddRFIWatcher()
+  // Default Distribution pre-fill from project_rfi_settings.default_distribution
+  // (column added by PR #365). On first open we hydrate distributionEmails
+  // from this list — but only if the user hasn't already started picking
+  // (defensive against a late settings load racing the form).
+  const [hasDistributionPrefilled, setHasDistributionPrefilled] = useState(false)
+  useEffect(() => {
+    if (!open || !projectId || hasDistributionPrefilled) return
+    let cancelled = false
+    void (async () => {
+      const { data } = await fromTable('project_rfi_settings')
+        .select('default_distribution')
+        .eq('project_id' as never, projectId)
+        .maybeSingle()
+      if (cancelled || !data) return
+      const dd = (data as { default_distribution?: unknown }).default_distribution
+      if (Array.isArray(dd) && dd.length > 0 && distributionEmails.length === 0) {
+        setDistributionEmails(dd.filter((x): x is string => typeof x === 'string'))
+      }
+      setHasDistributionPrefilled(true)
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot prefill
+  }, [open, projectId])
 
   // Reference fields
   const [specRef, setSpecRef] = useState('')
@@ -433,7 +485,9 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setTimeout(() => questionRef.current?.focus(), 120)
     } else {
       // Reset all state
-      setQuestion(''); setDetails(''); setAssignee(null); setManualAssignee(''); setFromContact(null)
+      setQuestion(''); setDetails(''); setFromContact(null)
+      setAssigneeIds([]); setDistributionEmails([]); setWatcherIds([]); setShowWatchers(false)
+      setHasDistributionPrefilled(false)
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())
       setSending(false); setShowMore(false)
@@ -457,7 +511,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   }, [question, existingRfis])
 
   const handleSend = useCallback(async (mode: 'draft' | 'open' = 'open') => {
-    if (!canSend || sending) return
+    if (!canSend || sending || !projectId) return
     setSending(true)
     setSavingMode(mode)
     try {
@@ -467,23 +521,20 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
         refParts.length > 0 ? `\n\nReferences: ${refParts.join(', ')}` : '',
       ].filter(Boolean).join('')
 
-      const assigneeName = assignee?.name || manualAssignee.trim()
-      // DB columns created_by, assigned_to, ball_in_court are uuid REFERENCES auth.users.
-      // Directory contacts aren't auth users, so we store their names in the
-      // description and leave the uuid columns null (or set to the auth user).
-      // The DB trigger auto_number_rfi() sets ball_in_court based on status.
-      const descWithAssignee = assigneeName
-        ? `${fullDescription || question.trim()}\n\nAssigned to: ${assigneeName}${assignee?.company ? ` (${assignee.company})` : ''}`
-        : fullDescription || question.trim()
-      await onSubmit({
+      // PR #366 — primary assignee mirror. The first picked assignee
+      // populates the legacy `assigned_to` column (uuid FK to auth.users)
+      // so existing list views + ball_in_court trigger keep working.
+      // Additional assignees land as rfi_assignees rows via fan-out below.
+      const primaryAssigneeId = assigneeIds[0] ?? null
+      const submitResult = await onSubmit({
         title: question.trim(),
-        description: descWithAssignee,
+        description: fullDescription || question.trim(),
         // P1b: when the user formatted the body in TipTap, persist the HTML
         // into the rich `question` column. Plain-text duplication into
         // `description` keeps backward compatibility for read paths still
         // looking at the legacy field.
         question: details.trim() ? details : null,
-        assigned_to: null,          // uuid FK — directory contacts aren't auth users
+        assigned_to: primaryAssigneeId,
         // ball_in_court omitted — DB trigger handles it from created_by/assigned_to
         created_by: user?.id || null, // auth user UUID
         // PR #4 (C1): two-button save. 'draft' writes Procore-equivalent
@@ -497,6 +548,53 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
         spec_section: specRef || null,
         drawing_reference: drawingRef || null,
       })
+
+      // PR #366 fan-out — after the RFI insert succeeds, write per-entity
+      // rows for assignees / distribution / watchers. Each hook is audit-
+      // aware (logs its own audit_log row per Chain Audit Prep Check 5).
+      // Failures here surface as warnings but don't block the create —
+      // the RFI exists and the user can re-add via the Edit panel.
+      const newRfiId = (submitResult as { id?: string } | undefined)?.id ?? null
+      if (newRfiId) {
+        const fanOuts: Array<Promise<unknown>> = []
+        for (const userId of assigneeIds) {
+          fanOuts.push(
+            addAssignee.mutateAsync({
+              rfiId: newRfiId,
+              projectId,
+              userId,
+              role: 'assignee',
+            }),
+          )
+        }
+        for (const email of distributionEmails) {
+          // Distribution rows track recipient_email; recipient_name is
+          // a best-effort lookup from the directory.
+          const member = (directory?.members ?? []).find((m) => m.sublabel === email)
+          fanOuts.push(
+            addDistribution.mutateAsync({
+              rfiId: newRfiId,
+              projectId,
+              recipient_email: email,
+              recipient_name: member?.label ?? null,
+              message: null,
+            }),
+          )
+        }
+        for (const userId of watcherIds) {
+          fanOuts.push(
+            addWatcher.mutateAsync({ rfiId: newRfiId, userId, projectId }),
+          )
+        }
+        if (fanOuts.length > 0) {
+          const results = await Promise.allSettled(fanOuts)
+          const failed = results.filter((r) => r.status === 'rejected').length
+          if (failed > 0) {
+            console.warn(`[rfi-create] ${failed} fan-out write(s) failed; user can re-add via Edit panel`)
+          }
+        }
+      }
+
       onClose()
     } catch {
       // handled by mutation layer
@@ -504,7 +602,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setSending(false)
       setSavingMode(null)
     }
-  }, [canSend, sending, question, details, assignee, manualAssignee, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose])
+  }, [canSend, sending, question, details, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose, assigneeIds, distributionEmails, watcherIds, directory, addAssignee, addDistribution, addWatcher])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSend) {
@@ -728,39 +826,95 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
                 />
               </div>
             )}
-            {contacts.length > 0 ? (
-              <PersonPicker
-                contacts={contacts}
-                selected={assignee}
-                onSelect={setAssignee}
-                label="To (answerer)"
-                placeholder="Select person..."
+            <div>
+              <label style={{
+                display: 'block', fontSize: '11px', fontWeight: 600,
+                color: colors.textTertiary, marginBottom: '6px',
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+              }}>
+                To (assignees) <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· each gets a "Response Required" indicator on detail</span>
+              </label>
+              <UserChipEditor
+                value={assigneeIds}
+                onChange={setAssigneeIds}
+                options={(directory?.members ?? []).map((m) => ({
+                  value: m.value,
+                  label: m.label,
+                  sublabel: m.sublabel,
+                }))}
+                placeholder="Pick one or more answerers…"
+                ariaLabel="RFI assignees"
+                emptyText="No assignees yet"
               />
+            </div>
+          </div>
+
+          {/* PR #366 — Distribution chip editor. Pre-fills from
+              project_rfi_settings.default_distribution (PR #365). Free-typed
+              emails accepted via UserChipEditor.onFreeText. */}
+          <div>
+            <label style={{
+              display: 'block', fontSize: '11px', fontWeight: 600,
+              color: colors.textTertiary, marginBottom: '6px',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+              Distribution <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· cc'd on send; can be project members or free-typed emails</span>
+            </label>
+            <UserChipEditor
+              value={distributionEmails}
+              onChange={setDistributionEmails}
+              options={(directory?.members ?? [])
+                .filter((m) => m.sublabel)
+                .map((m) => ({ value: m.sublabel!, label: m.label, sublabel: m.sublabel }))}
+              placeholder="Add an email or pick a member…"
+              ariaLabel="RFI distribution recipients"
+              emptyText="No recipients"
+              onFreeText={(raw) => {
+                // Bare email validation; reject obvious garbage so the
+                // chip + outbound email don't both fail downstream.
+                const trimmed = raw.trim()
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null
+                return { value: trimmed, label: trimmed, sublabel: trimmed }
+              }}
+            />
+          </div>
+
+          {/* PR #366 — Watchers (collapsed by default — secondary feature). */}
+          <div>
+            {!showWatchers && watcherIds.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowWatchers(true)}
+                style={{
+                  background: 'transparent', border: 'none',
+                  fontSize: 12, fontWeight: 500, color: colors.primaryOrange,
+                  cursor: 'pointer', padding: 0,
+                }}
+              >
+                + Add watchers
+              </button>
             ) : (
-              <div>
+              <>
                 <label style={{
                   display: 'block', fontSize: '11px', fontWeight: 600,
                   color: colors.textTertiary, marginBottom: '6px',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                 }}>
-                  To (answerer)
+                  Watchers <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· receive every status change</span>
                 </label>
-                <input
-                  value={manualAssignee}
-                  onChange={(e) => setManualAssignee(e.target.value)}
-                  placeholder="Name or company"
-                  style={{
-                    width: '100%', padding: '10px 12px',
-                    fontSize: '14px', color: colors.textPrimary,
-                    border: `1.5px solid ${colors.borderDefault}`,
-                    borderRadius: '10px', outline: 'none',
-                    backgroundColor: 'transparent', boxSizing: 'border-box',
-                    fontFamily: 'inherit', transition: 'border-color 0.15s',
-                  }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = colors.primaryOrange)}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = colors.borderDefault)}
+                <UserChipEditor
+                  value={watcherIds}
+                  onChange={setWatcherIds}
+                  options={(directory?.members ?? []).map((m) => ({
+                    value: m.value,
+                    label: m.label,
+                    sublabel: m.sublabel,
+                  }))}
+                  placeholder="Pick watchers…"
+                  ariaLabel="RFI watchers"
+                  emptyText="No watchers"
                 />
-              </div>
+              </>
             )}
           </div>
 

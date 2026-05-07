@@ -1933,8 +1933,13 @@ const RFIsPage: React.FC = () => {
         onSubmit={async (data) => {
           if (!projectId) { toast.error('No project selected'); return; }
           try {
-            await createRFI.mutateAsync({ projectId, data: { ...data, project_id: projectId } });
+            const result = await createRFI.mutateAsync({ projectId, data: { ...data, project_id: projectId } });
             toast.success('RFI created successfully');
+            // PR #366 — return the new RFI's id so the wizard can fan out
+            // per-entity inserts (rfi_assignees, rfi_distributions,
+            // rfi_watchers) before closing.
+            const newId = (result as { data?: { id?: string } } | undefined)?.data?.id;
+            return newId ? { id: newId } : undefined;
           } catch (err) {
             toast.error('Failed to create RFI. Please try again.');
             throw err;
