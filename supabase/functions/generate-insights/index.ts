@@ -6,9 +6,85 @@ import {
   errorResponse,
 } from '../shared/auth.ts'
 
+// ── Domain row shapes (kept loose — these tables vary across pre-prod schemas) ─
+interface TaskRow {
+  id: string
+  status?: string | null
+  start_date?: string | null
+  due_date?: string | null
+  percent_complete?: number | null
+  predecessor_ids?: string[] | null
+  is_critical_path?: boolean | null
+  risk_score?: number | null
+  risk_level?: string | null
+}
+
+interface BudgetItemRow {
+  original_amount?: number | null
+  actual_amount?: number | null
+}
+
+interface PhaseRow {
+  percent_complete?: number | null
+}
+
+interface RfiRow {
+  id: string
+  title?: string | null
+  status?: string | null
+  assigned_to?: string | null
+  created_at?: string | null
+  responded_at?: string | null
+  due_date?: string | null
+}
+
+interface SubmittalRow {
+  id: string
+  title?: string | null
+  status?: string | null
+  required_on_site_date?: string | null
+  submit_by_date?: string | null
+  lead_time_days?: number | null
+}
+
+interface PunchItemRow {
+  status?: string | null
+}
+
+interface CrewRow {
+  status?: string | null
+  size?: number | null
+}
+
+interface DailyLogRow {
+  incidents?: number | null
+}
+
+interface InsightRow {
+  project_id: string
+  page: string
+  severity: 'critical' | 'warning' | 'info'
+  prediction_type: string
+  category: string
+  message: string
+  expanded_content?: string
+  action_label?: string
+  action_link?: string
+  confidence?: number
+  entity_type?: string
+  entity_id?: string
+}
+
+interface ReviewerEntry {
+  overdue: number
+  total: number
+  responseTimes: number[]
+  longest: { title: string; daysOpen: number } | null
+}
+
 // ── Risk Assessment Algorithms (server side) ─────────────────
 
-function assessTaskRisk(task: any, predecessors: any[]): { riskLevel: string; riskScore: number; factors: string[] } {
+function assessTaskRisk(task: TaskRow, predecessors: TaskRow[]): { riskLevel: string; riskScore: number; factors: string[] } {
   let score = 0
   const factors: string[] = []
   const now = new Date()
@@ -58,9 +134,9 @@ function assessTaskRisk(task: any, predecessors: any[]): { riskLevel: string; ri
   return { riskLevel, riskScore: score, factors }
 }
 
-function computeEarnedValue(budgetItems: any[], avgProgress: number, elapsedPercent: number) {
-  const BAC = budgetItems.reduce((s: number, b: any) => s + (b.original_amount || 0), 0)
-  const AC = budgetItems.reduce((s: number, b: any) => s + (b.actual_amount || 0), 0)
+function computeEarnedValue(budgetItems: BudgetItemRow[], avgProgress: number, elapsedPercent: number) {
+  const BAC = budgetItems.reduce((s: number, b) => s + (b.original_amount || 0), 0)
+  const AC = budgetItems.reduce((s: number, b) => s + (b.actual_amount || 0), 0)
   const PV = BAC * Math.min(1, elapsedPercent / 100)
   const EV = BAC * Math.min(1, avgProgress / 100)
   const CPI = AC > 0 ? EV / AC : 1
@@ -109,16 +185,16 @@ Deno.serve(async (req) => {
         supabase.from('submittals').select('*').eq('project_id', pid),
       ])
 
-      const phases = phasesRes.data || []
-      const budget = budgetRes.data || []
-      const rfis = rfisRes.data || []
-      const punch = punchRes.data || []
-      const crews = crewsRes.data || []
-      const dailyLogs = dailyLogsRes.data || []
-      const tasks = tasksRes.data || []
-      const submittals = submittalsRes.data || []
+      const phases = (phasesRes.data ?? []) as PhaseRow[]
+      const budget = (budgetRes.data ?? []) as BudgetItemRow[]
+      const rfis = (rfisRes.data ?? []) as RfiRow[]
+      const punch = (punchRes.data ?? []) as PunchItemRow[]
+      const crews = (crewsRes.data ?? []) as CrewRow[]
+      const dailyLogs = (dailyLogsRes.data ?? []) as DailyLogRow[]
+      const tasks = (tasksRes.data ?? []) as TaskRow[]
+      const submittals = (submittalsRes.data ?? []) as SubmittalRow[]
       const now = new Date()
-      const insights: Array<Record<string, unknown>> = []
+      const insights: InsightRow[] = []
 
       // ── 1. Schedule Risk: Task-level risk assessment ────────────
       const taskAssessments: Array<{ id: string; riskLevel: string; riskScore: number }> = []
@@ -154,7 +230,7 @@ Deno.serve(async (req) => {
 
       // ── 2. Budget Burn Rate / Earned Value ─────────────────────
       const avgProgress = phases.length > 0
-        ? phases.reduce((s: number, p: any) => s + (p.percent_complete || 0), 0) / phases.length
+        ? phases.reduce((s: number, p) => s + (p.percent_complete || 0), 0) / phases.length
         : 0
       let elapsedPercent = 50
       if (project.start_date && project.target_completion) {
@@ -199,7 +275,7 @@ Deno.serve(async (req) => {
       }
 
       // ── 3. RFI Bottleneck Detection ────────────────────────────
-      const reviewerMap = new Map<string, { overdue: number; total: number; responseTimes: number[]; longest: any }>()
+      const reviewerMap = new Map<string, ReviewerEntry>()
       const allResponseTimes: number[] = []
 
       for (const rfi of rfis) {
@@ -216,7 +292,7 @@ Deno.serve(async (req) => {
         if (isOpen && rfi.created_at) {
           const daysOpen = Math.ceil((now.getTime() - new Date(rfi.created_at).getTime()) / 86400000)
           if (!entry.longest || daysOpen > entry.longest.daysOpen) {
-            entry.longest = { title: rfi.title, daysOpen }
+            entry.longest = { title: rfi.title ?? 'untitled', daysOpen }
           }
         }
         reviewerMap.set(reviewer, entry)
@@ -300,7 +376,7 @@ Deno.serve(async (req) => {
       }
 
       // ── 5. Existing checks: punch items, crews, safety ─────────
-      const openPunch = punch.filter((p: any) => p.status === 'open' || p.status === 'in_progress')
+      const openPunch = punch.filter((p) => p.status === 'open' || p.status === 'in_progress')
       if (openPunch.length > 20) {
         insights.push({
           project_id: pid, page: 'punchlist', severity: 'warning', prediction_type: 'quality', category: 'quality',
@@ -310,7 +386,7 @@ Deno.serve(async (req) => {
         })
       }
 
-      const recentIncidents = dailyLogs.reduce((sum: number, log: any) => sum + (log.incidents || 0), 0)
+      const recentIncidents = dailyLogs.reduce((sum: number, log) => sum + (log.incidents || 0), 0)
       if (recentIncidents > 0) {
         insights.push({
           project_id: pid, page: 'dashboard', severity: recentIncidents > 2 ? 'critical' : 'warning',
@@ -329,10 +405,10 @@ Deno.serve(async (req) => {
       }
 
       // ── Create project snapshot ────────────────────────────────
-      const totalBudget = budget.reduce((s: number, b: any) => s + (b.original_amount || 0), 0)
-      const totalSpent = budget.reduce((s: number, b: any) => s + (b.actual_amount || 0), 0)
-      const activeCrews = crews.filter((c: any) => c.status === 'active').length
-      const totalWorkers = crews.reduce((s: number, c: any) => s + (c.size || 0), 0)
+      const totalBudget = budget.reduce((s: number, b) => s + (b.original_amount || 0), 0)
+      const totalSpent = budget.reduce((s: number, b) => s + (b.actual_amount || 0), 0)
+      const activeCrews = crews.filter((c) => c.status === 'active').length
+      const totalWorkers = crews.reduce((s: number, c) => s + (c.size || 0), 0)
 
       await supabase.from('project_snapshots').insert({
         project_id: pid,
@@ -342,7 +418,7 @@ Deno.serve(async (req) => {
           progress: Math.round(avgProgress),
           budget_spent: totalSpent,
           budget_total: totalBudget,
-          open_rfis: rfis.filter((r: any) => r.status === 'open' || r.status === 'under_review').length,
+          open_rfis: rfis.filter((r) => r.status === 'open' || r.status === 'under_review').length,
           crew_count: activeCrews,
           workers_on_site: totalWorkers,
           open_punch: openPunch.length,
@@ -359,10 +435,10 @@ Deno.serve(async (req) => {
         },
         insights_summary: {
           total: insights.length,
-          critical: insights.filter((i: any) => i.severity === 'critical').length,
-          warning: insights.filter((i: any) => i.severity === 'warning').length,
+          critical: insights.filter((i) => i.severity === 'critical').length,
+          warning: insights.filter((i) => i.severity === 'warning').length,
         },
-        key_events: insights.filter((i: any) => i.severity === 'critical').map((i: any) => ({ title: i.message, type: 'insight' })),
+        key_events: insights.filter((i) => i.severity === 'critical').map((i) => ({ title: i.message, type: 'insight' })),
       })
     }
 

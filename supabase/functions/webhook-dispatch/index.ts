@@ -20,10 +20,31 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { handleCors, getCorsHeaders, errorResponse, HttpError } from '../shared/auth.ts'
+import { asRows } from '../shared/types.ts'
 
 const RETRY_LADDER_SECONDS = [30, 300, 1800, 7200, 43200, 86400, 259200]
 const DEAD_LETTER_AFTER_DAYS = 7
 const BATCH_SIZE = 50
+
+interface OutboundWebhookSubscription {
+  id: string
+  organization_id: string
+  url: string
+  event_types: string[]
+  paused?: boolean
+  active?: boolean
+  consecutive_failures?: number
+}
+
+interface WebhookDeliveryRow {
+  id: string
+  webhook_id: string
+  organization_id: string
+  event_type: string
+  payload: unknown
+  attempt_count: number
+  created_at: string
+}
 
 Deno.serve(async (req) => {
   const cors = handleCors(req)
@@ -48,11 +69,12 @@ async function handleTestFire(req: Request): Promise<Response> {
 
   const body = await req.json() as { webhook_id: string }
   const admin = createClient(sUrl, sKey)
-  const { data: sub } = await (admin as any)
+  const subRes = await admin
     .from('outbound_webhooks')
     .select('id, organization_id, url, event_types')
     .eq('id', body.webhook_id)
     .maybeSingle()
+  const sub = subRes.data as OutboundWebhookSubscription | null
   if (!sub) throw new HttpError(404, 'subscription not found')
 
   const event = {
@@ -62,7 +84,7 @@ async function handleTestFire(req: Request): Promise<Response> {
     created_at: new Date().toISOString(),
     payload: { source: 'webhook-dispatch test fire' },
   }
-  const { error } = await (admin as any).from('webhook_deliveries').insert({
+  const { error } = await admin.from('webhook_deliveries').insert({
     webhook_id: sub.id,
     organization_id: sub.organization_id,
     event_type: event.event_type,
@@ -83,7 +105,7 @@ async function drainQueue(): Promise<Response> {
   const admin = createClient(sUrl, sKey)
 
   const nowIso = new Date().toISOString()
-  const { data: dueRows } = await (admin as any)
+  const { data: dueRowsData } = await admin
     .from('webhook_deliveries')
     .select('id, webhook_id, organization_id, event_type, payload, attempt_count, created_at')
     .eq('status', 'pending')
@@ -92,15 +114,16 @@ async function drainQueue(): Promise<Response> {
     .limit(BATCH_SIZE)
 
   const summary = { attempted: 0, succeeded: 0, retried: 0, dead_lettered: 0 }
-  for (const d of (dueRows as any[] | null) ?? []) {
+  for (const d of asRows<WebhookDeliveryRow>(dueRowsData)) {
     summary.attempted += 1
-    const { data: sub } = await (admin as any)
+    const subRes = await admin
       .from('outbound_webhooks')
       .select('id, url, paused, active, consecutive_failures')
       .eq('id', d.webhook_id)
       .maybeSingle()
+    const sub = subRes.data as OutboundWebhookSubscription | null
     if (!sub || !sub.active || sub.paused) {
-      await (admin as any)
+      await admin
         .from('webhook_deliveries')
         .update({ next_attempt_at: new Date(Date.now() + 3_600_000).toISOString() })
         .eq('id', d.id)
@@ -131,7 +154,7 @@ async function drainQueue(): Promise<Response> {
     }
 
     if (success) {
-      await (admin as any)
+      await admin
         .from('webhook_deliveries')
         .update({
           status: 'succeeded',
@@ -142,7 +165,7 @@ async function drainQueue(): Promise<Response> {
           succeeded_at: new Date().toISOString(),
         })
         .eq('id', d.id)
-      await (admin as any)
+      await admin
         .from('outbound_webhooks')
         .update({ last_success_at: new Date().toISOString(), consecutive_failures: 0 })
         .eq('id', sub.id)
@@ -153,7 +176,7 @@ async function drainQueue(): Promise<Response> {
     const startMs = new Date(d.created_at).getTime()
     const elapsedDays = (Date.now() - startMs) / 86_400_000
     if (elapsedDays >= DEAD_LETTER_AFTER_DAYS) {
-      await (admin as any)
+      await admin
         .from('webhook_deliveries')
         .update({
           status: 'dead_letter',
@@ -166,7 +189,7 @@ async function drainQueue(): Promise<Response> {
       summary.dead_lettered += 1
     } else {
       const delay = RETRY_LADDER_SECONDS[Math.min(d.attempt_count, RETRY_LADDER_SECONDS.length - 1)]
-      await (admin as any)
+      await admin
         .from('webhook_deliveries')
         .update({
           attempt_count: d.attempt_count + 1,
@@ -178,11 +201,11 @@ async function drainQueue(): Promise<Response> {
         .eq('id', d.id)
       summary.retried += 1
     }
-    await (admin as any)
+    await admin
       .from('outbound_webhooks')
       .update({
         last_failure_at: new Date().toISOString(),
-        consecutive_failures: (sub.consecutive_failures as number ?? 0) + 1,
+        consecutive_failures: (sub.consecutive_failures ?? 0) + 1,
       })
       .eq('id', sub.id)
   }

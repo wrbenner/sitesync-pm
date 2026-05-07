@@ -20,8 +20,54 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { authenticateRequest, handleCors, getCorsHeaders, errorResponse, HttpError, parseJsonBody, requireUuid } from '../shared/auth.ts'
+import { asRows, type LaxClient } from '../shared/types.ts'
 
 interface RequestBody { organization_id: string }
+
+interface MembershipRow { role: string }
+
+interface OrganizationRow {
+  id: string
+  name: string | null
+  audit_retention_years: number | null
+  data_region: string | null
+  compliance_level: string | null
+}
+
+interface AuditLogTailRow {
+  id: string
+  created_at: string
+  previous_hash: string | null
+  entry_hash: string | null
+}
+
+interface PermissionChangeRow {
+  id: string
+  created_at: string
+  action: string
+  entity_type: string
+  user_email: string | null
+  user_name: string | null
+}
+
+interface BackupRow {
+  completed_at: string
+  size_bytes: number | null
+  status: string | null
+}
+
+interface ApiTokenRow {
+  id: string
+  revoked_at: string | null
+}
+
+interface SsoLoginEventRow {
+  outcome: string
+  created_at: string
+  email: string | null
+  ip_address: string | null
+  user_agent: string | null
+}
 
 Deno.serve(async (req) => {
   const cors = handleCors(req)
@@ -32,13 +78,14 @@ Deno.serve(async (req) => {
     const orgId = requireUuid(body.organization_id, 'organization_id')
 
     const { user, supabase: userSb } = await authenticateRequest(req)
-    const { data: membership } = await (userSb as any)
+    const membershipRes = await userSb
       .from('organization_members')
       .select('role')
       .eq('organization_id', orgId)
       .eq('user_id', user.id)
       .maybeSingle()
-    if (!membership || !['owner', 'admin'].includes(membership.role as string)) {
+    const membership = membershipRes.data as MembershipRow | null
+    if (!membership || !['owner', 'admin'].includes(membership.role)) {
       throw new HttpError(403, 'org admin required')
     }
 
@@ -57,38 +104,38 @@ Deno.serve(async (req) => {
       ssoEvents,
     ] = await Promise.all([
       verifyTailHashChain(admin, orgId),
-      (admin as any)
+      admin
         .from('organizations')
         .select('id, name, audit_retention_years, data_region, compliance_level')
         .eq('id', orgId)
         .maybeSingle(),
       countRecentSessions(admin, orgId),
-      (admin as any)
+      admin
         .from('audit_log')
         .select('id, created_at, action, entity_type, user_email, user_name')
         .eq('organization_id', orgId)
         .in('entity_type', ['organization_members', 'project_members', 'org_custom_roles', 'org_custom_role_assignments', 'per_project_role_overrides', 'org_api_tokens'])
         .order('created_at', { ascending: false })
         .limit(100),
-      (admin as any)
+      admin
         .from('sso_login_events')
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', orgId)
         .neq('outcome', 'success')
         .gte('created_at', new Date(Date.now() - 30 * 86_400_000).toISOString()),
-      (admin as any)
+      admin
         .from('platform_backups')
         .select('completed_at, size_bytes, status')
         .eq('organization_id', orgId)
         .order('completed_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-        .then((r: any) => r, () => ({ data: null })),
-      (admin as any)
+        .then((r) => r, () => ({ data: null as BackupRow | null })),
+      admin
         .from('org_api_tokens')
         .select('id, revoked_at')
         .eq('organization_id', orgId),
-      (admin as any)
+      admin
         .from('sso_login_events')
         .select('outcome, created_at, email, ip_address, user_agent')
         .eq('organization_id', orgId)
@@ -96,12 +143,13 @@ Deno.serve(async (req) => {
         .limit(20),
     ])
 
-    const tokens = (apiTokenSummary?.data as any[] | null) ?? []
+    const tokens = asRows<ApiTokenRow>(apiTokenSummary?.data)
     const liveTokens = tokens.filter((t) => !t.revoked_at).length
+    const orgRowData = orgRow?.data as OrganizationRow | null
 
     const snapshot = {
       generated_at: new Date().toISOString(),
-      organization: orgRow?.data ?? null,
+      organization: orgRowData,
       hash_chain: hashChainResult,
       encryption_at_rest: {
         enabled: true,
@@ -109,12 +157,12 @@ Deno.serve(async (req) => {
         notes: 'AES-256 at rest per Supabase Trust page. Verify against current Supabase trust documentation.',
       },
       active_sessions: activeSessions,
-      permission_changes: (permissionChanges?.data as any[] | null) ?? [],
-      failed_login_count_30d: (failedLogins?.count as number | null) ?? 0,
-      last_backup: backups?.data ?? null,
+      permission_changes: asRows<PermissionChangeRow>(permissionChanges?.data),
+      failed_login_count_30d: failedLogins?.count ?? 0,
+      last_backup: (backups?.data as BackupRow | null) ?? null,
       api_tokens: { live: liveTokens, total: tokens.length },
-      recent_sso_events: (ssoEvents?.data as any[] | null) ?? [],
-      data_retention_years: (orgRow?.data?.audit_retention_years as number | null) ?? null,
+      recent_sso_events: asRows<SsoLoginEventRow>(ssoEvents?.data),
+      data_retention_years: orgRowData?.audit_retention_years ?? null,
     }
 
     return new Response(JSON.stringify(snapshot, null, 2), {
@@ -129,16 +177,16 @@ Deno.serve(async (req) => {
   }
 })
 
-async function verifyTailHashChain(admin: ReturnType<typeof createClient>, orgId: string) {
+async function verifyTailHashChain(admin: LaxClient, orgId: string) {
   // Read the tail 1k rows for a fast posture snapshot. The full chain
   // verifier (cron job) covers the entire table at a slower cadence.
-  const { data } = await (admin as any)
+  const { data } = await admin
     .from('audit_log')
     .select('id, created_at, previous_hash, entry_hash')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
     .limit(1000)
-  const rows = ((data as any[] | null) ?? []).reverse()
+  const rows = asRows<AuditLogTailRow>(data).reverse()
   const total = rows.length
   // We don't recompute every payload here (that's the full verifier's
   // job); we just check that every row has both hashes set and that
@@ -154,12 +202,12 @@ async function verifyTailHashChain(admin: ReturnType<typeof createClient>, orgId
   return { rows_checked: total, gaps, ok: gaps === 0 }
 }
 
-async function countRecentSessions(admin: ReturnType<typeof createClient>, orgId: string) {
+async function countRecentSessions(admin: LaxClient, orgId: string) {
   // Supabase doesn't expose a direct "active sessions" count to anon SQL,
   // so we count org members who logged in in the last 24h via sso events
   // OR via a refresh-token usage proxy (when present). Best-effort.
   const since = new Date(Date.now() - 24 * 3_600_000).toISOString()
-  const { count: ssoSuccess } = await (admin as any)
+  const { count: ssoSuccess } = await admin
     .from('sso_login_events')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', orgId)

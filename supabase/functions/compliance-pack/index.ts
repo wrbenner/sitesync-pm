@@ -85,13 +85,13 @@ async function handleEnqueue(req: Request): Promise<Response> {
     punch_item: 'punch_items',
   }
   for (const t of types) {
-    let q = (admin as any).from(tableByType[t])
+    let q = admin.from(tableByType[t])
       .select('id', { count: 'exact', head: true })
       .eq('project_id', projectId)
     if (body.from_date) q = q.gte('created_at', body.from_date)
     if (body.to_date) q = q.lte('created_at', body.to_date)
     const { count } = await q
-    counts[t] = (count as number | null) ?? 0
+    counts[t] = count ?? 0
   }
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
 
@@ -101,7 +101,7 @@ async function handleEnqueue(req: Request): Promise<Response> {
   // table is added. Production projects should run the migration first.
   let jobId: string | null = null
   try {
-    const { data: inserted, error: insertErr } = await (admin as any)
+    const { data: inserted, error: insertErr } = await admin
       .from('compliance_pack_jobs')
       .insert({
         project_id: projectId,
@@ -114,7 +114,7 @@ async function handleEnqueue(req: Request): Promise<Response> {
       })
       .select('id')
       .single()
-    if (!insertErr && inserted) jobId = inserted.id as string
+    if (!insertErr && inserted) jobId = (inserted as { id: string }).id
   } catch {
     // Table not yet created — fine. The caller still gets the estimate
     // and can re-trigger after the migration lands.
@@ -167,16 +167,25 @@ async function handleStatus(req: Request): Promise<Response> {
   const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(sUrl, sKey)
 
-  const { data: job, error } = await (admin as any)
+  const { data: jobData, error } = await admin
     .from('compliance_pack_jobs')
     .select('id, project_id, status, signed_url, completed_at, estimated_count, error')
     .eq('id', jobId)
     .maybeSingle()
   if (error) throw new HttpError(500, `status: ${error.message}`)
+  const job = jobData as {
+    id: string
+    project_id: string
+    status: string
+    signed_url: string | null
+    completed_at: string | null
+    estimated_count: number | null
+    error: string | null
+  } | null
   if (!job) throw new HttpError(404, 'job not found')
 
   // Verify the user can see this project.
-  await verifyProjectMembership(userSb, user.id, job.project_id as string)
+  await verifyProjectMembership(userSb, user.id, job.project_id)
 
   return new Response(
     JSON.stringify({

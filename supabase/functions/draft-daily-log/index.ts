@@ -33,6 +33,7 @@ import {
   HttpError,
   errorResponse,
 } from '../shared/auth.ts'
+import { type AnthropicMessageResponse, asRows, type LaxClient } from '../shared/types.ts'
 import { assembleDailyLogDraft, type DayContext, type DraftedDailyLog } from './sections.ts'
 import { buildAnthropicRequest, parsePolishedDraft } from './promptBuilder.ts'
 
@@ -42,10 +43,85 @@ interface RequestBody {
   project_id: string
   date: string // YYYY-MM-DD
   hint?: string
-  /** When true, skip the LLM polish step and return the deterministic
-   *  draft only. Used in tests + by the cron's first-pass to keep cost
-   *  low until the user opens the panel. */
   skip_polish?: boolean
+}
+
+interface DraftedActionExisting {
+  id: string
+  status: string
+}
+
+interface ProjectRow {
+  timezone: string | null
+}
+
+interface WeatherRow {
+  condition: string | null
+  high_temp_f: number | null
+  low_temp_f: number | null
+  precipitation_in: number | null
+  wind_mph: number | null
+  source: string | null
+}
+
+interface CrewSummary {
+  name: string | null
+  trade: string | null
+  size: number | null
+}
+
+interface CrewAttendanceRow {
+  crew_id: string
+  actual_check_in_at: string | null
+  planned_arrival_time: string | null
+  crews: CrewSummary | CrewSummary[] | null
+}
+
+interface DailyLogPhotoEntryRow {
+  id: string
+  photos: Array<{ id?: string; caption?: string; url?: string }> | null
+  description: string | null
+}
+
+interface DailyLogCaptureRow {
+  id: string
+  type: string
+  description: string | null
+}
+
+interface RfiRow {
+  id: string
+  number: number
+  title: string
+  status: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface MeetingRow {
+  id: string
+  title: string
+}
+
+interface MeetingActionItemRow {
+  id: string
+  description: string
+  meeting_id: string
+}
+
+interface InspectionRow {
+  id: string
+  type: string
+  result: 'pass' | 'fail' | 'pending' | null
+  inspector: string | null
+  notes: string | null
+}
+
+interface DeliveryRow {
+  id: string
+  item: string
+  quantity: number | null
+  sub: string | null
 }
 
 Deno.serve(async (req) => {
@@ -61,7 +137,7 @@ Deno.serve(async (req) => {
 
     // Caller can be a logged-in user OR the service role (cron). Try the
     // user path first; fall through to service role on failure.
-    let admin: ReturnType<typeof createClient>
+    let admin: LaxClient
     let calledByUser = false
     try {
       const { user, supabase } = await authenticateRequest(req)
@@ -85,7 +161,7 @@ Deno.serve(async (req) => {
 
     // Existing-draft short-circuit. The unique partial index guarantees
     // at most one pending or approved row per (project, date).
-    const { data: existing } = await (admin as any)
+    const existingRes = await admin
       .from('drafted_actions')
       .select('id, status')
       .eq('project_id', projectId)
@@ -93,6 +169,7 @@ Deno.serve(async (req) => {
       .filter('payload->>date', 'eq', body.date)
       .in('status', ['pending', 'approved'])
       .maybeSingle()
+    const existing = existingRes.data as DraftedActionExisting | null
 
     if (existing && existing.status === 'approved') {
       return json({
@@ -133,20 +210,20 @@ Deno.serve(async (req) => {
 
     let draftId: string
     if (existing) {
-      const { error: updateErr } = await (admin as any)
+      const { error: updateErr } = await admin
         .from('drafted_actions')
         .update({ ...draftedActionRow, updated_at: new Date().toISOString() })
         .eq('id', existing.id)
       if (updateErr) throw new HttpError(500, `update draft: ${updateErr.message}`)
       draftId = existing.id
     } else {
-      const { data: inserted, error: insertErr } = await (admin as any)
+      const { data: inserted, error: insertErr } = await admin
         .from('drafted_actions')
         .insert(draftedActionRow)
         .select('id')
         .single()
       if (insertErr) throw new HttpError(500, `insert draft: ${insertErr.message}`)
-      draftId = inserted.id as string
+      draftId = (inserted as { id: string }).id
     }
 
     return json({ ok: true, draft_id: draftId, status: 'pending', payload: draft })
@@ -170,7 +247,7 @@ function json(body: unknown, status = 200): Response {
  * schema (e.g. procurement_deliveries), we silently skip it.
  */
 async function buildDayContext(
-  admin: ReturnType<typeof createClient>,
+  admin: LaxClient,
   projectId: string,
   date: string,
 ): Promise<DayContext> {
@@ -178,31 +255,33 @@ async function buildDayContext(
   const dayEnd = `${date}T23:59:59Z`
 
   // Project info (timezone, location).
-  const { data: project } = await (admin as any)
+  const projectRes = await admin
     .from('projects')
     .select('timezone')
     .eq('id', projectId)
     .maybeSingle()
-  const timezone = (project?.timezone as string | null) ?? 'UTC'
+  const project = projectRes.data as ProjectRow | null
+  const timezone = project?.timezone ?? 'UTC'
 
   // Weather: best-effort. Several schemas use different table names —
   // try the common ones in order.
-  let weather = null
+  let weather: DayContext['weather'] = null
   for (const table of ['weather_observations', 'weather_data', 'project_weather']) {
-    const r = await (admin as any)
+    const r = await admin
       .from(table)
       .select('condition, high_temp_f, low_temp_f, precipitation_in, wind_mph, source')
       .eq('project_id', projectId)
       .eq('observation_date', date)
       .maybeSingle()
-    if (!r.error && r.data) {
+    const row = r.data as WeatherRow | null
+    if (!r.error && row) {
       weather = {
-        condition: (r.data.condition as string) ?? 'unknown',
-        high_temp_f: r.data.high_temp_f as number | undefined,
-        low_temp_f: r.data.low_temp_f as number | undefined,
-        precipitation_in: r.data.precipitation_in as number | undefined,
-        wind_mph: r.data.wind_mph as number | undefined,
-        weather_source: ((r.data.source as string) === 'forecast' ? 'forecast' : 'observed') as
+        condition: row.condition ?? 'unknown',
+        high_temp_f: row.high_temp_f ?? undefined,
+        low_temp_f: row.low_temp_f ?? undefined,
+        precipitation_in: row.precipitation_in ?? undefined,
+        wind_mph: row.wind_mph ?? undefined,
+        weather_source: (row.source === 'forecast' ? 'forecast' : 'observed') as
           | 'observed' | 'forecast' | 'manual' | 'unknown',
       }
       break
@@ -211,86 +290,85 @@ async function buildDayContext(
 
   // Crew check-ins (Tab A's existing crew_attendance table from
   // 20260429010002).
-  const { data: attendance } = await (admin as any)
+  const attendanceRes = await admin
     .from('crew_attendance')
     .select('crew_id, actual_check_in_at, planned_arrival_time, crews:crew_id(name, trade, size)')
     .eq('project_id', projectId)
     .eq('attendance_date', date)
-  const crews = ((attendance as any[] | null) ?? [])
+  const crews = asRows<CrewAttendanceRow>(attendanceRes.data)
     .filter((a) => a.actual_check_in_at)
     .map((a) => {
       const crew = Array.isArray(a.crews) ? a.crews[0] : a.crews
       return {
-        trade: (crew?.trade as string) ?? 'unspecified',
-        sub_company: (crew?.name as string) ?? undefined,
-        count: (crew?.size as number) ?? 1,
+        trade: crew?.trade ?? 'unspecified',
+        sub_company: crew?.name ?? undefined,
+        count: crew?.size ?? 1,
         source: 'crew_check_in' as const,
       }
     })
 
   // Photos with captions.
-  const { data: photoEntries } = await (admin as any)
+  const photoEntriesRes = await admin
     .from('daily_log_entries')
     .select('id, photos, description')
     .eq('type', 'photo')
     .gte('created_at', dayStart)
     .lt('created_at', dayEnd)
   const photos: DayContext['photos'] = []
-  for (const e of (photoEntries as any[] | null) ?? []) {
-    const arr = (e.photos as Array<{ id?: string; caption?: string; url?: string }> | null) ?? []
-    for (const p of arr) {
+  for (const e of asRows<DailyLogPhotoEntryRow>(photoEntriesRes.data)) {
+    for (const p of e.photos ?? []) {
       if (p.caption) photos.push({ id: p.id ?? e.id, caption: p.caption })
     }
   }
 
   // Captures (free-form notes typed/spoken into the field-capture inbox).
-  const { data: capEntries } = await (admin as any)
+  const capEntriesRes = await admin
     .from('daily_log_entries')
     .select('id, type, description')
     .in('type', ['note', 'work_performed', 'observation'])
     .gte('created_at', dayStart)
     .lt('created_at', dayEnd)
-  const captures = ((capEntries as any[] | null) ?? [])
-    .filter((c) => (c.description as string)?.length > 0)
+  const captures = asRows<DailyLogCaptureRow>(capEntriesRes.data)
+    .filter((c) => (c.description?.length ?? 0) > 0)
     .map((c) => ({
-      id: c.id as string,
+      id: c.id,
       text: c.description as string,
       kind: c.type === 'observation' ? ('observation' as const) : ('text' as const),
     }))
 
   // RFIs filed today + status changes.
-  const { data: rfiRows } = await (admin as any)
+  const rfiRowsRes = await admin
     .from('rfis')
     .select('id, number, title, status, created_at, updated_at')
     .eq('project_id', projectId)
     .or(`created_at.gte.${dayStart},updated_at.gte.${dayStart}`)
   const rfis_today: DayContext['rfis_today'] = []
-  for (const r of (rfiRows as any[] | null) ?? []) {
-    const created = r.created_at as string
-    const event = created >= dayStart ? 'filed' : (r.status as string) ?? 'updated'
-    rfis_today.push({ id: r.id as string, number: r.number as number, title: r.title as string, event })
+  for (const r of asRows<RfiRow>(rfiRowsRes.data)) {
+    const event = r.created_at >= dayStart ? 'filed' : r.status ?? 'updated'
+    rfis_today.push({ id: r.id, number: r.number, title: r.title, event })
   }
 
   // Meetings held today + their action items (small join).
-  const { data: meetingRows } = await (admin as any)
+  const meetingRowsRes = await admin
     .from('meetings')
     .select('id, title')
     .eq('project_id', projectId)
     .gte('meeting_date', date)
     .lt('meeting_date', `${date}T23:59:59Z`)
-  const meetingIds = ((meetingRows as any[] | null) ?? []).map((m) => m.id)
+  const meetingRows = asRows<MeetingRow>(meetingRowsRes.data)
+  const meetingIds = meetingRows.map((m) => m.id)
   let meeting_action_items: DayContext['meeting_action_items'] = []
   if (meetingIds.length) {
-    const { data: aiRows } = await (admin as any)
+    const aiRowsRes = await admin
       .from('meeting_action_items')
       .select('id, description, meeting_id')
       .in('meeting_id', meetingIds)
     const titleById = new Map<string, string>()
-    for (const m of meetingRows as any[]) titleById.set(m.id, m.title as string)
-    meeting_action_items = ((aiRows as any[] | null) ?? []).map((a) => ({
-      id: a.id as string,
-      description: a.description as string,
-      meeting_title: titleById.get(a.meeting_id as string),
+    for (const m of meetingRows) titleById.set(m.id, m.title)
+    meeting_action_items = asRows<MeetingActionItemRow>(aiRowsRes.data).map((a) => ({
+      id: a.id,
+      description: a.description,
+      meeting_title: titleById.get(a.meeting_id),
     }))
   }
 
@@ -300,34 +378,34 @@ async function buildDayContext(
   const schedule_events: DayContext['schedule_events'] = []
 
   // Inspections (best-effort — same caveat).
-  const { data: inspRows } = await (admin as any)
+  const inspRowsRes = await admin
     .from('inspections')
     .select('id, type, result, inspector, notes')
     .eq('project_id', projectId)
     .gte('inspected_at', dayStart)
     .lt('inspected_at', dayEnd)
-  const inspections = ((inspRows as any[] | null) ?? []).map((i) => ({
-    id: i.id as string,
-    type: i.type as string,
-    result: i.result as 'pass' | 'fail' | 'pending' | undefined,
-    inspector: i.inspector as string | undefined,
-    notes: i.notes as string | undefined,
+  const inspections = asRows<InspectionRow>(inspRowsRes.data).map((i) => ({
+    id: i.id,
+    type: i.type,
+    result: i.result ?? undefined,
+    inspector: i.inspector ?? undefined,
+    notes: i.notes ?? undefined,
   }))
 
   // Material deliveries — silent skip if table doesn't exist.
   let deliveries: DayContext['deliveries'] = []
   try {
-    const { data: delRows } = await (admin as any)
+    const delRowsRes = await admin
       .from('procurement_deliveries')
       .select('id, item, quantity, sub')
       .eq('project_id', projectId)
       .gte('delivered_at', dayStart)
       .lt('delivered_at', dayEnd)
-    deliveries = ((delRows as any[] | null) ?? []).map((d) => ({
-      id: d.id as string,
-      item: d.item as string,
-      quantity: d.quantity as number | undefined,
-      sub: d.sub as string | undefined,
+    deliveries = asRows<DeliveryRow>(delRowsRes.data).map((d) => ({
+      id: d.id,
+      item: d.item,
+      quantity: d.quantity ?? undefined,
+      sub: d.sub ?? undefined,
     }))
   } catch {
     // table missing — fine
@@ -382,8 +460,8 @@ async function polishWithClaude(
         }
         return null
       }
-      const data = await r.json()
-      const text = (data?.content?.[0]?.text as string | undefined) ?? ''
+      const data = await r.json() as AnthropicMessageResponse
+      const text = data?.content?.[0]?.text ?? ''
       return parsePolishedDraft(text)
     } catch (err) {
       lastErr = (err as Error).message

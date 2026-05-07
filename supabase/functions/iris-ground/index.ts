@@ -67,6 +67,7 @@ import {
   type AIResponse,
   type ParallelAIResult,
 } from '../shared/aiRouter.ts'
+import { type LaxClient } from '../shared/types.ts'
 
 // ── Request / Response shapes ────────────────────────────────────────────────
 
@@ -153,8 +154,7 @@ interface LoadedEntity {
 async function loadEntity(
   // Loose-typed because Supabase generated types lag behind some columns
   // (e.g. jurisdiction / applicable_codes added in later migrations).
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: LaxClient,
   entityType: EntityType,
   entityId: string,
 ): Promise<LoadedEntity> {
@@ -335,8 +335,7 @@ interface CacheRow {
 }
 
 async function readCache(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: LaxClient,
   entityType: EntityType,
   entityId: string,
 ): Promise<CacheRow | null> {
@@ -358,8 +357,7 @@ function isCacheFresh(row: CacheRow, fingerprint: string): boolean {
 }
 
 async function writeCache(
-  // deno-lint-ignore no-explicit-any
-  supabase: any,
+  supabase: LaxClient,
   entityType: EntityType,
   entityId: string,
   response: GroundResponse,
@@ -386,8 +384,7 @@ async function writeCache(
 // metadata. Fail-soft: a CHECK constraint mismatch on `type` is logged, not
 // thrown — the caller still gets the lane response.
 async function recordAudit(params: {
-  // deno-lint-ignore no-explicit-any
-  supabase: any
+  supabase: LaxClient
   userId: string
   projectId: string
   entityType: EntityType

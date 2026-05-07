@@ -7,6 +7,55 @@ import {
   errorResponse,
 } from '../shared/auth.ts'
 
+interface RfiSummary {
+  status?: string | null
+  created_at?: string | null
+}
+
+interface TaskSummary {
+  status?: string | null
+  risk_level?: string | null
+  due_date?: string | null
+}
+
+interface BudgetSummary {
+  original_amount?: number | null
+  actual_amount?: number | null
+  percent_complete?: number | null
+}
+
+interface PhaseSummary {
+  percent_complete?: number | null
+}
+
+interface DailyLogSummary {
+  workers_onsite?: number | null
+  total_hours?: number | null
+  incidents?: number | null
+  log_date?: string | null
+}
+
+interface InsightSummary {
+  id: string
+  severity: string
+  message: string
+  prediction_type?: string
+}
+
+interface ChangeOrderSummary {
+  status?: string | null
+  amount?: number | null
+}
+
+interface SnapshotData {
+  progress?: number
+  budget_spent?: number
+  budget_total?: number
+  open_rfis?: number
+  workers_avg?: number
+  incidents?: number
+}
+
 const fmt = (n: number) => n >= 1000000 ? `$${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `$${(n / 1000).toFixed(0)}K` : `$${n.toFixed(0)}`
 
 Deno.serve(async (req) => {
@@ -48,32 +97,34 @@ Deno.serve(async (req) => {
         supabase.from('project_snapshots').select('data').eq('project_id', pid).eq('snapshot_date', new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)).limit(1),
       ])
 
-      const allRfis = rfis.data || []
-      const allTasks = tasks.data || []
-      const allBudget = budget.data || []
-      const allPhases = phases.data || []
-      const allLogs = dailyLogs.data || []
-      const allInsights = insights.data || []
-      const allCOs = changeOrders.data || []
+      const allRfis = (rfis.data ?? []) as RfiSummary[]
+      const allTasks = (tasks.data ?? []) as TaskSummary[]
+      const allBudget = (budget.data ?? []) as BudgetSummary[]
+      const allPhases = (phases.data ?? []) as PhaseSummary[]
+      const allLogs = (dailyLogs.data ?? []) as DailyLogSummary[]
+      const allInsights = (insights.data ?? []) as InsightSummary[]
+      const allCOs = (changeOrders.data ?? []) as ChangeOrderSummary[]
 
       // Calculate metrics
-      const openRfis = allRfis.filter((r: any) => r.status === 'open' || r.status === 'under_review').length
-      const newRfis = allRfis.filter((r: any) => r.created_at >= oneWeekAgo).length
-      const overdueTasks = allTasks.filter((t: any) => t.due_date && t.due_date < today && t.status !== 'done').length
-      const criticalRiskTasks = allTasks.filter((t: any) => t.risk_level === 'critical').length
+      const openRfis = allRfis.filter((r) => r.status === 'open' || r.status === 'under_review').length
+      const newRfis = allRfis.filter((r) => (r.created_at ?? '') >= oneWeekAgo).length
+      const overdueTasks = allTasks.filter((t) => t.due_date && t.due_date < today && t.status !== 'done').length
+      const criticalRiskTasks = allTasks.filter((t) => t.risk_level === 'critical').length
       const avgProgress = allPhases.length > 0
-        ? Math.round(allPhases.reduce((s: number, p: any) => s + (p.percent_complete || 0), 0) / allPhases.length) : 0
-      const totalBudget = allBudget.reduce((s: number, b: any) => s + (b.original_amount || 0), 0)
-      const totalSpent = allBudget.reduce((s: number, b: any) => s + (b.actual_amount || 0), 0)
+        ? Math.round(allPhases.reduce((s: number, p) => s + (p.percent_complete || 0), 0) / allPhases.length) : 0
+      const totalBudget = allBudget.reduce((s: number, b) => s + (b.original_amount || 0), 0)
+      const totalSpent = allBudget.reduce((s: number, b) => s + (b.actual_amount || 0), 0)
       const avgWorkers = allLogs.length > 0
-        ? Math.round(allLogs.reduce((s: number, l: any) => s + (l.workers_onsite || 0), 0) / allLogs.length) : 0
-      const totalHours = allLogs.reduce((s: number, l: any) => s + (l.total_hours || 0), 0)
-      const totalIncidents = allLogs.reduce((s: number, l: any) => s + (l.incidents || 0), 0)
-      const _pendingCOs = allCOs.filter((co: any) => !['approved', 'rejected', 'void'].includes(co.status)).reduce((s: number, co: any) => s + (co.amount || 0), 0)
-      const criticalInsights = allInsights.filter((i: any) => i.severity === 'critical').length
-      const warningInsights = allInsights.filter((i: any) => i.severity === 'warning').length
+        ? Math.round(allLogs.reduce((s: number, l) => s + (l.workers_onsite || 0), 0) / allLogs.length) : 0
+      const totalHours = allLogs.reduce((s: number, l) => s + (l.total_hours || 0), 0)
+      const totalIncidents = allLogs.reduce((s: number, l) => s + (l.incidents || 0), 0)
+      const _pendingCOs = allCOs
+        .filter((co) => !['approved', 'rejected', 'void'].includes(co.status ?? ''))
+        .reduce((s: number, co) => s + (co.amount || 0), 0)
+      const criticalInsights = allInsights.filter((i) => i.severity === 'critical').length
+      const warningInsights = allInsights.filter((i) => i.severity === 'warning').length
 
-      const lastWeekData = (lastWeekSnap.data?.[0] as any)?.data
+      const lastWeekData = (lastWeekSnap.data?.[0] as { data?: SnapshotData } | undefined)?.data
       const progressDelta = lastWeekData ? avgProgress - (lastWeekData.progress || 0) : 0
       const spentDelta = lastWeekData ? totalSpent - (lastWeekData.budget_spent || 0) : 0
 
@@ -172,12 +223,12 @@ function buildDigestEmail(
   avgWorkers: number, totalHours: number, totalIncidents: number,
   openRfis: number, newRfis: number, overdueTasks: number,
   criticalRiskTasks: number, criticalInsights: number, warningInsights: number,
-  insights: any[],
+  insights: InsightSummary[],
 ): string {
   const criticalAlerts = insights
-    .filter((i: any) => i.severity === 'critical')
+    .filter((i) => i.severity === 'critical')
     .slice(0, 3)
-    .map((i: any) => `<li style="color:#C93B3B;margin-bottom:4px;">${escapeHtml(i.message)}</li>`)
+    .map((i) => `<li style="color:#C93B3B;margin-bottom:4px;">${escapeHtml(i.message)}</li>`)
     .join('')
 
   return `<!DOCTYPE html>

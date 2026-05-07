@@ -23,11 +23,53 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { handleCors, getCorsHeaders, errorResponse, HttpError } from '../shared/auth.ts'
+import { asRows } from '../shared/types.ts'
 
 interface TokenContext {
   organization_id: string
   token_id: string
 }
+
+interface ApiTokenAuthRow {
+  id: string
+  organization_id: string
+  token_hash: string
+  scopes: string[] | null
+  expires_at: string | null
+  revoked_at: string | null
+}
+
+interface OrgMemberProfile {
+  email: string | null
+  first_name: string | null
+  last_name: string | null
+  active: boolean | null
+}
+
+interface OrgMemberRow {
+  user_id: string
+  role: string
+  profiles: OrgMemberProfile | OrgMemberProfile[] | null
+}
+
+interface CustomRoleRow {
+  id: string
+  name: string
+  description: string | null
+  permissions: string[] | null
+}
+
+interface ScimPatchOperation {
+  op?: string
+  path?: string
+  value?: unknown
+}
+
+interface ScimPatchBody {
+  Operations?: ReadonlyArray<ScimPatchOperation>
+}
+
+type ScimRequestBody = Record<string, unknown>
 
 Deno.serve(async (req) => {
   const cors = handleCors(req)
@@ -95,11 +137,12 @@ async function authenticateBearerToken(req: Request): Promise<TokenContext> {
   if (!prefixMatch) throw new HttpError(401, 'invalid token shape')
   const prefix = prefixMatch[1]
 
-  const { data: row } = await (admin as any)
+  const { data: rowData } = await admin
     .from('org_api_tokens')
     .select('id, organization_id, token_hash, scopes, expires_at, revoked_at')
     .eq('prefix', prefix)
     .maybeSingle()
+  const row = rowData as ApiTokenAuthRow | null
   if (!row) throw new HttpError(401, 'unknown token')
   if (row.revoked_at) throw new HttpError(401, 'token revoked')
   if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) {
@@ -138,16 +181,17 @@ async function listUsers(ctx: TokenContext, url: URL): Promise<Response> {
   const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(sUrl, sKey)
 
-  const { data, count: total } = await (admin as any)
+  const { data, count: total } = await admin
     .from('organization_members')
     .select('user_id, role, profiles:user_id(email, first_name, last_name, active)', { count: 'exact' })
     .eq('organization_id', ctx.organization_id)
     .range(startIndex - 1, startIndex - 1 + count - 1)
 
+  const members = asRows<OrgMemberRow>(data)
   return scimResponse({
     schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
-    totalResults: total ?? (data ?? []).length,
-    Resources: ((data as any[] | null) ?? []).map(toScimUser),
+    totalResults: total ?? members.length,
+    Resources: members.map(toScimUser),
     startIndex,
     itemsPerPage: count,
   })
@@ -157,24 +201,25 @@ async function getUser(ctx: TokenContext, userId: string): Promise<Response> {
   const sUrl = Deno.env.get('SUPABASE_URL')!
   const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(sUrl, sKey)
-  const { data } = await (admin as any)
+  const { data } = await admin
     .from('organization_members')
     .select('user_id, role, profiles:user_id(email, first_name, last_name, active)')
     .eq('organization_id', ctx.organization_id)
     .eq('user_id', userId)
     .maybeSingle()
-  if (!data) return scimResponse(scimError('User not found', 404), 404)
-  return scimResponse(toScimUser(data))
+  const member = data as OrgMemberRow | null
+  if (!member) return scimResponse(scimError('User not found', 404), 404)
+  return scimResponse(toScimUser(member))
 }
 
-async function createUser(_ctx: TokenContext, _body: any): Promise<Response> {
+async function createUser(_ctx: TokenContext, _body: ScimRequestBody): Promise<Response> {
   // Stub: production wiring inserts into auth.users + organization_members.
   return scimResponse(scimError('createUser not implemented yet', 501), 501)
 }
 
-async function patchUser(ctx: TokenContext, userId: string, body: any): Promise<Response> {
+async function patchUser(ctx: TokenContext, userId: string, body: ScimPatchBody): Promise<Response> {
   // Most common SCIM patch: { Operations: [{ op: 'replace', path: 'active', value: false }] }
-  const ops: ReadonlyArray<{ op?: string; path?: string; value?: unknown }> = body?.Operations ?? []
+  const ops: ReadonlyArray<ScimPatchOperation> = body?.Operations ?? []
   const setActive = ops.find((o) => (o.path ?? '').toLowerCase() === 'active')
   if (!setActive) return scimResponse(scimError('only active=true|false patches are supported', 501), 501)
 
@@ -183,13 +228,13 @@ async function patchUser(ctx: TokenContext, userId: string, body: any): Promise<
   const admin = createClient(sUrl, sKey)
 
   if (setActive.value === false) {
-    await (admin as any)
+    await admin
       .from('organization_members')
       .update({ deactivated_at: new Date().toISOString() })
       .eq('organization_id', ctx.organization_id)
       .eq('user_id', userId)
     // Cascade: revoke all of this user's API tokens; sessions are killed by Supabase auth.
-    await (admin as any).rpc('revoke_user_tokens', { p_user_id: userId }).catch(() => undefined)
+    await admin.rpc('revoke_user_tokens', { p_user_id: userId }).then((r) => r, () => undefined)
   }
   return getUser(ctx, userId)
 }
@@ -198,7 +243,7 @@ async function deleteUser(ctx: TokenContext, userId: string): Promise<Response> 
   const sUrl = Deno.env.get('SUPABASE_URL')!
   const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(sUrl, sKey)
-  await (admin as any)
+  await admin
     .from('organization_members')
     .delete()
     .eq('organization_id', ctx.organization_id)
@@ -212,34 +257,35 @@ async function listGroups(ctx: TokenContext, _url: URL): Promise<Response> {
   const sUrl = Deno.env.get('SUPABASE_URL')!
   const sKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(sUrl, sKey)
-  const { data } = await (admin as any)
+  const { data } = await admin
     .from('org_custom_roles')
     .select('id, name, description, permissions')
     .eq('organization_id', ctx.organization_id)
+  const roles = asRows<CustomRoleRow>(data)
   return scimResponse({
     schemas: ['urn:ietf:params:scim:api:messages:2.0:ListResponse'],
-    totalResults: (data ?? []).length,
-    Resources: ((data as any[] | null) ?? []).map((g) => ({
+    totalResults: roles.length,
+    Resources: roles.map((g) => ({
       schemas: ['urn:ietf:params:scim:schemas:core:2.0:Group'],
       id: g.id,
       displayName: g.name,
     })),
     startIndex: 1,
-    itemsPerPage: (data ?? []).length,
+    itemsPerPage: roles.length,
   })
 }
 
-async function createGroup(_ctx: TokenContext, _body: any): Promise<Response> {
+async function createGroup(_ctx: TokenContext, _body: ScimRequestBody): Promise<Response> {
   return scimResponse(scimError('createGroup not implemented yet', 501), 501)
 }
-async function patchGroup(_ctx: TokenContext, _id: string, _body: any): Promise<Response> {
+async function patchGroup(_ctx: TokenContext, _id: string, _body: ScimRequestBody): Promise<Response> {
   return scimResponse(scimError('patchGroup not implemented yet', 501), 501)
 }
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function toScimUser(row: any): Record<string, unknown> {
-  const p = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+function toScimUser(row: OrgMemberRow): Record<string, unknown> {
+  const p: OrgMemberProfile | null = Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles
   return {
     schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
     id: row.user_id,
