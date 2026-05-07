@@ -23,6 +23,8 @@ import { VirtualDataTable } from '../components/shared/VirtualDataTable';
 import { BulkActionBar } from '../components/shared/BulkActionBar';
 import { RFIEditPanel } from '../components/rfi/RFIEditPanel';
 import { RFIBulkEditPanel } from '../components/rfi/RFIBulkEditPanel';
+import { RFIVoiceFAB } from '../components/rfi/RFIVoiceFAB';
+import { RFIIrisDraftPreview } from '../components/rfi/RFIIrisDraftPreview';
 import { useDeletedRFIs, useSoftDeleteRFI, useRestoreRFI } from '../hooks/queries/useDeletedRFIs';
 import {
   Avatar, Btn, DetailPanel, RelatedItems, useToast,
@@ -419,6 +421,8 @@ const RFIsPage: React.FC = () => {
   // P1a — Edit panel for the per-row [Edit] button + Bulk Edit Values
   const [editPanelRfiId, setEditPanelRfiId] = useState<string | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  // P2b — Iris draft preview surface (driven by Voice FAB + email-to-RFI).
+  const [irisDraftId, setIrisDraftId] = useState<string | null>(null);
 
   // ── P2a — URL-driven filter / view / saved-view state ─────────────────
   // The URL is the canonical state. URLSearchParams round-trip through
@@ -1986,6 +1990,30 @@ const RFIsPage: React.FC = () => {
           onClose={() => setColumnConfigOpen(false)}
           projectId={projectId}
           allColumns={RFI_COLUMN_DEFS}
+        />
+      )}
+
+      {/* P2b — Voice-to-RFI FAB. Long-press → record → transcribe →
+          multi-pass draft → preview. */}
+      {projectId && (
+        <RFIVoiceFAB
+          projectId={projectId}
+          drawingId={null}
+          onDraftReady={(id) => setIrisDraftId(id)}
+        />
+      )}
+      {/* P2b — Iris draft preview side panel. The FAB and
+          email-to-RFI both feed into this surface. */}
+      {projectId && (
+        <RFIIrisDraftPreview
+          open={!!irisDraftId}
+          onClose={() => setIrisDraftId(null)}
+          draftId={irisDraftId}
+          projectId={projectId}
+          onAccepted={(rfiId) => {
+            setIrisDraftId(null)
+            if (rfiId) navigate(`/rfis/${rfiId}`)
+          }}
         />
       )}
 
