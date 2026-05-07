@@ -224,22 +224,18 @@ ALTER TABLE rfi_responses ADD COLUMN IF NOT EXISTS mentioned_user_ids UUID[] NOT
 
 -- Replace the old response_type CHECK with the P1b spec set. The
 -- legacy default 'comment' is migrated to 'answered' (the new default).
-DO $$
-BEGIN
-  -- Migrate legacy values that aren't in the new set.
-  UPDATE rfi_responses SET response_type = 'answered'
-    WHERE response_type IS NULL
-       OR response_type IN ('comment','official_response','question','clarification');
-EXCEPTION WHEN OTHERS THEN
-  -- If the column doesn't have those values, no-op.
-  NULL;
-END $$;
+-- Order matters: drop the legacy CHECK *first* so the backfill UPDATE
+-- isn't rejected by it, then backfill, then re-add the new CHECK.
+
+ALTER TABLE rfi_responses DROP CONSTRAINT IF EXISTS rfi_responses_response_type_check;
+
+UPDATE rfi_responses SET response_type = 'answered'
+  WHERE response_type IS NULL
+     OR response_type IN ('comment','official_response','question','clarification');
 
 ALTER TABLE rfi_responses
   ALTER COLUMN response_type SET DEFAULT 'answered';
 
--- Drop the legacy CHECK constraint and add the new one.
-ALTER TABLE rfi_responses DROP CONSTRAINT IF EXISTS rfi_responses_response_type_check;
 ALTER TABLE rfi_responses ADD CONSTRAINT rfi_responses_response_type_check
   CHECK (response_type IN (
     'answered',
