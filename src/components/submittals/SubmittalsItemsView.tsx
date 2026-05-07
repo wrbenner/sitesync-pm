@@ -194,12 +194,11 @@ export const SubmittalsItemsView: React.FC<SubmittalsItemsViewProps> = ({
     if (!onSelectionIdsChange) return
     onSelectionIdsChange(Array.from(selection.selectedIds))
   }, [onSelectionIdsChange, selection.selectedIds])
+  const selectionClear = selection.clear
   useEffect(() => {
     if (selectionClearToken === undefined) return
-    selection.clear()
-    // selection.clear is stable per render of the hook; tracking the token is enough.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectionClearToken])
+    selectionClear()
+  }, [selectionClearToken, selectionClear])
   useEffect(() => { onVisibleCountChange?.(sortedRows.length) }, [onVisibleCountChange, sortedRows.length])
 
   const scrollerRef = useRef<HTMLDivElement | null>(null)
