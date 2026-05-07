@@ -18,7 +18,7 @@ import {
   ArrowLeft, Send, Clock, Calendar, DollarSign,
   AlertTriangle, MessageSquare, FileText,
   Image, ChevronDown, User, Eye, EyeOff,
-  Flag, Pencil, Timer,
+  Flag, Pencil, Timer, MoreHorizontal, Printer, Trash2, RotateCcw,
 } from 'lucide-react'
 import { PageContainer, Btn, Avatar, PriorityTag, useToast } from '../../components/Primitives'
 import { colors, spacing, borderRadius } from '../../styles/theme'
@@ -36,6 +36,7 @@ import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
 import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
 import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
 import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
+import { RFIReopenDialog } from '../../components/rfi/RFIReopenDialog'
 import { RFIDetailSidebar } from '../../components/rfi/RFIDetailSidebar'
 import { RFIAssigneeStatusList } from '../../components/rfi/RFIAssigneeStatusList'
 import { RFIDistributionStaticList } from '../../components/rfi/RFIDistributionStaticList'
@@ -69,6 +70,22 @@ import type { RFI, RFIResponse } from '../../types/database'
 
 const getInitials = (s: string) =>
   ((s || '').trim().split(/\s+/).filter(Boolean).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()) || 'U'
+
+// PR #2.5 (A11) — Shared style for ··· overflow menu items.
+const overflowMenuItemStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  width: '100%',
+  padding: '8px 12px',
+  borderRadius: 6,
+  border: 'none',
+  background: 'transparent',
+  fontSize: 13,
+  color: colors.textSecondary,
+  textAlign: 'left',
+  cursor: 'pointer',
+}
 
 const formatDate = (d: string | null) => {
   if (!d) return null
@@ -393,6 +410,10 @@ export function RFIDetail() {
   const [transitioning, setTransitioning] = useState<string | null>(null)
   const [distributeOpen, setDistributeOpen] = useState(false)
   const [editPanelOpen, setEditPanelOpen] = useState(false)
+  // PR #2.5 wave — Reopen-with-reason dialog (A12) + ··· overflow menu (A11)
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false)
+  const [overflowMenuOpen, setOverflowMenuOpen] = useState(false)
+  const overflowMenuRef = useRef<HTMLDivElement>(null)
 
   // Track "last viewed" for unread indicator
   const lastViewedKey = rfiId ? `rfi_viewed_${rfiId}` : null
@@ -450,6 +471,13 @@ export function RFIDetail() {
 
   const handleTransition = useCallback(async (action: string) => {
     if (!rfi || !projectId) return
+    // PR #2.5 (A12) — Reopen captures reason + category before firing
+    // the state-machine transition. Intercept here and let the dialog
+    // handle the actual flip via onReopen callback.
+    if (action === 'Reopen') {
+      setReopenDialogOpen(true)
+      return
+    }
     const nextStatus = getNextStatus(currentStatus, action)
     if (!nextStatus) return
     setTransitioning(action)
@@ -462,6 +490,60 @@ export function RFIDetail() {
       setTransitioning(null)
     }
   }, [rfi, projectId, currentStatus, updateRFI, addToast])
+
+  // PR #2.5 (A12) — fired by RFIReopenDialog after reason + category
+  // persist; flips status to 'open' via the same audit-aware path.
+  const handleReopenAfterReason = useCallback(async () => {
+    if (!rfi || !projectId) return
+    setTransitioning('Reopen')
+    try {
+      await updateRFI.mutateAsync({ id: rfi.id, projectId, updates: { status: 'open' } })
+      addToast('success', 'RFI reopened')
+    } catch {
+      addToast('error', 'Failed to reopen RFI')
+    } finally {
+      setTransitioning(null)
+    }
+  }, [rfi, projectId, updateRFI, addToast])
+
+  // PR #2.5 (A11) — close the ··· overflow menu when clicking outside.
+  useEffect(() => {
+    if (!overflowMenuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (overflowMenuRef.current && !overflowMenuRef.current.contains(e.target as Node)) {
+        setOverflowMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [overflowMenuOpen])
+
+  // PR #2.5 (A11) — Print uses the browser's native print pipeline; CSS
+  // print rules in app-level styles can refine the layout if needed.
+  const handlePrint = useCallback(() => {
+    setOverflowMenuOpen(false)
+    window.print()
+  }, [])
+
+  // PR #2.5 (A11) — Soft-delete via existing `deleted_at`. Confirms via
+  // window.confirm; the Recycle Bin tab on the list page surfaces the
+  // restore path.
+  const handleDelete = useCallback(async () => {
+    if (!rfi || !projectId) return
+    setOverflowMenuOpen(false)
+    if (!window.confirm(`Delete RFI-${String(rfi.number ?? '').padStart(3, '0')}? It moves to the Recycle Bin and can be restored.`)) return
+    try {
+      await updateRFI.mutateAsync({
+        id: rfi.id,
+        projectId,
+        updates: { deleted_at: new Date().toISOString() } as never,
+      })
+      addToast('success', 'RFI moved to Recycle Bin')
+      navigate('/rfis')
+    } catch {
+      addToast('error', 'Failed to delete RFI')
+    }
+  }, [rfi, projectId, updateRFI, addToast, navigate])
 
   // Auto-scroll to bottom of thread
   const threadEndRef = useRef<HTMLDivElement>(null)
@@ -670,6 +752,79 @@ export function RFIDetail() {
                   loading={transitioning}
                 />
               </PermissionGate>
+
+              {/* PR #2.5 (A11) — ··· overflow menu. Print / Convert /
+                  Delete in the first cut; Duplicate + Move project queued
+                  for follow-up. Print is browser-native; Convert reuses
+                  the existing RFIConvertMenu; Delete soft-deletes via
+                  the existing deleted_at column. */}
+              <div ref={overflowMenuRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setOverflowMenuOpen((v) => !v)}
+                  aria-label="More actions"
+                  aria-expanded={overflowMenuOpen}
+                  title="More actions"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '5px 8px', borderRadius: 8,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    backgroundColor: 'transparent',
+                    color: colors.textSecondary,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {overflowMenuOpen && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+                      minWidth: 200, padding: 4,
+                      backgroundColor: colors.surfaceRaised,
+                      border: `1px solid ${colors.borderSubtle}`,
+                      borderRadius: 10,
+                      boxShadow: '0 12px 32px -8px rgba(0,0,0,0.25)',
+                      zIndex: 60,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handlePrint}
+                      style={overflowMenuItemStyle}
+                    >
+                      <Printer size={13} /> Print
+                    </button>
+                    {currentStatus === 'closed' || currentStatus === 'answered' ? (
+                      <PermissionGate permission="rfis.edit">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setOverflowMenuOpen(false)
+                            setReopenDialogOpen(true)
+                          }}
+                          style={overflowMenuItemStyle}
+                        >
+                          <RotateCcw size={13} /> Reopen…
+                        </button>
+                      </PermissionGate>
+                    ) : null}
+                    <PermissionGate permission="rfis.edit">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => void handleDelete()}
+                        style={{ ...overflowMenuItemStyle, color: colors.red }}
+                      >
+                        <Trash2 size={13} /> Move to Recycle Bin
+                      </button>
+                    </PermissionGate>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -985,6 +1140,19 @@ export function RFIDetail() {
         onClose={() => setEditPanelOpen(false)}
         rfiId={rfi.id}
         projectId={rfi.project_id}
+      />
+
+      {/* ── PR #2.5 (A12) — Reopen-with-reason dialog. Captures the
+          reason + category onto rfis.{reopen_reason, reopen_category}
+          before flipping status; chain-of-custody win for downstream
+          legal review. ───────────────────────────────────────────── */}
+      <RFIReopenDialog
+        open={reopenDialogOpen}
+        onClose={() => setReopenDialogOpen(false)}
+        rfiId={rfi.id}
+        projectId={rfi.project_id}
+        rfiNumber={rfi.number}
+        onReopen={handleReopenAfterReason}
       />
     </PageContainer>
   )
