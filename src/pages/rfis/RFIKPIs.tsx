@@ -112,16 +112,29 @@ interface KPICardData {
   alert?: boolean
   /** Show resolution ring instead of sparkline */
   ring?: { pct: number }
+  /** P2a — KPI cards are clickable filter shortcuts on the RFI list. */
+  onClick?: () => void
 }
 
 // ── KPI Card ─────────────────────────────────────────────────
-const KPICard: React.FC<KPICardData> = React.memo(({
+const KPICard: React.FC<KPICardData & { onClick?: () => void }> = React.memo(({
   label, value, formatter, icon, sparkData, sparkColor, trend, trendInvert,
-  subtitle, alert, ring,
+  subtitle, alert, ring, onClick,
 }) => {
   const [hovered, setHovered] = React.useState(false)
+  const clickable = !!onClick
   return (
     <div
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (clickable && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onClick?.()
+        }
+      }}
+      aria-label={clickable ? `Filter list to ${label}` : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -134,7 +147,7 @@ const KPICard: React.FC<KPICardData> = React.memo(({
         border: `1px solid ${alert ? `${colors.statusCritical}25` : hovered ? colors.borderDefault : colors.borderSubtle}`,
         borderRadius: borderRadius.xl,
         transition: `all 260ms cubic-bezier(0.16, 1, 0.3, 1)`,
-        cursor: 'default',
+        cursor: clickable ? 'pointer' : 'default',
         overflow: 'hidden',
         boxShadow: hovered ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
         transform: hovered ? 'translateY(-1px)' : 'none',
@@ -199,6 +212,8 @@ const KPICard: React.FC<KPICardData> = React.memo(({
 })
 
 // ── Exported KPI Dashboard ───────────────────────────────────
+export type RFIKPIFilterKey = 'total_open' | 'overdue' | 'closed_this_week' | 'cost_impact'
+
 export interface RFIKPIsProps {
   totalOpen: number
   openCount: number
@@ -208,6 +223,8 @@ export interface RFIKPIsProps {
   totalCostImpact: number
   totalRfis: number
   closedCount: number
+  /** P2a — when set, each KPI card is a clickable filter shortcut. */
+  onCardClick?: (key: RFIKPIFilterKey) => void
 }
 
 const fmtInt = (n: number) => Math.round(n).toLocaleString()
@@ -222,7 +239,7 @@ const fmtCurrency = (n: number) => {
 
 export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
   totalOpen, openCount, overdueCount, avgDaysToClose,
-  closedThisWeek, totalCostImpact, totalRfis, closedCount,
+  closedThisWeek, totalCostImpact, totalRfis, closedCount, onCardClick,
 }) => {
   // Synthetic sparkline data (trending pattern based on real metrics)
   const activeSparkData = React.useMemo(() => {
@@ -252,6 +269,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       sparkColor: '#3B82F6',
       trend: totalOpen > 0 ? -((closedThisWeek / Math.max(totalOpen, 1)) * 100) : 0,
       subtitle: `${openCount} open · ${totalOpen - openCount} in review`,
+      onClick: onCardClick ? () => onCardClick('total_open') : undefined,
     },
     {
       label: 'Overdue',
@@ -263,6 +281,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       trend: 0,
       subtitle: overdueCount > 0 ? 'Requires immediate attention' : 'All on track',
       alert: overdueCount > 0,
+      onClick: onCardClick ? () => onCardClick('overdue') : undefined,
     },
     {
       label: 'Avg Days to Close',
@@ -285,6 +304,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       sparkColor: '#16A34A',
       trend: closedThisWeek > 0 ? 8.4 : 0,
       subtitle: closedThisWeek > 0 ? 'Resolution velocity' : 'No closures yet',
+      onClick: onCardClick ? () => onCardClick('closed_this_week') : undefined,
     },
     {
       label: 'Cost Impact',
@@ -297,6 +317,7 @@ export const RFIKPIs: React.FC<RFIKPIsProps> = React.memo(({
       trendInvert: true,
       subtitle: totalCostImpact > 0 ? 'Potential exposure' : 'No cost impact',
       alert: totalCostImpact > 50000,
+      onClick: onCardClick ? () => onCardClick('cost_impact') : undefined,
     },
   ]
 
