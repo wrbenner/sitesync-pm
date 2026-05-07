@@ -174,8 +174,8 @@ function QuestionHeadline({
         color: INK,
         margin: 0,
         maxWidth: mobile ? undefined : 1100,
-        textWrap: 'balance' as any,
-      }}
+        textWrap: 'balance',
+      } as React.CSSProperties & { textWrap: string }}
     >
       {segments.map((seg, i) => {
         let text = seg.text;
@@ -795,8 +795,8 @@ function SundialDesktop({ data }: { data: SundialData }) {
                 color: INK,
                 margin: 0,
                 maxWidth: 1100,
-                textWrap: 'balance' as any,
-              }}
+                textWrap: 'balance',
+              } as React.CSSProperties & { textWrap: string }}
             >
               The day is <span style={{ fontStyle: 'italic' }}>yours</span>
               <span style={{ color: INK_3 }}>.</span>
