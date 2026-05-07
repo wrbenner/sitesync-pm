@@ -53,6 +53,11 @@ export interface RFIResponseRow {
   edited_at: string | null
   mentioned_user_ids: string[] | null
   created_at: string | null
+  // P1c — provenance. 'email_inbound' rows render with the envelope
+  // badge + "from <email>" sub-line.
+  source: 'web' | 'email_inbound' | 'email_inbound_iris_review' | null
+  source_email: string | null
+  inbound_message_id: string | null
 }
 
 const queryKey = (rfiId: string | undefined) => ['rfi_responses', rfiId]

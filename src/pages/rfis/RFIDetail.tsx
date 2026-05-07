@@ -38,6 +38,7 @@ import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
 import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
 import { RFIResponseThread } from '../../components/rfi/RFIResponseThread'
 import { RFIResponseComposer } from '../../components/rfi/RFIResponseComposer'
+import { RFIEmailReviewBanner } from '../../components/rfi/RFIEmailReviewBanner'
 import { useRFIResponsesList, type RFIResponseRow } from '../../hooks/queries/useRFIResponses'
 import { PermissionGate } from '../../components/auth/PermissionGate'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -716,6 +717,11 @@ export function RFIDetail() {
         <div style={{ marginBottom: '24px' }}>
           <EntityHistoryPanel entityType="rfi" entityId={rfi.id} />
         </div>
+
+        {/* ── P1c — Iris email review banner. Surfaces low-confidence
+              inbound matches for Walker to Accept/Reject before they
+              join the legal record. ─────────────────────────────── */}
+        <RFIEmailReviewBanner rfiId={rfi.id} projectId={rfi.project_id} />
 
         {/* ── The Question + Thread Card ──────────────────── */}
         <div style={{
