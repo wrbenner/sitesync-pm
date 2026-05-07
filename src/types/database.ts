@@ -15875,6 +15875,9 @@ export type Database = {
           event: string
           id: string
           project_id: string
+          recipient_role:
+            | Database["public"]["Enums"]["rfi_notification_recipient_role"]
+            | null
         }
         Insert: {
           channel: string
@@ -15882,6 +15885,9 @@ export type Database = {
           event: string
           id?: string
           project_id: string
+          recipient_role?:
+            | Database["public"]["Enums"]["rfi_notification_recipient_role"]
+            | null
         }
         Update: {
           channel?: string
@@ -15889,6 +15895,9 @@ export type Database = {
           event?: string
           id?: string
           project_id?: string
+          recipient_role?:
+            | Database["public"]["Enums"]["rfi_notification_recipient_role"]
+            | null
         }
         Relationships: [
           {
@@ -16023,6 +16032,7 @@ export type Database = {
       }
       project_rfi_settings: {
         Row: {
+          default_distribution: Json
           manual_override: boolean
           number_padding: number
           number_prefix: string
@@ -16032,6 +16042,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          default_distribution?: Json
           manual_override?: boolean
           number_padding?: number
           number_prefix?: string
@@ -16041,6 +16052,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          default_distribution?: Json
           manual_override?: boolean
           number_padding?: number
           number_prefix?: string
@@ -25114,6 +25126,12 @@ export type Database = {
         | "meeting"
         | "rfi"
         | "change_order"
+      rfi_notification_recipient_role:
+        | "creator"
+        | "manager"
+        | "assignee"
+        | "distribution_group"
+        | "watcher"
       rfi_pause_reason:
         | "site_closed"
         | "holiday"
@@ -25338,6 +25356,13 @@ export const Constants = {
         "meeting",
         "rfi",
         "change_order",
+      ],
+      rfi_notification_recipient_role: [
+        "creator",
+        "manager",
+        "assignee",
+        "distribution_group",
+        "watcher",
       ],
       rfi_pause_reason: [
         "site_closed",
