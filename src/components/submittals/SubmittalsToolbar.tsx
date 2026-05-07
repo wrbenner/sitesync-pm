@@ -30,6 +30,13 @@ export interface SubmittalsToolbarProps {
   onPageNext?: () => void
   hasPrev?: boolean
   hasNext?: boolean
+  /** Phase 2: clicked when ≥ 1 row is selected. Phase 3 wires the menu;
+   *  Phase 2 just surfaces a toast. */
+  onBulkActions?: () => void
+  /** Phase 3 slot — replaces the stub Add Filter button when provided. */
+  addFilterSlot?: React.ReactNode
+  /** Phase 3 slot — replaces the stub Bulk Actions button when provided. */
+  bulkActionsSlot?: React.ReactNode
 }
 
 export const SubmittalsToolbar: React.FC<SubmittalsToolbarProps> = ({
@@ -43,6 +50,9 @@ export const SubmittalsToolbar: React.FC<SubmittalsToolbarProps> = ({
   onPageNext,
   hasPrev = false,
   hasNext = false,
+  onBulkActions,
+  addFilterSlot,
+  bulkActionsSlot,
 }) => (
   <div
     style={{
@@ -88,21 +98,26 @@ export const SubmittalsToolbar: React.FC<SubmittalsToolbarProps> = ({
       />
     </div>
 
-    <ToolbarStubButton ariaLabel="Add filter" disabled>
-      <Filter size={12} />
-      Add Filter
-      <ChevronDown size={11} />
-    </ToolbarStubButton>
+    {addFilterSlot ?? (
+      <ToolbarStubButton ariaLabel="Add filter" disabled>
+        <Filter size={12} />
+        Add Filter
+        <ChevronDown size={11} />
+      </ToolbarStubButton>
+    )}
 
-    <ToolbarStubButton
-      ariaLabel="Bulk actions"
-      disabled={selectedCount === 0}
-      title={selectedCount === 0 ? 'Select rows to enable bulk actions' : 'Bulk actions'}
-    >
-      Bulk Actions
-      {selectedCount > 0 && <span style={{ color: C.ink2 }}>({selectedCount})</span>}
-      <ChevronDown size={11} />
-    </ToolbarStubButton>
+    {bulkActionsSlot ?? (
+      <ToolbarStubButton
+        ariaLabel="Bulk actions"
+        disabled={selectedCount === 0}
+        title={selectedCount === 0 ? 'Select rows to enable bulk actions' : 'Bulk actions'}
+        onClick={selectedCount > 0 ? onBulkActions : undefined}
+      >
+        Bulk Actions
+        {selectedCount > 0 && <span style={{ color: C.ink2 }}>({selectedCount})</span>}
+        <ChevronDown size={11} />
+      </ToolbarStubButton>
+    )}
 
     <div style={{ flex: 1 }} />
     <div
@@ -133,6 +148,7 @@ interface ToolbarStubButtonProps {
   children: React.ReactNode
   disabled?: boolean
   title?: string
+  onClick?: () => void
 }
 
 const ToolbarStubButton: React.FC<ToolbarStubButtonProps> = ({
@@ -140,6 +156,7 @@ const ToolbarStubButton: React.FC<ToolbarStubButtonProps> = ({
   children,
   disabled,
   title,
+  onClick,
 }) => (
   <button
     type="button"
@@ -147,6 +164,7 @@ const ToolbarStubButton: React.FC<ToolbarStubButtonProps> = ({
     aria-haspopup="menu"
     title={title}
     disabled={disabled}
+    onClick={onClick}
     style={{
       display: 'inline-flex',
       alignItems: 'center',
