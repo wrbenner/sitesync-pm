@@ -107,6 +107,10 @@ const RFISettingsPage = lazy(() => import('./pages/rfis/RFISettingsPage').then((
 const RFIReportsPage = lazy(() => import('./pages/rfis/RFIReportsPage').then((m) => ({ default: m.RFIReportsPage })));
 const Submittals = lazy(() => import('./pages/submittals').then((m) => ({ default: m.Submittals })));
 const SubmittalDetailPage = lazy(() => import('./pages/submittals/SubmittalDetailPage'));
+// Phase 6 — v2 detail shell with 7 tabs + Iris co-pilot. Replaces the
+// 547-LOC monolith. Legacy import retained for safety; flip the route below.
+const SubmittalDetailV2 = lazy(() => import('./pages/submittals/SubmittalDetailV2'));
+void SubmittalDetailPage;
 const SpecParserPage = lazy(() => import('./pages/submittals/SpecParserPage'));
 const SubmittalSettingsPage = lazy(() => import('./pages/submittals/SubmittalSettingsPage'));
 const PunchList = lazyWithRetry(() => import('./pages/punch-list').then((m) => ({ default: m.PunchList })));
@@ -406,7 +410,7 @@ function AppRoutes() {
             <Route path="/rfis/:rfiId" element={<PageSuspense><ProtectedRoute moduleId="rfis" moduleName="RFI Detail"><RFIDetail /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittals"><Submittals /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/settings" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Settings"><SubmittalSettingsPage /></ProtectedRoute></PageSuspense>} />
-            <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailPage /></ProtectedRoute></PageSuspense>} />
+            <Route path="/submittals/:submittalId" element={<PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Submittal Detail"><SubmittalDetailV2 /></ProtectedRoute></PageSuspense>} />
             <Route path="/submittals/spec-parser" element={FLAGS.specParser ? <PageSuspense><ProtectedRoute moduleId="submittals" moduleName="Spec Parser"><SpecParserPage /></ProtectedRoute></PageSuspense> : <Navigate to="/submittals" replace />} />
             <Route path="/punch-list" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch List"><PunchList /></ProtectedRoute></PageSuspense>} />
             <Route path="/punch-list/:itemId" element={<PageSuspense><ProtectedRoute moduleId="punch-list" moduleName="Punch Item Detail"><PunchItemDetailPage /></ProtectedRoute></PageSuspense>} />
