@@ -17552,40 +17552,58 @@ export type Database = {
       }
       rfi_distributions: {
         Row: {
+          attachment_ids: string[]
           bounce_reason: string | null
           delivery_status: Database["public"]["Enums"]["rfi_delivery_status"]
           delivery_status_at: string | null
+          distribution_kind: Database["public"]["Enums"]["rfi_distribution_kind"]
           id: string
           message: string | null
           message_id: string | null
+          needs_response_by: string | null
           recipient_email: string
           recipient_name: string | null
+          recipient_role:
+            | Database["public"]["Enums"]["rfi_notification_recipient_role"]
+            | null
           rfi_id: string
           sent_at: string
           sent_by: string | null
         }
         Insert: {
+          attachment_ids?: string[]
           bounce_reason?: string | null
           delivery_status?: Database["public"]["Enums"]["rfi_delivery_status"]
           delivery_status_at?: string | null
+          distribution_kind?: Database["public"]["Enums"]["rfi_distribution_kind"]
           id?: string
           message?: string | null
           message_id?: string | null
+          needs_response_by?: string | null
           recipient_email: string
           recipient_name?: string | null
+          recipient_role?:
+            | Database["public"]["Enums"]["rfi_notification_recipient_role"]
+            | null
           rfi_id: string
           sent_at?: string
           sent_by?: string | null
         }
         Update: {
+          attachment_ids?: string[]
           bounce_reason?: string | null
           delivery_status?: Database["public"]["Enums"]["rfi_delivery_status"]
           delivery_status_at?: string | null
+          distribution_kind?: Database["public"]["Enums"]["rfi_distribution_kind"]
           id?: string
           message?: string | null
           message_id?: string | null
+          needs_response_by?: string | null
           recipient_email?: string
           recipient_name?: string | null
+          recipient_role?:
+            | Database["public"]["Enums"]["rfi_notification_recipient_role"]
+            | null
           rfi_id?: string
           sent_at?: string
           sent_by?: string | null
@@ -18169,6 +18187,13 @@ export type Database = {
           assigned_to: string | null
           ball_in_court: string | null
           closed_date: string | null
+          closed_disposition:
+            | Database["public"]["Enums"]["rfi_close_disposition"]
+            | null
+          closed_signoff_user_id: string | null
+          closed_summary: string | null
+          cost_actual_cents: number | null
+          cost_code: string | null
           cost_impact_cents: number | null
           cost_impact_status: string | null
           created_at: string | null
@@ -18181,18 +18206,24 @@ export type Database = {
           drawing_y: number | null
           due_date: string | null
           external_ids: Json | null
+          final_response_id: string | null
           id: string
           is_auto_generated: boolean | null
           is_private: boolean
           legacy_payload: Json | null
+          location_id: string | null
           number: number
           priority: string | null
           project_id: string
           question: string | null
+          received_from_user_id: string | null
           reference: string | null
           reopen_category: string | null
           reopen_reason: string | null
           response_due_date: string | null
+          responsible_contractor_id: string | null
+          rfi_stage: string | null
+          schedule_actual_days: number | null
           schedule_days_impact: number | null
           schedule_impact: string | null
           schedule_impact_status: string | null
@@ -18214,6 +18245,13 @@ export type Database = {
           assigned_to?: string | null
           ball_in_court?: string | null
           closed_date?: string | null
+          closed_disposition?:
+            | Database["public"]["Enums"]["rfi_close_disposition"]
+            | null
+          closed_signoff_user_id?: string | null
+          closed_summary?: string | null
+          cost_actual_cents?: number | null
+          cost_code?: string | null
           cost_impact_cents?: number | null
           cost_impact_status?: string | null
           created_at?: string | null
@@ -18226,18 +18264,24 @@ export type Database = {
           drawing_y?: number | null
           due_date?: string | null
           external_ids?: Json | null
+          final_response_id?: string | null
           id?: string
           is_auto_generated?: boolean | null
           is_private?: boolean
           legacy_payload?: Json | null
+          location_id?: string | null
           number?: number
           priority?: string | null
           project_id: string
           question?: string | null
+          received_from_user_id?: string | null
           reference?: string | null
           reopen_category?: string | null
           reopen_reason?: string | null
           response_due_date?: string | null
+          responsible_contractor_id?: string | null
+          rfi_stage?: string | null
+          schedule_actual_days?: number | null
           schedule_days_impact?: number | null
           schedule_impact?: string | null
           schedule_impact_status?: string | null
@@ -18259,6 +18303,13 @@ export type Database = {
           assigned_to?: string | null
           ball_in_court?: string | null
           closed_date?: string | null
+          closed_disposition?:
+            | Database["public"]["Enums"]["rfi_close_disposition"]
+            | null
+          closed_signoff_user_id?: string | null
+          closed_summary?: string | null
+          cost_actual_cents?: number | null
+          cost_code?: string | null
           cost_impact_cents?: number | null
           cost_impact_status?: string | null
           created_at?: string | null
@@ -18271,18 +18322,24 @@ export type Database = {
           drawing_y?: number | null
           due_date?: string | null
           external_ids?: Json | null
+          final_response_id?: string | null
           id?: string
           is_auto_generated?: boolean | null
           is_private?: boolean
           legacy_payload?: Json | null
+          location_id?: string | null
           number?: number
           priority?: string | null
           project_id?: string
           question?: string | null
+          received_from_user_id?: string | null
           reference?: string | null
           reopen_category?: string | null
           reopen_reason?: string | null
           response_due_date?: string | null
+          responsible_contractor_id?: string | null
+          rfi_stage?: string | null
+          schedule_actual_days?: number | null
           schedule_days_impact?: number | null
           schedule_impact?: string | null
           schedule_impact_status?: string | null
@@ -18300,6 +18357,13 @@ export type Database = {
           void_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "rfis_final_response_id_fkey"
+            columns: ["final_response_id"]
+            isOneToOne: false
+            referencedRelation: "rfi_responses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rfis_project_id_fkey"
             columns: ["project_id"]
@@ -18319,6 +18383,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfis_responsible_contractor_id_fkey"
+            columns: ["responsible_contractor_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -19799,6 +19870,27 @@ export type Database = {
         }
         Relationships: []
       }
+      spec_sections: {
+        Row: {
+          division: number
+          division_title: string
+          section_number: string
+          title: string
+        }
+        Insert: {
+          division: number
+          division_title: string
+          section_number: string
+          title: string
+        }
+        Update: {
+          division?: number
+          division_title?: string
+          section_number?: string
+          title?: string
+        }
+        Relationships: []
+      }
       specifications: {
         Row: {
           approved_at: string | null
@@ -20446,13 +20538,16 @@ export type Database = {
           body_html: string | null
           body_text: string | null
           cc_addrs: string[] | null
+          created_at: string
           direction: string
           from_addr: string | null
           id: string
+          iris_diff_text: string | null
           message_id: string
           received_at: string
           subject: string | null
           submittal_id: string
+          thread_id: string | null
           to_addrs: string[] | null
         }
         Insert: {
@@ -20460,13 +20555,16 @@ export type Database = {
           body_html?: string | null
           body_text?: string | null
           cc_addrs?: string[] | null
+          created_at?: string
           direction: string
           from_addr?: string | null
           id?: string
+          iris_diff_text?: string | null
           message_id: string
           received_at?: string
           subject?: string | null
           submittal_id: string
+          thread_id?: string | null
           to_addrs?: string[] | null
         }
         Update: {
@@ -20474,13 +20572,16 @@ export type Database = {
           body_html?: string | null
           body_text?: string | null
           cc_addrs?: string[] | null
+          created_at?: string
           direction?: string
           from_addr?: string | null
           id?: string
+          iris_diff_text?: string | null
           message_id?: string
           received_at?: string
           subject?: string | null
           submittal_id?: string
+          thread_id?: string | null
           to_addrs?: string[] | null
         }
         Relationships: [
@@ -24419,6 +24520,13 @@ export type Database = {
           assigned_to: string | null
           ball_in_court: string | null
           closed_date: string | null
+          closed_disposition:
+            | Database["public"]["Enums"]["rfi_close_disposition"]
+            | null
+          closed_signoff_user_id: string | null
+          closed_summary: string | null
+          cost_actual_cents: number | null
+          cost_code: string | null
           cost_impact_cents: number | null
           cost_impact_status: string | null
           created_at: string | null
@@ -24431,18 +24539,24 @@ export type Database = {
           drawing_y: number | null
           due_date: string | null
           external_ids: Json | null
+          final_response_id: string | null
           id: string
           is_auto_generated: boolean | null
           is_private: boolean
           legacy_payload: Json | null
+          location_id: string | null
           number: number
           priority: string | null
           project_id: string
           question: string | null
+          received_from_user_id: string | null
           reference: string | null
           reopen_category: string | null
           reopen_reason: string | null
           response_due_date: string | null
+          responsible_contractor_id: string | null
+          rfi_stage: string | null
+          schedule_actual_days: number | null
           schedule_days_impact: number | null
           schedule_impact: string | null
           schedule_impact_status: string | null
@@ -24538,6 +24652,13 @@ export type Database = {
           assigned_to: string | null
           ball_in_court: string | null
           closed_date: string | null
+          closed_disposition:
+            | Database["public"]["Enums"]["rfi_close_disposition"]
+            | null
+          closed_signoff_user_id: string | null
+          closed_summary: string | null
+          cost_actual_cents: number | null
+          cost_code: string | null
           cost_impact_cents: number | null
           cost_impact_status: string | null
           created_at: string | null
@@ -24550,18 +24671,24 @@ export type Database = {
           drawing_y: number | null
           due_date: string | null
           external_ids: Json | null
+          final_response_id: string | null
           id: string
           is_auto_generated: boolean | null
           is_private: boolean
           legacy_payload: Json | null
+          location_id: string | null
           number: number
           priority: string | null
           project_id: string
           question: string | null
+          received_from_user_id: string | null
           reference: string | null
           reopen_category: string | null
           reopen_reason: string | null
           response_due_date: string | null
+          responsible_contractor_id: string | null
+          rfi_stage: string | null
+          schedule_actual_days: number | null
           schedule_days_impact: number | null
           schedule_impact: string | null
           schedule_impact_status: string | null
@@ -24799,6 +24926,17 @@ export type Database = {
         Args: { p_id: string }
         Returns: Json
       }
+      submittal_create_package: {
+        Args: {
+          p_csi_section: string
+          p_description: string
+          p_project_id: string
+          p_responsible_sub_id: string
+          p_submittal_ids: string[]
+          p_title: string
+        }
+        Returns: string
+      }
       submittal_create_revision: {
         Args: { p_parent_id: string }
         Returns: {
@@ -24873,6 +25011,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submittal_delete_package: { Args: { p_id: string }; Returns: undefined }
       submittal_distribute: {
         Args: { p_id: string; p_to_user_ids: string[] }
         Returns: {
@@ -25030,6 +25169,20 @@ export type Database = {
         Args: { p_new: string; p_old: string }
         Returns: number
       }
+      submittal_set_package_members: {
+        Args: { p_package_id: string; p_submittal_ids: string[] }
+        Returns: undefined
+      }
+      submittal_update_package: {
+        Args: {
+          p_csi_section: string
+          p_description: string
+          p_id: string
+          p_responsible_sub_id: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       update_warranty_status: { Args: never; Returns: undefined }
       verify_audit_chain: {
         Args: { start_after?: string }
@@ -25103,6 +25256,13 @@ export type Database = {
         | "commissioning"
         | "closeout"
       iris_confidence_band: "high" | "medium" | "low"
+      rfi_close_disposition:
+        | "approved"
+        | "approved_as_noted"
+        | "revise_and_resubmit"
+        | "returned_for_clarification"
+        | "no_comment"
+        | "forwarded"
       rfi_custom_field_type: "text" | "number" | "date" | "select" | "user"
       rfi_delivery_status:
         | "sent"
@@ -25110,6 +25270,7 @@ export type Database = {
         | "bounced"
         | "complained"
         | "unknown"
+      rfi_distribution_kind: "to" | "cc" | "bcc"
       rfi_link_kind:
         | "blocks"
         | "blocked_by"
@@ -25331,6 +25492,14 @@ export const Constants = {
         "closeout",
       ],
       iris_confidence_band: ["high", "medium", "low"],
+      rfi_close_disposition: [
+        "approved",
+        "approved_as_noted",
+        "revise_and_resubmit",
+        "returned_for_clarification",
+        "no_comment",
+        "forwarded",
+      ],
       rfi_custom_field_type: ["text", "number", "date", "select", "user"],
       rfi_delivery_status: [
         "sent",
@@ -25339,6 +25508,7 @@ export const Constants = {
         "complained",
         "unknown",
       ],
+      rfi_distribution_kind: ["to", "cc", "bcc"],
       rfi_link_kind: [
         "blocks",
         "blocked_by",

@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS public.submittal_emails (
   UNIQUE (message_id)
 );
 
+-- Drift-tolerant: an earlier deploy created the table with a partial schema.
+-- These ADD COLUMN IF NOT EXISTS calls let the migration self-heal so the
+-- index DDL below succeeds on every environment.
+ALTER TABLE public.submittal_emails
+  ADD COLUMN IF NOT EXISTS thread_id      text,
+  ADD COLUMN IF NOT EXISTS iris_diff_text text,
+  ADD COLUMN IF NOT EXISTS created_at     timestamptz NOT NULL DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS idx_submittal_emails_submittal
   ON public.submittal_emails (submittal_id, received_at DESC);
 
