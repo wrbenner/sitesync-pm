@@ -854,12 +854,12 @@ A submittal-module ship is **accepted** when ALL of the following hold:
 
 **Net new (Lap 2):**
 - `src/components/submittals/` directory becomes the unified home for everything submittal-related
-- `src/pages/submittals/import/` (spec importer)
-- `src/pages/submittals/closeout/` (closeout binder)
-- `src/services/iris/preflight.ts`
-- `src/services/iris/specExtract.ts`
-- `src/services/iris/revDiff.ts`
-- `src/services/closeoutBinder.ts`
+- `src/pages/submittals/import/` (spec importer) (planned)
+- `src/pages/submittals/closeout/` (closeout binder) (planned)
+- `src/services/iris/preflight.ts` (planned)
+- `src/services/iris/specExtract.ts` (planned)
+- `src/services/iris/revDiff.ts` (planned)
+- `src/services/closeoutBinder.ts` (planned)
 
 ---
 

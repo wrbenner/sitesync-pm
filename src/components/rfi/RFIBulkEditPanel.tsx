@@ -18,7 +18,10 @@ import { PermissionGate } from '../auth/PermissionGate'
 import { UserChipEditor, type UserChipOption } from './UserChipEditor'
 import { useUpdateRFI } from '../../hooks/mutations'
 import { useAddRFIWatcher } from '../../hooks/queries/useRFIWatchers'
-import { useAddRFIDistribution } from '../../hooks/queries/useRFIDistributions'
+// P1c — bulk distribute now sends through send-email per recipient per
+// RFI. Helper handles durable rfi_distributions row, message_id stamp,
+// and per-row audit log.
+import { sendRFIOutboundEmail } from '../../lib/email/rfiOutbound'
 import { useProjectDirectory } from '../../hooks/queries/useProjectDirectory'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 
@@ -49,7 +52,7 @@ export const RFIBulkEditPanel: React.FC<RFIBulkEditPanelProps> = ({
 }) => {
   const updateRFI = useUpdateRFI()
   const addWatcher = useAddRFIWatcher()
-  const addDistribution = useAddRFIDistribution()
+  // const addDistribution = useAddRFIDistribution() — superseded by sendRFIOutboundEmail (P1c)
   const { data: directory } = useProjectDirectory(projectId)
 
   const [draft, setDraft] = useState<BulkDraft>(EMPTY_BULK)
@@ -110,18 +113,31 @@ export const RFIBulkEditPanel: React.FC<RFIBulkEditPanelProps> = ({
         watcherFailed = watcherResults.filter((r) => r.status === 'rejected').length
       }
 
-      // 3. Per-RFI per-recipient fan-out
+      // 3. Per-RFI per-recipient fan-out — actually send the email.
+      //    Each call writes its own rfi_distributions row + message_id
+      //    + outbound_email_log + audit_log (Chain Audit Prep Check 5).
       let distFailed = 0
       if (addedRecipients.length > 0) {
+        const detailUrlBase = `${window.location.origin}/rfis`
         const distResults = await Promise.allSettled(
           selectedIds.flatMap((rfiId) =>
             addedRecipients.map((email) =>
-              addDistribution.mutateAsync({
-                rfiId,
-                projectId,
-                recipient_email: email,
-                recipient_name: null,
-                message: null,
+              sendRFIOutboundEmail({
+                ctx: {
+                  rfiId,
+                  projectId,
+                  rfiNumber: null,
+                  rfiTitle: 'RFI',
+                  rfiQuestion: null,
+                  projectName: null,
+                  detailUrl: `${detailUrlBase}/${rfiId}`,
+                  senderUserId: null,
+                  message: null,
+                },
+                recipient: { email },
+              }).then((r) => {
+                if (!r.ok) throw new Error(r.error ?? 'send failed')
+                return r
               }),
             ),
           ),
