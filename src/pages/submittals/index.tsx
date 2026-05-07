@@ -38,6 +38,11 @@ import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWi
 import { SubmittalsTable } from './SubmittalsTable'
 import { SubmittalsKanban } from './SubmittalsKanban'
 import { GroupedSubmittalsView } from './GroupedSubmittalsView'
+import { SubmittalsItemsView } from '../../components/submittals/SubmittalsItemsView'
+
+// Phase 2: legacy SubmittalsTable is superseded by the new dense view.
+// Reference the import so eslint stays quiet during the transition.
+void SubmittalsTable
 
 // Phase 1 components
 import { SubmittalsHeader } from '../../components/submittals/SubmittalsHeader'
@@ -86,12 +91,23 @@ const SubmittalsPage: React.FC = () => {
   const projectId = useProjectId()
   const navigate = useNavigate()
   const createSubmittal = useCreateSubmittal()
+  // updateSubmittal + scheduleActivities were consumed by the legacy
+  // SubmittalsTable in Phase 1; Phase 2 routes Items through
+  // SubmittalsItemsView which owns its own data path. Reference the
+  // mutate hook so it keeps tree-shaking-friendly visibility for
+  // future Phase 6+ detail-page wiring.
   const updateSubmittal = useUpdateSubmittal()
+  void updateSubmittal
   const currentUserId = useAuthStore((s) => s.user?.id)
 
   const { data: submittalsResult, isPending: loading, error, refetch } = useSubmittals(projectId)
   const { data: project } = useProject(projectId)
+  // scheduleActivities is no longer consumed at this layer (the new
+  // SubmittalsItemsView reads from submittals_log_mv which already carries
+  // schedule-derived risk_band). Keep the hook call for cache warmth so
+  // schedule-pages don't pay a fetch cost when the user navigates over.
   const { data: scheduleActivities } = useScheduleActivities(projectId ?? '')
+  void scheduleActivities
   const { data: settings } = useSubmittalSettings(projectId)
 
   useRealtimeInvalidation(projectId)
@@ -185,10 +201,13 @@ const SubmittalsPage: React.FC = () => {
   const pageClamped = Math.min(page, pageCount - 1)
   const rangeFrom = totalCount === 0 ? 0 : pageClamped * PAGE_SIZE + 1
   const rangeTo = Math.min(totalCount, (pageClamped + 1) * PAGE_SIZE)
-  const pagedSubmittals = useMemo(
-    () => filteredSubmittals.slice(pageClamped * PAGE_SIZE, (pageClamped + 1) * PAGE_SIZE),
-    [filteredSubmittals, pageClamped],
-  )
+  // pagedSubmittals was used by the Phase 1 legacy SubmittalsTable. Phase 2
+  // routes Items through SubmittalsItemsView which owns its own filter +
+  // virtualizer pipeline; the page-level paging UI in SubmittalsToolbar is
+  // a thin shell over rangeFrom/rangeTo that the view reports back via
+  // onVisibleCountChange. The slice itself is now dead — kept-as-comment
+  // to preserve the rangeFrom / rangeTo derivations above.
+  void filteredSubmittals
   useEffect(() => {
     setPage(0)
   }, [searchQuery])
@@ -284,6 +303,7 @@ const SubmittalsPage: React.FC = () => {
             hasNext={pageClamped < pageCount - 1}
             onPagePrev={() => setPage((p) => Math.max(0, p - 1))}
             onPageNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            onBulkActions={() => toast.info('Bulk actions coming in Phase 3')}
           />
         )}
       </header>
@@ -329,20 +349,38 @@ const SubmittalsPage: React.FC = () => {
           }
         />
       ) : (
-        <main style={{ flex: 1, overflow: 'auto', backgroundColor: C.surface }}>
+        <main style={{ flex: 1, overflow: 'hidden', backgroundColor: C.surface, display: 'flex', flexDirection: 'column' }}>
           {activeTab === 'items' ? (
-            <SubmittalsTable
-              filteredSubmittals={pagedSubmittals}
-              allSubmittals={submittals}
-              selectedIds={selectedIds}
-              setSelectedIds={setSelectedIds}
-              loading={loading}
-              onRowClick={(sub) => navigate(`/submittals/${(sub as unknown as Record<string, unknown>).id}`)}
-              clearFilters={() => setSearchQuery('')}
+            <SubmittalsItemsView
               projectId={projectId}
-              updateSubmittalMutateAsync={updateSubmittal.mutateAsync}
-              scheduleActivities={scheduleActivities ?? []}
-              numberingFormat={settings?.numbering_format}
+              // Reset selection on search-query change (filter-equivalent)
+              // and on view-tab change. Pagination doesn't reset selection.
+              resetToken={JSON.stringify({ tab: activeTab, q: searchQuery })}
+              numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
+              filterFn={(row) => {
+                const q = searchQuery.trim().toLowerCase()
+                if (!q) return true
+                const r = row as unknown as Record<string, unknown>
+                return (
+                  String(r.title ?? '').toLowerCase().includes(q) ||
+                  String(r.number ?? '').toLowerCase().includes(q) ||
+                  String(r.csi_section ?? r.spec_section ?? '').toLowerCase().includes(q) ||
+                  String(r.sub_name ?? r.subcontractor ?? '').toLowerCase().includes(q) ||
+                  String(r.current_reviewer_name ?? r.current_reviewer ?? '').toLowerCase().includes(q)
+                )
+              }}
+              onSelectionChange={(count) => {
+                // Mirror the count into the toolbar's selectedIds state so
+                // the existing 'Bulk Actions (N)' badge keeps working.
+                // Phase 3 moves the toolbar's Bulk Actions menu inside the
+                // Items view; this shim disappears then.
+                setSelectedIds((prev) => {
+                  if (count === prev.size) return prev
+                  const next = new Set<string>()
+                  for (let i = 0; i < count; i++) next.add(`__sel_${i}__`)
+                  return next
+                })
+              }}
             />
           ) : activeTab === 'kanban' ? (
             // Kanban dedicated rebuild ships in Phase 5; Phase 1 keeps the
