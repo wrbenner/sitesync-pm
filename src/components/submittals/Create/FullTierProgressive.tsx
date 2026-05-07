@@ -23,6 +23,7 @@
 import React, { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Field, inputStyle } from './QuickTierFields'
+import { ReviewerChainBuilder } from './People/ReviewerChainBuilder'
 import type { SubmittalDraft } from '../../../services/iris/submittalDraft'
 import type { WalkbackBreakdown } from '../../../hooks/useScheduleWalkback'
 import type { SubmittalKind } from '../../../types/submittal'
@@ -239,7 +240,8 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
 
     <Section
       title="People"
-      filledCount={(draft.responsible_sub_id ? 1 : 0)}
+      defaultOpen
+      filledCount={(draft.responsible_sub_id ? 1 : 0) + (draft.reviewer_chain.length > 0 ? 1 : 0)}
     >
       <Row>
         <Field label="Responsible sub" autoFromIris={autoSrc(draft, 'responsible_sub_id')}>
@@ -247,12 +249,18 @@ export const FullTierProgressive: React.FC<FullTierProgressiveProps> = ({
             type="text"
             value={draft.responsible_sub_id ?? ''}
             onChange={(e) => onPatch({ responsible_sub_id: e.target.value || null })}
-            placeholder="Pick org — Phase 6 typeahead"
+            placeholder="Pick org — typeahead in Phase 5b-2"
             style={inputStyle}
             aria-label="Responsible sub (placeholder picker)"
           />
         </Field>
       </Row>
+      <div style={{ marginTop: 14 }}>
+        <ReviewerChainBuilder
+          steps={draft.reviewer_chain}
+          onChange={(steps) => onPatch({ reviewer_chain: steps })}
+        />
+      </div>
     </Section>
 
     <Section title="Privacy" filledCount={draft.is_private ? 1 : 0}>

@@ -19,6 +19,22 @@ export type DraftSource =
   | 'email_in'
   | 'magic_link_request'
 
+export interface ReviewerChainStep {
+  /** Stable id used by the UI for keying + reorder. Not persisted. */
+  uid: string
+  /** 1-based sequence (auto-renumbered when steps reorder). */
+  sequence: number
+  /** Role label shown in the chain (e.g. "Architect of Record", "GC PE"). */
+  reviewer_role: string
+  /** Human display name. Phase 5b-2 wires the typeahead picker that
+   *  resolves to a project_member uuid; today this is a free-form string. */
+  reviewer_name: string
+  /** Days from create to this step's due date. */
+  due_date_offset_days: number
+  /** Steps with the same `parallel_group` int review in parallel. 0 = sequential. */
+  parallel_group: number
+}
+
 export interface SubmittalDraft {
   source: DraftSource
   // Quick tier
@@ -40,6 +56,9 @@ export interface SubmittalDraft {
   is_private: boolean
   drawing_pin_ids: string[]
   attachment_ids: string[]
+  /** Phase 5b: ordered reviewer chain materialized on Send via the
+   *  submittal_initialize_chain RPC. Empty array = no chain. */
+  reviewer_chain: ReviewerChainStep[]
   // Provenance — every Iris-prefilled field is hash-chained via this map
   // so downstream UI can render the "auto" badge selectively.
   provenance: Record<string, DraftSource>
@@ -64,6 +83,7 @@ export const emptyDraft = (source: DraftSource = 'manual'): SubmittalDraft => ({
   is_private: false,
   drawing_pin_ids: [],
   attachment_ids: [],
+  reviewer_chain: [],
   provenance: {},
 })
 
