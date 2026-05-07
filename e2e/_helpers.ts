@@ -17,7 +17,7 @@ export async function settle(page: Page, ms = 250) {
     }`,
   }).catch(() => undefined)
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
-  await page.waitForTimeout(ms)
+  await page.waitForTimeout(ms).catch(() => undefined)
 }
 
 /**
