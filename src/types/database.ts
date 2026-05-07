@@ -623,37 +623,115 @@ export type Database = {
       }
       ai_rfi_drafts: {
         Row: {
+          citations: Json
+          confidence_band:
+            | Database["public"]["Enums"]["iris_confidence_band"]
+            | null
+          confidence_by_field: Json
+          confidence_score: number | null
           created_at: string | null
+          draft_kind: string
+          first_token_ms: number | null
           id: string
           metadata: Json | null
+          model_fingerprint: string | null
+          pass_log: Json
           project_id: string | null
+          prompt_hash: string | null
           question: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rfi_id: string | null
           severity: string | null
           source: string | null
           source_ref: string | null
+          status: string
           subject: string | null
+          suggested_ball_in_court: string | null
+          suggested_body: string | null
+          suggested_cost_cents_max: number | null
+          suggested_cost_cents_min: number | null
+          suggested_drawing_ids: string[]
+          suggested_due_date: string | null
+          suggested_priority: string | null
+          suggested_schedule_days: number | null
+          suggested_spec_sections: string[]
+          suggested_title: string | null
+          total_ms: number | null
         }
         Insert: {
+          citations?: Json
+          confidence_band?:
+            | Database["public"]["Enums"]["iris_confidence_band"]
+            | null
+          confidence_by_field?: Json
+          confidence_score?: number | null
           created_at?: string | null
+          draft_kind?: string
+          first_token_ms?: number | null
           id?: string
           metadata?: Json | null
+          model_fingerprint?: string | null
+          pass_log?: Json
           project_id?: string | null
+          prompt_hash?: string | null
           question?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rfi_id?: string | null
           severity?: string | null
           source?: string | null
           source_ref?: string | null
+          status?: string
           subject?: string | null
+          suggested_ball_in_court?: string | null
+          suggested_body?: string | null
+          suggested_cost_cents_max?: number | null
+          suggested_cost_cents_min?: number | null
+          suggested_drawing_ids?: string[]
+          suggested_due_date?: string | null
+          suggested_priority?: string | null
+          suggested_schedule_days?: number | null
+          suggested_spec_sections?: string[]
+          suggested_title?: string | null
+          total_ms?: number | null
         }
         Update: {
+          citations?: Json
+          confidence_band?:
+            | Database["public"]["Enums"]["iris_confidence_band"]
+            | null
+          confidence_by_field?: Json
+          confidence_score?: number | null
           created_at?: string | null
+          draft_kind?: string
+          first_token_ms?: number | null
           id?: string
           metadata?: Json | null
+          model_fingerprint?: string | null
+          pass_log?: Json
           project_id?: string | null
+          prompt_hash?: string | null
           question?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rfi_id?: string | null
           severity?: string | null
           source?: string | null
           source_ref?: string | null
+          status?: string
           subject?: string | null
+          suggested_ball_in_court?: string | null
+          suggested_body?: string | null
+          suggested_cost_cents_max?: number | null
+          suggested_cost_cents_min?: number | null
+          suggested_drawing_ids?: string[]
+          suggested_due_date?: string | null
+          suggested_priority?: string | null
+          suggested_schedule_days?: number | null
+          suggested_spec_sections?: string[]
+          suggested_title?: string | null
+          total_ms?: number | null
         }
         Relationships: [
           {
@@ -675,6 +753,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_rfi_drafts_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
             referencedColumns: ["id"]
           },
         ]
@@ -1151,8 +1236,8 @@ export type Database = {
       }
       audit_incidents: {
         Row: {
-          context: Json
           category: string
+          context: Json
           description: string
           detected_at: string
           detected_by: string
@@ -1166,8 +1251,8 @@ export type Database = {
           severity: string
         }
         Insert: {
-          context?: Json
           category: string
+          context?: Json
           description: string
           detected_at?: string
           detected_by?: string
@@ -1181,8 +1266,8 @@ export type Database = {
           severity: string
         }
         Update: {
-          context?: Json
           category?: string
+          context?: Json
           description?: string
           detected_at?: string
           detected_by?: string
@@ -1195,40 +1280,29 @@ export type Database = {
           resolved_by?: string | null
           severity?: string
         }
-        Relationships: []
-      }
-      citation_interactions: {
-        Row: {
-          citation_index: number
-          citation_kind: string
-          drafted_action_id: string
-          id: string
-          inbox_session_id: string | null
-          interaction_type: string
-          occurred_at: string
-          user_id: string
-        }
-        Insert: {
-          citation_index: number
-          citation_kind: string
-          drafted_action_id: string
-          id?: string
-          inbox_session_id?: string | null
-          interaction_type: string
-          occurred_at?: string
-          user_id: string
-        }
-        Update: {
-          citation_index?: number
-          citation_kind?: string
-          drafted_action_id?: string
-          id?: string
-          inbox_session_id?: string | null
-          interaction_type?: string
-          occurred_at?: string
-          user_id?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_incidents_related_project_id_fkey"
+            columns: ["related_project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "audit_incidents_related_project_id_fkey"
+            columns: ["related_project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "audit_incidents_related_project_id_fkey"
+            columns: ["related_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_log: {
         Row: {
@@ -2534,7 +2608,9 @@ export type Database = {
       budget_items: {
         Row: {
           actual_amount: number | null
+          actual_amount_cents: number | null
           committed_amount: number | null
+          committed_amount_cents: number | null
           cost_code: string | null
           created_at: string | null
           csi_division: string | null
@@ -2542,9 +2618,11 @@ export type Database = {
           division: string
           external_ids: Json | null
           forecast_amount: number | null
+          forecast_amount_cents: number | null
           id: string
           legacy_payload: Json | null
           original_amount: number | null
+          original_amount_cents: number | null
           percent_complete: number | null
           project_id: string
           status: string | null
@@ -2552,7 +2630,9 @@ export type Database = {
         }
         Insert: {
           actual_amount?: number | null
+          actual_amount_cents?: number | null
           committed_amount?: number | null
+          committed_amount_cents?: number | null
           cost_code?: string | null
           created_at?: string | null
           csi_division?: string | null
@@ -2560,9 +2640,11 @@ export type Database = {
           division: string
           external_ids?: Json | null
           forecast_amount?: number | null
+          forecast_amount_cents?: number | null
           id?: string
           legacy_payload?: Json | null
           original_amount?: number | null
+          original_amount_cents?: number | null
           percent_complete?: number | null
           project_id: string
           status?: string | null
@@ -2570,7 +2652,9 @@ export type Database = {
         }
         Update: {
           actual_amount?: number | null
+          actual_amount_cents?: number | null
           committed_amount?: number | null
+          committed_amount_cents?: number | null
           cost_code?: string | null
           created_at?: string | null
           csi_division?: string | null
@@ -2578,9 +2662,11 @@ export type Database = {
           division?: string
           external_ids?: Json | null
           forecast_amount?: number | null
+          forecast_amount_cents?: number | null
           id?: string
           legacy_payload?: Json | null
           original_amount?: number | null
+          original_amount_cents?: number | null
           percent_complete?: number | null
           project_id?: string
           status?: string | null
@@ -2903,6 +2989,7 @@ export type Database = {
       change_order_line_items: {
         Row: {
           amount: number
+          amount_cents: number | null
           budget_item_id: string | null
           change_order_id: string
           cost_code: string | null
@@ -2914,10 +3001,12 @@ export type Database = {
           sort_order: number | null
           unit: string | null
           unit_cost: number | null
+          unit_cost_cents: number | null
           updated_at: string
         }
         Insert: {
           amount?: number
+          amount_cents?: number | null
           budget_item_id?: string | null
           change_order_id: string
           cost_code?: string | null
@@ -2929,10 +3018,12 @@ export type Database = {
           sort_order?: number | null
           unit?: string | null
           unit_cost?: number | null
+          unit_cost_cents?: number | null
           updated_at?: string
         }
         Update: {
           amount?: number
+          amount_cents?: number | null
           budget_item_id?: string | null
           change_order_id?: string
           cost_code?: string | null
@@ -2944,6 +3035,7 @@ export type Database = {
           sort_order?: number | null
           unit?: string | null
           unit_cost?: number | null
+          unit_cost_cents?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2987,10 +3079,12 @@ export type Database = {
       change_orders: {
         Row: {
           amount: number | null
+          amount_cents: number | null
           approval_comments: string | null
           approved_at: string | null
           approved_by: string | null
           approved_cost: number | null
+          approved_cost_cents: number | null
           approved_date: string | null
           budget_line_item_id: string | null
           cause: Database["public"]["Enums"]["change_order_cause"] | null
@@ -3008,6 +3102,7 @@ export type Database = {
           deleted_by: string | null
           description: string
           estimated_cost: number | null
+          estimated_cost_cents: number | null
           external_ids: Json | null
           id: string
           legacy_payload: Json | null
@@ -3034,6 +3129,7 @@ export type Database = {
           submitted_at: string | null
           submitted_by: string | null
           submitted_cost: number | null
+          submitted_cost_cents: number | null
           title: string | null
           type: string | null
           updated_at: string | null
@@ -3041,10 +3137,12 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          amount_cents?: number | null
           approval_comments?: string | null
           approved_at?: string | null
           approved_by?: string | null
           approved_cost?: number | null
+          approved_cost_cents?: number | null
           approved_date?: string | null
           budget_line_item_id?: string | null
           cause?: Database["public"]["Enums"]["change_order_cause"] | null
@@ -3062,6 +3160,7 @@ export type Database = {
           deleted_by?: string | null
           description: string
           estimated_cost?: number | null
+          estimated_cost_cents?: number | null
           external_ids?: Json | null
           id?: string
           legacy_payload?: Json | null
@@ -3088,6 +3187,7 @@ export type Database = {
           submitted_at?: string | null
           submitted_by?: string | null
           submitted_cost?: number | null
+          submitted_cost_cents?: number | null
           title?: string | null
           type?: string | null
           updated_at?: string | null
@@ -3095,10 +3195,12 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          amount_cents?: number | null
           approval_comments?: string | null
           approved_at?: string | null
           approved_by?: string | null
           approved_cost?: number | null
+          approved_cost_cents?: number | null
           approved_date?: string | null
           budget_line_item_id?: string | null
           cause?: Database["public"]["Enums"]["change_order_cause"] | null
@@ -3116,6 +3218,7 @@ export type Database = {
           deleted_by?: string | null
           description?: string
           estimated_cost?: number | null
+          estimated_cost_cents?: number | null
           external_ids?: Json | null
           id?: string
           legacy_payload?: Json | null
@@ -3142,6 +3245,7 @@ export type Database = {
           submitted_at?: string | null
           submitted_by?: string | null
           submitted_cost?: number | null
+          submitted_cost_cents?: number | null
           title?: string | null
           type?: string | null
           updated_at?: string | null
@@ -3230,6 +3334,47 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      citation_interactions: {
+        Row: {
+          citation_index: number
+          citation_kind: string
+          drafted_action_id: string
+          id: string
+          inbox_session_id: string | null
+          interaction_type: string
+          occurred_at: string
+          user_id: string
+        }
+        Insert: {
+          citation_index: number
+          citation_kind: string
+          drafted_action_id: string
+          id?: string
+          inbox_session_id?: string | null
+          interaction_type: string
+          occurred_at?: string
+          user_id: string
+        }
+        Update: {
+          citation_index?: number
+          citation_kind?: string
+          drafted_action_id?: string
+          id?: string
+          inbox_session_id?: string | null
+          interaction_type?: string
+          occurred_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "citation_interactions_drafted_action_id_fkey"
+            columns: ["drafted_action_id"]
+            isOneToOne: false
+            referencedRelation: "drafted_actions"
             referencedColumns: ["id"]
           },
         ]
@@ -4065,11 +4210,13 @@ export type Database = {
           insurance_required: boolean | null
           notes: string | null
           original_value: number
+          original_value_cents: number | null
           payment_terms: string | null
           project_id: string
           retainage_percent: number | null
           retention_percentage: number | null
           revised_value: number | null
+          revised_value_cents: number | null
           scope_of_work: string | null
           start_date: string | null
           status: string | null
@@ -4099,11 +4246,13 @@ export type Database = {
           insurance_required?: boolean | null
           notes?: string | null
           original_value: number
+          original_value_cents?: number | null
           payment_terms?: string | null
           project_id: string
           retainage_percent?: number | null
           retention_percentage?: number | null
           revised_value?: number | null
+          revised_value_cents?: number | null
           scope_of_work?: string | null
           start_date?: string | null
           status?: string | null
@@ -4133,11 +4282,13 @@ export type Database = {
           insurance_required?: boolean | null
           notes?: string | null
           original_value?: number
+          original_value_cents?: number | null
           payment_terms?: string | null
           project_id?: string
           retainage_percent?: number | null
           retention_percentage?: number | null
           revised_value?: number | null
+          revised_value_cents?: number | null
           scope_of_work?: string | null
           start_date?: string | null
           status?: string | null
@@ -5786,6 +5937,62 @@ export type Database = {
           },
         ]
       }
+      drafted_action_dedupe: {
+        Row: {
+          created_at: string
+          drafted_action_id: string
+          id: string
+          insight_kind: string
+          primary_entity_id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          drafted_action_id: string
+          id?: string
+          insight_kind: string
+          primary_entity_id: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          drafted_action_id?: string
+          id?: string
+          insight_kind?: string
+          primary_entity_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drafted_action_dedupe_drafted_action_id_fkey"
+            columns: ["drafted_action_id"]
+            isOneToOne: false
+            referencedRelation: "drafted_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drafted_action_dedupe_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "drafted_action_dedupe_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "drafted_action_dedupe_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drafted_actions: {
         Row: {
           action_type: string
@@ -5843,6 +6050,8 @@ export type Database = {
           required_edits?: boolean
           status?: string
           summary?: string | null
+          time_to_decide_ms?: number | null
+          time_to_first_view_ms?: number | null
           title: string
           updated_at?: string
           viewed_count?: number
@@ -5872,6 +6081,8 @@ export type Database = {
           required_edits?: boolean
           status?: string
           summary?: string | null
+          time_to_decide_ms?: number | null
+          time_to_first_view_ms?: number | null
           title?: string
           updated_at?: string
           viewed_count?: number
@@ -9879,6 +10090,108 @@ export type Database = {
         }
         Relationships: []
       }
+      iris_voice_diffs: {
+        Row: {
+          action_type: string | null
+          detector_kind: string | null
+          drafted_action_id: string | null
+          failed_rule_ids: string[]
+          id: string
+          linted_text: string
+          raw_text: string
+          recorded_at: string
+        }
+        Insert: {
+          action_type?: string | null
+          detector_kind?: string | null
+          drafted_action_id?: string | null
+          failed_rule_ids?: string[]
+          id?: string
+          linted_text: string
+          raw_text: string
+          recorded_at?: string
+        }
+        Update: {
+          action_type?: string | null
+          detector_kind?: string | null
+          drafted_action_id?: string | null
+          failed_rule_ids?: string[]
+          id?: string
+          linted_text?: string
+          raw_text?: string
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_voice_diffs_drafted_action_id_fkey"
+            columns: ["drafted_action_id"]
+            isOneToOne: false
+            referencedRelation: "drafted_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iris_weekly_digests: {
+        Row: {
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          email_sent_at: string | null
+          id: string
+          inbox_seen_at: string | null
+          project_id: string
+          ranked_rfis: Json
+          recipient_id: string | null
+          week_starting: string
+        }
+        Insert: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          inbox_seen_at?: string | null
+          project_id: string
+          ranked_rfis?: Json
+          recipient_id?: string | null
+          week_starting: string
+        }
+        Update: {
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          inbox_seen_at?: string | null
+          project_id?: string
+          ranked_rfis?: Json
+          recipient_id?: string | null
+          week_starting?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_weekly_digests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_weekly_digests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_weekly_digests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_cost_entries: {
         Row: {
           amount: number | null
@@ -10214,6 +10527,7 @@ export type Database = {
       lien_waivers: {
         Row: {
           amount: number
+          amount_cents: number | null
           application_id: string | null
           contractor_name: string
           created_at: string | null
@@ -10244,6 +10558,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_cents?: number | null
           application_id?: string | null
           contractor_name: string
           created_at?: string | null
@@ -10274,6 +10589,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_cents?: number | null
           application_id?: string | null
           contractor_name?: string
           created_at?: string | null
@@ -12081,11 +12397,14 @@ export type Database = {
           data_region: string | null
           default_project_role: string | null
           id: string
+          is_soft_pilot: boolean
           logo_url: string | null
           name: string
           plan: string | null
           settings: Json | null
           slug: string | null
+          soft_pilot_agreement_signed_at: string | null
+          soft_pilot_started_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -12096,11 +12415,14 @@ export type Database = {
           data_region?: string | null
           default_project_role?: string | null
           id?: string
+          is_soft_pilot?: boolean
           logo_url?: string | null
           name: string
           plan?: string | null
           settings?: Json | null
           slug?: string | null
+          soft_pilot_agreement_signed_at?: string | null
+          soft_pilot_started_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -12111,11 +12433,14 @@ export type Database = {
           data_region?: string | null
           default_project_role?: string | null
           id?: string
+          is_soft_pilot?: boolean
           logo_url?: string | null
           name?: string
           plan?: string | null
           settings?: Json | null
           slug?: string | null
+          soft_pilot_agreement_signed_at?: string | null
+          soft_pilot_started_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -12467,8 +12792,11 @@ export type Database = {
       pay_application_line_items: {
         Row: {
           amount: number | null
+          amount_cents: number | null
           amount_this_period: number | null
+          amount_this_period_cents: number | null
           balance_to_finish: number | null
+          balance_to_finish_cents: number | null
           cost_code: string | null
           created_at: string | null
           description: string | null
@@ -12476,12 +12804,16 @@ export type Database = {
           id: string
           item_number: string | null
           materials_stored: number | null
+          materials_stored_cents: number | null
           pay_application_id: string | null
           payment_period: string | null
           percent_complete: number | null
           previous_completed: number | null
+          previous_completed_cents: number | null
           retainage: number | null
+          retainage_cents: number | null
           scheduled_value: number | null
+          scheduled_value_cents: number | null
           sort_order: number | null
           source_document_id: string | null
           subcontractor_id: string | null
@@ -12490,8 +12822,11 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          amount_cents?: number | null
           amount_this_period?: number | null
+          amount_this_period_cents?: number | null
           balance_to_finish?: number | null
+          balance_to_finish_cents?: number | null
           cost_code?: string | null
           created_at?: string | null
           description?: string | null
@@ -12499,12 +12834,16 @@ export type Database = {
           id?: string
           item_number?: string | null
           materials_stored?: number | null
+          materials_stored_cents?: number | null
           pay_application_id?: string | null
           payment_period?: string | null
           percent_complete?: number | null
           previous_completed?: number | null
+          previous_completed_cents?: number | null
           retainage?: number | null
+          retainage_cents?: number | null
           scheduled_value?: number | null
+          scheduled_value_cents?: number | null
           sort_order?: number | null
           source_document_id?: string | null
           subcontractor_id?: string | null
@@ -12513,8 +12852,11 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          amount_cents?: number | null
           amount_this_period?: number | null
+          amount_this_period_cents?: number | null
           balance_to_finish?: number | null
+          balance_to_finish_cents?: number | null
           cost_code?: string | null
           created_at?: string | null
           description?: string | null
@@ -12522,12 +12864,16 @@ export type Database = {
           id?: string
           item_number?: string | null
           materials_stored?: number | null
+          materials_stored_cents?: number | null
           pay_application_id?: string | null
           payment_period?: string | null
           percent_complete?: number | null
           previous_completed?: number | null
+          previous_completed_cents?: number | null
           retainage?: number | null
+          retainage_cents?: number | null
           scheduled_value?: number | null
+          scheduled_value_cents?: number | null
           sort_order?: number | null
           source_document_id?: string | null
           subcontractor_id?: string | null
@@ -12555,82 +12901,112 @@ export type Database = {
         Row: {
           application_number: number | null
           balance_to_finish: number | null
+          balance_to_finish_cents: number | null
           certified_by: string | null
           certified_date: string | null
           contract_id: string
           contract_sum_to_date: number | null
+          contract_sum_to_date_cents: number | null
           created_at: string | null
           current_payment_due: number | null
+          current_payment_due_cents: number | null
           id: string
           less_previous_certificates: number | null
+          less_previous_certificates_cents: number | null
           net_change_orders: number | null
+          net_change_orders_cents: number | null
           original_contract_sum: number | null
+          original_contract_sum_cents: number | null
           paid_amount: number | null
+          paid_amount_cents: number | null
           paid_date: string | null
           period_to: string
           project_id: string
           raw_extraction: Json | null
           retainage: number | null
+          retainage_cents: number | null
           signature_url: string | null
           source_document_id: string | null
           status: string | null
           submitted_date: string | null
           total_completed_and_stored: number | null
+          total_completed_and_stored_cents: number | null
           total_earned_less_retainage: number | null
+          total_earned_less_retainage_cents: number | null
           updated_at: string | null
         }
         Insert: {
           application_number?: number | null
           balance_to_finish?: number | null
+          balance_to_finish_cents?: number | null
           certified_by?: string | null
           certified_date?: string | null
           contract_id: string
           contract_sum_to_date?: number | null
+          contract_sum_to_date_cents?: number | null
           created_at?: string | null
           current_payment_due?: number | null
+          current_payment_due_cents?: number | null
           id?: string
           less_previous_certificates?: number | null
+          less_previous_certificates_cents?: number | null
           net_change_orders?: number | null
+          net_change_orders_cents?: number | null
           original_contract_sum?: number | null
+          original_contract_sum_cents?: number | null
           paid_amount?: number | null
+          paid_amount_cents?: number | null
           paid_date?: string | null
           period_to: string
           project_id: string
           raw_extraction?: Json | null
           retainage?: number | null
+          retainage_cents?: number | null
           signature_url?: string | null
           source_document_id?: string | null
           status?: string | null
           submitted_date?: string | null
           total_completed_and_stored?: number | null
+          total_completed_and_stored_cents?: number | null
           total_earned_less_retainage?: number | null
+          total_earned_less_retainage_cents?: number | null
           updated_at?: string | null
         }
         Update: {
           application_number?: number | null
           balance_to_finish?: number | null
+          balance_to_finish_cents?: number | null
           certified_by?: string | null
           certified_date?: string | null
           contract_id?: string
           contract_sum_to_date?: number | null
+          contract_sum_to_date_cents?: number | null
           created_at?: string | null
           current_payment_due?: number | null
+          current_payment_due_cents?: number | null
           id?: string
           less_previous_certificates?: number | null
+          less_previous_certificates_cents?: number | null
           net_change_orders?: number | null
+          net_change_orders_cents?: number | null
           original_contract_sum?: number | null
+          original_contract_sum_cents?: number | null
           paid_amount?: number | null
+          paid_amount_cents?: number | null
           paid_date?: string | null
           period_to?: string
           project_id?: string
           raw_extraction?: Json | null
           retainage?: number | null
+          retainage_cents?: number | null
           signature_url?: string | null
           source_document_id?: string | null
           status?: string | null
           submitted_date?: string | null
           total_completed_and_stored?: number | null
+          total_completed_and_stored_cents?: number | null
           total_earned_less_retainage?: number | null
+          total_earned_less_retainage_cents?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -13734,6 +14110,65 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_agreements: {
+        Row: {
+          agreement_pdf_url: string | null
+          agreement_text_version: string
+          created_at: string
+          data_handling_consent: Json
+          ended_reason: string | null
+          id: string
+          organization_id: string
+          pilot_ended_at: string | null
+          pilot_user_ids: string[]
+          signed_at: string
+          signed_by_email: string
+          signed_by_name: string
+          signed_by_role: string | null
+          updated_at: string
+        }
+        Insert: {
+          agreement_pdf_url?: string | null
+          agreement_text_version: string
+          created_at?: string
+          data_handling_consent?: Json
+          ended_reason?: string | null
+          id?: string
+          organization_id: string
+          pilot_ended_at?: string | null
+          pilot_user_ids: string[]
+          signed_at: string
+          signed_by_email: string
+          signed_by_name: string
+          signed_by_role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agreement_pdf_url?: string | null
+          agreement_text_version?: string
+          created_at?: string
+          data_handling_consent?: Json
+          ended_reason?: string | null
+          id?: string
+          organization_id?: string
+          pilot_ended_at?: string | null
+          pilot_user_ids?: string[]
+          signed_at?: string
+          signed_by_email?: string
+          signed_by_name?: string
+          signed_by_role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -15132,6 +15567,55 @@ export type Database = {
           },
         ]
       }
+      project_business_calendar: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          holiday_date: string
+          id: string
+          label: string | null
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          holiday_date: string
+          id?: string
+          label?: string | null
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          holiday_date?: string
+          id?: string
+          label?: string | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_business_calendar_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_business_calendar_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_business_calendar_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_carbon_entries: {
         Row: {
           carbon_factor_id: string | null
@@ -15313,6 +15797,392 @@ export type Database = {
           },
         ]
       }
+      project_rfi_custom_fields: {
+        Row: {
+          applies_to_workflow_id: string | null
+          created_at: string
+          field_code: string
+          field_type: Database["public"]["Enums"]["rfi_custom_field_type"]
+          id: string
+          label: string
+          options: string[]
+          project_id: string
+          required: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          applies_to_workflow_id?: string | null
+          created_at?: string
+          field_code: string
+          field_type: Database["public"]["Enums"]["rfi_custom_field_type"]
+          id?: string
+          label: string
+          options?: string[]
+          project_id: string
+          required?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          applies_to_workflow_id?: string | null
+          created_at?: string
+          field_code?: string
+          field_type?: Database["public"]["Enums"]["rfi_custom_field_type"]
+          id?: string
+          label?: string
+          options?: string[]
+          project_id?: string
+          required?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfi_custom_fields_applies_to_workflow_id_fkey"
+            columns: ["applies_to_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "project_rfi_workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_rfi_custom_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_custom_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_custom_fields_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rfi_notification_prefs: {
+        Row: {
+          channel: string
+          enabled: boolean
+          event: string
+          id: string
+          project_id: string
+        }
+        Insert: {
+          channel: string
+          enabled?: boolean
+          event: string
+          id?: string
+          project_id: string
+        }
+        Update: {
+          channel?: string
+          enabled?: boolean
+          event?: string
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfi_notification_prefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_notification_prefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_notification_prefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rfi_permissions: {
+        Row: {
+          action: string
+          allowed: boolean
+          id: string
+          project_id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          allowed?: boolean
+          id?: string
+          project_id: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          allowed?: boolean
+          id?: string
+          project_id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfi_permissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_permissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_permissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rfi_response_types: {
+        Row: {
+          color: string | null
+          counts_as_answered: boolean
+          created_at: string
+          id: string
+          label: string
+          project_id: string
+          requires_resubmittal: boolean
+          sort_order: number
+          type_code: string
+        }
+        Insert: {
+          color?: string | null
+          counts_as_answered?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          project_id: string
+          requires_resubmittal?: boolean
+          sort_order?: number
+          type_code: string
+        }
+        Update: {
+          color?: string | null
+          counts_as_answered?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          project_id?: string
+          requires_resubmittal?: boolean
+          sort_order?: number
+          type_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfi_response_types_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_response_types_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_response_types_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rfi_settings: {
+        Row: {
+          manual_override: boolean
+          number_padding: number
+          number_prefix: string
+          number_suffix: string
+          per_trade_sequences: boolean
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          manual_override?: boolean
+          number_padding?: number
+          number_prefix?: string
+          number_suffix?: string
+          per_trade_sequences?: boolean
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          manual_override?: boolean
+          number_padding?: number
+          number_prefix?: string
+          number_suffix?: string
+          per_trade_sequences?: boolean
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfi_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rfi_workflows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          name: string
+          project_id: string
+          stages: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          project_id: string
+          stages?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          project_id?: string
+          stages?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfi_workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_rfi_workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_role_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          member_emails: string[]
+          member_names: string[]
+          name: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_emails?: string[]
+          member_names?: string[]
+          name: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          member_emails?: string[]
+          member_names?: string[]
+          name?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_role_groups_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_role_groups_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_role_groups_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_snapshots: {
         Row: {
           created_at: string | null
@@ -15374,6 +16244,70 @@ export type Database = {
           },
         ]
       }
+      project_spec_book: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          division: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          responsible_party: string | null
+          responsible_user_id: string | null
+          section_code: string
+          section_title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          division?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          responsible_party?: string | null
+          responsible_user_id?: string | null
+          section_code: string
+          section_title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          division?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          responsible_party?: string | null
+          responsible_user_id?: string | null
+          section_code?: string
+          section_title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_spec_book_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_spec_book_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_spec_book_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_templates: {
         Row: {
           created_at: string
@@ -15415,47 +16349,6 @@ export type Database = {
           },
         ]
       }
-      project_role_groups: {
-        Row: {
-          id: string
-          project_id: string
-          name: string
-          member_emails: string[]
-          member_names: string[]
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          project_id: string
-          name: string
-          member_emails?: string[]
-          member_names?: string[]
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          project_id?: string
-          name?: string
-          member_emails?: string[]
-          member_names?: string[]
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_role_groups_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       projects: {
         Row: {
           address: string | null
@@ -15477,6 +16370,7 @@ export type Database = {
           latitude: number | null
           logo_url: string | null
           longitude: number | null
+          max_drafts_per_day: number
           name: string
           num_floors: number | null
           organization_id: string | null
@@ -15518,6 +16412,7 @@ export type Database = {
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
+          max_drafts_per_day?: number
           name: string
           num_floors?: number | null
           organization_id?: string | null
@@ -15559,6 +16454,7 @@ export type Database = {
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
+          max_drafts_per_day?: number
           name?: string
           num_floors?: number | null
           organization_id?: string | null
@@ -16198,6 +17094,50 @@ export type Database = {
           },
         ]
       }
+      resend_webhook_events: {
+        Row: {
+          bounce_reason: string | null
+          event_type: string
+          id: string
+          message_id: string | null
+          raw_payload: Json
+          received_at: string
+          rfi_distribution_id: string | null
+          signature_valid: boolean
+          to_email: string | null
+        }
+        Insert: {
+          bounce_reason?: string | null
+          event_type: string
+          id?: string
+          message_id?: string | null
+          raw_payload: Json
+          received_at?: string
+          rfi_distribution_id?: string | null
+          signature_valid: boolean
+          to_email?: string | null
+        }
+        Update: {
+          bounce_reason?: string | null
+          event_type?: string
+          id?: string
+          message_id?: string | null
+          raw_payload?: Json
+          received_at?: string
+          rfi_distribution_id?: string | null
+          signature_valid?: boolean
+          to_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resend_webhook_events_rfi_distribution_id_fkey"
+            columns: ["rfi_distribution_id"]
+            isOneToOne: false
+            referencedRelation: "rfi_distributions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retainage_entries: {
         Row: {
           amount_held: number
@@ -16350,6 +17290,304 @@ export type Database = {
           },
         ]
       }
+      rfi_assignees: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          responded_at: string | null
+          response_id: string | null
+          rfi_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          responded_at?: string | null
+          response_id?: string | null
+          rfi_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          responded_at?: string | null
+          response_id?: string | null
+          rfi_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_assignees_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "rfi_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfi_assignees_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          filename: string
+          id: string
+          is_official: boolean
+          position: number
+          response_id: string | null
+          rfi_id: string
+          size_bytes: number | null
+          source: Database["public"]["Enums"]["rfi_response_source"]
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          filename: string
+          id?: string
+          is_official?: boolean
+          position?: number
+          response_id?: string | null
+          rfi_id: string
+          size_bytes?: number | null
+          source?: Database["public"]["Enums"]["rfi_response_source"]
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          filename?: string
+          id?: string
+          is_official?: boolean
+          position?: number
+          response_id?: string | null
+          rfi_id?: string
+          size_bytes?: number | null
+          source?: Database["public"]["Enums"]["rfi_response_source"]
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_attachments_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "rfi_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfi_attachments_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_clock_events: {
+        Row: {
+          created_at: string
+          id: string
+          paused_at: string
+          paused_by: string | null
+          reason_code: Database["public"]["Enums"]["rfi_pause_reason"]
+          reason_text: string | null
+          resumed_at: string | null
+          resumed_by: string | null
+          rfi_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          paused_at: string
+          paused_by?: string | null
+          reason_code?: Database["public"]["Enums"]["rfi_pause_reason"]
+          reason_text?: string | null
+          resumed_at?: string | null
+          resumed_by?: string | null
+          rfi_id: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          paused_at?: string
+          paused_by?: string | null
+          reason_code?: Database["public"]["Enums"]["rfi_pause_reason"]
+          reason_text?: string | null
+          resumed_at?: string | null
+          resumed_by?: string | null
+          rfi_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_clock_events_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_custom_reports: {
+        Row: {
+          created_at: string
+          definition: Json
+          id: string
+          is_shared: boolean
+          name: string
+          owner_id: string | null
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          definition?: Json
+          id?: string
+          is_shared?: boolean
+          name: string
+          owner_id?: string | null
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          definition?: Json
+          id?: string
+          is_shared?: boolean
+          name?: string
+          owner_id?: string | null
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_custom_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_custom_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_custom_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_custom_values: {
+        Row: {
+          field_code: string
+          id: string
+          rfi_id: string
+          updated_at: string
+          updated_by: string | null
+          value: Json | null
+        }
+        Insert: {
+          field_code: string
+          id?: string
+          rfi_id: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Update: {
+          field_code?: string
+          id?: string
+          rfi_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_custom_values_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_distributions: {
+        Row: {
+          bounce_reason: string | null
+          delivery_status: Database["public"]["Enums"]["rfi_delivery_status"]
+          delivery_status_at: string | null
+          id: string
+          message: string | null
+          message_id: string | null
+          recipient_email: string
+          recipient_name: string | null
+          rfi_id: string
+          sent_at: string
+          sent_by: string | null
+        }
+        Insert: {
+          bounce_reason?: string | null
+          delivery_status?: Database["public"]["Enums"]["rfi_delivery_status"]
+          delivery_status_at?: string | null
+          id?: string
+          message?: string | null
+          message_id?: string | null
+          recipient_email: string
+          recipient_name?: string | null
+          rfi_id: string
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Update: {
+          bounce_reason?: string | null
+          delivery_status?: Database["public"]["Enums"]["rfi_delivery_status"]
+          delivery_status_at?: string | null
+          id?: string
+          message?: string | null
+          message_id?: string | null
+          recipient_email?: string
+          recipient_name?: string | null
+          rfi_id?: string
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_distributions_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfi_drafts: {
         Row: {
           created_at: string | null
@@ -16404,6 +17642,57 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_drawing_pins: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          drawing_id: string
+          id: string
+          note: string | null
+          page: number | null
+          rfi_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          drawing_id: string
+          id?: string
+          note?: string | null
+          page?: number | null
+          rfi_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          drawing_id?: string
+          id?: string
+          note?: string | null
+          page?: number | null
+          rfi_id?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_drawing_pins_drawing_id_fkey"
+            columns: ["drawing_id"]
+            isOneToOne: false
+            referencedRelation: "drawings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfi_drawing_pins_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
             referencedColumns: ["id"]
           },
         ]
@@ -16505,36 +17794,95 @@ export type Database = {
           },
         ]
       }
+      rfi_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          link_kind: Database["public"]["Enums"]["rfi_link_kind"]
+          rfi_id: string
+          target_id: string
+          target_type: Database["public"]["Enums"]["rfi_link_target"]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link_kind?: Database["public"]["Enums"]["rfi_link_kind"]
+          rfi_id: string
+          target_id: string
+          target_type: Database["public"]["Enums"]["rfi_link_target"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link_kind?: Database["public"]["Enums"]["rfi_link_kind"]
+          rfi_id?: string
+          target_id?: string
+          target_type?: Database["public"]["Enums"]["rfi_link_target"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_links_rfi_id_fkey"
+            columns: ["rfi_id"]
+            isOneToOne: false
+            referencedRelation: "rfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfi_responses: {
         Row: {
           attachments: Json | null
           author_id: string | null
           content: string
           created_at: string | null
+          deleted_at: string | null
+          edited_at: string | null
           id: string
+          inbound_message_id: string | null
+          is_internal: boolean
           is_official: boolean | null
+          mentioned_user_ids: string[]
           response_type: string | null
           rfi_id: string
+          source: Database["public"]["Enums"]["rfi_response_source"]
+          source_email: string | null
         }
         Insert: {
           attachments?: Json | null
           author_id?: string | null
           content: string
           created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
+          inbound_message_id?: string | null
+          is_internal?: boolean
           is_official?: boolean | null
+          mentioned_user_ids?: string[]
           response_type?: string | null
           rfi_id: string
+          source?: Database["public"]["Enums"]["rfi_response_source"]
+          source_email?: string | null
         }
         Update: {
           attachments?: Json | null
           author_id?: string | null
           content?: string
           created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
           id?: string
+          inbound_message_id?: string | null
+          is_internal?: boolean
           is_official?: boolean | null
+          mentioned_user_ids?: string[]
           response_type?: string | null
           rfi_id?: string
+          source?: Database["public"]["Enums"]["rfi_response_source"]
+          source_email?: string | null
         }
         Relationships: [
           {
@@ -16546,40 +17894,230 @@ export type Database = {
           },
         ]
       }
-      rfi_distributions: {
+      rfi_responses_versions: {
         Row: {
+          body: string
+          edited_at: string
+          edited_by: string | null
           id: string
-          rfi_id: string
-          recipient_email: string
-          recipient_name: string | null
-          message: string | null
-          sent_by: string | null
-          sent_at: string
+          is_internal: boolean | null
+          is_official: boolean | null
+          response_id: string
+          response_type: string | null
         }
         Insert: {
+          body: string
+          edited_at?: string
+          edited_by?: string | null
           id?: string
-          rfi_id: string
-          recipient_email: string
-          recipient_name?: string | null
-          message?: string | null
-          sent_by?: string | null
-          sent_at?: string
+          is_internal?: boolean | null
+          is_official?: boolean | null
+          response_id: string
+          response_type?: string | null
         }
         Update: {
+          body?: string
+          edited_at?: string
+          edited_by?: string | null
           id?: string
-          rfi_id?: string
-          recipient_email?: string
-          recipient_name?: string | null
-          message?: string | null
-          sent_by?: string | null
-          sent_at?: string
+          is_internal?: boolean | null
+          is_official?: boolean | null
+          response_id?: string
+          response_type?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "rfi_distributions_rfi_id_fkey"
-            columns: ["rfi_id"]
+            foreignKeyName: "rfi_responses_versions_response_id_fkey"
+            columns: ["response_id"]
             isOneToOne: false
-            referencedRelation: "rfis"
+            referencedRelation: "rfi_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_saved_views: {
+        Row: {
+          color_by: string | null
+          columns: Json
+          created_at: string
+          created_by: string | null
+          filters: Json
+          id: string
+          is_default: boolean
+          name: string
+          owner_id: string | null
+          project_id: string
+          scope: Database["public"]["Enums"]["rfi_view_scope"]
+          sort: Json
+          updated_at: string
+          view_mode: string
+        }
+        Insert: {
+          color_by?: string | null
+          columns?: Json
+          created_at?: string
+          created_by?: string | null
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          name: string
+          owner_id?: string | null
+          project_id: string
+          scope: Database["public"]["Enums"]["rfi_view_scope"]
+          sort?: Json
+          updated_at?: string
+          view_mode?: string
+        }
+        Update: {
+          color_by?: string | null
+          columns?: Json
+          created_at?: string
+          created_by?: string | null
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          name?: string
+          owner_id?: string | null
+          project_id?: string
+          scope?: Database["public"]["Enums"]["rfi_view_scope"]
+          sort?: Json
+          updated_at?: string
+          view_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_saved_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_saved_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_saved_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_scheduled_reports: {
+        Row: {
+          cadence: string
+          canned_key: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          last_sent_at: string | null
+          project_id: string
+          recipients: string[]
+          report_id: string | null
+          subject_tmpl: string | null
+        }
+        Insert: {
+          cadence: string
+          canned_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_sent_at?: string | null
+          project_id: string
+          recipients?: string[]
+          report_id?: string | null
+          subject_tmpl?: string | null
+        }
+        Update: {
+          cadence?: string
+          canned_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_sent_at?: string | null
+          project_id?: string
+          recipients?: string[]
+          report_id?: string | null
+          subject_tmpl?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_scheduled_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_scheduled_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_scheduled_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfi_scheduled_reports_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "rfi_custom_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfi_user_column_prefs: {
+        Row: {
+          columns: Json
+          id: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          columns?: Json
+          id?: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          columns?: Json
+          id?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfi_user_column_prefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_user_column_prefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "rfi_user_column_prefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -16619,7 +18157,6 @@ export type Database = {
           assigned_to: string | null
           ball_in_court: string | null
           closed_date: string | null
-          cost_impact: number | null
           cost_impact_cents: number | null
           created_at: string | null
           created_by: string | null
@@ -16661,7 +18198,6 @@ export type Database = {
           assigned_to?: string | null
           ball_in_court?: string | null
           closed_date?: string | null
-          cost_impact?: number | null
           cost_impact_cents?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -16703,7 +18239,6 @@ export type Database = {
           assigned_to?: string | null
           ball_in_court?: string | null
           closed_date?: string | null
-          cost_impact?: number | null
           cost_impact_cents?: number | null
           created_at?: string | null
           created_by?: string | null
@@ -17466,6 +19001,73 @@ export type Database = {
           },
           {
             foreignKeyName: "schedule_recovery_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_insights_log: {
+        Row: {
+          attempt: number
+          computed_at: string
+          computed_count: number
+          detector_kind: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          job_msg_id: number | null
+          outcome: string
+          project_id: string
+          promoted_count: number
+          withdrawn_count: number
+        }
+        Insert: {
+          attempt?: number
+          computed_at?: string
+          computed_count?: number
+          detector_kind: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          job_msg_id?: number | null
+          outcome?: string
+          project_id: string
+          promoted_count?: number
+          withdrawn_count?: number
+        }
+        Update: {
+          attempt?: number
+          computed_at?: string
+          computed_count?: number
+          detector_kind?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          job_msg_id?: number | null
+          outcome?: string
+          project_id?: string
+          promoted_count?: number
+          withdrawn_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_insights_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "scheduled_insights_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "scheduled_insights_log_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -18706,6 +20308,477 @@ export type Database = {
             referencedRelation: "submittals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "submittal_approvals_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_change_history: {
+        Row: {
+          action_at: string
+          action_by: string | null
+          field: string | null
+          from_value: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
+          id: string
+          submittal_id: string
+          to_value: Json | null
+        }
+        Insert: {
+          action_at?: string
+          action_by?: string | null
+          field?: string | null
+          from_value?: Json | null
+          hash_chain_prev?: string | null
+          hash_chain_self?: string | null
+          id?: string
+          submittal_id: string
+          to_value?: Json | null
+        }
+        Update: {
+          action_at?: string
+          action_by?: string | null
+          field?: string | null
+          from_value?: Json | null
+          hash_chain_prev?: string | null
+          hash_chain_self?: string | null
+          id?: string
+          submittal_id?: string
+          to_value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_change_history_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_change_history_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_distributions: {
+        Row: {
+          distributed_at: string
+          distributed_by: string | null
+          id: string
+          message: string | null
+          pdf_url: string | null
+          submittal_id: string
+          to_emails: string[] | null
+          to_user_ids: string[] | null
+        }
+        Insert: {
+          distributed_at?: string
+          distributed_by?: string | null
+          id?: string
+          message?: string | null
+          pdf_url?: string | null
+          submittal_id: string
+          to_emails?: string[] | null
+          to_user_ids?: string[] | null
+        }
+        Update: {
+          distributed_at?: string
+          distributed_by?: string | null
+          id?: string
+          message?: string | null
+          pdf_url?: string | null
+          submittal_id?: string
+          to_emails?: string[] | null
+          to_user_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_distributions_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_distributions_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_emails: {
+        Row: {
+          attachments: Json | null
+          body_html: string | null
+          body_text: string | null
+          cc_addrs: string[] | null
+          direction: string
+          from_addr: string | null
+          id: string
+          message_id: string
+          received_at: string
+          subject: string | null
+          submittal_id: string
+          to_addrs: string[] | null
+        }
+        Insert: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          cc_addrs?: string[] | null
+          direction: string
+          from_addr?: string | null
+          id?: string
+          message_id: string
+          received_at?: string
+          subject?: string | null
+          submittal_id: string
+          to_addrs?: string[] | null
+        }
+        Update: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          cc_addrs?: string[] | null
+          direction?: string
+          from_addr?: string | null
+          id?: string
+          message_id?: string
+          received_at?: string
+          subject?: string | null
+          submittal_id?: string
+          to_addrs?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_emails_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_emails_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_items: {
+        Row: {
+          created_at: string
+          filename: string
+          id: string
+          kind: Database["public"]["Enums"]["submittal_item_kind"] | null
+          manufacturer: string | null
+          mime_type: string | null
+          ocr_text: string | null
+          page_count: number | null
+          product_model: string | null
+          product_name: string | null
+          size_bytes: number | null
+          storage_path: string
+          submittal_id: string
+          uploaded_by: string | null
+          uploaded_via: string | null
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          id?: string
+          kind?: Database["public"]["Enums"]["submittal_item_kind"] | null
+          manufacturer?: string | null
+          mime_type?: string | null
+          ocr_text?: string | null
+          page_count?: number | null
+          product_model?: string | null
+          product_name?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          submittal_id: string
+          uploaded_by?: string | null
+          uploaded_via?: string | null
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["submittal_item_kind"] | null
+          manufacturer?: string | null
+          mime_type?: string | null
+          ocr_text?: string | null
+          page_count?: number | null
+          product_model?: string | null
+          product_name?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          submittal_id?: string
+          uploaded_by?: string | null
+          uploaded_via?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_items_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_items_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_magic_links: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          intent: string
+          submittal_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          intent: string
+          submittal_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          intent?: string
+          submittal_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_magic_links_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_magic_links_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_markup: {
+        Row: {
+          comment_md: string | null
+          created_at: string
+          created_by: string | null
+          geometry: Json
+          id: string
+          kind: string
+          pdf_page: number
+          rev_number: number
+          submittal_item_id: string
+        }
+        Insert: {
+          comment_md?: string | null
+          created_at?: string
+          created_by?: string | null
+          geometry: Json
+          id?: string
+          kind: string
+          pdf_page: number
+          rev_number: number
+          submittal_item_id: string
+        }
+        Update: {
+          comment_md?: string | null
+          created_at?: string
+          created_by?: string | null
+          geometry?: Json
+          id?: string
+          kind?: string
+          pdf_page?: number
+          rev_number?: number
+          submittal_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_markup_submittal_item_id_fkey"
+            columns: ["submittal_item_id"]
+            isOneToOne: false
+            referencedRelation: "submittal_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          csi_section: string | null
+          description: string | null
+          distribution_list: Json
+          id: string
+          number: number
+          project_id: string
+          responsible_sub_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          csi_section?: string | null
+          description?: string | null
+          distribution_list?: Json
+          id?: string
+          number: number
+          project_id: string
+          responsible_sub_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          csi_section?: string | null
+          description?: string | null
+          distribution_list?: Json
+          id?: string
+          number?: number
+          project_id?: string
+          responsible_sub_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_packages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_packages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_packages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_packages_responsible_sub_id_fkey"
+            columns: ["responsible_sub_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_reviewers: {
+        Row: {
+          comments: string | null
+          created_at: string
+          disposition: string | null
+          due_date: string | null
+          id: string
+          parallel_group: number | null
+          received_at: string | null
+          responded_at: string | null
+          reviewer_email: string | null
+          reviewer_id: string | null
+          reviewer_org_id: string | null
+          reviewer_role: string | null
+          sequence: number
+          stamp_url: string | null
+          submittal_id: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          disposition?: string | null
+          due_date?: string | null
+          id?: string
+          parallel_group?: number | null
+          received_at?: string | null
+          responded_at?: string | null
+          reviewer_email?: string | null
+          reviewer_id?: string | null
+          reviewer_org_id?: string | null
+          reviewer_role?: string | null
+          sequence: number
+          stamp_url?: string | null
+          submittal_id: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          disposition?: string | null
+          due_date?: string | null
+          id?: string
+          parallel_group?: number | null
+          received_at?: string | null
+          responded_at?: string | null
+          reviewer_email?: string | null
+          reviewer_id?: string | null
+          reviewer_org_id?: string | null
+          reviewer_role?: string | null
+          sequence?: number
+          stamp_url?: string | null
+          submittal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_reviewers_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_reviewers_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_reviewers_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       submittal_revisions: {
@@ -18756,103 +20829,444 @@ export type Database = {
             referencedRelation: "submittals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "submittal_revisions_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_saved_views: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          owner_user_id: string | null
+          project_id: string
+          scope: Database["public"]["Enums"]["submittal_saved_view_scope"]
+          updated_at: string
+          view_state: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          owner_user_id?: string | null
+          project_id: string
+          scope: Database["public"]["Enums"]["submittal_saved_view_scope"]
+          updated_at?: string
+          view_state?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          owner_user_id?: string | null
+          project_id?: string
+          scope?: Database["public"]["Enums"]["submittal_saved_view_scope"]
+          updated_at?: string
+          view_state?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_saved_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_saved_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_saved_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_settings: {
+        Row: {
+          ai_preflight_block_threshold: number | null
+          ai_preflight_enabled: boolean
+          allow_approvers_to_add_reviewers: boolean
+          allow_attachment_download_no_login: boolean
+          approvers_required_by_default: boolean
+          closeout_template: Json | null
+          codeset: Database["public"]["Enums"]["submittal_codeset"]
+          created_at: string
+          custom_codes: Json | null
+          default_buffer_days: number
+          default_distribution: Json
+          default_sla_days: number
+          default_submittal_manager_id: string | null
+          email_notifications: Json
+          enable_dynamic_due_dates: boolean
+          enable_overdue_reminders: boolean
+          enable_qr_codes: boolean
+          enable_reject_workflow: boolean
+          enable_schedule_linking: boolean
+          include_spec_section_number: boolean
+          is_federal: boolean
+          numbering_format: string
+          private_by_default: boolean
+          project_id: string
+          ufgs_approving_authority: string | null
+          updated_at: string
+          voice_review_enabled: boolean
+        }
+        Insert: {
+          ai_preflight_block_threshold?: number | null
+          ai_preflight_enabled?: boolean
+          allow_approvers_to_add_reviewers?: boolean
+          allow_attachment_download_no_login?: boolean
+          approvers_required_by_default?: boolean
+          closeout_template?: Json | null
+          codeset: Database["public"]["Enums"]["submittal_codeset"]
+          created_at?: string
+          custom_codes?: Json | null
+          default_buffer_days?: number
+          default_distribution?: Json
+          default_sla_days?: number
+          default_submittal_manager_id?: string | null
+          email_notifications?: Json
+          enable_dynamic_due_dates?: boolean
+          enable_overdue_reminders?: boolean
+          enable_qr_codes?: boolean
+          enable_reject_workflow?: boolean
+          enable_schedule_linking?: boolean
+          include_spec_section_number?: boolean
+          is_federal?: boolean
+          numbering_format?: string
+          private_by_default?: boolean
+          project_id: string
+          ufgs_approving_authority?: string | null
+          updated_at?: string
+          voice_review_enabled?: boolean
+        }
+        Update: {
+          ai_preflight_block_threshold?: number | null
+          ai_preflight_enabled?: boolean
+          allow_approvers_to_add_reviewers?: boolean
+          allow_attachment_download_no_login?: boolean
+          approvers_required_by_default?: boolean
+          closeout_template?: Json | null
+          codeset?: Database["public"]["Enums"]["submittal_codeset"]
+          created_at?: string
+          custom_codes?: Json | null
+          default_buffer_days?: number
+          default_distribution?: Json
+          default_sla_days?: number
+          default_submittal_manager_id?: string | null
+          email_notifications?: Json
+          enable_dynamic_due_dates?: boolean
+          enable_overdue_reminders?: boolean
+          enable_qr_codes?: boolean
+          enable_reject_workflow?: boolean
+          enable_schedule_linking?: boolean
+          include_spec_section_number?: boolean
+          is_federal?: boolean
+          numbering_format?: string
+          private_by_default?: boolean
+          project_id?: string
+          ufgs_approving_authority?: string | null
+          updated_at?: string
+          voice_review_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_settings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submittal_workflow_templates: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          name: string
+          project_id: string | null
+          steps: Json
+          trade: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          project_id?: string | null
+          steps: Json
+          trade?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          project_id?: string | null
+          steps?: Json
+          trade?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_workflow_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_workflow_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_workflow_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittal_workflow_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
         ]
       }
       submittals: {
         Row: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
           approval_chain: Json | null
           approved_date: string | null
           assigned_to: string | null
           attachments: Json | null
+          ball_in_court_since: string | null
+          buffer_days: number | null
+          closed_at: string | null
+          closed_by: string | null
           closed_date: string | null
+          closed_reason: string | null
+          confirmed_delivery_date: string | null
           created_at: string | null
           created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
           current_reviewer: string | null
+          current_reviewer_id: string | null
+          current_reviewer_role: string | null
           days_in_review: number | null
           deleted_at: string | null
           deleted_by: string | null
           due_date: string | null
           external_ids: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
           id: string
+          iris_drafted_by_human: boolean | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          iris_voice_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
           lead_time_weeks: number | null
           legacy_payload: Json | null
           number: number
           parent_submittal_id: string | null
           project_id: string
+          required_on_site_date: string | null
           required_onsite_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number
+          review_duration_days: number | null
           revision_number: number | null
+          schedule_activity_id: string | null
+          spec_pdf_highlight_rect: Json | null
+          spec_pdf_page: number | null
           spec_section: string | null
+          spec_section_paragraph: string | null
           specification_id: string | null
           stamp: string | null
           status: string | null
           subcontractor: string | null
           submit_by_date: string | null
+          submittal_package_id: string | null
           submitted_date: string | null
           title: string
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
+          actual_delivery_date?: string | null
+          anticipated_delivery_date?: string | null
           approval_chain?: Json | null
           approved_date?: string | null
           assigned_to?: string | null
           attachments?: Json | null
+          ball_in_court_since?: string | null
+          buffer_days?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
           closed_date?: string | null
+          closed_reason?: string | null
+          confirmed_delivery_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          csi_division?: string | null
+          csi_section?: string | null
           current_reviewer?: string | null
+          current_reviewer_id?: string | null
+          current_reviewer_role?: string | null
           days_in_review?: number | null
           deleted_at?: string | null
           deleted_by?: string | null
           due_date?: string | null
           external_ids?: Json | null
+          hash_chain_prev?: string | null
+          hash_chain_self?: string | null
           id?: string
+          iris_drafted_by_human?: boolean | null
+          iris_preflight_findings?: Json | null
+          iris_preflight_score?: number | null
+          iris_voice_score?: number | null
+          is_critical_path?: boolean | null
+          is_federal?: boolean | null
+          is_private?: boolean
+          is_soft_pilot?: boolean | null
+          kind?: Database["public"]["Enums"]["submittal_kind"] | null
           lead_time_weeks?: number | null
           legacy_payload?: Json | null
           number?: number
           parent_submittal_id?: string | null
           project_id: string
+          required_on_site_date?: string | null
           required_onsite_date?: string | null
+          responsible_sub_id?: string | null
+          rev_number?: number
+          review_duration_days?: number | null
           revision_number?: number | null
+          schedule_activity_id?: string | null
+          spec_pdf_highlight_rect?: Json | null
+          spec_pdf_page?: number | null
           spec_section?: string | null
+          spec_section_paragraph?: string | null
           specification_id?: string | null
           stamp?: string | null
           status?: string | null
           subcontractor?: string | null
           submit_by_date?: string | null
+          submittal_package_id?: string | null
           submitted_date?: string | null
           title: string
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
+          actual_delivery_date?: string | null
+          anticipated_delivery_date?: string | null
           approval_chain?: Json | null
           approved_date?: string | null
           assigned_to?: string | null
           attachments?: Json | null
+          ball_in_court_since?: string | null
+          buffer_days?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
           closed_date?: string | null
+          closed_reason?: string | null
+          confirmed_delivery_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          csi_division?: string | null
+          csi_section?: string | null
           current_reviewer?: string | null
+          current_reviewer_id?: string | null
+          current_reviewer_role?: string | null
           days_in_review?: number | null
           deleted_at?: string | null
           deleted_by?: string | null
           due_date?: string | null
           external_ids?: Json | null
+          hash_chain_prev?: string | null
+          hash_chain_self?: string | null
           id?: string
+          iris_drafted_by_human?: boolean | null
+          iris_preflight_findings?: Json | null
+          iris_preflight_score?: number | null
+          iris_voice_score?: number | null
+          is_critical_path?: boolean | null
+          is_federal?: boolean | null
+          is_private?: boolean
+          is_soft_pilot?: boolean | null
+          kind?: Database["public"]["Enums"]["submittal_kind"] | null
           lead_time_weeks?: number | null
           legacy_payload?: Json | null
           number?: number
           parent_submittal_id?: string | null
           project_id?: string
+          required_on_site_date?: string | null
           required_onsite_date?: string | null
+          responsible_sub_id?: string | null
+          rev_number?: number
+          review_duration_days?: number | null
           revision_number?: number | null
+          schedule_activity_id?: string | null
+          spec_pdf_highlight_rect?: Json | null
+          spec_pdf_page?: number | null
           spec_section?: string | null
+          spec_section_paragraph?: string | null
           specification_id?: string | null
           stamp?: string | null
           status?: string | null
           subcontractor?: string | null
           submit_by_date?: string | null
+          submittal_package_id?: string | null
           submitted_date?: string | null
           title?: string
           updated_at?: string | null
@@ -18864,6 +21278,13 @@ export type Database = {
             columns: ["parent_submittal_id"]
             isOneToOne: false
             referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittals_parent_submittal_id_fkey"
+            columns: ["parent_submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
             referencedColumns: ["id"]
           },
           {
@@ -18888,10 +21309,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "submittals_responsible_sub_id_fkey"
+            columns: ["responsible_sub_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "submittals_specification_id_fkey"
             columns: ["specification_id"]
             isOneToOne: false
             referencedRelation: "specifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittals_submittal_package_id_fkey"
+            columns: ["submittal_package_id"]
+            isOneToOne: false
+            referencedRelation: "submittal_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -19621,11 +22056,14 @@ export type Database = {
           description: string | null
           document_ids: string[] | null
           due_date: string | null
+          email_message_id: string | null
           from_company: string | null
           from_contact: string | null
           id: string
           items: Json | null
+          kind: string | null
           notes: string | null
+          pdf_url: string | null
           project_id: string
           purpose: string | null
           responded_at: string | null
@@ -19634,6 +22072,7 @@ export type Database = {
           sent_date: string | null
           status: string | null
           subject: string
+          submittal_id: string | null
           to_company: string
           to_contact: string | null
           to_email: string | null
@@ -19649,11 +22088,14 @@ export type Database = {
           description?: string | null
           document_ids?: string[] | null
           due_date?: string | null
+          email_message_id?: string | null
           from_company?: string | null
           from_contact?: string | null
           id?: string
           items?: Json | null
+          kind?: string | null
           notes?: string | null
+          pdf_url?: string | null
           project_id: string
           purpose?: string | null
           responded_at?: string | null
@@ -19662,6 +22104,7 @@ export type Database = {
           sent_date?: string | null
           status?: string | null
           subject: string
+          submittal_id?: string | null
           to_company: string
           to_contact?: string | null
           to_email?: string | null
@@ -19677,11 +22120,14 @@ export type Database = {
           description?: string | null
           document_ids?: string[] | null
           due_date?: string | null
+          email_message_id?: string | null
           from_company?: string | null
           from_contact?: string | null
           id?: string
           items?: Json | null
+          kind?: string | null
           notes?: string | null
+          pdf_url?: string | null
           project_id?: string
           purpose?: string | null
           responded_at?: string | null
@@ -19690,6 +22136,7 @@ export type Database = {
           sent_date?: string | null
           status?: string | null
           subject?: string
+          submittal_id?: string | null
           to_company?: string
           to_contact?: string | null
           to_email?: string | null
@@ -19716,6 +22163,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transmittals_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transmittals_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -19900,6 +22361,55 @@ export type Database = {
           },
           {
             foreignKeyName: "user_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_rfi_notification_overrides: {
+        Row: {
+          channel: string
+          enabled: boolean
+          event: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          enabled: boolean
+          event: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          enabled?: boolean
+          event?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rfi_notification_overrides_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "user_rfi_notification_overrides_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "user_rfi_notification_overrides_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -21415,6 +23925,24 @@ export type Database = {
       }
     }
     Views: {
+      lap_2_gate_metrics_daily: {
+        Row: {
+          acceptance_rate_pct: number | null
+          aged_out_count: number | null
+          approved_count: number | null
+          approved_today: number | null
+          approved_with_edits_count: number | null
+          auto_withdrawn_count: number | null
+          avg_time_to_approve_sec: number | null
+          ghost_approval_count: number | null
+          keyboard_decisions: number | null
+          long_decision_count: number | null
+          median_time_to_approve_sec: number | null
+          metric_date: string | null
+          mouse_decisions: number | null
+        }
+        Relationships: []
+      }
       org_search_index: {
         Row: {
           body: string | null
@@ -21589,6 +24117,98 @@ export type Database = {
           },
         ]
       }
+      submittals_log_mv: {
+        Row: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
+          ball_in_court_since: string | null
+          confirmed_delivery_date: string | null
+          created_at: string | null
+          created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
+          current_reviewer_id: string | null
+          current_reviewer_name: string | null
+          current_reviewer_role: string | null
+          days_in_court: number | null
+          deleted_at: string | null
+          id: string | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean | null
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
+          lead_time_weeks: number | null
+          number: number | null
+          parent_submittal_id: string | null
+          project_id: string | null
+          required_on_site_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number | null
+          risk_band: string | null
+          spec_pdf_page: number | null
+          spec_section_paragraph: string | null
+          status: string | null
+          sub_name: string | null
+          submit_by_date: string | null
+          submittal_package_id: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittals_parent_submittal_id_fkey"
+            columns: ["parent_submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittals_parent_submittal_id_fkey"
+            columns: ["parent_submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "submittals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittals_responsible_sub_id_fkey"
+            columns: ["responsible_sub_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittals_submittal_package_id_fkey"
+            columns: ["submittal_package_id"]
+            isOneToOne: false
+            referencedRelation: "submittal_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_summary: {
         Row: {
           event_type: string | null
@@ -21687,6 +24307,18 @@ export type Database = {
         Args: { p_limit_type: string; p_organization_id: string }
         Returns: boolean
       }
+      compute_submittal_hash: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_id: string
+          p_payload: Json
+          p_prev_hash: string
+          p_rev_number: number
+          p_status: string
+        }
+        Returns: string
+      }
       create_notification: {
         Args: {
           p_body: string
@@ -21698,6 +24330,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      current_user_org_ids: { Args: never; Returns: string[] }
+      emit_submittal_event: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_metadata: Json
+          p_submittal_id: string
+        }
+        Returns: undefined
+      }
+      enqueue_insights_jobs: { Args: never; Returns: number }
       get_my_org_ids: { Args: never; Returns: string[] }
       get_portfolio_metrics: {
         Args: { org_id: string }
@@ -21723,18 +24366,12 @@ export type Database = {
         Args: { p_user_id: string; p_window_seconds: number }
         Returns: number
       }
-      list_deleted_rfis: {
-        Args: { p_project_id: string }
-        Returns: Database["public"]["Tables"]["rfis"]["Row"][]
-      }
-      restore_rfi: {
-        Args: { p_rfi_id: string }
-        Returns: Database["public"]["Tables"]["rfis"]["Row"]
-      }
       is_org_admin_or_empty: {
         Args: { org_id: string; uid: string }
         Returns: boolean
       }
+      is_pilot_project: { Args: { p_project_id: string }; Returns: boolean }
+      is_pilot_user: { Args: { p_user_id: string }; Returns: boolean }
       is_project_member: { Args: { p_project_id: string }; Returns: boolean }
       is_project_role: {
         Args: { allowed_roles: string[]; p_project_id: string }
@@ -21745,6 +24382,57 @@ export type Database = {
         Returns: boolean
       }
       kernel_role_label: { Args: { raw_role: string }; Returns: string }
+      lap_2_open_incident_count: { Args: never; Returns: number }
+      list_deleted_rfis: {
+        Args: { p_project_id: string }
+        Returns: {
+          applicable_codes: string[] | null
+          assigned_to: string | null
+          ball_in_court: string | null
+          closed_date: string | null
+          cost_impact_cents: number | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          drawing_reference: string | null
+          drawing_x: number | null
+          drawing_y: number | null
+          due_date: string | null
+          external_ids: Json | null
+          id: string
+          is_auto_generated: boolean | null
+          is_private: boolean
+          legacy_payload: Json | null
+          number: number
+          priority: string | null
+          project_id: string
+          question: string | null
+          reference: string | null
+          response_due_date: string | null
+          schedule_days_impact: number | null
+          schedule_impact: string | null
+          sla_paused_at: string | null
+          sla_paused_by: string | null
+          sla_paused_reason: string | null
+          sla_total_pause_seconds: number
+          source_discrepancy_id: string | null
+          spec_section: string | null
+          specification_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          void_reason: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rfis"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       match_document_chunks: {
         Args: {
           match_count?: number
@@ -21762,13 +24450,17 @@ export type Database = {
           similarity: number
         }[]
       }
+      promote_insight_to_draft: {
+        Args: { p_insight: Json; p_project_id: string }
+        Returns: string
+      }
       record_citation_interaction: {
         Args: {
           p_citation_index: number
           p_citation_kind: string
           p_draft_id: string
           p_interaction_type: string
-          p_session_id?: string | null
+          p_session_id?: string
         }
         Returns: undefined
       }
@@ -21781,32 +24473,8 @@ export type Database = {
         Returns: undefined
       }
       record_draft_view: {
-        Args: { p_draft_id: string; p_session_id: string | null }
+        Args: { p_draft_id: string; p_session_id: string }
         Returns: undefined
-      }
-      resolve_citation: {
-        Args: {
-          p_kind: string
-          p_payload?: Json
-          p_ref: string
-        }
-        Returns: Json
-      }
-      lap_2_open_incident_count: {
-        Args: Record<string, never>
-        Returns: number
-      }
-      withdraw_stale_draft: {
-        Args: { p_draft_id: string; p_reason: string }
-        Returns: undefined
-      }
-      promote_insight_to_draft: {
-        Args: { p_insight: Json; p_project_id: string }
-        Returns: string
-      }
-      enqueue_insights_jobs: {
-        Args: Record<string, never>
-        Returns: number
       }
       record_failed_login: {
         Args: {
@@ -21818,10 +24486,69 @@ export type Database = {
       }
       refresh_project_health_summary: { Args: never; Returns: undefined }
       refresh_project_metrics: { Args: never; Returns: undefined }
+      refresh_submittals_log_mv: {
+        Args: { p_concurrent?: boolean }
+        Returns: undefined
+      }
       reorder_tasks: {
         Args: { new_orders: number[]; task_ids: string[] }
         Returns: undefined
       }
+      resolve_citation: {
+        Args: { p_kind: string; p_payload?: Json; p_ref: string }
+        Returns: Json
+      }
+      restore_rfi: {
+        Args: { p_rfi_id: string }
+        Returns: {
+          applicable_codes: string[] | null
+          assigned_to: string | null
+          ball_in_court: string | null
+          closed_date: string | null
+          cost_impact_cents: number | null
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          drawing_reference: string | null
+          drawing_x: number | null
+          drawing_y: number | null
+          due_date: string | null
+          external_ids: Json | null
+          id: string
+          is_auto_generated: boolean | null
+          is_private: boolean
+          legacy_payload: Json | null
+          number: number
+          priority: string | null
+          project_id: string
+          question: string | null
+          reference: string | null
+          response_due_date: string | null
+          schedule_days_impact: number | null
+          schedule_impact: string | null
+          sla_paused_at: string | null
+          sla_paused_by: string | null
+          sla_paused_reason: string | null
+          sla_total_pause_seconds: number
+          source_discrepancy_id: string | null
+          spec_section: string | null
+          specification_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          void_reason: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rfis"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      round_half_even_cents: { Args: { v: number }; Returns: number }
       search_org:
         | {
             Args: {
@@ -21869,6 +24596,10 @@ export type Database = {
           title: string
         }[]
       }
+      seed_iris_suggested_submittal_views: {
+        Args: { p_project_id: string }
+        Returns: number
+      }
       should_send_notification: {
         Args: {
           p_channel?: string
@@ -21879,6 +24610,389 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submittal_advance_status: {
+        Args: { p_actor: string; p_id: string; p_reason?: string; p_to: string }
+        Returns: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
+          approval_chain: Json | null
+          approved_date: string | null
+          assigned_to: string | null
+          attachments: Json | null
+          ball_in_court_since: string | null
+          buffer_days: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_date: string | null
+          closed_reason: string | null
+          confirmed_delivery_date: string | null
+          created_at: string | null
+          created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
+          current_reviewer: string | null
+          current_reviewer_id: string | null
+          current_reviewer_role: string | null
+          days_in_review: number | null
+          deleted_at: string | null
+          deleted_by: string | null
+          due_date: string | null
+          external_ids: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
+          id: string
+          iris_drafted_by_human: boolean | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          iris_voice_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
+          lead_time_weeks: number | null
+          legacy_payload: Json | null
+          number: number
+          parent_submittal_id: string | null
+          project_id: string
+          required_on_site_date: string | null
+          required_onsite_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number
+          review_duration_days: number | null
+          revision_number: number | null
+          schedule_activity_id: string | null
+          spec_pdf_highlight_rect: Json | null
+          spec_pdf_page: number | null
+          spec_section: string | null
+          spec_section_paragraph: string | null
+          specification_id: string | null
+          stamp: string | null
+          status: string | null
+          subcontractor: string | null
+          submit_by_date: string | null
+          submittal_package_id: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submittals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submittal_close: {
+        Args: { p_id: string; p_reason?: string }
+        Returns: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
+          approval_chain: Json | null
+          approved_date: string | null
+          assigned_to: string | null
+          attachments: Json | null
+          ball_in_court_since: string | null
+          buffer_days: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_date: string | null
+          closed_reason: string | null
+          confirmed_delivery_date: string | null
+          created_at: string | null
+          created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
+          current_reviewer: string | null
+          current_reviewer_id: string | null
+          current_reviewer_role: string | null
+          days_in_review: number | null
+          deleted_at: string | null
+          deleted_by: string | null
+          due_date: string | null
+          external_ids: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
+          id: string
+          iris_drafted_by_human: boolean | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          iris_voice_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
+          lead_time_weeks: number | null
+          legacy_payload: Json | null
+          number: number
+          parent_submittal_id: string | null
+          project_id: string
+          required_on_site_date: string | null
+          required_onsite_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number
+          review_duration_days: number | null
+          revision_number: number | null
+          schedule_activity_id: string | null
+          spec_pdf_highlight_rect: Json | null
+          spec_pdf_page: number | null
+          spec_section: string | null
+          spec_section_paragraph: string | null
+          specification_id: string | null
+          stamp: string | null
+          status: string | null
+          subcontractor: string | null
+          submit_by_date: string | null
+          submittal_package_id: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submittals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submittal_compute_required_on_site: {
+        Args: { p_id: string }
+        Returns: Json
+      }
+      submittal_create_revision: {
+        Args: { p_parent_id: string }
+        Returns: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
+          approval_chain: Json | null
+          approved_date: string | null
+          assigned_to: string | null
+          attachments: Json | null
+          ball_in_court_since: string | null
+          buffer_days: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_date: string | null
+          closed_reason: string | null
+          confirmed_delivery_date: string | null
+          created_at: string | null
+          created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
+          current_reviewer: string | null
+          current_reviewer_id: string | null
+          current_reviewer_role: string | null
+          days_in_review: number | null
+          deleted_at: string | null
+          deleted_by: string | null
+          due_date: string | null
+          external_ids: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
+          id: string
+          iris_drafted_by_human: boolean | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          iris_voice_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
+          lead_time_weeks: number | null
+          legacy_payload: Json | null
+          number: number
+          parent_submittal_id: string | null
+          project_id: string
+          required_on_site_date: string | null
+          required_onsite_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number
+          review_duration_days: number | null
+          revision_number: number | null
+          schedule_activity_id: string | null
+          spec_pdf_highlight_rect: Json | null
+          spec_pdf_page: number | null
+          spec_section: string | null
+          spec_section_paragraph: string | null
+          specification_id: string | null
+          stamp: string | null
+          status: string | null
+          subcontractor: string | null
+          submit_by_date: string | null
+          submittal_package_id: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submittals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submittal_distribute: {
+        Args: { p_id: string; p_to_user_ids: string[] }
+        Returns: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
+          approval_chain: Json | null
+          approved_date: string | null
+          assigned_to: string | null
+          attachments: Json | null
+          ball_in_court_since: string | null
+          buffer_days: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_date: string | null
+          closed_reason: string | null
+          confirmed_delivery_date: string | null
+          created_at: string | null
+          created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
+          current_reviewer: string | null
+          current_reviewer_id: string | null
+          current_reviewer_role: string | null
+          days_in_review: number | null
+          deleted_at: string | null
+          deleted_by: string | null
+          due_date: string | null
+          external_ids: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
+          id: string
+          iris_drafted_by_human: boolean | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          iris_voice_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
+          lead_time_weeks: number | null
+          legacy_payload: Json | null
+          number: number
+          parent_submittal_id: string | null
+          project_id: string
+          required_on_site_date: string | null
+          required_onsite_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number
+          review_duration_days: number | null
+          revision_number: number | null
+          schedule_activity_id: string | null
+          spec_pdf_highlight_rect: Json | null
+          spec_pdf_page: number | null
+          spec_section: string | null
+          spec_section_paragraph: string | null
+          specification_id: string | null
+          stamp: string | null
+          status: string | null
+          subcontractor: string | null
+          submit_by_date: string | null
+          submittal_package_id: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submittals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submittal_record_disposition: {
+        Args: {
+          p_comment?: string
+          p_disposition: string
+          p_reviewer_id: string
+          p_stamp_url?: string
+        }
+        Returns: {
+          actual_delivery_date: string | null
+          anticipated_delivery_date: string | null
+          approval_chain: Json | null
+          approved_date: string | null
+          assigned_to: string | null
+          attachments: Json | null
+          ball_in_court_since: string | null
+          buffer_days: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_date: string | null
+          closed_reason: string | null
+          confirmed_delivery_date: string | null
+          created_at: string | null
+          created_by: string | null
+          csi_division: string | null
+          csi_section: string | null
+          current_reviewer: string | null
+          current_reviewer_id: string | null
+          current_reviewer_role: string | null
+          days_in_review: number | null
+          deleted_at: string | null
+          deleted_by: string | null
+          due_date: string | null
+          external_ids: Json | null
+          hash_chain_prev: string | null
+          hash_chain_self: string | null
+          id: string
+          iris_drafted_by_human: boolean | null
+          iris_preflight_findings: Json | null
+          iris_preflight_score: number | null
+          iris_voice_score: number | null
+          is_critical_path: boolean | null
+          is_federal: boolean | null
+          is_private: boolean
+          is_soft_pilot: boolean | null
+          kind: Database["public"]["Enums"]["submittal_kind"] | null
+          lead_time_weeks: number | null
+          legacy_payload: Json | null
+          number: number
+          parent_submittal_id: string | null
+          project_id: string
+          required_on_site_date: string | null
+          required_onsite_date: string | null
+          responsible_sub_id: string | null
+          rev_number: number
+          review_duration_days: number | null
+          revision_number: number | null
+          schedule_activity_id: string | null
+          spec_pdf_highlight_rect: Json | null
+          spec_pdf_page: number | null
+          spec_section: string | null
+          spec_section_paragraph: string | null
+          specification_id: string | null
+          stamp: string | null
+          status: string | null
+          subcontractor: string | null
+          submit_by_date: string | null
+          submittal_package_id: string | null
+          submitted_date: string | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submittals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submittal_replace_user: {
+        Args: { p_new: string; p_old: string }
+        Returns: number
+      }
       update_warranty_status: { Args: never; Returns: undefined }
       verify_audit_chain: {
         Args: { start_after?: string }
@@ -21898,6 +25012,10 @@ export type Database = {
           status: string
           view_name: string
         }[]
+      }
+      withdraw_stale_draft: {
+        Args: { p_draft_id: string; p_reason: string }
+        Returns: undefined
       }
       write_audit_entry: {
         Args: {
@@ -21947,6 +25065,64 @@ export type Database = {
         | "finishes"
         | "commissioning"
         | "closeout"
+      iris_confidence_band: "high" | "medium" | "low"
+      rfi_custom_field_type: "text" | "number" | "date" | "select" | "user"
+      rfi_delivery_status:
+        | "sent"
+        | "delivered"
+        | "bounced"
+        | "complained"
+        | "unknown"
+      rfi_link_kind:
+        | "blocks"
+        | "blocked_by"
+        | "related"
+        | "derived_from"
+        | "converts_to"
+      rfi_link_target:
+        | "submittal"
+        | "drawing"
+        | "schedule_phase"
+        | "budget_item"
+        | "punch_item"
+        | "daily_log"
+        | "meeting"
+        | "rfi"
+        | "change_order"
+      rfi_pause_reason:
+        | "site_closed"
+        | "holiday"
+        | "weather"
+        | "permit_wait"
+        | "other"
+      rfi_response_source: "web" | "email_inbound" | "email_inbound_iris_review"
+      rfi_view_scope: "company" | "project" | "personal"
+      submittal_codeset: "ejcdc" | "aia" | "ufgs" | "custom"
+      submittal_item_kind:
+        | "cut_sheet"
+        | "shop_drawing"
+        | "test_report"
+        | "sample_photo"
+        | "calculation"
+        | "certification"
+        | "spec_excerpt"
+        | "cover_letter"
+        | "other"
+      submittal_kind:
+        | "shop_drawing"
+        | "product_data"
+        | "sample"
+        | "mockup"
+        | "test_report"
+        | "certification"
+        | "qualification"
+        | "closeout"
+        | "warranty"
+        | "leed_credit"
+        | "coordination_drawing"
+        | "maintenance"
+        | "other"
+      submittal_saved_view_scope: "my" | "project" | "company" | "iris"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -22111,10 +25287,77 @@ export const Constants = {
         "commissioning",
         "closeout",
       ],
+      iris_confidence_band: ["high", "medium", "low"],
+      rfi_custom_field_type: ["text", "number", "date", "select", "user"],
+      rfi_delivery_status: [
+        "sent",
+        "delivered",
+        "bounced",
+        "complained",
+        "unknown",
+      ],
+      rfi_link_kind: [
+        "blocks",
+        "blocked_by",
+        "related",
+        "derived_from",
+        "converts_to",
+      ],
+      rfi_link_target: [
+        "submittal",
+        "drawing",
+        "schedule_phase",
+        "budget_item",
+        "punch_item",
+        "daily_log",
+        "meeting",
+        "rfi",
+        "change_order",
+      ],
+      rfi_pause_reason: [
+        "site_closed",
+        "holiday",
+        "weather",
+        "permit_wait",
+        "other",
+      ],
+      rfi_response_source: [
+        "web",
+        "email_inbound",
+        "email_inbound_iris_review",
+      ],
+      rfi_view_scope: ["company", "project", "personal"],
+      submittal_codeset: ["ejcdc", "aia", "ufgs", "custom"],
+      submittal_item_kind: [
+        "cut_sheet",
+        "shop_drawing",
+        "test_report",
+        "sample_photo",
+        "calculation",
+        "certification",
+        "spec_excerpt",
+        "cover_letter",
+        "other",
+      ],
+      submittal_kind: [
+        "shop_drawing",
+        "product_data",
+        "sample",
+        "mockup",
+        "test_report",
+        "certification",
+        "qualification",
+        "closeout",
+        "warranty",
+        "leed_credit",
+        "coordination_drawing",
+        "maintenance",
+        "other",
+      ],
+      submittal_saved_view_scope: ["my", "project", "company", "iris"],
     },
   },
 } as const
-
 
 // ── Custom exports (preserved across schema regeneration) ───────────────────
 
