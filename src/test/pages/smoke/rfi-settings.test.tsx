@@ -4,9 +4,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, it, expect } from 'vitest'
 
-const PAGE_FILE = path.resolve(__dirname, '..', '..', '..', '..', 'src/pages/submittals/SubmittalSettingsPage.tsx')
+const PAGE_FILE = path.resolve(__dirname, '..', '..', '..', '..', 'src/pages/rfis/RFISettingsPage.tsx')
 
-describe('Submittal Settings smoke', () => {
+describe('RFI Settings smoke', () => {
   it('page source exists on disk', () => {
     expect(fs.existsSync(PAGE_FILE)).toBe(true)
   })
@@ -15,14 +15,14 @@ describe('Submittal Settings smoke', () => {
     const src = fs.readFileSync(PAGE_FILE, 'utf8')
     // Matches:
     //   export default <expr>                                (default export)
-    //   export const SubmittalSettingsPage = …                        (named const arrow)
-    //   export function SubmittalSettingsPage(…)                      (named function)
-    //   export { SubmittalSettingsPage } from '…'                     (re-export)
+    //   export const RFISettingsPage = …                        (named const arrow)
+    //   export function RFISettingsPage(…)                      (named function)
+    //   export { RFISettingsPage } from '…'                     (re-export)
     const hasDefault = /export\s+default\s+/.test(src)
     const hasNamed = new RegExp(
-      'export\\s+(?:const|function|async\\s+function)\\s+SubmittalSettingsPage\\b',
+      'export\\s+(?:const|function|async\\s+function)\\s+RFISettingsPage\\b',
     ).test(src)
-    const hasReexport = new RegExp('export\\s*\\{[^}]*\\bSubmittalSettingsPage\\b').test(src)
+    const hasReexport = new RegExp('export\\s*\\{[^}]*\\bRFISettingsPage\\b').test(src)
     expect(hasDefault || hasNamed || hasReexport).toBe(true)
   })
 })
