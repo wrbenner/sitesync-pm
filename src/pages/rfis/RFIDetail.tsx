@@ -36,6 +36,10 @@ import { EntityHistoryPanel } from '../../components/audit/EntityHistoryPanel'
 import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
 import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
 import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
+import { RFIDetailSidebar } from '../../components/rfi/RFIDetailSidebar'
+import { RFIAssigneeStatusList } from '../../components/rfi/RFIAssigneeStatusList'
+import { RFIDistributionStaticList } from '../../components/rfi/RFIDistributionStaticList'
+import { RFIQuestionBody } from '../../components/rfi/RFIQuestionBody'
 import { RFIResponseThread } from '../../components/rfi/RFIResponseThread'
 import { RFIResponseComposer } from '../../components/rfi/RFIResponseComposer'
 import { RFIEmailReviewBanner } from '../../components/rfi/RFIEmailReviewBanner'
@@ -519,8 +523,25 @@ export function RFIDetail() {
     <PageContainer aria-label={`${rfiNumber}: ${rfi.title}`}>
       <style>{`
         @keyframes rfi-detail-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+        @media (max-width: 1024px) {
+          .rfi-detail-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          .rfi-detail-sidebar { order: -1; }
+        }
       `}</style>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      {/* Drop the 720px cap (May-7 final gap audit item #5) — Procore is
+          1240px+ with metadata in a side rail. Grid: main content (1fr) +
+          sidebar (320px). Collapses to single column under 1024px. */}
+      <div
+        className="rfi-detail-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) 320px',
+          gap: 24,
+          maxWidth: 1240,
+          margin: '0 auto',
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
 
         {/* ── Back navigation ──────────────────────────── */}
         <button
@@ -714,6 +735,68 @@ export function RFIDetail() {
           <RFIInlineMetadata rfi={rfi as RFI} />
         </div>
 
+        {/* ── Assignees with per-person ✓ checkboxes (May-7 audit item
+            #2). Reads rfi_assignees rows. The plumbing has been there
+            since P1b; this is the first time we render it on detail. */}
+        <section
+          aria-label="Assignees"
+          style={{
+            marginBottom: '24px',
+            padding: spacing['4'],
+            borderRadius: borderRadius.lg,
+            border: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surfaceRaised,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              marginBottom: spacing['3'],
+              fontSize: 13,
+              fontWeight: 700,
+              color: colors.textTertiary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            Assignees
+          </h2>
+          <RFIAssigneeStatusList rfiId={rfi.id} />
+        </section>
+
+        {/* ── Distribution recipients (May-7 audit item #3). Static chip
+            list, click-to-edit. Surfaces who's on the distribution
+            without forcing a click into Edit. */}
+        <section
+          aria-label="Distribution"
+          style={{
+            marginBottom: '24px',
+            padding: spacing['4'],
+            borderRadius: borderRadius.lg,
+            border: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surfaceRaised,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              marginBottom: spacing['3'],
+              fontSize: 13,
+              fontWeight: 700,
+              color: colors.textTertiary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            Distribution
+          </h2>
+          <RFIDistributionStaticList
+            rfiId={rfi.id}
+            projectId={rfi.project_id}
+            rfiNumber={rfi.number}
+          />
+        </section>
+
         {/* ── Audit timeline (the moat) ──────────────────── */}
         <div style={{ marginBottom: '24px' }}>
           <EntityHistoryPanel entityType="rfi" entityId={rfi.id} />
@@ -765,13 +848,13 @@ export function RFIDetail() {
               )}
             </div>
 
-            {/* The question body */}
-            <div style={{
-              fontSize: '15px', color: colors.textPrimary,
-              lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-            }}>
-              {rfi.description || (rfi as RFI & { question?: string }).question || rfi.title}
-            </div>
+            {/* The question body — TipTap-authored HTML rendered via
+                read-only editor (May-7 audit item #5). Falls back to
+                pre-wrap plain text for legacy non-HTML rows. */}
+            <RFIQuestionBody
+              body={rfi.description || (rfi as RFI & { question?: string }).question || null}
+              fallback={rfi.title ?? ''}
+            />
 
             {/* SLA timer + pause/resume + bounce surface */}
             <RfiSlaPanel
@@ -862,6 +945,24 @@ export function RFIDetail() {
               rfiNumber={rfi.number}
             />
           )}
+        </div>
+
+        </div>
+
+        {/* ── Sidebar (May-7 audit item #6). Right-rail summary so the
+            detail page reads as an enterprise record, not a chat thread.
+            On <1024px the sidebar collapses to the top of the column. */}
+        <div className="rfi-detail-sidebar" style={{ minWidth: 0 }}>
+          <RFIDetailSidebar
+            rfiId={rfi.id}
+            ballInCourt={rfi.ball_in_court ?? null}
+            status={currentStatus}
+            dueDate={rfi.due_date ?? null}
+            scheduleImpactStatus={(rfi as RFI & { schedule_impact_status?: string | null }).schedule_impact_status ?? null}
+            scheduleDaysImpact={(rfi as RFI & { schedule_days_impact?: number | null }).schedule_days_impact ?? null}
+            costImpactStatus={(rfi as RFI & { cost_impact_status?: string | null }).cost_impact_status ?? null}
+            costImpactCents={(rfi as RFI & { cost_impact_cents?: number | null }).cost_impact_cents ?? null}
+          />
         </div>
 
       </div>
