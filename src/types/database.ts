@@ -18158,7 +18158,6 @@ export type Database = {
           ball_in_court: string | null
           closed_date: string | null
           cost_impact_cents: number | null
-          cost_impact_status: string | null
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -18178,12 +18177,9 @@ export type Database = {
           project_id: string
           question: string | null
           reference: string | null
-          reopen_category: string | null
-          reopen_reason: string | null
           response_due_date: string | null
           schedule_days_impact: number | null
           schedule_impact: string | null
-          schedule_impact_status: string | null
           sla_paused_at: string | null
           sla_paused_by: string | null
           sla_paused_reason: string | null
@@ -18203,7 +18199,6 @@ export type Database = {
           ball_in_court?: string | null
           closed_date?: string | null
           cost_impact_cents?: number | null
-          cost_impact_status?: string | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -18223,12 +18218,9 @@ export type Database = {
           project_id: string
           question?: string | null
           reference?: string | null
-          reopen_category?: string | null
-          reopen_reason?: string | null
           response_due_date?: string | null
           schedule_days_impact?: number | null
           schedule_impact?: string | null
-          schedule_impact_status?: string | null
           sla_paused_at?: string | null
           sla_paused_by?: string | null
           sla_paused_reason?: string | null
@@ -18248,7 +18240,6 @@ export type Database = {
           ball_in_court?: string | null
           closed_date?: string | null
           cost_impact_cents?: number | null
-          cost_impact_status?: string | null
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
@@ -18268,12 +18259,9 @@ export type Database = {
           project_id?: string
           question?: string | null
           reference?: string | null
-          reopen_category?: string | null
-          reopen_reason?: string | null
           response_due_date?: string | null
           schedule_days_impact?: number | null
           schedule_impact?: string | null
-          schedule_impact_status?: string | null
           sla_paused_at?: string | null
           sla_paused_by?: string | null
           sla_paused_reason?: string | null
@@ -24353,11 +24341,6 @@ export type Database = {
         Returns: undefined
       }
       enqueue_insights_jobs: { Args: never; Returns: number }
-      fn_rfi_project_id: { Args: { p_rfi_id: string }; Returns: string }
-      fn_user_is_rfi_assignee: {
-        Args: { p_rfi_id: string; p_user_id: string }
-        Returns: boolean
-      }
       get_my_org_ids: { Args: never; Returns: string[] }
       get_portfolio_metrics: {
         Args: { org_id: string }
@@ -24408,7 +24391,6 @@ export type Database = {
           ball_in_court: string | null
           closed_date: string | null
           cost_impact_cents: number | null
-          cost_impact_status: string | null
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -24428,12 +24410,9 @@ export type Database = {
           project_id: string
           question: string | null
           reference: string | null
-          reopen_category: string | null
-          reopen_reason: string | null
           response_due_date: string | null
           schedule_days_impact: number | null
           schedule_impact: string | null
-          schedule_impact_status: string | null
           sla_paused_at: string | null
           sla_paused_by: string | null
           sla_paused_reason: string | null
@@ -24527,7 +24506,6 @@ export type Database = {
           ball_in_court: string | null
           closed_date: string | null
           cost_impact_cents: number | null
-          cost_impact_status: string | null
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
@@ -24547,12 +24525,9 @@ export type Database = {
           project_id: string
           question: string | null
           reference: string | null
-          reopen_category: string | null
-          reopen_reason: string | null
           response_due_date: string | null
           schedule_days_impact: number | null
           schedule_impact: string | null
-          schedule_impact_status: string | null
           sla_paused_at: string | null
           sla_paused_by: string | null
           sla_paused_reason: string | null
