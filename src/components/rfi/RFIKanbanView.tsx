@@ -43,10 +43,10 @@ const COLUMN_ORDER: Array<{ status: RFIState; label: string }> = [
 ]
 
 const PRIORITY_COLORS: Record<KanbanRow['priority'], string> = {
-  critical: '#C93B3B',
-  high: '#B8472E',
-  medium: '#C4850C',
-  low: '#8C857E',
+  critical: colors.statusCritical,
+  high: colors.statusCritical,
+  medium: colors.statusWarning,
+  low: colors.statusNeutral,
 }
 
 const daysOpen = (createdAt: string | null): number => {
@@ -246,7 +246,7 @@ export const RFIKanbanView: React.FC<RFIKanbanViewProps> = ({ rfis, projectId, o
                         title={card.due_date ?? ''}
                         style={{
                           fontSize: 11,
-                          color: overdue ? '#C93B3B' : colors.textTertiary,
+                          color: overdue ? colors.statusCritical : colors.textTertiary,
                           fontWeight: overdue ? 600 : 400,
                           display: 'inline-flex',
                           alignItems: 'center',

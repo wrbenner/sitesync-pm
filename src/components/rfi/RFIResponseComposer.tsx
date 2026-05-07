@@ -148,8 +148,8 @@ export const RFIResponseComposer: React.FC<RFIResponseComposerProps> = ({
     el.style.height = `${Math.min(el.scrollHeight, 220)}px`
   }, [text])
 
-  const internalBg = isInternal ? '#FFFBEB' : colors.surfaceInset
-  const internalBorder = isInternal ? '#F59E0B' : colors.borderSubtle
+  const internalBg = isInternal ? colors.badgeAmberBg : colors.surfaceInset
+  const internalBorder = isInternal ? colors.statusWarning : colors.borderSubtle
 
   return (
     <div
@@ -170,7 +170,7 @@ export const RFIResponseComposer: React.FC<RFIResponseComposerProps> = ({
             gap: spacing['1'],
             fontSize: 11,
             fontWeight: 600,
-            color: '#92400E',
+            color: colors.statusWarning,
             marginBottom: spacing['2'],
           }}
         >
@@ -219,9 +219,9 @@ export const RFIResponseComposer: React.FC<RFIResponseComposerProps> = ({
             padding: '4px 10px',
             fontSize: typography.fontSize.caption,
             fontWeight: 500,
-            color: isInternal ? '#92400E' : colors.textTertiary,
-            backgroundColor: isInternal ? '#FEF3C7' : 'transparent',
-            border: `1px solid ${isInternal ? '#F59E0B' : colors.borderSubtle}`,
+            color: isInternal ? colors.statusWarning : colors.textTertiary,
+            backgroundColor: isInternal ? colors.badgeAmberBg : 'transparent',
+            border: `1px solid ${isInternal ? colors.statusWarning : colors.borderSubtle}`,
             borderRadius: borderRadius.sm,
             cursor: 'pointer',
           }}

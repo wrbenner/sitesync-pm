@@ -28,10 +28,10 @@ interface RFICalendarViewProps {
 }
 
 const PRIORITY_COLORS: Record<CalRow['priority'], { bg: string; fg: string }> = {
-  critical: { bg: '#FEE2E2', fg: '#7C2D12' },
-  high: { bg: '#FEF2F2', fg: '#DC2626' },
-  medium: { bg: '#FFFBEB', fg: '#D97706' },
-  low: { bg: '#F3F4F6', fg: '#6B7280' },
+  critical: { bg: colors.statusCriticalSubtle, fg: colors.statusCritical },
+  high: { bg: colors.statusCriticalSubtle, fg: colors.statusCritical },
+  medium: { bg: colors.statusWarningSubtle, fg: colors.statusWarning },
+  low: { bg: colors.statusNeutralSubtle, fg: colors.statusNeutral },
 }
 
 function startOfMonth(date: Date): Date {
