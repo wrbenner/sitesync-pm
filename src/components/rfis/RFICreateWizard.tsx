@@ -35,6 +35,9 @@ import { useAddRFIDistribution } from '../../hooks/queries/useRFIDistributions'
 import { useAddRFIWatcher } from '../../hooks/queries/useRFIWatchers'
 import { fromTable } from '../../lib/db/queries'
 import { UserChipEditor } from '../rfi/UserChipEditor'
+import { RFITypeAhead } from '../rfi/RFITypeAhead'
+import { useProjectCostCodes } from '../../hooks/queries/useProjectCostCodes'
+import { useProjectRFIStages } from '../../hooks/queries/useProjectRFIStages'
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -270,6 +273,124 @@ const PersonPicker: React.FC<{
   )
 }
 
+// ─── Procore Tier S4 Fields Row ──────────────────────────
+// Three-column row that mounts the new Procore-parity inputs (Cost Code,
+// RFI Stage, Received From). All optional — the form submits with nulls
+// when the user leaves them blank.
+
+interface RFIProcoreFieldsRowProps {
+  projectId: string | undefined
+  costCode: string
+  onCostCodeChange: (v: string) => void
+  rfiStage: string
+  onRfiStageChange: (v: string) => void
+  receivedFromUserId: string
+  onReceivedFromChange: (v: string) => void
+  memberOptions: ReadonlyArray<{ value: string; label: string }>
+}
+
+const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
+  projectId,
+  costCode,
+  onCostCodeChange,
+  rfiStage,
+  onRfiStageChange,
+  receivedFromUserId,
+  onReceivedFromChange,
+  memberOptions,
+}) => {
+  const { data: costCodeOptions = [] } = useProjectCostCodes(projectId)
+  const { data: stageOptions = [] } = useProjectRFIStages(projectId)
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: colors.textTertiary,
+            marginBottom: '5px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          Cost Code
+        </label>
+        <RFITypeAhead
+          value={costCode}
+          onChange={onCostCodeChange}
+          options={costCodeOptions}
+          placeholder="e.g. 03-30-00"
+          ariaLabel="Cost code"
+        />
+      </div>
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: colors.textTertiary,
+            marginBottom: '5px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          RFI Stage
+        </label>
+        <RFITypeAhead
+          value={rfiStage}
+          onChange={onRfiStageChange}
+          options={stageOptions}
+          placeholder="Construction"
+          ariaLabel="RFI stage"
+        />
+      </div>
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '11px',
+            fontWeight: 600,
+            color: colors.textTertiary,
+            marginBottom: '5px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+        >
+          Received From
+        </label>
+        <select
+          value={receivedFromUserId}
+          onChange={(e) => onReceivedFromChange(e.target.value)}
+          aria-label="Received from"
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            fontSize: '13px',
+            color: colors.textPrimary,
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: '8px',
+            outline: 'none',
+            fontFamily: 'inherit',
+            boxSizing: 'border-box',
+          }}
+        >
+          <option value="">— Select —</option>
+          {memberOptions.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
 // ─── Attachment Strip ─────────────────────────────────────
 
 const AttachmentStrip: React.FC<{
@@ -407,6 +528,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   // Reference fields
   const [specRef, setSpecRef] = useState('')
   const [drawingRef, setDrawingRef] = useState('')
+
+  // Info-density wave PR #4 — Procore-parity Tier S4 fields. All optional
+  // text-or-uuid; the schema columns are nullable so empty submits are
+  // a no-op (matches the legacy behavior).
+  const [costCode, setCostCode] = useState('')
+  const [rfiStage, setRfiStage] = useState('')
+  const [receivedFromUserId, setReceivedFromUserId] = useState<string>('')
 
   // PR #367 — Schedule + Cost impact wrappers (Yes/No/TBD) + Private flag.
   // Schema columns already exist: cost_impact_status / schedule_impact_status
@@ -560,6 +688,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
         project_id: projectId,
         spec_section: specRef || null,
         drawing_reference: drawingRef || null,
+        // Info-density PR #4 — Procore-parity Tier S4 backfill. All
+        // nullable; only the picked values flow through. `location_id`
+        // and `responsible_contractor_id` deferred — both need their
+        // own typed lookup table that doesn't exist yet.
+        cost_code: costCode.trim() || null,
+        rfi_stage: rfiStage.trim() || null,
+        received_from_user_id: receivedFromUserId || null,
         // PR #367 — Schedule + Cost impact + Private. Submit even when
         // empty so the row's columns reflect the user's explicit '—' or
         // null choice rather than an inherited stale value.
@@ -1110,6 +1245,23 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               </div>
             </div>
           </div>
+
+          {/* Info-density PR #4 — Procore-parity Tier S4 fields. Three
+              optional inputs that close the parity gap; admins can leave
+              them blank without changing existing flow. */}
+          <RFIProcoreFieldsRow
+            projectId={projectId}
+            costCode={costCode}
+            onCostCodeChange={setCostCode}
+            rfiStage={rfiStage}
+            onRfiStageChange={setRfiStage}
+            receivedFromUserId={receivedFromUserId}
+            onReceivedFromChange={setReceivedFromUserId}
+            memberOptions={(directory?.members ?? []).map((m) => ({
+              value: m.value,
+              label: m.label,
+            }))}
+          />
 
           {/* Priority */}
           <div>
