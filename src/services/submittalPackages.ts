@@ -65,7 +65,7 @@ export const submittalPackagesService = {
     } as never)
 
     if (error) return fail(dbError(error.message, { projectId: input.projectId }))
-    return ok(data as unknown as string)
+    return ok((data as unknown as string) ?? '')
   },
 
   async update(input: {

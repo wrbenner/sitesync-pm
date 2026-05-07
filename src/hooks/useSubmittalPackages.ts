@@ -18,8 +18,8 @@ export function useSubmittalPackages(projectId: string | null | undefined): {
     queryFn: async () => {
       if (!projectId) return []
       const r = await submittalPackagesService.list(projectId)
-      if (!r.ok) throw new Error(r.error.message)
-      return r.data
+      if (r.error) throw new Error(r.error.message)
+      return r.data ?? []
     },
   })
 
@@ -42,8 +42,8 @@ export function useCreateSubmittalPackage(projectId: string): ReturnType<typeof 
   return useMutation({
     mutationFn: async (input) => {
       const r = await submittalPackagesService.create({ projectId, ...input })
-      if (!r.ok) throw new Error(r.error.message)
-      return r.data
+      if (r.error) throw new Error(r.error.message)
+      return r.data ?? ''
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(projectId) })
@@ -63,7 +63,7 @@ export function useUpdateSubmittalPackage(projectId: string): ReturnType<typeof 
   return useMutation({
     mutationFn: async (input) => {
       const r = await submittalPackagesService.update(input)
-      if (!r.ok) throw new Error(r.error.message)
+      if (r.error) throw new Error(r.error.message)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(projectId) })
@@ -79,7 +79,7 @@ export function useSetPackageMembers(projectId: string): ReturnType<typeof useMu
   return useMutation({
     mutationFn: async ({ packageId, submittalIds }) => {
       const r = await submittalPackagesService.setMembers(packageId, submittalIds)
-      if (!r.ok) throw new Error(r.error.message)
+      if (r.error) throw new Error(r.error.message)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(projectId) })
@@ -93,7 +93,7 @@ export function useDeleteSubmittalPackage(projectId: string): ReturnType<typeof 
   return useMutation({
     mutationFn: async (packageId: string) => {
       const r = await submittalPackagesService.remove(packageId)
-      if (!r.ok) throw new Error(r.error.message)
+      if (r.error) throw new Error(r.error.message)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY(projectId) })

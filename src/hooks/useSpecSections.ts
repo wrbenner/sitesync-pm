@@ -18,8 +18,8 @@ export function useSpecSections(sectionNumbers: string[]): {
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const r = await specSectionsService.lookup(sectionNumbers)
-      if (!r.ok) throw new Error(r.error.message)
-      return r.data
+      if (r.error) throw new Error(r.error.message)
+      return r.data ?? {}
     },
   })
 
