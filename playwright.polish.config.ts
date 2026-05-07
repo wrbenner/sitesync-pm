@@ -71,16 +71,15 @@ export default defineConfig({
       // user flow with assertions and captures every state along the
       // way. NOT dependent on storageState — we want to hit cold pages.
       //
-      // Per-spec timeout is 90s instead of the default 30s because
-      // cold-load pages routinely consume 15-25s in `waitLoad` alone
-      // before the spec gets to its assertions; default 30s was hitting
-      // "Target page, context or browser has been closed" on the slower
-      // pages (Daily Log, Equipment, Permits) without it being a real
-      // regression. 90s also gives flaky-but-recoverable pages a chance
-      // to settle on the second wait.
+      // Per-spec timeout is 180s because in dev-bypass mode waitLoad()
+      // waits the full 30s for "Loading projects…" to clear, and each
+      // settle() takes up to 3s (networkidle never fires against
+      // devbypass.invalid). Multiple settle calls + waitLoad + navigation
+      // accumulate to ~60-80s on complex pages; 180s gives safe headroom.
+      // Real-Supabase runs finish well under 90s.
       name: 'page-e2e',
       testMatch: /page-\d+-[a-z-]+\.spec\.ts$/,
-      timeout: 90_000,
+      timeout: 180_000,
       use: {
         ...baseConfig.use,
         baseURL: baseConfig.use?.baseURL,

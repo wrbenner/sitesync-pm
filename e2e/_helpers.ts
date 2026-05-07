@@ -16,7 +16,7 @@ export async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
   await page.waitForTimeout(ms).catch(() => undefined)
 }
 
@@ -73,8 +73,8 @@ export async function signIn(page: Page, user: string, pass: string) {
   // Login default is magic-link mode — click through to password mode first.
   const pwBtn = page.getByRole('button', { name: /sign in with password/i })
   if (await pwBtn.count() > 0) await pwBtn.click({ timeout: 5_000 }).catch(() => undefined)
-  await page.getByLabel('Email').fill(user)
-  await page.getByLabel('Password').fill(pass)
+  await page.getByLabel('Email', { exact: true }).fill(user)
+  await page.getByLabel('Password', { exact: true }).fill(pass)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(day|dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)

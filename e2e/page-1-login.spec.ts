@@ -102,8 +102,8 @@ for (const vp of VIEWPORTS) {
       // ────────────────────────────────────────────────────────
       // STATE 04 — Bad-credentials error
       // ────────────────────────────────────────────────────────
-      await page.getByLabel('Email').fill('not-a-real-user@example.com')
-      await page.getByLabel('Password').fill('definitely-wrong-password')
+      await page.getByLabel('Email', { exact: true }).fill('not-a-real-user@example.com')
+      await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-password')
       await submitBtn.click()
       await settle(page, 1500)
       await shot(page, vp.name, 4, 'sign-in-bad-creds-error')
@@ -119,7 +119,7 @@ for (const vp of VIEWPORTS) {
 
         // Type an email + screenshot the filled state. The forgot-password
         // field may use getByLabel('Email') or a standalone input.
-        const resetEmail = page.getByLabel('Email').last()
+        const resetEmail = page.getByLabel('Email', { exact: true }).last()
         const resetEmailFallback = page.locator('input[type="email"]:visible').last()
         const resetTarget = (await resetEmail.count() > 0) ? resetEmail : resetEmailFallback
         if (await resetTarget.count() > 0) {
@@ -204,8 +204,8 @@ for (const vp of VIEWPORTS) {
           await settle(page, 200)
         }
 
-        await page.getByLabel('Email').fill(USER)
-        await page.getByLabel('Password').fill(PASS)
+        await page.getByLabel('Email', { exact: true }).fill(USER)
+        await page.getByLabel('Password', { exact: true }).fill(PASS)
         await shot(page, vp.name, 11, 'sign-in-credentials-filled')
 
         await page.locator('button[type="submit"]').first().click()
