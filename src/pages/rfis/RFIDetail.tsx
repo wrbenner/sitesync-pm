@@ -37,6 +37,7 @@ import { RFIInlineMetadata } from '../../components/rfi/RFIInlineMetadata'
 import { RFIDistributeDialog } from '../../components/rfi/RFIDistributeDialog'
 import { RFIEditPanel } from '../../components/rfi/RFIEditPanel'
 import { RFIReopenDialog } from '../../components/rfi/RFIReopenDialog'
+import { RFICloseDialog } from '../../components/rfi/RFICloseDialog'
 import { RFIDetailSidebar } from '../../components/rfi/RFIDetailSidebar'
 import { RFIAssigneeStatusList } from '../../components/rfi/RFIAssigneeStatusList'
 import { RFIDistributionStaticList } from '../../components/rfi/RFIDistributionStaticList'
@@ -412,6 +413,7 @@ export function RFIDetail() {
   const [editPanelOpen, setEditPanelOpen] = useState(false)
   // PR #2.5 wave — Reopen-with-reason dialog (A12) + ··· overflow menu (A11)
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false)
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [overflowMenuOpen, setOverflowMenuOpen] = useState(false)
   const overflowMenuRef = useRef<HTMLDivElement>(null)
 
@@ -476,6 +478,13 @@ export function RFIDetail() {
     // handle the actual flip via onReopen callback.
     if (action === 'Reopen') {
       setReopenDialogOpen(true)
+      return
+    }
+    // Info-density wave PR #2 — Close intercepts the same way Reopen does.
+    // Open the dialog so disposition + final-response link + summary land
+    // alongside the status flip in one mutation.
+    if (action === 'Close') {
+      setCloseDialogOpen(true)
       return
     }
     const nextStatus = getNextStatus(currentStatus, action)
@@ -1153,6 +1162,25 @@ export function RFIDetail() {
         projectId={rfi.project_id}
         rfiNumber={rfi.number}
         onReopen={handleReopenAfterReason}
+      />
+
+      {/* Info-density PR #2 — Close-with-disposition dialog. Captures the
+          6 close-action fields (disposition, final_response_id, summary,
+          schedule_actual, cost_actual, signoff) onto the rfis row before
+          flipping status; matches Procore parity + the Bugatti audit
+          chain (legal-grade narrative). ───────────────────────────── */}
+      <RFICloseDialog
+        open={closeDialogOpen}
+        onClose={() => setCloseDialogOpen(false)}
+        rfiId={rfi.id}
+        projectId={rfi.project_id}
+        rfiNumber={rfi.number}
+        scheduleImpactStatus={
+          (rfi as RFI & { schedule_impact_status?: string | null }).schedule_impact_status ?? null
+        }
+        costImpactStatus={
+          (rfi as RFI & { cost_impact_status?: string | null }).cost_impact_status ?? null
+        }
       />
     </PageContainer>
   )
