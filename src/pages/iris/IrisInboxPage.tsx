@@ -210,8 +210,12 @@ const IrisInboxPage: React.FC = () => {
                           }
                         }}
                         onReject={async (d) => {
-                          await rejectDraft.mutateAsync({ draft: d, reason: undefined })
-                          toast('Rejected')
+                          try {
+                            await rejectDraft.mutateAsync({ draft: d, reason: undefined })
+                            toast('Rejected')
+                          } catch {
+                            toast.error('Could not reject — please try again')
+                          }
                         }}
                       />
                     ))}

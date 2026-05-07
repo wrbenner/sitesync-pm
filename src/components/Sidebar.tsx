@@ -620,7 +620,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     if (location.pathname === lastPathRef.current) return
     lastPathRef.current = location.pathname
     if (location.pathname === '/day') {
+      // Auto-collapse on /day but don't poison the stored preference.
+      // setSidebarCollapsed always writes to localStorage, so we save
+      // the real preference first and restore it immediately after.
+      const savedPref = readStoredCollapsed(false)
       setSidebarCollapsed(true)
+      writeStoredCollapsed(savedPref)
       return
     }
     setSidebarCollapsed(readStoredCollapsed(false))

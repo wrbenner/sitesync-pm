@@ -12,11 +12,16 @@ import { UserRole } from '../types/enums'
 // vite preview with no real Supabase backend; queries are expected to fail
 // gracefully and components render their empty/loading states. Use placeholder
 // values so createClient() doesn't throw at module load.
+// Similarly, in dev-bypass mode (VITE_DEV_BYPASS=true, SUPABASE_URL unset) the
+// Playwright e2e suite drives the app with auth bypassed — no real Supabase needed.
 const isAcceptanceBuild = import.meta.env.VITE_ACCEPTANCE_MODE === 'true'
+const isDevBypassMode = import.meta.env.VITE_DEV_BYPASS === 'true'
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? ''
 const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? ''
-const supabaseUrl = rawUrl || (isAcceptanceBuild ? 'http://acceptance.invalid' : '')
-const supabaseAnonKey = rawKey || (isAcceptanceBuild ? 'acceptance-stub-key' : '')
+// Dev-bypass uses localhost:59999 (guaranteed ECONNREFUSED, not a DNS-timeout)
+// so React Query fails fast and clears loading states quickly in e2e tests.
+const supabaseUrl = rawUrl || (isAcceptanceBuild ? 'http://acceptance.invalid' : isDevBypassMode ? 'http://localhost:59999' : '')
+const supabaseAnonKey = rawKey || (isAcceptanceBuild ? 'acceptance-stub-key' : isDevBypassMode ? 'dev-bypass-stub-key' : '')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +

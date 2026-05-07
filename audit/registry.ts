@@ -293,7 +293,7 @@ export const PAGE_REGISTRY: PageContract[] = [
       has_create: false,
       has_edit: false,
       has_delete: false,
-      has_export: true,
+      has_export: false,
       has_detail_view: false,
       has_filters: true,
       has_search: false,

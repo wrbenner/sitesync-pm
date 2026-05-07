@@ -16,7 +16,6 @@ export async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
   await page.waitForTimeout(ms)
 }
 
@@ -36,38 +35,52 @@ export async function settle(page: Page, ms = 250) {
  *   • Network activity: short networkidle wait at the end so React
  *     Query has settled.
  */
-export async function waitLoad(page: Page, timeoutMs = 30_000) {
+export async function waitLoad(page: Page, timeoutMs = 8_000) {
   await page.waitForFunction(
     () => {
       const text = document.body.textContent ?? ''
-      // Catch every "Loading…" or "Loading <X>…" subtitle plus the
-      // OfflineBanner sync message. Pages like /budget show
-      // "Loading financial data…" instead of plain "Loading...".
       const stillLoading = /Loading[\s.…]|Loading[a-zA-Z]/.test(text)
       const stillCaching = /Caching project data|Loading project/.test(text)
-      // Detect skeleton placeholders by aria-busy or known animation
-      // class names ("safety-pulse" + the generic pulse used by
-      // <Skeleton>). If any visible element is animating as a skeleton,
-      // the page is still painting placeholders, not data.
       const hasBusy = !!document.querySelector('[aria-busy="true"]')
       const hasSkeletons = !!document.querySelector(
         '[class*="skeleton" i], [data-skeleton="true"]',
       )
       return !stillLoading && !stillCaching && !hasBusy && !hasSkeletons
     },
-    { timeout: timeoutMs },
+    undefined,           // arg (unused)
+    { timeout: timeoutMs },  // options — third param, NOT second
   ).catch(() => undefined)
-  // One more brief network-idle sip so any in-flight queries can resolve
-  // and the page paints the resolved state before we capture.
-  await page.waitForLoadState('networkidle', { timeout: 4_000 }).catch(() => undefined)
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  // Abort requests to the dev-bypass stub Supabase URL immediately so React
+  // Query fails fast (no DNS/connection delay) and loading states clear quickly.
+  await page.route('http://localhost:59999/**', (route) => route.abort()).catch(() => undefined)
+
+  // When dev-bypass is active the app auto-authenticates — navigate straight to /day.
+  // Check by loading / and seeing if we bypass login entirely.
+  await page.goto('')
+  await page.waitForLoadState('domcontentloaded')
+  const currentUrl = page.url()
+  // If we're already past login (dev bypass active), go directly to /day.
+  if (!currentUrl.includes('#/login')) {
+    await page.goto('#/day')
+    await settle(page, 1500)
+    return
+  }
+  // Otherwise do real credential login.
+  // The redesigned login starts in magic-link mode (email only, no password field).
+  // Switch to password mode before filling credentials.
+  const toggle = page.getByRole('button', { name: /sign in with password/i }).first()
+  if (await toggle.count() > 0) {
+    await toggle.click()
+    await page.waitForTimeout(200)
+  }
+  await page.getByLabel('Email').fill(user)
+  await page.getByLabel('Password').fill(pass)
   await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
+  // After login, app redirects to / (→ /day in Wave 1), /dashboard, /onboarding, or /profile.
+  await page.waitForURL(/#\/(day|dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
 }
 
