@@ -14,7 +14,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Send, Camera, Paperclip, ChevronDown, Search, Loader2,
-  Clock, AlertCircle, Calendar, BookOpen, FileText
+  Clock, AlertCircle, Calendar, BookOpen, FileText, Sparkles
 } from 'lucide-react'
 import { colors, zIndex } from '../../styles/theme'
 import { Avatar } from '../Primitives'
@@ -25,6 +25,10 @@ import { useRFIs } from '../../hooks/queries'
 import { supabase } from '../../lib/supabase'
 import type { DirectoryContact } from '../../types/database'
 import { RFIRichTextEditor } from '../rfi/RFIRichTextEditor'
+import {
+  useCreateIrisRFIDraftV2,
+  useIrisRFIDraftV2,
+} from '../../hooks/queries/useIrisRFIDraftV2'
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -359,8 +363,63 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const [_showMore, setShowMore] = useState(false)
 
   const [sending, setSending] = useState(false)
+  // PR #4 wedge — track which save path the user picked so the
+  // success-state UI can reflect "saved as draft" vs "opened".
+  const [savingMode, setSavingMode] = useState<'draft' | 'open' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const questionRef = useRef<HTMLTextAreaElement>(null)
+
+  // ── PR #4 wedge — Iris-on-Create ──────────────────────────────────────
+  // The May-7 audit's call-out: "Hold the FAB, speak 30 seconds, watch
+  // every field fill in." We just deployed ai-rfi-draft-v2 to live; this
+  // wires the existing useCreateIrisRFIDraftV2 hook to a button right by
+  // the question input. User types a one-liner, clicks Iris, the 7-pass
+  // pipeline returns prefilled fields with confidence + citations. User
+  // accepts/edits/rejects each before save.
+  const [irisDraftId, setIrisDraftId] = useState<string | null>(null)
+  const createIrisDraft = useCreateIrisRFIDraftV2()
+  const { data: irisDraft } = useIrisRFIDraftV2(irisDraftId)
+  const [irisFilledFields, setIrisFilledFields] = useState<Set<string>>(new Set())
+
+  const runIrisDraft = useCallback(async () => {
+    if (!projectId || !question.trim() || createIrisDraft.isPending) return
+    try {
+      const { draftId } = await createIrisDraft.mutateAsync({
+        projectId,
+        description: question.trim(),
+      })
+      setIrisDraftId(draftId)
+    } catch (err) {
+      // surfaced via createIrisDraft.error; toast in parent layer.
+      console.error('[iris-draft] create failed', err)
+    }
+  }, [projectId, question, createIrisDraft])
+
+  // Auto-fill the form once the draft row is available. Only writes to
+  // empty fields — never overwrites what the user already typed.
+  useEffect(() => {
+    if (!irisDraft) return
+    const filled = new Set<string>()
+    if (irisDraft.suggested_body && !details) {
+      setDetails(irisDraft.suggested_body)
+      filled.add('details')
+    }
+    if (irisDraft.suggested_priority && priority === 'medium') {
+      setPriority(irisDraft.suggested_priority)
+      filled.add('priority')
+    }
+    if (irisDraft.suggested_due_date && dueDate === defaultDueDate()) {
+      setDueDate(irisDraft.suggested_due_date)
+      filled.add('dueDate')
+    }
+    if (irisDraft.suggested_spec_sections.length > 0 && !specRef) {
+      setSpecRef(irisDraft.suggested_spec_sections[0])
+      filled.add('specRef')
+    }
+    if (filled.size > 0) setIrisFilledFields(filled)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+    // one-shot fill on draft arrival; we don't re-fill if the user edits.
+  }, [irisDraft])
 
   // Auto-fill "from" when user detected
   useEffect(() => {
@@ -378,6 +437,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       setSpecRef(''); setDrawingRef('')
       setFiles([]); setPriority('medium'); setDueDate(defaultDueDate())
       setSending(false); setShowMore(false)
+      setSavingMode(null); setIrisDraftId(null); setIrisFilledFields(new Set())
     }
   }, [open])
 
@@ -396,9 +456,10 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
     return match ? match.title : null
   }, [question, existingRfis])
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(async (mode: 'draft' | 'open' = 'open') => {
     if (!canSend || sending) return
     setSending(true)
+    setSavingMode(mode)
     try {
       const refParts = [specRef, drawingRef].filter(Boolean)
       const fullDescription = [
@@ -425,7 +486,10 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
         assigned_to: null,          // uuid FK — directory contacts aren't auth users
         // ball_in_court omitted — DB trigger handles it from created_by/assigned_to
         created_by: user?.id || null, // auth user UUID
-        status: 'open',
+        // PR #4 (C1): two-button save. 'draft' writes Procore-equivalent
+        // pre-publish state — Number + Due are suggestions until a PM
+        // promotes to Open via the detail-page state-machine action.
+        status: mode === 'draft' ? 'draft' : 'open',
         priority,
         due_date: dueDate || null,
         response_due_date: dueDate || null,
@@ -438,13 +502,16 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       // handled by mutation layer
     } finally {
       setSending(false)
+      setSavingMode(null)
     }
   }, [canSend, sending, question, details, assignee, manualAssignee, user, priority, dueDate, projectId, specRef, drawingRef, onSubmit, onClose])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSend) {
       e.preventDefault()
-      handleSend()
+      // Cmd+Enter defaults to Open (the prior behavior); shift modifier
+      // saves as Draft instead. Discoverable via the button labels below.
+      handleSend(e.shiftKey ? 'draft' : 'open')
     }
   }, [canSend, handleSend])
 
@@ -540,6 +607,49 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
                 <AlertCircle size={11} /> Be specific — a clear question gets a faster answer
               </div>
             )}
+
+            {/* PR #4 wedge — Iris-on-Create. The May-7 audit's demo
+                moment: type a one-liner, click Iris, watch every field
+                fill in with confidence + citations. ai-rfi-draft-v2 was
+                deployed to live in this wave; this wires the existing
+                useCreateIrisRFIDraftV2 hook into the create form. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => void runIrisDraft()}
+                disabled={!question.trim() || createIrisDraft.isPending}
+                aria-label="Have Iris fill in the rest of this RFI"
+                title="Iris reads the question, drawings, and spec book to suggest details, due date, priority, and references."
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 8,
+                  border: `1px solid ${colors.primaryOrange}`,
+                  backgroundColor: createIrisDraft.isPending ? colors.orangeSubtle : 'transparent',
+                  color: colors.primaryOrange,
+                  fontSize: 12, fontWeight: 600,
+                  cursor: question.trim() && !createIrisDraft.isPending ? 'pointer' : 'not-allowed',
+                  opacity: question.trim() ? 1 : 0.5,
+                  transition: 'all 0.12s',
+                }}
+              >
+                {createIrisDraft.isPending ? (
+                  <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Iris is thinking…</>
+                ) : (
+                  <><Sparkles size={12} /> Iris draft</>
+                )}
+              </button>
+              {irisDraft && irisFilledFields.size > 0 && (
+                <span style={{ fontSize: 11, color: colors.primaryOrange, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Sparkles size={11} /> Iris filled {irisFilledFields.size} field{irisFilledFields.size === 1 ? '' : 's'}
+                  {irisDraft.confidence_band ? ` · ${irisDraft.confidence_band} confidence` : ''}
+                </span>
+              )}
+              {createIrisDraft.error && (
+                <span style={{ fontSize: 11, color: colors.statusCritical, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <AlertCircle size={11} /> Iris couldn't draft. You can still write it manually.
+                </span>
+              )}
+            </div>
             {possibleDuplicate && (
               <div style={{ fontSize: '11px', color: '#D97706', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#FFFBEB', borderRadius: '6px' }}>
                 <AlertCircle size={11} /> Similar RFI exists: "{possibleDuplicate.slice(0, 60)}"
@@ -753,11 +863,39 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '11px', color: colors.textTertiary }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: colors.textTertiary, marginRight: 4 }}>
               {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+↵
             </span>
-            <button type="button" onClick={handleSend} disabled={!canSend || sending}
+            {/* PR #4 (C1) — two-button save. Procore parity: explicit Draft
+                vs Open path. Cmd+Enter defaults to Open; Cmd+Shift+Enter
+                writes Draft. */}
+            <button
+              type="button"
+              onClick={() => handleSend('draft')}
+              disabled={!canSend || sending}
+              title="Save as Draft. Number + Due Date are suggestions until promoted to Open."
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '9px 16px', borderRadius: '10px',
+                border: `1px solid ${canSend && !sending ? colors.borderSubtle : '#E5E7EB'}`,
+                backgroundColor: 'transparent',
+                color: canSend && !sending ? colors.textSecondary : '#9CA3AF',
+                fontSize: '13px', fontWeight: 500,
+                cursor: canSend && !sending ? 'pointer' : 'not-allowed',
+                transition: 'all 0.12s',
+              }}
+            >
+              {sending && savingMode === 'draft' ? (
+                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Saving draft</>
+              ) : (
+                <>Save as Draft</>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSend('open')}
+              disabled={!canSend || sending}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '9px 22px', borderRadius: '10px', border: 'none',
@@ -769,10 +907,10 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
                 boxShadow: canSend && !sending ? '0 2px 8px rgba(244,120,32,0.3)' : 'none',
               }}
             >
-              {sending ? (
-                <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Sending...</>
+              {sending && savingMode === 'open' ? (
+                <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
               ) : (
-                <><Send size={14} /> Send RFI</>
+                <><Send size={14} /> Create as Open</>
               )}
             </button>
           </div>
