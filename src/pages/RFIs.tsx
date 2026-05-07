@@ -48,6 +48,22 @@ import { useRealtimeInvalidation } from '../hooks/useRealtimeInvalidation';
 import { useCopilotStore } from '../stores/copilotStore';
 
 import { exportRFILogXlsx } from '../lib/exportXlsx';
+import { exportRFIs as exportRFIsModule, type RFIExportMode } from '../lib/rfi/exportRFIs';
+import { RFIFilterPanel } from '../components/rfi/RFIFilterPanel';
+import { RFIColumnConfigurator, type RFIColumnDef } from '../components/rfi/RFIColumnConfigurator';
+import { RFISavedViewsRail } from '../components/rfi/RFISavedViewsRail';
+import { RFIKanbanView } from '../components/rfi/RFIKanbanView';
+import { RFICalendarView } from '../components/rfi/RFICalendarView';
+import {
+  filtersToSearchParams,
+  searchParamsToFilters,
+  matchesFilter,
+  type RFIListFilters,
+  type ViewMode,
+} from '../lib/rfi/listFilters';
+import { type RFISavedView } from '../hooks/queries/useRFISavedViews';
+import { useSearchParams } from 'react-router-dom';
+import type { RFIState } from '../machines/rfiMachine';
 import { useAppNavigate, getRelatedItemsForRfi } from '../utils/connections';
 import { spacing, typography, borderRadius, zIndex } from '../styles/theme';
 import type { RFI } from '../types/entities';
@@ -73,6 +89,23 @@ const STATUS = {
   iris: '#4F46E5',
   irisSubtle: '#4F46E512',
 } as const;
+
+// ── P2a — toolbar button shared style ───────────────────────────────────
+const toolbarBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '6px 12px',
+  border: `1px solid ${BORDER}`,
+  borderRadius: 6,
+  backgroundColor: '#FFFFFF',
+  color: INK_2,
+  fontSize: 12,
+  fontWeight: 600,
+  fontFamily: 'inherit',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
+}
 
 // ── Local types ─────────────────────────────────────────────────────────────
 
@@ -386,6 +419,49 @@ const RFIsPage: React.FC = () => {
   // P1a — Edit panel for the per-row [Edit] button + Bulk Edit Values
   const [editPanelRfiId, setEditPanelRfiId] = useState<string | null>(null);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+
+  // ── P2a — URL-driven filter / view / saved-view state ─────────────────
+  // The URL is the canonical state. URLSearchParams round-trip through
+  // listFilters helpers so a pasted URL reproduces the same view.
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
+  const urlState = useMemo(() => searchParamsToFilters(urlSearchParams), [urlSearchParams]);
+  const filtersFromUrl: RFIListFilters = urlState.filters;
+  const viewMode: ViewMode = urlState.view;
+  const activeSavedViewId = urlState.savedViewId ?? null;
+
+  const updateUrl = useCallback(
+    (next: Partial<{ filters: RFIListFilters; view: ViewMode; sort: typeof urlState.sort; groupBy: string | null; savedViewId: string | null }>) => {
+      const merged = {
+        filters: next.filters ?? urlState.filters,
+        view: next.view ?? urlState.view,
+        sort: next.sort ?? urlState.sort,
+        groupBy: next.groupBy === null ? undefined : (next.groupBy ?? urlState.groupBy),
+        savedViewId: next.savedViewId === null ? undefined : (next.savedViewId ?? urlState.savedViewId),
+      }
+      setUrlSearchParams(filtersToSearchParams(merged))
+    },
+    [urlState, setUrlSearchParams],
+  );
+
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [columnConfigOpen, setColumnConfigOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [calendarColorBy, setCalendarColorBy] = useState<'status' | 'priority'>('status');
+
+  const handleApplySavedView = useCallback(
+    (view: RFISavedView) => {
+      updateUrl({
+        filters: view.filters,
+        view: view.view_mode,
+        sort: view.sort,
+        savedViewId: view.id,
+      })
+    },
+    [updateUrl],
+  );
+
+  // (Save-as-View flow lives inside RFIFilterPanel, which calls
+  //  useCreateRFISavedView directly — no need to thread through here.)
   // Recycle bin contents — only fetched while the tab is active.
   const { data: deletedRfisRaw = [] } = useDeletedRFIs(activeChip === 'recycle_bin' ? projectId : null);
   const deletedRfis: RFIRow[] = useMemo(() => deletedRfisRaw.map((r) => {
@@ -476,8 +552,13 @@ const RFIsPage: React.FC = () => {
         return title.includes(q) || num.includes(q) || assigned.includes(q);
       });
     }
+
+    // P2a — apply URL filters on top of chip filter + search.
+    if (Object.keys(filtersFromUrl).length > 0) {
+      out = out.filter((r) => matchesFilter(r as unknown as Record<string, unknown>, filtersFromUrl));
+    }
     return out;
-  }, [rfis, deletedRfis, activeChip, search]);
+  }, [rfis, deletedRfis, activeChip, search, filtersFromUrl]);
 
   useEffect(() => {
     if (!announcedLoadRef.current) return;
@@ -959,6 +1040,126 @@ const RFIsPage: React.FC = () => {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* P2a — All Filters / Configure / View toggle / Export ▼ */}
+          <button
+            type="button"
+            onClick={() => setFilterPanelOpen(true)}
+            aria-label="Open filters"
+            style={toolbarBtnStyle}
+          >
+            All Filters{Object.keys(filtersFromUrl).length > 0 ? ` (${Object.keys(filtersFromUrl).length})` : ''}
+          </button>
+          <button
+            type="button"
+            onClick={() => setColumnConfigOpen(true)}
+            aria-label="Configure columns"
+            style={toolbarBtnStyle}
+          >
+            Configure
+          </button>
+          <div role="tablist" aria-label="View mode" style={{
+            display: 'inline-flex',
+            border: `1px solid ${BORDER}`,
+            borderRadius: 6,
+            overflow: 'hidden',
+          }}>
+            {(['table', 'kanban', 'calendar'] as ViewMode[]).map((mode) => {
+              const on = viewMode === mode
+              const label = mode === 'table' ? 'Table' : mode === 'kanban' ? 'Kanban' : 'Calendar'
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => updateUrl({ view: mode })}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    backgroundColor: on ? STATUS.brandAction : 'transparent',
+                    color: on ? '#FFFFFF' : INK_2,
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={exportMenuOpen}
+              style={toolbarBtnStyle}
+            >
+              <Download size={13} /> Export ▾
+            </button>
+            {exportMenuOpen && (
+              <ul
+                role="menu"
+                onMouseLeave={() => setExportMenuOpen(false)}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '100%',
+                  marginTop: 4,
+                  listStyle: 'none',
+                  padding: 4,
+                  minWidth: 220,
+                  backgroundColor: '#FFFFFF',
+                  border: `1px solid ${BORDER}`,
+                  borderRadius: 6,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  zIndex: 30,
+                }}
+              >
+                {(
+                  [
+                    { mode: 'pdf_official' as RFIExportMode, label: 'PDF — Official Only' },
+                    { mode: 'pdf_all' as RFIExportMode, label: 'PDF — All Responses' },
+                    { mode: 'csv' as RFIExportMode, label: 'CSV (current view)' },
+                    { mode: 'xlsx' as RFIExportMode, label: 'XLSX (current view)' },
+                  ]
+                ).map((opt) => (
+                  <li key={opt.mode} role="menuitem">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setExportMenuOpen(false)
+                        try {
+                          await exportRFIsModule(opt.mode, {
+                            projectName: project?.name ?? 'Project',
+                            rows: filteredRfis as unknown as Array<{ id: string }>,
+                            selectedIds: selectedIds.size > 0 ? selectedIds : undefined,
+                          })
+                          toast.success(`Exported (${opt.label})`)
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : 'Export failed')
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '6px 10px',
+                        fontSize: 12,
+                        background: 'transparent',
+                        border: 'none',
+                        color: INK,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {opt.label}
+                      {selectedIds.size > 0 && opt.mode.startsWith('pdf') ? ` · ${selectedIds.size} selected` : ''}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <ExportButton onExportXLSX={handleExportXlsx} pdfFilename="SiteSync_RFI_Log" />
           <PermissionGate permission="rfis.create">
             <button
@@ -1005,17 +1206,75 @@ const RFIsPage: React.FC = () => {
           totalCostImpact={totalCostImpact}
           totalRfis={rfis.length}
           closedCount={closedCount}
+          onCardClick={(key) => {
+            // P2a — KPI clicks-through to filtered URL state.
+            switch (key) {
+              case 'total_open':
+                updateUrl({ filters: { ...filtersFromUrl, status: ['open', 'under_review'], statusNot: undefined }, savedViewId: null })
+                return
+              case 'overdue':
+                updateUrl({ filters: { ...filtersFromUrl, overdue: true }, savedViewId: null })
+                return
+              case 'closed_this_week':
+                updateUrl({ filters: { ...filtersFromUrl, status: ['closed'], statusNot: undefined }, savedViewId: null })
+                return
+              case 'cost_impact':
+                updateUrl({ filters: { ...filtersFromUrl, costImpact: 'yes' }, savedViewId: null })
+                return
+            }
+          }}
         />
       </div>
 
-      {/* ── Table ─────────────────────────────────────────────────────── */}
-      <main style={{ padding: '16px 24px 32px 24px' }}>
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          border: `1px solid ${BORDER}`,
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}>
+      {/* ── P2a — Body switches between Table / Kanban / Calendar.
+            Saved-views rail is rendered to the left of the body. ───── */}
+      <main style={{ display: 'flex', minHeight: '60vh', padding: '0 24px 32px 24px' }}>
+        {projectId && (
+          <RFISavedViewsRail
+            projectId={projectId}
+            activeViewId={activeSavedViewId}
+            onApply={handleApplySavedView}
+            onCreate={() => setFilterPanelOpen(true)}
+          />
+        )}
+        <div style={{ flex: 1, marginLeft: spacing['3'] }}>
+          {viewMode === 'kanban' ? (
+            <RFIKanbanView
+              projectId={projectId ?? ''}
+              rfis={(filteredRfis as unknown as Array<RFIRow>).map((r) => ({
+                id: String(r.id),
+                number: (r as RFIRow & { number?: number | null }).number ?? null,
+                title: r.title ?? '',
+                status: ((r.status as string | null) ?? 'open') as RFIState,
+                priority: ((r.priority as string | null) ?? 'medium') as 'low' | 'medium' | 'high' | 'critical',
+                ball_in_court: (r.ball_in_court as string | null) ?? null,
+                due_date: r.dueDate ?? null,
+                created_at: (r.created_at as string | null) ?? null,
+              }))}
+              onCardClick={(rfiId) => navigate(`/rfis/${rfiId}`)}
+            />
+          ) : viewMode === 'calendar' ? (
+            <RFICalendarView
+              colorBy={calendarColorBy}
+              onColorByChange={setCalendarColorBy}
+              rfis={(filteredRfis as unknown as Array<RFIRow>).map((r) => ({
+                id: String(r.id),
+                number: (r as RFIRow & { number?: number | null }).number ?? null,
+                title: r.title ?? '',
+                status: ((r.status as string | null) ?? 'open') as RFIState,
+                priority: ((r.priority as string | null) ?? 'medium') as 'low' | 'medium' | 'high' | 'critical',
+                due_date: r.dueDate ?? null,
+              }))}
+              onDayClick={(iso) => updateUrl({ filters: { ...filtersFromUrl, dueFrom: iso, dueTo: iso }, view: 'table' })}
+              onCardClick={(rfiId) => navigate(`/rfis/${rfiId}`)}
+            />
+          ) : (
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              border: `1px solid ${BORDER}`,
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}>
           {rfisLoading && rfis.length === 0 ? (
             <div style={{ padding: 24 }}>
               {Array.from({ length: 8 }).map((_, i) => (
@@ -1058,6 +1317,8 @@ const RFIsPage: React.FC = () => {
                 });
               }}
             />
+          )}
+            </div>
           )}
         </div>
       </main>
@@ -1703,10 +1964,51 @@ const RFIsPage: React.FC = () => {
         />
       )}
 
+      {/* P2a — Filter / Configure side panels. Mounted near the end so
+          they overlay the entire page when open. */}
+      {projectId && (
+        <RFIFilterPanel
+          open={filterPanelOpen}
+          onClose={() => setFilterPanelOpen(false)}
+          projectId={projectId}
+          filters={filtersFromUrl}
+          onApply={(next) => {
+            updateUrl({ filters: next, savedViewId: null })
+          }}
+          onClear={() => {
+            updateUrl({ filters: {}, savedViewId: null })
+          }}
+        />
+      )}
+      {projectId && (
+        <RFIColumnConfigurator
+          open={columnConfigOpen}
+          onClose={() => setColumnConfigOpen(false)}
+          projectId={projectId}
+          allColumns={RFI_COLUMN_DEFS}
+        />
+      )}
+
       {deleteRfiDialog}
     </PageShell>
   );
 };
+
+// P2a — canonical column set surfaced in the Configure panel. The
+// table builds its column accessors from the same id list.
+const RFI_COLUMN_DEFS: RFIColumnDef[] = [
+  { id: 'rfiNumber', label: '#', defaultWidth: 96 },
+  { id: 'title', label: 'Title', defaultWidth: 380 },
+  { id: 'assigned_to', label: 'Ball-in-Court', defaultWidth: 180 },
+  { id: 'status', label: 'Status', defaultWidth: 130 },
+  { id: 'dueDate', label: 'Due', defaultWidth: 96 },
+  { id: 'priority', label: 'Priority', defaultWidth: 110 },
+  { id: 'days_open', label: 'Days Open', defaultWidth: 90 },
+  { id: 'cost_impact', label: '$ Impact', defaultWidth: 110 },
+  { id: 'schedule_impact', label: 'Sched', defaultWidth: 96 },
+  { id: 'iris', label: 'Iris', defaultWidth: 110 },
+  { id: 'edit', label: 'Edit', defaultWidth: 100 },
+];
 
 // ── Page shell — full-viewport, no max-width, #FCFCFA surface ──────────────
 
