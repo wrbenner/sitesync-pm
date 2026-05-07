@@ -117,11 +117,11 @@
 
 ### Files touched
 
-- `src/components/submittals/SubmittalsItemsView.tsx` — new.
-- `src/components/submittals/columns.tsx` — column definitions (11 columns).
-- `src/components/submittals/SubmittalRow.tsx` — row with inline Edit/Open buttons.
-- `src/components/submittals/StatusPill.tsx` — already exists, verify it covers all 9 states.
-- `src/hooks/useSubmittalsList.ts` — pulls from `submittals_log_mv` via the new RPC service.
+- `src/components/submittals/SubmittalsItemsView.tsx` (planned) — new.
+- `src/components/submittals/columns.tsx` (planned) — column definitions (11 columns).
+- `src/components/submittals/SubmittalRow.tsx` (planned) — row with inline Edit/Open buttons.
+- `src/components/submittals/StatusPill.tsx` (planned) — already exists, verify it covers all 9 states.
+- `src/hooks/useSubmittalsList.ts` (planned) — pulls from `submittals_log_mv` via the new RPC service.
 
 ### Acceptance criteria
 
