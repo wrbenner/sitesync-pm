@@ -63,11 +63,20 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
+  // Dev-bypass mode: no credentials → navigate directly (ProtectedRoute is bypassed).
+  if (!user || !pass) {
+    await page.goto('#/day')
+    await settle(page, 1500)
+    return
+  }
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  // Login default is magic-link mode — click through to password mode first.
+  const pwBtn = page.getByRole('button', { name: /sign in with password/i })
+  if (await pwBtn.count() > 0) await pwBtn.click({ timeout: 5_000 }).catch(() => undefined)
+  await page.getByLabel('Email').fill(user)
+  await page.getByLabel('Password').fill(pass)
   await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
+  await page.waitForURL(/#\/(day|dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
 }
 

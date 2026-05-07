@@ -45,11 +45,18 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
+  if (!USER || !PASS) {
+    await page.goto('#/day')
+    await settle(page, 1500)
+    return
+  }
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  const pwBtn = page.getByRole('button', { name: /sign in with password/i })
+  if (await pwBtn.count() > 0) await pwBtn.click({ timeout: 5_000 }).catch(() => undefined)
+  await page.getByLabel('Email').fill(USER)
+  await page.getByLabel('Password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
+  await page.waitForURL(/#\/(day|dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
 }
 

@@ -8,15 +8,16 @@ import { UserRole } from '../types/enums'
 // creation below will throw, which is what we want: a silently-running
 // build pointed at the wrong project is worse than a hard failure.
 
-// In acceptance-test builds (VITE_ACCEPTANCE_MODE=true) the gate runs against
-// vite preview with no real Supabase backend; queries are expected to fail
-// gracefully and components render their empty/loading states. Use placeholder
-// values so createClient() doesn't throw at module load.
+// In acceptance-test builds (VITE_ACCEPTANCE_MODE=true) and dev-bypass mode
+// (VITE_DEV_BYPASS=true) the gate runs without a real Supabase backend; queries
+// are expected to fail gracefully and components render their empty/loading
+// states. Use placeholder values so createClient() doesn't throw at module load.
 const isAcceptanceBuild = import.meta.env.VITE_ACCEPTANCE_MODE === 'true'
+const isDevBypassBuild = import.meta.env.VITE_DEV_BYPASS === 'true'
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? ''
 const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? ''
-const supabaseUrl = rawUrl || (isAcceptanceBuild ? 'http://acceptance.invalid' : '')
-const supabaseAnonKey = rawKey || (isAcceptanceBuild ? 'acceptance-stub-key' : '')
+const supabaseUrl = rawUrl || (isAcceptanceBuild ? 'http://acceptance.invalid' : '') || (isDevBypassBuild ? 'http://devbypass.invalid' : '')
+const supabaseAnonKey = rawKey || (isAcceptanceBuild ? 'acceptance-stub-key' : '') || (isDevBypassBuild ? 'devbypass-stub-key' : '')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +
