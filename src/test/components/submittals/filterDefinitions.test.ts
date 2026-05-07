@@ -280,7 +280,7 @@ describe('CHIP_TYPE', () => {
     ).toBe(true)
   })
   it('rejects unknown kind', () => {
-    expect(CHIP_TYPE.matches(row(), ['samples'] as SubmittalKind[])).toBe(false)
+    expect(CHIP_TYPE.matches(row(), ['sample'] as SubmittalKind[])).toBe(false)
   })
 })
 

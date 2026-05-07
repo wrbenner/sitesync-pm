@@ -6,7 +6,7 @@
 
 import React from 'react'
 import { describe, it, expect } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { useSubmittalFilters } from '../../../hooks/useSubmittalFilters'
 
@@ -35,7 +35,7 @@ describe('useSubmittalFilters', () => {
         </div>
       )
     }
-    const { getByTestId, getByText } = (require('@testing-library/react') as typeof import('@testing-library/react')).render(
+    const { getByTestId, getByText } = render(
       <MemoryRouter initialEntries={['/submittals']}>
         <Probe />
       </MemoryRouter>,
