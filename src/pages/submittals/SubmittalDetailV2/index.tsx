@@ -41,6 +41,9 @@ import {
 import { CitationsPanel } from '../../../components/submittals/detail/Citations/CitationsPanel'
 import type { CitationBase } from '../../../components/submittals/detail/Citations/citationKinds'
 import { VoiceReviewOverlay } from '../../../components/submittals/detail/VoiceReviewOverlay'
+import { MarkupCanvas } from '../../../components/submittals/detail/Markup/MarkupCanvas'
+import { RevDiffView } from '../../../components/submittals/detail/Revisions/RevDiffView'
+import { DistributeAction } from '../../../components/submittals/detail/Distribute/DistributeAction'
 import { submittalService } from '../../../services/submittalService'
 import type { SubmittalDisposition } from '../../../types/submittal'
 import { toast } from 'sonner'
@@ -261,13 +264,18 @@ const SubmittalDetailV2Page: React.FC = () => {
           )}
           {tab === 'history' && <HistoryTabPlaceholder />}
           {tab === 'markup' && (
-            <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'markup')!.phase} tabLabel="Markup" />
+            <MarkupTabContent submittal={submittal} />
           )}
           {tab === 'revisions' && (
-            <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'revisions')!.phase} tabLabel="Revisions" />
+            <RevisionsTabContent submittal={submittal} />
           )}
           {tab === 'distribute' && (
-            <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'distribute')!.phase} tabLabel="Distribute" />
+            <DistributeTabContent
+              submittal={submittal}
+              onDistributed={() => {
+                void submittalQuery.refetch()
+              }}
+            />
           )}
           {tab === 'emails' && (
             <EmptyDetailTab phase={DETAIL_TABS.find((t) => t.id === 'emails')!.phase} tabLabel="Emails" />
@@ -539,6 +547,134 @@ function buildCoPilotData(s: Record<string, unknown>): IrisCoPilotData {
     whatIdAsk,
     pastSimilar: [], // Phase 7 wires the vector-similarity lookup.
   }
+}
+
+// ── Phase 8 tab content ────────────────────────────────────────────────────
+
+const MarkupTabContent: React.FC<{ submittal: Record<string, unknown> }> = ({ submittal }) => {
+  // Phase 8 ships markup tied to a single submittal_item. The detail page
+  // typically surfaces the first item; multi-item submittals get a picker
+  // wired in Phase 8b alongside the DocumentViewer integration.
+  const items = (submittal.submittal_items as Array<Record<string, unknown>> | undefined) ?? []
+  const firstItemId = items[0]?.id != null ? String(items[0].id) : null
+  const revNumber = (submittal.rev_number as number | null) ?? 0
+
+  if (!firstItemId) {
+    return (
+      <section
+        aria-label="Markup"
+        style={{
+          backgroundColor: '#fff',
+          border: `1px solid ${C.border}`,
+          borderRadius: 6,
+          padding: '14px 18px',
+          fontFamily: FONT,
+        }}
+      >
+        <h3 style={overviewHeadingStyle}>Markup</h3>
+        <p style={{ margin: 0, fontSize: 13, color: C.ink2 }}>
+          No items uploaded yet — markup ships per-item, per-revision. Upload a
+          PDF on the General Information card to enable markup.
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <MarkupCanvas
+      submittalItemId={firstItemId}
+      revNumber={revNumber}
+      pdfPage={1}
+    />
+  )
+}
+
+const RevisionsTabContent: React.FC<{ submittal: Record<string, unknown> }> = ({ submittal }) => {
+  const items = (submittal.submittal_items as Array<Record<string, unknown>> | undefined) ?? []
+  const firstItemId = items[0]?.id != null ? String(items[0].id) : null
+  const revNumber = (submittal.rev_number as number | null) ?? 0
+
+  if (!firstItemId || revNumber < 1) {
+    return (
+      <section
+        aria-label="Revisions"
+        style={{
+          backgroundColor: '#fff',
+          border: `1px solid ${C.border}`,
+          borderRadius: 6,
+          padding: '14px 18px',
+          fontFamily: FONT,
+        }}
+      >
+        <h3 style={overviewHeadingStyle}>Revisions</h3>
+        <p style={{ margin: 0, fontSize: 13, color: C.ink2 }}>
+          {revNumber === 0
+            ? 'This is R0 (initial revision). The rev-diff view appears once a resubmission lands as R1.'
+            : 'No items uploaded yet — rev-diff compares markups per item.'}
+        </p>
+      </section>
+    )
+  }
+
+  return (
+    <RevDiffView
+      submittalItemId={firstItemId}
+      revFrom={revNumber - 1}
+      revTo={revNumber}
+    />
+  )
+}
+
+const DistributeTabContent: React.FC<{
+  submittal: Record<string, unknown>
+  onDistributed: () => void
+}> = ({ submittal, onDistributed }) => {
+  const submittalId = String(submittal.id)
+  const titleLine = formatTitleLine(submittal)
+
+  return (
+    <section
+      aria-label="Distribute"
+      style={{
+        backgroundColor: '#fff',
+        border: `1px solid ${C.border}`,
+        borderRadius: 6,
+        padding: '14px 18px',
+        fontFamily: FONT,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}
+    >
+      <h3 style={overviewHeadingStyle}>Distribute</h3>
+      <p style={{ margin: 0, fontSize: 13, color: C.ink2, lineHeight: 1.5 }}>
+        Push the approved submittal to the field team. The 3-step wizard
+        captures recipients → options (auto-pin drawings, magic-link viewer)
+        → confirmation preview, then logs to <code style={{ fontFamily: FONT }}>submittal_distributions</code>.
+      </p>
+      <div>
+        <DistributeAction
+          submittalId={submittalId}
+          submittalLabel={titleLine}
+          onDistributed={onDistributed}
+        />
+      </div>
+      <p style={{ margin: 0, fontSize: 11, color: C.ink3, lineHeight: 1.4 }}>
+        Each side-effect (auto-pin, magic-link) logs hash-chained provenance.
+        The 5-second-undoable toast appears on success — Phase 8b wires the
+        actual undo RPC.
+      </p>
+    </section>
+  )
+}
+
+const overviewHeadingStyle: React.CSSProperties = {
+  margin: '0 0 8px',
+  fontSize: 11,
+  fontWeight: 600,
+  color: C.ink3,
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
 }
 
 // ── Citations tab content (Phase 7) ───────────────────────────────────────
