@@ -16,6 +16,8 @@ export default defineConfig([
     '**/* [0-9].*',
     '**/* [0-9]/**',
     '**/* [0-9]',
+    // Local session-state artifacts from the `remember` skill (gitignored).
+    '.remember/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],
