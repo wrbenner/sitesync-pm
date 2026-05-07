@@ -88,6 +88,7 @@ Note: this branch was created before Phase 5 merged, so the Unified Create Modal
 - **"submittal_initialize_chain function does not exist"** — you skipped step 2. Run `supabase db push --local`.
 - **"submittal_reviewers does not exist"** — your local DB doesn't have the canonical Submittals migration applied. Run `supabase db reset` to apply all migrations from scratch.
 - **"Parallel group X only has 1 step"** — you marked exactly one step as parallel. Either add a sibling to that group or uncheck the parallel box.
+- **`db push --local` fails partway through on an old historical migration** — fixed in commit `db3c00b` (2026-05-09). 13 historical migrations are now schema-version-tolerant (column existence guards, dual view/materialized-view drops, both-extensions-required cron checks). If you're on an even older snapshot, `supabase db reset` is always safe and re-applies the chain end-to-end.
 
 ## What I'm working on next
 
