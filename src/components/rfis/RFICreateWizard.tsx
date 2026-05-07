@@ -574,6 +574,27 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           </button>
         </div>
 
+        {/* PR #4.5 (C2) — Draft RFI explainer banner. Matches Procore's
+            footer copy: makes the Draft semantic explicit so PMs don't
+            commit to a Number / Due Date until they're ready to publish. */}
+        <div
+          style={{
+            margin: '0 24px 12px',
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: `1px solid ${colors.borderSubtle}`,
+            backgroundColor: colors.surfaceInset,
+            fontSize: 11,
+            color: colors.textSecondary,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong style={{ color: colors.textPrimary }}>Save as Draft</strong> to refine
+          later — Number and Due Date are suggested values until you{' '}
+          <strong style={{ color: colors.textPrimary }}>Create as Open</strong> (or promote
+          via the detail-page state-machine).
+        </div>
+
         {/* ── Body ───────────────────────────────────────── */}
         <div style={{ padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
