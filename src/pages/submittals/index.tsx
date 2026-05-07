@@ -34,6 +34,9 @@ import { AlertTriangle, RefreshCw, Plus, Upload, ChevronDown } from 'lucide-reac
 import { toast } from 'sonner'
 import CreateSubmittalModal from '../../components/forms/CreateSubmittalModal'
 import SubmittalCreateWizard from '../../components/submittals/SubmittalCreateWizard'
+import { UnifiedCreateModal } from '../../components/submittals/Create/UnifiedCreateModal'
+import { VoiceEntryHandler } from '../../components/submittals/Create/EntryMethods/VoiceEntryHandler'
+import type { SubmittalDraft } from '../../services/iris/submittalDraft'
 
 import { SubmittalsTable } from './SubmittalsTable'
 import { SubmittalsKanban } from './SubmittalsKanban'
@@ -106,6 +109,7 @@ const SubmittalsPage: React.FC = () => {
   const projectId = useProjectId()
   const navigate = useNavigate()
   const createSubmittal = useCreateSubmittal()
+  void createSubmittal // mutation hook is the canonical path; UnifiedCreateModal owns the call
   // updateSubmittal + scheduleActivities were consumed by the legacy
   // SubmittalsTable in Phase 1; Phase 2 routes Items through
   // SubmittalsItemsView which owns its own data path. Reference the
@@ -130,6 +134,7 @@ const SubmittalsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SubmittalViewTab>('items')
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [unifiedCreateDraft, setUnifiedCreateDraft] = useState<SubmittalDraft | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(0)
   const specFileInputRef = useRef<HTMLInputElement>(null)
@@ -311,7 +316,15 @@ const SubmittalsPage: React.FC = () => {
         </SecondaryBtn>
       </PermissionGate>
       <PermissionGate permission="submittals.create">
-        <PrimaryBtn onClick={() => setShowCreate(true)}>
+        <VoiceEntryHandler
+          onDraftReady={(draft) => {
+            setUnifiedCreateDraft(draft)
+            setShowCreate(true)
+          }}
+        />
+      </PermissionGate>
+      <PermissionGate permission="submittals.create">
+        <PrimaryBtn onClick={() => { setUnifiedCreateDraft(null); setShowCreate(true) }}>
           <Plus size={14} /> New Submittal
         </PrimaryBtn>
       </PermissionGate>
@@ -535,15 +548,21 @@ const SubmittalsPage: React.FC = () => {
         </main>
       )}
 
-      <SubmittalCreateWizard
-        projectId={projectId}
+      <UnifiedCreateModal
         open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onSubmit={async (data) => {
-          await createSubmittal.mutateAsync({ projectId, data: { ...data, project_id: projectId } })
-          toast.success('Submittal created: ' + (data.title || 'New Submittal'))
+        projectId={projectId}
+        initialDraft={unifiedCreateDraft}
+        initialTier={unifiedCreateDraft?.source && unifiedCreateDraft.source !== 'manual' ? 'full' : 'quick'}
+        onClose={() => { setShowCreate(false); setUnifiedCreateDraft(null) }}
+        onCreated={(id) => {
+          refetch()
+          if (id) navigate(`/submittals/${id}`)
         }}
       />
+
+      {/* Legacy wizard kept temporarily for safety nets / Conversation page —
+          tree-shaken when the page never opens it. Phase 6 deletes the file. */}
+      {void SubmittalCreateWizard}
 
       <input ref={specFileInputRef} type="file" accept=".pdf,.docx,.xlsx,.csv" style={{ display: 'none' }} onChange={handleSpecImport} />
     </div>
