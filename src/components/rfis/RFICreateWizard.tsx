@@ -34,7 +34,7 @@ import { useAddRFIAssignee } from '../../hooks/queries/useRFIAssignees'
 import { useAddRFIDistribution } from '../../hooks/queries/useRFIDistributions'
 import { useAddRFIWatcher } from '../../hooks/queries/useRFIWatchers'
 import { fromTable } from '../../lib/db/queries'
-import { UserChipEditor, type UserChipOption } from '../rfi/UserChipEditor'
+import { UserChipEditor } from '../rfi/UserChipEditor'
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -511,7 +511,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   }, [question, existingRfis])
 
   const handleSend = useCallback(async (mode: 'draft' | 'open' = 'open') => {
-    if (!canSend || sending) return
+    if (!canSend || sending || !projectId) return
     setSending(true)
     setSavingMode(mode)
     try {
