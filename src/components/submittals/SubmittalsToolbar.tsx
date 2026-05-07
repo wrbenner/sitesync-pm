@@ -30,6 +30,9 @@ export interface SubmittalsToolbarProps {
   onPageNext?: () => void
   hasPrev?: boolean
   hasNext?: boolean
+  /** Phase 2: clicked when ≥ 1 row is selected. Phase 3 wires the menu;
+   *  Phase 2 just surfaces a toast. */
+  onBulkActions?: () => void
 }
 
 export const SubmittalsToolbar: React.FC<SubmittalsToolbarProps> = ({
@@ -43,6 +46,7 @@ export const SubmittalsToolbar: React.FC<SubmittalsToolbarProps> = ({
   onPageNext,
   hasPrev = false,
   hasNext = false,
+  onBulkActions,
 }) => (
   <div
     style={{
@@ -98,6 +102,7 @@ export const SubmittalsToolbar: React.FC<SubmittalsToolbarProps> = ({
       ariaLabel="Bulk actions"
       disabled={selectedCount === 0}
       title={selectedCount === 0 ? 'Select rows to enable bulk actions' : 'Bulk actions'}
+      onClick={selectedCount > 0 ? onBulkActions : undefined}
     >
       Bulk Actions
       {selectedCount > 0 && <span style={{ color: C.ink2 }}>({selectedCount})</span>}
@@ -133,6 +138,7 @@ interface ToolbarStubButtonProps {
   children: React.ReactNode
   disabled?: boolean
   title?: string
+  onClick?: () => void
 }
 
 const ToolbarStubButton: React.FC<ToolbarStubButtonProps> = ({
@@ -140,6 +146,7 @@ const ToolbarStubButton: React.FC<ToolbarStubButtonProps> = ({
   children,
   disabled,
   title,
+  onClick,
 }) => (
   <button
     type="button"
@@ -147,6 +154,7 @@ const ToolbarStubButton: React.FC<ToolbarStubButtonProps> = ({
     aria-haspopup="menu"
     title={title}
     disabled={disabled}
+    onClick={onClick}
     style={{
       display: 'inline-flex',
       alignItems: 'center',
