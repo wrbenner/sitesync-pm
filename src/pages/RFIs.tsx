@@ -12,7 +12,7 @@ import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  AlertCircle, AlertTriangle, ChevronRight, Download, Loader2,
+  AlertCircle, AlertTriangle, ChevronRight, Download, Eye, Loader2,
   MessageSquare, Pencil, Plus, RefreshCw, RotateCcw, Search, Send,
   Sparkles, Trash2, Trash, Wand2, X,
 } from 'lucide-react';
@@ -721,6 +721,68 @@ const RFIsPage: React.FC = () => {
             aria-label={`Select RFI ${id}`}
             style={{ cursor: 'pointer', width: 14, height: 14, accentColor: STATUS.brandAction }}
           />
+        );
+      },
+    }),
+    // ── Per-row Edit + View buttons (May-7 audit item B2). Procore puts
+    // these in the left-most column on every row; SiteSync only had row-
+    // click navigation. Edit opens the existing slide-in panel; View
+    // navigates to detail (same as click on a non-button cell).
+    colHelper.display({
+      id: 'rowActions',
+      size: 76,
+      header: () => null,
+      cell: (info) => {
+        const id = String(info.row.original.id);
+        const iconBtn: React.CSSProperties = {
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 26,
+          height: 26,
+          padding: 0,
+          borderRadius: 6,
+          border: `1px solid ${BORDER}`,
+          background: 'transparent',
+          color: INK_2,
+          cursor: 'pointer',
+        };
+        return (
+          <div style={{ display: 'inline-flex', gap: 4 }}>
+            <PermissionGate
+              permission="rfis.edit"
+              fallback={
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/rfis/${id}`); }}
+                  aria-label={`View RFI ${info.row.original.rfiNumber}`}
+                  title="View detail"
+                  style={iconBtn}
+                >
+                  <Eye size={13} />
+                </button>
+              }
+            >
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setEditPanelRfiId(id); }}
+                aria-label={`Edit RFI ${info.row.original.rfiNumber}`}
+                title="Edit (slide-in panel)"
+                style={iconBtn}
+              >
+                <Pencil size={13} />
+              </button>
+            </PermissionGate>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); navigate(`/rfis/${id}`); }}
+              aria-label={`View RFI ${info.row.original.rfiNumber}`}
+              title="View detail"
+              style={iconBtn}
+            >
+              <Eye size={13} />
+            </button>
+          </div>
         );
       },
     }),
