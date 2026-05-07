@@ -32,6 +32,7 @@ import {
   type SubmittalDraft,
   type DraftSource,
 } from '../../../services/iris/submittalDraft'
+import { submittalReviewerChainService } from '../../../services/submittalReviewerChain'
 import { QuickTierFields } from './QuickTierFields'
 import { FullTierProgressive } from './FullTierProgressive'
 import { IrisPreflightInline } from './IrisPreflightInline'
@@ -217,7 +218,34 @@ export const UnifiedCreateModal: React.FC<UnifiedCreateModalProps> = ({
       const newId = (result?.data as { id?: string } | undefined)?.id
                   ?? (result as unknown as { id?: string })?.id
                   ?? null
-      toast.success(`Submittal created${draft.title ? ': ' + draft.title : ''}`)
+
+      // Phase 5b — materialize the reviewer chain when the user defined one.
+      if (newId && draft.reviewer_chain.length > 0) {
+        try {
+          const chainResult = await submittalReviewerChainService.initialize(
+            newId,
+            draft.reviewer_chain,
+          )
+          if (chainResult.error) {
+            toast.warning(
+              `Submittal created but reviewer chain failed: ${chainResult.error.message}. Edit the chain on the detail page.`,
+              { duration: 8000 },
+            )
+          } else {
+            toast.success(
+              `Submittal created with ${chainResult.data ?? 0}-step reviewer chain. Step 1 is now in court.`,
+            )
+          }
+        } catch (chainErr) {
+          toast.warning(
+            `Submittal created but reviewer chain failed: ${(chainErr as Error).message}.`,
+            { duration: 8000 },
+          )
+        }
+      } else {
+        toast.success(`Submittal created${draft.title ? ': ' + draft.title : ''}`)
+      }
+
       return newId ?? null
     } catch (err) {
       toast.error('Failed to create submittal: ' + (err as Error).message)
