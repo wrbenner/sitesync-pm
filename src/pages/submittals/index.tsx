@@ -55,6 +55,14 @@ import {
 } from '../../components/submittals/SubmittalsViewTabs'
 import { useSubmittalSettings } from '../../hooks/useSubmittalSettings'
 
+// Phase 3 components
+import { AddFilterDropdown, FilterPillRail } from '../../components/submittals/FilterChips/AddFilterDropdown'
+import { applyChipFilters } from '../../components/submittals/FilterChips/filterDefinitions'
+import { BulkActionsMenu } from '../../components/submittals/BulkActionsMenu'
+import { BulkEditModal } from '../../components/submittals/BulkEditModal'
+import { SavedViewsSidebar } from '../../components/submittals/SavedViews/SavedViewsSidebar'
+import { useSubmittalFilters } from '../../hooks/useSubmittalFilters'
+
 // CreateSubmittalModal is the quick-create surface consumed by the
 // Conversation page (see CreateSubmittalModalWrapper); reference the import
 // here so eslint-no-unused stays quiet without affecting the bundle. The
@@ -118,6 +126,12 @@ const SubmittalsPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(0)
   const specFileInputRef = useRef<HTMLInputElement>(null)
+
+  // Phase 3 — filters, bulk actions, saved views.
+  const submittalFilters = useSubmittalFilters()
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false)
+  const [bulkEditOpen, setBulkEditOpen] = useState(false)
+  const [selectionClearToken, setSelectionClearToken] = useState(0)
 
   // GroupedSubmittalsView remains imported for Phase 4 — Phase 1 default is
   // ungrouped Items. The grouping toggle is dropped here; comes back in P3.
@@ -292,19 +306,36 @@ const SubmittalsPage: React.FC = () => {
         />
         <SubmittalsViewTabs active={activeTab} onChange={setActiveTab} />
         {activeTab === 'items' && (
-          <SubmittalsToolbar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            rangeFrom={rangeFrom}
-            rangeTo={rangeTo}
-            totalCount={totalCount}
-            selectedCount={selectedIds.size}
-            hasPrev={pageClamped > 0}
-            hasNext={pageClamped < pageCount - 1}
-            onPagePrev={() => setPage((p) => Math.max(0, p - 1))}
-            onPageNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-            onBulkActions={() => toast.info('Bulk actions coming in Phase 3')}
-          />
+          <>
+            <SubmittalsToolbar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              rangeFrom={rangeFrom}
+              rangeTo={rangeTo}
+              totalCount={totalCount}
+              selectedCount={selectedIds.size}
+              hasPrev={pageClamped > 0}
+              hasNext={pageClamped < pageCount - 1}
+              onPagePrev={() => setPage((p) => Math.max(0, p - 1))}
+              onPageNext={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              addFilterSlot={<AddFilterDropdown />}
+              bulkActionsSlot={
+                <BulkActionsTrigger
+                  selectedCount={selectedIds.size}
+                  open={bulkMenuOpen}
+                  onToggle={() => setBulkMenuOpen((o) => !o)}
+                  onClose={() => setBulkMenuOpen(false)}
+                  selectedIds={Array.from(selectedIds)}
+                  onOpenEdit={() => { setBulkMenuOpen(false); setBulkEditOpen(true) }}
+                  onClearSelection={() => {
+                    setSelectedIds(new Set())
+                    setSelectionClearToken((t) => t + 1)
+                  }}
+                />
+              }
+            />
+            <FilterPillRail />
+          </>
         )}
       </header>
 
@@ -349,39 +380,56 @@ const SubmittalsPage: React.FC = () => {
           }
         />
       ) : (
-        <main style={{ flex: 1, overflow: 'hidden', backgroundColor: C.surface, display: 'flex', flexDirection: 'column' }}>
-          {activeTab === 'items' ? (
-            <SubmittalsItemsView
-              projectId={projectId}
-              // Reset selection on search-query change (filter-equivalent)
-              // and on view-tab change. Pagination doesn't reset selection.
-              resetToken={JSON.stringify({ tab: activeTab, q: searchQuery })}
-              numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
-              filterFn={(row) => {
-                const q = searchQuery.trim().toLowerCase()
-                if (!q) return true
-                const r = row as unknown as Record<string, unknown>
-                return (
-                  String(r.title ?? '').toLowerCase().includes(q) ||
-                  String(r.number ?? '').toLowerCase().includes(q) ||
-                  String(r.csi_section ?? r.spec_section ?? '').toLowerCase().includes(q) ||
-                  String(r.sub_name ?? r.subcontractor ?? '').toLowerCase().includes(q) ||
-                  String(r.current_reviewer_name ?? r.current_reviewer ?? '').toLowerCase().includes(q)
-                )
-              }}
-              onSelectionChange={(count) => {
-                // Mirror the count into the toolbar's selectedIds state so
-                // the existing 'Bulk Actions (N)' badge keeps working.
-                // Phase 3 moves the toolbar's Bulk Actions menu inside the
-                // Items view; this shim disappears then.
-                setSelectedIds((prev) => {
-                  if (count === prev.size) return prev
-                  const next = new Set<string>()
-                  for (let i = 0; i < count; i++) next.add(`__sel_${i}__`)
-                  return next
-                })
-              }}
-            />
+        <main style={{ flex: 1, overflow: 'hidden', backgroundColor: C.surface, display: 'flex', flexDirection: 'row' }}>
+          {activeTab === 'items' && projectId ? (
+            <>
+              <SavedViewsSidebar projectId={projectId} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <SubmittalsItemsView
+                  projectId={projectId}
+                  resetToken={JSON.stringify({
+                    tab: activeTab,
+                    q: searchQuery,
+                    f: submittalFilters.filtersToken,
+                  })}
+                  selectionClearToken={selectionClearToken}
+                  numberingFormat={settings?.numbering_format ?? '{spec_section}-{seq}'}
+                  filterFn={(row) => {
+                    const r = row as unknown as Record<string, unknown>
+                    if (submittalFilters.hasAny) {
+                      const passed = applyChipFilters([r], submittalFilters.filters)
+                      if (passed.length === 0) return false
+                    }
+                    const q = searchQuery.trim().toLowerCase()
+                    if (!q) return true
+                    return (
+                      String(r.title ?? '').toLowerCase().includes(q) ||
+                      String(r.number ?? '').toLowerCase().includes(q) ||
+                      String(r.csi_section ?? r.spec_section ?? '').toLowerCase().includes(q) ||
+                      String(r.sub_name ?? r.subcontractor ?? '').toLowerCase().includes(q) ||
+                      String(r.current_reviewer_name ?? r.current_reviewer ?? '').toLowerCase().includes(q)
+                    )
+                  }}
+                  onSelectionIdsChange={(ids) => {
+                    setSelectedIds((prev) => {
+                      if (prev.size === ids.length && ids.every((id) => prev.has(id))) return prev
+                      return new Set(ids)
+                    })
+                  }}
+                />
+              </div>
+              <BulkEditModal
+                open={bulkEditOpen}
+                selectedIds={Array.from(selectedIds)}
+                onClose={() => setBulkEditOpen(false)}
+                onComplete={() => {
+                  setBulkEditOpen(false)
+                  setSelectedIds(new Set())
+                  setSelectionClearToken((t) => t + 1)
+                  refetch()
+                }}
+              />
+            </>
           ) : activeTab === 'kanban' ? (
             // Kanban dedicated rebuild ships in Phase 5; Phase 1 keeps the
             // legacy view available so the tab is never broken when clicked.
@@ -516,6 +564,77 @@ const SkeletonRows: React.FC = () => {
           ))}
         </div>
       ))}
+    </div>
+  )
+}
+
+// ── Phase 3 — bulk actions toolbar trigger ──────────────────────────────────
+//
+// Renders the "Bulk Actions ▾" pill in the toolbar slot and opens
+// BulkActionsMenu underneath when clicked. Disabled with an explanatory
+// tooltip when no rows are selected.
+
+interface BulkActionsTriggerProps {
+  selectedCount: number
+  selectedIds: string[]
+  open: boolean
+  onToggle: () => void
+  onClose: () => void
+  onOpenEdit: () => void
+  onClearSelection: () => void
+}
+
+const BulkActionsTrigger: React.FC<BulkActionsTriggerProps> = ({
+  selectedCount,
+  selectedIds,
+  open,
+  onToggle,
+  onClose,
+  onOpenEdit,
+  onClearSelection,
+}) => {
+  const disabled = selectedCount === 0
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        type="button"
+        aria-label="Bulk actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={disabled ? 'Select rows to enable bulk actions' : 'Bulk actions'}
+        disabled={disabled}
+        onClick={disabled ? undefined : onToggle}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '5px 10px',
+          minHeight: 30,
+          border: `1px solid ${C.border}`,
+          borderRadius: 4,
+          backgroundColor: '#fff',
+          color: disabled ? C.ink4 : C.ink,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          fontSize: 12,
+          fontWeight: 500,
+          fontFamily: FONT,
+          opacity: disabled ? 0.65 : 1,
+        }}
+      >
+        Bulk Actions
+        {selectedCount > 0 && <span style={{ color: C.ink2 }}>({selectedCount})</span>}
+        <ChevronDown size={11} />
+      </button>
+      {open && !disabled && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 50 }}>
+          <BulkActionsMenu
+            selectedIds={selectedIds}
+            onClose={onClose}
+            onOpenEdit={onOpenEdit}
+            onClearSelection={onClearSelection}
+          />
+        </div>
+      )}
     </div>
   )
 }

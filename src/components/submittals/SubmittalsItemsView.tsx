@@ -56,6 +56,9 @@ export interface SubmittalsItemsViewProps {
   numberingFormat: string
   filterFn?: (row: SubmittalListRow) => boolean
   onSelectionChange?: (count: number) => void
+  onSelectionIdsChange?: (ids: string[]) => void
+  /** Page-driven clear — Phase 3 BulkActionsMenu calls this after a bulk op. */
+  selectionClearToken?: number
   onVisibleCountChange?: (count: number) => void
 }
 
@@ -74,6 +77,8 @@ export const SubmittalsItemsView: React.FC<SubmittalsItemsViewProps> = ({
   numberingFormat,
   filterFn,
   onSelectionChange,
+  onSelectionIdsChange,
+  selectionClearToken,
   onVisibleCountChange,
 }) => {
   const navigate = useNavigate()
@@ -185,6 +190,16 @@ export const SubmittalsItemsView: React.FC<SubmittalsItemsViewProps> = ({
   }, [allColumns, columnState, filteredRows])
 
   useEffect(() => { onSelectionChange?.(selection.size) }, [onSelectionChange, selection.size])
+  useEffect(() => {
+    if (!onSelectionIdsChange) return
+    onSelectionIdsChange(Array.from(selection.selectedIds))
+  }, [onSelectionIdsChange, selection.selectedIds])
+  useEffect(() => {
+    if (selectionClearToken === undefined) return
+    selection.clear()
+    // selection.clear is stable per render of the hook; tracking the token is enough.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionClearToken])
   useEffect(() => { onVisibleCountChange?.(sortedRows.length) }, [onVisibleCountChange, sortedRows.length])
 
   const scrollerRef = useRef<HTMLDivElement | null>(null)
