@@ -45,6 +45,16 @@ npm run permissions:check                                                       
 npm run permissions:generate                                                      # back in sync
 ```
 
+## Behavioral side effect (intentional but worth flagging)
+
+Roles previously absent from `has_project_permission()`'s `CASE` (foreman, project_engineer, field_engineer, safety_manager, project_executive, architect, owner_rep, member, field_user) used to fall through to `ELSE 0`, making any RLS policy that passed one of them as `p_min_role` a **no-op gate** (always true since every authenticated role had `role_level >= 1`).
+
+The most visible site of this: **`supabase/migrations/20260417000008_equipment_service_layer.sql`** at lines 128, 134, 192 passes `'foreman'` as `p_min_role` for equipment INSERT/UPDATE and equipment_logs INSERT. Pre-PR-2: every project member could insert/update equipment records. Post-PR-2: only level-3+ roles (foreman, project_engineer, field_engineer, safety_manager, superintendent, project_manager, admin, owner_rep variant=2 NO, owner, project_executive). Level-2 roles — subcontractor, architect, owner_rep, member, field_user — lose equipment write access.
+
+This restores the original intent of the policy author (who explicitly named `'foreman'` as the minimum). It's a tightening, not a regression. Flagging here so post-deploy we know to expect a small wave of "equipment edit failed" reports from level-2 users — the resolution is to reassign those users to a level-3 role if equipment access is part of their job.
+
+The migration's BEHAVIOR NOTE comment block documents this in-line.
+
 ## Walker's follow-ups (not in this PR)
 
 1. **Wire CI gate.** Add this step to `.github/workflows/test.yml` immediately after the existing `TypeScript check` step:
