@@ -20,6 +20,7 @@
 import { test, expect, Page } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { signIn as sharedSignIn } from './_helpers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = path.resolve(__dirname, '..', 'polish-review', 'pages', 'dashboard')
@@ -36,7 +37,7 @@ async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForLoadState('networkidle', { timeout: 1_500 }).catch(() => undefined)
   await page.waitForTimeout(ms)
 }
 
@@ -49,12 +50,7 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
-  await settle(page, 1500)
+  await sharedSignIn(page, USER, PASS)
 }
 
 const VIEWPORTS = [

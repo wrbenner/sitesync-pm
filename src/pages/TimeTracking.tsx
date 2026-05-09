@@ -431,7 +431,7 @@ const TimeTracking: React.FC = () => {
       }
     >
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingInlineStart: spacing['1'], scrollPaddingInlineStart: spacing['1'] }}>
         {([
           { key: 'timesheet', label: 'Timesheet', icon: Clock },
           { key: 'payroll', label: 'Certified Payroll', icon: FileText },
