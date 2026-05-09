@@ -655,7 +655,12 @@ function AppContent() {
           // auto-flow and push <main> into column 1 — that exact bug
           // collapsed the entire viewport when the sidebar was hidden.
           display: 'grid',
-          gridTemplateColumns: `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
+          // On tablet (769–1024px) keep a 72px icon-only sidebar rail so
+          // page content is never hidden behind a 252px expanded sidebar.
+          // On desktop, respect the user's collapsed/expanded preference.
+          gridTemplateColumns: isTablet
+            ? '72px minmax(0, 1fr)'
+            : `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
           height: '100vh',
           backgroundColor: colorVars.surfacePage,
           fontFamily: typographyConfig.fontFamily,
@@ -665,9 +670,13 @@ function AppContent() {
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        {!sidebarCollapsed && (
+        {(isTablet || !sidebarCollapsed) && (
           <div style={{ gridColumn: '1 / 2', minWidth: 0, overflow: 'hidden' }}>
-            <Sidebar activeView={activeView} onNavigate={handleNavigate} />
+            <Sidebar
+              activeView={activeView}
+              onNavigate={handleNavigate}
+              forceCollapsed={isTablet}
+            />
           </div>
         )}
 
@@ -696,7 +705,7 @@ function AppContent() {
           {/* Floating "show menu" button when sidebar is collapsed.
               Without this, hiding the sidebar via Cmd+B left the user
               with no visible affordance to bring it back. */}
-          {sidebarCollapsed && !isMobile && (
+          {sidebarCollapsed && !isMobile && !isTablet && (
             <button
               type="button"
               onClick={() => setSidebarCollapsed(false)}
