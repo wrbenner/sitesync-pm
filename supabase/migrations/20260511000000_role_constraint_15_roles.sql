@@ -12,6 +12,17 @@ ALTER TABLE project_members ADD CONSTRAINT project_members_role_check
 -- > superintendent > subcontractor > viewer), so existing RLS policies that call
 -- this function return the same boolean. Numeric levels shift (owner: 6→7, admin:
 -- 5→6, project_manager: 4→5, superintendent: 3→4) but no policy hard-codes them.
+--
+-- BEHAVIOR NOTE: roles previously absent from the CASE (foreman, project_engineer,
+-- field_engineer, safety_manager, project_executive, architect, owner_rep, member,
+-- field_user) used to fall through to `ELSE 0`, making any policy that passed
+-- one of them as p_min_role a no-op (always returned true since every authenticated
+-- role had role_level >= 1). They now have explicit hierarchy levels. The most
+-- visible side effect: equipment service policies in
+-- 20260417000008_equipment_service_layer.sql at lines 128/134/192 pass 'foreman'
+-- as p_min_role; the gate now correctly enforces level-3+ access. Roles at level 2
+-- (subcontractor, architect, owner_rep, member, field_user) lose equipment write
+-- access — restoring the policy author's original intent.
 CREATE OR REPLACE FUNCTION has_project_permission(p_project_id uuid, p_min_role text)
 RETURNS boolean AS $$
 DECLARE
