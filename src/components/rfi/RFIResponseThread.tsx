@@ -33,6 +33,7 @@ import {
   type RFIResponseType,
 } from '../../hooks/queries/useRFIResponses'
 import { usePermissions } from '../../hooks/usePermissions'
+import { can } from '../../permissions'
 import { useAuth } from '../../hooks/useAuth'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 
@@ -119,10 +120,10 @@ const ResponseCard: React.FC<ResponseCardProps> = ({
   const [draftContent, setDraftContent] = useState(response.content)
 
   const isOwn = user?.id === response.author_id
-  const isAdmin = role === 'owner' || role === 'admin'
-  const canEdit = (isOwn && isWithinEditWindow(response.created_at)) || isAdmin
-  const canDelete = isOwn || isAdmin
-  const canFlipOfficial = isAdmin || role === 'member'
+  const canAdminEdit = can(role, 'rfis.admin_edit')
+  const canEdit = (isOwn && isWithinEditWindow(response.created_at)) || canAdminEdit
+  const canDelete = isOwn || canAdminEdit
+  const canFlipOfficial = can(role, 'rfis.flip_official')
 
   const authorName = displayName(profileMap, response.author_id)
   const responseTypeMeta = RESPONSE_TYPES.find((rt) => rt.value === (response.response_type as RFIResponseType))

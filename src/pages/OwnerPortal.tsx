@@ -272,12 +272,12 @@ function UpdateCard({ update, currentUserId }: UpdateCardProps) {
 export const OwnerPortal: React.FC = () => {
   const projectId = useProjectId()
   const { user } = useAuth()
-  const { role } = usePermissions()
+  const { hasPermission } = usePermissions()
   const { data: project, isLoading: projectLoading } = useProject(projectId)
   const { data: phases, isLoading: phasesLoading } = useSchedulePhases(projectId)
   const { data: updates, isLoading: updatesLoading } = useOwnerUpdatesForProject(projectId)
 
-  const isOwner = role === 'owner'
+  const isOwner = hasPermission('project.owner_view')
   const isLoading = projectLoading || phasesLoading || updatesLoading
 
   const visibleUpdates: OwnerUpdate[] = (updates ?? []).filter(

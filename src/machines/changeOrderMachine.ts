@@ -1,5 +1,6 @@
 import { setup } from 'xstate'
 import { colors } from '../styles/theme'
+import { can, type Role } from '../permissions'
 
 export type ChangeOrderState = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'void'
 export type ChangeOrderType = 'pco' | 'cor' | 'co'
@@ -186,7 +187,10 @@ export function getValidCOTransitionsForRole(
   status: ChangeOrderState,
   role: string,
 ): ChangeOrderState[] {
-  const isAdmin = ['admin', 'owner'].includes(role)
+  const isAdmin = can(role as Role, 'change_orders.approve')
+  // Approver / submitter cohorts are domain workflow lanes, not authorization
+  // gates — they describe who participates in a CO review, not who can write.
+  // Keep as role lists; the matrix governs the underlying mutations.
   const isApprover = ['project_manager', 'owner_rep', 'architect', 'owner'].includes(role)
   const isSubmitter = ['superintendent', 'foreman', 'project_manager', 'subcontractor'].includes(role)
 
