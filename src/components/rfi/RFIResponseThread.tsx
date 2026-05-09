@@ -418,6 +418,7 @@ const ResponseCard: React.FC<ResponseCardProps> = ({
               value={draftContent}
               onChange={(e) => setDraftContent(e.target.value)}
               rows={3}
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               aria-label="Edit response"
               style={{
