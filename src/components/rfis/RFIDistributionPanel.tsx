@@ -9,7 +9,7 @@ import { Avatar } from '../Primitives'
 import { useRealtimeDirectoryContacts } from '../../hooks/queries/realtime'
 import type { DirectoryContact } from '../../types/database'
 
-// ─── Types ───────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────
 
 interface DistributionRecipient {
   contactId: string
@@ -31,7 +31,7 @@ interface RFIDistributionPanelProps {
   onDistribute?: (recipients: DistributionRecipient[]) => Promise<void>
 }
 
-// ─── Status Badge ─────────────────────────────────────────
+// ─── Status Badge ─────────────────────────────────────
 
 const StatusBadge: React.FC<{ status: DistributionRecipient['status'] }> = ({ status }) => {
   const config = {
@@ -55,7 +55,7 @@ const StatusBadge: React.FC<{ status: DistributionRecipient['status'] }> = ({ st
   )
 }
 
-// ─── Recipient Row ────────────────────────────────────────
+// ─── Recipient Row ──────────────────────────────────────
 
 const RecipientRow: React.FC<{
   recipient: DistributionRecipient
@@ -73,7 +73,7 @@ const RecipientRow: React.FC<{
       border: `1px solid ${colors.borderSubtle}`,
     }}
   >
-    <Avatar initials={(recipient.name || '?').slice(0, 2).toUpperCase()} size={28} />
+    <Avatar initials={(recipient.name || 'Unknown').slice(0, 2).toUpperCase()} size={28} />
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{
         fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
@@ -120,7 +120,7 @@ const RecipientRow: React.FC<{
   </motion.div>
 )
 
-// ─── Main Component ───────────────────────────────────────
+// ─── Main Component ────────────────────────────────────────
 
 const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
   rfiId, projectId, recipients: initialRecipients = [], onDistribute,

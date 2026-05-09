@@ -92,11 +92,16 @@ export const WeatherCard: React.FC<WeatherCardProps> = React.memo(({ weather, on
           </div>
         </div>
 
-        {/* Temp */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}>
-          <Thermometer size={14} color={colors.textTertiary} />
+        {/* Temp — "High 97° / Low 91°" format so the two values are unambiguous */}
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: spacing['2'] }}
+          aria-label={`High ${weather.temp_high}° Low ${weather.temp_low}°`}
+        >
+          <Thermometer size={14} color={colors.textTertiary} aria-hidden="true" />
+          <span aria-hidden="true" style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>H</span>
           <span style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary }}>{weather.temp_high}°</span>
-          <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>/</span>
+          <span aria-hidden="true" style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>/</span>
+          <span aria-hidden="true" style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, fontWeight: typography.fontWeight.medium }}>L</span>
           <span style={{ fontSize: typography.fontSize.body, color: colors.textTertiary }}>{weather.temp_low}°</span>
         </div>
 
