@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-05 (Bugatti close-out: typecheck 0 / eslint 0 / vitest 0-fail; tail-truncated regressions surfaced & fixed; iCloud-dup ignore unified across .gitignore + eslint + tsconfig + vitest)
+**Last updated:** 2026-05-09 (Phase 2 telemetry — `iris_telemetry` page-event substrate + `track()` helper + 12 events instrumented across Day/RFIs/Submittals/Daily Log/Iris Inbox; spec-infra foundation 2026-05-08: 3 tier-1 templates registered as project skills + 5 Page Cards filed. See `PHASE_2_TELEMETRY_RECEIPT_2026-05-09.md` and `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md`.)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -81,6 +81,32 @@ entries before starting work. Update this file when you add a new doc.
 | 43–49 | Iris voice work | `IRIS_VOICE_GUIDE_SPEC_2026-05-04.md` | ✅ Infrastructure + iris-call wiring shipped (Days 43–49 + Day 45). Days 43/46/47 hand-edit cycle + Day 48 PM review remain Walker-side. |
 | 50–60 | Soft pilot | `SOFT_PILOT_PLAYBOOK_2026-05-04.md` | ✅ Code substrate + Day 60 export shipped. Recruit + onboard + run pilot remain Walker-side. |
 | 60 | Lap 2 acceptance gate | `LAP_2_ACCEPTANCE_GATE_SPEC_2026-05-04.md` | ✅ Workflow + scripts + matview shipped (Day 30.75 receipt) — awaiting STAGING_DB_URL secret |
+
+---
+
+## Page Cards / Workflow Specs / Iris Specs (tier-1 surface inventory)
+
+The tier-1 card system: every addressable page, every cross-feature chain, and every Iris feature gets one ~250-word card filed here. Sister templates registered as project skills — invoke `/page-card`, `/workflow-spec`, `/iris-spec` from this repo to scaffold a populated draft. Heavy detail lives behind `[Deep dive →]` links written only when the work demands them.
+
+See: `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md` (foundation receipt), `PHASE_2_TELEMETRY_RECEIPT_2026-05-09.md` (telemetry follow-on), and `.claude/skills/{page-card,workflow-spec,iris-spec}/SKILL.md` (the templates themselves).
+
+### Page Cards
+
+| Surface | Card | Status |
+|---|---|---|
+| `/day` | `PAGE_CARD_DAY_2026-05-08.md` | Draft |
+| `/rfis` | `PAGE_CARD_RFIS_2026-05-08.md` | Draft |
+| `/submittals` | `PAGE_CARD_SUBMITTALS_2026-05-08.md` | Draft |
+| `/daily-log` | `PAGE_CARD_DAILY_LOG_2026-05-08.md` | Draft |
+| `/iris/inbox` | `PAGE_CARD_IRIS_INBOX_2026-05-08.md` | Draft |
+
+### Workflow Specs
+
+(none filed yet — 12 chains queued in `src/lib/crossFeatureWorkflows.ts`; cards land one per session as the chains are reviewed)
+
+### Iris Specs
+
+(none filed yet — existing IRIS_TELEMETRY/CITATIONS/VOICE/PILOT specs cover the substrate; tier-1 per-feature cards land as new Iris features ship or as retro-summary work)
 
 ---
 

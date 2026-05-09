@@ -17,6 +17,7 @@ import React, {
   useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense,
 } from 'react';
 import { toast } from 'sonner';
+import { track } from '../../lib/telemetry/track';
 import {
   AlertTriangle, Camera, ChevronLeft, ChevronRight, CloudRain, Cloud, Sun,
   CloudSnow, FileText, Plus, RefreshCw, Send, ShieldCheck, Sparkles,
@@ -412,6 +413,15 @@ const DailyLogPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('daily-log'); }, [setPageContext]);
 
+  // Mount telemetry. Ref guard so StrictMode's intentional double-mount in
+  // dev doesn't double-fire `dailylog.opened` per visit.
+  const mountFiredRef = useRef(false);
+  useEffect(() => {
+    if (mountFiredRef.current) return;
+    mountFiredRef.current = true;
+    track('dailylog.opened');
+  }, []);
+
   const { addToast } = useToast();
   const { confirm: confirmDeleteLog, dialog: deleteLogDialog } = useConfirm();
   const isOnline = useIsOnline();
@@ -801,6 +811,7 @@ const DailyLogPage: React.FC = () => {
     }
     try {
       await submitDailyLog.mutateAsync({ id: todayLog.id, projectId });
+      track('dailylog.log_submitted', { log_id: todayLog.id, action: 'submit' });
       addToast('success', 'Daily log submitted');
     } catch { /* mutation toasts */ }
   }, [todayLog?.id, projectId, submitDailyLog, addToast]);
@@ -812,6 +823,7 @@ const DailyLogPage: React.FC = () => {
     }
     try {
       await approveDailyLog.mutateAsync({ id: todayLog.id, projectId, userId: authUserId });
+      track('dailylog.log_submitted', { log_id: todayLog.id, action: 'approve' });
       addToast('success', 'Daily log approved');
     } catch { /* mutation toasts */ }
   }, [todayLog?.id, projectId, authUserId, approveDailyLog, addToast]);
@@ -978,7 +990,13 @@ const DailyLogPage: React.FC = () => {
           <button
             type="button"
             aria-label="Previous day"
-            onClick={() => setSelectedDate((d) => shiftDate(d, -1))}
+            onClick={() => {
+              setSelectedDate((d) => {
+                const next = shiftDate(d, -1);
+                track('dailylog.date_changed', { direction: 'prev', date: next });
+                return next;
+              });
+            }}
             style={chevronStyle}
           >
             <ChevronLeft size={14} />
@@ -992,7 +1010,13 @@ const DailyLogPage: React.FC = () => {
           <button
             type="button"
             aria-label="Next day"
-            onClick={() => setSelectedDate((d) => shiftDate(d, +1))}
+            onClick={() => {
+              setSelectedDate((d) => {
+                const next = shiftDate(d, +1);
+                track('dailylog.date_changed', { direction: 'next', date: next });
+                return next;
+              });
+            }}
             style={chevronStyle}
           >
             <ChevronRight size={14} />

@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
+import { track } from '../lib/telemetry/track';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { useNavigate } from 'react-router-dom';
@@ -330,6 +331,15 @@ const RFIsPage: React.FC = () => {
   const { setPageContext } = useCopilotStore();
   useEffect(() => { setPageContext('rfis'); }, [setPageContext]);
 
+  // Mount telemetry. Ref guard so StrictMode's intentional double-mount in
+  // dev doesn't double-fire `rfi.opened` per visit.
+  const mountFiredRef = useRef(false);
+  useEffect(() => {
+    if (mountFiredRef.current) return;
+    mountFiredRef.current = true;
+    track('rfi.opened');
+  }, []);
+
   const { data: rfisResult, isPending: rfisLoading, error: rfisError, refetch } = useRFIs(projectId);
   const { data: project } = useProject(projectId);
   const { data: drafts } = useIrisDrafts(projectId, { status: ['pending'] });
@@ -647,6 +657,7 @@ const RFIsPage: React.FC = () => {
     if (!projectId) { addToast('error', 'No project selected'); return; }
     try {
       await updateRFI.mutateAsync({ id: rfiId, updates: { status: newStatus }, projectId });
+      track('rfi.status_changed', { rfi_id: rfiId, status: newStatus });
       addToast('success', 'Status updated');
     } catch {
       addToast('error', 'Failed to update status');
@@ -666,6 +677,7 @@ const RFIsPage: React.FC = () => {
     if (!ok) return;
     try {
       await deleteRFI.mutateAsync({ id: rfiId, projectId });
+      track('rfi.deleted', { rfi_id: rfiId });
       toast.success('RFI deleted');
       setSelectedRfi(null);
     } catch (err) {
@@ -675,6 +687,7 @@ const RFIsPage: React.FC = () => {
 
   const handleAIDraft = useCallback(async () => {
     if (!aiDraftInput.trim()) return;
+    track('rfi.ai_draft_requested', { description_length: aiDraftInput.length });
     setAiDraftLoading(true);
     try {
       // Edge function expects snake_case keys (server contract — see
