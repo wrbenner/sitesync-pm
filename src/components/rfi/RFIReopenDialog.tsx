@@ -285,7 +285,7 @@ export const RFIReopenDialog: React.FC<Props> = ({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="What changed? Be specific — this lands in the audit chain."
+                placeholder="What changed? Be specific. This lands in the audit chain."
                 style={{
                   width: '100%',
                   padding: '10px 12px',
