@@ -85,6 +85,14 @@ export interface IrisDraft {
   error?: string                     // populated when generation fails
   /** The tone the draft was generated with — null for tone-insensitive types. */
   tone?: IrisDraftTone | null
+  /**
+   * audit_log id from the originating iris-call. When the caller persists
+   * this draft via `draftAction({ ..., iris_audit_id })`, the iris-score
+   * edge fn can later emit Langfuse score events against the same trace
+   * on accept/reject. Forward-only — drafts produced before this field
+   * existed have it undefined.
+   */
+  auditId?: string
 }
 
 export interface ProjectContextSnapshot {

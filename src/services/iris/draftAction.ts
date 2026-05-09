@@ -118,6 +118,7 @@ export async function draftAction<T extends DraftedActionType>(
     draft_reason: input.draft_reason ?? null,
     related_resource_type: input.related_resource_type ?? null,
     related_resource_id: input.related_resource_id ?? null,
+    iris_audit_id: input.iris_audit_id ?? null,
     status: 'pending' as const,
   }
 

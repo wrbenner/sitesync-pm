@@ -14,6 +14,7 @@ import {
   sanitizeForPrompt,
   HttpError,
 } from '../shared/auth.ts'
+import { recordIrisTrace } from '../shared/langfuse.ts'
 
 // ── Rate Limiting (in-memory, 20 extractions/hour per user) ──
 
@@ -212,14 +213,47 @@ Deno.serve(async (req) => {
       ]
     }
 
+    const traceStartedAt = Date.now()
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       system: EXTRACTION_SYSTEM_PROMPT,
       messages: claudeMessages,
     })
+    const traceLatencyMs = Date.now() - traceStartedAt
 
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
+
+    // Best-effort Langfuse trace (env-gated, never blocks the response).
+    try {
+      await recordIrisTrace(
+        {
+          auditId: crypto.randomUUID(),
+          projectId,
+          userId: user.id,
+          isSoftPilot: false,
+          actionType: null,
+          metadata: {
+            operation: 'voice_extract',
+            language: language ?? 'en',
+            hasPhoto: Boolean(hasPhoto),
+            transcript_length: sanitizedTranscript.length,
+          },
+        },
+        {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-20250514',
+          input: sanitizedTranscript,
+          systemPrompt: EXTRACTION_SYSTEM_PROMPT,
+          output: text,
+          inputTokens: response.usage?.input_tokens ?? 0,
+          outputTokens: response.usage?.output_tokens ?? 0,
+          latencyMs: traceLatencyMs,
+        },
+      )
+    } catch (err) {
+      console.warn('[voice-extract] Langfuse trace failed (non-fatal):', err)
+    }
 
     // Parse the JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/)

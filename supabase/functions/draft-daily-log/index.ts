@@ -35,8 +35,10 @@ import {
 } from '../shared/auth.ts'
 import { assembleDailyLogDraft, type DayContext, type DraftedDailyLog } from './sections.ts'
 import { buildAnthropicRequest, parsePolishedDraft } from './promptBuilder.ts'
+import { recordIrisTrace } from '../shared/langfuse.ts'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
+const POLISH_MODEL = 'claude-sonnet-4-6'
 
 interface RequestBody {
   project_id: string
@@ -109,10 +111,19 @@ Deno.serve(async (req) => {
     // 2. Deterministic assemble.
     let draft: DraftedDailyLog = assembleDailyLogDraft(ctx)
 
-    // 3. Optional LLM polish.
+    // 3. Optional LLM polish. We pre-allocate a Langfuse trace id so the
+    //    drafted_actions row can correlate to the trace even if the
+    //    polish call later fails (the row still records "we tried").
+    const traceId = crypto.randomUUID()
+    let polishUsage: { input: number; output: number; latencyMs: number } | null = null
+    let polishOutput = ''
     if (!body.skip_polish) {
-      const polished = await polishWithClaude(draft, body.hint)
-      if (polished) draft = mergePolished(draft, polished)
+      const result = await polishWithClaude(draft, body.hint)
+      if (result?.draft) {
+        draft = mergePolished(draft, result.draft)
+        polishUsage = { input: result.inputTokens, output: result.outputTokens, latencyMs: result.latencyMs }
+        polishOutput = result.rawText
+      }
     }
 
     // 4. Persist (insert or update existing pending row).
@@ -129,6 +140,7 @@ Deno.serve(async (req) => {
       draft_reason:
         'Auto-generated from photos, captures, RFIs filed, schedule progress, and crew check-ins.',
       related_resource_type: 'daily_log',
+      iris_audit_id: polishUsage ? traceId : null,
     }
 
     let draftId: string
@@ -147,6 +159,38 @@ Deno.serve(async (req) => {
         .single()
       if (insertErr) throw new HttpError(500, `insert draft: ${insertErr.message}`)
       draftId = inserted.id as string
+    }
+
+    // 5. Best-effort Langfuse trace. Fires only when polish ran. Failures
+    //    here NEVER affect the user-facing response.
+    if (polishUsage) {
+      try {
+        await recordIrisTrace(
+          {
+            auditId: traceId,
+            projectId,
+            userId: null,
+            isSoftPilot: false,
+            draftedActionId: draftId,
+            actionType: 'daily_log.draft',
+            metadata: {
+              source: calledByUser ? 'user_initiated' : 'cron_5pm',
+              date: body.date,
+            },
+          },
+          {
+            provider: 'anthropic',
+            model: POLISH_MODEL,
+            input: body.hint ?? '(no hint)',
+            output: polishOutput,
+            inputTokens: polishUsage.input,
+            outputTokens: polishUsage.output,
+            latencyMs: polishUsage.latencyMs,
+          },
+        )
+      } catch (err) {
+        console.warn('[draft-daily-log] Langfuse trace failed (non-fatal):', err)
+      }
     }
 
     return json({ ok: true, draft_id: draftId, status: 'pending', payload: draft })
@@ -349,14 +393,23 @@ async function buildDayContext(
   }
 }
 
+interface PolishResult {
+  draft: DraftedDailyLog
+  rawText: string
+  inputTokens: number
+  outputTokens: number
+  latencyMs: number
+}
+
 /**
  * Send the deterministic draft to Claude for polish. Returns null on any
- * failure — caller falls back to the unpolished draft.
+ * failure — caller falls back to the unpolished draft. Token usage +
+ * latency are extracted from the response for Langfuse trace correlation.
  */
 async function polishWithClaude(
   draft: DraftedDailyLog,
   hint: string | undefined,
-): Promise<DraftedDailyLog | null> {
+): Promise<PolishResult | null> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
   if (!apiKey) return null
 
@@ -364,6 +417,7 @@ async function polishWithClaude(
 
   let lastErr = ''
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    const startedAt = Date.now()
     try {
       const r = await fetch(ANTHROPIC_URL, {
         method: 'POST',
@@ -384,7 +438,16 @@ async function polishWithClaude(
       }
       const data = await r.json()
       const text = (data?.content?.[0]?.text as string | undefined) ?? ''
-      return parsePolishedDraft(text)
+      const polished = parsePolishedDraft(text)
+      if (!polished) return null
+      const usage = data?.usage as { input_tokens?: number; output_tokens?: number } | undefined
+      return {
+        draft: polished,
+        rawText: text,
+        inputTokens: usage?.input_tokens ?? 0,
+        outputTokens: usage?.output_tokens ?? 0,
+        latencyMs: Date.now() - startedAt,
+      }
     } catch (err) {
       lastErr = (err as Error).message
       await new Promise((res) => setTimeout(res, 800 * (attempt + 1)))
