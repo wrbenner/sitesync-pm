@@ -73,8 +73,8 @@ for (const vp of VIEWPORTS) {
       await settle(page, 400)
 
       // Functional assert: the form rendered
-      await expect(page.getByPlaceholder('you@company.com')).toBeVisible()
-      await expect(page.getByPlaceholder('Enter your password')).toBeVisible()
+      await expect(page.getByPlaceholder('Email')).toBeVisible()
+      await expect(page.getByPlaceholder('Password')).toBeVisible()
       await expect(page.getByRole('button', { name: /^sign in/i }).last()).toBeVisible()
 
       await shot(page, vp.name, 1, 'sign-in-empty')
@@ -90,8 +90,8 @@ for (const vp of VIEWPORTS) {
       // ────────────────────────────────────────────────────────
       // STATE 03 — Bad-credentials error
       // ────────────────────────────────────────────────────────
-      await page.getByPlaceholder('you@company.com').fill('not-a-real-user@example.com')
-      await page.getByPlaceholder('Enter your password').fill('definitely-wrong-password')
+      await page.getByPlaceholder('Email').fill('not-a-real-user@example.com')
+      await page.getByPlaceholder('Password').fill('definitely-wrong-password')
       await submitBtn.click()
       await settle(page, 1500)
       await shot(page, vp.name, 3, 'sign-in-bad-creds-error')
@@ -106,7 +106,7 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 4, 'forgot-password-empty')
 
         // Type an email + screenshot the filled state
-        const resetEmail = page.getByPlaceholder('you@company.com').last()
+        const resetEmail = page.getByPlaceholder('Email').last()
         if (await resetEmail.count() > 0) {
           await resetEmail.fill('test@example.com')
           await settle(page, 100)
@@ -130,7 +130,7 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 6, 'magic-link-empty')
 
         // Fill an email
-        const magicEmail = page.getByPlaceholder('you@company.com').first()
+        const magicEmail = page.getByPlaceholder('Email').first()
         await magicEmail.fill('test@example.com')
         await settle(page, 100)
         await shot(page, vp.name, 7, 'magic-link-filled')
@@ -187,8 +187,8 @@ for (const vp of VIEWPORTS) {
         await settle(page, 150)
       }
 
-      await page.getByPlaceholder('you@company.com').fill(USER)
-      await page.getByPlaceholder('Enter your password').fill(PASS)
+      await page.getByPlaceholder('Email').fill(USER)
+      await page.getByPlaceholder('Password').fill(PASS)
       await shot(page, vp.name, 10, 'sign-in-credentials-filled')
 
       await page.locator('button[type="submit"]').first().click()

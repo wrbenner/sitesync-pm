@@ -34,11 +34,8 @@ function main() {
   writeFileSync(SQL_PATH, sql, 'utf8')
   writeFileSync(EDGE_PATH, edge, 'utf8')
 
-  // eslint-disable-next-line no-console
   console.log(`✓ wrote ${SQL_PATH} (${sql.length} bytes)`)
-  // eslint-disable-next-line no-console
   console.log(`✓ wrote ${EDGE_PATH} (${edge.length} bytes)`)
-  // eslint-disable-next-line no-console
   console.log(`  ROLES: ${ROLES.length}, PERMISSION_MATRIX rows: ${Object.keys(PERMISSION_MATRIX).length}`)
 }
 
