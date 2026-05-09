@@ -57,7 +57,7 @@ const daysFromNow = (dateStr: string) => {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000)
 }
 
-// ─── Priority Picker ─────────────────────────────────────
+// ─── Priority Picker ────────────────────────────────────
 
 const PRIORITIES = [
   { value: 'low',      label: 'Low',      color: '#6B7280', bg: '#F3F4F6' },
@@ -103,7 +103,7 @@ const PriorityPicker: React.FC<{
   </div>
 )
 
-// ─── Person Picker ────────────────────────────────────────
+// ─── Person Picker ──────────────────────────────────────
 
 const PersonPicker: React.FC<{
   contacts: DirectoryContact[]
@@ -273,7 +273,7 @@ const PersonPicker: React.FC<{
   )
 }
 
-// ─── Procore Tier S4 Fields Row ──────────────────────────
+// ─── Procore Tier S4 Fields Row ──────────────────────────────
 // Three-column row that mounts the new Procore-parity inputs (Cost Code,
 // RFI Stage, Received From). All optional — the form submits with nulls
 // when the user leaves them blank.
@@ -306,6 +306,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
       <div>
         <label
+          htmlFor="rfi-cost-code"
           style={{
             display: 'block',
             fontSize: '11px',
@@ -319,6 +320,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
           Cost Code
         </label>
         <RFITypeAhead
+          id="rfi-cost-code"
           value={costCode}
           onChange={onCostCodeChange}
           options={costCodeOptions}
@@ -328,6 +330,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
       </div>
       <div>
         <label
+          htmlFor="rfi-stage"
           style={{
             display: 'block',
             fontSize: '11px',
@@ -341,6 +344,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
           RFI Stage
         </label>
         <RFITypeAhead
+          id="rfi-stage"
           value={rfiStage}
           onChange={onRfiStageChange}
           options={stageOptions}
@@ -350,6 +354,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
       </div>
       <div>
         <label
+          htmlFor="rfi-received-from"
           style={{
             display: 'block',
             fontSize: '11px',
@@ -363,6 +368,7 @@ const RFIProcoreFieldsRow: React.FC<RFIProcoreFieldsRowProps> = ({
           Received From
         </label>
         <select
+          id="rfi-received-from"
           value={receivedFromUserId}
           onChange={(e) => onReceivedFromChange(e.target.value)}
           aria-label="Received from"
@@ -438,7 +444,7 @@ const AttachmentStrip: React.FC<{
   )
 }
 
-// ─── Main Component ───────────────────────────────────────
+// ─── Main Component ─────────────────────────────────────────
 
 interface RFICreateWizardProps {
   open: boolean
@@ -560,7 +566,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
   const fileInputRef = useRef<HTMLInputElement>(null)
   const questionRef = useRef<HTMLTextAreaElement>(null)
 
-  // ── PR #4 wedge — Iris-on-Create ──────────────────────────────────────
+  // ── PR #4 wedge — Iris-on-Create ──────────────────────────────────────────
   // The May-7 audit's call-out: "Hold the FAB, speak 30 seconds, watch
   // every field fill in." We just deployed ai-rfi-draft-v2 to live; this
   // wires the existing useCreateIrisRFIDraftV2 hook to a button right by
@@ -608,8 +614,8 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
       filled.add('specRef')
     }
     if (filled.size > 0) setIrisFilledFields(filled)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
     // one-shot fill on draft arrival; we don't re-fill if the user edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [irisDraft])
 
   // Auto-fill "from" when user detected
@@ -808,7 +814,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header ─────────────────────────────────────── */}
+        {/* ── Header ────────────────────────────────────────────── */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '20px 24px 12px',
@@ -855,7 +861,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           via the detail-page state-machine).
         </div>
 
-        {/* ── Body ───────────────────────────────────────── */}
+        {/* ── Body ─────────────────────────────────────────────── */}
         <div style={{ padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Question — the star of the show */}
@@ -964,7 +970,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               />
             ) : (
               <div>
-                <label style={{
+                <label htmlFor="rfi-from-name" style={{
                   display: 'block', fontSize: '11px', fontWeight: 600,
                   color: colors.textTertiary, marginBottom: '6px',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
@@ -972,6 +978,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
                   From
                 </label>
                 <input
+                  id="rfi-from-name"
                   value={fromContact?.name || ''}
                   onChange={(e) => setFromContact(e.target.value ? { id: 'manual', name: e.target.value } as DirectoryContact : null)}
                   placeholder="Your name"
@@ -989,13 +996,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               </div>
             )}
             <div>
-              <label style={{
+              <div style={{
                 display: 'block', fontSize: '11px', fontWeight: 600,
                 color: colors.textTertiary, marginBottom: '6px',
                 textTransform: 'uppercase', letterSpacing: '0.05em',
               }}>
                 To (assignees) <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· each gets a "Response Required" indicator on detail</span>
-              </label>
+              </div>
               <UserChipEditor
                 value={assigneeIds}
                 onChange={setAssigneeIds}
@@ -1015,13 +1022,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               project_rfi_settings.default_distribution (PR #365). Free-typed
               emails accepted via UserChipEditor.onFreeText. */}
           <div>
-            <label style={{
+            <div style={{
               display: 'block', fontSize: '11px', fontWeight: 600,
               color: colors.textTertiary, marginBottom: '6px',
               textTransform: 'uppercase', letterSpacing: '0.05em',
             }}>
               Distribution <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· cc'd on send; can be project members or free-typed emails</span>
-            </label>
+            </div>
             <UserChipEditor
               value={distributionEmails}
               onChange={setDistributionEmails}
@@ -1057,13 +1064,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               </button>
             ) : (
               <>
-                <label style={{
+                <div style={{
                   display: 'block', fontSize: '11px', fontWeight: 600,
                   color: colors.textTertiary, marginBottom: '6px',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                 }}>
                   Watchers <span style={{ color: colors.textTertiary, textTransform: 'none', letterSpacing: 0 }}>· receive every status change</span>
-                </label>
+                </div>
                 <UserChipEditor
                   value={watcherIds}
                   onChange={setWatcherIds}
@@ -1087,9 +1094,9 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               cost_impact_status / cost_impact_cents. */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 220px', minWidth: 220 }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Schedule Impact
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <select
                   value={scheduleImpactStatus}
@@ -1127,9 +1134,9 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               </div>
             </div>
             <div style={{ flex: '1 1 220px', minWidth: 220 }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Cost Impact
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <select
                   value={costImpactStatus}
@@ -1192,7 +1199,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             {/* Spec reference */}
             <div style={{ flex: '1 1 140px', minWidth: 120 }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <label htmlFor="rfi-spec-section" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Spec Section
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', backgroundColor: colors.surfaceInset, borderRadius: '8px', border: `1px solid transparent`, transition: 'border-color 0.15s' }}
@@ -1201,6 +1208,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               >
                 <BookOpen size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
                 <input
+                  id="rfi-spec-section"
                   value={specRef}
                   onChange={(e) => setSpecRef(e.target.value)}
                   placeholder="e.g. 03 30 00"
@@ -1210,7 +1218,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             </div>
             {/* Drawing reference */}
             <div style={{ flex: '1 1 140px', minWidth: 120 }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <label htmlFor="rfi-drawing-ref" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Drawing Ref
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', backgroundColor: colors.surfaceInset, borderRadius: '8px', border: `1px solid transparent`, transition: 'border-color 0.15s' }}
@@ -1219,6 +1227,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
               >
                 <FileText size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
                 <input
+                  id="rfi-drawing-ref"
                   value={drawingRef}
                   onChange={(e) => setDrawingRef(e.target.value)}
                   placeholder="e.g. A-201"
@@ -1228,12 +1237,13 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
             </div>
             {/* Due date compact */}
             <div style={{ flex: '1 1 160px', minWidth: 140 }}>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <label htmlFor="rfi-due-date" style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Due
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', backgroundColor: colors.surfaceInset, borderRadius: '8px' }}>
                 <Calendar size={12} style={{ color: colors.textTertiary, flexShrink: 0 }} />
                 <input
+                  id="rfi-due-date"
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
@@ -1265,9 +1275,9 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
 
           {/* Priority */}
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: colors.textTertiary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Priority
-            </label>
+            </div>
             <PriorityPicker value={priority} onChange={setPriority} />
           </div>
 
@@ -1286,7 +1296,7 @@ const RFICreateWizard: React.FC<RFICreateWizardProps> = ({ open, onClose, onSubm
           />
         </div>
 
-        {/* ── Footer ─────────────────────────────────────── */}
+        {/* ── Footer ─────────────────────────────────────────────── */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           padding: '14px 24px', marginTop: '12px',
