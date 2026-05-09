@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-05-05T16:13:33.104Z",
-  "totalRoutes": 83,
-  "passingRoutes": 79,
+  "generatedAt": "2026-05-09T12:33:05.122Z",
+  "totalRoutes": 86,
+  "passingRoutes": 80,
   "averageScore": 98,
   "results": [
     {
@@ -421,6 +421,78 @@
     },
     {
       "contract": {
+        "route": "/rfis/settings",
+        "pageFile": "src/pages/rfis/RFISettingsPage.tsx",
+        "title": "RFI Settings",
+        "entity": "rfi",
+        "expected": {
+          "has_list": true,
+          "has_create": true,
+          "has_edit": true,
+          "has_delete": false,
+          "has_export": false,
+          "has_detail_view": false,
+          "has_filters": false,
+          "has_search": false
+        },
+        "hooksModule": "src/hooks/queries/useRFISettings.ts",
+        "permissionModule": "rfis",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_create": true,
+        "has_edit": true
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [],
+      "score": 100
+    },
+    {
+      "contract": {
+        "route": "/rfis/reports",
+        "pageFile": "src/pages/rfis/RFIReportsPage.tsx",
+        "title": "RFI Reports",
+        "entity": "rfi",
+        "expected": {
+          "has_list": true,
+          "has_create": false,
+          "has_edit": false,
+          "has_delete": false,
+          "has_export": true,
+          "has_detail_view": false,
+          "has_filters": true,
+          "has_search": false
+        },
+        "hooksModule": "src/lib/rfi/reports.ts",
+        "permissionModule": "rfis",
+        "status": "production"
+      },
+      "actual": {
+        "has_list": true,
+        "has_filters": true,
+        "has_export": false
+      },
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P2",
+          "code": "MISSING_HAS_EXPORT",
+          "message": "Page declares has_export but no evidence found in src/pages/rfis/RFIReportsPage.tsx"
+        }
+      ],
+      "score": 67
+    },
+    {
+      "contract": {
         "route": "/submittals",
         "pageFile": "src/pages/submittals/index.tsx",
         "title": "Submittals",
@@ -463,7 +535,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "5 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
@@ -1783,11 +1855,6 @@
       "findings": [
         {
           "severity": "P3",
-          "code": "SMALL_TOUCH_TARGETS",
-          "message": "1 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
-        },
-        {
-          "severity": "P3",
           "code": "MISSING_HAS_DETAIL_VIEW",
           "message": "Page declares has_detail_view but no evidence found in src/pages/rfis/RFIDetail.tsx"
         }
@@ -1820,10 +1887,38 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "5 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
+    },
+    {
+      "contract": {
+        "route": "/submittals/settings",
+        "pageFile": "src/pages/submittals/SubmittalSettingsPage.tsx",
+        "title": "Submittal Settings",
+        "entity": "submittal",
+        "expected": {
+          "has_detail_view": false,
+          "has_edit": false
+        },
+        "permissionModule": "submittals",
+        "status": "stub"
+      },
+      "actual": {},
+      "mutations": {
+        "createPresent": true,
+        "updatePresent": true,
+        "deletePresent": true
+      },
+      "findings": [
+        {
+          "severity": "P3",
+          "code": "SMALL_TOUCH_TARGETS",
+          "message": "5 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+        }
+      ],
+      "score": -1
     },
     {
       "contract": {
@@ -1876,7 +1971,7 @@
         {
           "severity": "P3",
           "code": "SMALL_TOUCH_TARGETS",
-          "message": "6 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
+          "message": "5 interactive element(s) below 56px min-height (CLAUDE.md gloved-use standard)"
         }
       ],
       "score": 100
