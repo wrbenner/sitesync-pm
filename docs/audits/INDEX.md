@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-05 (Bugatti close-out: typecheck 0 / eslint 0 / vitest 0-fail; tail-truncated regressions surfaced & fixed; iCloud-dup ignore unified across .gitignore + eslint + tsconfig + vitest)
+**Last updated:** 2026-05-08 (Spec infrastructure foundation — 3 tier-1 templates registered as project skills (`/page-card`, `/workflow-spec`, `/iris-spec`) + 5 Page Cards filed for hottest pages: Day, RFIs, Submittals, Daily Log, Iris Inbox. See `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md`. Earlier 2026-05-08: IRIS Nativeness planning push — 6 phase specs + 1 ingestion taxonomy sub-spec + 5 ADR stubs (017–021).)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -65,6 +65,7 @@ entries before starting work. Update this file when you add a new doc.
 | 8 | `SOFT_PILOT_PLAYBOOK_2026-05-04.md` | Nexus (Brad Cameron, primary) + Carleton (backup). Pilot agreement + Day 50 onboarding + 5:30 PM standup + exit criteria. ADR-006 inline. |
 | 9 | `ADR_007_AUTO_WITHDRAW_POLICY_2026-05-04.md` | When underlying state changes mid-draft: withdraw, never auto-update, never stay-stale. |
 | 10 | `SOFT_PILOT_GC_RESEARCH_2026-05-04.md` | Nexus Companies (Dallas) + Carleton Companies. Brad Cameron contact verified. |
+| 11 | `IRIS_EVAL_PIPELINE_SPEC_2026-05-08.md` | 30-row synthetic corpus + voice/citations/action asserts + CI gate (`scripts/check-iris-eval.ts`). Self-host Langfuse for production trace observability. ADR-022 inline. |
 
 ---
 
@@ -84,11 +85,52 @@ entries before starting work. Update this file when you add a new doc.
 
 ---
 
+## Page Cards / Workflow Specs / Iris Specs (tier-1 surface inventory)
+
+The tier-1 card system: every addressable page, every cross-feature chain, and every Iris feature gets one ~250-word card filed here. Sister templates registered as project skills — invoke `/page-card`, `/workflow-spec`, `/iris-spec` from this repo to scaffold a populated draft. Heavy detail lives behind `[Deep dive →]` links written only when the work demands them.
+
+See: `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md` (foundation receipt) and `.claude/skills/{page-card,workflow-spec,iris-spec}/SKILL.md` (the templates themselves).
+
+### Page Cards
+
+| Surface | Card | Status |
+|---|---|---|
+| `/day` | `PAGE_CARD_DAY_2026-05-08.md` | Draft |
+| `/rfis` | `PAGE_CARD_RFIS_2026-05-08.md` | Draft |
+| `/submittals` | `PAGE_CARD_SUBMITTALS_2026-05-08.md` | Draft |
+| `/daily-log` | `PAGE_CARD_DAILY_LOG_2026-05-08.md` | Draft |
+| `/iris/inbox` | `PAGE_CARD_IRIS_INBOX_2026-05-08.md` | Draft |
+
+### Workflow Specs
+
+(none filed yet — 12 chains queued in `src/lib/crossFeatureWorkflows.ts`; cards land one per session as the chains are reviewed)
+
+### Iris Specs
+
+(none filed yet — existing IRIS_TELEMETRY/CITATIONS/VOICE/PILOT specs cover the substrate; tier-1 per-feature cards land as new Iris features ship or as retro-summary work)
+
+---
+
 ## Bugatti Launch Roadmap (post-Lap-3 → Apr 30, 2027 launch)
 
 | Doc | One-line summary |
 |---|---|
 | `BUGATTI_LAUNCH_ROADMAP_2026-05-04.md` | The 20-program plan from Lap 2 close to Embedded Payments v0 launch. Weapon-grade discipline applied. |
+| `IRIS_NATIVENESS_PLAN_2026-05-08.md` | The 8-phase AI-architecture plan that runs alongside the launch roadmap. Closes the role-based / context-fabric / universal-knowledge gaps Walker called out 2026-05-08. Companion to BUGATTI_LAUNCH_ROADMAP. ADR-017–021 stubs LANDED 2026-05-08. |
+
+### IRIS Native — Phase Specs (read each before its phase opens)
+
+⚠️ **Phases 1–4 have two specs each** (a `PHASE_X_*` file and a newer `IRIS_PHASE_X_*` file, both dated 2026-05-08). Both were written from the same parent plan in this same day's parallel-spec push; the newer `IRIS_PHASE_X_*` versions are slightly longer (~10–35% more words) but cover the same ground. **Walker to pick canonical per phase before Phase 1 implementation begins.** Recommend keeping `IRIS_PHASE_X_*` and archiving the `PHASE_X_*` versions to a `legacy/` subdirectory, but the older versions may have details worth merging in first.
+
+| Phase | Newer spec (recommended canonical) | Older sibling | Calendar | One-line summary |
+|---|---|---|---|---|
+| 1 | `IRIS_PHASE_1_ROLE_LAYER_CONTEXT_FABRIC_SPEC_2026-05-08.md` (7,526 w) | `PHASE_1_ROLE_LAYER_CONTEXT_FABRIC_SPEC_2026-05-08.md` (5,553 w) | Lap 3 first half (~Jul–Sep 2026) | 5 personas + Context Fabric v0 (single buildContext entrypoint assembling WHO/WHAT/WHEN/WHERE/WHY). Highest-leverage next move. ADR-019 + ADR-020. |
+| 2 | `IRIS_PHASE_2_SPECIALIST_SUBAGENTS_SPEC_2026-05-08.md` (6,617 w) | `PHASE_2_SPECIALIST_SUB_AGENTS_SPEC_2026-05-08.md` (4,891 w) | Lap 3 second half (~Sep–Oct 2026) | 4 specialists (Drafter / Money / Schedule / Code) + router + 3 hardened executors. ADR-018 boundary contract. |
+| 3 | `IRIS_PHASE_3_KNOWLEDGE_ABSORPTION_SPEC_2026-05-08.md` (6,339 w) | `PHASE_3_UNIVERSAL_KNOWLEDGE_ABSORPTION_SPEC_2026-05-08.md` (5,712 w) | Lap 4 (~Oct–Nov 2026) | pgvector + 8 ingestion workers + retrieval API. The missing pillar: every doc/log/photo absorbed. ADR-017. |
+| 3.sub | `INGESTION_TAXONOMY_SPEC_2026-05-08.md` | (none) | Phase 3 sub-spec | 64-artifact catalog + catch-all router; "no upload drops on the floor" CI lint. |
+| 4 | `IRIS_PHASE_4_INSIGHT_SLOT_AMBIENT_SPEC_2026-05-08.md` (7,290 w) | `PHASE_4_PER_PAGE_INSIGHT_AMBIENT_SPEC_2026-05-08.md` (7,392 w) | Lap 5 (~Nov 2026 → Jan 2027) | Insight Slot on every page (~50) + Morning Brief ambient layer + Cards on Home cross-entity. |
+| 5 | `IRIS_PHASE_5_MULTIMODAL_SPEC_2026-05-08.md` | (none — single spec) | Lap 5–6 (~Jan–Mar 2027) | Foreman voice flow (Whisper + IrisFieldAgent) + photo pipeline + drawing OCR + spatial memory v0 + photo_anchor/audio_anchor citation kinds. |
+| 6 | `IRIS_PHASE_6_FIRM_MEMORY_SPEC_2026-05-08.md` | (none — single spec) | Lap 6 (~Mar–Apr 2027) | The 36-month moat. firm_memory tables + closeout extractor + IrisHistorian. **Sequenced AFTER T-195 audit-chain cert.** ADR-021. |
 
 ### Wave 1 — Long-lead specs (immediate; this week)
 
@@ -152,6 +194,12 @@ entries before starting work. Update this file when you add a new doc.
 | ADR-014 | Public Trust Center at trust.sitesync.com | Inline in `SOC_2_READINESS_SPEC_2026-05-04.md` | Accepted |
 | ADR-015 | Multi-region active-active + chaos engineering + 4-nines SLA | Standalone: `RELIABILITY_ARCHITECTURE_ADR_015_2026-05-04.md` | Accepted |
 | ADR-016 | Integration framework pattern (every connector implements common interface) | Inline in `PROCORE_IMPORTER_SPEC_2026-05-04.md` | Accepted |
+| ADR-017 | Embedding model: OpenAI text-embedding-3-large (1536-dim) for Phase 3; revisit at Phase 7 | Standalone: `ADR_017_EMBEDDING_MODEL_2026-05-08.md` | Accepted |
+| ADR-018 | Specialist sub-agent boundary contract (deterministic check + LLM scope + write scope + audit fields + tool allow-list, CI-enforced) | Standalone: `ADR_018_SPECIALIST_BOUNDARY_CONTRACT_2026-05-08.md` | Accepted |
+| ADR-019 | Persona model: 5 personas (pm / super / foreman / owner_rep / office), org-assigned, never user-overridable; workflow > project > org override hierarchy | Standalone: `ADR_019_PERSONA_MODEL_2026-05-08.md` | Accepted |
+| ADR-020 | Context Fabric is the single retrieval entrypoint; caller-supplied `system=` deprecated by Phase 1d ESLint rule `no-raw-iris-system` | Standalone: `ADR_020_CONTEXT_FABRIC_AS_RETRIEVAL_ENTRYPOINT_2026-05-08.md` | Accepted |
+| ADR-022 | Self-host Langfuse on Fly.io for Iris trace observability (vs SaaS), to keep pilot data on Walker-controlled infra | `ADR_022_LANGFUSE_SELF_HOST_2026-05-08.md` | Accepted |
+| ADR-021 | Cross-project memory anonymization protocol: within-tenant Phase 6, cross-tenant Phase 7+ behind two-engineer review + legal sign-off | Standalone: `ADR_021_CROSS_PROJECT_ANONYMIZATION_2026-05-08.md` | Accepted |
 
 ---
 

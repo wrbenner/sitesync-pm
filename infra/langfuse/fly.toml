@@ -1,0 +1,48 @@
+# SiteSync — Langfuse self-host on Fly.io.
+#
+# Reference: infra/langfuse/README.md
+#            docs/audits/ADR_022_LANGFUSE_SELF_HOST_2026-05-08.md
+#
+# Walker provisions this manually:
+#   cd infra/langfuse
+#   flyctl launch --copy-config
+#
+# The image is the upstream langfuse/langfuse build. Updates ship via
+# `flyctl deploy` (re-pulls latest tag) or `flyctl image update`.
+
+app = 'sitesync-langfuse'
+primary_region = 'iad'
+
+[build]
+  image = 'langfuse/langfuse:latest'
+
+[env]
+  NEXTAUTH_URL = 'https://sitesync-langfuse.fly.dev'
+  TELEMETRY_ENABLED = 'false'
+  HOSTNAME = '0.0.0.0'
+  PORT = '3000'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+
+[checks]
+  [checks.health]
+    type = 'http'
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '60s'
+    method = 'GET'
+    path = '/api/public/health'
