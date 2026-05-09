@@ -16,12 +16,11 @@ const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ' // Crockford-ish; no 0/1/I/O
 
 /** Crypto-strong random secret using the standard alphabet. */
 function randomSecret(length: number): string {
-  const bytes = new Uint8Array(length)
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    crypto.getRandomValues(bytes)
-  } else {
-    for (let i = 0; i < length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
+    throw new Error('crypto.getRandomValues is required to mint API tokens — insecure fallback refused')
   }
+  const bytes = new Uint8Array(length)
+  crypto.getRandomValues(bytes)
   let out = ''
   for (let i = 0; i < length; i++) {
     out += ALPHABET[bytes[i] % ALPHABET.length]

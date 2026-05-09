@@ -4,6 +4,8 @@
 // admin UI uses `matchSubscription` to preview which subscriptions would
 // fire for a hypothetical event.
 
+let _webhookSeq = 0
+
 export interface WebhookSubscription {
   id: string
   url: string
@@ -127,7 +129,7 @@ export function eventFromTrigger(input: {
     status_from,
     status_to,
     payload: input.after ?? {},
-    event_id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    event_id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${++_webhookSeq}`,
     created_at: new Date().toISOString(),
   }
 }

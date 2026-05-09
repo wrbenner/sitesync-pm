@@ -224,6 +224,13 @@ export function integrityCheck(
     }
   }
 
+  // When ≥80 % of activities are orphans the schedule simply hasn't been
+  // linked yet — treat as unanalyzed so users see a neutral hint rather
+  // than a misleading red "F" grade on brand-new seed-data schedules.
+  if (counts.orphan / activities.length >= 0.8) {
+    return empty(zeroCounts);
+  }
+
   // Score: each issue weighted by severity, normalized over activity count.
   const totalWeight = issues.reduce((s, i) => s + SEVERITY_WEIGHT[i.severity], 0);
   const denom = Math.max(1, activities.length);

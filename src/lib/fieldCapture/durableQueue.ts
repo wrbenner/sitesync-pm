@@ -95,15 +95,20 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Random UUID, falls back to a manual implementation in older runtimes. */
+let _uuidFallbackSeq = 0
+/** Crypto UUID, with a monotonic fallback for environments lacking crypto.randomUUID. */
 function makeUuid(): string {
   const c = globalThis.crypto as Crypto | undefined
   if (c?.randomUUID) return c.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
-    const r = (Math.random() * 16) | 0
-    const v = ch === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  if (c?.getRandomValues) {
+    const b = c.getRandomValues(new Uint8Array(16))
+    b[6] = (b[6] & 0x0f) | 0x40
+    b[8] = (b[8] & 0x3f) | 0x80
+    return [...b].map((v, i) =>
+      ([4, 6, 8, 10].includes(i) ? '-' : '') + v.toString(16).padStart(2, '0')
+    ).join('')
+  }
+  return `fallback-${Date.now()}-${++_uuidFallbackSeq}`
 }
 
 /**
