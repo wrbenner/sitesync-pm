@@ -615,6 +615,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     return () => mq.removeEventListener('change', handler)
   }, [])
 
+  // Tablet detection — at 769–1024px we force an icon-only rail (collapsed
+  // visual) so the sidebar occupies the 72px grid track App.tsx allocates,
+  // not the 252px expanded width. The user's explicit collapse preference is
+  // preserved for when they return to a full desktop viewport.
+  const [isTabletViewport, setIsTabletViewport] = useState(() =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(min-width: 769px) and (max-width: 1024px)').matches,
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 769px) and (max-width: 1024px)')
+    const handler = (e: MediaQueryListEvent) => setIsTabletViewport(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   // Default-collapse on /day; on every other page, reapply the user's last
   // preference from localStorage. Track the prior pathname in a ref so we
   // only re-sync when it actually changes (avoids cascading re-renders that
@@ -666,7 +683,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     return <MobileTabBar streamRole={streamRole} activeView={activeView} onNavigate={onNavigate} />
   }
 
-  const collapsed = sidebarCollapsed
+  // Force icon-only rail on tablet; respect the user's stored preference elsewhere.
+  const collapsed = isTabletViewport || sidebarCollapsed
   const width = isOverlay ? layout.sidebarWidth : collapsed ? COLLAPSED_W : EXPANDED_W
 
   return (
