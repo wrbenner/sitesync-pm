@@ -1,6 +1,7 @@
 import { setup, fromPromise } from 'xstate'
 import { colors } from '../styles/theme'
 import type { CreateRfiPayload } from '../types/api'
+import { can, type Role } from '../permissions'
 
 export type RFIState = 'draft' | 'open' | 'under_review' | 'answered' | 'closed' | 'void'
 
@@ -103,7 +104,7 @@ export const rfiMachine = setup({
 
 // BUG #4 FIX: Accept userRole parameter. Void only available to admin/owner.
 export function getValidTransitions(status: RFIState, userRole: string = 'viewer'): string[] {
-  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner'
+  const canVoid = can(userRole as Role, 'rfis.void')
 
   const base: Record<RFIState, string[]> = {
     draft: ['Submit'],
@@ -116,8 +117,7 @@ export function getValidTransitions(status: RFIState, userRole: string = 'viewer
 
   const result = [...(base[status] || [])]
 
-  // BUG #4 FIX: Only admin/owner can void. Non-admin users never see void option.
-  if (isAdminOrOwner && status !== 'void') {
+  if (canVoid && status !== 'void') {
     result.push('Void')
   }
 

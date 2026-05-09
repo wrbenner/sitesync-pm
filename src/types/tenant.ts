@@ -14,23 +14,10 @@ export type OrgRole = 'owner' | 'admin' | 'member'
 export type { ProjectRole } from './database'
 import type { ProjectRole } from './database'
 
-export const ROLE_HIERARCHY: Record<ProjectRole, number> = {
-  viewer: 1,
-  architect: 2,
-  owner_rep: 2,
-  subcontractor: 2,
-  member: 2,
-  field_user: 2,
-  foreman: 3,
-  field_engineer: 3,
-  project_engineer: 3,
-  safety_manager: 3,
-  superintendent: 4,
-  project_manager: 5,
-  admin: 6,
-  owner: 7,
-  project_executive: 7,
-}
+// ROLE_HIERARCHY now lives in src/permissions.ts (canonical role-permission
+// matrix). Re-exported here for backwards compatibility with existing
+// importers (state machines, tests).
+export { ROLE_HIERARCHY } from '../permissions'
 
 export interface OrganizationMember {
   id: string

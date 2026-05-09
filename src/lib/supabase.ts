@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Session } from '@supabase/supabase-js'
 import type { Database, Profile } from '../types/database'
-import { UserRole } from '../types/enums'
+import type { Role } from '../permissions'
 
 // Supabase config: env vars are injected at build time by Vite.
 // Required — no source-level fallbacks. If either is missing the client
@@ -103,9 +103,10 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 }
 
 /**
- * Get the current user's role in a specific project
+ * Get the current user's role in a specific project. Returns the canonical
+ * 15-value Role from src/permissions.ts.
  */
-export async function getProjectRole(projectId: string): Promise<UserRole | null> {
+export async function getProjectRole(projectId: string): Promise<Role | null> {
   const user = await getCurrentUser()
   if (!user) return null
 
@@ -120,15 +121,18 @@ export async function getProjectRole(projectId: string): Promise<UserRole | null
     throw error
   }
 
-  return data?.role as UserRole || null
+  return (data?.role as Role) ?? null
 }
 
 /**
- * Check if current user has admin role in organization
+ * Check if current user has admin role in organization. OrgRole is distinct
+ * from the project Role type (orgs use 'owner' | 'admin' | 'member'), so the
+ * literal comparison stays here rather than routing through the project
+ * permission matrix.
  */
 export async function isOrgAdmin(organizationId: string): Promise<boolean> {
   const profile = await getCurrentProfile()
   if (!profile) return false
 
-  return profile.organization_id === organizationId && profile.role === UserRole.Admin
+  return profile.organization_id === organizationId && profile.role === 'admin'
 }

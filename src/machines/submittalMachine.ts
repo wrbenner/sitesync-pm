@@ -1,5 +1,6 @@
 import { setup, assign } from 'xstate'
 import { colors } from '../styles/theme'
+import { isAtLeast, type Role } from '../permissions'
 
 export type SubmittalState =
   | 'draft'
@@ -131,12 +132,16 @@ export function getValidSubmittalStatusTransitions(
 
   const isArchitect = ['architect', 'designer', 'admin', 'owner'].includes(userRole)
 
-  const canClose = isGC || userRole === 'admin' || userRole === 'owner'
+  // canClose: GC lanes can close; isGC already includes admin/owner so the
+  // historical disjunction was redundant.
+  const canClose = isGC
+
+  const isMember = isAtLeast(userRole as Role, 'subcontractor')
 
   switch (status) {
     case 'draft':
       // Any project member (non-viewer) may submit the package
-      return userRole !== 'viewer' ? ['submitted'] : []
+      return isMember ? ['submitted'] : []
     case 'submitted':
       return isGC ? ['gc_review', 'rejected'] : []
     case 'gc_review':
@@ -148,7 +153,7 @@ export function getValidSubmittalStatusTransitions(
     case 'rejected':
     case 'resubmit':
       // Any project member may initiate a revision cycle
-      return userRole !== 'viewer' ? ['draft'] : []
+      return isMember ? ['draft'] : []
     case 'closed':
       return []
     default:

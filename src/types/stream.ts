@@ -6,29 +6,17 @@
 // (data, UI, navigation, Iris) all import from here.
 //
 // DO NOT change shape mid-flight — coordinate any update through CONTRACT.md.
+//
+// Role + Permission are re-exported from src/permissions.ts (the canonical
+// role-permission matrix, edge-compatible). The 15-value role list itself is
+// unchanged; only its origin moved.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Permission } from '../hooks/usePermissions'
+import type { Permission, Role } from '../permissions'
 
 // ProjectRole is the canonical 15-value role from the membership table.
-// Defined inline here to keep the locked contract self-sufficient regardless
-// of the upstream re-export in src/types/database.ts.
-export type ProjectRole =
-  | 'owner'
-  | 'project_executive'
-  | 'admin'
-  | 'project_manager'
-  | 'superintendent'
-  | 'foreman'
-  | 'project_engineer'
-  | 'field_engineer'
-  | 'safety_manager'
-  | 'subcontractor'
-  | 'architect'
-  | 'owner_rep'
-  | 'member'
-  | 'field_user'
-  | 'viewer'
+// Aliases src/permissions.ts:Role so the matrix and the contract can never drift.
+export type ProjectRole = Role
 
 // ── Stream personas (UI lens, NOT auth) ─────────────────────────────────────
 // Six personas drive the role-based homepage. They are derived from the

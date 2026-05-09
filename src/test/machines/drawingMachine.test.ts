@@ -24,8 +24,10 @@ describe('Drawing State Machine', () => {
       expect(transitions).toContain('Archive');
     });
 
-    it('under_review: reviewer can Approve or Reject', () => {
-      const transitions = getValidTransitions('under_review', 'reviewer');
+    it('under_review: reviewer (project_manager) can Approve or Reject', () => {
+      // 'reviewer' is not a canonical role — project_manager is the matrix
+      // equivalent (drawings.upload allows owner/admin/project_manager).
+      const transitions = getValidTransitions('under_review', 'project_manager');
       expect(transitions).toContain('Approve');
       expect(transitions).toContain('Reject');
     });
@@ -72,7 +74,7 @@ describe('Drawing State Machine', () => {
 
     it('non-admin cannot Archive', () => {
       expect(getValidTransitions('draft', 'member')).not.toContain('Archive');
-      expect(getValidTransitions('under_review', 'reviewer')).not.toContain('Archive');
+      expect(getValidTransitions('under_review', 'project_manager')).not.toContain('Archive');
     });
 
     it('default (no role) behaves as viewer', () => {

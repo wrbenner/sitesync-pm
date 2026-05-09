@@ -1,6 +1,7 @@
 import { setup, fromPromise } from 'xstate';
 import { colors } from '../styles/theme';
 import type { DrawingStatus } from '../types/drawing';
+import { can, type Role } from '../permissions';
 
 export type { DrawingStatus };
 
@@ -97,8 +98,8 @@ export function getValidTransitions(
   status: DrawingStatus,
   userRole: string = 'viewer',
 ): string[] {
-  const isAdminOrOwner = userRole === 'admin' || userRole === 'owner';
-  const isReviewer = isAdminOrOwner || userRole === 'reviewer' || userRole === 'project_manager';
+  const isAdminOrOwner = can(userRole as Role, 'drawings.delete');
+  const isReviewer = can(userRole as Role, 'drawings.upload');
 
   const base: Partial<Record<DrawingStatus, string[]>> = {
     draft: ['Submit for Review'],

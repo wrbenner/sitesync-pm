@@ -137,8 +137,10 @@ describe('drawingService.transitionStatus', () => {
     expect(result.error).toBeNull();
   });
 
-  it('allows Approve from under_review for reviewer', async () => {
-    setupTransition('under_review', 'reviewer');
+  it('allows Approve from under_review for reviewer (project_manager)', async () => {
+    // 'reviewer' is not a canonical role — project_manager is the matrix
+    // equivalent (drawings.upload allows owner/admin/project_manager).
+    setupTransition('under_review', 'project_manager');
 
     const result = await drawingService.transitionStatus('d-1', 'Approve');
     expect(result.error).toBeNull();

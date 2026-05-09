@@ -162,17 +162,17 @@ const PaymentApplicationsPage: React.FC = () => {
   const { data: lienWaivers } = useLienWaivers(projectId)
   const { data: project } = useProject(projectId)
 
-  // Role gating for retainage release (owner/admin/project_manager).
-  const { role } = usePermissions()
+  // Role gating routed through the canonical matrix (src/permissions.ts).
+  const { hasPermission } = usePermissions()
   const { user } = useAuth()
-  const canReleaseRetainage = role === 'owner' || role === 'admin' || role === 'project_manager'
+  const canReleaseRetainage = hasPermission('financials.release_retainage')
 
   // Period-close gating: when the current financial period is closed, lock
   // writes for everyone except owner/admin. The banner renders for all roles
   // so the state is visible; only the disabled flag varies.
   const { data: activePeriod } = useActivePeriod(projectId ?? undefined)
   const periodClosed = activePeriod?.status === 'closed'
-  const canBypassPeriodLock = role === 'owner' || role === 'admin'
+  const canBypassPeriodLock = hasPermission('financials.bypass_period_lock')
   const writesLocked = periodClosed && !canBypassPeriodLock
   const lockTooltip = writesLocked
     ? 'Current period is closed — edits restricted to owner/admin'
