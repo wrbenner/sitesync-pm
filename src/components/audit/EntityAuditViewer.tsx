@@ -15,7 +15,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Send } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, fromTable } from '../../lib/supabase';
 import { colors, typography, spacing } from '../../styles/theme';
 import {
   verifyChain,
@@ -64,10 +64,7 @@ export const EntityAuditViewer: React.FC<EntityAuditViewerProps> = ({
   const { data, isPending } = useQuery({
     queryKey: ['audit-log', entityType, entityId],
     queryFn: async (): Promise<AuditLogRow[]> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data, error } = await sb
-        .from('audit_log')
+      const { data, error } = await fromTable('audit_log')
         .select(
           'id, created_at, user_id, user_email, user_name, project_id, organization_id, ' +
             'entity_type, entity_id, action, before_state, after_state, changed_fields, metadata, ' +
