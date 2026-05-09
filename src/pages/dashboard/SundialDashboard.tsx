@@ -82,7 +82,7 @@ function handleDecisionAnswer(
   }
 }
 
-// ── Design Tokens ──────────────────────────────────────────
+// ── Design Tokens ────────────────────────────
 
 const PARCHMENT = '#FAF7F0';
 const INK       = '#1A1613';
@@ -96,7 +96,7 @@ const ORANGE    = '#F47820';
 const SERIF = '"EB Garamond", Garamond, "Times New Roman", serif';
 const SANS  = 'Inter, -apple-system, sans-serif';
 
-// ── Time Helpers ───────────────────────────────────────────
+// ── Time Helpers ─────────────────────────────────
 
 function dayFrac(m: number, sunrise: number, sunset: number): number {
   return Math.max(0, Math.min(1, (m - sunrise) / (sunset - sunrise)));
@@ -111,7 +111,7 @@ function fmtTimeLower(m: number): string {
   return `${h12}:${String(mm).padStart(2, '0')}${ap}`;
 }
 
-// ── Atoms ──────────────────────────────────────────────────
+// ── Atoms ──────────────────────────────────────────
 
 /** All-caps label for eyebrows, nav, markers */
 function Caps({
@@ -174,8 +174,8 @@ function QuestionHeadline({
         color: INK,
         margin: 0,
         maxWidth: mobile ? undefined : 1100,
-        textWrap: 'balance' as any,
-      }}
+        textWrap: 'balance',
+      } as React.CSSProperties}
     >
       {segments.map((seg, i) => {
         let text = seg.text;
@@ -386,7 +386,7 @@ function AnswerBtn({
   );
 }
 
-// ── Day Horizon (Desktop) ──────────────────────────────────
+// ── Day Horizon (Desktop) ─────────────────────────────────
 
 function DayHorizon({
   events,
@@ -603,7 +603,7 @@ function DayHorizon({
   );
 }
 
-// ── Vertical Day (Mobile) ──────────────────────────────────
+// ── Vertical Day (Mobile) ─────────────────────────────────
 
 function VerticalDay({
   events,
@@ -671,7 +671,7 @@ function VerticalDay({
   );
 }
 
-// ── Desktop Dashboard ──────────────────────────────────────
+// ── Desktop Dashboard ───────────────────────────────────
 
 function SundialDesktop({ data }: { data: SundialData }) {
   const navigate = useNavigate();
@@ -795,8 +795,8 @@ function SundialDesktop({ data }: { data: SundialData }) {
                 color: INK,
                 margin: 0,
                 maxWidth: 1100,
-                textWrap: 'balance' as any,
-              }}
+                textWrap: 'balance',
+              } as React.CSSProperties}
             >
               The day is <span style={{ fontStyle: 'italic' }}>yours</span>
               <span style={{ color: INK_3 }}>.</span>
@@ -897,7 +897,7 @@ function SundialDesktop({ data }: { data: SundialData }) {
   );
 }
 
-// ── Mobile Dashboard ───────────────────────────────────────
+// ── Mobile Dashboard ─────────────────────────────────────
 
 function SundialMobile({ data }: { data: SundialData }) {
   const navigate = useNavigate();
@@ -1227,7 +1227,7 @@ function SundialLoading() {
   );
 }
 
-// ── Exported Component ─────────────────────────────────────
+// ── Exported Component ─────────────────────────────────────────
 
 export function SundialDashboard() {
   const data = useDecisionEngine();

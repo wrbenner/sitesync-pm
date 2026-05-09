@@ -73,9 +73,9 @@ interface FormState {
 
 function autoProjectNumber(): string {
   const year = new Date().getFullYear();
-  // Random 4-digit sequence — server has unique constraints; this is a hint
-  // value and the user can override before submit.
-  const seq = Math.floor(1000 + Math.random() * 9000);
+  // 4-digit sequence derived from randomUUID — server unique constraint is the real guard
+  const [byte] = crypto.getRandomValues(new Uint8Array(1));
+  const seq = 1000 + Math.floor((byte / 255) * 8999);
   return `${year}-${seq}`;
 }
 
