@@ -150,6 +150,84 @@ export async function recordIrisTrace(
   return traceId
 }
 
+/**
+ * Create a parent trace with metadata only (no child generation). Used
+ * when a single user request fans out to multiple LLM calls — emit one
+ * trace at request start, then recordIrisGeneration per call.
+ */
+export async function recordIrisTraceMeta(ctx: TraceContext): Promise<string | null> {
+  const env = readEnv()
+  if (!env) return null
+  const tags = [
+    ...(ctx.tags ?? []),
+    ctx.isSoftPilot ? 'soft_pilot' : 'self_serve',
+  ]
+  const event: IngestionEvent = {
+    id: uuid(),
+    type: 'trace-create',
+    timestamp: new Date().toISOString(),
+    body: {
+      id: ctx.auditId,
+      name: ctx.actionType ?? 'iris-call',
+      userId: ctx.userId ?? undefined,
+      sessionId: ctx.projectId ?? undefined,
+      tags,
+      metadata: {
+        ...(ctx.metadata ?? {}),
+        drafted_action_id: ctx.draftedActionId ?? null,
+        action_type: ctx.actionType ?? null,
+        is_soft_pilot: ctx.isSoftPilot ?? false,
+      },
+    },
+  }
+  await ingest(env, [event])
+  return ctx.auditId
+}
+
+/**
+ * Record a child generation event under an existing trace. Used by
+ * agent-orchestrator (one parent trace per user request, three
+ * generation children for intent → specialist → synthesis) and any
+ * future multi-call edge function. Caller chooses the parent traceId
+ * (typically a uuid generated at request entry, then passed to
+ * recordIrisTrace once + recordIrisGeneration N times).
+ */
+export async function recordIrisGeneration(
+  traceId: string,
+  generation: GenerationEvent & { name: string },
+): Promise<void> {
+  const env = readEnv()
+  if (!env) return
+  const event: IngestionEvent = {
+    id: uuid(),
+    type: 'generation-create',
+    timestamp: new Date().toISOString(),
+    body: {
+      id: uuid(),
+      traceId,
+      name: generation.name,
+      startTime: new Date(Date.now() - generation.latencyMs).toISOString(),
+      endTime: new Date().toISOString(),
+      model: generation.model,
+      modelParameters: { provider: generation.provider },
+      input: generation.systemPrompt
+        ? [
+            { role: 'system', content: generation.systemPrompt },
+            { role: 'user', content: generation.input },
+          ]
+        : generation.input,
+      output: generation.output,
+      usage: {
+        input: generation.inputTokens,
+        output: generation.outputTokens,
+        total: generation.inputTokens + generation.outputTokens,
+        unit: 'TOKENS',
+      },
+    },
+  }
+  await ingest(env, [event])
+}
+
 export async function recordIrisScore(params: {
   traceId: string
   name: 'accept' | 'reject' | 'reword' | 'rating'

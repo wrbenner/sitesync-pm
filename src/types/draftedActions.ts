@@ -193,6 +193,13 @@ export type DraftedActionInsert<T extends DraftedActionType = DraftedActionType>
   draft_reason?: string
   related_resource_type?: string
   related_resource_id?: string
+  /**
+   * Audit-log id (or generated trace id, for direct-Anthropic edge fns)
+   * for the LLM call that produced this draft. The iris-score edge fn
+   * uses it to emit Langfuse accept/reject events against the originating
+   * trace. Optional — pre-existing drafts and non-LLM drafts leave it null.
+   */
+  iris_audit_id?: string
 }
 
 /** Shape used when the user makes a decision. */

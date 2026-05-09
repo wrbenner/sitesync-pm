@@ -21,6 +21,7 @@ import { fromTable } from '../../lib/db/queries'
 import { useProjectId } from '../useProjectId'
 import { logAuditEntry } from '../../lib/auditLogger'
 import { approveAndExecute, rejectDraft as rejectDraftServer } from '../../services/iris/executeAction'
+import { submitIrisScore, SCORE_VALUES } from '../../services/iris/score'
 import type { DraftedAction, DraftedActionStatus } from '../../types/draftedActions'
 
 // ── Constants ─────────────────────────────────────────────────────────
@@ -255,6 +256,17 @@ export function useApproveDraftedAction() {
       } else if (draft.related_resource_type === 'change_order') {
         queryClient.invalidateQueries({ queryKey: ['change_orders'] })
       }
+
+      // Fire-and-forget: emit a Langfuse score event so the trace
+      // dashboard shows accept/reject correlation. Runs through the
+      // iris-score edge fn (Langfuse secrets stay server-side). When
+      // the draft has no iris_audit_id (pre-existing or non-LLM
+      // origin), the edge fn returns ok:false and we no-op.
+      void submitIrisScore({
+        draftedActionId: draft.id,
+        kind: 'accept',
+        value: SCORE_VALUES.accept,
+      })
     },
   })
 }
@@ -332,8 +344,16 @@ export function useRejectDraftedAction() {
 
       return draft
     },
-    onSuccess: () => {
+    onSuccess: (draft) => {
       queryClient.invalidateQueries({ queryKey: [DRAFTED_ACTIONS_KEY] })
+
+      // Mirror of the accept path — emit a reject score against the
+      // originating Langfuse trace.
+      void submitIrisScore({
+        draftedActionId: draft.id,
+        kind: 'reject',
+        value: SCORE_VALUES.reject,
+      })
     },
   })
 }

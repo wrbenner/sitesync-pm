@@ -6012,6 +6012,7 @@ export type Database = {
           first_viewed_at: string | null
           id: string
           inbox_session_id: string | null
+          iris_audit_id: string | null
           payload: Json
           project_id: string
           related_resource_id: string | null
@@ -6043,6 +6044,7 @@ export type Database = {
           first_viewed_at?: string | null
           id?: string
           inbox_session_id?: string | null
+          iris_audit_id?: string | null
           payload?: Json
           project_id: string
           related_resource_id?: string | null
@@ -6074,6 +6076,7 @@ export type Database = {
           first_viewed_at?: string | null
           id?: string
           inbox_session_id?: string | null
+          iris_audit_id?: string | null
           payload?: Json
           project_id?: string
           related_resource_id?: string | null
