@@ -32,8 +32,8 @@ setup('authenticate polish-audit user', async ({ page }) => {
   await page.goto('#/login')
 
   // The login form uses placeholder-based inputs; locate by role/type.
-  await page.getByPlaceholder('you@company.com').fill(email)
-  await page.getByPlaceholder('Enter your password').fill(password)
+  await page.getByPlaceholder('Email').fill(email)
+  await page.getByPlaceholder('Password').fill(password)
 
   // Two "Sign In" buttons exist — the tab control and the form submit.
   // Target the submit button by type to avoid the ambiguity.

@@ -44,16 +44,13 @@ function main(): never {
   }
 
   if (errors.length > 0) {
-    // eslint-disable-next-line no-console
     console.error('✗ permissions:check failed:\n')
     for (const err of errors) {
-      // eslint-disable-next-line no-console
       console.error(err + '\n')
     }
     process.exit(1)
   }
 
-  // eslint-disable-next-line no-console
   console.log('✓ permissions in sync — SQL migration + edge mirror match src/permissions.ts')
   process.exit(0)
 }
