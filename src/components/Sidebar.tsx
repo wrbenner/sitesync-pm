@@ -363,7 +363,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                       fontWeight: typography.fontWeight.bold,
                     }}
                   >
-                    {p.name?.[0]?.toUpperCase() ?? '?'}
+                    {(p.name?.[0] ?? p.id?.[0] ?? '#').toUpperCase()}
                   </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
