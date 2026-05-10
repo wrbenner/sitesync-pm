@@ -45,7 +45,12 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
+  await page.goto('#/login', { waitUntil: 'domcontentloaded' })
+  const bypassed = await page.waitForURL(
+    /#\/(dashboard|onboarding|profile|$)/,
+    { timeout: 3_000 },
+  ).then(() => true).catch(() => false)
+  if (bypassed) { await settle(page, 1000); return }
   await page.getByPlaceholder('you@company.com').fill(USER)
   await page.getByPlaceholder('Enter your password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
@@ -68,7 +73,7 @@ for (const vp of VIEWPORTS) {
 
     test('daily-log workflow', async ({ page }) => {
       await signIn(page)
-      await page.goto('#/daily-log')
+      await page.goto('#/daily-log', { waitUntil: 'domcontentloaded' })
       await settle(page, 1200)
       await shot(page, vp.name, 1, 'today-landing')
 
@@ -119,7 +124,7 @@ for (const vp of VIEWPORTS) {
       // ───────────────────────────────────────
       // Field Capture modal
       // ───────────────────────────────────────
-      await page.goto('#/daily-log')
+      await page.goto('#/daily-log', { waitUntil: 'domcontentloaded' })
       await settle(page, 800)
       const fieldCaptureBtn = page.getByRole('button', { name: /field capture/i }).first()
       if (await fieldCaptureBtn.count() > 0) {

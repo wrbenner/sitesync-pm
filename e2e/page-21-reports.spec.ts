@@ -23,13 +23,13 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('reports workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/reports')
-      await waitLoad(page)
+      await page.goto('#/reports', { waitUntil: 'domcontentloaded' })
+      await waitLoad(page, 8_000)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'overview')
 
-      await page.goto('#/reports/owner')
-      await waitLoad(page)
+      await page.goto('#/reports/owner', { waitUntil: 'domcontentloaded' })
+      await waitLoad(page, 8_000)
       await settle(page, 1200)
       await shot(page, vp.name, 2, 'owner-portal')
 

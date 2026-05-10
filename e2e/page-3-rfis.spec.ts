@@ -41,7 +41,12 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
+  await page.goto('#/login', { waitUntil: 'domcontentloaded' })
+  const bypassed = await page.waitForURL(
+    /#\/(dashboard|onboarding|profile|$)/,
+    { timeout: 3_000 },
+  ).then(() => true).catch(() => false)
+  if (bypassed) { await settle(page, 1000); return }
   await page.getByPlaceholder('you@company.com').fill(USER)
   await page.getByPlaceholder('Enter your password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
@@ -68,7 +73,7 @@ for (const vp of VIEWPORTS) {
       // ───────────────────────────────────────
       // STATE 01 — Land on /rfis
       // ───────────────────────────────────────
-      await page.goto('#/rfis')
+      await page.goto('#/rfis', { waitUntil: 'domcontentloaded' })
       // Wait for the cold-cache warmup to complete on the first load.
       // The "Loading..." subtitle disappears once data lands.
       await page.waitForFunction(
@@ -186,7 +191,7 @@ for (const vp of VIEWPORTS) {
       // ───────────────────────────────────────
       // STATE 11 — Filtering on the list
       // ───────────────────────────────────────
-      await page.goto('#/rfis')
+      await page.goto('#/rfis', { waitUntil: 'domcontentloaded' })
       await settle(page, 600)
 
       // Click "Open" filter if present

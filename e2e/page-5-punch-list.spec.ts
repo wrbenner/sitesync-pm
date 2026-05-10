@@ -33,10 +33,10 @@ async function settle(page: Page, ms = 250) {
   await page.waitForTimeout(ms)
 }
 
-async function waitLoad(page: Page) {
+async function waitLoad(page: Page, timeoutMs = 15_000) {
   await page.waitForFunction(
     () => !document.body.textContent?.match(/Loading\.\.\./),
-    { timeout: 15_000 },
+    { timeout: timeoutMs },
   ).catch(() => undefined)
 }
 
@@ -49,7 +49,12 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
+  await page.goto('#/login', { waitUntil: 'domcontentloaded' })
+  const bypassed = await page.waitForURL(
+    /#\/(dashboard|onboarding|profile|$)/,
+    { timeout: 3_000 },
+  ).then(() => true).catch(() => false)
+  if (bypassed) { await settle(page, 1000); return }
   await page.getByPlaceholder('you@company.com').fill(USER)
   await page.getByPlaceholder('Enter your password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
@@ -72,8 +77,8 @@ for (const vp of VIEWPORTS) {
 
     test('punch-list workflow', async ({ page }) => {
       await signIn(page)
-      await page.goto('#/punch-list')
-      await waitLoad(page)
+      await page.goto('#/punch-list', { waitUntil: 'domcontentloaded' })
+      await waitLoad(page, 8_000)
       await settle(page, 600)
       await shot(page, vp.name, 1, 'list')
 

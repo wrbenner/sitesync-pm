@@ -49,7 +49,7 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
+  await page.goto('#/login', { waitUntil: 'domcontentloaded' })
   // Dev-bypass mode: Login page immediately redirects to dashboard.
   const bypassed = await page.waitForURL(
     /#\/(dashboard|onboarding|profile|$)/,
@@ -91,7 +91,7 @@ for (const vp of VIEWPORTS) {
       await shot(page, vp.name, 1, 'cold-post-login')
 
       // Force navigation to /dashboard regardless of where we landed
-      await page.goto('#/dashboard')
+      await page.goto('#/dashboard', { waitUntil: 'domcontentloaded' })
       await settle(page, 1200)
       await shot(page, vp.name, 2, 'dashboard-landing')
 

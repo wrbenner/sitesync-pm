@@ -23,8 +23,8 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('schedule workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/schedule')
-      await waitLoad(page)
+      await page.goto('#/schedule', { waitUntil: 'domcontentloaded' })
+      await waitLoad(page, 8_000)
       await settle(page, 1000)
       await shot(page, vp.name, 1, 'gantt-default')
 

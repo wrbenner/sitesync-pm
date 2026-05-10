@@ -31,8 +31,8 @@ for (const vp of VIEWPORTS) {
         { path: '/settings/workflows', name: 'workflows' },
       ]
       for (let i = 0; i < routes.length; i++) {
-        await page.goto('#' + routes[i].path)
-        await waitLoad(page)
+        await page.goto('#' + routes[i].path, { waitUntil: 'domcontentloaded' })
+        await waitLoad(page, 8_000)
         await settle(page, 800)
         await shot(page, vp.name, i + 1, routes[i].name)
       }

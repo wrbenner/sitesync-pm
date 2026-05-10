@@ -69,7 +69,7 @@ for (const vp of VIEWPORTS) {
       // ────────────────────────────────────────────────────────
       // STATE 01 — Cold landing on /login (Sign In tab default)
       // ────────────────────────────────────────────────────────
-      await page.goto('#/login')
+      await page.goto('#/login', { waitUntil: 'domcontentloaded' })
       // Dev-bypass mode: Login component fires a useEffect that calls
       // navigate('/dashboard'). That happens AFTER the initial render, so we
       // must wait for the URL to change rather than checking it after settle().
@@ -191,7 +191,7 @@ for (const vp of VIEWPORTS) {
       // (Last so subsequent screenshots show the post-login state.)
       // ────────────────────────────────────────────────────────
       // Navigate fresh to login (shake off any tab state)
-      await page.goto('#/login')
+      await page.goto('#/login', { waitUntil: 'domcontentloaded' })
       await settle(page, 400)
 
       // ensure Sign In tab is active
