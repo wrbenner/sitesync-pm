@@ -39,7 +39,68 @@
 // =============================================================================
 
 import { supabase } from '../supabase'
+import { isDevBypassActive } from '../devBypass'
 import type { Database } from '../../types/database'
+
+// ── Dev-bypass stub ──────────────────────────────────────────────────────────
+// In VITE_DEV_BYPASS mode there is no real Supabase backend. Any query that
+// reaches the network returns a fetch error, which pages render as error
+// states. This stub intercepts fromTable() calls and resolves them to empty
+// data so pages render their zero-state UI instead.
+//
+// The `as never` cast on the return keeps TypeScript's inferred return type
+// of fromTable() unchanged (never ⊆ every type → the union simplifies away).
+// At runtime the stub satisfies the chaining contract: every method returns
+// `this`, `.single()` / `.maybeSingle()` return Promise<{data:null,error:null}>,
+// and the builder itself is thenable → await resolves to {data:[],error:null,count:null}.
+class DevBypassQueryStub {
+  // Fluent filter / ordering / pagination methods — return this for chaining
+  select(): this { return this }
+  eq(): this { return this }
+  neq(): this { return this }
+  gt(): this { return this }
+  gte(): this { return this }
+  lt(): this { return this }
+  lte(): this { return this }
+  like(): this { return this }
+  ilike(): this { return this }
+  is(): this { return this }
+  in(): this { return this }
+  not(): this { return this }
+  filter(): this { return this }
+  or(): this { return this }
+  and(): this { return this }
+  contains(): this { return this }
+  containedBy(): this { return this }
+  rangeGt(): this { return this }
+  rangeGte(): this { return this }
+  rangeLt(): this { return this }
+  rangeLte(): this { return this }
+  order(): this { return this }
+  range(): this { return this }
+  limit(): this { return this }
+  // Mutation stubs — also chainable
+  insert(): this { return this }
+  update(): this { return this }
+  upsert(): this { return this }
+  delete(): this { return this }
+  // Single-row variants resolve to null data (no rows found)
+  single(): Promise<{ data: null; error: null }> {
+    return Promise.resolve({ data: null, error: null })
+  }
+  maybeSingle(): Promise<{ data: null; error: null }> {
+    return Promise.resolve({ data: null, error: null })
+  }
+  // Make the builder thenable so `await fromTable(...)...` works
+  then<T>(
+    onfulfilled?: ((v: { data: never[]; error: null; count: null }) => T | PromiseLike<T>) | null,
+  ): Promise<T> {
+    const result = { data: [] as never[], error: null as null, count: null as null }
+    return Promise.resolve(result).then(onfulfilled ?? undefined)
+  }
+}
+
+const _devBypassStub = new DevBypassQueryStub()
 
 // ── Type primitives ──────────────────────────────────────────────────────────
 
@@ -76,6 +137,7 @@ export type SoftDeletableTable = {
  * gets resolved at the call site) and threads it through.
  */
 export function fromTable<T extends TableName>(table: T) {
+  if (isDevBypassActive()) return _devBypassStub as never
   return supabase.from(table)
 }
 
