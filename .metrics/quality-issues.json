@@ -1,34 +1,109 @@
 {
   "totals": {
-    "mock_data": 0,
-    "hardcoded_colors": 402,
-    "files": 46
+    "mock_data": 13,
+    "hardcoded_colors": 1833,
+    "files": 205
   },
   "files": [
     {
-      "file": "src/pages/Submittals.tsx",
+      "file": "src/components/schedule/ScheduleCanvas.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 98
+    },
+    {
+      "file": "src/components/ai/AIDailySummary.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 74
+    },
+    {
+      "file": "src/pages/site-intelligence/SiteIntelligencePage.tsx",
       "mock_data": 0,
       "hardcoded_colors": 54
     },
     {
-      "file": "src/components/schedule/GanttChart.tsx",
+      "file": "src/components/reports/OwnerReport.tsx",
       "mock_data": 0,
-      "hardcoded_colors": 43
+      "hardcoded_colors": 48
     },
     {
-      "file": "src/pages/Schedule.tsx",
+      "file": "src/components/schedule/GanttChart.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 41
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 40
+    },
+    {
+      "file": "src/components/shared/IntelligenceGraph.tsx",
+      "mock_data": 4,
+      "hardcoded_colors": 32
+    },
+    {
+      "file": "src/pages/drawings/constants.ts",
       "mock_data": 0,
       "hardcoded_colors": 33
     },
     {
+      "file": "src/components/shared/Whiteboard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 31
+    },
+    {
+      "file": "src/components/shared/LinkedEntities.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 30
+    },
+    {
+      "file": "src/pages/budget/BudgetKPIs.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 27
+    },
+    {
       "file": "src/components/schedule/MobileScheduleView.tsx",
       "mock_data": 0,
-      "hardcoded_colors": 25
+      "hardcoded_colors": 26
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 26
     },
     {
       "file": "src/pages/RFIs.tsx",
       "mock_data": 0,
+      "hardcoded_colors": 26
+    },
+    {
+      "file": "src/pages/field-capture/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 25
+    },
+    {
+      "file": "src/components/schedule/ScheduleHealthPanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 24
+    },
+    {
+      "file": "src/api/endpoints/documents.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 23
+    },
+    {
+      "file": "src/pages/daily-log/index.tsx",
+      "mock_data": 0,
       "hardcoded_colors": 22
+    },
+    {
+      "file": "src/components/shared/CrossEntitySearch.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 21
+    },
+    {
+      "file": "src/pages/Crews.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 20
     },
     {
       "file": "src/components/export/DailyLogPDF.tsx",
@@ -36,9 +111,44 @@
       "hardcoded_colors": 19
     },
     {
-      "file": "src/pages/PunchList.tsx",
+      "file": "src/pages/CreateProject.tsx",
+      "mock_data": 1,
+      "hardcoded_colors": 18
+    },
+    {
+      "file": "src/pages/schedule/ScheduleStatusChip.tsx",
       "mock_data": 0,
       "hardcoded_colors": 18
+    },
+    {
+      "file": "src/pages/drawings/DrawingDetail.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 18
+    },
+    {
+      "file": "src/pages/digital-twin/DigitalTwinPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 18
+    },
+    {
+      "file": "src/components/drawings/AnnotationCanvas.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 17
+    },
+    {
+      "file": "src/components/rfis/RFICreateWizard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 17
+    },
+    {
+      "file": "src/components/shared/DrawingMarkup.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 17
+    },
+    {
+      "file": "src/pages/Workforce.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 16
     },
     {
       "file": "src/components/Primitives.tsx",
@@ -51,9 +161,24 @@
       "hardcoded_colors": 15
     },
     {
-      "file": "src/pages/Safety.tsx",
+      "file": "src/pages/AIAssistant.tsx",
       "mock_data": 0,
       "hardcoded_colors": 15
+    },
+    {
+      "file": "src/components/drawings/tools/StampTool.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 14
+    },
+    {
+      "file": "src/pages/auth/Login.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 14
+    },
+    {
+      "file": "src/pages/intelligence/IntelligenceGraphPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 14
     },
     {
       "file": "src/components/export/SafetyReport.tsx",
@@ -61,7 +186,122 @@
       "hardcoded_colors": 13
     },
     {
-      "file": "src/components/collaboration/PresenceBar.tsx",
+      "file": "src/pages/ChangeOrders.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 13
+    },
+    {
+      "file": "src/pages/Tasks.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 13
+    },
+    {
+      "file": "src/pages/Budget.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 13
+    },
+    {
+      "file": "src/pages/rfis/RFIKPIs.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 13
+    },
+    {
+      "file": "src/pages/rfis/RFIReportsPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 13
+    },
+    {
+      "file": "src/pages/submittals/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 13
+    },
+    {
+      "file": "src/components/forms/CreateProjectModal.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 12
+    },
+    {
+      "file": "src/components/shared/PhotoAnnotation.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 12
+    },
+    {
+      "file": "src/pages/Commitments.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 12
+    },
+    {
+      "file": "src/components/schedule/IrisScheduleRiskBanner.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 11
+    },
+    {
+      "file": "src/components/projects/ProjectCreatePreview.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 11
+    },
+    {
+      "file": "src/components/drawings/IrisConflictScanButton.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 11
+    },
+    {
+      "file": "src/components/submittals/SpecParser.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 11
+    },
+    {
+      "file": "src/pages/submittals/SubmittalKPIs.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 11
+    },
+    {
+      "file": "src/components/audit/EntityHistoryPanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/reports/ScaleAuditReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/reports/DiscrepancyReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/submittals/Create/UnifiedCreateModal.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/submittals/detail/IrisCoPilotPanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/bim/BIMViewer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/pages/punch-list/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/pages/file/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/hooks/useDrawingPresence.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 10
+    },
+    {
+      "file": "src/components/submittals/GroupedView/GroupHeader.tsx",
       "mock_data": 0,
       "hardcoded_colors": 9
     },
@@ -71,14 +311,154 @@
       "hardcoded_colors": 9
     },
     {
-      "file": "src/components/forms/CreateDailyLogModal.tsx",
+      "file": "src/components/dailylog/IrisDailySummaryButton.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 9
+    },
+    {
+      "file": "src/pages/set/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 9
+    },
+    {
+      "file": "src/components/reports/ProgressTimeline.tsx",
       "mock_data": 0,
       "hardcoded_colors": 8
     },
     {
-      "file": "src/api/endpoints/documents.ts",
+      "file": "src/components/submittals/BulkEditModal.tsx",
       "mock_data": 0,
       "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/submittals/BallInCourtView/ReviewerSidePanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/submittals/Create/IrisPreflightInline.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/submittals/detail/StoryBanner.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/submittals/detail/Overview/CompactWorkflowChain.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/submittals/FilterChips/AddFilterDropdown.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/rfi/RFICalendarView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/pages/schedule/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/pages/field/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/pages/punch-list/PunchListPlanView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/lib/collaborativeEditor.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/lib/realtime/liveCursor.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/services/signatureService.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 8
+    },
+    {
+      "file": "src/components/reports/DrawingAnalysisReport.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/drawings/DrawingTiledViewer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/cockpit/IrisDraftDrawer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/SubmittalsItemsView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/SubmittalRow.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/BulkActionsMenu.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/SubmittalsHeader.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/columns.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/BulkDistributeDialog.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/SubmittalsToolbar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/SavedViews/SavedViewsSidebar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/GroupedView/GroupedSubmittalsView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/submittals/PackagesView/CreatePackageDialog.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/workflows/ApprovalStatusBar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 7
     },
     {
       "file": "src/components/export/BudgetReport.tsx",
@@ -91,14 +471,74 @@
       "hardcoded_colors": 7
     },
     {
-      "file": "src/pages/DailyLog.tsx",
+      "file": "src/pages/schedule/ScheduleTimeline.tsx",
       "mock_data": 0,
       "hardcoded_colors": 7
     },
     {
-      "file": "src/pages/Drawings.tsx",
+      "file": "src/pages/conversation/index.tsx",
       "mock_data": 0,
       "hardcoded_colors": 7
+    },
+    {
+      "file": "src/hooks/queries/useRFIResponses.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 7
+    },
+    {
+      "file": "src/components/SlideOverPanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/forms/CreateDailyLogModal.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/cockpit/NeedsYouTable.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/cockpit/NeedsYouMobileList.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/submittals/SubmittalsViewTabs.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/submittals/DocumentViewer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/submittals/StatusPill.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/submittals/Create/FullTierProgressive.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/submittals/detail/DetailTabs.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/rfi/RFIResponseComposer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/rfi/RFIDetailSidebar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
     },
     {
       "file": "src/components/export/DailyLogReport.tsx",
@@ -106,7 +546,52 @@
       "hardcoded_colors": 6
     },
     {
-      "file": "src/components/drawings/DrawingsEmptyState.tsx",
+      "file": "src/pages/safety/InspectionsAndCerts.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/pages/submittals/SubmittalDetailV2/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/pages/dashboard/SundialDashboard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/pages/bim/BIMViewerPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/lib/iris/confidence.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 6
+    },
+    {
+      "file": "src/components/drawings/MeasurementOverlay.tsx",
+      "mock_data": 1,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/submittals/Create/QuickTierFields.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/components/submittals/Create/EntryMethods/VoiceEntryHandler.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/components/submittals/detail/Overview/GeneralInfoCard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/components/shared/SidePanel.tsx",
       "mock_data": 0,
       "hardcoded_colors": 5
     },
@@ -116,12 +601,67 @@
       "hardcoded_colors": 5
     },
     {
+      "file": "src/components/rfi/RFIKanbanView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
       "file": "src/components/dashboard/widgets/AIInsightsWidget.tsx",
       "mock_data": 0,
       "hardcoded_colors": 5
     },
     {
-      "file": "src/components/drawings/BIMViewer.tsx",
+      "file": "src/pages/Meetings.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/pages/submittals/SubmittalSettingsPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/pages/submittals/SubmittalsTable.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/pages/plan/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 5
+    },
+    {
+      "file": "src/components/cockpit/ProjectNow.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/submittals/PackagesView/DeletePackageDialog.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/submittals/PackagesView/PackagesView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/submittals/PackagesView/ManagePackageMembersDialog.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/conversation/InboxRow.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/rfi/RFIDistributionStatusList.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/rfi/RFIResponseThread.tsx",
       "mock_data": 0,
       "hardcoded_colors": 4
     },
@@ -131,17 +671,77 @@
       "hardcoded_colors": 4
     },
     {
-      "file": "src/pages/ChangeOrders.tsx",
+      "file": "src/pages/schedule/ScheduleList.tsx",
       "mock_data": 0,
       "hardcoded_colors": 4
     },
     {
-      "file": "src/pages/FieldCapture.tsx",
+      "file": "src/pages/rfis/RFISettingsPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/pages/files/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/lib/riskEngine.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 4
+    },
+    {
+      "file": "src/components/reports/OwnerUpdateGenerator.tsx",
       "mock_data": 0,
       "hardcoded_colors": 3
     },
     {
-      "file": "src/pages/Files.tsx",
+      "file": "src/components/drawings/DrawingViewer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/drawings/PdfViewer.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/cockpit/CockpitMetrics.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/submittals/SpecSectionsView/SpecSectionsView.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/submittals/GroupedView/ExpandAllControls.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/shared/Tooltip.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/shared/CollaborativeFieldIndicator.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/components/workflows/WorkflowBuilder.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/pages/owner-portal/OwnerStream.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 3
+    },
+    {
+      "file": "src/pages/safety/index.tsx",
       "mock_data": 0,
       "hardcoded_colors": 3
     },
@@ -151,7 +751,7 @@
       "hardcoded_colors": 2
     },
     {
-      "file": "src/components/ui/ConflictResolutionModal.tsx",
+      "file": "src/components/schedule/ConflictCard.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -161,17 +761,32 @@
       "hardcoded_colors": 2
     },
     {
-      "file": "src/components/ui/EmptyState.tsx",
-      "mock_data": 0,
-      "hardcoded_colors": 2
-    },
-    {
       "file": "src/components/ui/RealtimeFlash.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
     {
-      "file": "src/components/drawings/DrawingViewer.tsx",
+      "file": "src/components/reports/OwnerLinkButton.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/components/forms/CreateChangeOrderModal.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/components/admin/DemoSeedButton.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/components/cockpit/InboxClearState.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/components/submittals/BallInCourtView/BallInCourtView.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -181,7 +796,32 @@
       "hardcoded_colors": 2
     },
     {
+      "file": "src/components/rfi/RFIEmailReviewBanner.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/stores/aiAnnotationStore.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/pages/Procurement.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
       "file": "src/pages/Settings/NotificationSettings.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/pages/drawings/DrawingCardGrid.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
     },
@@ -191,9 +831,24 @@
       "hardcoded_colors": 2
     },
     {
-      "file": "src/pages/auth/Login.tsx",
+      "file": "src/pages/punch-list/PunchListDenseTable.tsx",
       "mock_data": 0,
       "hardcoded_colors": 2
+    },
+    {
+      "file": "src/pages/punch-list/PunchListGrouped.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/lib/schedulePdfImport.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 2
+    },
+    {
+      "file": "src/lib/fieldCapture/durableQueue.ts",
+      "mock_data": 2,
+      "hardcoded_colors": 0
     },
     {
       "file": "src/hooks/useTheme.ts",
@@ -206,12 +861,72 @@
       "hardcoded_colors": 1
     },
     {
+      "file": "src/components/MagicLinkOwnerRoute.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
       "file": "src/components/activity/MentionInput.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
     },
     {
+      "file": "src/components/ui/ConflictResolutionModal.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/panels/SubmittalActionPanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/panels/RFIActionPanel.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/field/QuickRFI.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
       "file": "src/components/drawings/MarkupToolbar.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/drawings/RevisionOverlay.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/drawings/tools/CloudTool.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/field-capture/FieldCaptureModal.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/cockpit/IrisInsightsLane.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/cockpit/IrisLane.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/cockpit/IrisInsightsCard.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/components/cockpit/TypeFilterChips.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
     },
@@ -226,6 +941,11 @@
       "hardcoded_colors": 1
     },
     {
+      "file": "src/components/rfi/RFIVoiceFAB.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
       "file": "src/components/dashboard/widgets/BIMPreviewWidget.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
@@ -234,6 +954,81 @@
       "file": "src/components/export/CostReport.tsx",
       "mock_data": 0,
       "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/Files.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/safety/IncidentForm.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/auth/Register.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/field-capture/CaptureSync.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/crew/index.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/files/fileTypes.ts",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/iris/IrisInboxPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/daily-log/DailyLogForm.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/pages/daily-log/DailySummaryPage.tsx",
+      "mock_data": 0,
+      "hardcoded_colors": 1
+    },
+    {
+      "file": "src/lib/emailThreading.ts",
+      "mock_data": 1,
+      "hardcoded_colors": 0
+    },
+    {
+      "file": "src/lib/webhooks/index.ts",
+      "mock_data": 1,
+      "hardcoded_colors": 0
+    },
+    {
+      "file": "src/lib/realtime/presenceChannel.ts",
+      "mock_data": 1,
+      "hardcoded_colors": 0
+    },
+    {
+      "file": "src/lib/observability/langfuse.ts",
+      "mock_data": 1,
+      "hardcoded_colors": 0
+    },
+    {
+      "file": "src/lib/apiTokens/index.ts",
+      "mock_data": 1,
+      "hardcoded_colors": 0
     }
   ]
 }
