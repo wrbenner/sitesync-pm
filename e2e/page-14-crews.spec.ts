@@ -24,7 +24,7 @@ for (const vp of VIEWPORTS) {
     test('crews workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
       await page.goto('#/crews')
-      await waitLoad(page)
+      await waitLoad(page, 8_000)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'cards')
 

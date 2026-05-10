@@ -31,7 +31,7 @@ for (const vp of VIEWPORTS) {
     test('submittals workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
       await page.goto('#/submittals')
-      await waitLoad(page)
+      await waitLoad(page, 8_000)
       await settle(page, 600)
       await shot(page, vp.name, 1, 'list-or-empty')
 

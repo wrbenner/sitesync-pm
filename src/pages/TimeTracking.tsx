@@ -466,8 +466,10 @@ const TimeTracking: React.FC = () => {
 
       {/* Week-at-a-glance: workers × days, backed by the `timesheets` table */}
       <Card padding={spacing['5']}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
-          <SectionHeader title={`Week at a Glance — ${weekFromISO} to ${weekToISO}`} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: spacing['3'], marginBottom: spacing['3'] }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <SectionHeader title={`Week at a Glance — ${weekFromISO} to ${weekToISO}`} />
+          </div>
           <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setTsModalOpen(true)}>Enter Hours</Btn>
         </div>
         {timesheetsLoading ? (
