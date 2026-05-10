@@ -41,7 +41,8 @@
     "demo:refresh:dry": "tsx scripts/demo-refresh.ts --dry-run",
     "eval:iris": "tsx evals/iris/run-iris-eval.ts",
     "eval:iris:ci": "tsx evals/iris/run-iris-eval.ts && tsx scripts/check-iris-eval.ts",
-    "eval:iris:expand": "tsx scripts/build-iris-corpus.ts"
+    "eval:iris:expand": "tsx scripts/build-iris-corpus.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",
@@ -160,8 +161,10 @@
     "fake-indexeddb": "^6.2.5",
     "fast-check": "^4.6.0",
     "globals": "^17.4.0",
+    "husky": "^9.1.7",
     "jest-axe": "^10.0.0",
     "jsdom": "^27.0.1",
+    "lint-staged": "^17.0.4",
     "postgres": "^3.4.9",
     "rollup-plugin-visualizer": "^7.0.1",
     "supabase": "^2.84.4",

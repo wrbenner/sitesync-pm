@@ -100,6 +100,21 @@ The active doc set lives under `docs/audits/`. Read in order before doing any wo
 
 ---
 
+## Sandbox hygiene & merge protocol (read this before pushing or merging)
+
+**The repo lives inside iCloud Drive (`~/Desktop/sitesync-pm/`).** That means:
+
+- **iCloud silently regenerates conflict-suffixed duplicate files** (`foo 2.tsx`, `audit-cron 3.ts`, `audit 4.yml`) after every concurrent edit or device sync. They're already gitignored (`*\ [0-9].*` etc.) — never staged — but they pollute local typecheck/lint runs and make `git status` noisy. To purge: `bash scripts/cleanup-icloud-duplicates.sh` (use `--dry-run` first if curious).
+- **Phantom file modifications** can appear in your working tree mid-session if any background worker (organism, swarm, quality-swarm) is running. Today those workers are workflow_dispatch-only (not on schedule), so the risk is low. If you see `M` files you never touched, **stage explicitly** (`git add <my-files>`) — never `git add .` or `git add -A`.
+
+**Branch protection on `main` requires only 6 status checks:** Gate 1 (TypeScript), Gate 2 (ESLint), Gate 3 (Tests), Gate 4 (Build), Eval Layer 1 (Database/RLS), Eval Layer 2 (API). Every other workflow that runs on a PR is **informational** — its red doesn't block merge. Do not fear-debug optional reds; they're noise from harnesses with known false-positive modes (link-check on stale doc paths, perf-budget's NO_FCP issue, dead-clicks ratchet drift, Playwright flake).
+
+**Canonical merge command:** `gh pr merge <N> --auto --squash --delete-branch`. Do not ask "should I merge" when required checks are green; per memory `feedback_merge_without_review`, Walker's posture is merge-without-review. When the base branch deletes on merge, **stacked dependent PRs auto-close and cannot be reopened** — rebase the dependent onto fresh main and `gh pr create --base main` again.
+
+**Pre-commit gate:** `.husky/pre-commit` runs `lint-staged` + incremental `tsc --noEmit` on both project tsconfigs. Skipping is allowed via `git commit --no-verify` for intentional WIP, not as a habit. Failures here mean you would have failed Gate 1 or Gate 2 in CI 5 minutes later — fix locally and save the roundtrip.
+
+---
+
 ## Failure Modes (if you hit one of these, stop and document)
 
 - **Typecheck fails after your changes.** Don't proceed. Roll back the last batch and re-attempt with a smaller scope.
