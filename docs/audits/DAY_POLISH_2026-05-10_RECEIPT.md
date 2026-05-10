@@ -39,6 +39,34 @@ Two unguarded `Math.random()` uses in production ID generation replaced with `cr
 
 ---
 
+---
+
+## Addendum — Session 2 audit (2026-05-10, PR #409 branch)
+
+A second autonomous session ran a full code audit against the punch list generated 2026-04-27. Findings:
+
+**Verified already fixed (no action needed):**
+- Profile avatar `?` placeholder → initials already implemented (`UserProfile.tsx`)
+- `QUALITY 0` missing `/100` → `DashboardProjectHealth.tsx` already shows `{sub.value}/100`
+- `%` superscript in Closeout KPI → `MetricBox` already renders `%` inline at value font size
+- Faded primary buttons → `Primitives.tsx` already uses `surfaceDisabled`/`textDisabled` on disabled state
+- OfflineBanner "Never synced" → replaced with compact pill + "Setting up your workspace…"
+- Safety in-page tab overflow → already has `overflowX: 'auto'` + `flexShrink: 0`
+- MobileTabBar iPhone overflow → 4-tabs + More pattern avoids it
+- Budget `$-500` display → already renders `−$500` + "Over budget" label
+- Delete account modal clipped → sticky footer pattern already in place
+- Meetings template modal clipped → sticky action footer already in place
+- Equipment "+1% from 0" → page redesigned, no delta pills on 0-value KPIs
+- Schedule F-grade pill → `ScheduleHealthPanel` not rendered in schedule page header
+
+**New fix in this session:**
+- `IrisScheduleRiskBanner.tsx`: replaced `(error as Error).message` with static user-facing copy — removes unsafe cast, prevents internal Supabase error strings leaking to demo users.
+
+**Quality floor after this session:**
+- tsErrors: 0, eslintErrors: 0, anyCount: 68 (floor 69), Math.random unguarded: 0, @ts-ignore: 0
+
+---
+
 ## What's Next
 
 Lap 2 Day 31 work: drawer-gate seed (per LAP_1_CARRYOVER_PLAN) and IRIS telemetry migration (per IRIS_TELEMETRY_SPEC_2026-05-04.md — must land before Lap 2 Day 31).
