@@ -7,6 +7,14 @@
  */
 import type { Page } from '@playwright/test'
 
+// Native-JS hard cap that bypasses Playwright's internal state machine.
+// In acceptance mode, page.waitForLoadState('networkidle') can hang
+// indefinitely because Playwright waits for the current load cycle to
+// complete before starting the idle countdown — and some routes never
+// complete their load cycle (continuous failing Supabase requests reset
+// the timer). Promise.race + hardCap guarantees we always move on.
+const hardCap = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+
 export async function settle(page: Page, ms = 250) {
   await page.addStyleTag({
     content: `*, *::before, *::after {
@@ -16,7 +24,10 @@ export async function settle(page: Page, ms = 250) {
       transition-delay: 0s !important;
     }`,
   }).catch(() => undefined)
-  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
+  await Promise.race([
+    page.waitForLoadState('networkidle').catch(() => undefined),
+    hardCap(2_500),
+  ])
   await page.waitForTimeout(ms)
 }
 
@@ -59,7 +70,10 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
   ).catch(() => undefined)
   // One more brief network-idle sip so any in-flight queries can resolve
   // and the page paints the resolved state before we capture.
-  await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
+  await Promise.race([
+    page.waitForLoadState('networkidle').catch(() => undefined),
+    hardCap(2_500),
+  ])
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
