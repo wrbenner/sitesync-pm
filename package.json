@@ -38,7 +38,10 @@
     "seed:demo-account": "tsx scripts/seed-demo-account.ts",
     "seed:iris-inbox": "tsx scripts/seed-iris-inbox.ts",
     "demo:refresh": "tsx scripts/demo-refresh.ts",
-    "demo:refresh:dry": "tsx scripts/demo-refresh.ts --dry-run"
+    "demo:refresh:dry": "tsx scripts/demo-refresh.ts --dry-run",
+    "eval:iris": "tsx evals/iris/run-iris-eval.ts",
+    "eval:iris:ci": "tsx evals/iris/run-iris-eval.ts && tsx scripts/check-iris-eval.ts",
+    "eval:iris:expand": "tsx scripts/build-iris-corpus.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

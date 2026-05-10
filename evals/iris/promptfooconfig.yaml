@@ -1,0 +1,42 @@
+# Iris eval pipeline — promptfoo config (developer-only).
+#
+# CI runs `evals/iris/run-iris-eval.ts` directly, not promptfoo. This
+# YAML is provided for ad-hoc local iteration when Walker wants
+# promptfoo's matrix UI to compare prompt variants or model swaps —
+# it uses promptfoo's built-in asserts only (regex, contains-not) and
+# does not invoke our type-safe asserts in `evals/iris/asserts/*`.
+# The CI gate is in `scripts/check-iris-eval.ts`.
+#
+# Usage:
+#   npx promptfoo eval -c evals/iris/promptfooconfig.yaml
+#
+# Reference: docs/audits/IRIS_EVAL_PIPELINE_SPEC_2026-05-08.md
+
+description: SiteSync — Iris eval pipeline (developer iteration only)
+
+prompts:
+  - id: corpus-prompt
+    raw: '{{prompt}}'
+
+providers:
+  - id: file://providers/iris-call.ts
+    label: iris-call (staging)
+
+# The corpus is JSONL — each row carries its own prompt and metadata.
+tests: file://corpus/seed.jsonl
+
+# Coarse-grained asserts only. The CI pipeline runs the full type-safe
+# voice / citations / action asserts via run-iris-eval.ts.
+defaultTest:
+  assert:
+    - type: not-contains
+      value: '—'
+      metric: 'no-em-dash'
+    - type: not-icontains
+      value: 'I hope this helps'
+      metric: 'no-politeness-coda'
+    - type: not-icontains
+      value: 'Great question'
+      metric: 'no-great-question'
+
+outputPath: ./results/promptfoo-output.json

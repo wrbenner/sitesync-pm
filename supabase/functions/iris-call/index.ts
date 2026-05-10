@@ -73,6 +73,7 @@ import {
   type AITaskType,
 } from '../shared/aiRouter.ts'
 import { lintVoice, type DraftedActionTypeLite } from '../shared/voiceLinter.ts'
+import { recordIrisTrace } from '../shared/langfuse.ts'
 
 // ── Tunables ─────────────────────────────────────────────────────────────────
 
@@ -535,7 +536,38 @@ Deno.serve(async (req) => {
         // Fail-soft idempotency write — the response already shipped.
         await writeIdempotencyCache(supabase, idempotencyKey, user.id, requestHash, cacheable)
 
+        // ── Langfuse trace (best-effort, env-gated) ────────────────────────
+        // Per ADR-022: every iris-call gets a trace tagged with audit_id +
+        // action_type + is_soft_pilot, so production drafts are visible
+        // alongside the eval-pipeline runs in one dashboard. Failure here
+        // never blocks the response.
         const totalLatencyMs = Date.now() - requestStart
+        try {
+          await recordIrisTrace(
+            {
+              auditId,
+              projectId: body.project_id ?? null,
+              userId: user.id,
+              isSoftPilot: false, // populated downstream when org membership lookup lands
+              draftedActionId: body.drafted_action_id ?? null,
+              actionType: body.action_type ?? null,
+              metadata: { task: body.task },
+            },
+            {
+              provider: finalProvider,
+              model: finalModel,
+              input: body.prompt,
+              systemPrompt: body.system,
+              output: finalContent,
+              inputTokens: finalUsage.input_tokens,
+              outputTokens: finalUsage.output_tokens,
+              latencyMs: totalLatencyMs,
+            },
+          )
+        } catch (err) {
+          console.warn('[iris-call] Langfuse trace failed (non-fatal):', err)
+        }
+
         send('done', {
           content: finalContent,
           usage: finalUsage,
