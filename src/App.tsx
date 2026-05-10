@@ -902,3 +902,5 @@ function App() {
     </Sentry.ErrorBoundary>
   );
 }
+
+export default App;
