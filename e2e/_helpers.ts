@@ -63,14 +63,24 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
+  // Detect devBypass mode: navigate to a ProtectedRoute page and wait for it
+  // to settle. When VITE_DEV_BYPASS=true + no real Supabase URL, the page
+  // renders its content unconditionally (no redirect to /login).
+  await page.goto('#/day')
+  await page.waitForLoadState('domcontentloaded')
+  await page.waitForTimeout(3_000)
+  if (!page.url().includes('login')) {
+    await settle(page, 500)
+    return
+  }
+  // Normal auth flow against a live Supabase instance.
   await page.goto('#/login')
-  // Login starts in magic-link mode — switch to password mode first.
   const pwdBtn = page.getByRole('button', { name: /sign in with password/i })
   if (await pwdBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
     await pwdBtn.click()
   }
-  await page.getByLabel('Email').fill(user)
-  await page.getByLabel('Password').fill(pass)
+  await page.getByRole('textbox', { name: 'Email' }).fill(user)
+  await page.getByRole('textbox', { name: 'Password' }).fill(pass)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)

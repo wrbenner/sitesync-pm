@@ -13,6 +13,7 @@
 import { test, expect, Page } from '@playwright/test'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { signIn } from './_helpers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = path.resolve(__dirname, '..', 'polish-review', 'pages', 'punch-list')
@@ -48,14 +49,6 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
   }).catch(() => undefined)
 }
 
-async function signIn(page: Page) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
-  await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
-  await settle(page, 1500)
-}
 
 const VIEWPORTS = [
   { name: 'iphone',  width: 393,  height: 852 },
@@ -71,7 +64,7 @@ for (const vp of VIEWPORTS) {
     })
 
     test('punch-list workflow', async ({ page }) => {
-      await signIn(page)
+      await signIn(page, USER, PASS)
       await page.goto('#/punch-list')
       await waitLoad(page)
       await settle(page, 600)
