@@ -66,6 +66,7 @@ entries before starting work. Update this file when you add a new doc.
 | 9 | `ADR_007_AUTO_WITHDRAW_POLICY_2026-05-04.md` | When underlying state changes mid-draft: withdraw, never auto-update, never stay-stale. |
 | 10 | `SOFT_PILOT_GC_RESEARCH_2026-05-04.md` | Nexus Companies (Dallas) + Carleton Companies. Brad Cameron contact verified. |
 | 11 | `IRIS_EVAL_PIPELINE_SPEC_2026-05-08.md` | 30-row synthetic corpus + voice/citations/action asserts + CI gate (`scripts/check-iris-eval.ts`). Self-host Langfuse for production trace observability. ADR-022 inline. |
+| 12 | `CI_PR_FRICTION_PUSH_RECEIPT_2026-05-09.md` | Cleared 1,095 iCloud duplicates from working tree, moved 5 noisy non-required workflows off PR triggers (push-to-main + workflow_dispatch only), shipped husky+lint-staged pre-commit gate, documented merge protocol in CLAUDE.md. |
 
 ---
 

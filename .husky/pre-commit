@@ -1,0 +1,25 @@
+# SiteSync pre-commit gate.
+#
+# Trades ~30s of local pain for ~5min of CI roundtrip when something
+# would have failed Gate 1 (typecheck) or Gate 2 (lint) on the server.
+# Both are required status checks per branch protection on `main`, so a
+# fail at this hook means you would have blocked your own merge anyway.
+#
+# Skipping is allowed via `git commit --no-verify` for the rare case
+# you are committing intentionally-broken WIP. Don't make it a habit.
+#
+# To suspend the hook entirely (e.g. while bisecting), `mv .husky/pre-commit{,.disabled}`.
+
+# 1. ESLint + JSON validity on staged files.
+#    `npx --no-install` so a missing dep fails loudly instead of fetching.
+npx --no-install lint-staged
+
+# 2. Incremental project typecheck. The first run after a clean checkout
+#    is ~30s; subsequent runs hit the .tsbuildinfo cache and complete in
+#    <5s. If TS isn't installed yet (fresh clone), bail with a hint.
+if [ ! -x node_modules/.bin/tsc ]; then
+  echo "[pre-commit] TypeScript not installed — run 'npm install' first."
+  exit 1
+fi
+node_modules/.bin/tsc --noEmit -p tsconfig.app.json
+node_modules/.bin/tsc --noEmit -p tsconfig.node.json

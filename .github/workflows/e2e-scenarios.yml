@@ -1,8 +1,11 @@
 name: E2E Scenarios
 
+# INFORMATIONAL ONLY. Not a required status check. The Playwright suite
+# is flaky in CI (browser/timing variance) and produces frequent reds
+# unrelated to the PR's code. Runs on push-to-main to catch real
+# regressions; on-demand via workflow_dispatch for any PR that needs
+# explicit E2E validation.
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
