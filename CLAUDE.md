@@ -113,6 +113,13 @@ The active doc set lives under `docs/audits/`. Read in order before doing any wo
 
 **Pre-commit gate:** `.husky/pre-commit` runs `lint-staged` + incremental `tsc --noEmit` on both project tsconfigs. Skipping is allowed via `git commit --no-verify` for intentional WIP, not as a habit. Failures here mean you would have failed Gate 1 or Gate 2 in CI 5 minutes later — fix locally and save the roundtrip.
 
+**First-run setup after clone or branch switch:** `npm install` activates the husky hook (the `prepare` script writes the git hook). If you skip this and try to commit, the hook is silently absent — your "pre-commit" is effectively `--no-verify`. Run `npm install` once after every fresh clone.
+
+**One-shot maintenance scripts** (idempotent, dry-run-safe with `--dry-run`):
+- `scripts/cleanup-icloud-duplicates.sh` — sweep iCloud `* N.ext` duplicates from the working tree.
+- `scripts/relocate-out-of-icloud.sh` — move the repo out of iCloud Drive entirely (the actual fix; cleanup is a band-aid).
+- `scripts/sweep-stale-auto-branches.sh` — delete stale `auto/*` / `quality-swarm/*` / `organism/*` branches with no open PR and last commit > 7 days old.
+
 ---
 
 ## Failure Modes (if you hit one of these, stop and document)
