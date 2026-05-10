@@ -5,6 +5,8 @@
  * with cold caches is that pages take 5-25 seconds to first-load. The
  * `waitLoad` helper handles that without inflating per-call timeouts.
  */
+import fs from 'node:fs'
+import path from 'node:path'
 import type { Page } from '@playwright/test'
 
 // Native-JS hard cap that bypasses Playwright's internal state machine.
@@ -97,6 +99,23 @@ export async function signIn(page: Page, user: string, pass: string) {
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
+}
+
+/**
+ * Write a named screenshot into outDir, creating the directory if needed.
+ * Swallows all errors so a missing dir or failed capture never fails a test.
+ * Shared by all page-N-*.spec.ts files so they can drop the boilerplate.
+ */
+export async function shot(
+  page: Page,
+  outDir: string,
+  viewport: string,
+  n: number,
+  name: string,
+) {
+  const filename = `${viewport}-${String(n).padStart(2, '0')}-${name}.png`
+  fs.mkdirSync(outDir, { recursive: true })
+  await page.screenshot({ path: path.join(outDir, filename), fullPage: true }).catch(() => undefined)
 }
 
 export async function tryClick(
