@@ -90,7 +90,9 @@ export const QuickCreateFAB: React.FC<QuickCreateFABProps> = ({
       ref={fabRef}
       style={{
         position: 'fixed',
-        bottom: isMobile ? 24 : 32,
+        // On mobile the bottom tab bar is 68px tall + safe-area-inset.
+        // Matching the FloatingAIButton offset so both sit above the nav.
+        bottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0px) + 84px)' : 32,
         right: isMobile ? 20 : 32,
         zIndex: 900,
         display: 'flex',

@@ -24,6 +24,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       VITE_DEV_BYPASS: 'true',
+      VITE_ACCEPTANCE_MODE: 'true',
     },
   },
 })
