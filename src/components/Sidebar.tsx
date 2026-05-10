@@ -465,7 +465,9 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawName = authProfile?.full_name?.trim() ?? ''
+  // Treat em-dash/en-dash placeholder names (seed data artifact) as unset
+  const fullName = /^[—–\-\s]+$/.test(rawName) ? '' : rawName
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
