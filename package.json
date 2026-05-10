@@ -42,6 +42,8 @@
     "eval:iris": "tsx evals/iris/run-iris-eval.ts",
     "eval:iris:ci": "tsx evals/iris/run-iris-eval.ts && tsx scripts/check-iris-eval.ts",
     "eval:iris:expand": "tsx scripts/build-iris-corpus.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "doctor:fix": "tsx scripts/doctor.ts --fix",
     "prepare": "husky"
   },
   "dependencies": {
