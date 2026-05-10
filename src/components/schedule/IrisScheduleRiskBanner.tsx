@@ -171,7 +171,7 @@ export const IrisScheduleRiskBanner: React.FC<Props> = ({ projectId }) => {
       >
         <AlertTriangle size={16} color="#C93B3B" aria-hidden />
         <span style={{ fontSize: 13, color: '#9A2929', flex: 1 }}>
-          Risk scan failed. {(error as Error).message ?? 'Try again in a minute.'}
+          Risk scan unavailable · Try again in a moment.
         </span>
         <button
           type="button"
