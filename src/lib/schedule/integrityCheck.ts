@@ -224,6 +224,12 @@ export function integrityCheck(
     }
   }
 
+  // If ≥80% of activities are orphans the schedule simply hasn't had its
+  // logic drawn yet — don't punish it with a broken/F grade. Return
+  // unanalyzed (neutral) instead so the pill stays grey until the PM
+  // actually starts linking activities.
+  if (counts.orphan / activities.length >= 0.8) return empty(zeroCounts);
+
   // Score: each issue weighted by severity, normalized over activity count.
   const totalWeight = issues.reduce((s, i) => s + SEVERITY_WEIGHT[i.severity], 0);
   const denom = Math.max(1, activities.length);
