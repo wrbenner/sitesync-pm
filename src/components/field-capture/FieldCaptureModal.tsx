@@ -293,7 +293,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                   )}
                 </>
               ) : gpsError ? (
-                <span>{gpsError}</span>
+                <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{gpsError}</span>
               ) : (
                 <span>Locating…</span>
               )}
@@ -387,7 +387,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                 ) : !dailyLogId ? (
                   'Create a log first'
                 ) : isOnline ? (
-                  <><CloudUpload size={16} /> Save to Today's Log</>
+                  <><CloudUpload size={16} /> Save to Today\'s Log</>
                 ) : (
                   <><WifiOff size={16} /> Queue for Sync</>
                 )}

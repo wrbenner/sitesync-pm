@@ -982,7 +982,11 @@ const BudgetRow: React.FC<BudgetRowProps> = ({
       <Td align="right" mono>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <span style={{ color: vTone, fontWeight: bold ? 600 : 500 }}>
-            {row.original === 0 && row.forecast === 0 ? '—' : `${vSign}${fmt$(Math.abs(v))}`}
+            {row.original === 0 && row.forecast === 0
+              ? '—'
+              : row.original === 0 && v < 0
+                ? `Over by ${fmt$(Math.abs(v))}`
+                : `${vSign}${fmt$(Math.abs(v))}`}
           </span>
           {row.original > 0 && (
             <div
