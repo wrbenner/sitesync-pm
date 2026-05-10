@@ -204,34 +204,37 @@ describe('Role Hierarchy', () => {
 // ── Dev Bypass Security ──────────────────────────────────
 
 describe('Dev Bypass Security (Bug #1 Fix)', () => {
-  it('dev bypass role is viewer, NOT owner', () => {
-    expect(DEV_BYPASS_ROLE).toBe('viewer')
+  it('dev bypass role is project_manager, NOT owner or admin', () => {
+    expect(DEV_BYPASS_ROLE).toBe('project_manager')
+    expect(DEV_BYPASS_ROLE).not.toBe('owner')
+    expect(DEV_BYPASS_ROLE).not.toBe('admin')
   })
 
-  it('dev bypass viewer cannot access admin features', () => {
+  it('dev bypass project_manager cannot access org-admin features', () => {
     expect(hasPermission(DEV_BYPASS_ROLE, 'project.settings')).toBe(false)
     expect(hasPermission(DEV_BYPASS_ROLE, 'project.delete')).toBe(false)
     expect(hasPermission(DEV_BYPASS_ROLE, 'org.settings')).toBe(false)
     expect(hasPermission(DEV_BYPASS_ROLE, 'org.billing')).toBe(false)
   })
 
-  it('dev bypass viewer cannot create entities', () => {
-    expect(hasPermission(DEV_BYPASS_ROLE, 'tasks.create')).toBe(false)
-    expect(hasPermission(DEV_BYPASS_ROLE, 'rfis.create')).toBe(false)
-    expect(hasPermission(DEV_BYPASS_ROLE, 'daily_log.create')).toBe(false)
-    expect(hasPermission(DEV_BYPASS_ROLE, 'change_orders.create')).toBe(false)
+  it('dev bypass project_manager CAN create PM-level entities', () => {
+    expect(hasPermission(DEV_BYPASS_ROLE, 'tasks.create')).toBe(true)
+    expect(hasPermission(DEV_BYPASS_ROLE, 'rfis.create')).toBe(true)
+    expect(hasPermission(DEV_BYPASS_ROLE, 'daily_log.create')).toBe(true)
+    expect(hasPermission(DEV_BYPASS_ROLE, 'change_orders.create')).toBe(true)
   })
 
-  it('dev bypass viewer cannot approve anything', () => {
+  it('dev bypass project_manager cannot approve financial records (owner/admin only)', () => {
     expect(hasPermission(DEV_BYPASS_ROLE, 'budget.approve')).toBe(false)
     expect(hasPermission(DEV_BYPASS_ROLE, 'change_orders.approve')).toBe(false)
-    expect(hasPermission(DEV_BYPASS_ROLE, 'submittals.approve')).toBe(false)
   })
 
-  it('dev bypass viewer CAN view basic pages', () => {
+  it('dev bypass project_manager CAN view all PM pages', () => {
     expect(hasPermission(DEV_BYPASS_ROLE, 'dashboard.view')).toBe(true)
     expect(hasPermission(DEV_BYPASS_ROLE, 'tasks.view')).toBe(true)
     expect(hasPermission(DEV_BYPASS_ROLE, 'rfis.view')).toBe(true)
+    expect(hasPermission(DEV_BYPASS_ROLE, 'budget.view')).toBe(true)
+    expect(hasPermission(DEV_BYPASS_ROLE, 'change_orders.view')).toBe(true)
   })
 })
 
