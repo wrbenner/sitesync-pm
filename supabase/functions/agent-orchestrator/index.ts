@@ -16,6 +16,36 @@ import {
   escapeIlike,
   HttpError,
 } from '../shared/auth.ts'
+import { recordIrisTraceMeta, recordIrisGeneration } from '../shared/langfuse.ts'
+
+const ORCHESTRATOR_MODEL = 'claude-sonnet-4-20250514'
+
+async function emitGeneration(
+  traceId: string | null,
+  name: string,
+  startedAt: number,
+  systemPrompt: string,
+  userInput: string,
+  output: string,
+  usage: { input_tokens?: number; output_tokens?: number } | undefined,
+): Promise<void> {
+  if (!traceId) return
+  try {
+    await recordIrisGeneration(traceId, {
+      name,
+      provider: 'anthropic',
+      model: ORCHESTRATOR_MODEL,
+      input: userInput,
+      systemPrompt,
+      output,
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
+      latencyMs: Date.now() - startedAt,
+    })
+  } catch (err) {
+    console.warn('[agent-orchestrator] Langfuse generation failed (non-fatal):', err)
+  }
+}
 
 // ── Rate Limiting (in-memory, 50 agent runs/hour per user) ───
 
@@ -271,6 +301,7 @@ async function classifyIntent(
   message: string,
   mentionedAgent: AgentDomain | undefined,
   conversationHistory: ConversationMessage[],
+  traceId: string | null = null,
 ): Promise<IntentClassification> {
   // Direct @mention bypasses classification
   if (mentionedAgent) {
@@ -283,10 +314,8 @@ async function classifyIntent(
     }
   }
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 256,
-    system: `You are a routing classifier for a construction project AI system. Given a user message, determine which specialist agent(s) should handle it.
+  const startedAt = Date.now()
+  const systemPrompt = `You are a routing classifier for a construction project AI system. Given a user message, determine which specialist agent(s) should handle it.
 
 Agents: schedule, cost, safety, quality, compliance, document
 
@@ -297,7 +326,11 @@ Rules:
 - For ambiguous requests needing clarification, return intent "clarification"
 
 Respond ONLY with valid JSON:
-{"intent":"single_agent|multi_agent|general|clarification","targetAgents":["domain1","domain2"],"confidence":0.0-1.0,"reasoning":"brief explanation"}`,
+{"intent":"single_agent|multi_agent|general|clarification","targetAgents":["domain1","domain2"],"confidence":0.0-1.0,"reasoning":"brief explanation"}`
+  const response = await client.messages.create({
+    model: ORCHESTRATOR_MODEL,
+    max_tokens: 256,
+    system: systemPrompt,
     messages: [
       ...conversationHistory.slice(-5).map((m) => ({
         role: m.role === 'user' ? 'user' as const : 'assistant' as const,
@@ -307,8 +340,10 @@ Respond ONLY with valid JSON:
     ],
   })
 
+  const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  await emitGeneration(traceId, 'orchestrator:intent', startedAt, systemPrompt, message, text, response.usage)
+
   try {
-    const text = response.content[0].type === 'text' ? response.content[0].text : ''
     const parsed = JSON.parse(text)
     return {
       intent: parsed.intent || 'general',
@@ -335,17 +370,19 @@ async function executeAgent(
   conversationHistory: ConversationMessage[],
   projectContext: ProjectContext,
   supabaseClient: ReturnType<typeof createClient>,
+  traceId: string | null = null,
 ): Promise<AgentResult> {
   const startTime = Date.now()
   const systemPrompt = AGENT_SYSTEM_PROMPTS[domain]
+  const fullSystem = `${systemPrompt}\n\nProject ID: ${projectContext.projectId}\nCurrent page: ${projectContext.page || 'general'}`
   const tools = TOOLS_BY_DOMAIN[domain]
   const toolCalls: AgentResult['toolCalls'] = []
   const suggestedActions: AgentResult['suggestedActions'] = []
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: ORCHESTRATOR_MODEL,
     max_tokens: 1024,
-    system: `${systemPrompt}\n\nProject ID: ${projectContext.projectId}\nCurrent page: ${projectContext.page || 'general'}`,
+    system: fullSystem,
     tools,
     messages: [
       ...conversationHistory.slice(-10).map((m) => ({
@@ -355,6 +392,12 @@ async function executeAgent(
       { role: 'user', content: message },
     ],
   })
+
+  const agentText = response.content
+    .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+    .map((c) => c.text)
+    .join('\n')
+  await emitGeneration(traceId, `orchestrator:specialist:${domain}`, startTime, fullSystem, message, agentText, response.usage)
 
   // Process tool calls
   let contentText = ''
@@ -743,6 +786,7 @@ async function synthesizeResponses(
   client: Anthropic,
   results: AgentResult[],
   originalMessage: string,
+  traceId: string | null = null,
 ): Promise<string> {
   if (results.length <= 1) return '' // No synthesis needed for single agent
 
@@ -750,19 +794,18 @@ async function synthesizeResponses(
     .map((r) => `${r.domain.toUpperCase()} AGENT: ${r.content.substring(0, 500)}`)
     .join('\n\n')
 
+  const startedAt = Date.now()
+  const systemPrompt = `You are the coordinator for a multi-agent construction project AI. Multiple specialist agents have provided their analysis. Synthesize their findings into a brief, actionable summary that highlights key takeaways and any conflicts between agents. Be concise. Never use hyphens in text.`
+  const userContent = `Original question: ${originalMessage}\n\nAgent responses:\n${agentSummaries}\n\nProvide a brief synthesis.`
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: ORCHESTRATOR_MODEL,
     max_tokens: 512,
-    system: `You are the coordinator for a multi-agent construction project AI. Multiple specialist agents have provided their analysis. Synthesize their findings into a brief, actionable summary that highlights key takeaways and any conflicts between agents. Be concise. Never use hyphens in text.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Original question: ${originalMessage}\n\nAgent responses:\n${agentSummaries}\n\nProvide a brief synthesis.`,
-      },
-    ],
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userContent }],
   })
 
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  await emitGeneration(traceId, 'orchestrator:synthesis', startedAt, systemPrompt, userContent, text, response.usage)
   return text
 }
 
@@ -879,12 +922,34 @@ Deno.serve(async (req) => {
       })
     }
 
+    // 0. Open a Langfuse parent trace (best-effort, env-gated). All
+    //    subsequent generations attach as children under this trace id
+    //    so the UI shows the full intent → specialist(s) → synthesis chain.
+    const traceId = crypto.randomUUID()
+    try {
+      await recordIrisTraceMeta({
+        auditId: traceId,
+        projectId: projectContext?.projectId ?? null,
+        userId: user.id,
+        isSoftPilot: false,
+        actionType: null,
+        metadata: {
+          operation: 'orchestrator',
+          mentioned_agent: mentionedAgent ?? null,
+          page: projectContext?.page ?? null,
+        },
+      })
+    } catch (err) {
+      console.warn('[agent-orchestrator] Langfuse trace meta failed (non-fatal):', err)
+    }
+
     // 1. Classify intent
     const intent = await classifyIntent(
       anthropic,
       message,
       mentionedAgent,
       conversationHistory,
+      traceId,
     )
 
     // 2. Route to agents
@@ -901,14 +966,17 @@ Deno.serve(async (req) => {
 
     if (intent.intent === 'general' || intent.targetAgents.length === 0) {
       // Coordinator handles directly
+      const coordStartedAt = Date.now()
+      const coordSystem = `You are the SiteSync PM Coordinator, managing a team of 6 specialist agents (Schedule, Cost, Safety, Quality, Compliance, Document) for construction project management. Answer general questions, greetings, and meta questions about the system. If the user's question would benefit from a specialist, suggest they ask a more specific question or use @mention. Never use hyphens in text.`
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: ORCHESTRATOR_MODEL,
         max_tokens: 512,
-        system: `You are the SiteSync PM Coordinator, managing a team of 6 specialist agents (Schedule, Cost, Safety, Quality, Compliance, Document) for construction project management. Answer general questions, greetings, and meta questions about the system. If the user's question would benefit from a specialist, suggest they ask a more specific question or use @mention. Never use hyphens in text.`,
+        system: coordSystem,
         messages: [{ role: 'user', content: message }],
       })
 
       const text = response.content[0].type === 'text' ? response.content[0].text : ''
+      await emitGeneration(traceId, 'orchestrator:coordinator', coordStartedAt, coordSystem, message, text, response.usage)
       responseMessages.push({
         id: `msg-${Date.now()}-coord`,
         role: 'coordinator',
@@ -948,6 +1016,7 @@ Deno.serve(async (req) => {
             conversationHistory,
             projectContext || { projectId: '' },
             supabaseClient,
+            traceId,
           ),
         ),
       )
@@ -986,7 +1055,7 @@ Deno.serve(async (req) => {
 
       // Synthesize if multiple agents
       if (agentResults.length > 1) {
-        const synthesis = await synthesizeResponses(anthropic, agentResults, message)
+        const synthesis = await synthesizeResponses(anthropic, agentResults, message, traceId)
         if (synthesis) {
           responseMessages.push({
             id: `msg-${Date.now()}-synthesis`,

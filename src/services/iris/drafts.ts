@@ -101,5 +101,6 @@ export async function generateIrisDraft(
     status: 'pending',
     generatedAt: new Date().toISOString(),
     confidence: template.confidence,
+    auditId: result.auditId || undefined,
   }
 }
