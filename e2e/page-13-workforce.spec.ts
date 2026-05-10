@@ -23,8 +23,8 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('workforce workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/workforce')
-      await waitLoad(page)
+      await page.goto('#/workforce', { waitUntil: 'domcontentloaded' })
+      await waitLoad(page, 8_000)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'roster')
 

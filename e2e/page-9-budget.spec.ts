@@ -23,7 +23,7 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('budget workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/budget')
+      await page.goto('#/budget', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'summary')
@@ -47,7 +47,6 @@ for (const vp of VIEWPORTS) {
         await settle(page, 200)
       }
 
-      // sub-tab Overview/WBS/Change Orders/Earned Value
       for (const tab of [
         { rx: /^wbs$/i, name: 'wbs' },
         { rx: /^change orders$/i, name: 'sub-change-orders' },

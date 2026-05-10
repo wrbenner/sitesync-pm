@@ -282,7 +282,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
               fontSize: typography.fontSize.caption,
               display: 'flex', alignItems: 'center', gap: spacing['1'],
             }}>
-              <MapPin size={12} color={gps ? '#4ade80' : colors.statusPending} />
+              <MapPin size={12} color={gps ? '#4ade80' : gpsError ? colors.overlayWhiteMedium : colors.statusPending} />
               {gps ? (
                 <>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -293,7 +293,7 @@ export const FieldCaptureModal: React.FC<FieldCaptureModalProps> = ({
                   )}
                 </>
               ) : gpsError ? (
-                <span>{gpsError}</span>
+                <span style={{ opacity: 0.65 }}>Location optional</span>
               ) : (
                 <span>Locating…</span>
               )}

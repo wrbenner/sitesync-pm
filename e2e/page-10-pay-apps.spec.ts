@@ -23,7 +23,7 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('pay-apps workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/pay-apps')
+      await page.goto('#/pay-apps', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'list')
@@ -39,7 +39,6 @@ for (const vp of VIEWPORTS) {
         }
       }
 
-      // Detail of first pay app
       const firstLink = page.locator('a[href*="/pay-apps/"]').first()
       if (await firstLink.count() > 0) {
         await firstLink.click().catch(() => undefined)

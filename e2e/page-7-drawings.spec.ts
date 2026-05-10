@@ -30,7 +30,7 @@ for (const vp of VIEWPORTS) {
 
     test('drawings workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/drawings')
+      await page.goto('#/drawings', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 600)
       await shot(page, vp.name, 1, 'list-or-empty')

@@ -23,17 +23,13 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('iris workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/ai')
+      await page.goto('#/ai', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'empty-with-prompts')
 
       const prompt = page.getByRole('button', { name: /budget analysis/i }).first()
       if (await prompt.count() > 0) {
-        // Clicking the suggested prompt only populates the input — the
-        // captures previously stopped here and 02/03 looked identical.
-        // Submit the message so streaming actually begins, then wait for
-        // the assistant message to appear before each shot.
         await prompt.click().catch(() => undefined)
         await page.keyboard.press('Enter').catch(() => undefined)
         await page
