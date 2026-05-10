@@ -19,6 +19,9 @@ import AddPhaseModal, { type PhaseData } from '../../components/forms/AddPhaseMo
 import { ScheduleImportWizard } from '../../components/schedule/ScheduleImportWizard';
 import { fromTable } from '../../lib/db/queries';
 import { colors, typography, spacing } from '../../styles/theme';
+import { useSidebar } from '../../components/Primitives';
+import { useIsMobile } from '../../hooks/useWindowSize';
+import { useProjectId } from '../../hooks/useProjectId';
 import type { SchedulePhase } from '../../stores/scheduleStore';
 import { ScheduleTimeline } from './ScheduleTimeline';
 import { ScheduleList } from './ScheduleList';
@@ -150,7 +153,10 @@ function IrisNote({ phase, onClose }: IrisNoteProps) {
 
 const SchedulePage: React.FC = () => {
   const { activeProject } = useProjectStore();
-  const projectId = activeProject?.id;
+  const projectId = useProjectId() ?? activeProject?.id;
+  const { collapsed: sidebarCollapsed } = useSidebar();
+  const isMobile = useIsMobile();
+  const headerPaddingLeft = !isMobile && sidebarCollapsed ? '72px' : spacing[6];
   const queryClient = useQueryClient();
   const { setPageContext } = useCopilotStore();
   const { phases, loading, error, loadSchedule, updatePhase } = useScheduleStore();
@@ -298,7 +304,7 @@ const SchedulePage: React.FC = () => {
           zIndex: 10,
           background: '#FCFCFA',
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          paddingLeft: spacing[6],
+          paddingLeft: headerPaddingLeft,
           paddingRight: spacing[6],
           paddingTop: spacing[4],
           paddingBottom: spacing[4],
@@ -445,7 +451,7 @@ const SchedulePage: React.FC = () => {
 
       <main
         style={{
-          paddingLeft: spacing[6],
+          paddingLeft: headerPaddingLeft,
           paddingRight: spacing[6],
           paddingTop: spacing[4],
           paddingBottom: spacing[8],
