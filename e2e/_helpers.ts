@@ -53,6 +53,10 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
   await page.waitForFunction(
     () => {
       const text = document.body.textContent ?? ''
+      // Guard: if the body is empty the React app hasn't mounted yet
+      // (cold Vite server still compiling modules). Keep waiting rather
+      // than incorrectly declaring the page "done loading".
+      if (text.trim().length === 0) return false
       // Catch every "Loading…" or "Loading <X>…" subtitle plus the
       // OfflineBanner sync message. Pages like /budget show
       // "Loading financial data…" instead of plain "Loading...".
@@ -68,6 +72,7 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
       )
       return !stillLoading && !stillCaching && !hasBusy && !hasSkeletons
     },
+    null,
     { timeout: timeoutMs },
   ).catch(() => undefined)
   // One more brief network-idle sip so any in-flight queries can resolve
