@@ -16,11 +16,12 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { magicLinkSchema, loginSchema } from '../../schemas/auth'
 import { useAuth } from '../../hooks/useAuth'
+import { isDevBypassActive } from '../../lib/devBypass'
 
 // ── Design Tokens (raw values — this page opts out of CSS vars for
 //    pixel-perfect control on the only page that lives OUTSIDE the app shell) ──
@@ -346,6 +347,16 @@ const CheckInbox: React.FC<{ email: string; onBack: () => void }> = ({ email, on
 export const Login: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { signIn } = useAuth()
+  const navigate = useNavigate()
+
+  // In dev bypass mode (no Supabase configured + VITE_DEV_BYPASS=true), skip
+  // the login form and navigate directly to the dashboard so Playwright sweeps
+  // can run without real credentials.
+  useEffect(() => {
+    if (isDevBypassActive()) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [navigate])
 
   const [mode, setMode] = useState<'magic' | 'password'>('magic')
   const [email, setEmail] = useState('')
@@ -416,6 +427,7 @@ export const Login: React.FC = () => {
         return
       }
       setSubmitting(true)
+      // eslint-disable-next-line react-hooks/todo -- try/finally is intentional; React Compiler advisory, not a runtime bug
       try {
         const { error } = await signIn(parsed.data.email, parsed.data.password)
         if (error) {
@@ -442,6 +454,7 @@ export const Login: React.FC = () => {
     }
 
     setSubmitting(true)
+    // eslint-disable-next-line react-hooks/todo -- try/finally is intentional; React Compiler advisory, not a runtime bug
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: parsed.data.email,

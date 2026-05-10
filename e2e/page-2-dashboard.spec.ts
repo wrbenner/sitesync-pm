@@ -50,6 +50,12 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 
 async function signIn(page: Page) {
   await page.goto('#/login')
+  // Dev-bypass mode: Login page immediately redirects to dashboard.
+  const bypassed = await page.waitForURL(
+    /#\/(dashboard|onboarding|profile|$)/,
+    { timeout: 3_000 },
+  ).then(() => true).catch(() => false)
+  if (bypassed) { await settle(page, 1000); return }
   await page.getByPlaceholder('you@company.com').fill(USER)
   await page.getByPlaceholder('Enter your password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
