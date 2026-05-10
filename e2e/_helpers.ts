@@ -63,7 +63,22 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
+  // VITE_DEV_BYPASS=true — navigate directly; ProtectedRoute renders without auth.
+  // Detect bypass by checking whether the app stays on a protected route (not /login).
+  await page.goto('#/')
+  await page.waitForTimeout(800)
+  const afterBypassUrl = page.url()
+  if (!afterBypassUrl.includes('/login') && !afterBypassUrl.includes('login')) {
+    await settle(page, 1500)
+    return
+  }
+  // Full credential sign-in (VITE_DEV_BYPASS not active)
   await page.goto('#/login')
+  const passwordModeBtn = page.getByRole('button', { name: 'Sign in with password' })
+  if (await passwordModeBtn.count().catch(() => 0) > 0) {
+    await passwordModeBtn.click()
+    await page.waitForTimeout(150)
+  }
   await page.getByPlaceholder('you@company.com').fill(user)
   await page.getByPlaceholder('Enter your password').fill(pass)
   await page.locator('button[type="submit"]').first().click()

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { useIsMobile } from '../hooks/useWindowSize';
 import { Search, Users, Phone, Mail, Building, Plus, ShieldCheck, FileText, Upload, MessageSquare, Clock, AlertTriangle } from 'lucide-react';
 import { PageContainer, Card, MetricBox, Avatar, Tag, Btn } from '../components/Primitives';
 import { Drawer } from '../components/Drawer';
@@ -604,6 +605,7 @@ const TH: React.FC<{ children: React.ReactNode; width?: string }> = ({ children,
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export const Directory: React.FC = () => {
+  const isMobile = useIsMobile();
   const projectId = useProjectId();
   const qc = useQueryClient();
   const { data: contactsResult } = useDirectoryContacts(projectId);
@@ -790,7 +792,7 @@ export const Directory: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
 
         {/* Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: spacing['4'] }}>
           <MetricBox label="Total Contacts" value={totalContacts} />
           <MetricBox label="Active Companies" value={activeCompanies} />
           <MetricBox

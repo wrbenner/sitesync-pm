@@ -661,7 +661,7 @@ export const Login: React.FC = () => {
               autoCapitalize="none"
               spellCheck={false}
               disabled={submitting}
-              placeholder={mode === 'password' ? 'Email' : ''}
+              placeholder={mode === 'password' ? 'you@company.com' : ''}
               className="ss-login-input"
               style={{
                 position: 'absolute',
@@ -728,7 +728,7 @@ export const Login: React.FC = () => {
                 aria-describedby={errorMessage ? 'login-error' : undefined}
                 autoComplete="current-password"
                 disabled={submitting}
-                placeholder="Password"
+                placeholder="Enter your password"
                 className="ss-login-input"
                 style={{
                   position: 'absolute',
