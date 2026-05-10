@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 
 import { colors, spacing, typography, borderRadius, colorVars } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
+import { useSidebar } from '../components/Primitives'
+import { useIsMobile } from '../hooks/useWindowSize'
 import { useCustomReports, useReportRuns } from '../hooks/queries'
 import { REPORT_TYPES, type ReportType } from '../hooks/useReportData'
 import { useActionStream } from '../hooks/useActionStream'
@@ -361,6 +363,9 @@ function useOwnerUpdateContext(
 export const Reports: React.FC = () => {
   const projectId = useProjectId()
   const navigate = useNavigate()
+  const { collapsed: sidebarCollapsed } = useSidebar()
+  const isMobile = useIsMobile()
+  const headerPaddingLeft = !isMobile && sidebarCollapsed ? '72px' : spacing['6']
   const { data: customReports } = useCustomReports(projectId)
   const { data: recentRuns, isLoading: runsLoading } = useReportRuns(projectId)
 
@@ -482,7 +487,10 @@ export const Reports: React.FC = () => {
           zIndex: 5,
           backgroundColor: colors.surfacePage,
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          padding: `${spacing['4']} ${spacing['6']}`,
+          paddingTop: spacing['4'],
+          paddingBottom: spacing['4'],
+          paddingLeft: headerPaddingLeft,
+          paddingRight: spacing['6'],
           display: 'flex',
           alignItems: 'center',
           gap: spacing['4'],

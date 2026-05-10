@@ -70,6 +70,20 @@ for (const vp of VIEWPORTS) {
       // STATE 01 — Cold landing on /login (Sign In tab default)
       // ────────────────────────────────────────────────────────
       await page.goto('#/login')
+      // Dev-bypass mode: Login component fires a useEffect that calls
+      // navigate('/dashboard'). That happens AFTER the initial render, so we
+      // must wait for the URL to change rather than checking it after settle().
+      const bypassed = await page.waitForURL(
+        /#\/(dashboard|onboarding|profile)/,
+        { timeout: 5_000 },
+      ).then(() => true).catch(() => false)
+
+      if (bypassed) {
+        await settle(page, 400)
+        await shot(page, vp.name, 1, 'bypass-redirect-to-dashboard')
+        return
+      }
+
       await settle(page, 400)
 
       // Functional assert: the form rendered

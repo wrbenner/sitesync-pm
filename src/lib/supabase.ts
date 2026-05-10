@@ -12,11 +12,15 @@ import type { Role } from '../permissions'
 // vite preview with no real Supabase backend; queries are expected to fail
 // gracefully and components render their empty/loading states. Use placeholder
 // values so createClient() doesn't throw at module load.
+// Same treatment for VITE_DEV_BYPASS=true (local dev without Supabase configured):
+// the bypass redirects all auth/data to stub behavior; the client still needs to
+// instantiate cleanly so module-level imports don't crash the app.
 const isAcceptanceBuild = import.meta.env.VITE_ACCEPTANCE_MODE === 'true'
+const isDevBypassBuild = import.meta.env.DEV === true && import.meta.env.VITE_DEV_BYPASS === 'true'
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? ''
 const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? ''
-const supabaseUrl = rawUrl || (isAcceptanceBuild ? 'http://acceptance.invalid' : '')
-const supabaseAnonKey = rawKey || (isAcceptanceBuild ? 'acceptance-stub-key' : '')
+const supabaseUrl = rawUrl || (isAcceptanceBuild || isDevBypassBuild ? 'http://dev-stub.invalid' : '')
+const supabaseAnonKey = rawKey || (isAcceptanceBuild || isDevBypassBuild ? 'dev-stub-anon-key' : '')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +

@@ -37,6 +37,11 @@ interface PageContainerProps {
 
 export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, actions, children, 'aria-label': ariaLabel }) => {
   const isMobile = useIsMobile()
+  const { collapsed: sidebarCollapsed } = useSidebar()
+  // When the sidebar is collapsed on desktop/tablet, a fixed hamburger button
+  // occupies left:16 to left:56 (16px + 40px width). The default 36px left
+  // padding clips behind it. Raise to 72px to clear the button with a gap.
+  const paddingLeft = (!isMobile && sidebarCollapsed) ? '72px' : layout.pagePaddingX
   return (
     <div
       role="region"
@@ -53,6 +58,7 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
           maxWidth: layout.pageMaxWidth,
           margin: '0 auto',
           padding: `${layout.pagePaddingY} ${layout.pagePaddingX}`,
+          paddingLeft,
           // PageContainer is its own scroll context (overflow: auto above).
           // On mobile, the outer MobileLayout's paddingBottom doesn't reach
           // here, so we add our own bottom clearance for the fixed bottom

@@ -22,6 +22,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { useIsOnline } from '../../hooks/useOfflineStatus'
 import { useIsMobile } from '../../hooks/useWindowSize'
 import { colors, typography, spacing } from '../../styles/theme'
+import { useSidebar } from '../../components/Primitives'
 import { Cockpit } from '../../components/cockpit/Cockpit'
 import { CockpitMetrics } from '../../components/cockpit/CockpitMetrics'
 import { IrisLane } from '../../components/cockpit/IrisLane'
@@ -41,7 +42,7 @@ import { toStreamRole } from '../../types/stream'
 import type { StreamItem, StreamItemType } from '../../types/stream'
 import { WifiOff } from 'lucide-react'
 
-// ── Keyboard hint chip — surfaces j/k/Enter shortcuts ────────────────────
+// ── Keyboard hint chip — surfaces j/k/Enter shortcuts ────────────────────────────────────────
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -87,7 +88,7 @@ function KeyboardHint() {
   )
 }
 
-// ── Header ────────────────────────────────────────────────────────────────
+// ── Header ──────────────────────────────────────────────────────────────────────────
 
 function CockpitHeader({ projectName }: { projectName: string }) {
   const today = new Date()
@@ -96,6 +97,9 @@ function CockpitHeader({ projectName }: { projectName: string }) {
     month: 'long',
     day: 'numeric',
   })
+  const { collapsed: sidebarCollapsed } = useSidebar()
+  const isMobile = useIsMobile()
+  const paddingLeft = !isMobile && sidebarCollapsed ? '72px' : spacing[5]
   return (
     <header
       data-testid="dashboard-hero"
@@ -103,7 +107,10 @@ function CockpitHeader({ projectName }: { projectName: string }) {
         display: 'flex',
         alignItems: 'baseline',
         gap: spacing[3],
-        padding: `${spacing[3]} ${spacing[5]}`,
+        paddingTop: spacing[3],
+        paddingBottom: spacing[3],
+        paddingLeft,
+        paddingRight: spacing[5],
         background: colors.surfaceFlat,
         borderBottom: `1px solid ${colors.borderDefault}`,
         minHeight: 56,
@@ -142,7 +149,7 @@ function CockpitHeader({ projectName }: { projectName: string }) {
   )
 }
 
-// ── Offline banner ────────────────────────────────────────────────────────
+// ── Offline banner ────────────────────────────────────────────────────────────────
 
 function OfflineBanner() {
   return (
@@ -167,7 +174,7 @@ function OfflineBanner() {
   )
 }
 
-// ── Routing helper ────────────────────────────────────────────────────────
+// ── Routing helper ────────────────────────────────────────────────────────────────
 
 const TYPE_ROUTE: Record<StreamItem['type'], string> = {
   rfi: '/rfis',
@@ -224,7 +231,7 @@ function ZoneFallback({ label }: { label: string }) {
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────────────
 
 const DayPage: React.FC = () => {
   const projectId = useProjectId()

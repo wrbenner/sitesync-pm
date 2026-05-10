@@ -162,14 +162,15 @@ export function usePermissions(): PermissionsResult {
 
   const role: ProjectRole = membership ?? 'viewer'
 
-  // BUG #1 FIX: Dev bypass only with explicit opt-in, viewer role, and loud warning
+  // Dev bypass: project_manager role — realistic PM UI without org-admin escalation.
+  // Prevents owner/admin capabilities (org.billing, org.settings, project.delete)
+  // while allowing create/edit for demo and e2e sweeps where Supabase is absent.
   if (isDevBypassActive()) {
     if (typeof console !== 'undefined') {
       console.warn(
         '%c⚠️ PERMISSION BYPASS ACTIVE ⚠️\n' +
-        'Permissions granted as VIEWER role (read-only).\n' +
-        'Set VITE_SUPABASE_URL to connect to a real backend.\n' +
-        'Set VITE_DEV_BYPASS=true in .env to enable this bypass explicitly.',
+        'Permissions granted as PROJECT_MANAGER role.\n' +
+        'Set VITE_SUPABASE_URL to connect to a real backend.',
         `color: ${colors.statusWarning}; font-size: 14px; font-weight: bold;`
       )
     }

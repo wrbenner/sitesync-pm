@@ -64,6 +64,18 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 
 export async function signIn(page: Page, user: string, pass: string) {
   await page.goto('#/login')
+  // In dev-bypass mode (VITE_DEV_BYPASS=true, no Supabase configured) the
+  // Login page immediately redirects to /dashboard. Detect that case by
+  // waiting briefly for either the email field OR a dashboard-like URL.
+  const redirectedToDashboard = await page.waitForURL(
+    /#\/(dashboard|onboarding|profile|$)/,
+    { timeout: 3_000 },
+  ).then(() => true).catch(() => false)
+  if (redirectedToDashboard) {
+    await settle(page, 1000)
+    return
+  }
+  // Real Supabase auth: fill and submit the form.
   await page.getByPlaceholder('you@company.com').fill(user)
   await page.getByPlaceholder('Enter your password').fill(pass)
   await page.locator('button[type="submit"]').first().click()

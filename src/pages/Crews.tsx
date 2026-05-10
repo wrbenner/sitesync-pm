@@ -15,6 +15,8 @@ import { ProjectGate } from '../components/ProjectGate';
 import { PermissionGate } from '../components/auth/PermissionGate';
 import { useConfirm } from '../components/ConfirmDialog';
 import { colors, spacing, typography, borderRadius } from '../styles/theme';
+import { useSidebar } from '../components/Primitives';
+import { useIsMobile } from '../hooks/useWindowSize';
 
 import { fromTable } from '../lib/db/queries'
 import { useEntityStore, useEntityActions } from '../stores/entityStore';
@@ -24,6 +26,7 @@ import { useDeleteCrew } from '../hooks/mutations';
 import { useCrewSchedules, useSchedulePhasesForAssignment } from '../hooks/queries/crew-schedules';
 import { useCreateCrewSchedule, useDeleteCrewSchedule } from '../hooks/mutations/crew-schedules';
 import { useTimesheets } from '../hooks/queries/timesheets';
+import { useProjectId } from '../hooks/useProjectId';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -222,7 +225,10 @@ export const Crews: React.FC = () => {
   const { items: crews, loading, error: crewError } = useEntityStore<Crew>('crews');
   const { loadItems: loadCrews } = useEntityActions<Crew>('crews');
   const { activeProject } = useProjectStore();
-  const projectId = activeProject?.id;
+  const projectId = useProjectId() ?? activeProject?.id;
+  const { collapsed: sidebarCollapsed } = useSidebar();
+  const isMobile = useIsMobile();
+  const headerPaddingLeft = !isMobile && sidebarCollapsed ? '72px' : spacing[6];
   const deleteCrew = useDeleteCrew();
   const { confirm: confirmDeleteCrew, dialog: deleteCrewDialog } = useConfirm();
 
@@ -364,7 +370,7 @@ export const Crews: React.FC = () => {
           zIndex: 10,
           background: '#FCFCFA',
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          paddingLeft: spacing[6],
+          paddingLeft: headerPaddingLeft,
           paddingRight: spacing[6],
           paddingTop: spacing[4],
           paddingBottom: spacing[4],
@@ -451,7 +457,7 @@ export const Crews: React.FC = () => {
         </PermissionGate>
       </header>
 
-      <main style={{ paddingLeft: spacing[6], paddingRight: spacing[6], paddingTop: spacing[4], paddingBottom: spacing[8] }}>
+      <main style={{ paddingLeft: headerPaddingLeft, paddingRight: spacing[6], paddingTop: spacing[4], paddingBottom: spacing[8] }}>
         {crewError && (
           <div role="alert" style={{ padding: spacing[3], marginBottom: spacing[4], background: '#FCE7E7', border: '1px solid rgba(201,59,59,0.20)', borderRadius: 6, color: '#9A2929', fontSize: 13 }}>
             Failed to load crews: {String(crewError)}

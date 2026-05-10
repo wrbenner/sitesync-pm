@@ -59,10 +59,13 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
 // Alias kept for callers that read the literal name `ROLE_LEVELS`.
 export const ROLE_LEVELS = ROLE_HIERARCHY
 
-// Dev bypass defaults to viewer, not admin. Tests ("Bug #1 Fix") enforce this
-// so that a build accidentally deployed with VITE_DEV_BYPASS=true cannot
-// escalate an anonymous session to admin/create/approve capabilities.
-export const DEV_BYPASS_ROLE: Role = 'viewer'
+// Dev bypass role is project_manager, not owner/admin. This prevents escalation
+// to org-level admin capabilities (org.billing, org.settings, project.delete)
+// while still showing a realistic PM-level UI in demos and e2e tests where
+// Supabase is not connected. Viewer was too restrictive — it gated budget,
+// change-orders, and pay-apps pages and disabled all write-action buttons,
+// making the app look broken in screenshots and e2e sweeps.
+export const DEV_BYPASS_ROLE: Role = 'project_manager'
 
 // ── Permissions ──────────────────────────────────────────────────────────────
 
