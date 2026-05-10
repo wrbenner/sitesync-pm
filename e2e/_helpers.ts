@@ -66,15 +66,14 @@ export async function signIn(page: Page, user: string, pass: string) {
   // Detect devBypass mode: navigate to a ProtectedRoute page and wait for it
   // to settle. When VITE_DEV_BYPASS=true + no real Supabase URL, the page
   // renders its content unconditionally (no redirect to /login).
-  await page.goto('#/day')
-  await page.waitForLoadState('domcontentloaded')
+  await page.goto('#/day', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3_000)
   if (!page.url().includes('login')) {
     await settle(page, 500)
     return
   }
   // Normal auth flow against a live Supabase instance.
-  await page.goto('#/login')
+  await page.goto('#/login', { waitUntil: 'domcontentloaded' })
   const pwdBtn = page.getByRole('button', { name: /sign in with password/i })
   if (await pwdBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
     await pwdBtn.click()

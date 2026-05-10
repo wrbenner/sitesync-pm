@@ -1,13 +1,5 @@
 /**
  * PAGE 3 — /rfis — Full e2e verification.
- *
- * The construction PM daily-driver. Lifecycle:
- *   list → new form → typed → priority → submitted → detail → reply → closed
- *
- * NOTE: We do NOT actually submit a new RFI (would write to live DB).
- * We capture the form-filled state and verify the submit button is
- * functional. Detail view is captured by clicking an existing RFI if
- * one is present.
  */
 import { test, expect, Page } from '@playwright/test'
 import path from 'node:path'
@@ -58,12 +50,7 @@ for (const vp of VIEWPORTS) {
     test('rfis workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
 
-      // ───────────────────────────────────────
-      // STATE 01 — Land on /rfis
-      // ───────────────────────────────────────
-      await page.goto('#/rfis')
-      // Wait for the cold-cache warmup to complete on the first load.
-      // The "Loading..." subtitle disappears once data lands.
+      await page.goto('#/rfis', { waitUntil: 'domcontentloaded' })
       await page.waitForFunction(
         () => !document.body.textContent?.includes('Loading...'),
         { timeout: 15_000 },
@@ -71,9 +58,6 @@ for (const vp of VIEWPORTS) {
       await settle(page, 600)
       await shot(page, vp.name, 1, 'list-or-empty')
 
-      // ───────────────────────────────────────
-      // STATE 02 — Open the create form
-      // ───────────────────────────────────────
       let formOpened = false
       const ctas = [
         /^create first rfi$/i,
@@ -94,9 +78,6 @@ for (const vp of VIEWPORTS) {
         await settle(page, 400)
         await shot(page, vp.name, 2, 'new-form-empty')
 
-        // ─────────────────────────────────────
-        // STATE 03 — Type the question
-        // ─────────────────────────────────────
         const questionField = page.getByPlaceholder(/needs to be clarified/i).first()
         if (await questionField.count() > 0) {
           await questionField.fill(
@@ -106,9 +87,6 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 3, 'question-typed')
         }
 
-        // ─────────────────────────────────────
-        // STATE 04 — Type background context
-        // ─────────────────────────────────────
         const contextField = page.getByPlaceholder(/background.*context|already checked/i).first()
         if (await contextField.count() > 0) {
           await contextField.fill(
@@ -118,9 +96,6 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 4, 'context-typed')
         }
 
-        // ─────────────────────────────────────
-        // STATE 05 — Click priority pill (High)
-        // ─────────────────────────────────────
         const highPill = page.getByRole('button', { name: /^high$/i }).first()
         if (await highPill.count() > 0) {
           await highPill.click().catch(() => undefined)
@@ -128,9 +103,6 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 5, 'priority-high')
         }
 
-        // ─────────────────────────────────────
-        // STATE 06 — Click priority pill (Critical)
-        // ─────────────────────────────────────
         const criticalPill = page.getByRole('button', { name: /^critical$/i }).first()
         if (await criticalPill.count() > 0) {
           await criticalPill.click().catch(() => undefined)
@@ -138,9 +110,6 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 6, 'priority-critical')
         }
 
-        // ─────────────────────────────────────
-        // STATE 07 — Fill SPEC SECTION + DRAWING REF
-        // ─────────────────────────────────────
         const specField = page.getByPlaceholder(/03 30 00/i).first()
         if (await specField.count() > 0) {
           await specField.fill('05 12 00')
@@ -152,21 +121,16 @@ for (const vp of VIEWPORTS) {
         await settle(page, 200)
         await shot(page, vp.name, 7, 'all-fields-filled')
 
-        // Close without submitting
         await page.keyboard.press('Escape')
         await settle(page, 300)
       }
 
-      // ───────────────────────────────────────
-      // STATE 08 — Detail of an existing RFI (if any)
-      // ───────────────────────────────────────
       const firstRfiLink = page.locator('a[href*="/rfis/"]').first()
       if (await firstRfiLink.count() > 0) {
         await firstRfiLink.click().catch(() => undefined)
         await settle(page, 600)
         await shot(page, vp.name, 8, 'detail')
 
-        // Scroll the detail view
         await page.evaluate(() => window.scrollTo({ top: 400, behavior: 'instant' }))
         await settle(page, 200)
         await shot(page, vp.name, 9, 'detail-scrolled')
@@ -176,13 +140,9 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 10, 'detail-bottom')
       }
 
-      // ───────────────────────────────────────
-      // STATE 11 — Filtering on the list
-      // ───────────────────────────────────────
-      await page.goto('#/rfis')
+      await page.goto('#/rfis', { waitUntil: 'domcontentloaded' })
       await settle(page, 600)
 
-      // Click "Open" filter if present
       const openTab = page.getByRole('button', { name: /^open\s*\d*$/i }).first()
       if (await openTab.count() > 0) {
         await openTab.click().catch(() => undefined)
@@ -190,7 +150,6 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 11, 'filter-open')
       }
 
-      // Click "Closed" filter if present
       const closedTab = page.getByRole('button', { name: /^closed\s*\d*$/i }).first()
       if (await closedTab.count() > 0) {
         await closedTab.click().catch(() => undefined)

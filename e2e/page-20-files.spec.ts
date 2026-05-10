@@ -23,7 +23,7 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('files workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/files')
+      await page.goto('#/files', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'list')
@@ -34,7 +34,6 @@ for (const vp of VIEWPORTS) {
         await page.keyboard.press('Escape')
         await settle(page, 200)
       }
-      // toggle list view
       const listToggle = page.getByRole('button', { name: /list/i }).first()
       if (await listToggle.count() > 0) {
         await listToggle.click().catch(() => undefined)

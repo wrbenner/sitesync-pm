@@ -23,7 +23,7 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('contracts workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/contracts')
+      await page.goto('#/contracts', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'contracts-tab')

@@ -23,12 +23,11 @@ for (const vp of VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height }, storageState: { cookies: [], origins: [] } })
     test('profile workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/profile')
+      await page.goto('#/profile', { waitUntil: 'domcontentloaded' })
       await waitLoad(page)
       await settle(page, 800)
       await shot(page, vp.name, 1, 'overview')
 
-      // Scroll to danger zone
       await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }))
       await settle(page, 200)
       await shot(page, vp.name, 2, 'scrolled-to-danger')
@@ -37,7 +36,6 @@ for (const vp of VIEWPORTS) {
         await settle(page, 400)
         await shot(page, vp.name, 3, 'delete-confirm-empty')
 
-        // Type the confirm phrase
         await page.keyboard.type('DELETE MY ACCOUNT').catch(() => undefined)
         await settle(page, 200)
         await shot(page, vp.name, 4, 'delete-confirm-typed')

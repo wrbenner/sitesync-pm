@@ -69,7 +69,7 @@ for (const vp of VIEWPORTS) {
       // ────────────────────────────────────────────────────────
       // STATE 01 — Cold landing on /login (magic-link mode default)
       // ────────────────────────────────────────────────────────
-      await page.goto('#/login')
+      await page.goto('#/login', { waitUntil: 'domcontentloaded' })
       await settle(page, 400)
 
       // Functional assert: the form rendered (magic mode has just email)
@@ -137,7 +137,7 @@ for (const vp of VIEWPORTS) {
       // ────────────────────────────────────────────────────────
       // STATE 10 — Successful Sign In with real credentials
       // ────────────────────────────────────────────────────────
-      await page.goto('#/login')
+      await page.goto('#/login', { waitUntil: 'domcontentloaded' })
       await settle(page, 400)
 
       // Switch to password mode

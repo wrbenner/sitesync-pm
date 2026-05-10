@@ -1,17 +1,5 @@
 /**
  * PAGE 4 — /daily-log — Full e2e verification.
- *
- * The killer field-first feature. The thing a foreman uses every morning
- * with cold hands. Every state must feel inevitable.
- *
- * Workflows:
- *  1. Today landing
- *  2. Quick Entry — walk all 9 steps (Weather, Crew, Hours, Photos,
- *     Safety, Visitor, Materials, Equipment, Sign)
- *  3. Field Capture modal
- *  4. Manual Entry tab
- *  5. Calendar View tab
- *  6. Export PDF dialog
  */
 import { test, expect, Page } from '@playwright/test'
 import path from 'node:path'
@@ -61,25 +49,19 @@ for (const vp of VIEWPORTS) {
 
     test('daily-log workflow', async ({ page }) => {
       await signIn(page, USER, PASS)
-      await page.goto('#/daily-log')
+      await page.goto('#/daily-log', { waitUntil: 'domcontentloaded' })
       await settle(page, 1200)
       await shot(page, vp.name, 1, 'today-landing')
 
-      // ───────────────────────────────────────
-      // Quick Entry — walk every step
-      // ───────────────────────────────────────
       const quickEntryBtn = page.getByRole('button', { name: /^quick entry$/i }).first()
       if (await quickEntryBtn.count() > 0) {
         await quickEntryBtn.click().catch(() => undefined)
         await settle(page, 600)
         await shot(page, vp.name, 2, 'quick-entry-step1-weather')
 
-        // Walk steps 2–9. Each Next click advances to the next step.
         for (let stepN = 2; stepN <= 9; stepN++) {
           const nextBtn = page.getByRole('button', { name: /^next/i }).first()
           if (await nextBtn.count() === 0) break
-          // Some steps may require a value to enable Next — try clicking
-          // any visible primary input in the step first.
           const visibleInputs = page.locator('input:visible, textarea:visible')
           const inputCount = await visibleInputs.count().catch(() => 0)
           if (inputCount > 0) {
@@ -92,14 +74,11 @@ for (const vp of VIEWPORTS) {
               await first.fill('Demo entry').catch(() => undefined)
             }
           }
-          // Try Next
           await nextBtn.click().catch(() => undefined)
           await settle(page, 300)
           await shot(page, vp.name, stepN + 1, `quick-entry-step${stepN}`)
         }
 
-        // Close Quick Entry — Cancel button preferred over Esc since
-        // a multi-step modal may capture Esc internally.
         const cancelBtn = page.getByRole('button', { name: /^cancel$/i }).first()
         if (await cancelBtn.count() > 0) {
           await cancelBtn.click().catch(() => undefined)
@@ -109,10 +88,7 @@ for (const vp of VIEWPORTS) {
         await settle(page, 400)
       }
 
-      // ───────────────────────────────────────
-      // Field Capture modal
-      // ───────────────────────────────────────
-      await page.goto('#/daily-log')
+      await page.goto('#/daily-log', { waitUntil: 'domcontentloaded' })
       await settle(page, 800)
       const fieldCaptureBtn = page.getByRole('button', { name: /field capture/i }).first()
       if (await fieldCaptureBtn.count() > 0) {
@@ -123,9 +99,6 @@ for (const vp of VIEWPORTS) {
         await settle(page, 200)
       }
 
-      // ───────────────────────────────────────
-      // Manual Entry tab
-      // ───────────────────────────────────────
       const manualTab = page.getByRole('button', { name: /^manual entry$/i }).first()
       if (await manualTab.count() > 0) {
         await manualTab.click().catch(() => undefined)
@@ -133,9 +106,6 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 12, 'manual-entry')
       }
 
-      // ───────────────────────────────────────
-      // Calendar View tab
-      // ───────────────────────────────────────
       const calendarTab = page.getByRole('button', { name: /^calendar view$/i }).first()
       if (await calendarTab.count() > 0) {
         await calendarTab.click().catch(() => undefined)
@@ -143,10 +113,6 @@ for (const vp of VIEWPORTS) {
         await shot(page, vp.name, 13, 'calendar-view')
       }
 
-      // ───────────────────────────────────────
-      // Export PDF
-      // ───────────────────────────────────────
-      // Switch back to auto log first
       const autoTab = page.getByRole('button', { name: /^auto log$/i }).first()
       if (await autoTab.count() > 0) {
         await autoTab.click().catch(() => undefined)
