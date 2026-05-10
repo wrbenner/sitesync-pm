@@ -302,6 +302,7 @@ export const RFICloseDialog: React.FC<Props> = ({
                 {DISPOSITION_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
+                    aria-label={opt.label}
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
@@ -371,6 +372,7 @@ export const RFICloseDialog: React.FC<Props> = ({
                     return (
                       <label
                         key={r.id}
+                        aria-label={preview}
                         style={{
                           display: 'flex',
                           alignItems: 'flex-start',
