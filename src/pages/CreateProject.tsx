@@ -75,7 +75,7 @@ function autoProjectNumber(): string {
   const year = new Date().getFullYear();
   // Random 4-digit sequence — server has unique constraints; this is a hint
   // value and the user can override before submit.
-  const seq = Math.floor(1000 + Math.random() * 9000);
+  const seq = 1000 + (crypto.getRandomValues(new Uint16Array(1))[0] % 9000);
   return `${year}-${seq}`;
 }
 

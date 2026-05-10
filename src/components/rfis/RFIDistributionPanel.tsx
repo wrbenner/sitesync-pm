@@ -73,7 +73,7 @@ const RecipientRow: React.FC<{
       border: `1px solid ${colors.borderSubtle}`,
     }}
   >
-    <Avatar initials={(recipient.name || '?').slice(0, 2).toUpperCase()} size={28} />
+    <Avatar initials={(recipient.name || 'Unknown').slice(0, 2).toUpperCase()} size={28} />
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{
         fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
