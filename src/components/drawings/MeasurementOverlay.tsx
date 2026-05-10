@@ -17,7 +17,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────
 
 /** Tools this overlay actively handles. Passing any other tool makes the overlay non-interactive
  *  while still rendering already-completed measurements. */
@@ -76,9 +76,9 @@ const AREA_STROKE = '#F47820';
 // Count marker
 const COUNT_COLOR = '#F47820';
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${crypto.randomUUID()}`;
 
 function normalizedDistance(
   a: NormalizedPoint,
@@ -132,7 +132,7 @@ function perpUnit(a: { x: number; y: number }, b: { x: number; y: number }): { x
   return { x: -Math.sin(angle), y: Math.cos(angle) };
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────
+// ── Sub-components ───────────────────────────────────────────────────────────────
 
 /**
  * ArchDimensionLine — A proper architectural dimension line with:
@@ -414,7 +414,7 @@ const CalibrationGuide: React.FC<{
   </g>
 );
 
-// ── Main Component ────────────────────────────────────────────────────────
+// ── Main Component ───────────────────────────────────────────────────────────────
 
 export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   activeTool,
@@ -661,7 +661,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   const countTotal = displayList.filter((m) => m.type === 'count').length;
   const interactive = isMeasureTool(activeTool);
 
-  // ── Smart label collision avoidance ───────────────────────────────────
+  // ── Smart label collision avoidance ──────────────────────────────────────────────
   // For each linear measurement, compute its label midpoint in screen space. Greedy pass:
   // if a new label would overlap an already-placed one, push it further from the dimension line.
   const linearOffsets = new Map<string, number>();
@@ -711,7 +711,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
       onMouseLeave={() => onSnapStateChange?.(false)}
       onDoubleClick={handleDoubleClick}
     >
-      {/* ── Completed measurements ──────────────────────────────────── */}
+      {/* ── Completed measurements ─────────────────────────────────────────────────── */}
       {displayList.map((m) => {
         const pts = m.points.map((p) => toScreen(p.x, p.y)).filter(Boolean) as { x: number; y: number }[];
         if (pts.length === 0) return null;
@@ -822,7 +822,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         return null;
       })}
 
-      {/* ── In-progress measurement ────────────────────────────────── */}
+      {/* ── In-progress measurement ──────────────────────────────────────────── */}
       {inProgressPoints.length > 0 && (() => {
         const pts = inProgressPoints.map((p) => toScreen(p.x, p.y)).filter(Boolean) as { x: number; y: number }[];
         if (pts.length === 0) return null;
@@ -888,14 +888,14 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         return null;
       })()}
 
-      {/* ── Calibration in-progress ────────────────────────────────── */}
+      {/* ── Calibration in-progress ────────────────────────────────────────────── */}
       {calibratePoints.length === 1 && (() => {
         const p = toScreen(calibratePoints[0].x, calibratePoints[0].y);
         if (!p) return null;
         return <CalibrationGuide point={p} />;
       })()}
 
-      {/* ── Scale badge — bottom-left ──────────────────────────────── */}
+      {/* ── Scale badge — bottom-left ──────────────────────────────────────────────── */}
       {hasScale && (
         <ScaleBadge
           label={scaleRatioText || 'Calibrated'}
@@ -904,7 +904,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
         />
       )}
 
-      {/* ── Count total pill — bottom-right ────────────────────────── */}
+      {/* ── Count total pill — bottom-right ─────────────────────────────────────────────── */}
       {activeTool === 'count' && countTotal > 0 && (
         <CountSummaryPill
           count={countTotal}
