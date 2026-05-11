@@ -21,7 +21,9 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - run: npm ci
-      - run: npx tsc --noEmit
+      # Gate 1 typechecks BOTH project configs (tsconfig.app.json includes test
+      # files; default tsconfig excludes them). See hotfix #431 post-mortem.
+      - run: npm run typecheck
 
   lint:
     name: "Gate 2: ESLint"
