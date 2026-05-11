@@ -338,9 +338,14 @@ const Wiki: React.FC = () => {
             }}
           >
             {hasChildren ? (
-              <span onClick={(e) => { e.stopPropagation(); toggleExpand(p.id) }} style={{ display: 'flex' }}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); toggleExpand(p.id) }}
+                aria-label={isOpen ? 'Collapse section' : 'Expand section'}
+                style={{ display: 'flex', background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit' }}
+              >
                 {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-              </span>
+              </button>
             ) : (
               <FileText size={12} color={colors.textTertiary} />
             )}
