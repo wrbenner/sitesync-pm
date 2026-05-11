@@ -67,52 +67,59 @@ for (const vp of VIEWPORTS) {
 
     test('full login workflow', async ({ page }) => {
       // ────────────────────────────────────────────────────────
-      // STATE 01 — Cold landing on /login (Sign In tab default)
+      // STATE 01 — Cold landing on /login (magic-link mode default)
       // ────────────────────────────────────────────────────────
       await page.goto('#/login')
       await settle(page, 400)
 
-      // Functional assert: the form rendered
-      await expect(page.getByPlaceholder('you@company.com')).toBeVisible()
-      await expect(page.getByPlaceholder('Enter your password')).toBeVisible()
-      await expect(page.getByRole('button', { name: /^sign in/i }).last()).toBeVisible()
+      // Functional assert: the form rendered in magic-link mode
+      await expect(page.getByRole('button', { name: 'Sign in with password' })).toBeVisible()
 
-      await shot(page, vp.name, 1, 'sign-in-empty')
+      await shot(page, vp.name, 1, 'sign-in-magic-empty')
+
+      // Switch to password mode to test the full sign-in flow
+      await page.getByRole('button', { name: 'Sign in with password' }).click()
+      await settle(page, 200)
+
+      // Functional assert: password mode inputs rendered
+      await expect(page.getByLabel('Email')).toBeVisible()
+      await expect(page.getByLabel('Password')).toBeVisible()
+
+      await shot(page, vp.name, 2, 'sign-in-password-empty')
 
       // ────────────────────────────────────────────────────────
-      // STATE 02 — Empty submit attempts client-side validation
+      // STATE 02b — Empty submit attempts client-side validation
       // ────────────────────────────────────────────────────────
       const submitBtn = page.locator('button[type="submit"]').first()
       await submitBtn.click().catch(() => undefined)
       await settle(page, 200)
-      await shot(page, vp.name, 2, 'sign-in-validation')
+      await shot(page, vp.name, 3, 'sign-in-validation')
 
       // ────────────────────────────────────────────────────────
       // STATE 03 — Bad-credentials error
       // ────────────────────────────────────────────────────────
-      await page.getByPlaceholder('you@company.com').fill('not-a-real-user@example.com')
-      await page.getByPlaceholder('Enter your password').fill('definitely-wrong-password')
+      await page.getByLabel('Email').fill('not-a-real-user@example.com')
+      await page.getByLabel('Password').fill('definitely-wrong-password')
       await submitBtn.click()
       await settle(page, 1500)
-      await shot(page, vp.name, 3, 'sign-in-bad-creds-error')
+      await shot(page, vp.name, 4, 'sign-in-bad-creds-error')
 
       // ────────────────────────────────────────────────────────
-      // STATE 04 — Forgot Password link → modal/state
+      // STATE 05 — Forgot Password link → modal/state
       // ────────────────────────────────────────────────────────
       const forgotLink = page.getByRole('button', { name: /forgot password/i }).first()
       if (await forgotLink.count() > 0) {
         await forgotLink.click()
         await settle(page, 300)
-        await shot(page, vp.name, 4, 'forgot-password-empty')
+        await shot(page, vp.name, 5, 'forgot-password-empty')
 
-        // Type an email + screenshot the filled state
-        const resetEmail = page.getByPlaceholder('you@company.com').last()
+        // Reset form uses email input — locate by type
+        const resetEmail = page.locator('input[type="email"]').last()
         if (await resetEmail.count() > 0) {
-          await resetEmail.fill('test@example.com')
+          await resetEmail.fill('test@example.com').catch(() => undefined)
           await settle(page, 100)
-          await shot(page, vp.name, 5, 'forgot-password-filled')
+          await shot(page, vp.name, 6, 'forgot-password-filled')
         }
-        // Close via the modal's Cancel button (Esc didn't close it).
         const cancelBtn = page.getByRole('button', { name: /^cancel$/i }).first()
         if (await cancelBtn.count() > 0) {
           await cancelBtn.click().catch(() => undefined)
@@ -121,34 +128,32 @@ for (const vp of VIEWPORTS) {
       }
 
       // ────────────────────────────────────────────────────────
-      // STATE 06 — Magic Link tab
+      // STATE 07 — Magic Link mode (switch back)
       // ────────────────────────────────────────────────────────
-      const magicTab = page.getByRole('button', { name: /^magic link$/i }).first()
-      if (await magicTab.count() > 0) {
-        await magicTab.click()
+      const magicToggle = page.getByRole('button', { name: 'Use a sign-in link' }).first()
+      if (await magicToggle.count() > 0) {
+        await magicToggle.click()
         await settle(page, 300)
-        await shot(page, vp.name, 6, 'magic-link-empty')
+        await shot(page, vp.name, 7, 'magic-link-empty')
 
-        // Fill an email
-        const magicEmail = page.getByPlaceholder('you@company.com').first()
-        await magicEmail.fill('test@example.com')
+        // In magic mode the email input has no placeholder, use type selector
+        const magicEmail = page.locator('input[type="email"]').first()
+        await magicEmail.fill('test@example.com').catch(() => undefined)
         await settle(page, 100)
-        await shot(page, vp.name, 7, 'magic-link-filled')
+        await shot(page, vp.name, 8, 'magic-link-filled')
       }
 
       // ────────────────────────────────────────────────────────
-      // STATE 08 — Sign Up tab
+      // STATE 09 — Sign Up link
       // ────────────────────────────────────────────────────────
-      const signupTab = page.getByRole('button', { name: /^sign up$/i }).first()
-      if (await signupTab.count() > 0) {
-        await signupTab.click()
-        await settle(page, 300)
-        await shot(page, vp.name, 8, 'sign-up-empty')
+      const signupLink = page.getByRole('link', { name: /sign up/i }).first()
+      if (await signupLink.count() > 0) {
+        await signupLink.click()
+        await settle(page, 400)
+        await shot(page, vp.name, 9, 'sign-up-empty')
 
-        // Try to fill the form. Field placeholders may vary.
         const allInputs = page.locator('input:visible')
         const inputCount = await allInputs.count()
-        // Fill all visible text/email/password inputs with reasonable demo values.
         for (let i = 0; i < inputCount; i++) {
           const inp = allInputs.nth(i)
           const type = await inp.getAttribute('type')
@@ -174,21 +179,15 @@ for (const vp of VIEWPORTS) {
 
       // ────────────────────────────────────────────────────────
       // STATE 10 — Successful Sign In with real credentials
-      // (Last so subsequent screenshots show the post-login state.)
       // ────────────────────────────────────────────────────────
-      // Navigate fresh to login (shake off any tab state)
       await page.goto('#/login')
       await settle(page, 400)
+      // Switch to password mode
+      await page.getByRole('button', { name: 'Sign in with password' }).click()
+      await settle(page, 200)
 
-      // ensure Sign In tab is active
-      const signInTab = page.getByRole('button', { name: /^sign in$/i }).first()
-      if (await signInTab.count() > 0) {
-        await signInTab.click()
-        await settle(page, 150)
-      }
-
-      await page.getByPlaceholder('you@company.com').fill(USER)
-      await page.getByPlaceholder('Enter your password').fill(PASS)
+      await page.getByLabel('Email').fill(USER)
+      await page.getByLabel('Password').fill(PASS)
       await shot(page, vp.name, 10, 'sign-in-credentials-filled')
 
       await page.locator('button[type="submit"]').first().click()

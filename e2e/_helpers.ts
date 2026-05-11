@@ -64,8 +64,10 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 
 export async function signIn(page: Page, user: string, pass: string) {
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  // The form starts in magic-link mode. Switch to password auth before filling.
+  await page.getByRole('button', { name: 'Sign in with password' }).click()
+  await page.getByLabel('Email').fill(user)
+  await page.getByLabel('Password').fill(pass)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
