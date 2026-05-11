@@ -1,0 +1,50 @@
+{
+  "name": "schedule-3wk-lookahead",
+  "description": "3-week lookahead with a critical-path slip due to weather. Super persona should produce a terse 'push the Wed pour → Thu' style recommendation.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/schedule",
+    "entity_type": "schedule_activity",
+    "entity_id": "ACT-pour-L3",
+    "invocation_intent": "recommend_action"
+  },
+  "slots": {
+    "what": {
+      "entity_type": "schedule_activity",
+      "entity_id": "ACT-pour-L3",
+      "entity_state": "open",
+      "entity_summary": "Level 3 deck pour scheduled Wed. 5-day forecast shows 80% precip Wed.",
+      "related_entities": [],
+      "current_page": "/schedule"
+    },
+    "when": {
+      "project_phase": "superstructure",
+      "days_to_substantial_completion": 100,
+      "schedule_status": "behind",
+      "schedule_variance_days": -2,
+      "last_user_session_at": "2026-05-10T17:00:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": [
+        { "date": "2026-05-13", "high_f": 58, "low_f": 45, "conditions": "Thunderstorms", "precipitation_pct": 80 },
+        { "date": "2026-05-14", "high_f": 64, "low_f": 50, "conditions": "Partly cloudy", "precipitation_pct": 20 },
+        { "date": "2026-05-15", "high_f": 70, "low_f": 55, "conditions": "Sunny", "precipitation_pct": 5 }
+      ]
+    },
+    "why": {
+      "invocation_intent": "recommend_action",
+      "page_intent": "list_view",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

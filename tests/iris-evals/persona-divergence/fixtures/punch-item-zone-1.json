@@ -1,0 +1,46 @@
+{
+  "name": "punch-item-zone-1",
+  "description": "Punch list item for paint touch-up in Zone 1. Field-team scope; Foreman persona should produce structured form output, not prose.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/punch-list/PL-114/detail",
+    "entity_type": "punch_item",
+    "entity_id": "PL-114",
+    "invocation_intent": "draft_email"
+  },
+  "slots": {
+    "what": {
+      "entity_type": "punch_item",
+      "entity_id": "PL-114",
+      "entity_state": "open",
+      "entity_summary": "PL-114 — paint touch-up zone 1 east wall. Assigned to subcontractor.",
+      "related_entities": [],
+      "current_page": "/punch-list/PL-114/detail"
+    },
+    "when": {
+      "project_phase": "closeout",
+      "days_to_substantial_completion": 14,
+      "schedule_status": "on_track",
+      "schedule_variance_days": 0,
+      "last_user_session_at": "2026-05-10T12:00:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": "Zone 1",
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_email",
+      "page_intent": "detail_view",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

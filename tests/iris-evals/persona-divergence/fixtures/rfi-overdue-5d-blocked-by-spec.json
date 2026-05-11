@@ -1,0 +1,55 @@
+{
+  "name": "rfi-overdue-5d-blocked-by-spec",
+  "description": "RFI 5 days overdue with a spec-section block. Should produce stronger persona variance because the recommended next step diverges (PM cites spec; Super pushes the lookahead; Office wants the documented status).",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/rfis/078/detail",
+    "entity_type": "rfi",
+    "entity_id": "078",
+    "invocation_intent": "draft_email"
+  },
+  "slots": {
+    "what": {
+      "entity_type": "rfi",
+      "entity_id": "078",
+      "entity_state": "open",
+      "entity_summary": "RFI #078 — slab penetration sleeves conflict with mech rough-in. Blocked by spec section 03 30 00.",
+      "related_entities": [
+        {
+          "entity_type": "submittal",
+          "entity_id": "S-MECH-014",
+          "relation": "linked",
+          "summary": "MEP rough-in submittal awaiting RFI close-out"
+        }
+      ],
+      "current_page": "/rfis/078/detail"
+    },
+    "when": {
+      "project_phase": "superstructure",
+      "days_to_substantial_completion": 95,
+      "schedule_status": "behind",
+      "schedule_variance_days": -7,
+      "last_user_session_at": "2026-05-10T08:00:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_email",
+      "page_intent": "detail_view",
+      "recent_query_history": [],
+      "pinned_context": [
+        { "kind": "spec", "ref": "03 30 00", "title": "Cast-in-place concrete" }
+      ]
+    }
+  }
+}

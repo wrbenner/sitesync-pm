@@ -18,7 +18,14 @@
  */
 
 function flag(envKey: string, defaultValue = false): boolean {
-  const raw = import.meta.env[envKey]
+  // `import.meta.env` is a Vite injection — undefined when this module is
+  // imported by a tsx eval harness or a Node test runner outside Vite.
+  // Fall back to process.env (or the default) so non-Vite consumers like
+  // tests/iris-evals/persona-divergence/run.ts don't crash on module load.
+  const viteEnv = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
+  const raw =
+    (viteEnv && viteEnv[envKey])
+    ?? (typeof process !== 'undefined' ? process.env?.[envKey] : undefined)
   if (raw === undefined || raw === '') return defaultValue
   return raw === 'true' || raw === '1'
 }

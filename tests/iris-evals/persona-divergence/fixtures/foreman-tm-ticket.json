@@ -1,0 +1,46 @@
+{
+  "name": "foreman-tm-ticket",
+  "description": "Foreman voice → T&M ticket flow. Foreman persona should produce structured form output (no prose); other personas should produce prose recapping the entry.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/field/tm-ticket/new",
+    "entity_type": null,
+    "entity_id": null,
+    "invocation_intent": "draft_email"
+  },
+  "slots": {
+    "what": {
+      "entity_type": null,
+      "entity_id": null,
+      "entity_state": null,
+      "entity_summary": "Foreman voice memo: '3 hours, 2 guys, demo of east stair railings, hauled to roll-off'.",
+      "related_entities": [],
+      "current_page": "/field/tm-ticket/new"
+    },
+    "when": {
+      "project_phase": "interiors",
+      "days_to_substantial_completion": 60,
+      "schedule_status": "on_track",
+      "schedule_variance_days": 0,
+      "last_user_session_at": "2026-05-10T11:15:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": "East stair",
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_email",
+      "page_intent": "create_flow",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

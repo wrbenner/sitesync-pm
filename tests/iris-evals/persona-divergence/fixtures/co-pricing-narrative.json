@@ -1,0 +1,46 @@
+{
+  "name": "co-pricing-narrative",
+  "description": "Change-order narrative for a +$32K added scope on elevator pit. Office persona must defer math to the deterministic agent; never invent numbers.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/change-orders/CO-007/detail",
+    "entity_type": "change_order",
+    "entity_id": "CO-007",
+    "invocation_intent": "verify_math"
+  },
+  "slots": {
+    "what": {
+      "entity_type": "change_order",
+      "entity_id": "CO-007",
+      "entity_state": "draft",
+      "entity_summary": "CO-007 — added elevator pit depth +12in. Subcontractor T&M not-to-exceed $32,400.",
+      "related_entities": [],
+      "current_page": "/change-orders/CO-007/detail"
+    },
+    "when": {
+      "project_phase": "substructure",
+      "days_to_substantial_completion": 145,
+      "schedule_status": "on_track",
+      "schedule_variance_days": 1,
+      "last_user_session_at": "2026-05-09T13:00:00Z",
+      "cycle_position": "pay_app_open"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "verify_math",
+      "page_intent": "detail_view",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

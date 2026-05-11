@@ -1,0 +1,46 @@
+{
+  "name": "submittal-pending-architect",
+  "description": "Submittal in architect review for 14 days. PM/Office personas should both reference contract timeline; Super persona should reference the field impact.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/submittals/S-022/detail",
+    "entity_type": "submittal",
+    "entity_id": "S-022",
+    "invocation_intent": "draft_email"
+  },
+  "slots": {
+    "what": {
+      "entity_type": "submittal",
+      "entity_id": "S-022",
+      "entity_state": "pending",
+      "entity_summary": "S-022 storefront — pending architect review 14 days. Sole-source for north entry.",
+      "related_entities": [],
+      "current_page": "/submittals/S-022/detail"
+    },
+    "when": {
+      "project_phase": "enclosure",
+      "days_to_substantial_completion": 110,
+      "schedule_status": "on_track",
+      "schedule_variance_days": 0,
+      "last_user_session_at": "2026-05-09T16:00:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_email",
+      "page_intent": "detail_view",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

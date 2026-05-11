@@ -1,0 +1,83 @@
+# ────────────────────────────────────────────────────────────────────────────
+# Phase 1 acceptance gate — daily run + workflow_dispatch
+# ────────────────────────────────────────────────────────────────────────────
+# Spec: docs/audits/IRIS_PHASE_1_ROLE_LAYER_CONTEXT_FABRIC_SPEC_2026-05-08.md §11
+#
+# The 4 metrics (all must be green for 7 consecutive days to close Phase 1):
+#   1. fabric_used_pct ≥ 80% on cutover surfaces      (DB metric — needs STAGING_DB_URL)
+#   2. acceptance_rate_pct no drop > 3 pp vs baseline  (DB metric — needs STAGING_DB_URL)
+#   3. persona divergence ≥ 80% (rubric on goldens)    (Walker-rated, Day 27)
+#   4. ESLint sitesync/no-raw-iris-system errors = 0   (runs here)
+#
+# This workflow runs the automated parts (divergence smoke + lint rule) and
+# emits a JSON report. The DB-metric job is conditional on STAGING_DB_URL.
+
+name: Phase 1 Acceptance
+
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/services/iris/**'
+      - 'tests/iris-evals/persona-divergence/**'
+      - 'eslint-rules/no-raw-iris-system.js'
+      - '.github/workflows/phase-1-acceptance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  divergence:
+    name: Persona divergence (automated smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run iris:eval:persona
+
+  lint-rule:
+    name: ESLint no-raw-iris-system green on main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run sitesync/no-raw-iris-system across src
+        run: npm run lint -- src/
+
+  db-metrics:
+    name: DB metrics (fabric_used_pct + acceptance_rate)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' }}
+    env:
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: secret-check
+        name: Verify STAGING_DB_URL secret
+        run: |
+          if [ -z "${STAGING_DB_URL:-}" ]; then
+            echo "::warning::STAGING_DB_URL not set — Phase 1 DB metrics skipped."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.secret-check.outputs.skipped != 'true'
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+        if: steps.secret-check.outputs.skipped != 'true'
+      - name: Query Phase 1 metrics
+        if: steps.secret-check.outputs.skipped != 'true'
+        run: psql "$STAGING_DB_URL" -t -A -F'|' -f scripts/phase-1-metrics.sql
