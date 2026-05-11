@@ -174,8 +174,8 @@ function QuestionHeadline({
         color: INK,
         margin: 0,
         maxWidth: mobile ? undefined : 1100,
-        textWrap: 'balance' as any,
-      }}
+        textWrap: 'balance',
+      } as React.CSSProperties}
     >
       {segments.map((seg, i) => {
         let text = seg.text;
@@ -757,24 +757,27 @@ function SundialDesktop({ data }: { data: SundialData }) {
             color: INK_3,
           }}
         >
-          <span
-            style={{ cursor: 'pointer' }}
+          <button
+            type="button"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', color: 'inherit' }}
             onClick={() => navigate('/drawings')}
           >
             Plans
-          </span>
-          <span
-            style={{ cursor: 'pointer' }}
+          </button>
+          <button
+            type="button"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', color: 'inherit' }}
             onClick={() => navigate('/daily-log')}
           >
             Day book
-          </span>
-          <span
-            style={{ cursor: 'pointer' }}
+          </button>
+          <button
+            type="button"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 'inherit', letterSpacing: 'inherit', textTransform: 'inherit', color: 'inherit' }}
             onClick={() => navigate('/projects')}
           >
             Portfolio
-          </span>
+          </button>
         </div>
       </div>
 
@@ -795,8 +798,8 @@ function SundialDesktop({ data }: { data: SundialData }) {
                 color: INK,
                 margin: 0,
                 maxWidth: 1100,
-                textWrap: 'balance' as any,
-              }}
+                textWrap: 'balance',
+              } as React.CSSProperties}
             >
               The day is <span style={{ fontStyle: 'italic' }}>yours</span>
               <span style={{ color: INK_3 }}>.</span>
@@ -940,7 +943,11 @@ function SundialMobile({ data }: { data: SundialData }) {
     >
       <div
         style={{
-          padding: '24px 28px 24px',
+          // Bottom padding clears the fixed tab bar (68px) + Iris FAB (80px)
+          // + breathing room (16px) + iOS safe-area. SundialMobile is its own
+          // scroll container inside MobileLayout, so MobileLayout's matching
+          // paddingBottom doesn't reach this inner scroll viewport.
+          padding: '24px 28px calc(24px + 164px + env(safe-area-inset-bottom, 0px))',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -1250,5 +1257,3 @@ export function SundialDashboard() {
     <SundialDesktop data={data} />
   );
 }
-
-export default SundialDashboard;
