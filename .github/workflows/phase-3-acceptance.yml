@@ -40,7 +40,7 @@ jobs:
       - name: Run kb-retrieval harness unit tests
         run: npx vitest run tests/iris-evals/kb-retrieval/run.test.ts
       - name: Print acceptance thresholds
-        run: node -e "const m=require('./src/services/iris/types/retrieval'); console.log(JSON.stringify(m.PHASE_3_ACCEPTANCE,null,2))"
+        run: npx tsx -e "import { PHASE_3_ACCEPTANCE } from './src/services/iris/types/retrieval'; console.log(JSON.stringify(PHASE_3_ACCEPTANCE, null, 2))"
 
   rls-leakage:
     name: RLS leakage suite
