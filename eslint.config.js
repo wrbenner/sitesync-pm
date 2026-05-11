@@ -47,6 +47,11 @@ export default defineConfig([
       // exempts files under src/services/iris/ where the Fabric and its
       // legacy adapter live; everything else fails the build.
       'sitesync/no-raw-iris-system': 'error',
+      // Per IRIS_PHASE_3 spec §6 — direct writes to iris_kb_chunks /
+      // iris_kb_sources outside the ingestion worker allow-list are
+      // forbidden. Upload paths route through routeArtifact() and let
+      // a per-source-type worker write the chunk.
+      'sitesync/no-raw-ingest': 'error',
       // UserName.tsx itself is the canonical resolver — it has to render
       // the raw value in the non-UUID early-return branch. Disabling at
       // the per-file level (below) instead of inside the file keeps the
