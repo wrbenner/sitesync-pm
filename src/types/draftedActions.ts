@@ -49,6 +49,11 @@ export interface DraftedActionCitation {
     | 'schedule_phase'
     | 'budget_line'
     | 'change_order'
+    // Phase 3d additions — Universal Knowledge Absorption surfaces these from
+    // the spreadsheet/contract/punch-item workers via retrieve().
+    | 'spreadsheet_cell'
+    | 'contract_clause'
+    | 'punch_item'
   /** Human-readable label, e.g. "Drawing E-2 @ column line 7". */
   label: string
   /** Stable identifier for the cited resource. */
@@ -59,6 +64,13 @@ export interface DraftedActionCitation {
   drawing_id?: string
   x?: number
   y?: number
+  /** For spreadsheet_cell citations: sheet name + A1 range. */
+  sheet_name?: string
+  range_a1?: string
+  /** For contract_clause citations: the clause number (e.g. "3.2.1"). */
+  clause_number?: string
+  /** For contract_clause citations: optional article header. */
+  article?: string
 }
 
 // ── Per-action-type payload shapes ────────────────────────────────────

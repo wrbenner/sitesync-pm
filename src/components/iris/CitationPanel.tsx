@@ -32,6 +32,9 @@ import { ChangeOrderCitationPanelContent } from './citations/ChangeOrderCitation
 import { SpecCitationPanelContent } from './citations/SpecCitationPanelContent'
 import { SchedulePhaseCitationPanelContent } from './citations/SchedulePhaseCitationPanelContent'
 import { GenericCitationPanelContent } from './citations/GenericCitationPanelContent'
+import { SpreadsheetCellCitationPanelContent } from './citations/SpreadsheetCellCitationPanelContent'
+import { ContractClauseCitationPanelContent } from './citations/ContractClauseCitationPanelContent'
+import { PunchItemCitationPanelContent } from './citations/PunchItemCitationPanelContent'
 
 type ResolvedStatus = 'ok' | 'stale' | 'not_found' | 'forbidden'
 
@@ -335,6 +338,12 @@ const PanelBody: React.FC<{
       return <SpecCitationPanelContent data={sidePanelData} />
     case 'schedule_phase':
       return <SchedulePhaseCitationPanelContent data={sidePanelData} />
+    case 'spreadsheet_cell':
+      return <SpreadsheetCellCitationPanelContent data={sidePanelData} citation={citation} />
+    case 'contract_clause':
+      return <ContractClauseCitationPanelContent data={sidePanelData} citation={citation} />
+    case 'punch_item':
+      return <PunchItemCitationPanelContent data={sidePanelData} />
     case 'budget_line':
     case 'photo_observation':
       return <GenericCitationPanelContent data={sidePanelData} citation={citation} />
