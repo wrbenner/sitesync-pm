@@ -87,6 +87,16 @@ export const FLAGS = {
    * VITE_FLAG_COMPLIANCE_COCKPIT
    */
   complianceCockpit: flag('VITE_FLAG_COMPLIANCE_COCKPIT'),
+
+  /**
+   * Iris Context Fabric — route Iris calls through buildContext() rather
+   * than the legacy caller-supplied `system=` parameter. Per ADR-020 and
+   * IRIS_PHASE_1 spec §5. Default off until Phase 1b cuts over RFI /
+   * submittal / daily-log surfaces; flipped to true per-org on the soft
+   * pilot first.
+   * VITE_FLAG_IRIS_USE_FABRIC
+   */
+  irisUseFabric: flag('VITE_FLAG_IRIS_USE_FABRIC'),
 } as const
 
 export type FlagKey = keyof typeof FLAGS
