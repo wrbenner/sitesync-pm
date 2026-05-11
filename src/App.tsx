@@ -751,7 +751,7 @@ function AppContent() {
             {/* key={pathname} resets the boundary on navigation so a crash on one page
                 doesn't lock the user out of every other page. */}
             <ErrorBoundary key={location.pathname}>
-              {!projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
+              {!isDevBypassActive() && !projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
                 ? <ProjectGate />
                 : <AppRoutes />
               }
