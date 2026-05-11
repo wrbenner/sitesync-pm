@@ -11,6 +11,7 @@ import {
 import { colors, spacing, typography, borderRadius } from '../styles/theme'
 import { useProjectId } from '../hooks/useProjectId'
 import { PermissionGate } from '../components/auth/PermissionGate'
+import { ProjectGate } from '../components/ProjectGate'
 
 import { useCloseoutData, type CloseoutItemRow } from '../hooks/queries/closeout'
 import { usePunchItems } from '../hooks/queries/punch-items'
@@ -42,7 +43,7 @@ import {
 import type { PunchItem } from '../types/database'
 import { useConfirm } from '../components/ConfirmDialog'
 
-// ── Tabs ──────────────────────────────────────────────────
+// ── Tabs ────────────────────────────────────────────────────────
 
 type Tab = 'punch' | 'warranties' | 'om' | 'training' | 'signoff'
 
@@ -54,14 +55,14 @@ const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'signoff',    label: 'Final Sign-offs', icon: FileSignature },
 ]
 
-// ── Helpers ───────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-// ── Main component ───────────────────────────────────────
+// ── Main component ───────────────────────────────────────────
 
 export const Closeout: React.FC = () => {
   const projectId = useProjectId()
@@ -88,12 +89,14 @@ export const Closeout: React.FC = () => {
 
   const loading = loadingCloseout || loadingPunch || loadingWarranties
 
+  if (!projectId) return <ProjectGate />
+
   return (
     <PageContainer
       title="Project Closeout"
       subtitle="Punch list verification, warranties, O&M manuals, training, and final sign-offs"
     >
-      {/* ── Completion bar ───────────────────────────── */}
+      {/* ── Completion bar ─────────────────────────────────── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -130,7 +133,7 @@ export const Closeout: React.FC = () => {
         <ProgressBar value={pctComplete} />
       </Card>
 
-      {/* ── Tabs ─────────────────────────────────────── */}
+      {/* ── Tabs ──────────────────────────────────────────── */}
       <div
         role="tablist"
         aria-label="Closeout sections"
@@ -233,9 +236,9 @@ export const Closeout: React.FC = () => {
 
 export default Closeout
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // ██ PUNCH ITEMS TAB (read-only)
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 const PunchTab: React.FC<{ unresolved: PunchItem[] }> = ({ unresolved }) => {
   // Resolve assigned_to (UUID OR free-text trade) for every visible row.
@@ -294,9 +297,9 @@ const PunchTab: React.FC<{ unresolved: PunchItem[] }> = ({ unresolved }) => {
   )
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // ██ WARRANTIES TAB
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 const WarrantiesTab: React.FC<{ projectId: string; warranties: WarrantyWithStatus[] }> = ({ projectId, warranties }) => {
   const [createOpen, setCreateOpen] = useState(false)
@@ -462,7 +465,7 @@ const iconButtonStyle: React.CSSProperties = {
   cursor: 'pointer', color: colors.textTertiary,
 }
 
-// ── Warranty modal ────────────────────────────────────────
+// ── Warranty modal ────────────────────────────────────────────
 
 interface WarrantyFormValues {
   item: string
@@ -575,9 +578,9 @@ const WarrantyFormModal: React.FC<{
   )
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // ██ O&M MANUALS TAB
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 const OMManualsTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = ({ projectId, items }) => {
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -787,9 +790,9 @@ const OMUploadModal: React.FC<{
   )
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // ██ TRAINING TAB
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = ({ projectId, items }) => {
   const [createOpen, setCreateOpen] = useState(false)
@@ -927,9 +930,9 @@ const TrainingTab: React.FC<{ projectId: string; items: CloseoutItemRow[] }> = (
   )
 }
 
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 // ██ FINAL SIGN-OFFS TAB
-// ══════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 
 const SignOffTab: React.FC<{ projectId: string; items: CloseoutItemRow[]; blocksCompletion: boolean }> = ({ projectId, items, blocksCompletion }) => {
   const recordSignOff = useRecordSignOff()
