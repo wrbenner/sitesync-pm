@@ -950,6 +950,13 @@ export type Database = {
             foreignKeyName: "api_keys_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1801,6 +1808,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "billing_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "billing_customers_organization_id_fkey"
             columns: ["organization_id"]
@@ -3838,6 +3852,13 @@ export type Database = {
             foreignKeyName: "collab_doc_state_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "collab_doc_state_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -4117,6 +4138,13 @@ export type Database = {
           report_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "compliance_reports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "compliance_reports_organization_id_fkey"
             columns: ["organization_id"]
@@ -8423,6 +8451,106 @@ export type Database = {
           },
         ]
       }
+      executor_runs: {
+        Row: {
+          audit_log_id: string | null
+          cancel_reason: string | null
+          committed_at: string | null
+          confidence: number | null
+          decided_at: string
+          entity_id: string | null
+          entity_type: string | null
+          executor_name: string
+          id: string
+          metadata: Json
+          org_id: string | null
+          project_id: string | null
+          shadow_mode: boolean
+          specialist_name: string
+          user_id: string | null
+          was_human_cancelled: boolean | null
+        }
+        Insert: {
+          audit_log_id?: string | null
+          cancel_reason?: string | null
+          committed_at?: string | null
+          confidence?: number | null
+          decided_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          executor_name: string
+          id?: string
+          metadata?: Json
+          org_id?: string | null
+          project_id?: string | null
+          shadow_mode?: boolean
+          specialist_name: string
+          user_id?: string | null
+          was_human_cancelled?: boolean | null
+        }
+        Update: {
+          audit_log_id?: string | null
+          cancel_reason?: string | null
+          committed_at?: string | null
+          confidence?: number | null
+          decided_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          executor_name?: string
+          id?: string
+          metadata?: Json
+          org_id?: string | null
+          project_id?: string | null
+          shadow_mode?: boolean
+          specialist_name?: string
+          user_id?: string | null
+          was_human_cancelled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "executor_runs_audit_log_id_fkey"
+            columns: ["audit_log_id"]
+            isOneToOne: false
+            referencedRelation: "audit_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "executor_runs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "executor_runs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "executor_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "executor_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "executor_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       failed_login_attempts: {
         Row: {
           attempted_at: string
@@ -8905,6 +9033,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "import_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "import_jobs_organization_id_fkey"
             columns: ["organization_id"]
@@ -9590,6 +9725,13 @@ export type Database = {
             foreignKeyName: "integration_connections_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "integration_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -9893,6 +10035,13 @@ export type Database = {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -10060,6 +10209,69 @@ export type Database = {
         }
         Relationships: []
       }
+      iris_personas: {
+        Row: {
+          auto_action_threshold: number
+          base_prompt_fragment: string
+          created_at: string
+          default_tone: string
+          display_name: string
+          effective_org_id: string
+          org_id: string | null
+          permission_scope_template: Json
+          slug: string
+          suggestion_frequency: string
+          tool_allow_list: string[]
+          updated_at: string
+          voice_overrides: Json
+        }
+        Insert: {
+          auto_action_threshold?: number
+          base_prompt_fragment: string
+          created_at?: string
+          default_tone?: string
+          display_name: string
+          effective_org_id?: string
+          org_id?: string | null
+          permission_scope_template?: Json
+          slug: string
+          suggestion_frequency?: string
+          tool_allow_list?: string[]
+          updated_at?: string
+          voice_overrides?: Json
+        }
+        Update: {
+          auto_action_threshold?: number
+          base_prompt_fragment?: string
+          created_at?: string
+          default_tone?: string
+          display_name?: string
+          effective_org_id?: string
+          org_id?: string | null
+          permission_scope_template?: Json
+          slug?: string
+          suggestion_frequency?: string
+          tool_allow_list?: string[]
+          updated_at?: string
+          voice_overrides?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_personas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "iris_personas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iris_suggestion_history: {
         Row: {
           decided_at: string | null
@@ -10092,6 +10304,121 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      iris_telemetry: {
+        Row: {
+          created_at: string
+          details: Json
+          event_name: string
+          id: string
+          project_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_name: string
+          id?: string
+          project_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_name?: string
+          id?: string
+          project_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_telemetry_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_telemetry_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_telemetry_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iris_user_personas: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          effective_project_id: string
+          org_id: string
+          persona_slug: string
+          project_id: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          effective_project_id?: string
+          org_id: string
+          persona_slug: string
+          project_id?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          effective_project_id?: string
+          org_id?: string
+          persona_slug?: string
+          project_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_user_personas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "iris_user_personas_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iris_user_personas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_user_personas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_user_personas_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       iris_voice_diffs: {
         Row: {
@@ -11780,6 +12107,13 @@ export type Database = {
             foreignKeyName: "org_api_tokens_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_api_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -11845,6 +12179,13 @@ export type Database = {
             foreignKeyName: "org_branding_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "org_branding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -11882,6 +12223,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "org_custom_roles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_custom_role_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "org_custom_role_assignments_organization_id_fkey"
@@ -11930,6 +12278,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "org_custom_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "org_custom_roles_organization_id_fkey"
             columns: ["organization_id"]
@@ -12079,6 +12434,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "org_sso_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "org_sso_config_organization_id_fkey"
             columns: ["organization_id"]
@@ -12314,6 +12676,13 @@ export type Database = {
             foreignKeyName: "organization_members_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -12394,6 +12763,9 @@ export type Database = {
       organizations: {
         Row: {
           audit_retention_years: number | null
+          auto_execute_opt_in: boolean
+          auto_execute_opted_in_at: string | null
+          auto_execute_opted_in_by: string | null
           billing_email: string | null
           compliance_level: string | null
           created_at: string | null
@@ -12412,6 +12784,9 @@ export type Database = {
         }
         Insert: {
           audit_retention_years?: number | null
+          auto_execute_opt_in?: boolean
+          auto_execute_opted_in_at?: string | null
+          auto_execute_opted_in_by?: string | null
           billing_email?: string | null
           compliance_level?: string | null
           created_at?: string | null
@@ -12430,6 +12805,9 @@ export type Database = {
         }
         Update: {
           audit_retention_years?: number | null
+          auto_execute_opt_in?: boolean
+          auto_execute_opted_in_at?: string | null
+          auto_execute_opted_in_by?: string | null
           billing_email?: string | null
           compliance_level?: string | null
           created_at?: string | null
@@ -12537,6 +12915,13 @@ export type Database = {
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "outbound_webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "outbound_webhooks_organization_id_fkey"
             columns: ["organization_id"]
@@ -13600,6 +13985,13 @@ export type Database = {
             foreignKeyName: "payment_methods_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "payment_methods_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -14167,6 +14559,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pilot_agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "pilot_agreements_organization_id_fkey"
             columns: ["organization_id"]
@@ -15167,6 +15566,13 @@ export type Database = {
             foreignKeyName: "presence_heartbeats_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "presence_heartbeats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -15204,6 +15610,13 @@ export type Database = {
           room_key?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "presence_room_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "presence_room_keys_organization_id_fkey"
             columns: ["organization_id"]
@@ -15496,6 +15909,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "profiles_organization_id_fkey"
             columns: ["organization_id"]
@@ -16359,6 +16779,13 @@ export type Database = {
             foreignKeyName: "project_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "project_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -16498,6 +16925,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "directory_contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
           },
           {
             foreignKeyName: "projects_organization_id_fkey"
@@ -18392,6 +18826,13 @@ export type Database = {
             foreignKeyName: "rfis_responsible_contractor_id_fkey"
             columns: ["responsible_contractor_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "rfis_responsible_contractor_id_fkey"
+            columns: ["responsible_contractor_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -18464,6 +18905,45 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_to_default_persona: {
+        Row: {
+          created_at: string
+          effective_org_id: string
+          org_id: string | null
+          persona_slug: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          effective_org_id?: string
+          org_id?: string | null
+          persona_slug: string
+          role: string
+        }
+        Update: {
+          created_at?: string
+          effective_org_id?: string
+          org_id?: string | null
+          persona_slug?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_to_default_persona_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "role_to_default_persona_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -20030,6 +20510,13 @@ export type Database = {
             foreignKeyName: "sso_configurations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "sso_configurations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -20076,6 +20563,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sso_login_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "sso_login_events_organization_id_fkey"
             columns: ["organization_id"]
@@ -20183,6 +20677,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "stripe_connected_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "stripe_connected_accounts_organization_id_fkey"
             columns: ["organization_id"]
@@ -20535,6 +21036,66 @@ export type Database = {
           },
         ]
       }
+      submittal_drawing_pins: {
+        Row: {
+          bbox_pct: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          page_no: number
+          sheet_id: string | null
+          sheet_number: string | null
+          sheet_title: string | null
+          submittal_id: string
+          x_pct: number
+          y_pct: number
+        }
+        Insert: {
+          bbox_pct?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          page_no?: number
+          sheet_id?: string | null
+          sheet_number?: string | null
+          sheet_title?: string | null
+          submittal_id: string
+          x_pct: number
+          y_pct: number
+        }
+        Update: {
+          bbox_pct?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          page_no?: number
+          sheet_id?: string | null
+          sheet_number?: string | null
+          sheet_title?: string | null
+          submittal_id?: string
+          x_pct?: number
+          y_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submittal_drawing_pins_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submittal_drawing_pins_submittal_id_fkey"
+            columns: ["submittal_id"]
+            isOneToOne: false
+            referencedRelation: "submittals_log_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submittal_emails: {
         Row: {
           attachments: Json | null
@@ -20828,6 +21389,13 @@ export type Database = {
             foreignKeyName: "submittal_packages_responsible_sub_id_fkey"
             columns: ["responsible_sub_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "submittal_packages_responsible_sub_id_fkey"
+            columns: ["responsible_sub_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -20886,6 +21454,13 @@ export type Database = {
           submittal_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "submittal_reviewers_reviewer_org_id_fkey"
+            columns: ["reviewer_org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "submittal_reviewers_reviewer_org_id_fkey"
             columns: ["reviewer_org_id"]
@@ -21440,6 +22015,13 @@ export type Database = {
             foreignKeyName: "submittals_responsible_sub_id_fkey"
             columns: ["responsible_sub_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "submittals_responsible_sub_id_fkey"
+            columns: ["responsible_sub_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -21518,6 +22100,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "subscriptions_organization_id_fkey"
             columns: ["organization_id"]
@@ -22396,6 +22985,13 @@ export type Database = {
           unit_price?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "usage_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "usage_events_organization_id_fkey"
             columns: ["organization_id"]
@@ -23376,6 +23972,13 @@ export type Database = {
             foreignKeyName: "webhook_endpoints_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoints_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -23425,6 +24028,13 @@ export type Database = {
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "webhooks_organization_id_fkey"
             columns: ["organization_id"]
@@ -24053,6 +24663,18 @@ export type Database = {
       }
     }
     Views: {
+      executor_daily_counts: {
+        Row: {
+          avg_confidence: number | null
+          cancelled_runs: number | null
+          committed_runs: number | null
+          day: string | null
+          executor_name: string | null
+          shadow_mode: boolean | null
+          total_runs: number | null
+        }
+        Relationships: []
+      }
       lap_2_gate_metrics_daily: {
         Row: {
           acceptance_rate_pct: number | null
@@ -24068,6 +24690,17 @@ export type Database = {
           median_time_to_approve_sec: number | null
           metric_date: string | null
           mouse_decisions: number | null
+        }
+        Relationships: []
+      }
+      org_executor_cancel_rate_7d: {
+        Row: {
+          auto_execute_opt_in: boolean | null
+          auto_execute_opted_in_at: string | null
+          cancelled_runs_7d: number | null
+          org_id: string | null
+          org_name: string | null
+          total_runs_7d: number | null
         }
         Relationships: []
       }
@@ -24138,6 +24771,13 @@ export type Database = {
           status: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "projects_organization_id_fkey"
             columns: ["organization_id"]
@@ -24325,6 +24965,13 @@ export type Database = {
             foreignKeyName: "submittals_responsible_sub_id_fkey"
             columns: ["responsible_sub_id"]
             isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "submittals_responsible_sub_id_fkey"
+            columns: ["responsible_sub_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -24346,6 +24993,13 @@ export type Database = {
           total_quantity: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "usage_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
           {
             foreignKeyName: "usage_events_organization_id_fkey"
             columns: ["organization_id"]
@@ -24626,6 +25280,10 @@ export type Database = {
         Args: { p_draft_id: string; p_session_id: string }
         Returns: undefined
       }
+      record_event: {
+        Args: { p_details?: Json; p_event_name: string; p_project_id: string }
+        Returns: string
+      }
       record_failed_login: {
         Args: {
           email_to_record: string
@@ -24647,6 +25305,10 @@ export type Database = {
       resolve_citation: {
         Args: { p_kind: string; p_payload?: Json; p_ref: string }
         Returns: Json
+      }
+      resolve_persona: {
+        Args: { p_project_id: string; p_user_id: string }
+        Returns: string
       }
       restore_rfi: {
         Args: { p_rfi_id: string }

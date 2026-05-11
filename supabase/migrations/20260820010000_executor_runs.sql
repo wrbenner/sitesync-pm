@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS executor_runs (
   cancel_reason TEXT,
   decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   committed_at TIMESTAMPTZ,
-  audit_log_id BIGINT REFERENCES audit_log(id),
+  audit_log_id UUID REFERENCES audit_log(id),
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 

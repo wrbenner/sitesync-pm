@@ -27,8 +27,6 @@ ALTER TABLE public.drafted_actions
 -- filters by iris_audit_id directly. (Keeping schema minimal.)
 
 COMMENT ON COLUMN public.drafted_actions.iris_audit_id IS
-  'Correlates this draft to the audit_log row for the iris-call (or trace id ' ||
-  'for direct-Anthropic edge fns) that produced it. Used by iris-score edge ' ||
-  'fn to emit Langfuse score events against the originating trace.';
+  'Correlates this draft to the audit_log row for the iris-call (or trace id for direct-Anthropic edge fns) that produced it. Used by iris-score edge fn to emit Langfuse score events against the originating trace.';
 
 COMMIT;
