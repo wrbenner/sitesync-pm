@@ -24,6 +24,10 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       VITE_DEV_BYPASS: 'true',
+      // Prevents supabase.ts from throwing at module load when no real
+      // credentials are present. devBypass still activates because
+      // VITE_SUPABASE_URL raw env var remains unset.
+      VITE_ACCEPTANCE_MODE: 'true',
     },
   },
 })

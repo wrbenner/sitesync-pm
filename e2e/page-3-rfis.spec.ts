@@ -41,6 +41,10 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+  await page.waitForTimeout(600)
+  if (!page.url().includes('/login')) { await settle(page, 800); return }
   await page.goto('#/login')
   await page.getByRole('button', { name: 'Sign in with password' }).click()
   await page.getByLabel('Email').fill(USER)
@@ -102,9 +106,9 @@ for (const vp of VIEWPORTS) {
         await settle(page, 400)
         await shot(page, vp.name, 2, 'new-form-empty')
 
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         // STATE 03 — Type the question
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         const questionField = page.getByPlaceholder(/needs to be clarified/i).first()
         if (await questionField.count() > 0) {
           await questionField.fill(
@@ -114,9 +118,9 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 3, 'question-typed')
         }
 
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         // STATE 04 — Type background context
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         const contextField = page.getByPlaceholder(/background.*context|already checked/i).first()
         if (await contextField.count() > 0) {
           await contextField.fill(
@@ -126,9 +130,9 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 4, 'context-typed')
         }
 
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         // STATE 05 — Click priority pill (High)
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         const highPill = page.getByRole('button', { name: /^high$/i }).first()
         if (await highPill.count() > 0) {
           await highPill.click().catch(() => undefined)
@@ -136,9 +140,9 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 5, 'priority-high')
         }
 
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         // STATE 06 — Click priority pill (Critical)
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         const criticalPill = page.getByRole('button', { name: /^critical$/i }).first()
         if (await criticalPill.count() > 0) {
           await criticalPill.click().catch(() => undefined)
@@ -146,9 +150,9 @@ for (const vp of VIEWPORTS) {
           await shot(page, vp.name, 6, 'priority-critical')
         }
 
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         // STATE 07 — Fill SPEC SECTION + DRAWING REF
-        // ─────────────────────────────────────
+        // ───────────────────────────────────
         const specField = page.getByPlaceholder(/03 30 00/i).first()
         if (await specField.count() > 0) {
           await specField.fill('05 12 00')

@@ -45,6 +45,10 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+  await page.waitForTimeout(600)
+  if (!page.url().includes('/login')) { await settle(page, 800); return }
   await page.goto('#/login')
   await page.getByRole('button', { name: 'Sign in with password' }).click()
   await page.getByLabel('Email').fill(USER)
