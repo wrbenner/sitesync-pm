@@ -1,10 +1,14 @@
 name: Lap 1 Acceptance Gate
 
+# INFORMATIONAL ONLY. Not a required status check (Lap 1 closed
+# 2026-05-04 per DAY_30_LAP_1_ACCEPTANCE_RECEIPT). Drawer-perf gate
+# skips in CI (no real Supabase backend wired into the vite preview
+# build) which produces noise on PRs. Runs on push-to-main + on-demand
+# via workflow_dispatch.
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 # Spec: docs/audits/LAP_1_ACCEPTANCE_GATE_SPEC_2026-05-01.md
 # Receipt: docs/audits/DAY_30_LAP_1_ACCEPTANCE_RECEIPT_2026-05-04.md
@@ -38,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies

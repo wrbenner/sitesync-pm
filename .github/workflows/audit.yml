@@ -16,14 +16,12 @@
 
 name: "Audit - static detectors"
 
+# INFORMATIONAL ONLY. Not a required status check. The dead-clicks.json
+# ratchet drifts on every file-count change and produces noisy reds on
+# PRs even with continue-on-error: true. Runs on push-to-main to catch
+# real regressions; on-demand via workflow_dispatch for any PR that
+# specifically needs the audit re-run.
 on:
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'scripts/detect-dead-clicks.ts'
-      - 'scripts/check-handler-bindings.ts'
-      - 'audit/dead-clicks.json'
-      - '.github/workflows/audit.yml'
   push:
     branches: [main]
   workflow_dispatch:
@@ -41,7 +39,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install

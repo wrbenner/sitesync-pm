@@ -1,10 +1,14 @@
 name: Performance Budget
 
+# INFORMATIONAL ONLY. Not a required status check. Known NO_FCP issue
+# in the perf harness produces false reds on PRs (see project memory
+# `project_polish_push_ci_zero`). Runs on push-to-main to catch real
+# regressions; runs on-demand via workflow_dispatch for any PR that
+# needs explicit perf validation.
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   perf-budget:

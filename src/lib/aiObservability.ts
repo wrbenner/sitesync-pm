@@ -7,6 +7,7 @@
 // `traceLLM` and we record model, tokens, cost, latency, and success.
 
 import { supabase, fromTable } from './supabase'
+import { recordIrisTrace } from './observability/langfuse'
 // Model cost reference, USD per 1K tokens. Update when Anthropic/OpenAI/Google
 // publish new pricing. Values are input → output.
 
@@ -89,6 +90,13 @@ async function recordTrace(
 /**
  * Wrap an LLM call. The inner `execute` returns both the model output and
  * the token usage it reports — caller knows the model's response shape.
+ *
+ * Writes to two telemetry sinks:
+ *   1. `ai_cost_tracking` (always) — the canonical cost rollup table
+ *      consumed by the dashboard widget below.
+ *   2. Langfuse self-host (when env keys are set) — per ADR-010, the
+ *      trace dashboard the eval pipeline shares. Best-effort; failures
+ *      here NEVER affect the caller.
  */
 export async function traceLLM<T>(
   input: TraceInput,
@@ -104,6 +112,41 @@ export async function traceLLM<T>(
       latencyMs,
     })
     const costCents = estimateCostCents(input.model, res.inputTokens, res.outputTokens)
+
+    // Best-effort Langfuse mirror. The output payload may not be a string
+    // (e.g. structured classification response); we stringify so it's
+    // searchable in the trace UI but skip if it would explode in size.
+    if (traceId) {
+      const outputForTrace =
+        typeof res.output === 'string' ? res.output : safeStringify(res.output)
+      try {
+        await recordIrisTrace(
+          {
+            auditId: traceId,
+            projectId: input.projectId ?? null,
+            userId: input.userId ?? null,
+            metadata: {
+              feature: input.feature ?? null,
+              operation: input.operation,
+              ...input.metadata,
+            },
+          },
+          {
+            provider: input.service,
+            model: input.model,
+            input: input.promptPreview ?? '',
+            output: outputForTrace,
+            inputTokens: res.inputTokens,
+            outputTokens: res.outputTokens,
+            latencyMs,
+            costCents,
+          },
+        )
+      } catch (err) {
+        console.warn('[aiObservability] Langfuse mirror failed (non-fatal):', err)
+      }
+    }
+
     return {
       output: res.output,
       traceId: traceId ?? '',
@@ -123,6 +166,15 @@ export async function traceLLM<T>(
       error: err instanceof Error ? err.message : String(err),
     })
     throw err
+  }
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    const str = JSON.stringify(value)
+    return str.length > 50_000 ? `${str.slice(0, 50_000)}…[truncated]` : str
+  } catch {
+    return '[unserializable]'
   }
 }
 

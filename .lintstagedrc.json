@@ -1,0 +1,13 @@
+{
+  "_comment": "Pre-commit linters per file pattern. Run by .husky/pre-commit via lint-staged. Keep targets fast — every commit pays this cost. The full project typecheck runs separately in pre-commit (incremental, cached); this file is for staged-file-only checks.",
+
+  "*.{ts,tsx}": [
+    "eslint --max-warnings 0"
+  ],
+  "*.{js,jsx,mjs,cjs}": [
+    "eslint --max-warnings 0"
+  ],
+  "*.json": [
+    "node -e \"JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))\""
+  ]
+}

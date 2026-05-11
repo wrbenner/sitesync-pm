@@ -1,10 +1,15 @@
 name: Test + Audit
 
+# INFORMATIONAL ONLY. Not a required status check. The two checks in
+# this workflow (Vitest + tsc) duplicate homeostasis.yml's Gate 1
+# (TypeScript) and Gate 3 (Tests) — both of which ARE required and
+# carry the load on PRs. Running this workflow on PRs adds noise
+# without signal. Kept on push-to-main + workflow_dispatch for
+# historical artifact / on-demand re-runs.
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies

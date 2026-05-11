@@ -691,6 +691,12 @@ function AppContent() {
             minWidth: 0,
             overflow: 'auto',
             position: 'relative',
+            // When the sidebar is collapsed a fixed hamburger button appears
+            // at viewport left:16, width:40 (right edge at x=56). Page content
+            // starts at x=0 here; PageContainer adds pagePaddingX=36px, putting
+            // headings at x=36 — inside the button zone. Add 28px so headings
+            // land at x=64, safely past the button's right edge.
+            paddingLeft: sidebarCollapsed && !isMobile ? 28 : undefined,
           }}
         >
           {/* Floating "show menu" button when sidebar is collapsed.

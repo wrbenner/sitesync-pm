@@ -43,7 +43,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: "22"
   OWNER: wrbenner
   REPO: sitesync-pm
 
@@ -66,7 +65,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: "npm"
 
       - name: Install dependencies
@@ -407,7 +406,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.exp.outputs.skip != 'true'
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
           cache: "npm"
 
       - name: Install dependencies + Claude Code
@@ -836,35 +835,21 @@ jobs:
               pr_number = pr_url.split("/")[-1]
               print(f"   Created PR #{pr_number}: {pr_url}")
 
-              # ── Create check runs for required status checks ────────────
-              # GITHUB_TOKEN events don't trigger other workflows (GitHub security).
-              # The organism already verified tsc, eslint, and build in the build phase.
-              # Create check runs reflecting those verified results.
-              rc_sha, head_sha, _ = run_gh("gh", "api",
-                  f"repos/{owner}/{repo}/pulls/{pr_number}", "--jq", ".head.sha")
-
-              if rc_sha == 0 and head_sha:
-                  required_checks = [
-                      "Gate 1: TypeScript",
-                      "Gate 2: ESLint",
-                      "Gate 3: Tests",
-                      "Gate 4: Build",
-                      "Eval Layer 1: Database/RLS",
-                      "Eval Layer 2: API",
-                  ]
-                  eslint_count = exp.get("eslint_errors", "verified")
-                  for check_name in required_checks:
-                      run_gh("gh", "api", f"repos/{owner}/{repo}/check-runs",
-                          "--method", "POST",
-                          "-f", f"name={check_name}",
-                          "-f", f"head_sha={head_sha}",
-                          "-f", "status=completed",
-                          "-f", "conclusion=success",
-                          "-f", "output[title]=Passed",
-                          "-f", f"output[summary]=Verified by Organism build phase. ESLint: {eslint_count}, tsc: 0 errors, build: success.")
-                  print(f"   ✅ Created {len(required_checks)} check runs on {head_sha[:7]}")
-              else:
-                  print(f"   ⚠️  Could not get head SHA for check runs")
+              # ── Synthetic check-run writes REMOVED ──────────────────────
+              # Previously this block POSTed hardcoded conclusion=success
+              # check-runs for Gate 1-4 + Eval Layer 1-2 to the PR's head
+              # SHA, fooling branch protection into letting the organism
+              # auto-merge. That was a lie: the organism's local "build
+              # phase" is not the same code path as the real CI gates and
+              # often gave a falsely-green view of main.
+              #
+              # New posture: organism PRs run the real CI like everyone
+              # else. If the organism wants the PR to merge, the real
+              # checks have to actually pass. Removed 2026-05-10 in PR γ
+              # of the perfect-velocity push.
+              eslint_count = exp.get("eslint_errors", "verified")
+              print(f"   ℹ️  Organism build verified locally: ESLint={eslint_count}, tsc=0, build=ok")
+              print(f"   ℹ️  PR #{pr_number} now waits for real CI to verify the same thing.")
 
               # ── Merge with auto-rebase on conflicts ─────────────────
               print("   ⏳ Waiting for checks to register (30s)...")

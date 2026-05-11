@@ -11,9 +11,6 @@ permissions:
   contents: write
   pull-requests: write
 
-env:
-  NODE_VERSION: '22'
-
 jobs:
   typecheck:
     name: "Gate 1: TypeScript"
@@ -22,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
       - run: npm ci
       - run: npx tsc --noEmit
 
@@ -33,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
       - run: npm ci
       - name: Run ESLint on src/ only (not .claude/worktrees)
         run: npx eslint "src/**/*.{ts,tsx}" --format json -o /tmp/eslint-report.json || true
@@ -60,7 +57,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
       - run: npm ci
       - name: Run unit tests (skip Supabase-dependent tests)
         run: |
@@ -79,7 +76,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
       - run: npm ci
       - run: npm run build
       - name: Bundle size ratchet
@@ -145,7 +142,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
       - run: npm ci
       - name: Measure and ratchet quality floor
         run: |
