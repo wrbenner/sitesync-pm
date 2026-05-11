@@ -212,7 +212,11 @@ export function useFieldCapture(): UseFieldCapture {
         setGpsError(null);
       },
       (err) => {
-        setGpsError(err.message || 'Location unavailable');
+        const msg =
+          err.code === 1 ? 'Location access denied' :
+          err.code === 2 ? 'Location unavailable' :
+          'Location timed out';
+        setGpsError(msg);
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
     );

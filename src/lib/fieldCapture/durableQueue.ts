@@ -95,15 +95,8 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Random UUID, falls back to a manual implementation in older runtimes. */
 function makeUuid(): string {
-  const c = globalThis.crypto as Crypto | undefined
-  if (c?.randomUUID) return c.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
-    const r = (Math.random() * 16) | 0
-    const v = ch === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  return crypto.randomUUID()
 }
 
 /**

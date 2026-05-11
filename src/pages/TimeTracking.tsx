@@ -430,31 +430,40 @@ const TimeTracking: React.FC = () => {
         </>
       }
     >
-      {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: spacing['1'], marginBottom: spacing['4'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        {([
-          { key: 'timesheet', label: 'Timesheet', icon: Clock },
-          { key: 'payroll', label: 'Certified Payroll', icon: FileText },
-          { key: 'tm', label: 'T&M Tickets', icon: Briefcase },
-          { key: 'rates', label: 'Rates', icon: DollarSign },
-          { key: 'export', label: 'Payroll Export', icon: Upload },
-        ] as const).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: spacing['1'],
-              padding: `${spacing['2']} ${spacing['3']}`,
-              fontSize: typography.fontSize.sm, fontWeight: activeTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
-              color: activeTab === tab.key ? colors.primaryOrange : colors.textSecondary,
-              background: activeTab === tab.key ? colors.surfaceInset : 'transparent',
-              border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >
-            <tab.icon size={14} /> {tab.label}
-          </button>
-        ))}
+      {/* Tab Navigation — scrollable on narrow viewports; gradient hints at right edge */}
+      <div style={{ position: 'relative', marginBottom: spacing['4'] }}>
+        <div role="tablist" aria-label="Time tracking sections" style={{ display: 'flex', gap: spacing['1'], borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: spacing['1'], overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {([
+            { key: 'timesheet', label: 'Timesheet', icon: Clock },
+            { key: 'payroll', label: 'Certified Payroll', icon: FileText },
+            { key: 'tm', label: 'T&M Tickets', icon: Briefcase },
+            { key: 'rates', label: 'Rates', icon: DollarSign },
+            { key: 'export', label: 'Payroll Export', icon: Upload },
+          ] as const).map((tab) => (
+            <button
+              key={tab.key}
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: spacing['1'],
+                padding: `${spacing['2']} ${spacing['3']}`,
+                fontSize: typography.fontSize.sm, fontWeight: activeTab === tab.key ? typography.fontWeight.semibold : typography.fontWeight.medium,
+                color: activeTab === tab.key ? colors.primaryOrange : colors.textSecondary,
+                background: activeTab === tab.key ? colors.surfaceInset : 'transparent',
+                border: 'none', borderRadius: borderRadius.md, cursor: 'pointer',
+                whiteSpace: 'nowrap', flex: '0 0 auto',
+              }}
+            >
+              <tab.icon size={14} /> {tab.label}
+            </button>
+          ))}
+        </div>
+        <div aria-hidden style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0, width: 32,
+          background: `linear-gradient(to left, ${colors.surfacePage}, transparent)`,
+          pointerEvents: 'none',
+        }} />
       </div>
 
       {activeTab === 'timesheet' && (<>

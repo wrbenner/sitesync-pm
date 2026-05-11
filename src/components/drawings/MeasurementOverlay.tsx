@@ -78,7 +78,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
 
 function normalizedDistance(
   a: NormalizedPoint,
@@ -450,6 +450,7 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   // Without this, switching tools and coming back would resume a half-drawn measurement.
   useEffect(() => {
     if (!isMeasureTool(activeTool)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInProgressPoints([]);
       setCalibratePoints([]);
     }

@@ -129,6 +129,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
 
   // Reset the search whenever the dropdown closes so the next open starts fresh.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) setFilter('')
   }, [open])
 
@@ -256,6 +257,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                   }}
                 >
                   <Search size={12} color={colors.textTertiary} />
+                  {/* eslint-disable jsx-a11y/no-autofocus */}
                   <input
                     autoFocus
                     type="text"
@@ -274,6 +276,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                       minWidth: 0,
                     }}
                   />
+                  {/* eslint-enable jsx-a11y/no-autofocus */}
                 </div>
               </div>
             )}
@@ -465,7 +468,9 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawFullName = authProfile?.full_name?.trim() ?? ''
+  // Reject em-dash / en-dash only strings that look like DB placeholders.
+  const fullName = /^[-—–]+$/.test(rawFullName) ? '' : rawFullName
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
