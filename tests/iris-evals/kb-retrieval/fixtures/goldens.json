@@ -1,0 +1,162 @@
+[
+  {
+    "id": "g-001",
+    "category": "drawing",
+    "question": "What is shown on sheet A-101?",
+    "expected_source_types": ["drawing"],
+    "expected_anchor_substrings": ["A-101"],
+    "min_score": 0.4
+  },
+  {
+    "id": "g-002",
+    "category": "drawing",
+    "question": "Show me the structural framing plan for the third floor",
+    "expected_source_types": ["drawing"],
+    "expected_anchor_substrings": ["framing", "S-"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-003",
+    "category": "drawing",
+    "question": "Where is the curtain wall thermal break detail?",
+    "expected_source_types": ["drawing", "spec_section"],
+    "expected_anchor_substrings": ["thermal", "curtain"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-004",
+    "category": "spec",
+    "question": "What does spec section 03 30 00 say about concrete cover?",
+    "expected_source_types": ["spec_section"],
+    "expected_anchor_substrings": ["03 30 00", "concrete"],
+    "min_score": 0.4
+  },
+  {
+    "id": "g-005",
+    "category": "spec",
+    "question": "Find the curtain wall specifications",
+    "expected_source_types": ["spec_section"],
+    "expected_anchor_substrings": ["08 44", "curtain"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-006",
+    "category": "spec",
+    "question": "What are the waterproofing requirements per spec section 07 14 00?",
+    "expected_source_types": ["spec_section"],
+    "expected_anchor_substrings": ["07 14", "waterproofing"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-007",
+    "category": "rfi",
+    "question": "What is the status of RFI 142?",
+    "expected_source_types": ["rfi"],
+    "expected_anchor_substrings": ["142", "RFI"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-008",
+    "category": "rfi",
+    "question": "Are there any open RFIs about column line 7?",
+    "expected_source_types": ["rfi"],
+    "expected_anchor_substrings": ["column", "line 7"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-009",
+    "category": "daily_log",
+    "question": "What was logged on 2026-04-15?",
+    "expected_source_types": ["daily_log"],
+    "expected_anchor_substrings": ["2026-04-15"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-010",
+    "category": "daily_log",
+    "question": "Summarize last week's weather conditions",
+    "expected_source_types": ["daily_log"],
+    "expected_anchor_substrings": ["weather"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-011",
+    "category": "photo",
+    "question": "Show me photos of the north elevation",
+    "expected_source_types": ["photo"],
+    "expected_anchor_substrings": ["north", "elevation"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-012",
+    "category": "conversation",
+    "question": "What did Brad say about the thermal break placement?",
+    "expected_source_types": ["conversation"],
+    "expected_anchor_substrings": ["Brad", "thermal break"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-013",
+    "category": "submittal",
+    "question": "Which submittal satisfies spec 07 92 00?",
+    "expected_source_types": ["submittal"],
+    "expected_anchor_substrings": ["07 92 00"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-014",
+    "category": "change_order",
+    "question": "Summarize change order CO-14",
+    "expected_source_types": ["change_order"],
+    "expected_anchor_substrings": ["CO-14"],
+    "min_score": 0.4
+  },
+  {
+    "id": "g-015",
+    "category": "change_order",
+    "question": "What change orders exceed $5,000?",
+    "expected_source_types": ["change_order"],
+    "expected_anchor_substrings": ["change order"],
+    "min_score": 0.25
+  },
+  {
+    "id": "g-016",
+    "category": "contract",
+    "question": "What does AIA A201 article 3 require about contract document review?",
+    "expected_source_types": ["contract"],
+    "expected_anchor_substrings": ["3.2", "review"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-017",
+    "category": "spreadsheet",
+    "question": "Show me the budget summary range",
+    "expected_source_types": ["spreadsheet"],
+    "expected_anchor_substrings": ["budget", "summary"],
+    "min_score": 0.3
+  },
+  {
+    "id": "g-018",
+    "category": "cross_source",
+    "question": "What does the curtain wall RFI say compared to the spec section?",
+    "expected_source_types": ["rfi", "spec_section"],
+    "expected_anchor_substrings": ["curtain"],
+    "min_score": 0.25
+  },
+  {
+    "id": "g-019",
+    "category": "cross_source",
+    "question": "Is the thermal break submittal consistent with the original drawing detail?",
+    "expected_source_types": ["submittal", "drawing"],
+    "expected_anchor_substrings": ["thermal"],
+    "min_score": 0.25
+  },
+  {
+    "id": "g-020",
+    "category": "cross_source",
+    "question": "What pay app reference is relevant for change order CO-14?",
+    "expected_source_types": ["change_order", "pay_app"],
+    "expected_anchor_substrings": ["CO-14"],
+    "min_score": 0.25
+  }
+]
