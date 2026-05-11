@@ -25,6 +25,7 @@
     "test:acceptance": "playwright test --config=playwright.acceptance.config.ts",
     "test:coverage": "vitest run --coverage",
     "audit": "npm run audit:gen && npm run audit:static && playwright test audit/generated audit/harness/route-audit.ts",
+    "iris:eval:persona": "tsx tests/iris-evals/persona-divergence/run.ts",
     "audit:static": "tsx scripts/audit.ts",
     "audit:gen": "tsx scripts/generate-e2e.ts",
     "bundle:check": "node scripts/check-bundle-size.js",

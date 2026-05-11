@@ -1,0 +1,46 @@
+{
+  "name": "safety-walk-followup",
+  "description": "Safety walk follow-up: missing fall protection above 6ft. Super persona should be terse + tactical; PM should reference contract safety provisions.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/safety/SW-2026-05-10/items",
+    "entity_type": null,
+    "entity_id": null,
+    "invocation_intent": "recommend_action"
+  },
+  "slots": {
+    "what": {
+      "entity_type": null,
+      "entity_id": null,
+      "entity_state": null,
+      "entity_summary": "Safety walk SW-2026-05-10 — fall protection not deployed on north elevation, ironworker crew.",
+      "related_entities": [],
+      "current_page": "/safety/SW-2026-05-10/items"
+    },
+    "when": {
+      "project_phase": "superstructure",
+      "days_to_substantial_completion": 100,
+      "schedule_status": "on_track",
+      "schedule_variance_days": 0,
+      "last_user_session_at": "2026-05-10T09:30:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": "North elevation",
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "recommend_action",
+      "page_intent": "list_view",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

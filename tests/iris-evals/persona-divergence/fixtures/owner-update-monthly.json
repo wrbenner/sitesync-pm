@@ -1,0 +1,46 @@
+{
+  "name": "owner-update-monthly",
+  "description": "Monthly owner update with one CO authorized and two schedule risks. Owner-rep persona must frame in outcomes (days/dollars), never reveal contingency.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/reports/owner",
+    "entity_type": null,
+    "entity_id": null,
+    "invocation_intent": "draft_owner_update"
+  },
+  "slots": {
+    "what": {
+      "entity_type": null,
+      "entity_id": null,
+      "entity_state": null,
+      "entity_summary": "Monthly owner update. 1 authorized CO; 2 schedule risks.",
+      "related_entities": [],
+      "current_page": "/reports/owner"
+    },
+    "when": {
+      "project_phase": "superstructure",
+      "days_to_substantial_completion": 120,
+      "schedule_status": "behind",
+      "schedule_variance_days": -5,
+      "last_user_session_at": "2026-05-08T11:00:00Z",
+      "cycle_position": "oac_today"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_owner_update",
+      "page_intent": "create_flow",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

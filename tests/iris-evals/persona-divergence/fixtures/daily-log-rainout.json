@@ -1,0 +1,46 @@
+{
+  "name": "daily-log-rainout",
+  "description": "Daily log for a weather rainout day. Super persona should produce a tight jobsite-vocab summary; Office persona should produce documentation-grade prose. Foreman persona is structured form output.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/daily-log/2026-05-10",
+    "entity_type": "daily_log",
+    "entity_id": "DL-2026-05-10",
+    "invocation_intent": "draft_daily_log"
+  },
+  "slots": {
+    "what": {
+      "entity_type": "daily_log",
+      "entity_id": "DL-2026-05-10",
+      "entity_state": "draft",
+      "entity_summary": "Rainout day. 0 productive hours on roofing. 4 crew released by 10am.",
+      "related_entities": [],
+      "current_page": "/daily-log/2026-05-10"
+    },
+    "when": {
+      "project_phase": "enclosure",
+      "days_to_substantial_completion": 90,
+      "schedule_status": "behind",
+      "schedule_variance_days": -3,
+      "last_user_session_at": "2026-05-10T07:00:00Z",
+      "cycle_position": "normal_week"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": { "temp_f": 52, "conditions": "Heavy rain", "precipitation_pct": 95, "as_of": "2026-05-10T08:00:00Z" },
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_daily_log",
+      "page_intent": "create_flow",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}

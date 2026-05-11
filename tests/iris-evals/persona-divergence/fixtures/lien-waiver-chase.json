@@ -1,0 +1,46 @@
+{
+  "name": "lien-waiver-chase",
+  "description": "Lien waiver chase for a $48K progress draw. Office persona should produce documentation-grade language; never paraphrase contract clauses.",
+  "invocation": {
+    "user_id": "fixture-user",
+    "org_id": "fixture-org",
+    "project_id": "project-avery-oaks",
+    "current_page": "/pay-apps/PA-009/lien-waivers",
+    "entity_type": null,
+    "entity_id": null,
+    "invocation_intent": "draft_lien_waiver"
+  },
+  "slots": {
+    "what": {
+      "entity_type": null,
+      "entity_id": null,
+      "entity_state": null,
+      "entity_summary": "Lien waiver chase — PA-009, $48,200 progress draw, sub: Acme Mechanical.",
+      "related_entities": [],
+      "current_page": "/pay-apps/PA-009/lien-waivers"
+    },
+    "when": {
+      "project_phase": "superstructure",
+      "days_to_substantial_completion": 90,
+      "schedule_status": "on_track",
+      "schedule_variance_days": 0,
+      "last_user_session_at": "2026-05-08T09:00:00Z",
+      "cycle_position": "pay_app_close"
+    },
+    "where": {
+      "project_id": "project-avery-oaks",
+      "project_name": "Avery Oaks",
+      "area_id": null,
+      "area_name": null,
+      "gps_hint": null,
+      "weather_now": null,
+      "weather_5d_forecast": null
+    },
+    "why": {
+      "invocation_intent": "draft_lien_waiver",
+      "page_intent": "list_view",
+      "recent_query_history": [],
+      "pinned_context": []
+    }
+  }
+}
