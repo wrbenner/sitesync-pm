@@ -41,6 +41,12 @@ export default defineConfig([
       // "code in activity" finding). UserName is the canonical resolver;
       // ESLint blocks regressions at build time.
       'sitesync/no-raw-user-id-in-jsx': 'error',
+      // Per ADR-020 / IRIS_PHASE_1 spec §5.3 — caller-supplied `system=` on
+      // iris-call invocations is deprecated. New code must route through
+      // `buildContext()` in src/services/iris/contextFabric.ts. The rule
+      // exempts files under src/services/iris/ where the Fabric and its
+      // legacy adapter live; everything else fails the build.
+      'sitesync/no-raw-iris-system': 'error',
       // UserName.tsx itself is the canonical resolver — it has to render
       // the raw value in the non-UUID early-return branch. Disabling at
       // the per-file level (below) instead of inside the file keeps the
