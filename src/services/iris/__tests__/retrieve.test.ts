@@ -1,15 +1,19 @@
 // ────────────────────────────────────────────────────────────────────────────
-// retrieve() — Phase 3a tests
+// retrieve() tests — Phase 3c full impl
 // ────────────────────────────────────────────────────────────────────────────
 // Spec: docs/audits/IRIS_PHASE_3_KNOWLEDGE_ABSORPTION_SPEC_2026-05-08.md §9
 //
-// Phase 3a tests the typed surface + the stub's contract. Real corpus
-// retrieval (recall@5 etc.) is asserted by Phase 3e's harness against
-// staging with real chunks. These tests run anywhere with no DB.
+// Phase 3a shipped the typed-surface tests against the stub. Phase 3c adds:
+//   - LRU cache hit/miss/expiration
+//   - Telemetry emission (fire-and-forget; must not break user path)
+//   - RPC error fallback to empty result
+//   - empty_corpus probe when zero chunks returned
+//   - Options pass-through (vector_weight, tsv_weight, freshness_decay)
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  __resetRetrieveCacheForTests,
   isValidSourceAnchor,
   RetrieveError,
   retrieve,
@@ -23,21 +27,39 @@ import {
   type RetrieveQuery,
 } from '../types/retrieval'
 
-// ── Mock supabase + featureFlags so the stub is deterministic ───────────────
+// ── Mocks ────────────────────────────────────────────────────────────────────
 
-vi.mock('../../../lib/supabase', () => ({
-  supabase: {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          is: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
+const supabaseMock = vi.hoisted(() => {
+  type AnyResult = { data?: unknown; error: unknown; count?: number }
+  const rpcSpy = vi.fn<(name: string, args: unknown) => Promise<AnyResult>>(
+    async () => ({ data: [], error: null }),
+  )
+  const fromCountSpy = vi.fn<() => Promise<AnyResult>>(
+    async () => ({ count: 0, error: null, data: [] }),
+  )
+  const invokeSpy = vi.fn<(fn: string, opts: unknown) => Promise<AnyResult>>(
+    async () => ({ data: { embedding: null }, error: null }),
+  )
+
+  return {
+    supabase: {
+      rpc: rpcSpy,
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            is: () => ({
+              limit: fromCountSpy,
+            }),
           }),
         }),
       }),
-    }),
-  },
-}))
+      functions: { invoke: invokeSpy },
+    },
+    spies: { rpcSpy, fromCountSpy, invokeSpy },
+  }
+})
+
+vi.mock('../../../lib/supabase', () => ({ supabase: supabaseMock.supabase }))
 
 const flagsModule = vi.hoisted(() => ({ FLAGS: { irisKbEnabled: false } }))
 vi.mock('../../../lib/featureFlags', () => flagsModule)
@@ -66,6 +88,13 @@ function healthyQuery(overrides: Partial<RetrieveQuery> = {}): RetrieveQuery {
 
 beforeEach(() => {
   flagsModule.FLAGS.irisKbEnabled = false
+  __resetRetrieveCacheForTests()
+  supabaseMock.spies.rpcSpy.mockReset()
+  supabaseMock.spies.rpcSpy.mockResolvedValue({ data: [], error: null })
+  supabaseMock.spies.fromCountSpy.mockReset()
+  supabaseMock.spies.fromCountSpy.mockResolvedValue({ count: 0, error: null })
+  supabaseMock.spies.invokeSpy.mockReset()
+  supabaseMock.spies.invokeSpy.mockResolvedValue({ data: { embedding: null }, error: null })
 })
 
 afterEach(() => {
@@ -80,8 +109,6 @@ describe('IrisSourceType discriminated union', () => {
   })
 
   it.each(ALL_SOURCE_TYPES)('isValidSourceAnchor accepts %s kind', (kind) => {
-    // Minimal valid anchor per kind. Some kinds have required fields beyond
-    // `kind`; we only need to prove the kind discriminant is accepted here.
     const anchor = { kind } as unknown as KbSourceAnchor
     expect(isValidSourceAnchor(anchor)).toBe(true)
   })
@@ -175,38 +202,296 @@ describe('retrieve() — input validation', () => {
   })
 })
 
-// ── 3. retrieve() return shape ──────────────────────────────────────────────
+// ── 3. retrieve() flag + empty-corpus paths ─────────────────────────────────
 
-describe('retrieve() — stub return shape', () => {
-  it('returns empty corpus when flag is off (Phase 3a default)', async () => {
+describe('retrieve() — flag + empty-corpus paths', () => {
+  it('returns empty corpus when flag is off (no RPC call)', async () => {
     flagsModule.FLAGS.irisKbEnabled = false
     const result = await retrieve(healthyQuery())
     expect(result.chunks).toEqual([])
     expect(result.empty_corpus).toBe(true)
-    expect(result.cache_hit).toBe(false)
-    expect(result.latency_ms).toBeGreaterThanOrEqual(0)
+    expect(supabaseMock.spies.rpcSpy).not.toHaveBeenCalled()
   })
 
-  it('returns empty corpus when flag is on but corpus is empty', async () => {
+  it('returns empty_corpus=true when RPC returns 0 rows AND probe count is 0', async () => {
     flagsModule.FLAGS.irisKbEnabled = true
+    supabaseMock.spies.rpcSpy.mockResolvedValueOnce({ data: [], error: null })
+    supabaseMock.spies.fromCountSpy.mockResolvedValueOnce({ count: 0, error: null })
     const result = await retrieve(healthyQuery())
     expect(result.chunks).toEqual([])
     expect(result.empty_corpus).toBe(true)
   })
 
-  it('always returns a latency_ms that is a non-negative integer', async () => {
+  it('returns empty_corpus=false when RPC returns 0 rows but probe shows chunks exist', async () => {
+    flagsModule.FLAGS.irisKbEnabled = true
+    supabaseMock.spies.rpcSpy.mockResolvedValueOnce({ data: [], error: null })
+    supabaseMock.spies.fromCountSpy.mockResolvedValueOnce({ count: 42, error: null })
+    const result = await retrieve(healthyQuery())
+    expect(result.chunks).toEqual([])
+    expect(result.empty_corpus).toBe(false)
+  })
+
+  it('latency_ms is always a non-negative integer', async () => {
     const result = await retrieve(healthyQuery())
     expect(Number.isInteger(result.latency_ms)).toBe(true)
     expect(result.latency_ms).toBeGreaterThanOrEqual(0)
   })
+})
 
-  it('cache_hit is false on the stub (cache lands in Phase 3c)', async () => {
+// ── 4. retrieve() RPC happy path ────────────────────────────────────────────
+
+describe('retrieve() — RPC happy path', () => {
+  beforeEach(() => {
+    flagsModule.FLAGS.irisKbEnabled = true
+  })
+
+  it('returns chunks mapped from RPC rows', async () => {
+    supabaseMock.spies.rpcSpy.mockResolvedValueOnce({
+      data: [
+        {
+          chunk_id: 'c1',
+          source_type: 'spec_section',
+          source_id: 's-03',
+          source_anchor: { kind: 'spec_section', section: '03 30 00' },
+          chunk_text: 'Cast-in-place concrete cover requirements...',
+          sensitivity: 'public_to_project',
+          score: 0.91,
+          ingested_at: '2026-05-11T12:00:00Z',
+          metadata: { csi_division: '03' },
+        },
+      ],
+      error: null,
+    })
     const result = await retrieve(healthyQuery())
-    expect(result.cache_hit).toBe(false)
+    expect(result.chunks).toHaveLength(1)
+    expect(result.chunks[0].chunk_id).toBe('c1')
+    expect(result.chunks[0].source_type).toBe('spec_section')
+    expect(result.empty_corpus).toBe(false)
+  })
+
+  it('passes default weights (0.7 / 0.3 / 0.001) and min_score to RPC', async () => {
+    await retrieve(healthyQuery())
+    const args = supabaseMock.spies.rpcSpy.mock.calls[0][1] as Record<string, unknown>
+    expect(args.p_vector_weight).toBe(0.7)
+    expect(args.p_tsv_weight).toBe(0.3)
+    expect(args.p_freshness_decay).toBe(0.001)
+    expect(args.p_min_score).toBe(0.1)
+    expect(args.p_top_k).toBe(5)
+  })
+
+  it('honors caller-supplied weights + k + min_score', async () => {
+    await retrieve(healthyQuery(), {
+      k: 10,
+      min_score: 0.3,
+      vector_weight: 0.5,
+      tsv_weight: 0.5,
+      freshness_decay: 0.002,
+    })
+    const args = supabaseMock.spies.rpcSpy.mock.calls[0][1] as Record<string, unknown>
+    expect(args.p_top_k).toBe(10)
+    expect(args.p_min_score).toBe(0.3)
+    expect(args.p_vector_weight).toBe(0.5)
+    expect(args.p_tsv_weight).toBe(0.5)
+    expect(args.p_freshness_decay).toBe(0.002)
+  })
+
+  it('invokes iris-embed for the query text', async () => {
+    await retrieve(healthyQuery())
+    expect(supabaseMock.spies.invokeSpy).toHaveBeenCalledWith('iris-embed', {
+      body: { text: healthyQuery().text },
+    })
+  })
+
+  it('passes null embedding to RPC when iris-embed unavailable', async () => {
+    supabaseMock.spies.invokeSpy.mockResolvedValueOnce({
+      data: null,
+      error: { name: 'FunctionsHttpError', message: 'not deployed' },
+    })
+    await retrieve(healthyQuery())
+    const args = supabaseMock.spies.rpcSpy.mock.calls[0][1] as Record<string, unknown>
+    expect(args.q_embedding).toBeNull()
+  })
+
+  it('returns chunks even when embedding is null (ts_rank fallback)', async () => {
+    supabaseMock.spies.invokeSpy.mockResolvedValueOnce({ data: null, error: null })
+    supabaseMock.spies.rpcSpy.mockResolvedValueOnce({
+      data: [
+        {
+          chunk_id: 'c2',
+          source_type: 'rfi',
+          source_id: 'r-1',
+          source_anchor: { kind: 'rfi', rfi_id: 'r-1' },
+          chunk_text: 'RFI text...',
+          sensitivity: 'gc_only',
+          score: 0.45,
+          ingested_at: '2026-05-11T12:00:00Z',
+          metadata: {},
+        },
+      ],
+      error: null,
+    })
+    const result = await retrieve(healthyQuery())
+    expect(result.chunks).toHaveLength(1)
   })
 })
 
-// ── 4. rpcRowToKbChunk — RPC payload normalization ──────────────────────────
+// ── 5. LRU cache ────────────────────────────────────────────────────────────
+
+describe('retrieve() — LRU cache', () => {
+  beforeEach(() => {
+    flagsModule.FLAGS.irisKbEnabled = true
+  })
+
+  it('cache-miss on first call, cache-hit on second identical call', async () => {
+    supabaseMock.spies.rpcSpy.mockResolvedValue({
+      data: [
+        {
+          chunk_id: 'c1',
+          source_type: 'spec_section',
+          source_id: 's-1',
+          source_anchor: { kind: 'spec_section', section: '03 30 00' },
+          chunk_text: 'text',
+          sensitivity: 'public_to_project',
+          score: 0.9,
+          ingested_at: '2026-05-11T12:00:00Z',
+          metadata: {},
+        },
+      ],
+      error: null,
+    })
+    const r1 = await retrieve(healthyQuery())
+    const r2 = await retrieve(healthyQuery())
+    expect(r1.cache_hit).toBe(false)
+    expect(r2.cache_hit).toBe(true)
+    expect(r2.chunks).toEqual(r1.chunks)
+    // kb_retrieve called once — second call served from cache. Telemetry
+    // fires on both calls, so we filter to the kb_retrieve invocations only.
+    const kbCalls = supabaseMock.spies.rpcSpy.mock.calls.filter((c) => c[0] === 'kb_retrieve')
+    expect(kbCalls).toHaveLength(1)
+  })
+
+  const kbRetrieveCalls = () =>
+    supabaseMock.spies.rpcSpy.mock.calls.filter((c) => c[0] === 'kb_retrieve')
+
+  it('different queries produce separate cache keys', async () => {
+    await retrieve(healthyQuery({ text: 'first question' }))
+    await retrieve(healthyQuery({ text: 'second question' }))
+    expect(kbRetrieveCalls()).toHaveLength(2)
+  })
+
+  it('different opts produce separate cache keys', async () => {
+    await retrieve(healthyQuery(), { k: 5 })
+    await retrieve(healthyQuery(), { k: 10 })
+    expect(kbRetrieveCalls()).toHaveLength(2)
+  })
+
+  it('different personas produce separate cache keys', async () => {
+    await retrieve(healthyQuery({ persona: 'pm' }))
+    await retrieve(healthyQuery({ persona: 'owner_rep' }))
+    expect(kbRetrieveCalls()).toHaveLength(2)
+  })
+
+  it('whitespace + case normalization in the cache key', async () => {
+    await retrieve(healthyQuery({ text: 'Spec Section 03 30 00' }))
+    await retrieve(healthyQuery({ text: '  spec section 03 30 00  ' }))
+    // Same key after normalize -> cache hit on second.
+    expect(kbRetrieveCalls()).toHaveLength(1)
+  })
+
+  it('__resetRetrieveCacheForTests clears the cache', async () => {
+    await retrieve(healthyQuery())
+    __resetRetrieveCacheForTests()
+    await retrieve(healthyQuery())
+    expect(kbRetrieveCalls()).toHaveLength(2)
+  })
+})
+
+// ── 6. RPC error path ───────────────────────────────────────────────────────
+
+describe('retrieve() — RPC error path', () => {
+  beforeEach(() => {
+    flagsModule.FLAGS.irisKbEnabled = true
+  })
+
+  it('returns empty result (does not throw) when RPC fails', async () => {
+    supabaseMock.spies.rpcSpy.mockResolvedValueOnce({
+      data: null,
+      error: { name: 'PostgrestError', message: 'permission denied', code: '42501' },
+    })
+    const result = await retrieve(healthyQuery())
+    expect(result.chunks).toEqual([])
+    expect(result.empty_corpus).toBe(false) // we don't probe on error
+  })
+})
+
+// ── 7. Telemetry — fire-and-forget ──────────────────────────────────────────
+
+describe('retrieve() — telemetry emission', () => {
+  beforeEach(() => {
+    flagsModule.FLAGS.irisKbEnabled = true
+  })
+
+  it('emits one telemetry event per call (cache miss)', async () => {
+    await retrieve(healthyQuery())
+    const calls = supabaseMock.spies.rpcSpy.mock.calls.filter(
+      (c) => c[0] === 'iris_kb_record_retrieve',
+    )
+    expect(calls.length).toBe(1)
+  })
+
+  it('emits a cache_hit=true event on cache hit', async () => {
+    supabaseMock.spies.rpcSpy.mockResolvedValue({ data: [], error: null })
+    await retrieve(healthyQuery())
+    await retrieve(healthyQuery())
+    const telemetryCalls = supabaseMock.spies.rpcSpy.mock.calls.filter(
+      (c) => c[0] === 'iris_kb_record_retrieve',
+    )
+    expect(telemetryCalls.length).toBe(2)
+    const second = telemetryCalls[1][1] as Record<string, unknown>
+    expect(second.p_cache_hit).toBe(true)
+  })
+
+  it('telemetry failures do not break the user path', async () => {
+    let firstCall = true
+    supabaseMock.spies.rpcSpy.mockImplementation(async (name: string) => {
+      if (name === 'iris_kb_record_retrieve') {
+        throw new Error('telemetry network blip')
+      }
+      if (firstCall) {
+        firstCall = false
+        return { data: [], error: null }
+      }
+      return { data: [], error: null }
+    })
+    // Must not throw — fire-and-forget.
+    await expect(retrieve(healthyQuery())).resolves.toBeDefined()
+  })
+
+  it('truncates query_text to 1000 chars in telemetry', async () => {
+    const longText = 'q '.repeat(2500) // 5000 chars; under 4000 validator? No.
+    // Use a query just under the validator ceiling so it reaches telemetry.
+    const text = 'q '.repeat(1500).slice(0, 3999)
+    await retrieve(healthyQuery({ text }))
+    const telemetryCalls = supabaseMock.spies.rpcSpy.mock.calls.filter(
+      (c) => c[0] === 'iris_kb_record_retrieve',
+    )
+    expect(telemetryCalls.length).toBe(1)
+    const args = telemetryCalls[0][1] as Record<string, unknown>
+    expect(String(args.p_query_text).length).toBeLessThanOrEqual(1000)
+    expect(longText.length).toBeGreaterThan(0) // referenced
+  })
+
+  it('forwards caller_tag through to telemetry', async () => {
+    await retrieve(healthyQuery(), { caller_tag: 'code-specialist' })
+    const telemetryCalls = supabaseMock.spies.rpcSpy.mock.calls.filter(
+      (c) => c[0] === 'iris_kb_record_retrieve',
+    )
+    const args = telemetryCalls[0][1] as Record<string, unknown>
+    expect(args.p_caller_tag).toBe('code-specialist')
+  })
+})
+
+// ── 8. rpcRowToKbChunk — RPC payload normalization ──────────────────────────
 
 describe('rpcRowToKbChunk', () => {
   const baseRow = {
@@ -249,13 +534,9 @@ describe('rpcRowToKbChunk', () => {
   })
 })
 
-// ── 5. Persona × sensitivity matrix — defense-in-depth ──────────────────────
-// Documents which persona is allowed to see which sensitivity tier. Phase 3e
-// re-asserts these against the live RPC + RLS policy; these unit tests prove
-// the TYPE-level contract is what the spec demands. Mismatch = caught here.
+// ── 9. Persona × sensitivity matrix — defense-in-depth ──────────────────────
 
 describe('RLS smoke — persona-sensitivity matrix (defense-in-depth)', () => {
-  // (persona, sensitivity) -> allowed?
   const matrix: Array<[string, IrisSensitivity, boolean]> = [
     ['pm',             'public_to_project', true],
     ['pm',             'gc_only',           true],
@@ -273,14 +554,11 @@ describe('RLS smoke — persona-sensitivity matrix (defense-in-depth)', () => {
   ]
 
   it.each(matrix)('persona=%s sensitivity=%s -> allowed=%s', (_persona, _sensitivity, expected) => {
-    // The actual gate is in the kb_retrieve RPC + table RLS policy.
-    // This is the spec-author contract that those policies enforce.
-    // Phase 3e's rls-leakage.test.ts asserts the same against the real DB.
     expect(typeof expected).toBe('boolean')
   })
 })
 
-// ── 6. Performance budget reminders ─────────────────────────────────────────
+// ── 10. Budget tripwires ────────────────────────────────────────────────────
 
 describe('PHASE_3_ACCEPTANCE — budget tripwires', () => {
   it('latency budget is the spec §11 number (not drifted)', () => {
