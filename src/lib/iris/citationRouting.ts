@@ -62,6 +62,30 @@ export const CITATION_ROUTES: Record<CitationKind, CitationRoute> = {
     label: 'Change order',
     buildDeepLink: (ref) => `/change-orders/${ref}`,
   },
+  // Phase 3d additions ──────────────────────────────────────────────────────
+  spreadsheet_cell: {
+    label: 'Spreadsheet',
+    buildDeepLink: (ref, c) => {
+      if (c.sheet_name && c.range_a1) {
+        const q = new URLSearchParams({ sheet: c.sheet_name, range: c.range_a1 })
+        return `/files/${ref}?${q.toString()}`
+      }
+      return `/files/${ref}`
+    },
+  },
+  contract_clause: {
+    label: 'Contract clause',
+    buildDeepLink: (ref, c) => {
+      if (c.clause_number) {
+        return `/contracts/${ref}?clause=${encodeURIComponent(c.clause_number)}`
+      }
+      return `/contracts/${ref}`
+    },
+  },
+  punch_item: {
+    label: 'Punch item',
+    buildDeepLink: (ref) => `/punch-items/${ref}`,
+  },
 }
 
 /** Compile-time exhaustiveness check — fails to typecheck if a kind is missing. */
@@ -74,6 +98,9 @@ const ALL_KINDS: ReadonlyArray<CitationKind> = [
   'schedule_phase',
   'budget_line',
   'change_order',
+  'spreadsheet_cell',
+  'contract_clause',
+  'punch_item',
 ]
 
 export function isCitationKind(value: string): value is CitationKind {

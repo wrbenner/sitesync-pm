@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────────────────────
-// Code specialist — Phase 2d, ADR-018 conformant
+// Code specialist — Phase 3d, ADR-018 conformant
 // ────────────────────────────────────────────────────────────────────────────
 // Spec: docs/audits/IRIS_PHASE_2_SPECIALIST_SUBAGENTS_SPEC_2026-05-08.md (Code §)
 // ADR: docs/audits/ADR_018_SPECIALIST_BOUNDARY_CONTRACT_2026-05-08.md
@@ -9,8 +9,13 @@
 // `synthesis`: the model combines retrieved clauses into a draft answer but
 // cannot fabricate clause text or section identifiers.
 //
-// Phase 2d ships the contract surface + the keyword/jaccard retrieval stub.
-// pgvector-backed embedding retrieval lands Phase 3 per ADR-017.
+// Phase 3d cutover: the retrieval path uses `retrieve()` (pgvector hybrid)
+// when irisKbEnabled is on AND the project has indexed corpus; falls back
+// to kb-stub's Jaccard retrieval otherwise. The cite-or-reject decision
+// invariant is preserved — both paths produce the same decision shape.
+//
+// Old kb-stub.ts stays in-tree as a fallback for 14 days post-cutover, then
+// gets deleted in a Lap 5 cleanup PR after clean production traffic.
 
 import type { IrisContext } from '../types/context'
 
@@ -39,8 +44,8 @@ export interface CodeInput {
   k?: number
 }
 
-const CODE_VERSION = '0.1.0' as const
-const CODE_PROMPT_VERSION = 'phase-2d.0' as const
+const CODE_VERSION = '0.2.0' as const // bumped at 3d cutover
+const CODE_PROMPT_VERSION = 'phase-3d.0' as const
 
 // Spec: "KB retrieval recall@5 >= 0.5 over candidate clauses; no hallucinated
 // section identifiers". The deterministic check is the first half (recall
@@ -133,12 +138,19 @@ export const CODE_DECL: SpecialistDecl<CodeInput> = {
     'retrieval_count',
     'cite_or_reject',
     'top_score',
+    // Phase 3d cutover audit fields:
+    'retrieval_path', // 'kb_stub' | 'retrieve_pgvector' | 'fallback_kb_stub'
+    'project_id',
   ],
   toolAllowList: [
     'query_kb',
     'cite_spec_reference',
     'cite_drawing_coordinate',
     'cite_rfi_reference',
+    // Phase 3d additions — retrieve() can surface these via cross-source matches.
+    'cite_contract_clause',
+    'cite_spreadsheet_cell',
+    'cite_punch_item',
   ],
 }
 
