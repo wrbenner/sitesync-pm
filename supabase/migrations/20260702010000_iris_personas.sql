@@ -27,7 +27,11 @@ CREATE TABLE IF NOT EXISTS iris_personas (
   permission_scope_template JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (slug, COALESCE(org_id, '00000000-0000-0000-0000-000000000000'::uuid))
+  -- effective_org_id folds NULL (system default) into a sentinel UUID;
+  -- Postgres doesn't allow expressions inside PRIMARY KEY constraints.
+  effective_org_id UUID GENERATED ALWAYS AS
+    (COALESCE(org_id, '00000000-0000-0000-0000-000000000000'::uuid)) STORED,
+  PRIMARY KEY (slug, effective_org_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_iris_personas_org

@@ -23,7 +23,11 @@ CREATE TABLE IF NOT EXISTS role_to_default_persona (
   org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   persona_slug TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (role, COALESCE(org_id, '00000000-0000-0000-0000-000000000000'::uuid))
+  -- effective_org_id folds NULL (system default) into a sentinel UUID;
+  -- Postgres doesn't allow expressions inside PRIMARY KEY constraints.
+  effective_org_id UUID GENERATED ALWAYS AS
+    (COALESCE(org_id, '00000000-0000-0000-0000-000000000000'::uuid)) STORED,
+  PRIMARY KEY (role, effective_org_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_role_to_default_persona_lookup

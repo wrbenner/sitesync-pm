@@ -52,19 +52,12 @@ export function usePersona(): UsePersonaResult {
     staleTime: 30_000,
     queryFn: async (): Promise<PersonaSlug | null> => {
       if (!userId) return null
-      // The `resolve_persona` RPC ships in migration
-      // 20260722010000_role_to_default_persona.sql (this PR). Until
-      // db-types:write regenerates database.ts against staging, supabase.rpc's
-      // overload set does not include the new function, so we cast through
-      // a function-typed wrapper. Replace with the typed call after the
-      // regen lands.
-      const rpc = supabase.rpc as unknown as (
-        fn: string,
-        args: Record<string, unknown>,
-      ) => Promise<{ data: unknown; error: { message: string } | null }>
-      const { data, error } = await rpc('resolve_persona', {
+      const { data, error } = await supabase.rpc('resolve_persona', {
         p_user_id: userId,
-        p_project_id: projectId,
+        // The RPC accepts NULL server-side (treated as "no active project,
+        // resolve from org or system default"). The generated type is strict
+        // `string`; cast through unknown so the wire-format null is still sent.
+        p_project_id: projectId as unknown as string,
       })
       if (error) {
         if (import.meta.env.DEV) {

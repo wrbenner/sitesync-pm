@@ -160,9 +160,24 @@ These are not Day-0 blockers but should land within Phase 3a's PR:
 
 | Item | Status | Date |
 |------|--------|------|
-| 1. db-types regen | ⏳ pending | |
-| 2. pgvector check | ⏳ pending | |
-| 3. OPENAI_API_KEY | ⏳ pending | |
-| 4. Soft-pilot fixtures | ⏳ pending | |
+| 1. db-types regen | ✅ done — 9 migrations pushed (incl. 2 drift-heal renames + 1 orphan capture + 4 SQL bug fixes) — `database.ts` +662 lines | 2026-05-11 |
+| 2. pgvector check | ✅ done — `vector 0.8.0`, `pg_trgm 1.6`, `pgcrypto 1.3`, `pg_cron 1.6.4` all available | 2026-05-11 |
+| 3. OPENAI_API_KEY | ✅ done — already set in edge-fn secrets | 2026-05-11 |
+| 4. Soft-pilot fixtures | 🚫 skipped per Walker — not gating Lap 4 PR 3a | 2026-05-11 |
 
-Walker signs here when all 4 are done: __________
+**Lap 4 Day-0 complete.** PR 3a unblocked.
+
+### What landed in the drift-fix PR
+
+- 2 file renames (`iris_telemetry` away from the May-9 timestamp collision; `rfi_information_density` to the dashboard-applied timestamp).
+- 1 new local file (`20260507200810_submittal_emails_drift_heal.sql`) capturing the second orphan that was dashboard-applied during the May 7 RFI push.
+- 4 SQL bug fixes in Lap-3 migrations: `||` comment concat → single string; `PRIMARY KEY (col, COALESCE(...))` → generated column + plain PK across 3 migrations; `audit_log_id BIGINT` → `UUID` on `executor_runs`.
+- `database.ts` regenerated against staging — 24 new symbol hits (resolve_persona + 5 tables + auto_execute_opt_in trio).
+- `usePersona` cleanup: removed the `supabase.rpc as unknown as ...` cast now that the typed RPC is in `database.ts`.
+
+### Schema verified on staging
+
+- 5 new tables: `iris_telemetry`, `iris_personas`, `iris_user_personas`, `role_to_default_persona`, `executor_runs`
+- 1 RPC: `resolve_persona(p_user_id UUID, p_project_id UUID) RETURNS TEXT`
+- 3 new columns on `organizations`: `auto_execute_opt_in`, `auto_execute_opted_in_at`, `auto_execute_opted_in_by`
+- 5 personas seeded: `pm`, `superintendent`, `foreman`, `owner_rep`, `office`

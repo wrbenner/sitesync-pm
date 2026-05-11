@@ -19,7 +19,11 @@ CREATE TABLE IF NOT EXISTS iris_user_personas (
   persona_slug TEXT NOT NULL,
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   assigned_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  PRIMARY KEY (user_id, org_id, COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid))
+  -- effective_project_id folds NULL (org-default binding) into a sentinel
+  -- UUID; Postgres doesn't allow expressions inside PRIMARY KEY constraints.
+  effective_project_id UUID GENERATED ALWAYS AS
+    (COALESCE(project_id, '00000000-0000-0000-0000-000000000000'::uuid)) STORED,
+  PRIMARY KEY (user_id, org_id, effective_project_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_iris_user_personas_lookup
