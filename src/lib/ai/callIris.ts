@@ -57,6 +57,24 @@ export interface IrisCallRequest {
    * when the caller doesn't supply a key explicitly.
    */
   idempotencyKey?: string
+  /**
+   * When true, the `system` field was assembled by the Context Fabric
+   * (per ADR-020 / IRIS_PHASE_1 spec §5.2) rather than the legacy caller-
+   * built prompt. The edge function logs this on audit_log.metadata so the
+   * `fabric_used_pct` Phase 1 acceptance metric can be measured.
+   */
+  useFabric?: boolean
+  /**
+   * Semver of the Fabric that built the system prompt. Pinned in
+   * src/services/iris/types/context.ts FABRIC_VERSION. Only meaningful when
+   * `useFabric` is true.
+   */
+  fabricVersion?: string
+  /**
+   * Persona slug the Fabric resolved for this call (per ADR-019). Logged for
+   * per-persona acceptance dashboards.
+   */
+  fabricPersona?: string
   /** Allow callers to abort an in-flight stream. */
   signal?: AbortSignal
 }
@@ -149,6 +167,9 @@ export async function callIris(
   if (request.searchContext) requestBody.search_context = request.searchContext
   if (request.jsonSchema) requestBody.json_schema = request.jsonSchema
   if (request.idempotencyKey) requestBody.idempotency_key = request.idempotencyKey
+  if (request.useFabric) requestBody.use_fabric = true
+  if (request.fabricVersion) requestBody.fabric_version = request.fabricVersion
+  if (request.fabricPersona) requestBody.fabric_persona = request.fabricPersona
 
   let response: Response
   try {
