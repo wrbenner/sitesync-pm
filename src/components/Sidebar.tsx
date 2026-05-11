@@ -57,6 +57,7 @@ interface SidebarProps {
   onNavigate: (view: string) => void
   mode?: 'overlay'
   onClose?: () => void
+  forceCollapsed?: boolean
 }
 
 // ── Icon registry — string → component ──────────────────────────────────────
@@ -465,7 +466,9 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawFullName = authProfile?.full_name?.trim() ?? ''
+  // Treat placeholder strings (em-dash, en-dash, bare hyphen) as unset
+  const fullName = /^[-–—]+$/.test(rawFullName) ? '' : rawFullName
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
@@ -588,7 +591,7 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
 
 // ── Sidebar ─────────────────────────────────────────────────────────────────
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, onClose, forceCollapsed }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isOverlay = mode === 'overlay'
@@ -662,7 +665,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
     return <MobileTabBar streamRole={streamRole} activeView={activeView} onNavigate={onNavigate} />
   }
 
-  const collapsed = sidebarCollapsed
+  const collapsed = forceCollapsed || sidebarCollapsed
   const width = isOverlay ? layout.sidebarWidth : collapsed ? COLLAPSED_W : EXPANDED_W
 
   return (
