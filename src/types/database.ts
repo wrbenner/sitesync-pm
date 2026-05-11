@@ -10209,6 +10209,183 @@ export type Database = {
         }
         Relationships: []
       }
+      iris_kb_chunks: {
+        Row: {
+          chunk_text: string
+          chunk_token_count: number | null
+          deleted_at: string | null
+          embedding: string | null
+          embedding_model_version: string
+          id: string
+          ingested_at: string
+          metadata: Json
+          org_id: string
+          project_id: string
+          sensitivity: Database["public"]["Enums"]["iris_sensitivity"]
+          source_anchor: Json
+          source_id: string
+          source_type: Database["public"]["Enums"]["iris_source_type"]
+          text_tsv: unknown
+          version_hash: string
+        }
+        Insert: {
+          chunk_text: string
+          chunk_token_count?: number | null
+          deleted_at?: string | null
+          embedding?: string | null
+          embedding_model_version?: string
+          id?: string
+          ingested_at?: string
+          metadata?: Json
+          org_id: string
+          project_id: string
+          sensitivity?: Database["public"]["Enums"]["iris_sensitivity"]
+          source_anchor?: Json
+          source_id: string
+          source_type: Database["public"]["Enums"]["iris_source_type"]
+          text_tsv?: unknown
+          version_hash: string
+        }
+        Update: {
+          chunk_text?: string
+          chunk_token_count?: number | null
+          deleted_at?: string | null
+          embedding?: string | null
+          embedding_model_version?: string
+          id?: string
+          ingested_at?: string
+          metadata?: Json
+          org_id?: string
+          project_id?: string
+          sensitivity?: Database["public"]["Enums"]["iris_sensitivity"]
+          source_anchor?: Json
+          source_id?: string
+          source_type?: Database["public"]["Enums"]["iris_source_type"]
+          text_tsv?: unknown
+          version_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_kb_chunks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_chunks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iris_kb_chunks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_chunks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_chunks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      iris_kb_sources: {
+        Row: {
+          chunk_count: number
+          created_at: string
+          error_log: string | null
+          failure_count: number
+          id: string
+          ingestion_status: string
+          last_ingested_at: string | null
+          last_version_hash: string | null
+          org_id: string
+          project_id: string
+          source_id: string
+          source_type: Database["public"]["Enums"]["iris_source_type"]
+          updated_at: string
+        }
+        Insert: {
+          chunk_count?: number
+          created_at?: string
+          error_log?: string | null
+          failure_count?: number
+          id?: string
+          ingestion_status?: string
+          last_ingested_at?: string | null
+          last_version_hash?: string | null
+          org_id: string
+          project_id: string
+          source_id: string
+          source_type: Database["public"]["Enums"]["iris_source_type"]
+          updated_at?: string
+        }
+        Update: {
+          chunk_count?: number
+          created_at?: string
+          error_log?: string | null
+          failure_count?: number
+          id?: string
+          ingestion_status?: string
+          last_ingested_at?: string | null
+          last_version_hash?: string | null
+          org_id?: string
+          project_id?: string
+          source_id?: string
+          source_type?: Database["public"]["Enums"]["iris_source_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_kb_sources_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "org_executor_cancel_rate_7d"
+            referencedColumns: ["org_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_sources_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iris_kb_sources_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_sources_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_sources_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iris_personas: {
         Row: {
           auto_action_threshold: number
@@ -24675,6 +24852,14 @@ export type Database = {
         }
         Relationships: []
       }
+      iris_ingest_queue_depth: {
+        Row: {
+          in_flight: number | null
+          oldest_age: string | null
+          total_pending: number | null
+        }
+        Relationships: []
+      }
       lap_2_gate_metrics_daily: {
         Row: {
           acceptance_rate_pct: number | null
@@ -25167,6 +25352,30 @@ export type Database = {
       is_project_role_compat: {
         Args: { allowed_roles: string[]; p_project_id: string }
         Returns: boolean
+      }
+      kb_retrieve: {
+        Args: {
+          p_freshness_decay?: number
+          p_min_score?: number
+          p_persona?: string
+          p_project_id: string
+          p_top_k?: number
+          p_tsv_weight?: number
+          p_vector_weight?: number
+          q_embedding: string
+          q_text: string
+        }
+        Returns: {
+          chunk_id: string
+          chunk_text: string
+          ingested_at: string
+          metadata: Json
+          score: number
+          sensitivity: Database["public"]["Enums"]["iris_sensitivity"]
+          source_anchor: Json
+          source_id: string
+          source_type: Database["public"]["Enums"]["iris_source_type"]
+        }[]
       }
       kernel_role_label: { Args: { raw_role: string }; Returns: string }
       lap_2_open_incident_count: { Args: never; Returns: number }
@@ -25921,6 +26130,28 @@ export type Database = {
         | "commissioning"
         | "closeout"
       iris_confidence_band: "high" | "medium" | "low"
+      iris_sensitivity:
+        | "public_to_project"
+        | "gc_only"
+        | "owner_only"
+        | "finance_only"
+      iris_source_type:
+        | "drawing"
+        | "spec_section"
+        | "submittal"
+        | "rfi"
+        | "daily_log"
+        | "photo"
+        | "conversation"
+        | "contract"
+        | "change_order"
+        | "bulletin"
+        | "asi"
+        | "spreadsheet"
+        | "pay_app"
+        | "lien_waiver"
+        | "punch_item"
+        | "unclassified"
       rfi_close_disposition:
         | "approved"
         | "approved_as_noted"
@@ -26157,6 +26388,30 @@ export const Constants = {
         "closeout",
       ],
       iris_confidence_band: ["high", "medium", "low"],
+      iris_sensitivity: [
+        "public_to_project",
+        "gc_only",
+        "owner_only",
+        "finance_only",
+      ],
+      iris_source_type: [
+        "drawing",
+        "spec_section",
+        "submittal",
+        "rfi",
+        "daily_log",
+        "photo",
+        "conversation",
+        "contract",
+        "change_order",
+        "bulletin",
+        "asi",
+        "spreadsheet",
+        "pay_app",
+        "lien_waiver",
+        "punch_item",
+        "unclassified",
+      ],
       rfi_close_disposition: [
         "approved",
         "approved_as_noted",
