@@ -86,6 +86,9 @@ const ExportCenter = lazy(() => import('./components/export/ExportCenter').then(
 // ── Lazy loaded pages ─────────────────────────────────────
 // The Nine
 const DayPage = lazyWithRetry(() => import('./pages/day/index'));
+// Phase 1d (IRIS_PHASE_1 spec §6) — persona-aware home routes. Feature-flag
+// gated until Phase 1e flips the persona-eval gate green.
+const HomePersonaSwitch = lazyWithRetry(() => import('./pages/HomePersonaSwitch'));
 const FieldPage = lazyWithRetry(() => import('./pages/field/index'));
 // /conversation and /site now redirect to /day (Wave 1 homepage redesign);
 // their page components are no longer routed.
@@ -401,6 +404,21 @@ function AppRoutes() {
             <Route path="/" element={<PageSuspense><ProtectedRoute moduleId="day" moduleName="The Day"><DayPage /></ProtectedRoute></PageSuspense>} />
             {/* /dashboard merges into the Command stream — Wave 1 redirect */}
             <Route path="/dashboard" element={<Navigate to="/day" replace />} />
+            {/* Phase 1d persona-aware home (IRIS_PHASE_1 spec §6). Flag-gated until 1e. */}
+            <Route
+              path="/home/iris"
+              element={
+                FLAGS.irisUseFabric ? (
+                  <PageSuspense>
+                    <ProtectedRoute moduleId="day" moduleName="Persona Home">
+                      <HomePersonaSwitch />
+                    </ProtectedRoute>
+                  </PageSuspense>
+                ) : (
+                  <Navigate to="/day" replace />
+                )
+              }
+            />
             <Route path="/daily-log" element={<PageSuspense><ProtectedRoute moduleId="daily-log" moduleName="Daily Log"><DailyLog /></ProtectedRoute></PageSuspense>} />
             <Route path="/schedule" element={<PageSuspense><ProtectedRoute moduleId="schedule" moduleName="Schedule"><Schedule /></ProtectedRoute></PageSuspense>} />
             <Route path="/budget" element={<PageSuspense><ProtectedRoute moduleId="budget" moduleName="Budget"><Budget /></ProtectedRoute></PageSuspense>} />
