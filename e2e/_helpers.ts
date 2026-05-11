@@ -37,6 +37,15 @@ export async function settle(page: Page, ms = 250) {
  *     Query has settled.
  */
 export async function waitLoad(page: Page, timeoutMs = 30_000) {
+  // In VITE_DEV_BYPASS mode the DevBanner is always visible; real data never
+  // arrives so loading states can persist indefinitely. Cap to 8 s to keep
+  // the per-test budget (90 s) intact. The check is best-effort — if it
+  // throws (page not yet mounted), fall back to the caller-supplied timeout.
+  const isBypass = await page.locator('[role="alert"]')
+    .filter({ hasText: /Authentication bypassed/i })
+    .count()
+    .catch(() => 0) > 0
+  const effectiveTimeout = isBypass ? 8_000 : timeoutMs
   await page.waitForFunction(
     () => {
       const text = document.body.textContent ?? ''
@@ -55,7 +64,7 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
       )
       return !stillLoading && !stillCaching && !hasBusy && !hasSkeletons
     },
-    { timeout: timeoutMs },
+    { timeout: effectiveTimeout },
   ).catch(() => undefined)
   // One more brief network-idle sip so any in-flight queries can resolve
   // and the page paints the resolved state before we capture.

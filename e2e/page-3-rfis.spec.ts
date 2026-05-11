@@ -41,7 +41,13 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('domcontentloaded')
+  await page.waitForTimeout(800)
+  if (!page.url().includes('/login')) {
+    await settle(page, 1000)
+    return
+  }
   await page.getByPlaceholder('you@company.com').fill(USER)
   await page.getByPlaceholder('Enter your password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
