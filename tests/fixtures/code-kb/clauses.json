@@ -1,0 +1,272 @@
+[
+  {
+    "id": "ibc-2024-1006.2",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1006.2",
+    "title": "Egress from spaces",
+    "body": "The means of egress from spaces shall comply with the applicable provisions of this chapter. Where two exits or exit access doorways are required, they shall be placed a distance apart equal to not less than one-half of the length of the maximum overall diagonal dimension of the area served.",
+    "tags": ["egress", "exits", "diagonal"]
+  },
+  {
+    "id": "ibc-2024-1011.2",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1011.2",
+    "title": "Width and capacity of stairways",
+    "body": "The required capacity of stairways shall be determined as specified in Section 1005.3.1, but the minimum width shall be not less than 44 inches (1118 mm). Exception: Stairways serving an occupant load of less than 50 shall have a width of not less than 36 inches.",
+    "tags": ["stairs", "egress", "width", "capacity"]
+  },
+  {
+    "id": "ibc-2024-703.2",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "703.2",
+    "title": "Fire-resistance ratings",
+    "body": "The fire-resistance rating of building elements, components, and assemblies shall be determined in accordance with the test procedures set forth in ASTM E119 or UL 263 or in accordance with Section 703.3.",
+    "tags": ["fire-rating", "astm-e119", "ul-263", "assemblies"]
+  },
+  {
+    "id": "ibc-2024-714.4.1",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "714.4.1",
+    "title": "Through-penetrations of fire-resistance-rated assemblies",
+    "body": "Penetrations of fire-resistance-rated walls shall be protected by an approved penetration firestop system installed as tested in accordance with ASTM E814 or UL 1479, with a minimum positive pressure differential of 0.01 inch of water.",
+    "tags": ["fire-rating", "penetration", "firestop", "astm-e814"]
+  },
+  {
+    "id": "ibc-2024-1607.5",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1607.5",
+    "title": "Partition loads",
+    "body": "In office buildings and in other buildings where partition locations are subject to change, provisions for partition weight shall be made, whether or not partitions are shown on the construction documents, unless the specified live load exceeds 80 psf.",
+    "tags": ["loads", "partitions", "psf", "office"]
+  },
+  {
+    "id": "ibc-2024-1809.5",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1809.5",
+    "title": "Frost protection",
+    "body": "Except where otherwise protected from frost, foundation walls, piers and other permanent supports of buildings and structures shall be protected from frost by one or more of the following methods: (1) extending below the frost line of the locality, (2) constructing in accordance with ASCE 32, or (3) erecting on solid rock.",
+    "tags": ["foundation", "frost", "asce-32"]
+  },
+  {
+    "id": "ibc-2024-2304.10",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "2304.10",
+    "title": "Connectors and fasteners",
+    "body": "Connectors and fasteners shall be in accordance with this section. Bolts, lag screws, nails, screws, and other fasteners used to assemble the structural members of the building shall comply with the applicable provisions of Chapter 23 and with the manufacturer's installation instructions.",
+    "tags": ["fasteners", "wood", "connectors", "structural"]
+  },
+  {
+    "id": "ibc-2024-2603.5",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "2603.5",
+    "title": "Foam plastic insulation",
+    "body": "Foam plastic insulation shall be separated from the interior of a building by an approved thermal barrier of 0.5-inch (12.7 mm) gypsum wallboard or equivalent thermal barrier.",
+    "tags": ["insulation", "foam-plastic", "thermal-barrier"]
+  },
+  {
+    "id": "nec-2023-110.26",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "110.26",
+    "title": "Spaces about electrical equipment",
+    "body": "Access and working space shall be provided and maintained about all electrical equipment to permit ready and safe operation and maintenance of such equipment. Depth of working space shall be not less than 36 inches.",
+    "tags": ["electrical", "clearance", "working-space"]
+  },
+  {
+    "id": "nec-2023-210.8",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "210.8",
+    "title": "GFCI protection for personnel",
+    "body": "Ground-fault circuit-interrupter protection for personnel shall be provided for all 125-volt through 250-volt receptacles installed in the locations specified in 210.8(A) through (F), including bathrooms, garages, outdoor receptacles, kitchens, and similar wet locations.",
+    "tags": ["electrical", "gfci", "outlets", "receptacles", "wet-locations"]
+  },
+  {
+    "id": "nec-2023-300.5",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "300.5",
+    "title": "Underground installations",
+    "body": "Direct-buried cables or raceways shall be installed in accordance with the minimum cover requirements of Table 300.5. Where the installation is in a thoroughfare subject to vehicular traffic, the minimum cover shall be 24 inches.",
+    "tags": ["electrical", "underground", "burial-depth"]
+  },
+  {
+    "id": "nec-2023-700.10",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "700.10",
+    "title": "Wiring of emergency systems",
+    "body": "Wiring of emergency systems shall be kept entirely independent of all other wiring and equipment and shall not enter the same raceway, cable, box, or cabinet with other wiring except in transfer equipment enclosures, or in junction or pull boxes serving exclusively emergency systems.",
+    "tags": ["electrical", "emergency", "wiring", "raceway"]
+  },
+  {
+    "id": "ashrae-90.1-2019-6.4.3",
+    "jurisdiction": "ASHRAE",
+    "code": "ASHRAE 90.1-2019",
+    "section": "6.4.3",
+    "title": "HVAC system controls",
+    "body": "HVAC systems shall be equipped with at least one temperature control device that responds to indoor temperature and at least one thermostat for the regulation of temperature within each zone. Setback controls shall be provided that can automatically restart and temporarily operate.",
+    "tags": ["mechanical", "hvac", "controls", "thermostat", "setback"]
+  },
+  {
+    "id": "ashrae-90.1-2019-9.4.1",
+    "jurisdiction": "ASHRAE",
+    "code": "ASHRAE 90.1-2019",
+    "section": "9.4.1",
+    "title": "Interior lighting power",
+    "body": "Interior lighting power for all buildings, except as exempted in 9.1.1, shall be determined using either the Building Area Method (9.5) or the Space-by-Space Method (9.6). The total connected interior lighting power shall not exceed the calculated allowance.",
+    "tags": ["lighting", "interior", "energy", "lighting-power-density"]
+  },
+  {
+    "id": "ashrae-62.1-2019-6.2.2",
+    "jurisdiction": "ASHRAE",
+    "code": "ASHRAE 62.1-2019",
+    "section": "6.2.2",
+    "title": "Ventilation rate procedure",
+    "body": "The breathing zone outdoor airflow rate shall be calculated using the Ventilation Rate Procedure. Outdoor airflow rate per person shall be the sum of the people outdoor air rate and the area outdoor air rate as defined by occupancy category in Table 6.2.2.1.",
+    "tags": ["ventilation", "indoor-air-quality", "outdoor-air", "breathing-zone"]
+  },
+  {
+    "id": "ibc-2024-505.3",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "505.3",
+    "title": "Mezzanines",
+    "body": "The aggregate area of a mezzanine or mezzanines within a room shall not exceed one-third of the floor area of that room in which they are located, except as permitted in Sections 505.3.1 and 505.3.2.",
+    "tags": ["mezzanine", "area", "ratio"]
+  },
+  {
+    "id": "ibc-2024-1010.1.9.4",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1010.1.9.4",
+    "title": "Locks and latches",
+    "body": "Locks and latches shall be permitted to prevent operation of doors where any of the conditions in Section 1010.1.9.4 are met, including places of detention or restraint and rooms within Group B occupancies where a key, special tool, or fingerprint reader is required for egress.",
+    "tags": ["egress", "doors", "locks", "latches"]
+  },
+  {
+    "id": "ibc-2024-1404.10",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1404.10",
+    "title": "Wood veneer",
+    "body": "Wood veneer attached to exterior walls of Type I, II, III, or IV construction shall be not less than 1 inch (25 mm) nominal thickness and shall be solid sawn or backed with foil. Wood veneer shall comply with the requirements for Class C finish in Section 803.",
+    "tags": ["exterior", "wood", "veneer", "finish-class"]
+  },
+  {
+    "id": "ibc-2024-1612.4",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1612.4",
+    "title": "Design and construction of flood-resistant buildings",
+    "body": "The design and construction of buildings and structures located in flood hazard areas shall be in accordance with Chapter 5 of ASCE 24. The lowest floor (including basement) of new and substantially improved structures shall be elevated to or above the design flood elevation.",
+    "tags": ["flood", "asce-24", "elevation"]
+  },
+  {
+    "id": "ibc-2024-1607.10",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1607.10",
+    "title": "Roof loads",
+    "body": "Roofs shall be designed for the live loads specified in Table 1607.1 or for snow loads, drift loads, ponding loads, and rain loads, whichever produces the greatest load effect.",
+    "tags": ["roof", "loads", "snow", "rain", "ponding"]
+  },
+  {
+    "id": "ibc-2024-419.3",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "419.3",
+    "title": "Live/work units",
+    "body": "Live/work units shall be permitted in buildings of Group R-2 occupancy. The nonresidential area shall be permitted to have a maximum area of 3,000 square feet (279 m2) and shall not exceed 50 percent of the area of each unit.",
+    "tags": ["live-work", "occupancy", "r-2", "area"]
+  },
+  {
+    "id": "ibc-2024-1612.5",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1612.5",
+    "title": "Flood damage-resistant materials",
+    "body": "Where required by FEMA P-936 or its successors, all materials used below the elevation required in Section 1612.4 shall be flood damage-resistant materials.",
+    "tags": ["flood", "materials", "fema-p-936"]
+  },
+  {
+    "id": "ibc-2024-3303.2",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "3303.2",
+    "title": "Means of egress during construction",
+    "body": "Required means of egress shall be maintained at all times during construction, demolition, alterations, or additions to any existing building. The number, capacity, illumination, and width of the means of egress shall not be reduced below the requirements of Chapter 10.",
+    "tags": ["egress", "construction", "demolition", "alteration"]
+  },
+  {
+    "id": "nec-2023-250.66",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "250.66",
+    "title": "Size of grounding electrode conductor",
+    "body": "The size of the grounding electrode conductor at the service shall be sized in accordance with Table 250.66, except as permitted in 250.66(A) through (C).",
+    "tags": ["electrical", "grounding", "service-conductor"]
+  },
+  {
+    "id": "nec-2023-400.7",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "400.7",
+    "title": "Uses permitted for flexible cords",
+    "body": "Flexible cords and flexible cables shall be used only for pendants, wiring of luminaires, connection of portable equipment, elevator cables, wiring of cranes and hoists, and similar uses specified in 400.7(A).",
+    "tags": ["electrical", "flexible-cord", "uses-permitted"]
+  },
+  {
+    "id": "nec-2023-680.21",
+    "jurisdiction": "NEC",
+    "code": "NEC 2023",
+    "section": "680.21",
+    "title": "Motors for swimming pools",
+    "body": "All motors for swimming pool pumps shall be of an approved type and shall be supplied by either a wiring method recognized by the NEC for the location involved or as specified in 680.21(A)(1) through (A)(4).",
+    "tags": ["electrical", "swimming-pool", "motors"]
+  },
+  {
+    "id": "ashrae-189.1-2017-7.4",
+    "jurisdiction": "ASHRAE",
+    "code": "ASHRAE 189.1-2017",
+    "section": "7.4",
+    "title": "Building envelope air leakage",
+    "body": "The air leakage of the building envelope shall be tested in accordance with ASTM E779 or equivalent and shall not exceed 0.40 cfm per square foot of building envelope area at a pressure of 0.30 in. w.g.",
+    "tags": ["envelope", "air-leakage", "astm-e779", "blower-door"]
+  },
+  {
+    "id": "ibc-2024-2305.1",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "2305.1",
+    "title": "General — wood shear walls and diaphragms",
+    "body": "Structures using wood shear walls and diaphragms to resist wind, seismic, or other lateral loads shall be designed and constructed in accordance with AWC SDPWS and the provisions of this section.",
+    "tags": ["wood", "seismic", "shear-wall", "diaphragm", "awc-sdpws"]
+  },
+  {
+    "id": "ibc-2024-1505.1",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "1505.1",
+    "title": "Roof coverings classification",
+    "body": "Roof coverings shall be classified in accordance with the following: Class A roof coverings are effective against severe fire test exposure. Class B against moderate. Class C against light. Approval shall be by a recognized testing agency in accordance with ASTM E108 or UL 790.",
+    "tags": ["roofing", "fire-rating", "astm-e108", "ul-790"]
+  },
+  {
+    "id": "ibc-2024-3411.4",
+    "jurisdiction": "IBC",
+    "code": "IBC 2024",
+    "section": "3411.4",
+    "title": "Accessibility for existing buildings",
+    "body": "Where alterations or additions are made to existing buildings, those alterations shall be made in such a manner that the area, to the maximum extent feasible, is in compliance with the requirements for new construction.",
+    "tags": ["accessibility", "alterations", "existing-building", "ada"]
+  }
+]
