@@ -65,9 +65,28 @@ export const ProjectGate: React.FC = () => {
 
   const hasProjects = (projects?.length ?? 0) > 0;
 
-  // In dev-bypass mode there is no Supabase — skip the gate so e2e tests
-  // see real page content (empty states) instead of the first-run onboarding.
-  if (isDevBypassActive()) return null;
+  // In dev-bypass mode there is no Supabase. Show a minimal placeholder so
+  // e2e screenshots show something instead of blank white — the page-level
+  // guards (if (!projectId) return <ProjectGate />) hit this path.
+  if (isDevBypassActive()) return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '30vh',
+        gap: spacing['2'],
+        color: colors.textTertiary,
+        fontFamily: typography.fontFamily,
+        fontSize: typography.fontSize.sm,
+      }}
+    >
+      <HardHat size={24} color={colors.textTertiary} aria-hidden />
+      <span>No project selected · dev bypass active</span>
+    </div>
+  );
 
   if (isLoading) {
     return (
