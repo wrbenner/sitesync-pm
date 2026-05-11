@@ -1,0 +1,78 @@
+# Lap 3 acceptance gate
+# Spec: docs/audits/LAP_3_ACCEPTANCE_GATE_SPEC_2026-05-04.md
+
+name: Lap 3 Acceptance
+
+on:
+  schedule:
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate-4-zero-cancel:
+    name: Gate 4 - auto-execute zero cancels 7d
+    runs-on: ubuntu-latest
+    env:
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: secret-check
+        run: |
+          if [ -z "${STAGING_DB_URL:-}" ]; then
+            echo "::warning::STAGING_DB_URL not set - Gate 4 skipped."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Query cancel rate view
+        if: steps.secret-check.outputs.skipped != 'true'
+        run: psql "$STAGING_DB_URL" -t -A -F'|' -c "SELECT org_name, total_runs_7d, cancelled_runs_7d FROM org_executor_cancel_rate_7d WHERE auto_execute_opt_in = TRUE"
+      - name: Assert zero cancels fail-closed
+        if: steps.secret-check.outputs.skipped != 'true'
+        run: |
+          COUNT=$(psql "$STAGING_DB_URL" -t -A -c "SELECT COUNT(*) FROM org_executor_cancel_rate_7d WHERE auto_execute_opt_in = TRUE AND cancelled_runs_7d > 0")
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::Gate 4 FAILED - $COUNT org(s) had cancels in the last 7 days."
+            exit 1
+          fi
+
+  gate-3-demo-runs:
+    name: Gate 3 - demo runs logged
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Count demo-run receipts
+        run: |
+          COUNT=$(find docs/sales/demo-runs -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+          echo "Demo-run receipts: $COUNT"
+          if [ "$COUNT" -lt 4 ]; then
+            echo "::warning::Gate 3 not yet green - $COUNT of 4 demo-run receipts on file."
+          fi
+
+  gate-1-2-contracts:
+    name: Gates 1 + 2 - signed contracts informational
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Count contract receipts
+        run: |
+          SIGNED=$(find docs/contracts/signed -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+          LEGAL=$(find docs/contracts/legal-review -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+          echo "Contracts signed: $SIGNED"
+          echo "Contracts in legal review: $LEGAL"
+
+  gate-5-weekend-off:
+    name: Gate 5 - weekend-off attestation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate weekend-off receipt
+        run: |
+          if [ -f "docs/audits/WEEKEND_OFF_RECEIPT.md" ]; then
+            echo "::notice::Walker-signed weekend-off receipt found."
+          else
+            echo "::warning::Gate 5 - no WEEKEND_OFF_RECEIPT.md yet."
+          fi
