@@ -63,9 +63,23 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
+  // When VITE_DEV_BYPASS + VITE_ACCEPTANCE_MODE are both set, ProtectedRoute
+  // bypasses auth entirely. Probe a protected page first; if we land there
+  // without a login redirect, the bypass is active and no form fill is needed.
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+  await page.waitForTimeout(600)
+  if (!page.url().includes('/login')) {
+    await settle(page, 800)
+    return
+  }
+
+  // No bypass — authenticate via the real login form.
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  // The form starts in magic-link mode. Switch to password auth before filling.
+  await page.getByRole('button', { name: 'Sign in with password' }).click()
+  await page.getByLabel('Email').fill(user)
+  await page.getByLabel('Password').fill(pass)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)

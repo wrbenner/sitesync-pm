@@ -13,7 +13,7 @@
  *  - Calibrate: Two-point scale definition with smooth reveal
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { parseScaleRatio, formatFeetInches } from './measurementUtils';
 import type { NormalizedPoint } from '../../lib/annotationGeometry';
 
@@ -78,7 +78,7 @@ const COUNT_COLOR = '#F47820';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const genId = () => `meas_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+const genId = () => `meas_${crypto.randomUUID()}`;
 
 function normalizedDistance(
   a: NormalizedPoint,
@@ -445,15 +445,18 @@ export const MeasurementOverlay: React.FC<MeasurementOverlayProps> = ({
   const [measurements, setMeasurements] = useState<MeasurementResult[]>([]);
   const [inProgressPoints, setInProgressPoints] = useState<NormalizedPoint[]>([]);
   const [calibratePoints, setCalibratePoints] = useState<NormalizedPoint[]>([]);
+  const [lastSeenTool, setLastSeenTool] = useState(activeTool);
 
-  // When the user leaves any measure tool (e.g. hits Escape → select), drop any in-progress points.
-  // Without this, switching tools and coming back would resume a half-drawn measurement.
-  useEffect(() => {
+  // React-recommended "adjust state when prop changes" pattern: reset in-progress
+  // points synchronously during render when the user leaves a measurement tool,
+  // so half-drawn measurements don't persist across tool switches.
+  if (lastSeenTool !== activeTool) {
+    setLastSeenTool(activeTool);
     if (!isMeasureTool(activeTool)) {
       setInProgressPoints([]);
       setCalibratePoints([]);
     }
-  }, [activeTool]);
+  }
 
   const scaleParsed = useMemo(() => parseScaleRatio(scaleRatioText), [scaleRatioText]);
 
