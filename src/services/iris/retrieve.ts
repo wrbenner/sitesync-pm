@@ -298,21 +298,16 @@ interface TelemetryEvent {
 
 async function emitTelemetry(ev: TelemetryEvent): Promise<void> {
   // Fire-and-forget. Failures here must never break the user-facing path.
-  // iris_kb_record_retrieve lands in migration 20261008000005 (this PR);
-  // db-types regenerate post-merge picks it up. Cast until then.
   try {
-    await (supabase.rpc as unknown as (
-      name: string,
-      args: Record<string, unknown>,
-    ) => Promise<unknown>)('iris_kb_record_retrieve', {
+    await supabase.rpc('iris_kb_record_retrieve', {
       p_project_id: ev.project_id,
       p_persona: ev.persona,
       p_query_text: ev.query_text.slice(0, 1000),
       p_latency_ms: ev.latency_ms,
       p_cache_hit: ev.cache_hit,
       p_chunks_returned: ev.chunks_returned,
-      p_error_code: ev.error_code ?? null,
-      p_caller_tag: ev.caller_tag,
+      p_error_code: ev.error_code,
+      p_caller_tag: ev.caller_tag ?? undefined,
     })
   } catch {
     // Swallow — telemetry MUST NOT regress user-facing latency or correctness.

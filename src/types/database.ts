@@ -10386,6 +10386,45 @@ export type Database = {
           },
         ]
       }
+      iris_kb_telemetry: {
+        Row: {
+          cache_hit: boolean
+          caller_tag: string | null
+          chunks_returned: number
+          created_at: string
+          error_code: string | null
+          id: string
+          latency_ms: number
+          persona: string
+          project_id: string
+          query_text: string
+        }
+        Insert: {
+          cache_hit?: boolean
+          caller_tag?: string | null
+          chunks_returned?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          latency_ms: number
+          persona: string
+          project_id: string
+          query_text: string
+        }
+        Update: {
+          cache_hit?: boolean
+          caller_tag?: string | null
+          chunks_returned?: number
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          latency_ms?: number
+          persona?: string
+          project_id?: string
+          query_text?: string
+        }
+        Relationships: []
+      }
       iris_personas: {
         Row: {
           auto_action_threshold: number
@@ -24860,6 +24899,65 @@ export type Database = {
         }
         Relationships: []
       }
+      iris_kb_health_daily: {
+        Row: {
+          avg_chunks_returned: number | null
+          cache_hit_rate: number | null
+          day: string | null
+          error_rate: number | null
+          latency_p50: number | null
+          latency_p95: number | null
+          n_cache_hits: number | null
+          n_calls: number | null
+          n_errors: number | null
+          project_id: string | null
+          projected_cost_usd_per_month: number | null
+        }
+        Relationships: []
+      }
+      iris_kb_retrieval_p95_1h: {
+        Row: {
+          avg_chunks_returned: number | null
+          hour: string | null
+          latency_p50: number | null
+          latency_p95: number | null
+          n_cache_hits: number | null
+          n_calls: number | null
+          n_errors: number | null
+        }
+        Relationships: []
+      }
+      iris_kb_source_coverage_7d: {
+        Row: {
+          chunk_count: number | null
+          most_recent_ingest_at: string | null
+          project_id: string | null
+          source_type: Database["public"]["Enums"]["iris_source_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iris_kb_chunks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_health_summary"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_chunks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_metrics"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "iris_kb_chunks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lap_2_gate_metrics_daily: {
         Row: {
           acceptance_rate_pct: number | null
@@ -25337,6 +25435,29 @@ export type Database = {
       iris_call_count_recent: {
         Args: { p_user_id: string; p_window_seconds: number }
         Returns: number
+      }
+      iris_enqueue_ingest: {
+        Args: {
+          p_org_id: string
+          p_project_id: string
+          p_source_id: string
+          p_source_type: string
+          p_version_hash: string
+        }
+        Returns: undefined
+      }
+      iris_kb_record_retrieve: {
+        Args: {
+          p_cache_hit: boolean
+          p_caller_tag?: string
+          p_chunks_returned: number
+          p_error_code?: string
+          p_latency_ms: number
+          p_persona: string
+          p_project_id: string
+          p_query_text: string
+        }
+        Returns: string
       }
       is_org_admin_or_empty: {
         Args: { org_id: string; uid: string }
