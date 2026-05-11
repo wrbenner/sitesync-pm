@@ -190,7 +190,12 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
   const requiredPerm = requiredPermission ?? MODULE_PERMISSIONS[moduleId ?? '']
 
   if (requiredPerm && !hasPermission(requiredPerm)) {
-    return <RequestAccessPage moduleName={moduleName} />
+    return (
+      <>
+        {isDevBypassActive() && <DevBanner />}
+        <RequestAccessPage moduleName={moduleName} />
+      </>
+    )
   }
 
   return (
