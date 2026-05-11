@@ -13,10 +13,18 @@ import type { Role } from '../permissions'
 // gracefully and components render their empty/loading states. Use placeholder
 // values so createClient() doesn't throw at module load.
 const isAcceptanceBuild = import.meta.env.VITE_ACCEPTANCE_MODE === 'true'
+// In dev-bypass mode (VITE_DEV_BYPASS=true, no Supabase vars, dev build only)
+// the entire auth layer is bypassed — use stub values so createClient() doesn't
+// throw and Supabase calls fail gracefully instead of crashing the module.
+const isDevBypassBuild =
+  import.meta.env.DEV === true &&
+  import.meta.env.VITE_DEV_BYPASS === 'true' &&
+  !import.meta.env.VITE_SUPABASE_URL &&
+  !import.meta.env.VITE_SUPABASE_ANON_KEY
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? ''
 const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? ''
-const supabaseUrl = rawUrl || (isAcceptanceBuild ? 'http://acceptance.invalid' : '')
-const supabaseAnonKey = rawKey || (isAcceptanceBuild ? 'acceptance-stub-key' : '')
+const supabaseUrl = rawUrl || (isAcceptanceBuild || isDevBypassBuild ? 'http://dev-bypass.invalid' : '')
+const supabaseAnonKey = rawKey || (isAcceptanceBuild || isDevBypassBuild ? 'dev-bypass-stub-key' : '')
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     '[SiteSync] VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set. ' +

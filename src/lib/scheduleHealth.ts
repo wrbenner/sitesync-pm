@@ -109,6 +109,22 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
     }
   }
 
+  // If ≥80% of activities are completely unlinked (no preds AND no succs),
+  // the schedule has no logic data at all — typically seed/imported data that
+  // hasn't been sequenced yet. Return a neutral "unanalyzed" report rather
+  // than an F-grade that would alarm users on an otherwise healthy project.
+  // Only applies to larger schedules (>10 activities) — small schedules should
+  // still be analyzed so that genuine issues (missing preds, dangling) surface.
+  const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
+  const orphanCount = phases.filter(p =>
+    (predecessorMap.get(p.id)?.length ?? 0) === 0 &&
+    (successorMap.get(p.id)?.length ?? 0) === 0
+  ).length;
+  const orphanRate = phases.length > 0 ? orphanCount / phases.length : 0;
+  if (orphanRate >= 0.8 && totalLinks === 0 && phases.length > 10) {
+    return unlinkedReport(phases.length);
+  }
+
   // ── 1. Open Ends ──────────────────────────────────────────────────────────
   // Tasks without predecessors (open starts) or without successors (open finishes)
   // Milestones at project start/end are exempted
@@ -275,7 +291,7 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
 
   // ── 6. Logic Density ──────────────────────────────────────────────────────
   // A healthy schedule has at least 1.5 links per activity on average
-  const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
+  // totalLinks is already computed above for the orphan-rate early-return check
   const logicDensity = phases.length > 0 ? totalLinks / phases.length : 0;
 
   if (logicDensity < 1.0 && phases.length > 5) {
@@ -409,6 +425,37 @@ function buildSummary(
     return `Schedule needs attention. ${critCount} critical issue${critCount === 1 ? '' : 's'} and ${warnCount} warning${warnCount === 1 ? '' : 's'} were found. Logic density is ${metrics.logicDensityPct < 1 ? 'below target' : 'adequate'}. Address critical findings before submitting for review.`;
   }
   return `Schedule has significant quality issues. ${critCount} critical finding${critCount === 1 ? '' : 's'} undermine the schedule's reliability. Focus on connecting open ends and improving logic density (currently ${metrics.logicDensityPct} links/activity, target ≥1.5).`;
+}
+
+// ── Unlinked Report (no predecessor/successor data) ─────────────────────────
+// Returned when ≥80% of activities have zero logic links. The schedule exists
+// but has not been sequenced yet — don't show a red F-grade.
+
+function unlinkedReport(activityCount: number): HealthReport {
+  return {
+    score: 100,
+    grade: '—',
+    summary: `${activityCount} activities found but no predecessor-successor links have been added yet. Add logic ties to enable schedule health analysis.`,
+    findings: [],
+    criticalCount: 0,
+    warningCount: 0,
+    infoCount: 0,
+    analyzedAt: new Date().toISOString(),
+    metrics: {
+      totalActivities: activityCount,
+      activitiesWithPredecessors: 0,
+      activitiesWithSuccessors: 0,
+      logicDensityPct: 0,
+      criticalPathPct: 0,
+      avgFloatDays: 0,
+      openStartCount: 0,
+      openFinishCount: 0,
+      negativeFloatCount: 0,
+      outOfSequenceCount: 0,
+      danglingCount: 0,
+      durationAnomalyCount: 0,
+    },
+  };
 }
 
 // ── Empty Report ────────────────────────────────────────────────────────────
