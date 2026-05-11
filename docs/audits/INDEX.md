@@ -1,6 +1,6 @@
 # Audits & Receipts Index
 
-**Last updated:** 2026-05-08 (Spec infrastructure foundation — 3 tier-1 templates registered as project skills (`/page-card`, `/workflow-spec`, `/iris-spec`) + 5 Page Cards filed for hottest pages: Day, RFIs, Submittals, Daily Log, Iris Inbox. See `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md`. Earlier 2026-05-08: IRIS Nativeness planning push — 6 phase specs + 1 ingestion taxonomy sub-spec + 5 ADR stubs (017–021).)
+**Last updated:** 2026-05-09 (Phase 2 telemetry — `iris_telemetry` page-event substrate + `track()` helper + 12 events instrumented across Day/RFIs/Submittals/Daily Log/Iris Inbox; spec-infra foundation 2026-05-08: 3 tier-1 templates registered as project skills + 5 Page Cards filed; IRIS Nativeness planning push: 6 phase specs + 1 ingestion taxonomy sub-spec + 5 ADR stubs (017–021). See `PHASE_2_TELEMETRY_RECEIPT_2026-05-09.md` and `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md`.)
 **Purpose:** Single map of every audit, receipt, and ADR. Read the relevant
 entries before starting work. Update this file when you add a new doc.
 
@@ -91,7 +91,7 @@ entries before starting work. Update this file when you add a new doc.
 
 The tier-1 card system: every addressable page, every cross-feature chain, and every Iris feature gets one ~250-word card filed here. Sister templates registered as project skills — invoke `/page-card`, `/workflow-spec`, `/iris-spec` from this repo to scaffold a populated draft. Heavy detail lives behind `[Deep dive →]` links written only when the work demands them.
 
-See: `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md` (foundation receipt) and `.claude/skills/{page-card,workflow-spec,iris-spec}/SKILL.md` (the templates themselves).
+See: `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md` (foundation receipt), `PHASE_2_TELEMETRY_RECEIPT_2026-05-09.md` (telemetry follow-on), and `.claude/skills/{page-card,workflow-spec,iris-spec}/SKILL.md` (the templates themselves).
 
 ### Page Cards
 

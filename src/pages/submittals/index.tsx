@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { track } from '../../lib/telemetry/track'
 import { ProjectGate } from '../../components/ProjectGate'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { PermissionGate } from '../../components/auth/PermissionGate'
@@ -106,6 +107,15 @@ const SubmittalsPage: React.FC = () => {
   const setPageContext = useCopilotStore((s) => s.setPageContext)
   useEffect(() => { setPageContext('submittals') }, [setPageContext])
 
+  // Mount telemetry. Ref guard so StrictMode's intentional double-mount in
+  // dev doesn't double-fire `submittal.opened` per visit.
+  const mountFiredRef = useRef(false)
+  useEffect(() => {
+    if (mountFiredRef.current) return
+    mountFiredRef.current = true
+    track('submittal.opened')
+  }, [])
+
   const projectId = useProjectId()
   const navigate = useNavigate()
   const createSubmittal = useCreateSubmittal()
@@ -132,6 +142,10 @@ const SubmittalsPage: React.FC = () => {
   useRealtimeInvalidation(projectId)
 
   const [activeTab, setActiveTab] = useState<SubmittalViewTab>('items')
+  const handleTabChange = useCallback((next: SubmittalViewTab) => {
+    track('submittal.tab_switched', { tab: next })
+    setActiveTab(next)
+  }, [])
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [unifiedCreateDraft, setUnifiedCreateDraft] = useState<SubmittalDraft | null>(null)
@@ -361,7 +375,7 @@ const SubmittalsPage: React.FC = () => {
           actions={actionCluster}
           onOpenSettings={handleOpenSettings}
         />
-        <SubmittalsViewTabs active={activeTab} onChange={setActiveTab} />
+        <SubmittalsViewTabs active={activeTab} onChange={handleTabChange} />
         {activeTab === 'items' && (
           <>
             <SubmittalsToolbar
@@ -555,6 +569,7 @@ const SubmittalsPage: React.FC = () => {
         initialTier={unifiedCreateDraft?.source && unifiedCreateDraft.source !== 'manual' ? 'full' : 'quick'}
         onClose={() => { setShowCreate(false); setUnifiedCreateDraft(null) }}
         onCreated={(id) => {
+          track('submittal.created', { source: unifiedCreateDraft?.source ?? 'manual' })
           refetch()
           if (id) navigate(`/submittals/${id}`)
         }}

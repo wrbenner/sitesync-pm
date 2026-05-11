@@ -11,8 +11,9 @@
  * visual queue of well-cited proposals.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Sparkles, Inbox } from 'lucide-react'
+import { track } from '../../lib/telemetry/track'
 import { PageContainer, EmptyState } from '../../components/Primitives'
 import { Eyebrow } from '../../components/atoms'
 import { IrisApprovalGate, ACTION_LABELS } from '../../components/iris/IrisApprovalGate'
@@ -79,6 +80,24 @@ const IrisInboxPage: React.FC = () => {
   const [tab, setTab] = useState<TabKey>('drafts')
   const [kindFilter, setKindFilter] = useState<KindFilter>('all')
   const projectId = useProjectId()
+
+  // Page-mount telemetry. The ref guards against StrictMode's intentional
+  // double-mount in dev so the inbox-opened event only fires once per visit.
+  const mountFiredRef = useRef(false)
+  useEffect(() => {
+    if (mountFiredRef.current) return
+    mountFiredRef.current = true
+    track('iris.opened')
+  }, [])
+
+  const handleSetTab = (next: TabKey) => {
+    track('iris.tab_switched', { tab: next })
+    setTab(next)
+  }
+  const handleSetKindFilter = (next: KindFilter) => {
+    track('iris.suggestion_filtered', { kind: next })
+    setKindFilter(next)
+  }
   const {
     insights,
     isLoading: insightsLoading,
@@ -158,20 +177,20 @@ const IrisInboxPage: React.FC = () => {
       >
         <TabButton
           active={tab === 'drafts'}
-          onClick={() => setTab('drafts')}
+          onClick={() => handleSetTab('drafts')}
           label="Drafts"
           count={draftsCount}
           ariaControls="iris-inbox-drafts"
         />
         <TabButton
           active={tab === 'suggestions'}
-          onClick={() => setTab('suggestions')}
+          onClick={() => handleSetTab('suggestions')}
           label="Suggestions"
           ariaControls="iris-inbox-suggestions"
         />
         <TabButton
           active={tab === 'history'}
-          onClick={() => setTab('history')}
+          onClick={() => handleSetTab('history')}
           label="History"
           ariaControls="iris-inbox-history"
         />
@@ -242,7 +261,7 @@ const IrisInboxPage: React.FC = () => {
                 label="All"
                 count={insights.length}
                 active={kindFilter === 'all'}
-                onClick={() => setKindFilter('all')}
+                onClick={() => handleSetKindFilter('all')}
               />
               {KIND_ORDER.filter((k) => insightCountsByKind[k] > 0).map((kind) => (
                 <FilterChip
@@ -250,7 +269,7 @@ const IrisInboxPage: React.FC = () => {
                   label={KIND_LABELS[kind]}
                   count={insightCountsByKind[kind]}
                   active={kindFilter === kind}
-                  onClick={() => setKindFilter(kind)}
+                  onClick={() => handleSetKindFilter(kind)}
                 />
               ))}
             </div>

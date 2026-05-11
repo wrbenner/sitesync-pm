@@ -10,8 +10,9 @@
  * Project Now panel emphasises whatever the role cares about.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { track } from '../../lib/telemetry/track'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { ProjectGate } from '../../components/ProjectGate'
 import { useCopilotStore } from '../../stores/copilotStore'
@@ -283,8 +284,20 @@ const DayPage: React.FC = () => {
     setPageContext('day')
   }, [setPageContext])
 
+  // Mount telemetry. Ref guard so StrictMode's intentional double-mount in
+  // dev doesn't double-fire `day.opened` per visit.
+  const mountFiredRef = useRef(false)
+  useEffect(() => {
+    if (mountFiredRef.current) return
+    mountFiredRef.current = true
+    track('day.opened')
+  }, [])
+
   const handleRowClick = useCallback(
-    (item: StreamItem) => navigate(destinationFor(item)),
+    (item: StreamItem) => {
+      track('day.item_navigated', { type: item.type })
+      navigate(destinationFor(item))
+    },
     [navigate],
   )
 
@@ -293,6 +306,7 @@ const DayPage: React.FC = () => {
       // Open the inline Iris draft drawer. The drawer auto-generates the draft
       // (or reuses an in-memory cached one) and offers Send / Edit / Dismiss.
       // No navigation — the AI loop happens on the dashboard.
+      track('day.lane_clicked', { lane: 'iris', has_draft: !!item.irisEnhancement?.draftAvailable })
       if (item.irisEnhancement?.draftAvailable) {
         setDraftItem(item)
       } else {
