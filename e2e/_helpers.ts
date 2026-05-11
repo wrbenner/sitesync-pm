@@ -63,7 +63,19 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
-  await page.goto('#/login')
+  // When VITE_DEV_BYPASS=true the app skips Supabase auth entirely and
+  // ProtectedRoute renders without a real user. Navigating directly to
+  // #/dashboard works; trying real sign-in fails (no Supabase URL) and
+  // waitForURL times out. Detect bypass by checking whether we land on
+  // dashboard (bypass active) or are redirected to /login (real auth).
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('domcontentloaded')
+  await page.waitForTimeout(800)
+  if (!page.url().includes('/login')) {
+    await settle(page, 1000)
+    return
+  }
+  // Real auth path — Supabase is configured.
   await page.getByPlaceholder('you@company.com').fill(user)
   await page.getByPlaceholder('Enter your password').fill(pass)
   await page.locator('button[type="submit"]').first().click()
