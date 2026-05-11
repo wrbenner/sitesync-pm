@@ -15,6 +15,7 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { useProjects } from '../hooks/queries';
 import { useProjectStore } from '../stores/projectStore';
 import { CreateProjectModal } from './forms/CreateProjectModal';
+import { isDevBypassActive } from '../lib/devBypass';
 
 /* ── Helpers ────────────────────────────────────────────── */
 
@@ -63,6 +64,10 @@ export const ProjectGate: React.FC = () => {
   );
 
   const hasProjects = (projects?.length ?? 0) > 0;
+
+  // In dev-bypass mode there is no Supabase — skip the gate so e2e tests
+  // see real page content (empty states) instead of the first-run onboarding.
+  if (isDevBypassActive()) return null;
 
   if (isLoading) {
     return (
