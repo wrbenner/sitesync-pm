@@ -86,6 +86,14 @@ export function sourceFetchKindFor(citation: DraftedActionCitation): SourceFetch
     case 'drawing_coordinate':
     case 'photo_observation':
       return null
+    // Phase 3d citation kinds — structural references that don't carry
+    // verifiable snippet text on the citation itself (the verifier would
+    // need to fetch the cited chunk from iris_kb_chunks). For now they
+    // pass verification by default.
+    case 'spreadsheet_cell':
+    case 'contract_clause':
+    case 'punch_item':
+      return null
   }
 }
 

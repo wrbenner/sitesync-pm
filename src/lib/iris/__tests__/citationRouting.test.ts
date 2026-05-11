@@ -13,17 +13,20 @@ import {
 } from '../citationRouting'
 
 describe('CITATION_ROUTES', () => {
-  it('covers all 8 spec kinds exactly', () => {
+  it('covers all 11 spec kinds exactly (8 base + 3 Phase 3d)', () => {
     const keys = Object.keys(CITATION_ROUTES).sort()
     expect(keys).toEqual([
       'budget_line',
       'change_order',
+      'contract_clause',
       'daily_log_excerpt',
       'drawing_coordinate',
       'photo_observation',
+      'punch_item',
       'rfi_reference',
       'schedule_phase',
       'spec_reference',
+      'spreadsheet_cell',
     ])
   })
 
@@ -81,6 +84,42 @@ describe('citationDeepLink', () => {
     expect(
       citationDeepLink({ kind: 'rfi_reference', label: 'x' }),
     ).toBeNull()
+  })
+
+  // Phase 3d additions
+  it('builds spreadsheet_cell deep link with sheet + range query', () => {
+    expect(
+      citationDeepLink({
+        kind: 'spreadsheet_cell',
+        label: 'x',
+        ref: 'asset-1',
+        sheet_name: 'Budget',
+        range_a1: 'B2:D15',
+      }),
+    ).toBe('/files/asset-1?sheet=Budget&range=B2%3AD15')
+  })
+
+  it('falls back to bare files path for spreadsheet_cell without sheet/range', () => {
+    expect(
+      citationDeepLink({ kind: 'spreadsheet_cell', label: 'x', ref: 'asset-1' }),
+    ).toBe('/files/asset-1')
+  })
+
+  it('builds contract_clause deep link with clause query', () => {
+    expect(
+      citationDeepLink({
+        kind: 'contract_clause',
+        label: 'x',
+        ref: 'k-1',
+        clause_number: '3.2.1',
+      }),
+    ).toBe('/contracts/k-1?clause=3.2.1')
+  })
+
+  it('builds punch_item deep link', () => {
+    expect(
+      citationDeepLink({ kind: 'punch_item', label: 'x', ref: 'p-1' }),
+    ).toBe('/punch-items/p-1')
   })
 })
 
