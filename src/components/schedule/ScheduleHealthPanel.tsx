@@ -39,6 +39,7 @@ function gradeColor(grade: string): string {
   if (grade === 'A') return '#16A34A';
   if (grade === 'B') return '#2563EB';
   if (grade === 'C') return '#D97706';
+  if (grade === '—') return '#6B7280';  // unlinked — neutral grey
   return '#DC2626';
 }
 

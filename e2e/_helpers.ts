@@ -63,12 +63,36 @@ export async function waitLoad(page: Page, timeoutMs = 30_000) {
 }
 
 export async function signIn(page: Page, user: string, pass: string) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(user)
-  await page.getByPlaceholder('Enter your password').fill(pass)
+  // In dev-bypass mode (VITE_DEV_BYPASS=true, no Supabase) ProtectedRoute
+  // renders without auth — navigate directly to dashboard.
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('domcontentloaded', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForTimeout(400)
+
+  // If we're not on the login page, bypass is active and we're done.
+  if (!page.url().includes('/login')) {
+    await settle(page, 800)
+    return
+  }
+
+  // Real auth flow: the form starts in magic-link mode; switch to password mode.
+  const toPasswordBtn = page.getByRole('button', { name: /sign in with password/i })
+  if (await toPasswordBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await toPasswordBtn.click()
+    await page.waitForTimeout(300)
+  }
+
+  // Fill credentials using the redesigned form placeholders.
+  await page.getByPlaceholder('Email').fill(user).catch(async () => {
+    // Legacy fallback for older builds that still use the original placeholder.
+    await page.getByPlaceholder('you@company.com').fill(user).catch(() => undefined)
+  })
+  await page.getByPlaceholder('Password').fill(pass).catch(async () => {
+    await page.getByPlaceholder('Enter your password').fill(pass).catch(() => undefined)
+  })
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
-  await settle(page, 1500)
+  await settle(page, 1_500)
 }
 
 export async function tryClick(
