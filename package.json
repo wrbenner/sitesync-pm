@@ -9,7 +9,7 @@
     "./src/lib/sentry.ts"
   ],
   "engines": {
-    "node": ">=20"
+    "node": "^22.13.0"
   },
   "scripts": {
     "dev": "vite",

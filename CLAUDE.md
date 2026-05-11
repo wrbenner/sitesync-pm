@@ -111,7 +111,9 @@ The active doc set lives under `docs/audits/`. Read in order before doing any wo
 
 **Canonical merge command:** `gh pr merge <N> --auto --squash --delete-branch`. Do not ask "should I merge" when required checks are green; per memory `feedback_merge_without_review`, Walker's posture is merge-without-review. When the base branch deletes on merge, **stacked dependent PRs auto-close and cannot be reopened** — rebase the dependent onto fresh main and `gh pr create --base main` again.
 
-**Pre-commit gate:** `.husky/pre-commit` runs `lint-staged` + incremental `tsc --noEmit` on both project tsconfigs. Skipping is allowed via `git commit --no-verify` for intentional WIP, not as a habit. Failures here mean you would have failed Gate 1 or Gate 2 in CI 5 minutes later — fix locally and save the roundtrip.
+**Pre-commit gate:** `.husky/pre-commit` exports `NODE_OPTIONS=--max-old-space-size=4096` (Node's ~2GB default OOMs the project's `tsc` graph from cold), then runs `lint-staged` + incremental `tsc --noEmit` on both project tsconfigs. Skipping is allowed via `git commit --no-verify` for intentional WIP, not as a habit. Failures here mean you would have failed Gate 1 or Gate 2 in CI 5 minutes later — fix locally and save the roundtrip.
+
+**Node version policy:** `.nvmrc` (currently `22.13.0`) is the **single source of truth**. `package.json` engines enforce `^22.13.0`. All 23 CI workflows resolve via `node-version-file: '.nvmrc'` — bumping the version is a one-line edit, no workflow churn. Local dev: use `nvm use` / `fnm use` (both read `.nvmrc` automatically). Node 22 LTS is in maintenance through April 2027; the floor (22.13) is set by `eslint-visitor-keys@5`.
 
 **First-run setup after clone or branch switch:** `npm install` activates the husky hook (the `prepare` script writes the git hook). If you skip this and try to commit, the hook is silently absent — your "pre-commit" is effectively `--no-verify`. Run `npm install` once after every fresh clone.
 
