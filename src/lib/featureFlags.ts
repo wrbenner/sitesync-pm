@@ -104,6 +104,16 @@ export const FLAGS = {
    * VITE_FLAG_IRIS_USE_FABRIC
    */
   irisUseFabric: flag('VITE_FLAG_IRIS_USE_FABRIC'),
+
+  /**
+   * Iris Knowledge Base retrieve() — gates the Lap 4 / Phase 3 substrate.
+   * Phase 3a ships the migrations + the typed retrieve() stub behind this
+   * flag (default off). Phase 3b–3d wire in real workers + the RPC call;
+   * Phase 3e's acceptance gate flips it on for staging after recall@5
+   * holds ≥ 0.85 for 7 consecutive days.
+   * VITE_FLAG_IRIS_KB_ENABLED
+   */
+  irisKbEnabled: flag('VITE_FLAG_IRIS_KB_ENABLED'),
 } as const
 
 export type FlagKey = keyof typeof FLAGS
