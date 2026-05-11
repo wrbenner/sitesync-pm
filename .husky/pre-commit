@@ -10,6 +10,12 @@
 #
 # To suspend the hook entirely (e.g. while bisecting), `mv .husky/pre-commit{,.disabled}`.
 
+# Bump tsc heap to 4GB. Node's ~2GB default OOMs on this project graph
+# whenever the .tsbuildinfo cache is cold (fresh clone, post-relocation,
+# branch switch with major schema deltas). Default goes first so a caller
+# can still override via env: later flags win in NODE_OPTIONS parsing.
+export NODE_OPTIONS="--max-old-space-size=4096 ${NODE_OPTIONS:-}"
+
 # 1. ESLint + JSON validity on staged files.
 #    `npx --no-install` so a missing dep fails loudly instead of fetching.
 npx --no-install lint-staged

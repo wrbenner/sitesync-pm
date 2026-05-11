@@ -35,7 +35,6 @@ permissions:
   issues: write
 
 env:
-  NODE_VERSION: '22'
   PYTHON_VERSION: '3.12'
 
 jobs:
@@ -56,7 +55,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
 
       - uses: actions/setup-python@v5
         with:
@@ -254,7 +253,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.nvmrc'
 
       - name: Download perception data
         uses: actions/download-artifact@v4
