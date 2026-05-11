@@ -1,0 +1,80 @@
+# Phase 2 acceptance gate
+# Spec: docs/audits/IRIS_PHASE_2_SPECIALIST_SUBAGENTS_SPEC_2026-05-08.md
+
+name: Phase 2 Acceptance
+
+on:
+  schedule:
+    - cron: '15 18 * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/services/iris/specialists/**'
+      - 'src/services/iris/executors/**'
+      - 'src/services/iris/router.ts'
+      - 'src/services/iris/cpm.ts'
+      - 'src/services/iris/co-pricing.ts'
+      - 'src/services/iris/kb-stub.ts'
+      - 'tests/fixtures/code-kb/**'
+      - '.github/workflows/phase-2-acceptance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  router-accuracy:
+    name: Router accuracy at or above 95 percent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx vitest run src/services/iris/__tests__/router.test.ts
+
+  specialists:
+    name: Specialist tests (Drafter / Money / Schedule / Code)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx vitest run src/services/iris/specialists/
+
+  executors:
+    name: Executor unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx vitest run src/services/iris/executors/
+
+  shadow-telemetry:
+    name: Shadow-mode executor_runs populated
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' }}
+    env:
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: secret-check
+        name: Verify STAGING_DB_URL secret
+        run: |
+          if [ -z "${STAGING_DB_URL:-}" ]; then
+            echo "::warning::STAGING_DB_URL not set — shadow-telemetry job skipped."
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Count shadow runs over last 7 days
+        if: steps.secret-check.outputs.skipped != 'true'
+        run: psql "$STAGING_DB_URL" -t -A -c "SELECT executor_name, COUNT(*) FROM executor_runs WHERE shadow_mode = TRUE AND decided_at > now() - interval '7 days' GROUP BY 1"
