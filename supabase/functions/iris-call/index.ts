@@ -126,6 +126,16 @@ interface CallRequest {
    * Walker can pull "what did the linter change for this specific draft".
    */
   drafted_action_id?: string
+  /**
+   * When true, the `system` field was assembled by the Context Fabric
+   * (per ADR-020 / IRIS_PHASE_1 spec §5.2). Logged on audit_log.metadata
+   * for the Phase 1 acceptance metric `fabric_used_pct`.
+   */
+  use_fabric?: boolean
+  /** Semver of the Fabric (matches src FABRIC_VERSION constant). */
+  fabric_version?: string
+  /** Persona resolved by Fabric (per ADR-019). */
+  fabric_persona?: string
 }
 
 // ── Hashing ──────────────────────────────────────────────────────────────────
@@ -172,6 +182,7 @@ interface CachedResponse {
 
 async function readIdempotencyCache(
   // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   idempotencyKey: string,
   requestHash: string,
@@ -197,6 +208,7 @@ async function readIdempotencyCache(
 
 async function writeIdempotencyCache(
   // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   idempotencyKey: string,
   userId: string,
@@ -223,6 +235,7 @@ async function writeIdempotencyCache(
 
 async function checkRateLimit(
   // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   userId: string,
 ): Promise<void> {
@@ -260,6 +273,7 @@ async function checkRateLimit(
 
 async function writeAuditEntry(params: {
   // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any
   userId: string
   userEmail: string | null
@@ -275,6 +289,9 @@ async function writeAuditEntry(params: {
   entityType: string | null
   entityId: string | null
   cached: boolean
+  useFabric: boolean
+  fabricVersion: string | null
+  fabricPersona: string | null
 }): Promise<string> {
   const auditEntityType = params.entityType ?? 'iris_call'
   const auditEntityId = params.entityId ?? crypto.randomUUID()
@@ -299,6 +316,9 @@ async function writeAuditEntry(params: {
         output_tokens: params.outputTokens,
         latency_ms: params.latencyMs,
         cached: params.cached,
+        use_fabric: params.useFabric,
+        fabric_version: params.fabricVersion,
+        fabric_persona: params.fabricPersona,
       },
     })
     .select('id')
@@ -337,6 +357,7 @@ Deno.serve(async (req) => {
   let body: CallRequest
   let user: { id: string; email: string }
   // deno-lint-ignore no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let supabase: any
 
   try {
@@ -522,6 +543,9 @@ Deno.serve(async (req) => {
           entityType: body.entity_type ?? null,
           entityId: body.entity_id ?? null,
           cached: false,
+          useFabric: body.use_fabric === true,
+          fabricVersion: body.fabric_version ?? null,
+          fabricPersona: body.fabric_persona ?? null,
         })
 
         const cacheable: CachedResponse = {

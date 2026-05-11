@@ -14,9 +14,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { callIris } from '../../lib/ai/callIris'
+import { FLAGS } from '../../lib/featureFlags'
 import type { StreamItem } from '../../types/stream'
+import { adaptStreamItemToFabric, type AdaptOptions } from './legacyAdapters'
 import { DRAFT_TEMPLATES } from './templates'
 import type { IrisDraft, ProjectContextSnapshot } from './types'
+import { FABRIC_VERSION } from './types/context'
 
 // Allow tests to inject a stub callIris without importing the real SSE stack.
 // Default is the real client.
@@ -29,6 +32,14 @@ export interface GenerateDraftOptions {
   onDelta?: (text: string) => void
   /** AbortSignal to cancel an in-flight draft. */
   signal?: AbortSignal
+  /**
+   * Caller-resolved Fabric inputs (Phase 1b cutover, per ADR-020).
+   * When the irisUseFabric flag is on AND these are supplied, the draft is
+   * generated through the Context Fabric path: persona-aware system prompt +
+   * Fabric telemetry on the audit row. When omitted or flag is off, the
+   * legacy template-builds-everything path is used (current behavior).
+   */
+  fabric?: AdaptOptions
 }
 
 // Map a StreamItem id like "rfi-uuid" to the entity_type / entity_id pair
@@ -72,20 +83,33 @@ export async function generateIrisDraft(
 
   const { entityType, entityId } = entityRefFromItemId(item.id)
 
+  // ── Phase 1b Fabric cutover — opt-in path ────────────────────────────────
+  // When the irisUseFabric flag is on AND the caller supplied Fabric inputs,
+  // assemble a persona-aware system prompt via the Context Fabric per
+  // ADR-020. Otherwise fall through to the legacy template-only path.
+  const useFabric = FLAGS.irisUseFabric && !!options.fabric
+  const adapted = useFabric && options.fabric
+    ? adaptStreamItemToFabric(item, projectContext, draftType, options.fabric)
+    : null
+
   const result = await callFn(
     {
       task: 'reasoning',
       prompt,
-      // The drafts task carries no separate system prompt today — the
-      // role/preamble is baked into template.buildPrompt(). Kept here as a
-      // single place to add per-draft guardrails (e.g. "do not invent
-      // monetary figures") if they become needed.
+      ...(adapted ? { system: adapted.systemPrompt } : {}),
       projectId: projectContext.projectId ?? undefined,
       entityType,
       entityId,
       maxTokens: 500,
       temperature: 0.3,
       idempotencyKey,
+      ...(adapted
+        ? {
+            useFabric: true,
+            fabricVersion: FABRIC_VERSION,
+            fabricPersona: adapted.persona,
+          }
+        : {}),
       signal: options.signal,
     },
     {
