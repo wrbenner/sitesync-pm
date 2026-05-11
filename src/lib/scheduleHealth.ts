@@ -113,13 +113,15 @@ export function analyzeScheduleHealth(phases: MappedSchedulePhase[]): HealthRepo
   // the schedule has no logic data at all — typically seed/imported data that
   // hasn't been sequenced yet. Return a neutral "unanalyzed" report rather
   // than an F-grade that would alarm users on an otherwise healthy project.
+  // Only applies to larger schedules (>10 activities) — small schedules should
+  // still be analyzed so that genuine issues (missing preds, dangling) surface.
   const totalLinks = phases.reduce((sum, p) => sum + (predecessorMap.get(p.id)?.length ?? 0), 0);
   const orphanCount = phases.filter(p =>
     (predecessorMap.get(p.id)?.length ?? 0) === 0 &&
     (successorMap.get(p.id)?.length ?? 0) === 0
   ).length;
   const orphanRate = phases.length > 0 ? orphanCount / phases.length : 0;
-  if (orphanRate >= 0.8 && totalLinks === 0) {
+  if (orphanRate >= 0.8 && totalLinks === 0 && phases.length > 10) {
     return unlinkedReport(phases.length);
   }
 
