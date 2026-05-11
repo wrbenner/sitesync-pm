@@ -24,8 +24,13 @@ export interface AutoExecuteInput {
   org_auto_execute_opt_in: boolean
   /** Resolved persona for the user invoking this. */
   persona: PersonaSlug
-  /** The hardened executor's declaration. */
-  executor: ExecutorDecl
+  /**
+   * The hardened executor's declaration. Generic position is widened to `any`
+   * here so callers can pass any concrete `ExecutorDecl<TInput>` without the
+   * variance mismatch TypeScript would otherwise raise on `ExecutorDecl<unknown>`.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  executor: ExecutorDecl<any>
   /** Specialist-provided confidence on the proposed write (0..1). */
   confidence: number
 }
