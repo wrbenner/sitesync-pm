@@ -1,0 +1,115 @@
+# Phase 3 Acceptance — daily gate for IRIS Phase 3 (Universal Knowledge Absorption).
+# Spec: docs/audits/IRIS_PHASE_3_KNOWLEDGE_ABSORPTION_SPEC_2026-05-08.md section 11.
+#
+# Runs:
+#   - Daily at 18:45 UTC (after the 18:30 dispatcher tick settles).
+#   - On every PR that touches retrieval / chunkers / migrations.
+#   - On workflow_dispatch.
+#
+# Jobs are fail-closed by design - any failure means Phase 3 stays open.
+
+name: Phase 3 Acceptance
+
+on:
+  schedule:
+    - cron: "45 18 * * *"
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "src/services/iris/retrieve.ts"
+      - "src/services/iris/types/retrieval.ts"
+      - "src/services/iris/ingestion/**"
+      - "src/services/iris/specialists/code-retrieval-cutover.ts"
+      - "tests/iris-evals/kb-retrieval/**"
+      - "supabase/migrations/20261008*"
+      - "supabase/functions/iris-ingest-*/**"
+      - ".github/workflows/phase-3-acceptance.yml"
+
+jobs:
+  goldens:
+    name: Goldens recall + precision
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run kb-retrieval harness unit tests
+        run: npx vitest run tests/iris-evals/kb-retrieval/run.test.ts
+      - name: Print acceptance thresholds
+        run: node -e "const m=require('./src/services/iris/types/retrieval'); console.log(JSON.stringify(m.PHASE_3_ACCEPTANCE,null,2))"
+
+  rls-leakage:
+    name: RLS leakage suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run RLS leakage matrix
+        run: npx vitest run tests/iris-evals/kb-retrieval/rls-leakage.test.ts
+
+  ingestion-chunkers:
+    name: Ingestion chunkers + router
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run all chunker + router tests
+        run: npx vitest run src/services/iris/ingestion/__tests__/ eslint-rules/__tests__/no-raw-ingest.test.js
+
+  cutover-parity:
+    name: Code specialist cutover parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run cutover parity tests
+        run: npx vitest run src/services/iris/__tests__/code-retrieval-cutover.test.ts
+      - name: Run legacy Code specialist tests
+        run: npx vitest run src/services/iris/specialists/__tests__/code.test.ts
+
+  retrieve-contract:
+    name: retrieve() contract + cache + telemetry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run retrieve() unit tests
+        run: npx vitest run src/services/iris/__tests__/retrieve.test.ts
+
+  citation-routing:
+    name: Citation routing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Run citationRouting tests
+        run: npx vitest run src/lib/iris/__tests__/citationRouting.test.ts
