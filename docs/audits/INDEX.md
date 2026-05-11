@@ -47,6 +47,8 @@ entries before starting work. Update this file when you add a new doc.
 | 2026-05-07 | RFI Procore-parity wave (5 stacked PRs) | `RFI_PROCORE_PARITY_WAVE_RECEIPT_2026-05-07.md` | Closes 5 of 6 "Brad notices in 3 minutes" items from the May-7 final gap audit + the Iris-on-Create wedge. PR #350 schema (cost/schedule impact status enums, reopen reason); PR #351 detail page (drop 720px cap → 1240px grid + sidebar, multi-assignee w/ per-person checkboxes, distribution chips, TipTap read-only question render); PR #352 list per-row Edit + View buttons; PR #354 Iris-on-Create wedge (one-line question → 7-pass Iris fills the form); PR #355 cost/schedule Yes/No/TBD wrappers + required-fields legend. All 5 typecheck-green. Migration applied to live DB. |
 | 2026-05-07 | RFI Procore-parity follow-on (PRs #361, #362) | `RFI_PROCORE_PARITY_FOLLOW_ON_RECEIPT_2026-05-07.md` | Picks up the original wave's deferred items. PR #361 = 4-col 20-field metadata grid (A2) + Reopen-with-reason dialog (A12) + ··· overflow menu (A11). PR #362 = Draft RFI explainer banner (C2). Names the 3 schema-blocked items (C3 default_distribution column missing on project_rfi_settings, E1 notification_prefs needs recipient_role enum, E2 same as C3) with migration sketches for the next person. Wave totals: 14 of 30 scoped items shipped — every Brad-eye visible item live; remaining items either schema-blocked or lower-impact polish. |
 | 2026-05-08 | RFI Create flow Procore-parity spec (queues 3 follow-up PRs) | `RFI_CREATE_FLOW_PARITY_SPEC_2026-05-08.md` | Walker surfaced the real gap: Create flow is single-assignee only; can't add multiple people / per-person Response Required checkbox / Distribution List / Watchers / Schedule + Cost Impact / Private flag on Create. PR #354 (Iris-on-Create wedge) didn't touch the structural fields. Spec inventories Procore's 22 Create fields vs. SiteSync's 11, ranks 23 gaps by severity, and queues 3 PRs (#366 multi-assignee + dist + watchers, #367 impact wrappers + private + RFI Manager + req-legend, #368 spec-book typeahead + drawing auto-link + reference). Schema for #366 + #367 already unblocked by PR #365. |
+| 2026-05-08 | IRIS nativeness planning push | `IRIS_NATIVENESS_PLANNING_PUSH_RECEIPT_2026-05-08.md` (master plan: `IRIS_NATIVENESS_PLAN_2026-05-08.md`) | 6 phase specs (Phase 1–6) + 1 ingestion taxonomy sub-spec + 5 ADR stubs (017–021) + Agent architecture research + Cross-industry AI research + SiteSync agent topology recommendation. Sets the Lap 3–6 roadmap for turning Iris from drafter into actor. |
+| 2026-05-08 | Finder/iCloud duplicate purge — round 1 | `FINDER_DUP_PURGE_ROUND_1_RECEIPT_2026-05-08.md` | Deleted 954 macOS Finder/iCloud-conflict duplicate files from `src/`; 8.9 MB removed. Files never git-tracked (`.gitignore` line 78 excluded the pattern). Pure working-tree cleanup. No imports referenced any deleted file. |
 
 ---
 
@@ -84,6 +86,12 @@ entries before starting work. Update this file when you add a new doc.
 | 43–49 | Iris voice work | `IRIS_VOICE_GUIDE_SPEC_2026-05-04.md` | ✅ Infrastructure + iris-call wiring shipped (Days 43–49 + Day 45). Days 43/46/47 hand-edit cycle + Day 48 PM review remain Walker-side. |
 | 50–60 | Soft pilot | `SOFT_PILOT_PLAYBOOK_2026-05-04.md` | ✅ Code substrate + Day 60 export shipped. Recruit + onboard + run pilot remain Walker-side. |
 | 60 | Lap 2 acceptance gate | `LAP_2_ACCEPTANCE_GATE_SPEC_2026-05-04.md` | ✅ Workflow + scripts + matview shipped (Day 30.75 receipt) — awaiting STAGING_DB_URL secret |
+| Lap 3 (1–30) | IRIS Phase 1 — Role Layer + Context Fabric v0 | `IRIS_PHASE_1_ROLE_LAYER_CONTEXT_FABRIC_SPEC_2026-05-08.md` (canonical, supersedes `PHASE_1_ROLE_LAYER_CONTEXT_FABRIC_SPEC_2026-05-08.md` draft) | 📋 Draft — Lap 3 pre-flight |
+| Lap 3 (31–60) | IRIS Phase 2 — Specialist Sub-Agents | `IRIS_PHASE_2_SPECIALIST_SUBAGENTS_SPEC_2026-05-08.md` (canonical, supersedes `PHASE_2_SPECIALIST_SUB_AGENTS_SPEC_2026-05-08.md` draft) | 📋 Draft — Lap 3 pre-flight |
+| Lap 4 | IRIS Phase 3 — Universal Knowledge Absorption | `IRIS_PHASE_3_KNOWLEDGE_ABSORPTION_SPEC_2026-05-08.md` (canonical, supersedes `PHASE_3_UNIVERSAL_KNOWLEDGE_ABSORPTION_SPEC_2026-05-08.md` draft); ingestion taxonomy sub-spec: `INGESTION_TAXONOMY_SPEC_2026-05-08.md` | 📋 Draft |
+| Lap 4 | IRIS Phase 4 — Per-Page Insight + Ambient Awareness | `IRIS_PHASE_4_INSIGHT_SLOT_AMBIENT_SPEC_2026-05-08.md` (canonical, supersedes `PHASE_4_PER_PAGE_INSIGHT_AMBIENT_SPEC_2026-05-08.md` draft) | 📋 Draft |
+| Lap 5 | IRIS Phase 5 — Multimodal | `IRIS_PHASE_5_MULTIMODAL_SPEC_2026-05-08.md` | 📋 Draft |
+| Lap 6 | IRIS Phase 6 — Firm Memory | `IRIS_PHASE_6_FIRM_MEMORY_SPEC_2026-05-08.md` | 📋 Draft |
 
 ---
 
@@ -218,6 +226,9 @@ See: `SPEC_INFRA_FOUNDATION_RECEIPT_2026-05-08.md` (foundation receipt), `PHASE_
 | 2026-05-04 | `RFI_MODULE_BUILD_SPEC_2026-05-04.md` | Bugatti-grade RFI build spec — Part 17 P0 list shipped 2026-05-06. P1 / P2 sections still queued. |
 | 2026-05-06 | `RFI_EDIT_MANIPULATE_AUDIT_2026-05-06.md` | Procore vs SiteSync edit/manipulate parity audit (live walkthrough). |
 | 2026-05-06 | `SUBMITTALS_MODULE_BUILD_SPEC_2026-05-06.md` | Submittals build spec — P0-D35 cleanup shipped via PR #324; D38+ refactor queued. |
+| 2026-05-08 | `AGENT_ARCHITECTURE_RESEARCH_2026-05-08.md` | Agent architecture research feeding the IRIS Phase 1–2 design (specialist boundaries, persona model, retrieval entrypoint). |
+| 2026-05-08 | `CROSS_INDUSTRY_AI_RESEARCH_2026-05-08.md` | Cross-industry AI feature research (Salesforce, ServiceNow, Linear, Notion AI etc.) feeding the IRIS Nativeness Plan. |
+| 2026-05-08 | `SITESYNC_AGENT_TOPOLOGY_RECOMMENDATION_2026-05-08.md` | Synthesis of the agent-architecture + cross-industry research into a recommended SiteSync agent topology (router + 4 specialists + 3 hardened executors). |
 
 ---
 
