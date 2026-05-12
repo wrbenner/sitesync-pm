@@ -222,23 +222,27 @@ export const Safety: React.FC = () => {
         inspectionsThisWeek={inspectionsThisWeek}
       />
 
-      {/* Tab Switcher */}
-      <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing.lg, overflowX: 'auto' }}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              aria-pressed={isActive}
-              onClick={() => setActiveTab(tab.key)}
-              style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px', flexShrink: 0 }}
-            >
-              {React.createElement(Icon, { size: 14 })}
-              {tab.label}
-            </button>
-          );
-        })}
+      {/* Tab Switcher — horizontally scrollable with right-fade hint */}
+      <div style={{ position: 'relative', marginBottom: spacing.lg }}>
+        <div style={{ display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, padding: spacing['1'], overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(tab.key)}
+                style={{ display: 'flex', alignItems: 'center', gap: spacing['2'], padding: `${spacing['2']} ${spacing['4']}`, border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily, fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal, color: isActive ? colors.orangeText : colors.textSecondary, backgroundColor: isActive ? colors.surfaceRaised : 'transparent', transition: `all ${transitions.instant}`, whiteSpace: 'nowrap', minHeight: '36px', flexShrink: 0 }}
+              >
+                {React.createElement(Icon, { size: 14 })}
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        {/* Right-edge fade signals more tabs are scrollable on narrow viewports */}
+        <div aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 56, background: `linear-gradient(to right, transparent, ${colors.surfacePage})`, borderRadius: `0 ${borderRadius.lg} ${borderRadius.lg} 0`, pointerEvents: 'none' }} />
       </div>
 
       {/* Skeleton loaders */}
