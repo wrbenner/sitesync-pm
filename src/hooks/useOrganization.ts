@@ -7,6 +7,7 @@ import type { OrgRole } from '../types/tenant'
 import type { Organization } from '../types/database'
 import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'
+import { scoped } from '../lib/supabase/orgScope'
 
 interface OrganizationContextValue {
   currentOrg: Organization | null
@@ -57,9 +58,10 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     let cancelled = false
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user || cancelled) return
-      fromTable('organization_members')
-        .select('role')
-        .eq('organization_id' as never, currentOrg.id)
+      scoped(
+        fromTable('organization_members').select('role'),
+        currentOrg.id,
+      )
         .eq('user_id' as never, user.id)
         .maybeSingle()
         .then(({ data }) => {

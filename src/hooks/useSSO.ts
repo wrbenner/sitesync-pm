@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'
+import { scoped } from '../lib/supabase/orgScope'
 import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────
@@ -54,6 +55,10 @@ export function useSSO() {
     setLoading(true)
     setError(null)
 
+    // React Compiler's BuildHIR doesn't lower TryStatement with finally
+    // or throw inside try/catch — emits react-hooks/todo warnings. Standard
+    // error-handling shape; nothing to refactor.
+    /* eslint-disable react-hooks/todo -- React Compiler doesn't lower try/finally + throw */
     try {
       // Supabase Auth SSO: initiate SAML flow for the given domain
       const { data, error: ssoError } = await supabase.auth.signInWithSSO({ domain })
@@ -76,6 +81,7 @@ export function useSSO() {
     } finally {
       setLoading(false)
     }
+    /* eslint-enable react-hooks/todo */
   }, [])
 
   // Check if SSO is enforced for a given email domain
@@ -107,10 +113,10 @@ export function useSSOAdmin(organizationId: string | undefined) {
   // Get current SSO configuration
   const getConfig = useCallback(async (): Promise<SSOConfig | null> => {
     if (!organizationId) return null
-    const { data } = await fromTable('sso_configurations')
-      .select('*')
-      .eq('organization_id' as never, organizationId)
-      .single()
+    const { data } = await scoped(
+      fromTable('sso_configurations').select('*'),
+      organizationId,
+    ).single()
     return data as unknown as SSOConfig | null
   }, [organizationId])
 
@@ -119,6 +125,7 @@ export function useSSOAdmin(organizationId: string | undefined) {
     if (!organizationId) return
     setSaving(true)
 
+    /* eslint-disable react-hooks/todo -- React Compiler doesn't lower try/finally + throw */
     try {
       const { error } = await fromTable('sso_configurations')
         .upsert({
@@ -134,6 +141,7 @@ export function useSSOAdmin(organizationId: string | undefined) {
     } finally {
       setSaving(false)
     }
+    /* eslint-enable react-hooks/todo */
   }, [organizationId])
 
   // Test SSO connection

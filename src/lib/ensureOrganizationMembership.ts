@@ -1,5 +1,6 @@
 
 import { fromTable, asRow } from '../lib/db/queries'
+import { scoped } from '../lib/supabase/orgScope'
 import { useAuthStore } from '../stores/authStore'
 import type { Organization } from '../types/database'
 
@@ -70,9 +71,10 @@ export async function ensureOrganizationMembership(userId: string): Promise<stri
   }
 
   // 3. Ensure organization_members row exists (idempotent).
-  const { data: memberData } = await fromTable('organization_members')
-    .select('id')
-    .eq('organization_id' as never, activeOrgId)
+  const { data: memberData } = await scoped(
+    fromTable('organization_members').select('id'),
+    activeOrgId,
+  )
     .eq('user_id' as never, userId)
     .maybeSingle()
   const memberRow = asRow<{ id: string }>(memberData)
