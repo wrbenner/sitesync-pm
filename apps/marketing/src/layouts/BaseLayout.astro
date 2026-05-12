@@ -1,0 +1,122 @@
+---
+// BRT sub-5 §4.2 — base layout for all marketing pages.
+// SEO + OG + Inter font preconnect + minimal nav/footer.
+//
+// Per-page props: title, description, ogImage, canonicalPath
+// All defaults are sane so an Astro page can omit them.
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  canonicalPath?: string;
+  noIndex?: boolean;
+}
+
+const {
+  title = 'SiteSync — Construction project management built for the field',
+  description = 'AI-assisted RFIs, submittals, daily logs, and budget — with audit-grade traceability for every draft. $400/mo per company. 14-day trial.',
+  ogImage = '/og/default.png',
+  canonicalPath = Astro.url.pathname,
+  noIndex = false,
+} = Astro.props;
+
+const canonical = new URL(canonicalPath, Astro.site).toString();
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  {noIndex && <meta name="robots" content="noindex,nofollow" />}
+  <link rel="canonical" href={canonical} />
+
+  <!-- OpenGraph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content={new URL(ogImage, Astro.site).toString()} />
+  <meta property="og:site_name" content="SiteSync" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={new URL(ogImage, Astro.site).toString()} />
+
+  <!-- Inter font, system-fallback safe -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+
+  <!-- JSON-LD: Organization -->
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'SiteSync AI, Inc.',
+    url: 'https://sitesyncai.com',
+    logo: new URL('/logo.svg', Astro.site).toString(),
+    sameAs: ['https://github.com/wrbenner/sitesync-pm'],
+  })} />
+</head>
+<body class="bg-white text-brand-ink antialiased">
+  <header class="border-b border-slate-100">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <a href="/" class="text-lg font-semibold tracking-tight text-brand">
+        SiteSync
+      </a>
+      <nav class="flex items-center gap-6 text-sm">
+        <a href="/features" class="text-brand-mute hover:text-brand-ink">Features</a>
+        <a href="/pricing" class="text-brand-mute hover:text-brand-ink">Pricing</a>
+        <a href="https://app.sitesyncai.com/login" class="text-brand-mute hover:text-brand-ink">Sign in</a>
+        <a href="https://app.sitesyncai.com/signup"
+           class="rounded-md bg-brand-accent px-4 py-2 font-semibold text-white hover:bg-blue-600">
+          Start trial
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <slot />
+
+  <footer class="mt-24 border-t border-slate-100 bg-slate-50">
+    <div class="mx-auto max-w-6xl px-6 py-12 text-sm text-brand-mute">
+      <div class="flex flex-wrap items-start gap-12">
+        <div class="min-w-[12rem]">
+          <div class="font-semibold text-brand-ink">SiteSync</div>
+          <div class="mt-2">Construction project management,<br />built for the field.</div>
+        </div>
+        <div>
+          <div class="font-semibold text-brand-ink">Product</div>
+          <ul class="mt-2 space-y-1">
+            <li><a href="/features" class="hover:text-brand-ink">Features</a></li>
+            <li><a href="/pricing" class="hover:text-brand-ink">Pricing</a></li>
+            <li><a href="https://app.sitesyncai.com/help" class="hover:text-brand-ink">Help</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-semibold text-brand-ink">Company</div>
+          <ul class="mt-2 space-y-1">
+            <li><a href="/about" class="hover:text-brand-ink">About</a></li>
+            <li><a href="mailto:walker@sitesyncai.com" class="hover:text-brand-ink">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-semibold text-brand-ink">Legal</div>
+          <ul class="mt-2 space-y-1">
+            <li><a href="/legal/terms" class="hover:text-brand-ink">Terms</a></li>
+            <li><a href="/legal/privacy" class="hover:text-brand-ink">Privacy</a></li>
+            <li><a href="/legal/dpa" class="hover:text-brand-ink">DPA</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-8 border-t border-slate-200 pt-6 text-xs">
+        © {new Date().getFullYear()} SiteSync AI, Inc. All rights reserved.
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

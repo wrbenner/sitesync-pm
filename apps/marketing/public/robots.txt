@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Legal placeholders are noindexed via meta tag while counsel reviews.
+Disallow: /legal/
+
+Sitemap: https://sitesyncai.com/sitemap-index.xml

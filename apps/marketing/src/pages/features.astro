@@ -1,0 +1,66 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+
+const workflows = [
+  { name: 'RFIs',          one: 'AI-drafted from drawings + photos. Routed in one click.' },
+  { name: 'Submittals',    one: 'Spec-aware cover sheets. Stamped + audit-trailed.' },
+  { name: 'Daily logs',    one: 'Auto-drafted from check-ins, photos, RFIs, weather.' },
+  { name: 'Budget',        one: 'Contract value + commitments + variance — in one view.' },
+  { name: 'Change orders', one: 'State-machine workflow. Adds to contract automatically.' },
+  { name: 'Schedule',      one: 'Gantt + critical path + downstream slip propagation.' },
+  { name: 'Punch items',   one: 'Photo-tagged. Trade-routed. Closed via mobile.' },
+  { name: 'Drawings',      one: 'Sheet-aware revisions. Spec callouts auto-link to RFIs.' },
+  { name: 'Closeout',      one: 'AIA-style packet generation in minutes, not days.' },
+];
+---
+<BaseLayout
+  title="Features — SiteSync"
+  description="The Nine workflows every construction project needs, with an AI Copilot that drafts and an audit chain that proves."
+>
+  <section class="mx-auto max-w-4xl px-6 pt-24 pb-12">
+    <h1 class="font-display text-4xl font-bold tracking-tight text-brand-ink">
+      The Nine workflows your project actually needs.
+    </h1>
+    <p class="mt-6 text-lg text-brand-mute">
+      Built around how construction work actually flows — not how a software
+      vendor wished it flowed.
+    </p>
+  </section>
+
+  <section class="mx-auto max-w-4xl px-6 py-12">
+    <div class="grid gap-8 sm:grid-cols-2">
+      {workflows.map((w) => (
+        <div class="rounded-lg border border-slate-200 bg-white p-6">
+          <h3 class="font-display text-xl font-semibold text-brand-ink">{w.name}</h3>
+          <p class="mt-2 text-brand-mute">{w.one}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 py-24">
+    <h2 class="font-display text-2xl font-bold text-brand-ink">The AI Copilot</h2>
+    <p class="mt-4 text-brand-mute">
+      Every draft is hash-chained and audit-logged. The AI suggests; you
+      approve. The AI never ships work on its own.
+    </p>
+    <p class="mt-4 text-brand-mute">
+      Eight citation kinds anchor every claim back to source data — drawing
+      coordinates, RFI references, daily log excerpts, photo observations,
+      spec sections, schedule phases, budget lines, change orders.
+    </p>
+    <p class="mt-4 text-brand-mute">
+      Want the technical detail?
+      <a href="https://app.sitesyncai.com/security" class="text-brand-accent hover:underline">
+        Read the security overview →
+      </a>
+    </p>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-6 py-12 text-center">
+    <a href="https://app.sitesyncai.com/signup"
+       class="rounded-md bg-brand-accent px-6 py-3 text-base font-semibold text-white hover:bg-blue-600">
+      Start 14-day trial
+    </a>
+  </section>
+</BaseLayout>
