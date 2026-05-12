@@ -15,6 +15,7 @@ import { colors, spacing, typography, borderRadius, transitions } from '../style
 import { useProjects } from '../hooks/queries';
 import { useProjectStore } from '../stores/projectStore';
 import { CreateProjectModal } from './forms/CreateProjectModal';
+import { isDevBypassActive } from '../lib/devBypass';
 
 /* ── Helpers ────────────────────────────────────────────── */
 
@@ -49,7 +50,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 /* ── Main Component ─────────────────────────────────────── */
 
-export const ProjectGate: React.FC = () => {
+// Inner component — all hooks live here. Rendered only when Supabase is live.
+const ProjectGateInner: React.FC = () => {
   const { data: projects, isLoading } = useProjects();
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
   const [createOpen, setCreateOpen] = useState(false);
@@ -351,6 +353,33 @@ export const ProjectGate: React.FC = () => {
       <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </>
   );
+};
+
+// In dev-bypass mode the Supabase client points to http://dev-bypass.invalid
+// and every query fails after two retries. That keeps "Loading projects…"
+// alive for ~3s per page, blocking waitLoad() in every Playwright spec that
+// visits a guarded route. The bypass check is a compile-time constant so no
+// rule-of-hooks violation occurs — ProjectGateInner never mounts in that path.
+export const ProjectGate: React.FC = () => {
+  if (isDevBypassActive()) {
+    return (
+      <div
+        role="status"
+        aria-label="No project selected"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '80vh',
+        }}
+      >
+        <p style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary, margin: 0 }}>
+          No project selected · dev bypass active
+        </p>
+      </div>
+    );
+  }
+  return <ProjectGateInner />;
 };
 
 export default ProjectGate;
