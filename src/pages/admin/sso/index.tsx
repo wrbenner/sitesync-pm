@@ -42,6 +42,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
   const { data: cfg } = useQuery({
     queryKey: ['org_sso_config', organizationId],
     queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data } = await (supabase as any)
         .from('org_sso_config')
         .select('*')
@@ -52,6 +53,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
   });
 
   const [draft, setDraft] = useState<Partial<SsoConfigRow>>({});
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (cfg) setDraft(cfg); }, [cfg]);
 
   const protocol = draft.protocol ?? 'saml';
@@ -62,6 +64,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
 
   const save = async () => {
     const payload = { ...draft, organization_id: organizationId };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any)
       .from('org_sso_config')
       .upsert(payload, { onConflict: 'organization_id' });
@@ -110,7 +113,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
             <input style={input} value={draft.saml_idp_entity_id ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_idp_entity_id: e.target.value }))} />
           </Field>
-          <Field label="SSO URL" error={!samlUrlCheck.ok ? (samlUrlCheck as any).reason : undefined}>
+          <Field label="SSO URL" error={!samlUrlCheck.ok ? samlUrlCheck.reason : undefined}>
             <input style={input} value={draft.saml_sso_url ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_sso_url: e.target.value }))} />
           </Field>
@@ -175,7 +178,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
         />
         <Field label="Default role (used when no group matches)">
           <input style={input} value={draft.default_role ?? ''}
-            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null as any }))} />
+            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null }))} />
         </Field>
       </fieldset>
 

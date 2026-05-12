@@ -34,7 +34,7 @@ export async function detectShareChannel(): Promise<ShareResult['channel']> {
   } catch {
     /* not capacitor */
   }
-  if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     return 'web'
   }
   if (typeof navigator !== 'undefined' && navigator.clipboard != null) {
@@ -50,6 +50,7 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
   try {
     const { Capacitor } = await import('@capacitor/core')
     if (Capacitor.isNativePlatform()) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mod = await import('@capacitor/share' as any).catch(() => null)
       if (mod?.Share) {
         await mod.Share.share({
@@ -67,16 +68,16 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
 
   // 2. Web Share API
   try {
-    if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       const payload: ShareData = {
         title: input.title,
         text: input.text,
         url: input.url,
       }
-      if (input.file && (navigator as any).canShare?.({ files: [new File([input.file.blob], input.file.name, { type: input.file.type })] })) {
-        ;(payload as any).files = [new File([input.file.blob], input.file.name, { type: input.file.type })]
+      if (input.file && navigator.canShare?.({ files: [new File([input.file.blob], input.file.name, { type: input.file.type })] })) {
+        payload.files = [new File([input.file.blob], input.file.name, { type: input.file.type })]
       }
-      await (navigator as any).share(payload)
+      await navigator.share(payload)
       return { ok: true, channel: 'web' }
     }
   } catch (err) {
