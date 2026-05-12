@@ -5,6 +5,7 @@ import type { Profile, Organization } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
 import type { OrgRole } from '../types/tenant';
 import analytics from '../lib/analytics';
+import { identifyCrispUser, resetCrispSession } from '../lib/crisp/init';
 
 // BUG-H11 FIX: Keep a module-level reference to the auth subscription so we can
 // unsubscribe on teardown (e.g. signOut / HMR) and avoid leaked listeners.
@@ -85,8 +86,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             ...(profile?.first_name ? { first_name: profile.first_name } : {}),
             ...(profile?.last_name ? { last_name: profile.last_name } : {}),
           });
+          // BRT sub-6 §4.1: identify to Crisp so chat shows org + plan context.
+          const { organization } = get();
+          identifyCrispUser({
+            email: session.user.email ?? '',
+            fullName: profile?.first_name && profile?.last_name
+              ? `${profile.first_name} ${profile.last_name}`
+              : profile?.first_name ?? null,
+            orgName: organization?.name ?? null,
+            plan: organization?.plan ?? null,
+            signupAt: session.user.created_at ?? null,
+          });
         } else {
           set({ profile: null, organization: null, organizations: [], currentOrgRole: null });
+          // BRT sub-6 §4.1: reset Crisp on signout so a shared device gets a clean thread.
+          resetCrispSession();
           // BRT sub-7 §4.3: drop posthog identity on signout so the next
           // user on the same device starts a clean funnel.
           analytics.reset();

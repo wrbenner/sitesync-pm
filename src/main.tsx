@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { initVitals } from './lib/vitals'
 import { registerServiceWorker } from './lib/registerSW'
+import { initCrisp } from './lib/crisp/init'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,6 +21,10 @@ if (typeof requestIdleCallback !== 'undefined') {
 } else {
   setTimeout(() => initVitals(), 0)
 }
+
+// BRT sub-6 §4.1 — Crisp chat embed (no-op if VITE_CRISP_WEBSITE_ID is unset
+// or we're on a print/export route). Idempotent; can be re-called safely.
+initCrisp()
 
 // Development only: axe-core accessibility audit
 if (import.meta.env.DEV) {
