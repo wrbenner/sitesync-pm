@@ -20,7 +20,8 @@ function randomSecret(length: number): string {
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     crypto.getRandomValues(bytes)
   } else {
-    for (let i = 0; i < length; i++) bytes[i] = Math.floor(Math.random() * 256)
+    // crypto.getRandomValues is universally available (Node 15+, all browsers)
+    crypto.getRandomValues(bytes)
   }
   let out = ''
   for (let i = 0; i < length; i++) {

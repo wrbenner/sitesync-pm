@@ -95,15 +95,17 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Random UUID, falls back to a manual implementation in older runtimes. */
+/** Random UUID using the Web Crypto API (available Node 18+, all modern browsers). */
 function makeUuid(): string {
-  const c = globalThis.crypto as Crypto | undefined
+  const c = globalThis.crypto
   if (c?.randomUUID) return c.randomUUID()
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, ch => {
-    const r = (Math.random() * 16) | 0
-    const v = ch === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
+  // getRandomValues has broader support (available since Chrome 11, Node 15+)
+  const bytes = new Uint8Array(16)
+  c.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0'))
+  return `${hex.slice(0,4).join('')}-${hex.slice(4,6).join('')}-${hex.slice(6,8).join('')}-${hex.slice(8,10).join('')}-${hex.slice(10).join('')}`
 }
 
 /**
@@ -187,7 +189,7 @@ export async function readyItems(): Promise<QueueItem[]> {
 export function nextDelayMs(attempts: number): number {
   const exp = BASE_DELAY_MS * Math.pow(2, attempts)
   const capped = Math.min(MAX_DELAY_MS, exp)
-  const jitter = Math.random() * capped * 0.2  // ±20%
+  const jitter = (crypto.getRandomValues(new Uint8Array(1))[0] / 255) * capped * 0.2  // ±20%
   return Math.round(capped - jitter / 2 + jitter)
 }
 

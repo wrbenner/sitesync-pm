@@ -17,7 +17,8 @@ export async function settle(page: Page, ms = 250) {
     }`,
   }).catch(() => undefined)
   await page.waitForLoadState('networkidle', { timeout: 8_000 }).catch(() => undefined)
-  await page.waitForTimeout(ms)
+  // Catch page-closed errors (e.g. when test timeout fires mid-wait).
+  await page.waitForTimeout(ms).catch(() => undefined)
 }
 
 /**
@@ -36,7 +37,7 @@ export async function settle(page: Page, ms = 250) {
  *   • Network activity: short networkidle wait at the end so React
  *     Query has settled.
  */
-export async function waitLoad(page: Page, timeoutMs = 30_000) {
+export async function waitLoad(page: Page, timeoutMs = 20_000) {
   await page.waitForFunction(
     () => {
       const text = document.body.textContent ?? ''

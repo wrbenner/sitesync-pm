@@ -91,7 +91,8 @@ function randomHex(bytes: number): string {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(buf)
   } else {
-    for (let i = 0; i < bytes; i++) buf[i] = Math.floor(Math.random() * 256)
+    // crypto.getRandomValues is universally available (Node 15+, all browsers)
+    crypto.getRandomValues(buf)
   }
   return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('')
 }

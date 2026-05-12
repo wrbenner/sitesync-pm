@@ -94,15 +94,14 @@ export const OfflineBanner: React.FC = () => {
   // Don't show banner when online, idle, with nothing pending and no just-synced flash
   if (isOnline && !isSyncing && !isCaching && !hasPending && !hasConflicts && !justSynced) return null;
 
-  // Cache priming once at least one table has landed: collapse the full
-  // banner into a compact pill anchored top-right. The full multi-line
-  // "Loading project — submittals (3/16)… · Never synced" bar across the
-  // top of every page during the first 30s read as ominous in audit
-  // captures. The pill keeps users informed without dominating the page.
+  // During cache priming collapse to a compact pill anchored top-right.
+  // Never show the full-width "Loading project — submittals (3/16)… · Never
+  // synced" banner during the initial caching window — it reads as an error
+  // state and dominates the page even before a single table has loaded.
   const cacheCompletedCount = cacheProgress?.completed ?? 0;
   const cacheTotalCount = cacheProgress?.total ?? 0;
-  if (isCaching && !hasConflicts && !hasPending && cacheCompletedCount > 0 && cacheTotalCount > 0) {
-    const pct = Math.round((cacheCompletedCount / cacheTotalCount) * 100);
+  if (isCaching && !hasConflicts && !hasPending) {
+    const pct = cacheTotalCount > 0 ? Math.round((cacheCompletedCount / cacheTotalCount) * 100) : 0;
     return (
       <div
         role="status"

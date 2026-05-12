@@ -28,6 +28,7 @@ import { useRealtimeSubscription, usePresence } from './hooks/useRealtimeSubscri
 import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
 import { useNotificationRealtime } from './hooks/useNotificationRealtime';
 import { useProjectId } from './hooks/useProjectId';
+import { isDevBypassActive } from './lib/devBypass';
 import { useProjectInit } from './hooks/useProjectInit';
 import { ProjectGate } from './components/ProjectGate';
 import { useAuth } from './hooks/useAuth';
@@ -580,12 +581,13 @@ function AppContent() {
 
   useEffect(() => {
     // Mobile uses MobileLayout entirely — collapse so any flicker through the
-    // desktop tree doesn't widen the layout. iPad keeps the full sidebar
-    // because (a) the Sidebar component renders at a fixed 252px regardless of
-    // the `collapsed` flag, so collapsing only desyncs the main margin and
-    // hides content behind the sidebar, and (b) 1024px viewports comfortably
-    // fit 252px sidebar + 772px content.
+    // desktop tree doesn't widen the layout.
+    // Tablet (769–1024px) shows the 72px icon rail: save the desktop pref so
+    // it restores when the viewport grows back to desktop.
     if (isMobile) {
+      prevDesktopCollapsed.current = sidebarCollapsed;
+      setSidebarCollapsed(true);
+    } else if (isTablet) {
       prevDesktopCollapsed.current = sidebarCollapsed;
       setSidebarCollapsed(true);
     } else {
@@ -649,7 +651,7 @@ function AppContent() {
         {/* key={pathname} resets the boundary on navigation so a crash on one page
             doesn't lock the user out of every other page. */}
         <ErrorBoundary key={location.pathname} fallback={<ErrorFallback />}>
-          {!projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
+          {!isDevBypassActive() && !projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
             ? <ProjectGate />
             : <AppRoutes />
           }
@@ -673,7 +675,7 @@ function AppContent() {
           // auto-flow and push <main> into column 1 — that exact bug
           // collapsed the entire viewport when the sidebar was hidden.
           display: 'grid',
-          gridTemplateColumns: `${sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
+          gridTemplateColumns: `${isTablet ? '72px' : sidebarCollapsed ? '0' : '252px'} minmax(0, 1fr)`,
           height: '100vh',
           backgroundColor: colorVars.surfacePage,
           fontFamily: typographyConfig.fontFamily,
@@ -683,7 +685,7 @@ function AppContent() {
       >
         <SkipToContent />
         {user && <AuthenticatedProviders activeView={activeView} />}
-        {!sidebarCollapsed && (
+        {(isTablet || !sidebarCollapsed) && (
           <div style={{ gridColumn: '1 / 2', minWidth: 0, overflow: 'hidden' }}>
             <Sidebar activeView={activeView} onNavigate={handleNavigate} />
           </div>
@@ -714,13 +716,13 @@ function AppContent() {
             // starts at x=0 here; PageContainer adds pagePaddingX=36px, putting
             // headings at x=36 — inside the button zone. Add 28px so headings
             // land at x=64, safely past the button's right edge.
-            paddingLeft: sidebarCollapsed && !isMobile ? 28 : undefined,
+            paddingLeft: sidebarCollapsed && !isMobile && !isTablet ? 28 : undefined,
           }}
         >
           {/* Floating "show menu" button when sidebar is collapsed.
               Without this, hiding the sidebar via Cmd+B left the user
               with no visible affordance to bring it back. */}
-          {sidebarCollapsed && !isMobile && (
+          {sidebarCollapsed && !isMobile && !isTablet && (
             <button
               type="button"
               onClick={() => setSidebarCollapsed(false)}
@@ -767,7 +769,7 @@ function AppContent() {
             {/* key={pathname} resets the boundary on navigation so a crash on one page
                 doesn't lock the user out of every other page. */}
             <ErrorBoundary key={location.pathname}>
-              {!projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
+              {!isDevBypassActive() && !projectId && !projectsLoading && !['portfolio', 'settings'].some(p => activeView.startsWith(p))
                 ? <ProjectGate />
                 : <AppRoutes />
               }

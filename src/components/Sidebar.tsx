@@ -363,7 +363,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                       fontWeight: typography.fontWeight.bold,
                     }}
                   >
-                    {p.name?.[0]?.toUpperCase() ?? '?'}
+                    {p.name?.[0]?.toUpperCase() ?? '·'}
                   </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
@@ -465,7 +465,11 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawName = authProfile?.full_name?.trim() || ''
+  // Reject placeholder values like '—' that contain no word characters.
+  // The seed user's full_name column defaults to an em-dash; fall through
+  // to email-derived name so the sidebar never shows '— / Role'.
+  const fullName = /\w/.test(rawName) ? rawName : ''
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal

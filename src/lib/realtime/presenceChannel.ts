@@ -112,7 +112,8 @@ function generateUuid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
   }
-  return `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const b = crypto.getRandomValues(new Uint8Array(6))
+  return `dev-${Date.now()}-${Array.from(b, x => x.toString(36)).join('')}`
 }
 
 /**

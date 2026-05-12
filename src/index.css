@@ -184,6 +184,11 @@ button, input, textarea, select {
   background: rgba(255, 255, 255, 0.18);
 }
 
+/* Tab strip: hide scrollbar track so horizontal scroll is clean on mobile */
+.tabs-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Selection ────────────────────────────────────────── */
 
 ::selection {

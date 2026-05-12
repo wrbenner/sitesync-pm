@@ -18,12 +18,18 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
   return (
     <div
       role="tablist"
+      className="tabs-scroll-container"
       style={{
         display: 'flex',
         gap: spacing['6'],
         borderBottom: `1px solid ${colors.borderSubtle}`,
         position: 'relative',
-      }}
+        overflowX: 'auto',
+        // Firefox: hide scrollbar track
+        scrollbarWidth: 'none',
+        // IE/Edge: hide scrollbar
+        msOverflowStyle: 'none',
+      } as React.CSSProperties}
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
@@ -40,6 +46,8 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange }) => {
               padding: `${spacing['3']} 0`,
               border: 'none',
               backgroundColor: 'transparent',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
               color: isActive ? colors.orangeText : colors.textSecondary,
               fontSize: typography.fontSize.sm,
               fontFamily: typography.fontFamily,
