@@ -43,6 +43,9 @@ function addDays(d: Date, n: number): Date {
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+const totalTimeEntryHours = (e: TimeEntry) =>
+  Number(e.regular_hours || 0) + Number(e.overtime_hours || 0) + Number(e.double_time_hours || 0)
+
 const TimeTracking: React.FC = () => {
   const projectId = useProjectId()
   const { user } = useAuth()
@@ -305,23 +308,21 @@ const TimeTracking: React.FC = () => {
     { trade: 'Sheet Metal Worker', local: 'SMART Local 104', base: 51.85, hw: 10.60, pension: 8.80, training: 1.15, other: 2.70, otMult: 1.5, effective: '2026-01-01', expires: '2026-12-31' },
   ]
 
-  const totalHours = (e: TimeEntry) => Number(e.regular_hours || 0) + Number(e.overtime_hours || 0) + Number(e.double_time_hours || 0)
-
   const grid = useMemo(() => {
     const map = new Map<string, Map<string, number>>()
     ;(entries ?? []).forEach((e) => {
       const code = e.cost_code ?? 'unassigned'
       if (!map.has(code)) map.set(code, new Map())
       const day = map.get(code)!
-      day.set(e.date, (day.get(e.date) ?? 0) + totalHours(e))
+      day.set(e.date, (day.get(e.date) ?? 0) + totalTimeEntryHours(e))
     })
     return map
   }, [entries])
 
   const totals = useMemo(() => {
     const list = entries ?? []
-    const hours = list.reduce((s, e) => s + totalHours(e), 0)
-    const approved = list.filter((e) => e.approved).reduce((s, e) => s + totalHours(e), 0)
+    const hours = list.reduce((s, e) => s + totalTimeEntryHours(e), 0)
+    const approved = list.filter((e) => e.approved).reduce((s, e) => s + totalTimeEntryHours(e), 0)
     const pending = hours - approved
     const overtime = list.reduce((s, e) => s + Number(e.overtime_hours || 0) + Number(e.double_time_hours || 0), 0)
     return { hours, approved, pending, overtime }
@@ -458,15 +459,15 @@ const TimeTracking: React.FC = () => {
       </div>
 
       {activeTab === 'timesheet' && (<>
-      <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['4'] }}>
-        <Btn variant="ghost" onClick={() => setWeekStart(addDays(weekStart, -7))}>← Prev Week</Btn>
-        <Btn variant="ghost" onClick={() => setWeekStart(startOfWeek(new Date()))}>Today</Btn>
-        <Btn variant="ghost" onClick={() => setWeekStart(addDays(weekStart, 7))}>Next Week →</Btn>
+      <div style={{ display: 'flex', gap: spacing['2'], marginBottom: spacing['4'], overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <Btn style={{ flexShrink: 0, whiteSpace: 'nowrap' }} variant="ghost" onClick={() => setWeekStart(addDays(weekStart, -7))}>← Prev Week</Btn>
+        <Btn style={{ flexShrink: 0, whiteSpace: 'nowrap' }} variant="ghost" onClick={() => setWeekStart(startOfWeek(new Date()))}>Today</Btn>
+        <Btn style={{ flexShrink: 0, whiteSpace: 'nowrap' }} variant="ghost" onClick={() => setWeekStart(addDays(weekStart, 7))}>Next Week →</Btn>
       </div>
 
       {/* Week-at-a-glance: workers × days, backed by the `timesheets` table */}
       <Card padding={spacing['5']}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'] }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing['3'], flexWrap: 'wrap', gap: spacing['2'] }}>
           <SectionHeader title={`Week at a Glance — ${weekFromISO} to ${weekToISO}`} />
           <Btn variant="primary" icon={<Plus size={14} />} onClick={() => setTsModalOpen(true)}>Enter Hours</Btn>
         </div>
@@ -669,7 +670,7 @@ const TimeTracking: React.FC = () => {
             <Card key={e.id} padding={spacing['3']}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{totalHours(e)}h on {e.date}</div>
+                  <div style={{ color: colors.textPrimary, fontWeight: typography.fontWeight.semibold }}>{totalTimeEntryHours(e)}h on {e.date}</div>
                   <div style={{ fontSize: typography.fontSize.xs, color: colors.textTertiary }}>{e.task_description || '—'}</div>
                 </div>
                 <Btn
@@ -965,16 +966,16 @@ const TimeTracking: React.FC = () => {
             <SectionHeader title="Export to Payroll System" />
             <div style={{ display: 'flex', gap: spacing['4'], marginBottom: spacing['4'], alignItems: 'flex-end' }}>
               <div>
-                <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Period</label>
-                <select value={exportPeriod} onChange={(e) => setExportPeriod(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
+                <label htmlFor="tt-export-period" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Period</label>
+                <select id="tt-export-period" value={exportPeriod} onChange={(e) => setExportPeriod(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
                   <option value="this_week">This Week ({toISODate(weekStart)})</option>
                   <option value="last_week">Last Week</option>
                   <option value="custom">Custom Range</option>
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Format</label>
-                <select value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
+                <label htmlFor="tt-export-format" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Format</label>
+                <select id="tt-export-format" value={exportFormat} onChange={(e) => setExportFormat(e.target.value)} style={{ padding: spacing['2'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minWidth: 160 }}>
                   <option value="csv">CSV (Generic)</option>
                   <option value="adp">ADP Workforce Now</option>
                   <option value="viewpoint">Viewpoint Vista</option>
@@ -1065,8 +1066,9 @@ const TimeTracking: React.FC = () => {
       <Modal open={tsModalOpen} onClose={() => setTsModalOpen(false)} title="Enter Hours">
         <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           <div>
-            <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Worker *</label>
+            <label htmlFor="tt-ts-worker" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Worker *</label>
             <select
+              id="tt-ts-worker"
               value={tsForm.worker_id}
               onChange={(e) => setTsForm((p) => ({ ...p, worker_id: e.target.value }))}
               style={{ width: '100%', padding: spacing['3'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minHeight: 56 }}
@@ -1095,8 +1097,9 @@ const TimeTracking: React.FC = () => {
         <InputField label="Overtime Hours" value={form.overtime_hours} onChange={(v) => setForm({ ...form, overtime_hours: v })} type="number" />
         <InputField label="Double Time Hours" value={form.double_time_hours} onChange={(v) => setForm({ ...form, double_time_hours: v })} type="number" />
         <div style={{ marginBottom: spacing['3'] }}>
-          <label style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Cost Code</label>
+          <label htmlFor="tt-log-cost-code" style={{ fontSize: typography.fontSize.xs, color: colors.textSecondary, display: 'block', marginBottom: spacing['1'] }}>Cost Code</label>
           <select
+            id="tt-log-cost-code"
             value={form.cost_code}
             onChange={(e) => setForm({ ...form, cost_code: e.target.value })}
             style={{ width: '100%', padding: spacing['3'], borderRadius: borderRadius.md, border: `1px solid ${colors.borderSubtle}`, background: colors.surfaceInset, color: colors.textPrimary, minHeight: 56 }}
@@ -1162,7 +1165,10 @@ const TimeTracking: React.FC = () => {
                 status: 'draft',
                 created_by: user?.id ?? null,
               } as never)
-              if (error) throw error
+              if (error) {
+                toast.error(error.message ?? 'Failed to create T&M ticket')
+                return
+              }
               toast.success('T&M ticket created')
               setTmModalOpen(false)
               setTmForm({ description: '', date: toISODate(new Date()), location: '', laborHours: '', laborRate: '', materialCost: '', equipmentCost: '' })
