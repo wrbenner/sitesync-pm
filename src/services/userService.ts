@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { fromTable } from '../lib/db/queries';
+import { scoped } from '../lib/supabase/orgScope';
 import type { Organization, Profile } from '../types/database';
 import type { OrgRole, ProjectRole } from '../types/tenant';
 import {
@@ -28,9 +29,10 @@ async function resolveOrgRole(
 ): Promise<OrgRole | null> {
   if (!userId) return null;
 
-  const { data } = await fromTable('organization_members')
-    .select('role')
-    .eq('organization_id' as never, organizationId)
+  const { data } = await scoped(
+    fromTable('organization_members').select('role'),
+    organizationId,
+  )
     .eq('user_id' as never, userId)
     .single();
 
@@ -207,10 +209,10 @@ export const userService = {
     // Two-step join: PostgREST can't auto-embed `profiles` because both
     // tables reference auth.users(id), not each other. Same pattern as
     // projectService.loadMembers — see that function for the why.
-    const { data: members, error: mErr } = await fromTable('organization_members')
-      .select('*')
-      .eq('organization_id' as never, organizationId)
-      .order('created_at', { ascending: true });
+    const { data: members, error: mErr } = await scoped(
+      fromTable('organization_members').select('*'),
+      organizationId,
+    ).order('created_at', { ascending: true });
 
     if (mErr) return fail(dbError(mErr.message, { organizationId }));
     type OrgMemberRow = { id: string; organization_id: string; user_id: string; role: OrgRole; created_at: string | null }

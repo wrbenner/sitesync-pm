@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabase'
 import { fromTable } from '../lib/db/queries'
+import { scoped } from '../lib/supabase/orgScope'
 import type { Cents } from '../types/money'
 import { multiplyCents, addCents } from '../types/money'
 
@@ -94,10 +95,10 @@ export async function getPlans(): Promise<Plan[]> {
 // ── Subscription Management ─────────────────────────────
 
 export async function getSubscription(organizationId: string): Promise<Subscription | null> {
-  const { data, error } = await fromTable('subscriptions')
-    .select('*')
-    .eq('organization_id' as never, organizationId)
-    .single()
+  const { data, error } = await scoped(
+    fromTable('subscriptions').select('*'),
+    organizationId,
+  ).single()
 
   if (error || !data) return null
 
@@ -190,9 +191,10 @@ export async function checkFeatureAccess(
   organizationId: string,
   feature: 'ai_copilot' | 'integrations' | 'custom_reports' | 'sso' | 'api_access',
 ): Promise<boolean> {
-  const { data, error } = await fromTable('subscriptions')
-    .select('plan:plan_id(*)')
-    .eq('organization_id' as never, organizationId)
+  const { data, error } = await scoped(
+    fromTable('subscriptions').select('plan:plan_id(*)'),
+    organizationId,
+  )
     .eq('status' as never, 'active')
     .single()
 
@@ -212,9 +214,10 @@ export async function trackUsage(
   projectId?: string,
 ): Promise<void> {
   // Get the unit price from the plan
-  const { data: sub } = await fromTable('subscriptions')
-    .select('plan:plan_id(ai_per_page_rate, payment_processing_rate)')
-    .eq('organization_id' as never, organizationId)
+  const { data: sub } = await scoped(
+    fromTable('subscriptions').select('plan:plan_id(ai_per_page_rate, payment_processing_rate)'),
+    organizationId,
+  )
     .eq('status' as never, 'active')
     .single()
 
@@ -241,9 +244,10 @@ export async function getUsageSummary(
 ): Promise<UsageSummary[]> {
   const start = periodStart ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-  const { data, error } = await fromTable('usage_events')
-    .select('event_type, quantity, unit_price')
-    .eq('organization_id' as never, organizationId)
+  const { data, error } = await scoped(
+    fromTable('usage_events').select('event_type, quantity, unit_price'),
+    organizationId,
+  )
     .gte('created_at' as never, start)
 
   if (error) throw error
