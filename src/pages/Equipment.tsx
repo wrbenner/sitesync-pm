@@ -308,8 +308,8 @@ export const EquipmentPage: React.FC = () => {
           zIndex: 10,
           background: '#FCFCFA',
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          paddingLeft: spacing[6],
-          paddingRight: spacing[6],
+          paddingLeft: spacing[9],
+          paddingRight: spacing[9],
           paddingTop: spacing[4],
           paddingBottom: spacing[3],
           display: 'flex',
@@ -427,7 +427,7 @@ export const EquipmentPage: React.FC = () => {
         </div>
       </header>
 
-      <main style={{ paddingLeft: spacing[6], paddingRight: spacing[6], paddingTop: spacing[4], paddingBottom: spacing[8] }}>
+      <main style={{ paddingLeft: spacing[9], paddingRight: spacing[9], paddingTop: spacing[4], paddingBottom: spacing[8] }}>
         {error && (
           <div role="alert" style={{ padding: spacing[3], marginBottom: spacing[4], background: '#FCE7E7', border: '1px solid rgba(201,59,59,0.20)', borderRadius: 6, color: '#9A2929', fontSize: 13 }}>
             Failed to load equipment: {String(error)}

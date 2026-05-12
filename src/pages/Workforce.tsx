@@ -915,8 +915,8 @@ const WorkforcePage: React.FC = () => {
           zIndex: 10,
           background: '#FCFCFA',
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          paddingLeft: spacing[6],
-          paddingRight: spacing[6],
+          paddingLeft: spacing[9],
+          paddingRight: spacing[9],
           paddingTop: spacing[4],
           paddingBottom: spacing[4],
           display: 'flex',
@@ -1048,8 +1048,8 @@ const WorkforcePage: React.FC = () => {
 
       <main
         style={{
-          paddingLeft: spacing[6],
-          paddingRight: spacing[6],
+          paddingLeft: spacing[9],
+          paddingRight: spacing[9],
           paddingTop: spacing[4],
           paddingBottom: spacing[8],
         }}

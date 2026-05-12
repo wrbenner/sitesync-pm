@@ -393,7 +393,7 @@ export function ProjectSettings() {
           margin: 0, marginTop: spacing['2'],
           fontSize: typography.fontSize.body, color: colors.textTertiary,
         }}>
-          Select a project from the sidebar to configure its settings
+          Select a project to configure its settings
         </p>
       </div>
     );
