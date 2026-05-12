@@ -170,7 +170,7 @@ const AddPhaseModal: React.FC<AddPhaseModalProps> = ({ open, onClose, onSubmit }
         padding: spacing['4'], backdropFilter: 'blur(4px)',
       }}
     >
-      <form onSubmit={handleSubmit} style={{
+      <form onSubmit={handleSubmit} noValidate style={{
         backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
         width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto',
         boxShadow: '0 32px 64px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)',

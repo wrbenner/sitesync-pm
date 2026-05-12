@@ -485,7 +485,7 @@ const CreateLookaheadTaskModal: React.FC<CreateLookaheadTaskModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ padding: spacing['4'], overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
+        <form onSubmit={handleSubmit} noValidate style={{ padding: spacing['4'], overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: spacing['3'] }}>
           {/* Title */}
           <div>
             <label style={labelStyle}>Title *</label>

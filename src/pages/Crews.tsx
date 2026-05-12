@@ -704,7 +704,7 @@ function CrewDetailPanel({
           <PermissionGate permission="crews.manage">
             <section style={{ marginTop: spacing[5] }}>
               <h3 style={{ margin: 0, marginBottom: spacing[2], fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: colors.textTertiary }}>Assign to phase</h3>
-              <form onSubmit={submit} style={{ display: 'grid', gap: spacing[3] }}>
+              <form onSubmit={submit} noValidate style={{ display: 'grid', gap: spacing[3] }}>
                 <div>
                   <label style={labelStyle}>Phase</label>
                   <select style={inputStyle} value={phaseId} onChange={(e) => setPhaseId(e.target.value)}>

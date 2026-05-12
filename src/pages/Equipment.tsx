@@ -724,7 +724,7 @@ function FormModal({ title, form, setForm, err, saving, onClose, onSubmit, submi
   };
   return (
     <div role="dialog" aria-modal="true" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.40)' }}>
-      <form onSubmit={onSubmit} style={{ width: 480, maxWidth: '92vw', background: colors.surfaceRaised, borderRadius: 8, padding: spacing[6], boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
+      <form onSubmit={onSubmit} noValidate style={{ width: 480, maxWidth: '92vw', background: colors.surfaceRaised, borderRadius: 8, padding: spacing[6], boxShadow: '0 16px 48px rgba(0,0,0,0.12)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[4] }}>
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.textPrimary }}>{title}</h2>
           <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: colors.textTertiary, padding: 4 }}>

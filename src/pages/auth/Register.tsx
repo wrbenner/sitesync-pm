@@ -343,7 +343,7 @@ export function Register() {
                 </AnimatePresence>
 
                 {step === 'account' ? (
-                  <form onSubmit={handleAccountSubmit} style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+                  <form onSubmit={handleAccountSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing['3'] }}>
                       <PremiumInput
                         id="reg-first" label="First name"
@@ -414,7 +414,7 @@ export function Register() {
                     </button>
                   </form>
                 ) : (
-                  <form onSubmit={handleCompanySubmit} style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+                  <form onSubmit={handleCompanySubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
                     <PremiumInput
                       id="reg-company" label="Company name"
                       value={companyName} onChange={setCompanyName}
