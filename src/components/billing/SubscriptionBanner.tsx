@@ -13,6 +13,7 @@
 // portal to update payment / restart trial.
 
 import { Link } from 'react-router-dom'
+import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { useSubscription } from '../../hooks/useSubscription'
 
 interface BannerStyle {
@@ -23,10 +24,10 @@ interface BannerStyle {
 }
 
 const PALETTE: Record<'red' | 'amber' | 'gray' | 'blue', BannerStyle> = {
-  red:   { bg: '#FEE2E2', border: '#FCA5A5', text: '#7F1D1D', cta: '#B91C1C' },
-  amber: { bg: '#FEF3C7', border: '#FCD34D', text: '#78350F', cta: '#B45309' },
-  gray:  { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151', cta: '#1F2937' },
-  blue:  { bg: '#EEF4FF', border: '#BFDBFE', text: '#1E3A8A', cta: '#0066FF' },
+  red:   { bg: colors.statusCriticalSubtle, border: colors.statusCritical, text: colors.statusCritical,  cta: colors.statusCritical },
+  amber: { bg: colors.statusPendingSubtle,  border: colors.statusPending,  text: colors.statusPending,   cta: colors.statusPending },
+  gray:  { bg: colors.surfaceInset,         border: colors.borderSubtle,   text: colors.textPrimary,     cta: colors.textPrimary },
+  blue:  { bg: colors.statusInfoSubtle,     border: colors.statusInfo,     text: colors.statusInfo,      cta: colors.statusInfo },
 }
 
 export default function SubscriptionBanner() {
@@ -75,28 +76,29 @@ export default function SubscriptionBanner() {
         background: style.bg,
         borderBottom: `1px solid ${style.border}`,
         color: style.text,
-        padding: '10px 16px',
+        padding: `${spacing['2']} ${spacing['4']}`,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        fontSize: 14,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        gap: spacing['3'],
+        fontSize: typography.fontSize.sm,
+        fontFamily: typography.fontFamily,
       }}
     >
       <div style={{ flex: '1 1 auto' }}>
-        <strong style={{ marginRight: 8 }}>{title}.</strong>
+        <strong style={{ marginRight: spacing['2'] }}>{title}.</strong>
         <span style={{ opacity: 0.85 }}>{body}</span>
       </div>
       <Link
         to="/settings/billing"
         style={{
           background: style.cta,
-          color: 'white',
+          color: colors.white,
           textDecoration: 'none',
-          padding: '6px 14px',
-          borderRadius: 4,
-          fontWeight: 600,
-          fontSize: 13,
+          padding: `${spacing['1']} ${spacing['3']}`,
+          borderRadius: borderRadius.base,
+          fontWeight: typography.fontWeight.semibold,
+          fontSize: typography.fontSize.sm,
+          fontFamily: typography.fontFamily,
           whiteSpace: 'nowrap',
         }}
       >
