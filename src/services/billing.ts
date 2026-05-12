@@ -59,9 +59,12 @@ export type UsageEventType =
 // ── Plan Queries ────────────────────────────────────────
 
 export async function getPlans(): Promise<Plan[]> {
-  const { data, error } = await fromTable('plans')
+  // BRT sub-4 §4.1: read from v_active_plans (filters out archived rows)
+  // instead of plans.active which doesn't exist in the current schema.
+  // Existing code's .eq('active', true) returned empty silently — bug
+  // that was never surfaced because plans was rarely queried client-side.
+  const { data, error } = await fromTable('v_active_plans' as never)
     .select('*')
-    .eq('active' as never, true)
     .order('price_monthly')
 
   if (error) throw error
@@ -70,14 +73,18 @@ export async function getPlans(): Promise<Plan[]> {
     id: string; name: string; description: string | null; price_monthly: number; price_annual: number;
     max_projects: number; max_users: number; max_storage_gb: number;
     ai_copilot: boolean; integrations: boolean; custom_reports: boolean; sso: boolean; api_access: boolean;
-    ai_per_page_rate: number | null; payment_processing_rate: number | null; active: boolean;
+    ai_per_page_rate: number | null; payment_processing_rate: number | null;
   }
   return ((data ?? []) as unknown as PlanRow[]).map((p) => ({
     id: p.id,
     name: p.name,
     description: p.description ?? '',
-    priceMonthly: p.price_monthly as Cents,
-    priceAnnual: p.price_annual as Cents,
+    // plans.price_monthly is numeric(10,2) in DOLLARS; Plan.priceMonthly is
+    // Cents per src/types/money.ts. Boundary cast: round to nearest cent
+    // and brand at the parser edge. Math.round avoids float-residual cents
+    // (400.00 * 100 = 40000.00000000001 in some JS runtimes).
+    priceMonthly: Math.round(p.price_monthly * 100) as Cents,
+    priceAnnual:  Math.round(p.price_annual  * 100) as Cents,
     maxProjects: p.max_projects,
     maxUsers: p.max_users,
     maxStorageGb: p.max_storage_gb,
@@ -89,6 +96,28 @@ export async function getPlans(): Promise<Plan[]> {
     aiPerPageRate: (p.ai_per_page_rate ?? 0) as Cents,
     paymentProcessingRate: p.payment_processing_rate ?? 0,
   }))
+}
+
+// ── BRT sub-4 §4.2 / §4.5 — new self-serve trial + portal flow ──────────
+
+export async function startTrialCheckout(
+  billingCycle: 'monthly' | 'annual',
+): Promise<{ sessionUrl: string }> {
+  const { data, error } = await supabase.functions.invoke('start-trial-checkout', {
+    body: { billing_cycle: billingCycle },
+  })
+  if (error) throw new Error(error.message ?? 'Failed to start checkout')
+  const url = (data as { session_url?: string } | null)?.session_url
+  if (!url) throw new Error('No session URL returned')
+  return { sessionUrl: url }
+}
+
+export async function openBillingPortal(): Promise<{ portalUrl: string }> {
+  const { data, error } = await supabase.functions.invoke('billing-portal', {})
+  if (error) throw new Error(error.message ?? 'Failed to open billing portal')
+  const url = (data as { portal_url?: string } | null)?.portal_url
+  if (!url) throw new Error('No portal URL returned')
+  return { portalUrl: url }
 }
 
 // ── Subscription Management ─────────────────────────────
