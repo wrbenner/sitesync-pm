@@ -69,7 +69,7 @@ export const CreatePackageDialog: React.FC<CreatePackageDialogProps> = ({
 
   return (
     <DialogShell title="Create Package" onClose={onClose}>
-      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <form onSubmit={submit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Field label="Package name" required>
           <input
             type="text"

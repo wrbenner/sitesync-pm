@@ -137,7 +137,7 @@ const CreateCrewModal: React.FC<CreateCrewModalProps> = ({ open, onClose, onSubm
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
+            <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
               {/* Name */}
               <div>
                 <label style={labelStyle}>Name *</label>

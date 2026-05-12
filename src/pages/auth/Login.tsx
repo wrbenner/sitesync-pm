@@ -635,6 +635,7 @@ export const Login: React.FC = () => {
             still feel connected without two competing strong lines. */}
         <form
           onSubmit={(e) => { e.preventDefault(); handleSubmit() }}
+          noValidate
           style={{
             width: '100%',
             display: 'flex',
