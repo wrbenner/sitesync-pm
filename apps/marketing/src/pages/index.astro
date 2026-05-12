@@ -1,0 +1,82 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+---
+<BaseLayout
+  title="SiteSync — Construction project management, built for the field"
+  description="AI-assisted RFIs, submittals, daily logs, and budget — with audit-grade traceability for every draft. $400/mo per company. 14-day trial."
+>
+  <!-- HERO -->
+  <section class="mx-auto max-w-6xl px-6 pt-24 pb-12 text-center">
+    <h1 class="font-display text-4xl font-bold tracking-tight text-brand-ink sm:text-5xl md:text-6xl">
+      Construction project management,<br />built for the field.
+    </h1>
+    <p class="mx-auto mt-6 max-w-2xl text-lg text-brand-mute">
+      AI-assisted RFIs, submittals, daily logs, and budget — with
+      audit-grade traceability for every draft.
+    </p>
+    <div class="mt-10 flex items-center justify-center gap-4">
+      <a href="https://app.sitesyncai.com/signup"
+         class="rounded-md bg-brand-accent px-6 py-3 text-base font-semibold text-white hover:bg-blue-600">
+        Start 14-day trial
+      </a>
+      <a href="/features" class="text-base font-semibold text-brand-ink underline-offset-4 hover:underline">
+        See how it works →
+      </a>
+    </div>
+
+    <!-- Proof bar -->
+    <div class="mx-auto mt-16 grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-3">
+      {[
+        { n: '0',     l: 'TypeScript errors' },
+        { n: '<1s',  l: 'Mobile first paint' },
+        { n: 'Live', l: 'Hash-chained audit' },
+      ].map((m) => (
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <div class="text-3xl font-semibold text-brand-ink">{m.n}</div>
+          <div class="mt-1 text-sm text-brand-mute">{m.l}</div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- FEATURE BLOCKS -->
+  <section class="mx-auto max-w-6xl px-6 py-24">
+    <div class="grid gap-12 md:grid-cols-3">
+      <div>
+        <h3 class="font-display text-xl font-semibold text-brand-ink">AI Copilot, with receipts</h3>
+        <p class="mt-3 text-brand-mute">
+          Every draft is auditable end-to-end. Hash-chained, not hand-waved.
+          Approve or reject — the AI doesn't ship for you.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-display text-xl font-semibold text-brand-ink">Mobile-first, actually</h3>
+        <p class="mt-3 text-brand-mute">
+          Built as a PWA. The crew uses SiteSync on iPhones, not laptops.
+          Offline-first; syncs when the signal comes back.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-display text-xl font-semibold text-brand-ink">Pricing that doesn't gatekeep</h3>
+        <p class="mt-3 text-brand-mute">
+          One tier. No "request a quote." $400/month per company. Annual
+          prepay 15% off. 14-day trial, card required.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOTTOM CTA -->
+  <section class="mx-auto max-w-3xl px-6 py-24 text-center">
+    <h2 class="font-display text-3xl font-bold text-brand-ink">
+      Ship the project. Skip the paperwork.
+    </h2>
+    <p class="mx-auto mt-4 max-w-xl text-brand-mute">
+      Start a free 14-day trial in under 2 minutes. No sales call.
+    </p>
+    <a href="https://app.sitesyncai.com/signup"
+       class="mt-8 inline-block rounded-md bg-brand-accent px-8 py-3 text-base font-semibold text-white hover:bg-blue-600">
+      Start trial
+    </a>
+  </section>
+</BaseLayout>

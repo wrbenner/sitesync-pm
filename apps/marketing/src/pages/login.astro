@@ -1,0 +1,22 @@
+---
+const target = 'https://app.sitesyncai.com/login';
+const url = new URL(Astro.url);
+const params = url.searchParams.toString();
+const targetWithParams = params.length > 0 ? `${target}?${params}` : target;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Redirecting to sign in — SiteSync</title>
+  <meta http-equiv="refresh" content={`0; url=${targetWithParams}`} />
+  <meta name="robots" content="noindex" />
+  <link rel="canonical" href={targetWithParams} />
+</head>
+<body>
+  <p>Redirecting to <a href={targetWithParams}>sign in</a>…</p>
+  <script>
+    window.location.replace(document.querySelector<HTMLLinkElement>('link[rel=canonical]')!.href);
+  </script>
+</body>
+</html>
