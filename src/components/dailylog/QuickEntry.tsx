@@ -217,7 +217,7 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
               <div style={{ padding: spacing['4'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.lg, textAlign: 'center' }}>
                 <span style={{ fontSize: spacing['12'] }}>{data.weather.icon}</span>
                 <p style={{ fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: `${spacing['2']} 0 0` }}>
-                  H {data.weather.temp_high}° / L {data.weather.temp_low}°
+                  High {data.weather.temp_high}° / Low {data.weather.temp_low}°
                 </p>
                 <p style={{ fontSize: typography.fontSize.body, color: colors.textSecondary, margin: `${spacing['1']} 0 0` }}>
                   {data.weather.conditions} · Wind {data.weather.wind_speed}
@@ -364,8 +364,9 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
       case 'work':
         return (
           <div>
-            <label style={touchLabel}>Work performed today</label>
+            <label htmlFor="qe-work-performed" style={touchLabel}>Work performed today</label>
             <textarea
+              id="qe-work-performed"
               value={data.workPerformed}
               onChange={e => setData(prev => ({ ...prev, workPerformed: e.target.value }))}
               placeholder={'Concrete pour Level 9 complete\nElectrical rough in Floors 3 to 5\nSteel erection Floors 10 and 11'}
@@ -378,8 +379,9 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}>
             <div>
-              <label style={touchLabel}>Toolbox talk topic</label>
+              <label htmlFor="qe-toolbox-talk" style={touchLabel}>Toolbox talk topic</label>
               <input
+                id="qe-toolbox-talk"
                 type="text"
                 value={data.toolbox_talk_topic}
                 onChange={e => setData(prev => ({ ...prev, toolbox_talk_topic: e.target.value }))}
@@ -388,8 +390,9 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
               />
             </div>
             <div>
-              <label style={touchLabel}>Safety observations</label>
+              <label htmlFor="qe-safety-observations" style={touchLabel}>Safety observations</label>
               <textarea
+                id="qe-safety-observations"
                 value={data.safety_observations}
                 onChange={e => setData(prev => ({ ...prev, safety_observations: e.target.value }))}
                 placeholder={'All PPE compliance verified\nNo near misses observed\nHousekeeping inspection passed'}
@@ -498,8 +501,9 @@ export const QuickEntry: React.FC<QuickEntryProps> = ({ initialWeather, onSave, 
       case 'notes':
         return (
           <div>
-            <label style={touchLabel}>Additional notes</label>
+            <label htmlFor="qe-additional-notes" style={touchLabel}>Additional notes</label>
             <textarea
+              id="qe-additional-notes"
               value={data.notes}
               onChange={e => setData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Additional observations, follow up items, or notes for tomorrow"
