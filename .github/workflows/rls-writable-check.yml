@@ -1,0 +1,56 @@
+name: RLS Writable Adversarial
+
+# Verifies BRT subsystem 4 §4.6 read-only mode enforcement against staging.
+# Skipped when SUPABASE_DB_URL secret is unset (pre-credential-setup-day).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/rls-writable-adversarial.ts'
+      - '.github/workflows/rls-writable-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/rls-writable-adversarial.ts'
+  workflow_dispatch:
+
+concurrency:
+  group: rls-writable-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  adversarial:
+    name: "RLS read-only adversarial"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for SUPABASE_DB_URL secret
+        id: check
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -n "$DB_URL" ]; then
+            echo "has_db=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_db=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SUPABASE_DB_URL not set; skipping adversarial. Add to GitHub Secrets to gate read-only mode."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.has_db == 'true'
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install dependencies
+        if: steps.check.outputs.has_db == 'true'
+        run: npm ci
+
+      - name: Run rls-writable adversarial
+        if: steps.check.outputs.has_db == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: npx tsx scripts/rls-writable-adversarial.ts
