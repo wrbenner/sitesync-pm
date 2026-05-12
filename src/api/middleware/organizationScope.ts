@@ -1,5 +1,6 @@
 import { supabase } from '../client'
 import { fromTable } from '../../lib/db/queries'
+import { scoped } from '../../lib/supabase/orgScope'
 import { PermissionError } from '../../lib/rls'
 import { ApiError, AuthError } from '../errors'
 
@@ -21,9 +22,10 @@ export async function withOrgAccess<T>(orgId: string, fn: () => Promise<T>): Pro
     throw new PermissionError('Not authenticated')
   }
 
-  const { data, error } = await fromTable('organization_members')
-    .select('id, role')
-    .eq('organization_id' as never, orgId)
+  const { data, error } = await scoped(
+    fromTable('organization_members').select('id, role'),
+    orgId,
+  )
     .eq('user_id' as never, user.id)
     .maybeSingle()
 
@@ -43,9 +45,10 @@ export async function withOrgAdminAccess<T>(orgId: string, fn: () => Promise<T>)
     throw new PermissionError('Not authenticated')
   }
 
-  const { data, error } = await fromTable('organization_members')
-    .select('role')
-    .eq('organization_id' as never, orgId)
+  const { data, error } = await scoped(
+    fromTable('organization_members').select('role'),
+    orgId,
+  )
     .eq('user_id' as never, user.id)
     .maybeSingle()
 
@@ -61,9 +64,10 @@ export async function assertOrganizationAccess(orgId: string): Promise<void> {
   if (authError || !user) {
     throw new AuthError('Not authenticated')
   }
-  const { data } = await fromTable('organization_members')
-    .select('id')
-    .eq('organization_id' as never, orgId)
+  const { data } = await scoped(
+    fromTable('organization_members').select('id'),
+    orgId,
+  )
     .eq('user_id' as never, user.id)
     .maybeSingle()
   if (!data) {
