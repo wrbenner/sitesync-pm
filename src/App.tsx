@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
 import { HardHat } from 'lucide-react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -66,6 +66,8 @@ const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.
 const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: m.Signup })));
 // Public, unauthenticated trust center page used by procurement reviewers.
 const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
+// BRT sub-3 §4.1 — new 5-step onboarding wizard
+const OnboardingWizard = lazy(() => import('./pages/onboarding/OnboardingWizard'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { FLAGS } from './lib/featureFlags';
 const MagicLinkSubRoute = lazy(() => import('./components/MagicLinkSubRoute'));
@@ -176,12 +178,17 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
     const prefetch = () => {
+      // Dynamic-import prefetch for high-traffic routes. The React Compiler
+      // can't statically lower bare import() inside a function; these
+      // warnings are intentional.
+      /* eslint-disable react-hooks/todo */
       import('./pages/day/index');
       import('./pages/field/index');
       import('./pages/plan/index');
       import('./pages/ledger/index');
       import('./pages/RFIs');
       import('./pages/daily-log');
+      /* eslint-enable react-hooks/todo */
     };
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(prefetch);
@@ -481,6 +488,10 @@ function AppRoutes() {
             <Route path="/share/owner-payapp/:token" element={<PageSuspense><OwnerPayAppPreviewPage /></PageSuspense>} />
             <Route path="/profile" element={<PageSuspense><UserProfile /></PageSuspense>} />
             <Route path="/onboarding" element={<PageSuspense><Onboarding /></PageSuspense>} />
+            {/* BRT sub-3 §4.1 — new 5-step wizard. Coexists with the legacy
+                single-screen onboarding above; the canonical /onboarding will
+                switch over once the wizard's step-3/4/5 bodies ship. */}
+            <Route path="/onboarding/wizard" element={<PageSuspense><OnboardingWizard /></PageSuspense>} />
 
             {/* Catch-all PM/super inbox + commitment register. */}
             <Route path="/tasks" element={<PageSuspense><ProtectedRoute moduleId="tasks" moduleName="Tasks"><Tasks /></ProtectedRoute></PageSuspense>} />
@@ -544,7 +555,14 @@ function AppContent() {
   const { user } = useAuth();
   usePrefetchRoutes(!!user);
   const { conflictCount } = useOfflineStatus();
-  const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  // Conflict modal: derive `open` from (current count vs. last-dismissed count)
+  // instead of a separate setState-in-effect. Auto-opens when a fresh batch
+  // of conflicts arrives; stays closed across navigations until count changes.
+  const [dismissedAtCount, setDismissedAtCount] = useState(0);
+  const conflictModalOpen = conflictCount > 0 && conflictCount !== dismissedAtCount;
+  const closeConflictModal = useCallback(() => {
+    setDismissedAtCount(conflictCount);
+  }, [conflictCount]);
   // PMF telemetry: the metric that decides whether the vision is working.
   // See VISION.md and useFieldSuperPMF — target is 8+ field sessions/day
   // per super within 30 days of onboarding.
@@ -554,11 +572,6 @@ function AppContent() {
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
 
   useProjectCache(isAuthPage ? undefined : projectId);
-
-  // Auto-open conflict modal when conflicts appear
-  useEffect(() => {
-    if (conflictCount > 0) setConflictModalOpen(true);
-  }, [conflictCount]);
 
   // Move focus to main content on route change for keyboard and screen reader users
   useEffect(() => {
@@ -657,8 +670,8 @@ function AppContent() {
       </ChunkLoadErrorBoundary>
       <Suspense fallback={null}><FloatingAIButton /></Suspense>
       {user && <Suspense fallback={null}><ProjectBrain /></Suspense>}
-      {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
-      <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
+      {copilotOpen && <aside aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
+      <ConflictResolutionModal open={conflictModalOpen} onClose={closeConflictModal} />
     </MobileLayout>
   ) : (
     <SidebarContext.Provider value={{ collapsed: sidebarCollapsed, setCollapsed: setSidebarCollapsed }}>
@@ -697,6 +710,7 @@ function AppContent() {
           // <main> is overflow:auto, so keyboard users need a focus stop
           // to scroll it with arrow keys when no inner control is focused.
           // The skip-link still works (programmatic focus() ignores tabIndex).
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
           style={{
             // Always live in column 2 regardless of which siblings are
@@ -781,8 +795,8 @@ function AppContent() {
         {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
         {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}
         <Suspense fallback={null}><FloatingAIButton /></Suspense>
-        {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
-        <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
+        {copilotOpen && <aside aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
+        <ConflictResolutionModal open={conflictModalOpen} onClose={closeConflictModal} />
       </div>
     </SidebarContext.Provider>
   );
