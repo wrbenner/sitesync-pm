@@ -189,6 +189,50 @@ async function main() {
         assert(readOk, `SELECT on ${probeTable} remains permitted in read-only mode`)
 
         // -------------------------------------------------------------
+        // Phase 5b — project-scoped probe (sub-4 §4.6 sibling migration).
+        // RFIs are the canonical project-scoped artifact: high mutation
+        // volume, no organization_id column, RLS via project_members.
+        // We need a seeded project for the org to give the probe a target.
+        // -------------------------------------------------------------
+        console.log('\nPhase 5b: project-scoped INSERT on rfis (expect 42501)')
+        await tx.unsafe(`RESET ROLE`)
+        // Seed a project under the test org + membership for the synthetic user.
+        const [{ id: testProjectId }] = await tx<{ id: string }[]>`
+          INSERT INTO projects (organization_id, name, status)
+          VALUES (${testOrgId}, 'rls-adv-test-project', 'active')
+          RETURNING id
+        `
+        await tx`
+          INSERT INTO project_members (project_id, user_id, role)
+          VALUES (${testProjectId}, ${testUserId}, 'project_manager')
+        `
+
+        // Sub is still paused from Phase 2 — Phase 7 hasn't flipped it
+        // back yet. Re-authenticate and probe.
+        await tx.unsafe(`SET LOCAL ROLE authenticated`)
+        await tx.unsafe(
+          `SET LOCAL "request.jwt.claims" = ` +
+            `'${JSON.stringify({ sub: testUserId, role: 'authenticated' })}'`
+        )
+
+        let projectBlocked42501 = false
+        try {
+          await tx`
+            INSERT INTO rfis (project_id, title, description, priority)
+            VALUES (${testProjectId}, 'rls-adv-probe-rfi', 'denied?', 'low')
+          `
+        } catch (e) {
+          const code = (e as { code?: string }).code
+          if (code === '42501') {
+            projectBlocked42501 = true
+          } else {
+            console.error(`  unexpected project-scope error: ${(e as Error).message}`)
+            throw e
+          }
+        }
+        assert(projectBlocked42501, 'INSERT on rfis for paused org denied with 42501 (project-scoped sweep)')
+
+        // -------------------------------------------------------------
         // Phase 6 — exempt table (dunning_email_log) accepts INSERT
         // even though the org is paused (cron must keep writing).
         // -------------------------------------------------------------
