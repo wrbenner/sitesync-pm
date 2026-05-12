@@ -115,25 +115,36 @@ export const PageContainer: React.FC<PageContainerProps> = ({ title, subtitle, a
                 )}
               </div>
               {actions && (
-                <div
-                  data-pagecontainer-actions={isMobile ? 'mobile' : ''}
-                  style={{
-                    display: 'flex',
-                    gap: spacing.md,
-                    alignItems: 'center',
-                    // Mobile: never wrap, scroll the row horizontally so
-                    // buttons keep their natural width (the [data-pca]>*
-                    // rule in tokens.css enforces flex-shrink:0). Desktop:
-                    // wrap normally if a page has too many actions.
-                    flexWrap: isMobile ? 'nowrap' : 'wrap',
-                    flexShrink: 0,
-                    overflowX: isMobile ? 'auto' : 'visible',
-                    overflowY: 'visible',
-                    paddingBottom: isMobile ? spacing['1'] : 0,
-                    WebkitOverflowScrolling: 'touch',
-                  }}
-                >
-                  {actions}
+                <div style={{ position: 'relative', flexShrink: 0, minWidth: 0 }}>
+                  <div
+                    data-pagecontainer-actions={isMobile ? 'mobile' : ''}
+                    style={{
+                      display: 'flex',
+                      gap: spacing.md,
+                      alignItems: 'center',
+                      // Mobile: never wrap, scroll the row horizontally so
+                      // buttons keep their natural width (the [data-pca]>*
+                      // rule in tokens.css enforces flex-shrink:0). Desktop:
+                      // wrap normally if a page has too many actions.
+                      flexWrap: isMobile ? 'nowrap' : 'wrap',
+                      overflowX: isMobile ? 'auto' : 'visible',
+                      overflowY: 'visible',
+                      paddingBottom: isMobile ? spacing['1'] : 0,
+                      WebkitOverflowScrolling: 'touch',
+                    }}
+                  >
+                    {actions}
+                  </div>
+                  {isMobile && (
+                    <div
+                      aria-hidden
+                      style={{
+                        position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
+                        background: `linear-gradient(to left, ${colors.surfacePage}, transparent)`,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
                 </div>
               )}
             </div>
