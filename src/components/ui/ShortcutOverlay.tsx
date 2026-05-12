@@ -66,8 +66,8 @@ export const ShortcutOverlay: React.FC<ShortcutOverlayProps> = ({ open, onClose 
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${spacing['4']} ${spacing['5']}`, borderBottom: `1px solid ${colors.borderSubtle}` }}>
               <h3 style={{ fontSize: typography.fontSize.title, fontWeight: typography.fontWeight.semibold, color: colors.textPrimary, margin: 0 }}>Keyboard Shortcuts</h3>
-              <button onClick={onClose} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
-                <X size={16} />
+              <button onClick={onClose} aria-label="Close keyboard shortcuts" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
+                <X size={16} aria-hidden />
               </button>
             </div>
             <div style={{ padding: `${spacing['3']} ${spacing['5']}`, maxHeight: '480px', overflowY: 'auto' }}>

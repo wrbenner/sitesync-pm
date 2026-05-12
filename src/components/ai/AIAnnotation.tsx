@@ -28,6 +28,8 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
         style={{
           display: inline ? 'inline-flex' : 'flex',
           alignItems: 'center',
@@ -38,6 +40,7 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         onClick={(e) => { e.stopPropagation(); setShowDetail(true); setShowTooltip(false); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowDetail(true); setShowTooltip(false); } }}
       >
         <div
           style={{
@@ -86,6 +89,7 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
       {/* Detail panel overlay */}
       {showDetail && (
         <div
+          role="presentation"
           style={{
             position: 'fixed', inset: 0, zIndex: zIndex.modal as number,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -94,6 +98,7 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
           onClick={() => setShowDetail(false)}
         >
           <div
+            role="presentation"
             style={{
               width: '440px', maxWidth: '90vw',
               backgroundColor: colors.surfaceRaised, borderRadius: borderRadius.xl,
@@ -115,8 +120,8 @@ export const AIAnnotationIndicator: React.FC<AIAnnotationIndicatorProps> = ({ an
                   <span style={{ fontSize: typography.fontSize.caption, color: colors.statusReview }}>{annotation.confidence}% confidence</span>
                 </div>
               </div>
-              <button onClick={() => setShowDetail(false)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
-                <X size={16} />
+              <button onClick={() => setShowDetail(false)} aria-label="Close annotation" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', border: 'none', borderRadius: borderRadius.base, cursor: 'pointer', color: colors.textTertiary }}>
+                <X size={16} aria-hidden />
               </button>
             </div>
 
