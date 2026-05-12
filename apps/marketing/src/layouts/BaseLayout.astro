@@ -61,6 +61,30 @@ const canonical = new URL(canonicalPath, Astro.site).toString();
     logo: new URL('/logo.svg', Astro.site).toString(),
     sameAs: ['https://github.com/wrbenner/sitesync-pm'],
   })} />
+
+  {import.meta.env.PUBLIC_POSTHOG_KEY && (
+    <script is:inline define:vars={{ posthogKey: import.meta.env.PUBLIC_POSTHOG_KEY }}>
+      {`(function(){
+        if (typeof window === 'undefined' || window.__sitesync_posthog) return;
+        window.__sitesync_posthog = true;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://us.i.posthog.com/static/array.js';
+        s.onload = function() {
+          if (!window.posthog) return;
+          window.posthog.init(${JSON.stringify(import.meta.env.PUBLIC_POSTHOG_KEY)}, {
+            api_host: 'https://us.i.posthog.com',
+            autocapture: false,
+            capture_pageview: true,
+            capture_pageleave: true,
+            persistence: 'localStorage',
+          });
+          window.posthog.capture('marketing_page_view', { page: window.location.pathname });
+        };
+        document.head.appendChild(s);
+      })();`}
+    </script>
+  )}
 </head>
 <body class="bg-white text-brand-ink antialiased">
   <header class="border-b border-slate-100">
