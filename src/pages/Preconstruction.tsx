@@ -565,7 +565,7 @@ export const Preconstruction: React.FC = () => {
       </div>
 
       {packagesLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'] }}>
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       ) : (
@@ -1076,7 +1076,7 @@ function PackagesView({
           </div>
 
           {/* Key Info Bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['3'], marginBottom: spacing['4'], padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['3'], marginBottom: spacing['4'], padding: spacing['3'], backgroundColor: colors.surfaceInset, borderRadius: borderRadius.base }}>
             <div>
               <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary }}>Estimated</div>
               <div style={{ fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium, color: colors.textPrimary }}>{fmt(selectedPackage.estimated_value || 0)}</div>

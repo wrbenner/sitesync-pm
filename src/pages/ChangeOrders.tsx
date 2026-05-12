@@ -1363,7 +1363,7 @@ const TotalsStrip: React.FC<{ totals: ShellProps['totals'] }> = ({ totals }) => 
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
         borderTop: `1px solid ${C.borderSubtle}`,
       }}
     >

@@ -26,10 +26,10 @@ import {
 } from '../../components/atoms';
 import { ChevronRight, Users, Layers } from 'lucide-react';
 import { QuickCreateFAB } from '../../components/QuickCreateFAB';
-import CreateCrewModal from '../../components/forms/CreateCrewModal';
+import CreateCrewModal, { type CrewFormData } from '../../components/forms/CreateCrewModal';
 import { useCreateCrew } from '../../hooks/mutations/crews';
 
-// ── Status badge helpers ──────────────────────────────────
+// ── Status badge helpers ────────────────────────────
 
 const statusColor: Record<string, string> = {
   active: colors.statusActive,
@@ -60,7 +60,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
-// ── Crew Card ────────────────────────────────────────────
+// ── Crew Card ──────────────────────────────────────────
 
 interface CrewRecord {
   id: string | number;
@@ -136,7 +136,7 @@ const CrewCard: React.FC<{ crew: CrewRecord }> = ({ crew }) => (
   </a>
 );
 
-// ── Headcount Strip ──────────────────────────────────────
+// ── Headcount Strip ────────────────────────────────────
 
 const HeadcountStrip: React.FC<{
   workersOnsite: number | undefined;
@@ -221,7 +221,7 @@ const HeadcountStrip: React.FC<{
   );
 };
 
-// ── Trade Row ────────────────────────────────────────────
+// ── Trade Row ──────────────────────────────────────────
 
 const TradeRow: React.FC<{ trade: string; count: number }> = ({ trade, count }) => (
   <div
@@ -268,7 +268,7 @@ const CrewPage: React.FC = () => {
 
   useEffect(() => { setPageContext('crew'); }, [setPageContext]);
 
-  // ── Data ─────────────────────────────────────────────
+  // ── Data ───────────────────────────────────────────
   useProjectMetrics(projectId);
   const { data: workforceData, isPending: workforceLoading } = useWorkforceMembers(projectId);
   const { data: crewData, isPending: crewsLoading } = useCrews(projectId);
@@ -298,7 +298,7 @@ const CrewPage: React.FC = () => {
     });
   }, [incidents]);
 
-  // ── Trade summary ────────────────────────────────────
+  // ── Trade summary ───────────────────────────────
   const tradeCounts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const member of workforceMembers) {
@@ -310,7 +310,7 @@ const CrewPage: React.FC = () => {
 
   const isLoading = workforceLoading || crewsLoading;
 
-  // ── Guard ────────────────────────────────────────────
+  // ── Guard ──────────────────────────────────────────
   if (!projectId) return <ProjectGate />;
 
   return (
@@ -345,7 +345,7 @@ const CrewPage: React.FC = () => {
             </span>
           </div>
 
-          {/* ── Headcount Strip ───────────── */}
+          {/* ── Headcount Strip ───────────────── */}
           {isLoading ? (
             <div style={{ marginTop: 24, marginBottom: 8 }}>
               <PageState status="loading" />
@@ -392,7 +392,7 @@ const CrewPage: React.FC = () => {
             </div>
           )}
 
-          {/* ── Workforce by Trade ─────── */}
+          {/* ── Workforce by Trade ─────────── */}
           <Eyebrow style={{ marginBottom: 12, marginTop: 16 }}>Workforce by Trade</Eyebrow>
 
           {isLoading ? (
@@ -442,7 +442,7 @@ const CrewPage: React.FC = () => {
             </div>
           )}
 
-          {/* ── Quick Links ──────────────── */}
+          {/* ── Quick Links ────────────── */}
           <div
             style={{
               display: 'flex',
@@ -469,7 +469,7 @@ const CrewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Quick-Create FAB ─────────────────────── */}
+      {/* ── Quick-Create FAB ──────────────────────── */}
       <QuickCreateFAB
         onPrimaryAction={() => setShowCreateCrew(true)}
       />
@@ -484,17 +484,17 @@ const CrewPage: React.FC = () => {
   );
 };
 
-// ── Create Crew Modal Wrapper ──────────────────────────────
+// ── Create Crew Modal Wrapper ────────────────────────────
 
 const CreateCrewModalWrapper: React.FC<{ open: boolean; onClose: () => void; projectId: string }> = ({ open, onClose, projectId }) => {
   const createCrew = useCreateCrew();
-  const handleSubmit = (data: Record<string, unknown>) => {
+  const handleSubmit = (data: CrewFormData) => {
     createCrew.mutate({ data: { ...data, project_id: projectId }, projectId });
     onClose();
   };
-  return <CreateCrewModal open={open} onClose={onClose} onSubmit={handleSubmit as any} />;
+  return <CreateCrewModal open={open} onClose={onClose} onSubmit={handleSubmit} />;
 };
 
-// ── Export ────────────────────────────────────────────────
+// ── Export ────────────────────────────────────────────
 
 export default CrewPage;

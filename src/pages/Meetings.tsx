@@ -1080,7 +1080,7 @@ interface ActionItem {
 
 const MeetingsSkeleton: React.FC = () => (
   <PageContainer title="Meetings">
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing.lg, marginBottom: spacing['2xl'] }}>
       {[0, 1, 2, 3].map((i) => <MetricCardSkeleton key={i} />)}
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
@@ -1429,7 +1429,7 @@ export const Meetings: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
           gap: spacing.lg,
           marginBottom: spacing['2xl'],
         }}

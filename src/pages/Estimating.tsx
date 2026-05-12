@@ -160,7 +160,7 @@ export const Estimating: React.FC = () => {
       subtitle="Line items, bid packages, vendor submissions, and division rollups"
     >
       {/* Top metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'], marginBottom: spacing['6'] }}>
         <MetricBox label="Line Items" value={lineItems.length} />
         <MetricBox label="Total Estimate" value={fmtCurrency(totalEstimate)} />
         <MetricBox label="Bid Packages" value={bidPackages.length} />

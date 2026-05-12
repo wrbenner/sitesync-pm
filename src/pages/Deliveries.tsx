@@ -206,7 +206,7 @@ const Deliveries: React.FC = () => {
         </Btn>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'], marginBottom: spacing['6'] }}>
         <MetricBox label="Total" value={String(stats.total)} />
         <MetricBox label="Scheduled" value={String(stats.scheduled)} />
         <MetricBox label="On Time" value={String(stats.onTime)} />

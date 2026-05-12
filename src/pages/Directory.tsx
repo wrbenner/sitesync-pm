@@ -790,7 +790,7 @@ export const Directory: React.FC = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing['6'] }}>
 
         {/* Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'] }}>
           <MetricBox label="Total Contacts" value={totalContacts} />
           <MetricBox label="Active Companies" value={activeCompanies} />
           <MetricBox

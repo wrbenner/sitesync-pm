@@ -1195,7 +1195,7 @@ const HUDCompliancePage: React.FC = () => {
                   <Camera size={16} /> Upload Photos
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.md }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing.md }}>
                 {['Facade - Before', 'Facade - During', 'Interior - Before', 'Interior - During',
                   'Windows - Before', 'Windows - Installed', 'Cornice - Before', 'Cornice - Restored'].map((label, i) => (
                   <div key={i} style={{ background: colors.surfaceInset, borderRadius: borderRadius.md, aspectRatio: '4/3',

@@ -220,7 +220,7 @@ export const MetricsRow: React.FC<MetricsRowProps> = ({ totalCaptures, thisWeek,
   <div
     style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
       gap: spacing['3'],
       marginBottom: spacing['6'],
     }}
