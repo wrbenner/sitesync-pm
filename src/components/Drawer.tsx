@@ -82,6 +82,7 @@ export const Drawer: React.FC<DrawerProps> = ({ open, onClose, title, width = '5
                 </h2>
                 <button
                   onClick={onClose}
+                  aria-label="Close"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -102,7 +103,7 @@ export const Drawer: React.FC<DrawerProps> = ({ open, onClose, title, width = '5
                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
                   }}
                 >
-                  <X size={18} />
+                  <X size={18} aria-hidden />
                 </button>
               </div>
             )}

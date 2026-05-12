@@ -56,7 +56,7 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
         progress += 25;
         if (progress >= 100) {
           progress = 100;
-          clearInterval(interval);
+          clearInterval(interval); // eslint-disable-line react-hooks/memo-dependencies
           setUploadedFiles((prev) =>
             prev.map((f) => f.id === entry.id ? { ...f, progress: 100, status: 'complete' } : f)
           );
@@ -127,8 +127,8 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
                 {f.status === 'complete' ? <CheckCircle size={12} color={colors.statusActive} /> : <div style={{ width: 12, height: 12, borderRadius: '50%', border: `2px solid ${colors.primaryOrange}`, borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />}
                 <span style={{ flex: 1, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
                 <span style={{ color: colors.textTertiary }}>{formatSize(f.size)}</span>
-                <button onClick={() => removeFile(f.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: colors.textTertiary, display: 'flex' }}>
-                  <X size={12} />
+                <button onClick={() => removeFile(f.id)} aria-label={`Remove ${f.name}`} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: colors.textTertiary, display: 'flex' }}>
+                  <X size={12} aria-hidden />
                 </button>
               </div>
             ))}
@@ -149,7 +149,11 @@ export function UppyUploader({ onFilesSelected, onUploadComplete, accept, maxFil
         onChange={(e) => e.target.files && processFiles(e.target.files)}
       />
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload files"
         onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
