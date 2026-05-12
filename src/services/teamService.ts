@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { fromTable } from '../lib/db/queries';
+import { scoped } from '../lib/supabase/orgScope';
 import type { OrgRole, ProjectRole } from '../types/tenant';
 import type { Database } from '../types/database';
 import {
@@ -29,9 +30,10 @@ async function resolveOrgRole(
 ): Promise<OrgRole | null> {
   if (!userId) return null;
 
-  const { data } = await fromTable('organization_members')
-    .select('role')
-    .eq('organization_id' as never, organizationId)
+  const { data } = await scoped(
+    fromTable('organization_members').select('role'),
+    organizationId,
+  )
     .eq('user_id' as never, userId)
     .single();
 
@@ -80,10 +82,10 @@ export const teamService = {
     // Two-step join: PostgREST can't embed `profiles` from
     // `organization_members` because both reference auth.users(id), not each
     // other. Same fix as projectService.loadMembers.
-    const { data: members, error: mErr } = await fromTable('organization_members')
-      .select('*')
-      .eq('organization_id' as never, organizationId)
-      .order('created_at', { ascending: true });
+    const { data: members, error: mErr } = await scoped(
+      fromTable('organization_members').select('*'),
+      organizationId,
+    ).order('created_at', { ascending: true });
 
     if (mErr) return fail(dbError(mErr.message, { organizationId }));
     const memberRows = (members ?? []) as unknown as OrgMemberRow[]
@@ -128,9 +130,10 @@ export const teamService = {
     }
 
     // Check for existing membership
-    const { data: existing } = await fromTable('organization_members')
-      .select('id')
-      .eq('organization_id' as never, organizationId)
+    const { data: existing } = await scoped(
+      fromTable('organization_members').select('id'),
+      organizationId,
+    )
       .eq('user_id' as never, userId)
       .single();
 
@@ -172,11 +175,10 @@ export const teamService = {
       return fail(permissionError('Cannot assign owner role through this endpoint'));
     }
 
-    const { data: member } = await fromTable('organization_members')
-      .select('id, role')
-      .eq('id' as never, memberId)
-      .eq('organization_id' as never, organizationId)
-      .single();
+    const { data: member } = await scoped(
+      fromTable('organization_members').select('id, role').eq('id' as never, memberId),
+      organizationId,
+    ).single();
 
     if (!member) return fail(notFoundError('TeamMember', memberId));
     const memberRow = member as unknown as { id: string; role: string }
@@ -209,11 +211,10 @@ export const teamService = {
       return fail(permissionError('Only org admins and owners can remove members'));
     }
 
-    const { data: member } = await fromTable('organization_members')
-      .select('id, role, user_id')
-      .eq('id' as never, memberId)
-      .eq('organization_id' as never, organizationId)
-      .single();
+    const { data: member } = await scoped(
+      fromTable('organization_members').select('id, role, user_id').eq('id' as never, memberId),
+      organizationId,
+    ).single();
 
     if (!member) return fail(notFoundError('TeamMember', memberId));
     const memberRow = member as unknown as { id: string; role: string; user_id: string }

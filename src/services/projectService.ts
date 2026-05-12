@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { fromTable } from '../lib/db/queries';
+import { scoped } from '../lib/supabase/orgScope';
 import { ensureOrganizationMembership } from '../lib/ensureOrganizationMembership';
 import type { Project, ProjectMember } from '../types/entities';
 import type { ProjectRole } from '../types/tenant';
@@ -67,9 +68,10 @@ export const projectService = {
    * Load all non-deleted projects for an organization, newest first.
    */
   async loadProjects(organizationId: string): Promise<Result<Project[]>> {
-    const { data, error } = await fromTable('projects')
-      .select('*')
-      .eq('organization_id' as never, organizationId)
+    const { data, error } = await scoped(
+      fromTable('projects').select('*'),
+      organizationId,
+    )
       .neq('status' as never, 'archived')
       .order('created_at', { ascending: false });
 

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { fromTable } from '../../lib/db/queries'
+import { scoped } from '../../lib/supabase/orgScope'
 import {
   integrationConnectionsKey,
   integrationSyncJobsKey,
@@ -68,10 +69,10 @@ export function useConfirmConnection() {
     mutationFn: async (input: ConfirmConnectionInput) => {
       const updates: Record<string, unknown> = { status: 'connected' }
       if (input.accountName !== undefined) updates.account_name = input.accountName ?? null
-      const { data, error } = await from('integration_connections')
-        .update(updates as never)
-        .eq('id' as never, input.id)
-        .eq('organization_id' as never, input.organizationId)
+      const { data, error } = await scoped(
+        from('integration_connections').update(updates as never).eq('id' as never, input.id),
+        input.organizationId,
+      )
         .select()
         .single()
       if (error) throw error
@@ -94,16 +95,18 @@ export function useDisconnectConnection() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: DisconnectConnectionInput) => {
-      const { data, error } = await from('integration_connections')
-        .update({
-          status: 'disconnected',
-          // Clear tokens on disconnect — a future reconnect starts over.
-          oauth_token_encrypted: null,
-          oauth_refresh_token_encrypted: null,
-          expires_at: null,
-        } as never)
-        .eq('id' as never, input.id)
-        .eq('organization_id' as never, input.organizationId)
+      const { data, error } = await scoped(
+        from('integration_connections')
+          .update({
+            status: 'disconnected',
+            // Clear tokens on disconnect — a future reconnect starts over.
+            oauth_token_encrypted: null,
+            oauth_refresh_token_encrypted: null,
+            expires_at: null,
+          } as never)
+          .eq('id' as never, input.id),
+        input.organizationId,
+      )
         .select()
         .single()
       if (error) throw error
@@ -126,10 +129,12 @@ export function useRevokeConnection() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: DisconnectConnectionInput) => {
-      const { data, error } = await from('integration_connections')
-        .update({ status: 'revoked' } as never)
-        .eq('id' as never, input.id)
-        .eq('organization_id' as never, input.organizationId)
+      const { data, error } = await scoped(
+        from('integration_connections')
+          .update({ status: 'revoked' } as never)
+          .eq('id' as never, input.id),
+        input.organizationId,
+      )
         .select()
         .single()
       if (error) throw error
@@ -152,10 +157,10 @@ export function useDeleteConnection() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (input: DeleteConnectionInput) => {
-      const { error } = await from('integration_connections')
-        .delete()
-        .eq('id' as never, input.id)
-        .eq('organization_id' as never, input.organizationId)
+      const { error } = await scoped(
+        from('integration_connections').delete().eq('id' as never, input.id),
+        input.organizationId,
+      )
       if (error) throw error
       return input
     },
