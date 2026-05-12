@@ -107,6 +107,8 @@ export const Signup: React.FC = () => {
     }
 
     setIsSubmitting(true)
+    // try/catch (no finally) — React Compiler doesn't lower try/finally.
+    // Loading state is cleared in both branches explicitly.
     try {
       const { data, error: authError } = await supabase.auth.signUp({
         email,
@@ -116,35 +118,36 @@ export const Signup: React.FC = () => {
 
       if (authError) {
         setSubmitError(mapSignupError(authError.message))
+        setIsSubmitting(false)
         return
       }
 
       if (!data.user) {
         setSubmitError({ text: 'Signup failed. Please try again.' })
+        setIsSubmitting(false)
         return
       }
 
       const userId = data.user.id
 
-      // Insert organization row
-      const slug = company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-      const { data: orgData, error: orgError } = await fromTable('organizations')
-        .insert({ name: company.trim(), slug } as never)
-        .select('id')
-        .single()
+      // BRT sub-2 §4.1 — provision the org via the atomic edge function
+      // (replaces the prior 3-step ad-hoc insert that had no slug retry,
+      // no atomicity, no audit-log entry). Failure here doesn't roll back
+      // the auth user; a follow-up signup-rollback edge function (separate
+      // slice) handles the half-provisioned-account cleanup.
+      const { data: provisionData, error: provisionError } = await supabase.functions.invoke(
+        'provision-org',
+        { body: { name: company.trim() } },
+      )
 
-      const organizationId = orgError ? null : orgData?.id ?? null
-
-      // Add user as owner of the organization
-      if (organizationId) {
-        await fromTable('organization_members').insert({
-          organization_id: organizationId,
-          user_id: userId,
-          role: 'owner',
-        } as never)
+      let organizationId: string | null = null
+      if (provisionError) {
+        console.error('[signup] provision-org failed:', provisionError)
+      } else if (provisionData && typeof (provisionData as { organization_id?: unknown }).organization_id === 'string') {
+        organizationId = (provisionData as { organization_id: string }).organization_id
       }
 
-      // Create user profile
+      // Create user profile (links to the freshly provisioned org).
       await fromTable('profiles').insert({
         user_id: userId,
         full_name: `${firstName.trim()} ${lastName.trim()}`,
@@ -155,7 +158,14 @@ export const Signup: React.FC = () => {
       } as never)
 
       setSuccess(true)
-    } finally {
+      setIsSubmitting(false)
+    } catch (err) {
+      console.error('[signup] unexpected error:', err)
+      setSubmitError({
+        text: err instanceof Error
+          ? `Signup hit an unexpected error: ${err.message}`
+          : 'Signup hit an unexpected error. Please try again.',
+      })
       setIsSubmitting(false)
     }
   }
