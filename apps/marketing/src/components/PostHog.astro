@@ -1,0 +1,48 @@
+---
+// apps/marketing/src/components/PostHog.astro — BRT sub-5 §4.4 + sub-7
+//
+// Loads PostHog client-side and fires the typed event union (subset
+// relevant to marketing — same names as the in-app events.ts so funnels
+// can join across both surfaces).
+//
+// Loaded from BaseLayout (one site-wide instance). Inert when
+// PUBLIC_POSTHOG_KEY env var is unset (dev / preview without PostHog).
+//
+// Events fired here:
+//   marketing_page_view       — every navigation
+//   marketing_cta_click       — wired by the CTAButton component
+//
+// Privacy: pageview only; no autocapture; no identify. Visitors are
+// anonymous until they sign up and hit /signup → app.
+
+const posthogKey = import.meta.env.PUBLIC_POSTHOG_KEY ?? ''
+---
+{posthogKey && (
+  <script is:inline define:vars={{ posthogKey }}>
+    {`
+      (function() {
+        if (typeof window === 'undefined') return;
+        if (window.__posthog_loaded) return;
+        window.__posthog_loaded = true;
+
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://us.i.posthog.com/static/array.js';
+        s.onload = function() {
+          if (!window.posthog) return;
+          window.posthog.init(${JSON.stringify(posthogKey)}, {
+            api_host: 'https://us.i.posthog.com',
+            autocapture: false,
+            capture_pageview: true,
+            capture_pageleave: true,
+            persistence: 'localStorage',
+          });
+          window.posthog.capture('marketing_page_view', {
+            page: window.location.pathname,
+          });
+        };
+        document.head.appendChild(s);
+      })();
+    `}
+  </script>
+)}

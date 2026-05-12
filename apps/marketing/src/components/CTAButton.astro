@@ -1,0 +1,48 @@
+---
+// apps/marketing/src/components/CTAButton.astro — BRT sub-5 §4.4
+//
+// All CTAs on the marketing site go through this component so PostHog
+// fires marketing_cta_click with cta_id + page on every click. Keep
+// links external-target-friendly (UTM-preserving, opens app in new
+// tab when desired).
+
+interface Props {
+  /** Stable ID — used in PostHog funnels. Don't change after launch. */
+  ctaId: string
+  href: string
+  variant?: 'primary' | 'secondary'
+  newTab?: boolean
+  class?: string
+}
+
+const { ctaId, href, variant = 'primary', newTab = false, class: extraClass = '' } = Astro.props
+
+const base = variant === 'primary'
+  ? 'rounded-md bg-brand-accent px-6 py-3 font-semibold text-white hover:bg-blue-600'
+  : 'rounded-md border border-brand-accent px-6 py-3 font-semibold text-brand-accent hover:bg-brand-highlight'
+---
+<a
+  href={href}
+  data-cta-id={ctaId}
+  class={`${base} ${extraClass}`}
+  {...(newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+>
+  <slot />
+</a>
+
+<script>
+  // Single delegated listener — one handler for all CTA buttons on the page.
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null
+    const link = target?.closest<HTMLAnchorElement>('a[data-cta-id]')
+    if (!link) return
+    const id = link.getAttribute('data-cta-id') ?? ''
+    const w = window as unknown as { posthog?: { capture: (n: string, p: Record<string, unknown>) => void } }
+    if (w.posthog) {
+      w.posthog.capture('marketing_cta_click', {
+        cta_id: id,
+        page: window.location.pathname,
+      })
+    }
+  })
+</script>
