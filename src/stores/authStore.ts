@@ -4,6 +4,7 @@ import { userService } from '../services/userService';
 import type { Profile, Organization } from '../types/database';
 import type { Session, User } from '@supabase/supabase-js';
 import type { OrgRole } from '../types/tenant';
+import analytics from '../lib/analytics';
 
 // BUG-H11 FIX: Keep a module-level reference to the auth subscription so we can
 // unsubscribe on teardown (e.g. signOut / HMR) and avoid leaked listeners.
@@ -76,8 +77,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (session?.user) {
           await get().loadProfile();
           await get().loadOrganization();
+          // BRT sub-7 §4.3: identify the user once profile is loaded so
+          // events captured before identify still attach via session merge.
+          const { profile } = get();
+          analytics.identify(session.user.id, {
+            email: session.user.email ?? '',
+            ...(profile?.first_name ? { first_name: profile.first_name } : {}),
+            ...(profile?.last_name ? { last_name: profile.last_name } : {}),
+          });
         } else {
           set({ profile: null, organization: null, organizations: [], currentOrgRole: null });
+          // BRT sub-7 §4.3: drop posthog identity on signout so the next
+          // user on the same device starts a clean funnel.
+          analytics.reset();
         }
       });
       authSubscription = data.subscription;
@@ -196,6 +208,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data, error } = await userService.loadOrganization(profile.organization_id);
     if (!error && data) {
       set({ organization: data });
+      // BRT sub-7 §4.3: group user under org so funnels can roll up by tenant.
+      analytics.group('organization', data.id, {
+        name: data.name,
+        ...(data.slug ? { slug: data.slug } : {}),
+      });
     }
   },
 
