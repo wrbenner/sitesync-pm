@@ -1,5 +1,6 @@
 import { supabase } from '../client'
 import { fromTable } from '../../lib/db/queries'
+import { scoped } from '../../lib/supabase/orgScope'
 import { transformSupabaseError } from '../errors'
 import { assertOrganizationAccess } from '../middleware/organizationScope'
 import { dedupTtl, queryKey } from '../../lib/requestDedup'
@@ -30,10 +31,10 @@ export async function getUserOrganizations(): Promise<Organization[]> {
 // Fetch all projects belonging to an organization
 export async function getOrganizationProjects(orgId: string): Promise<ProjectRow[]> {
   await assertOrganizationAccess(orgId)
-  const { data, error } = await fromTable('projects')
-    .select('id, name, status, contract_value, start_date, target_completion, created_at')
-    .eq('organization_id' as never, orgId)
-    .order('created_at', { ascending: false })
+  const { data, error } = await scoped(
+    fromTable('projects').select('id, name, status, contract_value, start_date, target_completion, created_at'),
+    orgId,
+  ).order('created_at', { ascending: false })
 
   if (error) throw transformSupabaseError(error)
   return (data ?? []) as unknown as ProjectRow[]
@@ -44,10 +45,10 @@ export async function getOrganizationProjects(orgId: string): Promise<ProjectRow
 // whenever full project detail is not needed (e.g. metrics, counts, status lists).
 export async function getOrganizationProjectSummaries(orgId: string): Promise<ProjectSummaryRow[]> {
   await assertOrganizationAccess(orgId)
-  const { data, error } = await fromTable('projects')
-    .select('id, status, contract_value, target_completion')
-    .eq('organization_id' as never, orgId)
-    .order('created_at', { ascending: false })
+  const { data, error } = await scoped(
+    fromTable('projects').select('id, status, contract_value, target_completion'),
+    orgId,
+  ).order('created_at', { ascending: false })
 
   if (error) throw transformSupabaseError(error)
   return (data ?? []) as unknown as ProjectSummaryRow[]
@@ -93,9 +94,10 @@ export async function getPortfolioMetrics(orgId: string): Promise<PortfolioMetri
         // Fall back to manual aggregation using direct table queries scoped to the org's project IDs.
         // This handles missing RPC (42883), permission errors, and any other RPC failure.
         try {
-          const { data: projectRows, error: projectsError } = await fromTable('projects')
-            .select('id, status, contract_value')
-            .eq('organization_id' as never, orgId)
+          const { data: projectRows, error: projectsError } = await scoped(
+            fromTable('projects').select('id, status, contract_value'),
+            orgId,
+          )
 
           if (projectsError || !projectRows) {
             return ZERO_METRICS
