@@ -398,7 +398,7 @@ export const ProjectHealth: React.FC = () => {
       }
     >
       {/* KPI Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'], marginBottom: spacing['6'] }}>
         {kpiMetrics.map((kpi) => {
           const Icon = kpi.icon;
           const TrendIcon = kpi.trend === 'up' ? ArrowUpRight : kpi.trend === 'down' ? ArrowDownRight : Minus;

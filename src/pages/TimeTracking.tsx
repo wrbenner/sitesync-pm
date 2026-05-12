@@ -604,7 +604,7 @@ const TimeTracking: React.FC = () => {
       </Card>
       <div style={{ marginTop: spacing['4'] }} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['6'] }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'], marginBottom: spacing['6'] }}>
         <MetricBox label="Total Hours" value={totals.hours.toFixed(1)} icon={<Clock size={16} />} />
         <MetricBox label="Approved" value={totals.approved.toFixed(1)} icon={<CheckCircle2 size={16} />} />
         <MetricBox label="Pending" value={totals.pending.toFixed(1)} />

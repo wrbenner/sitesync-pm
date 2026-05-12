@@ -220,7 +220,7 @@ export const Transmittals: React.FC = () => {
       }
     >
       {isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'], marginBottom: spacing['2xl'] }}>
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} width="100%" height="100px" />)}
         </div>
       ) : (

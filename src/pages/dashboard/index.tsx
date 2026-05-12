@@ -17,7 +17,7 @@ function DashboardSkeleton() {
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: `${spacing['12']} 0` }}>
         <div style={{ ...skel, height: 32, width: 260, marginBottom: spacing['3'] }} />
         <div style={{ ...skel, height: 14, width: 180, marginBottom: spacing['12'], animationDelay: '0.08s' }} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing['4'], marginBottom: spacing['10'] }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing['4'], marginBottom: spacing['10'] }}>
           {[0, 1, 2, 3].map((i) => <div key={i} style={{ ...skel, height: 110, animationDelay: `${0.12 + i * 0.04}s` }} />)}
         </div>
         <div style={{ ...skel, height: 240, animationDelay: '0.3s' }} />

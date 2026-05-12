@@ -96,7 +96,7 @@ export const DashboardEarnedValue: React.FC = React.memo(() => {
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.08 }}
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
         gap: spacing['4'],
         padding: `${spacing['4']} ${spacing['5']}`,
         backgroundColor: colors.surfaceRaised,

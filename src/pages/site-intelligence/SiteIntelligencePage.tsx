@@ -180,7 +180,7 @@ function WeatherTab({ data }: { data: SiteIntelligenceData }) {
             </div>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: spacing.md, marginTop: spacing.lg }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: spacing.md, marginTop: spacing.lg }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: typography.fontSize.caption, color: colors.textTertiary, textTransform: 'uppercase', marginBottom: 2 }}>Concrete</div>
             <Badge
