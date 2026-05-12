@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { fromTable } from '../../lib/db/queries'
+import { scoped } from '../../lib/supabase/orgScope'
 
 export type IntegrationProvider =
   | 'procore'
@@ -75,9 +76,10 @@ export function useIntegrationConnections(organizationId: string | undefined) {
     queryKey: integrationConnectionsKey(organizationId),
     enabled: !!organizationId,
     queryFn: async () => {
-      const { data, error } = await fromTable('integration_connections')
-        .select('*')
-        .eq('organization_id' as never, organizationId!)
+      const { data, error } = await scoped(
+        fromTable('integration_connections').select('*'),
+        organizationId,
+      )
         .order('provider', { ascending: true })
         .order('created_at', { ascending: false })
       if (error) throw error

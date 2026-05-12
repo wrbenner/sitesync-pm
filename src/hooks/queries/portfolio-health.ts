@@ -10,6 +10,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { fromTable } from '../../lib/db/queries'
+import { scoped } from '../../lib/supabase/orgScope';
 import { useAuthStore } from '../../stores/authStore';
 import type { PortfolioProjectInput } from '../../types/portfolio';
 
@@ -21,9 +22,10 @@ export function usePortfolioHealth() {
     staleTime: 60_000,
     queryFn: async (): Promise<PortfolioProjectInput[]> => {
       if (!organization?.id) return [];
-      const { data, error } = await fromTable('project_health_summary' as never)
-        .select('*')
-        .eq('organization_id' as never, organization.id);
+      const { data, error } = await scoped(
+        fromTable('project_health_summary' as never).select('*'),
+        organization.id,
+      );
       if (error) {
         // Materialized view may not exist yet in older deploys —
         // graceful degradation.
