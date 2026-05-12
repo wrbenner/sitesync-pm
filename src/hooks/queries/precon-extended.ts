@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fromTable } from '../../lib/db/queries'
+import { scoped } from '../../lib/supabase/orgScope'
 
 const from = (table: string) => fromTable(table as never)
 
@@ -77,10 +78,10 @@ export function usePreconSubcontractors(organizationId: string | undefined) {
   return useQuery({
     queryKey: ['precon_subcontractors', organizationId],
     queryFn: async () => {
-      const { data, error } = await from('precon_subcontractors')
-        .select('*')
-        .eq('organization_id' as never, organizationId!)
-        .order('company_name', { ascending: true })
+      const { data, error } = await scoped(
+        from('precon_subcontractors').select('*'),
+        organizationId,
+      ).order('company_name', { ascending: true })
       if (error) throw error
       return ((data || []) as unknown) as unknown as PreconSubcontractor[]
     },
