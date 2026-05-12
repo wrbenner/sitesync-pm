@@ -16,6 +16,7 @@ import { Sidebar } from './components/Sidebar';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { MfaRequiredBanner } from './components/auth/MfaRequiredBanner';
+import SubscriptionBanner from './components/billing/SubscriptionBanner';
 import { useUiStore, useAIAnnotationStore } from './stores';
 import { useCopilotStore } from './stores/copilotStore';
 import { colors, colorVars, spacing, typography, borderRadius } from './styles/theme';
@@ -175,6 +176,11 @@ const typographyConfig = { fontFamily: '"Inter", -apple-system, BlinkMacSystemFo
 function usePrefetchRoutes(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
+    // React Compiler's BuildHIR doesn't lower dynamic import() expressions and
+    // emits react-hooks/todo warnings on each one. The prefetch IIFE is fire-
+    // and-forget (no return value used by render) so compiler-memoization is
+    // unnecessary — disable the rule for the block.
+    /* eslint-disable react-hooks/todo -- React Compiler doesn't lower import() */
     const prefetch = () => {
       import('./pages/day/index');
       import('./pages/field/index');
@@ -183,6 +189,7 @@ function usePrefetchRoutes(isAuthenticated: boolean) {
       import('./pages/RFIs');
       import('./pages/daily-log');
     };
+    /* eslint-enable react-hooks/todo */
     if (typeof requestIdleCallback !== 'undefined') {
       const id = requestIdleCallback(prefetch);
       return () => cancelIdleCallback(id);
@@ -555,8 +562,15 @@ function AppContent() {
 
   useProjectCache(isAuthPage ? undefined : projectId);
 
-  // Auto-open conflict modal when conflicts appear
+  // Auto-open conflict modal when conflicts appear.
+  // setState in an effect triggers an extra render but is the right shape
+  // here: the source of truth for conflictCount lives outside React (sync
+  // store + WS) and the modal must mount the moment we observe a positive
+  // count. Refactoring to derive open from count directly would couple the
+  // modal's open state to the count and prevent the user from dismissing
+  // the modal while conflicts are still in flight.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see block comment above
     if (conflictCount > 0) setConflictModalOpen(true);
   }, [conflictCount]);
 
@@ -643,6 +657,7 @@ function AppContent() {
   return isMobile ? (
     <MobileLayout>
       {user && <AuthenticatedProviders activeView={activeView} />}
+      {user && <SubscriptionBanner />}
       {user && <MfaRequiredBanner />}
       <OfflineBanner />
       <ChunkLoadErrorBoundary>
@@ -657,7 +672,7 @@ function AppContent() {
       </ChunkLoadErrorBoundary>
       <Suspense fallback={null}><FloatingAIButton /></Suspense>
       {user && <Suspense fallback={null}><ProjectBrain /></Suspense>}
-      {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
+      {copilotOpen && <aside aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
       <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
     </MobileLayout>
   ) : (
@@ -697,6 +712,7 @@ function AppContent() {
           // <main> is overflow:auto, so keyboard users need a focus stop
           // to scroll it with arrow keys when no inner control is focused.
           // The skip-link still works (programmatic focus() ignores tabIndex).
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- intentional per comment above
           tabIndex={0}
           style={{
             // Always live in column 2 regardless of which siblings are
@@ -761,6 +777,7 @@ function AppContent() {
               </svg>
             </button>
           )}
+          {user && <SubscriptionBanner />}
           {user && <MfaRequiredBanner />}
       <OfflineBanner />
           <ChunkLoadErrorBoundary>
@@ -781,7 +798,7 @@ function AppContent() {
         {exportOpen && <Suspense fallback={null}><ExportCenter open={exportOpen} onClose={() => setExportOpen(false)} /></Suspense>}
         {contextPanelOpen && <Suspense fallback={null}><AIContextPanel currentPage={activeView} /></Suspense>}
         <Suspense fallback={null}><FloatingAIButton /></Suspense>
-        {copilotOpen && <aside role="complementary" aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
+        {copilotOpen && <aside aria-label="AI Assistant"><Suspense fallback={null}><CopilotPanel /></Suspense></aside>}
         <ConflictResolutionModal open={conflictModalOpen} onClose={() => setConflictModalOpen(false)} />
       </div>
     </SidebarContext.Provider>
