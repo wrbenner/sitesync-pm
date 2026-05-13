@@ -156,6 +156,7 @@ const AuditTrail = lazy(() => import('./pages/AuditTrail').then((m) => ({ defaul
 const Integrations = lazy(() => import('./pages/Integrations'));
 const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const WorkflowSettings = lazy(() => import('./pages/Settings/WorkflowSettings'));
+const Billing = lazy(() => import('./pages/Settings/Billing'));
 const ProjectSettings = lazy(() => import('./pages/admin/ProjectSettings').then((m) => ({ default: m.ProjectSettings })));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
 const NotificationSettings = lazy(() => import('./pages/Settings/NotificationSettings'));
@@ -486,6 +487,7 @@ function AppRoutes() {
             <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
             <Route path="/settings/workflows" element={FLAGS.approvalWorkflows ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense> : <Navigate to="/settings" replace />} />
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
+            <Route path="/settings/billing" element={<PageSuspense><Billing /></PageSuspense>} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
             <Route path="/admin/bulk-invite" element={FLAGS.bulkInvite ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense> : <Navigate to="/settings/team" replace />} />
