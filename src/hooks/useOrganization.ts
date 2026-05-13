@@ -14,7 +14,7 @@ interface OrganizationContextValue {
   organizations: Organization[]
   currentOrgRole: OrgRole | null
   loading: boolean
-  switchOrg: (org: Organization) => void
+  switchOrg: (org: Organization) => Promise<void>
 }
 
 const OrganizationContext = createContext<OrganizationContextValue>({
@@ -22,7 +22,7 @@ const OrganizationContext = createContext<OrganizationContextValue>({
   organizations: [],
   currentOrgRole: null,
   loading: false,
-  switchOrg: () => {},
+  switchOrg: async () => {},
 })
 
 export function OrganizationProvider({ children }: { children: React.ReactNode }) {
@@ -80,8 +80,10 @@ export function OrganizationProvider({ children }: { children: React.ReactNode }
     return () => subscription.unsubscribe()
   }, [clearOrganization])
 
-  const switchOrg = useCallback((org: Organization) => {
-    setCurrentOrg(org)
+  const switchOrg = useCallback(async (org: Organization) => {
+    // P0-G: await so the org-switch's cancelQueries/clear/Sentry retag
+    // settles before downstream code re-fetches under the new org context.
+    await setCurrentOrg(org)
   }, [setCurrentOrg])
 
   return React.createElement(
