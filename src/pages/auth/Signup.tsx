@@ -46,6 +46,13 @@ export const Signup: React.FC = () => {
   const [submitError, setSubmitError] = useState<{ text: string; linkToLogin?: boolean } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  // BRT sub-0 day-4 P0-I: required Terms/Privacy acceptance.
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null)
+  // BRT sub-0 day-4 P0-H: surface the slug that provision-org actually
+  // resolved (may differ from the user-typed company name if a collision
+  // pushed it to "name-2", "name-3", etc.).
+  const [resolvedSlug, setResolvedSlug] = useState<string | null>(null)
 
   const validateFirstName = (val: string) => {
     if (!val.trim()) { setFirstNameError('First name is required'); return false }
@@ -87,6 +94,7 @@ export const Signup: React.FC = () => {
       confirmPassword,
       organization: company,
       jobTitle,
+      acceptedTerms,
     })
     if (!parsed.success) {
       const errs = parsed.error.flatten().fieldErrors
@@ -96,6 +104,7 @@ export const Signup: React.FC = () => {
       if (errs.password?.[0]) setPasswordError(errs.password[0])
       if (errs.confirmPassword?.[0]) setConfirmPasswordError(errs.confirmPassword[0])
       if (errs.organization?.[0]) setCompanyError(errs.organization[0])
+      if (errs.acceptedTerms?.[0]) setAcceptedTermsError(errs.acceptedTerms[0])
       // Fall back on legacy per-field validators for any remaining UX cases
       validateFirstName(firstName)
       validateLastName(lastName)
@@ -105,6 +114,7 @@ export const Signup: React.FC = () => {
       validateCompany(company)
       return
     }
+    setAcceptedTermsError(null)
 
     setIsSubmitting(true)
     // try/catch (no finally) — React Compiler doesn't lower try/finally.
@@ -141,13 +151,18 @@ export const Signup: React.FC = () => {
       )
 
       let organizationId: string | null = null
+      let resolvedSlugLocal: string | null = null
       if (provisionError) {
         console.error('[signup] provision-org failed:', provisionError)
-      } else if (provisionData && typeof (provisionData as { organization_id?: unknown }).organization_id === 'string') {
-        organizationId = (provisionData as { organization_id: string }).organization_id
+      } else if (provisionData) {
+        const pd = provisionData as { organization_id?: unknown; slug?: unknown }
+        if (typeof pd.organization_id === 'string') organizationId = pd.organization_id
+        if (typeof pd.slug === 'string') resolvedSlugLocal = pd.slug
       }
 
       // Create user profile (links to the freshly provisioned org).
+      // BRT sub-0 day-4 P0-I: capture terms_accepted_at — required by the
+      // schema; checkbox was the gate.
       await fromTable('profiles').insert({
         user_id: userId,
         full_name: `${firstName.trim()} ${lastName.trim()}`,
@@ -155,8 +170,10 @@ export const Signup: React.FC = () => {
         last_name: lastName.trim(),
         job_title: jobTitle.trim() || null,
         organization_id: organizationId,
+        terms_accepted_at: new Date().toISOString(),
       } as never)
 
+      setResolvedSlug(resolvedSlugLocal)
       setSuccess(true)
       setIsSubmitting(false)
     } catch (err) {
@@ -328,6 +345,28 @@ export const Signup: React.FC = () => {
               >
                 Account created.
               </p>
+              {/* BRT sub-0 day-4 P0-H: surface the slug provision-org actually
+                  resolved. If it differs from the lowercased+kebab'd company
+                  name the user typed, it means a slug collision pushed it to
+                  "name-2", "name-3", etc. — give the user a heads-up. */}
+              {resolvedSlug && (
+                <p
+                  style={{
+                    fontSize: typography.fontSize.sm,
+                    color: colors.textSecondary,
+                    margin: 0,
+                    marginBottom: spacing['2'],
+                    letterSpacing: typography.letterSpacing.normal,
+                  }}
+                >
+                  Workspace: <code style={{ fontFamily: 'monospace', color: colors.textPrimary }}>{resolvedSlug}</code>
+                  {company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') !== resolvedSlug && (
+                    <span style={{ display: 'block', marginTop: spacing['1'], color: colors.textTertiary, fontStyle: 'italic' }}>
+                      The original name was already taken. You can rename your workspace later in Settings.
+                    </span>
+                  )}
+                </p>
+              )}
               <p
                 style={{
                   fontSize: typography.fontSize.sm,
@@ -547,6 +586,57 @@ export const Signup: React.FC = () => {
                 style={inputBase}
               />
             </div>
+
+            {/* BRT sub-0 day-4 P0-I: required Terms of Service + Privacy Policy acceptance */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing['2'], marginTop: spacing['2'] }}>
+              <input
+                id="signup-accept-terms"
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => {
+                  setAcceptedTerms(e.target.checked)
+                  if (e.target.checked) setAcceptedTermsError(null)
+                }}
+                style={{ marginTop: '4px', cursor: 'pointer' }}
+                aria-invalid={acceptedTermsError ? 'true' : undefined}
+                aria-describedby={acceptedTermsError ? 'signup-accept-terms-error' : undefined}
+              />
+              <label
+                htmlFor="signup-accept-terms"
+                style={{
+                  fontSize: typography.fontSize.sm,
+                  color: colors.textSecondary,
+                  letterSpacing: typography.letterSpacing.normal,
+                  lineHeight: 1.5,
+                  cursor: 'pointer',
+                }}
+              >
+                I accept the{' '}
+                <Link to="/terms" style={{ color: colors.primaryOrange, textDecoration: 'underline' }}>
+                  Terms of Service
+                </Link>
+                {' '}and{' '}
+                <Link to="/privacy" style={{ color: colors.primaryOrange, textDecoration: 'underline' }}>
+                  Privacy Policy
+                </Link>
+                .
+              </label>
+            </div>
+            {acceptedTermsError && (
+              <p
+                id="signup-accept-terms-error"
+                role="alert"
+                style={{
+                  fontSize: typography.fontSize.sm,
+                  color: colors.statusCritical,
+                  margin: 0,
+                  marginTop: spacing['1'],
+                  letterSpacing: typography.letterSpacing.normal,
+                }}
+              >
+                {acceptedTermsError}
+              </p>
+            )}
 
             {/* Submit */}
             <button

@@ -18,6 +18,10 @@ export const signupSchema = z
     lastName: z.string().min(1, 'Last name is required').max(80),
     organization: z.string().min(1, 'Organization is required').max(120),
     jobTitle: z.string().max(120).optional().or(z.literal('')),
+    // BRT sub-0 day-4 P0-I: explicit ToS + Privacy acceptance gate.
+    acceptedTerms: z.boolean().refine((v) => v === true, {
+      message: 'You must accept the Terms of Service and Privacy Policy to continue',
+    }),
   })
   .refine((v) => v.password === v.confirmPassword, {
     path: ['confirmPassword'],

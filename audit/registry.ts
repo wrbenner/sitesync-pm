@@ -956,6 +956,23 @@ export const PAGE_REGISTRY: PageContract[] = [
     expected: {},
     status: 'production',
   },
+  // BRT sub-0 day-4 P0-I: legal placeholder pages (final copy pending review).
+  {
+    route: '/terms',
+    pageFile: 'src/pages/legal/Terms.tsx',
+    title: 'Terms of Service (placeholder)',
+    entity: null,
+    expected: {},
+    status: 'stub',
+  },
+  {
+    route: '/privacy',
+    pageFile: 'src/pages/legal/Privacy.tsx',
+    title: 'Privacy Policy (placeholder)',
+    entity: null,
+    expected: {},
+    status: 'stub',
+  },
 
   // ── Magic-link surfaces (token-scoped, no auth session) ──
   {
