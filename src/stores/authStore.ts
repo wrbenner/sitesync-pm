@@ -6,6 +6,8 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { OrgRole } from '../types/tenant';
 import analytics from '../lib/analytics';
 import { identifyCrispUser, resetCrispSession } from '../lib/crisp/init';
+import { queryClient } from '../lib/queryClient';
+import { setSentryUser } from '../lib/sentry';
 
 // BUG-H11 FIX: Keep a module-level reference to the auth subscription so we can
 // unsubscribe on teardown (e.g. signOut / HMR) and avoid leaked listeners.
@@ -40,7 +42,7 @@ interface AuthState {
   createCompany: (name: string) => Promise<{ error: string | null; organization: Organization | null }>;
   clearError: () => void;
   // ── Org management actions (absorbed from organizationStore) ──
-  setCurrentOrg: (org: Organization) => void;
+  setCurrentOrg: (org: Organization) => Promise<void>;
   setOrganizations: (orgs: Organization[]) => void;
   setCurrentOrgRole: (role: OrgRole | null) => void;
   clearOrganization: () => void;
@@ -260,10 +262,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // ── Org management (absorbed from organizationStore, Day 7) ──
 
-  setCurrentOrg: (org) => {
-    // Mirror the organizationStore behaviour: clear role when switching orgs
+  // BRT sub-0 day-4 P0-G: org-switch is atomic — cancel in-flight queries,
+  // clear cached data, re-tag Sentry scope BEFORE flipping state so org-A
+  // data can't render under org-B context after switch. Same-org "rename"
+  // calls (Step2OrgDetails) are a no-op on the cache.
+  setCurrentOrg: async (org) => {
     const prev = get().organization;
-    const roleReset = prev?.id !== org.id ? { currentOrgRole: null } : {};
+    const isSwitch = prev?.id !== org.id;
+    if (isSwitch) {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      const u = get().user;
+      if (u) setSentryUser(u.id, u.email ?? '', undefined, org.id);
+    }
+    const roleReset = isSwitch ? { currentOrgRole: null } : {};
     set({ organization: org, ...roleReset });
   },
 
