@@ -153,12 +153,22 @@ DO $$ BEGIN
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- equipment_maintenance
+-- equipment_maintenance — joins through equipment(equipment_id → project_id).
+-- equipment_maintenance has no project_id column of its own; the original
+-- version of this migration referenced project_id directly and failed
+-- (SQLSTATE 42703 "column does not exist") on clean `supabase db reset`.
+-- Later migration 20260417000008_equipment_service_layer.sql replaces these
+-- policies with equipment.current_project_id + has_project_permission(),
+-- but the broken statements here had to land first for the chain to
+-- proceed. Forward-fix: rewrite to the join-through-equipment shape.
 DO $$ BEGIN
   CREATE POLICY "Project members can view" ON equipment_maintenance
     FOR SELECT USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM equipment e
+        JOIN project_members pm ON pm.project_id = e.project_id
+        WHERE e.id = equipment_maintenance.equipment_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -166,8 +176,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON equipment_maintenance
     FOR INSERT WITH CHECK (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM equipment e
+        JOIN project_members pm ON pm.project_id = e.project_id
+        WHERE e.id = equipment_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -175,8 +188,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON equipment_maintenance
     FOR UPDATE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM equipment e
+        JOIN project_members pm ON pm.project_id = e.project_id
+        WHERE e.id = equipment_maintenance.equipment_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -184,9 +200,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON equipment_maintenance
     FOR DELETE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM equipment e
+        JOIN project_members pm ON pm.project_id = e.project_id
+        WHERE e.id = equipment_maintenance.equipment_id
+          AND pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
@@ -348,12 +366,18 @@ DO $$ BEGIN
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- toolbox_talk_attendees (joins to toolbox_talks which has project_id)
+-- toolbox_talk_attendees (joins through toolbox_talks). The comment in the
+-- original version of this migration correctly noted the table has no
+-- project_id of its own, but the policy body still referenced project_id
+-- directly. Forward-fix: join through toolbox_talks(toolbox_talk_id → project_id).
 DO $$ BEGIN
   CREATE POLICY "Project members can view" ON toolbox_talk_attendees
     FOR SELECT USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM toolbox_talks tt
+        JOIN project_members pm ON pm.project_id = tt.project_id
+        WHERE tt.id = toolbox_talk_attendees.toolbox_talk_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -361,8 +385,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON toolbox_talk_attendees
     FOR INSERT WITH CHECK (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM toolbox_talks tt
+        JOIN project_members pm ON pm.project_id = tt.project_id
+        WHERE tt.id = toolbox_talk_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -370,8 +397,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON toolbox_talk_attendees
     FOR UPDATE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM toolbox_talks tt
+        JOIN project_members pm ON pm.project_id = tt.project_id
+        WHERE tt.id = toolbox_talk_attendees.toolbox_talk_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -379,9 +409,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON toolbox_talk_attendees
     FOR DELETE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM toolbox_talks tt
+        JOIN project_members pm ON pm.project_id = tt.project_id
+        WHERE tt.id = toolbox_talk_attendees.toolbox_talk_id
+          AND pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
