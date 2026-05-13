@@ -30,7 +30,7 @@ import {
 import type { TPointerEventInfo } from 'fabric'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 
-// ── Types ────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────
 
 export interface AnnotationData {
   id: string
@@ -52,7 +52,7 @@ export interface PhotoAnnotationProps {
   height?: number
 }
 
-// ── Constants ────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────
 
 const ANNOTATION_COLORS = [
   { label: 'Red', value: '#EF4444' },
@@ -78,21 +78,19 @@ const ZOOM_STEP = 0.2
 // Custom property keys stored on fabric objects
 const CUSTOM_PROPS = ['_annotationType', '_annotationColor', '_annotationId'] as const
 
-// ── Helpers ──────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────
 
 function uid(): string {
   return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 function getMeta(obj: FabricObject, key: string): unknown {
-  return (obj as any)[key]
+  return (obj as unknown as Record<string, unknown>)[key]
 }
 
 function setMeta(obj: FabricObject, key: string, value: unknown) {
-  ;(obj as any)[key] = value
+  ;(obj as unknown as Record<string, unknown>)[key] = value
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function getAnnotationType(obj: FabricObject): AnnotationData['type'] {
   const custom = getMeta(obj, '_annotationType') as AnnotationData['type'] | undefined
@@ -154,7 +152,7 @@ function createArrow(x1: number, y1: number, x2: number, y2: number, color: stri
   return group
 }
 
-// ── Styles ───────────────────────────────────────────────
+// ── Styles ───────────────────────────────────────────
 
 const toolbarStyle: React.CSSProperties = {
   display: 'flex',
@@ -224,7 +222,7 @@ const canvasWrapperStyle: React.CSSProperties = {
   touchAction: 'none',
 }
 
-// ── Component ────────────────────────────────────────────
+// ── Component ──────────────────────────────────────────
 
 export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
   imageUrl,
@@ -306,7 +304,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     }
   }, [restoreHistory])
 
-  // ── Serialize annotations ──────────────────────────────
+  // ── Serialize annotations ─────────────────────────────
 
   const serializeAnnotations = useCallback((): AnnotationData[] => {
     const canvas = fabricRef.current
@@ -337,7 +335,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     saveHistory()
   }, [saveHistory])
 
-  // ── Zoom helpers ───────────────────────────────────────
+  // ── Zoom helpers ─────────────────────────────────────
 
   const setZoom = useCallback((newZoom: number) => {
     const canvas = fabricRef.current
@@ -382,7 +380,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     [activeColor],
   )
 
-  // ── Initialize fabric canvas ───────────────────────────
+  // ── Initialize fabric canvas ─────────────────────────────
 
   useEffect(() => {
     const canvasEl = canvasElRef.current
@@ -452,7 +450,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imageUrl])
 
-  // ── Mouse event handlers for shape drawing ─────────────
+  // ── Mouse event handlers for shape drawing ──────────────────
 
   useEffect(() => {
     const canvas = fabricRef.current
@@ -586,7 +584,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     }
   }, [activeTool, activeColor, readOnly, saveHistory])
 
-  // ── Update freehand brush color when color changes ─────
+  // ── Update freehand brush color when color changes ─────────────
 
   useEffect(() => {
     const canvas = fabricRef.current
@@ -596,7 +594,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     }
   }, [activeColor, activeTool])
 
-  // ── Keyboard shortcuts ─────────────────────────────────
+  // ── Keyboard shortcuts ──────────────────────────────────
 
   useEffect(() => {
     if (readOnly) return
@@ -648,7 +646,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [readOnly, undo, redo, saveHistory, activateTool])
 
-  // ── ResizeObserver for responsive sizing ───────────────
+  // ── ResizeObserver for responsive sizing ───────────────────
 
   useEffect(() => {
     const container = containerRef.current
@@ -673,7 +671,7 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
     return () => observer.disconnect()
   }, [propWidth, propHeight])
 
-  // ── Render ─────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────
 
   const canW = propWidth ?? containerSize.w
   const canH = propHeight ?? containerSize.h
