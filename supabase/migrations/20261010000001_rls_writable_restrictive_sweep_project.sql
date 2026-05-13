@@ -23,6 +23,13 @@
 -- by the org-scoped sweep — this migration skips them via NOT EXISTS check.
 -- =============================================================================
 
+-- The sibling org-scoped sweep above already created
+-- v_writable_restrictive_coverage with column order (table_name, is_exempt, …).
+-- We redefine it below with (table_name, scope_kind, is_exempt, …). PostgreSQL
+-- forbids column renames inside CREATE OR REPLACE VIEW (SQLSTATE 42P16), so
+-- drop the legacy shape first; the recreate below is unconditional.
+DROP VIEW IF EXISTS public.v_writable_restrictive_coverage;
+
 -- ---------------------------------------------------------------------------
 -- Helper: resolve the project's org and delegate to is_org_writable. Returns
 -- true (allow) when the project is missing (i.e., the row is orphaned —

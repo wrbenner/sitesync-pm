@@ -40,7 +40,7 @@ BEGIN
     'daily_log',
     NEW.id::text,
     NEW.project_id,
-    (SELECT org_id FROM public.projects WHERE id = NEW.project_id LIMIT 1),
+    (SELECT organization_id FROM public.projects WHERE id = NEW.project_id LIMIT 1),
     v_version_hash
   );
   RETURN NEW;
@@ -74,7 +74,7 @@ BEGIN
     'change_order',
     NEW.id::text,
     NEW.project_id,
-    (SELECT org_id FROM public.projects WHERE id = NEW.project_id LIMIT 1),
+    (SELECT organization_id FROM public.projects WHERE id = NEW.project_id LIMIT 1),
     v_version_hash
   );
   RETURN NEW;
