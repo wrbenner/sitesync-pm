@@ -1,0 +1,40 @@
+name: pgTAP
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/database/**'
+      - '.github/workflows/pgtap.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/database/**'
+
+permissions:
+  contents: read
+
+jobs:
+  pgtap:
+    name: SQL test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start ephemeral Supabase
+        run: supabase start --exclude=realtime,storage-api,inbucket,studio,gotrue,kong,edge-runtime,logflare,vector
+
+      - name: Run pgTAP suite
+        run: supabase test db
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup
