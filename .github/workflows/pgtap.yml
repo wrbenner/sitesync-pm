@@ -1,0 +1,57 @@
+name: pgTAP
+
+# BRT sub-0 day-0: SQL test suite. Currently INFORMATIONAL — the job
+# is marked `continue-on-error: true` because the migration chain has
+# multiple pre-existing issues that prevent a clean `supabase db reset`
+# from succeeding (broken column refs, single-quoted policy names, and
+# a pg_cron extension requirement that the local stack doesn't satisfy).
+#
+# Those are pre-existing bugs unrelated to sub-0; surfacing them is the
+# unanticipated value of having added this workflow. The migration-chain
+# repair is filed as a P1 follow-up (see Day 0 receipt). Once the chain
+# applies cleanly end-to-end, flip `continue-on-error` to false and the
+# pgTAP suite becomes a real merge gate.
+#
+# In the meantime the pgTAP test files exist as both documentation and
+# something runnable manually via `supabase test db` after a local
+# chain repair.
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/database/**'
+      - '.github/workflows/pgtap.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/database/**'
+
+permissions:
+  contents: read
+
+jobs:
+  pgtap:
+    name: SQL test suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start ephemeral Supabase
+        run: supabase start --exclude=realtime,storage-api,inbucket,studio,gotrue,kong,edge-runtime,logflare,vector
+
+      - name: Run pgTAP suite
+        run: supabase test db
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup
