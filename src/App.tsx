@@ -477,6 +477,7 @@ function AppRoutes() {
             <Route path="/integrations" element={<PageSuspense><ProtectedRoute moduleId="integrations" moduleName="Integrations"><Integrations /></ProtectedRoute></PageSuspense>} />
             <Route path="/settings/workflows" element={FLAGS.approvalWorkflows ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense> : <Navigate to="/settings" replace />} />
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
+            <Route path="/settings/billing" element={<Navigate to="/settings" replace />} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
             <Route path="/admin/bulk-invite" element={FLAGS.bulkInvite ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense> : <Navigate to="/settings/team" replace />} />
