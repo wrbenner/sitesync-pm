@@ -1,4 +1,4 @@
-// ── Site Intelligence ─────────────────────────────────────────
+// ── Site Intelligence ───────────────────────────────────────────────
 // Production-grade site due diligence for general contractors.
 // ALL data from real public APIs — zero mock data.
 // FEMA flood zones, USDA soil, OpenWeatherMap, OSM amenities, USGS elevation.
@@ -25,7 +25,7 @@ import {
 
 import 'leaflet/dist/leaflet.css';
 
-// ── Types ─────────────────────────────────────────────────────
+// ── Types ───────────────────────────────────────────────────────────────
 
 type TabKey = 'weather' | 'flood' | 'soil' | 'environmental' | 'nearby' | 'sun';
 
@@ -38,7 +38,7 @@ const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: 'sun', label: 'Sun Exposure', icon: Sun },
 ];
 
-// ── Amenity Icon Map ──────────────────────────────────────────
+// ── Amenity Icon Map ────────────────────────────────────────────
 
 const AMENITY_ICON: Record<string, React.ElementType> = {
   school: School,
@@ -62,7 +62,7 @@ const AMENITY_COLOR: Record<string, string> = {
   airport: '#6366F1',
 };
 
-// ── Shared UI Components ──────────────────────────────────────
+// ── Shared UI Components ──────────────────────────────────────────
 
 function DataCard({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
@@ -137,7 +137,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-// ── Weather Tab ───────────────────────────────────────────────
+// ── Weather Tab ─────────────────────────────────────────────
 
 function WeatherTab({ data }: { data: SiteIntelligenceData }) {
   if (!data.weather) return <EmptyState message="Weather data unavailable. Check your OpenWeatherMap API key." />;
@@ -279,7 +279,7 @@ function WeatherTab({ data }: { data: SiteIntelligenceData }) {
   );
 }
 
-// ── Flood Tab ─────────────────────────────────────────────────
+// ── Flood Tab ───────────────────────────────────────────────────
 
 function FloodTab({ data }: { data: SiteIntelligenceData }) {
   if (!data.flood) return <EmptyState message="Flood zone data unavailable. FEMA NFHL service may be temporarily down." />;
@@ -384,7 +384,7 @@ function FloodTab({ data }: { data: SiteIntelligenceData }) {
   );
 }
 
-// ── Soil & Elevation Tab ──────────────────────────────────────
+// ── Soil & Elevation Tab ─────────────────────────────────────────
 
 function SoilTab({ data }: { data: SiteIntelligenceData }) {
   return (
@@ -490,7 +490,7 @@ function SoilTab({ data }: { data: SiteIntelligenceData }) {
   );
 }
 
-// ── Environmental Tab ─────────────────────────────────────────
+// ── Environmental Tab ────────────────────────────────────────────
 
 function EnvironmentalTab({ data }: { data: SiteIntelligenceData }) {
   return (
@@ -570,7 +570,7 @@ function EnvironmentalTab({ data }: { data: SiteIntelligenceData }) {
   );
 }
 
-// ── Nearby Amenities Tab ──────────────────────────────────────
+// ── Nearby Amenities Tab ─────────────────────────────────────────
 
 function NearbyTab({ data }: { data: SiteIntelligenceData }) {
   if (data.nearby.length === 0) return <EmptyState message="No nearby amenity data available. The Overpass API may be temporarily unavailable." />;
@@ -638,7 +638,7 @@ function NearbyTab({ data }: { data: SiteIntelligenceData }) {
   );
 }
 
-// ── Sun Exposure Tab ──────────────────────────────────────────
+// ── Sun Exposure Tab ────────────────────────────────────────────
 
 function SunTab({ data }: { data: SiteIntelligenceData }) {
   if (!data.sun) return <EmptyState message="Sun exposure data unavailable." />;
@@ -722,7 +722,7 @@ function exportReport(data: SiteIntelligenceData) {
   }
 
   if (data.flood) {
-    lines.push(`── FLOOD ZONE ──────────────────────────────────────`);
+    lines.push(`── FLOOD ZONE ───────────────────────────────────────────────────`);
     lines.push(`Zone: ${data.flood.zone} (${data.flood.risk_level} Risk)`);
     lines.push(`SFHA: ${data.flood.is_sfha ? 'Yes' : 'No'}`);
     lines.push(`Insurance Required: ${data.flood.insurance_required ? 'Yes' : 'No'}`);
@@ -732,7 +732,7 @@ function exportReport(data: SiteIntelligenceData) {
   }
 
   if (data.soil) {
-    lines.push(`── SOIL ────────────────────────────────────────────`);
+    lines.push(`── SOIL ────────────────────────────────────────────────────────`);
     lines.push(`Soil: ${data.soil.map_unit_name} (${data.soil.map_unit_symbol})`);
     lines.push(`Drainage: ${data.soil.drainage_class}`);
     lines.push(`Hydrologic Group: ${data.soil.hydrologic_group}`);
@@ -741,7 +741,7 @@ function exportReport(data: SiteIntelligenceData) {
   }
 
   if (data.weather) {
-    lines.push(`── WEATHER ─────────────────────────────────────────`);
+    lines.push(`── WEATHER ─────────────────────────────────────────────────────────`);
     lines.push(`Current: ${data.weather.current.temperature}°F, ${data.weather.current.conditions}`);
     lines.push(`Wind: ${data.weather.current.wind_speed} mph`);
     lines.push(`Pour Day: ${data.weather.construction.pour_day ? 'YES' : 'NO'}`);
@@ -750,7 +750,7 @@ function exportReport(data: SiteIntelligenceData) {
   }
 
   if (data.nearby.length > 0) {
-    lines.push(`── NEARBY AMENITIES ────────────────────────────────`);
+    lines.push(`── NEARBY AMENITIES ────────────────────────────────────────────────`);
     for (const a of data.nearby) {
       lines.push(`  ${a.name} (${a.category}) — ${a.distance_mi} mi`);
     }
@@ -758,12 +758,12 @@ function exportReport(data: SiteIntelligenceData) {
   }
 
   if (data.epa_facilities.length > 0) {
-    lines.push(`── EPA FACILITIES (3 mi radius) ────────────────────`);
+    lines.push(`── EPA FACILITIES (3 mi radius) ──────────────────────────────────────────────`);
     for (const f of data.epa_facilities) {
       lines.push(`  ${f.name} — ${f.street}, ${f.city} ${f.state}`);
     }
   } else {
-    lines.push(`── EPA FACILITIES ──────────────────────────────────`);
+    lines.push(`── EPA FACILITIES ──────────────────────────────────────────────────────────`);
     lines.push(`  No regulated facilities within 3 miles`);
   }
 
@@ -781,7 +781,7 @@ function exportReport(data: SiteIntelligenceData) {
   URL.revokeObjectURL(url);
 }
 
-// ── Main Component ────────────────────────────────────────────
+// ── Main Component ─────────────────────────────────────────────────
 
 const SiteIntelligencePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -854,7 +854,7 @@ const SiteIntelligencePage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Initialize & Update Leaflet Map ─────────────────────────
+  // ── Initialize & Update Leaflet Map ─────────────────────────────
   // The map container div is conditionally rendered (only when data exists),
   // so we must init the map when data arrives, not on component mount.
 
@@ -868,7 +868,7 @@ const SiteIntelligencePage: React.FC = () => {
       if (cancelled) return;
 
       // Fix default marker icon issue
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
         iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
