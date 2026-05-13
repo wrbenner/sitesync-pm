@@ -198,11 +198,16 @@ export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick,
     )
   }
 
+  // Wrap in overflow-x:auto so the table scrolls at narrow widths (iPad ≈
+  // 364px available after sidebar + PROJECT NOW panel) rather than squeezing
+  // all columns and truncating headers.
   return (
+    <div style={{ overflowX: 'auto' }}>
     <table
       ref={tableRef}
       style={{
         width: '100%',
+        minWidth: 600,
         borderCollapse: 'collapse',
         fontFamily: typography.fontFamily,
         fontSize: '13px',
@@ -301,6 +306,7 @@ export const NeedsYouTable: React.FC<NeedsYouTableProps> = ({ items, onRowClick,
         })}
       </tbody>
     </table>
+    </div>
   )
 }
 

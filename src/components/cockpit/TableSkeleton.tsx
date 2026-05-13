@@ -36,9 +36,11 @@ function Bar({ width, height = 12 }: { width: number | string; height?: number }
 export const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 6 }) => (
   <>
     <style>{SHIMMER_KEYFRAMES}</style>
+    <div style={{ overflowX: 'auto' }}>
     <table
       style={{
         width: '100%',
+        minWidth: 600,
         borderCollapse: 'collapse',
         fontFamily: typography.fontFamily,
       }}
@@ -81,6 +83,7 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 6 }) => (
         ))}
       </tbody>
     </table>
+    </div>
   </>
 )
 

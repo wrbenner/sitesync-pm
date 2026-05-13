@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Permission } from '../../hooks/usePermissions'
@@ -108,7 +109,7 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
         : 'You do not have permission to access this page.'}
     </p>
     <button
-      onClick={() => {/* TODO: wire up request access flow */}}
+      onClick={() => toast.info('Contact your project admin to request access to this module.')}
       style={{
         backgroundColor: colors.brand400, color: colors.white,
         border: 'none', borderRadius: borderRadius.md,
