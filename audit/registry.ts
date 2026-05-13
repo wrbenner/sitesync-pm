@@ -115,6 +115,15 @@ export const PAGE_REGISTRY: PageContract[] = [
     expected: {},
     status: 'production',
   },
+  {
+    route: '/settings/billing',
+    pageFile: 'src/pages/Settings/Billing.tsx',
+    title: 'Billing',
+    entity: null,
+    expected: { has_detail_view: true },
+    permissionModule: 'settings',
+    status: 'production',
+  },
 
   // ── The Nine ─────────────────────────────────────────────
   // The IA the manifesto promises: nine question-shaped destinations
