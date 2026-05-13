@@ -84,15 +84,13 @@ function uid(): string {
   return `ann_${Date.now()}_${crypto.randomUUID().slice(0, 7)}`
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 function getMeta(obj: FabricObject, key: string): unknown {
-  return (obj as any)[key]
+  return (obj as unknown as Record<string, unknown>)[key]
 }
 
 function setMeta(obj: FabricObject, key: string, value: unknown) {
-  ;(obj as any)[key] = value
+  ;(obj as unknown as Record<string, unknown>)[key] = value
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function getAnnotationType(obj: FabricObject): AnnotationData['type'] {
   const custom = getMeta(obj, '_annotationType') as AnnotationData['type'] | undefined
@@ -729,7 +727,9 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Undo (Ctrl+Z)"
             aria-label="Undo"
+            // eslint-disable-next-line react-hooks/refs -- fabric canvas history is stored in refs intentionally
             disabled={historyIndexRef.current <= 0}
+            // eslint-disable-next-line react-hooks/refs
             style={btnStyle(false, historyIndexRef.current <= 0)}
             onClick={undo}
           >
@@ -739,7 +739,9 @@ export const PhotoAnnotation: FC<PhotoAnnotationProps> = ({
             type="button"
             title="Redo (Ctrl+Shift+Z)"
             aria-label="Redo"
+            // eslint-disable-next-line react-hooks/refs
             disabled={historyIndexRef.current >= historyRef.current.length - 1}
+            // eslint-disable-next-line react-hooks/refs
             style={btnStyle(false, historyIndexRef.current >= historyRef.current.length - 1)}
             onClick={redo}
           >
