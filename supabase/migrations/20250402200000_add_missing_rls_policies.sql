@@ -906,12 +906,22 @@ DO $$ BEGIN
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- progress_detection_results
+-- progress_detection_results — joins through photo_pins(photo_pin_id → project_id).
+-- At the time this migration runs, progress_detection_results has no
+-- project_id column of its own (created by 00047_photo_pins.sql with
+-- only photo_pin_id; project_id is added by 20260417000007 LATER in
+-- the chain). The original version of these policies referenced
+-- project_id directly and failed (SQLSTATE 42703) on clean
+-- supabase db reset. Forward-fix: join through photo_pins, which is
+-- well-defined at every point in the chain.
 DO $$ BEGIN
   CREATE POLICY "Project members can view" ON progress_detection_results
     FOR SELECT USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM photo_pins pp
+        JOIN project_members pm ON pm.project_id = pp.project_id
+        WHERE pp.id = progress_detection_results.photo_pin_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -919,8 +929,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON progress_detection_results
     FOR INSERT WITH CHECK (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM photo_pins pp
+        JOIN project_members pm ON pm.project_id = pp.project_id
+        WHERE pp.id = photo_pin_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -928,8 +941,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON progress_detection_results
     FOR UPDATE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM photo_pins pp
+        JOIN project_members pm ON pm.project_id = pp.project_id
+        WHERE pp.id = progress_detection_results.photo_pin_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -937,9 +953,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON progress_detection_results
     FOR DELETE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM photo_pins pp
+        JOIN project_members pm ON pm.project_id = pp.project_id
+        WHERE pp.id = progress_detection_results.photo_pin_id
+          AND pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
