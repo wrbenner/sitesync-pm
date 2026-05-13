@@ -363,7 +363,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                       fontWeight: typography.fontWeight.bold,
                     }}
                   >
-                    {p.name?.[0]?.toUpperCase() ?? '?'}
+                    {p.name?.[0]?.toUpperCase() ?? '·'}
                   </span>
                   <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
@@ -465,7 +465,11 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawName = authProfile?.full_name?.trim() || ''
+  // Reject placeholder values like '—' that contain no word characters.
+  // The seed user's full_name column defaults to an em-dash; fall through
+  // to email-derived display name so the sidebar never shows '— / Role'.
+  const fullName = /\w/.test(rawName) ? rawName : ''
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
@@ -600,12 +604,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   // Mobile detection — when present we render <MobileTabBar/>; the App shell
   // already prefers MobileLayout, so this is the safety net.
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches,
   )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(max-width: 768px)')
+    const mq = window.matchMedia('(max-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
@@ -623,15 +627,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
       setSidebarCollapsed(true)
       return
     }
+    if (isMobile) return
     setSidebarCollapsed(readStoredCollapsed(false))
-  }, [location.pathname, setSidebarCollapsed])
+  }, [location.pathname, setSidebarCollapsed, isMobile])
 
   // Persist user-driven changes — but only when they happen on a non-/day
   // page so the auto-collapse on /day doesn't poison the preference.
+  // Skip on mobile: the forced collapse there must not overwrite the desktop
+  // preference stored in localStorage.
   useEffect(() => {
     if (location.pathname === '/day') return
+    if (isMobile) return
     writeStoredCollapsed(sidebarCollapsed)
-  }, [sidebarCollapsed, location.pathname])
+  }, [sidebarCollapsed, location.pathname, isMobile])
 
   // Keyboard: `[` toggles the sidebar (light-touch chord). Cmd+\ is the
   // platform-standard sidebar toggle and works even while typing in an
