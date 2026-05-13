@@ -1,0 +1,41 @@
+# BRT sub-3 §4.2 — sample data fixture for "architect" role.
+# Reference doc; inline data lives in seed_sample_data(p_org_id, 'architect').
+
+role: architect
+display_name: Architect
+project:
+  name: "Sample — Riverside MOB (Architect View)"
+  description: "Sample data for exploring SiteSync. Delete anytime from Settings."
+  status: active
+
+rfis:
+  - number: RFI-001
+    title: "Window mullion spacing per A-301"
+    question: "Mullion spacing on A-301 does not match elevation B/A-501. Which is correct?"
+    priority: high
+    status: open
+  - number: RFI-002
+    title: "Confirm rebar grade for footings"
+    question: "Plan note says Grade 60; spec section 03 20 00 says Grade 75. Reconcile."
+    priority: medium
+    status: pending_response
+
+submittals:
+  - number: SUB-001
+    title: "Window assembly — A-301 type 4"
+    status: pending_review
+
+daily_logs:
+  - log_date: "T-1"
+    summary: "Crew of 12. Pour at footings A-D complete. No injuries."
+    weather: "Sunny, 72F, light winds from W"
+
+punch_items:
+  - number: PI-001
+    title: "Touch-up paint, corridor 102"
+    description: "North wall paint touch-up needed."
+    priority: low
+  - number: PI-002
+    title: "Replace damaged door hardware"
+    description: "Damaged latch at room 201."
+    priority: medium

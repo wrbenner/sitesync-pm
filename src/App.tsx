@@ -161,7 +161,9 @@ const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m
 const NotificationSettings = lazy(() => import('./pages/Settings/NotificationSettings'));
 const UserProfile = lazy(() => import('./pages/UserProfile'));
 const ProjectBrain = lazy(() => import('./components/ai/ProjectBrain').then((m) => ({ default: m.ProjectBrain })));
-const Onboarding = lazy(() => import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })));
+// BRT sub-3 §4.1: replace single-screen Onboarding with the 5-step wizard.
+// Kept the lazy import name for fewer downstream churn diffs.
+const Onboarding = lazy(() => import('./components/onboarding/OnboardingWizard'));
 const NotFound = lazy(() => import('./pages/errors/NotFound').then((m) => ({ default: m.NotFound })));
 const BulkInvitePage = lazy(() => import('./pages/admin/bulk-invite'));
 const CostCodeLibraryPage = lazy(() => import('./pages/admin/cost-code-library'));

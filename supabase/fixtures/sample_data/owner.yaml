@@ -1,0 +1,41 @@
+# BRT sub-3 §4.2 — sample data fixture for "owner" role.
+# Reference doc; inline data lives in seed_sample_data(p_org_id, 'owner').
+
+role: owner
+display_name: Owner / Developer
+project:
+  name: "Sample — Riverside MOB (Owner View)"
+  description: "Sample data for exploring SiteSync. Delete anytime from Settings."
+  status: active
+
+rfis:
+  - number: RFI-001
+    title: "Budget impact of finish upgrade in lobby"
+    question: "Proposed upgrade from porcelain to terrazzo adds $34k. Approve?"
+    priority: high
+    status: open
+  - number: RFI-002
+    title: "Confirm rebar grade for footings"
+    question: "Plan note says Grade 60; spec section 03 20 00 says Grade 75. Reconcile."
+    priority: medium
+    status: pending_response
+
+submittals:
+  - number: SUB-001
+    title: "Concrete mix design — 4500 psi"
+    status: pending_review
+
+daily_logs:
+  - log_date: "T-1"
+    summary: "Crew of 12. Pour at footings A-D complete. No injuries."
+    weather: "Sunny, 72F, light winds from W"
+
+punch_items:
+  - number: PI-001
+    title: "Touch-up paint, corridor 102"
+    description: "North wall paint touch-up needed."
+    priority: low
+  - number: PI-002
+    title: "Replace damaged door hardware"
+    description: "Damaged latch at room 201."
+    priority: medium
