@@ -597,15 +597,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   const streamRole: StreamRole = useMemo(() => toStreamRole(projectRole), [projectRole])
   const navItems = useMemo(() => getNavForRole(streamRole), [streamRole])
 
-  // Mobile detection — when present we render <MobileTabBar/>; the App shell
-  // already prefers MobileLayout, so this is the safety net.
+  // Safety net: if the Sidebar is somehow mounted at ≤1024px (should not happen —
+  // App.tsx uses MobileLayout for isMobile=max-width:1024px), render MobileTabBar.
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches,
   )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(max-width: 768px)')
+    const mq = window.matchMedia('(max-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
