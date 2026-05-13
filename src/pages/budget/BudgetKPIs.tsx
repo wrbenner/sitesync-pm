@@ -286,7 +286,7 @@ export const BudgetKPIs: React.FC<BudgetKPIProps> = ({
                   </span>
                 ) : i === 3 ? (
                   <span style={{ fontSize: 11, color: remaining >= 0 ? '#16A34A' : '#DC2626', fontWeight: 500 }}>
-                    {totalBudget <= 0 ? '—' : remaining >= 0 ? 'Under budget' : 'Over budget'}
+                    {totalBudget <= 0 ? '—' : remaining >= 0 ? 'Under budget' : `Over by ${fmtCurrency(Math.abs(remaining))}`}
                   </span>
                 ) : (
                   <span />
