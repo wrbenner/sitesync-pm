@@ -129,6 +129,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
 
   // Reset the search whenever the dropdown closes so the next open starts fresh.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- simple reset, no external sync needed
     if (!open) setFilter('')
   }, [open])
 
@@ -256,8 +257,8 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                   }}
                 >
                   <Search size={12} color={colors.textTertiary} />
-                  <input
-                    autoFocus
+                  {/* eslint-disable-next-line jsx-a11y/no-autofocus -- dropdown search, intentional */}
+                  <input autoFocus
                     type="text"
                     placeholder="Search projects…"
                     value={filter}
@@ -465,7 +466,9 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawName = authProfile?.full_name?.trim() || ''
+  // Guard against seed placeholder '—' (em-dash with no word chars)
+  const fullName = /\w/.test(rawName) ? rawName : ''
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
@@ -600,23 +603,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   // Mobile detection — when present we render <MobileTabBar/>; the App shell
   // already prefers MobileLayout, so this is the safety net.
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches,
   )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(max-width: 768px)')
+    const mq = window.matchMedia('(max-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
 
   // Default-collapse on /day; on every other page, reapply the user's last
-  // preference from localStorage. Track the prior pathname in a ref so we
-  // only re-sync when it actually changes (avoids cascading re-renders that
-  // a state-tracked previous value would cause).
+  // preference from localStorage. Guard on isMobile so a phone session never
+  // clobbers the desktop preference (Sidebar doesn't render on mobile but
+  // these effects still execute).
   const lastPathRef = useRef(location.pathname)
   useEffect(() => {
+    if (isMobile) return
     if (location.pathname === lastPathRef.current) return
     lastPathRef.current = location.pathname
     if (location.pathname === '/day') {
@@ -624,14 +628,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
       return
     }
     setSidebarCollapsed(readStoredCollapsed(false))
-  }, [location.pathname, setSidebarCollapsed])
+  }, [isMobile, location.pathname, setSidebarCollapsed])
 
   // Persist user-driven changes — but only when they happen on a non-/day
   // page so the auto-collapse on /day doesn't poison the preference.
   useEffect(() => {
+    if (isMobile) return
     if (location.pathname === '/day') return
     writeStoredCollapsed(sidebarCollapsed)
-  }, [sidebarCollapsed, location.pathname])
+  }, [isMobile, sidebarCollapsed, location.pathname])
 
   // Keyboard: `[` toggles the sidebar (light-touch chord). Cmd+\ is the
   // platform-standard sidebar toggle and works even while typing in an
