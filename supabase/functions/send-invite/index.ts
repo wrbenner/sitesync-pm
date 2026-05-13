@@ -19,6 +19,7 @@ import {
   HttpError,
   errorResponse,
 } from '../shared/auth.ts'
+import { enforceRateLimit, tooManyRequestsResponse, RATE_LIMIT_BUCKETS } from '../_shared/rateLimit.ts'
 
 type Role = 'owner' | 'admin' | 'pm' | 'editor' | 'viewer'
 
@@ -154,6 +155,10 @@ Deno.serve(async (req) => {
     if (!body.organization_id) {
       throw new HttpError(400, 'organization_id required', 'validation_error')
     }
+
+    // BRT sub-8 §4.1: rate-limit invite sends per org (50/hr default).
+    const ok = await enforceRateLimit(admin, body.organization_id, RATE_LIMIT_BUCKETS.INVITE_SEND)
+    if (!ok) return tooManyRequestsResponse(RATE_LIMIT_BUCKETS.INVITE_SEND, corsHeaders)
     const role = (body.role ?? 'viewer') as Role
     const expiresHours = body.expires_hours ?? 48
     const ttl = Math.min(expiresHours * 3600, 14 * 24 * 3600) // cap at 14 days

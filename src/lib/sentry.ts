@@ -2,6 +2,7 @@
 // Captures errors, traces, session replays, and custom breadcrumbs.
 
 import * as Sentry from '@sentry/react'
+import { sentryBeforeSend } from './observability/scrubbers'
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || '',
@@ -32,12 +33,18 @@ Sentry.init({
     return breadcrumb
   },
 
-  // Strip PII from error reports
+  // BRT sub-7 §4.5 (I4 invariant): strip PII before send. The centralized
+  // scrubber drops password/token/secret/api_key/draft_text/rfi_body/etc.
+  // from anywhere in the event payload (extra, contexts, breadcrumbs,
+  // request headers). Pair with useTrack scrubbing for PostHog.
   beforeSend(event) {
     if (event.user) {
       delete event.user.ip_address
     }
-    return event
+    // Cast through unknown because sentryBeforeSend is structurally a
+    // record-walker and Sentry's ErrorEvent type carries non-optional
+    // discriminants. The scrubber preserves shape.
+    return sentryBeforeSend(event as unknown as Record<string, unknown>) as unknown as typeof event
   },
 })
 

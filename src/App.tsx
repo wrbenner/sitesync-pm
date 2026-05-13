@@ -157,6 +157,13 @@ const Integrations = lazy(() => import('./pages/Integrations'));
 const OwnerReportPage = lazy(() => import('./pages/OwnerReportPage'));
 const WorkflowSettings = lazy(() => import('./pages/Settings/WorkflowSettings'));
 const Billing = lazy(() => import('./pages/Settings/Billing'));
+// BRT sub-6 §4.4-§4.7: admin + customer-history + help
+const AdminOrgList = lazy(() => import('./pages/admin/AdminOrgList'));
+const AdminOrgDetail = lazy(() => import('./pages/admin/AdminOrgDetail'));
+const ImpersonationLog = lazy(() => import('./pages/admin/ImpersonationLog'));
+const ImpersonationHistory = lazy(() => import('./pages/Settings/security/ImpersonationHistory'));
+const HelpIndex = lazy(() => import('./pages/help/HelpIndex'));
+const HelpArticle = lazy(() => import('./pages/help/HelpArticle'));
 const ProjectSettings = lazy(() => import('./pages/admin/ProjectSettings').then((m) => ({ default: m.ProjectSettings })));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
 const NotificationSettings = lazy(() => import('./pages/Settings/NotificationSettings'));
@@ -488,6 +495,14 @@ function AppRoutes() {
             <Route path="/settings/workflows" element={FLAGS.approvalWorkflows ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Workflow Settings"><WorkflowSettings /></ProtectedRoute></PageSuspense> : <Navigate to="/settings" replace />} />
             <Route path="/settings" element={<PageSuspense><ProjectSettings /></PageSuspense>} />
             <Route path="/settings/billing" element={<PageSuspense><Billing /></PageSuspense>} />
+            <Route path="/settings/security/impersonation" element={<PageSuspense><ImpersonationHistory /></PageSuspense>} />
+            {/* BRT sub-6 §4.4: admin routes — server-side gated via profiles.is_internal_admin */}
+            <Route path="/admin/orgs" element={<PageSuspense><AdminOrgList /></PageSuspense>} />
+            <Route path="/admin/orgs/:id" element={<PageSuspense><AdminOrgDetail /></PageSuspense>} />
+            <Route path="/admin/impersonation-log" element={<PageSuspense><ImpersonationLog /></PageSuspense>} />
+            {/* BRT sub-6 §4.7: help center */}
+            <Route path="/help" element={<PageSuspense><HelpIndex /></PageSuspense>} />
+            <Route path="/help/:slug" element={<PageSuspense><HelpArticle /></PageSuspense>} />
             <Route path="/settings/team" element={<PageSuspense><UserManagement /></PageSuspense>} />
             <Route path="/settings/notifications" element={<PageSuspense><NotificationSettings /></PageSuspense>} />
             <Route path="/admin/bulk-invite" element={FLAGS.bulkInvite ? <PageSuspense><ProtectedRoute moduleId="settings" moduleName="Bulk Invite"><BulkInvitePage /></ProtectedRoute></PageSuspense> : <Navigate to="/settings/team" replace />} />
