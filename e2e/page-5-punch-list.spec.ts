@@ -49,9 +49,22 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
-  await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  // Dev-bypass: navigate to dashboard; if not redirected to login, bypass is active.
+  await page.goto('#/dashboard')
+  await page.waitForLoadState('domcontentloaded', { timeout: 8_000 }).catch(() => undefined)
+  await page.waitForTimeout(400)
+  if (!page.url().includes('/login')) { await settle(page, 800); return }
+
+  const pwBtn = page.getByRole('button', { name: /sign in with password/i })
+  if (await pwBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await pwBtn.click(); await page.waitForTimeout(300)
+  }
+  await page.getByPlaceholder('Email').fill(USER).catch(async () => {
+    await page.getByPlaceholder('you@company.com').fill(USER).catch(() => undefined)
+  })
+  await page.getByPlaceholder('Password').fill(PASS).catch(async () => {
+    await page.getByPlaceholder('Enter your password').fill(PASS).catch(() => undefined)
+  })
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
