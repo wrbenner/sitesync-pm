@@ -33,6 +33,10 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, firstName: string, lastName?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  // BRT sub-1 §4.3: server-side org switch — validates membership via the
+  // switch-active-org edge fn, persists profiles.active_org_id, refreshes
+  // the session so the JWT carries the new org_id claim.
+  switchActiveOrg: (targetOrgId: string) => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   loadProfile: () => Promise<void>;
@@ -176,6 +180,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       set({ error, loading: false });
+    }
+  },
+
+  // BRT sub-1 §4.3 — server-side org switch.
+  //
+  // Sequence:
+  //   1. Call the switch-active-org edge fn (it validates membership via
+  //      set_active_org() SECURITY DEFINER + writes profiles.active_org_id).
+  //   2. supabase.auth.refreshSession() so the JWT picks up the new
+  //      `org_id` custom claim (injected by custom_access_token_hook).
+  //   3. Locally mirror the switch via setCurrentOrg(), which cancels
+  //      in-flight queries + clears the React Query cache.
+  //
+  // Failure paths return a customer-grade message; the prior org stays
+  // active so the UI doesn't flicker to a half-switched state.
+  switchActiveOrg: async (targetOrgId) => {
+    const { organizations } = get();
+    const target = organizations.find((o) => o.id === targetOrgId);
+    if (!target) {
+      return { error: 'You are not a member of that organization.' };
+    }
+    try {
+      const { error: fnError } = await supabase.functions.invoke('switch-active-org', {
+        body: { target_org_id: targetOrgId },
+      });
+      if (fnError) {
+        if (import.meta.env.DEV) console.error('[switch-active-org] edge fn error:', fnError);
+        return { error: 'Could not switch organization. Please try again.' };
+      }
+      // Refresh the session so the JWT carries the new org_id claim.
+      await supabase.auth.refreshSession();
+      await get().setCurrentOrg(target);
+      return { error: null };
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('[switch-active-org] unexpected:', err);
+      return { error: 'Network error while switching organization.' };
     }
   },
 

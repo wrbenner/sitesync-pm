@@ -36,6 +36,38 @@ interface ProvisionOrgRequest {
   name: string
   slug?: string
   metadata?: Record<string, unknown>
+  turnstile_token?: string
+}
+
+// BRT sub-2 §4.2 — Cloudflare Turnstile server-side verification.
+// Returns true if the token is valid (or if no secret is configured, in
+// which case the function is opted out of CAPTCHA — useful for local dev
+// without the CF dashboard config). The widget passes 'DEV_BYPASS' when
+// the public site key is unset; we accept it only when the secret is also
+// unset, so production builds with the secret cannot be bypassed.
+async function verifyTurnstile(token: string | undefined, clientIp: string | null): Promise<boolean> {
+  const secret = Deno.env.get('TURNSTILE_SECRET_KEY')
+  if (!secret) return true // CAPTCHA opt-out (dev / not-yet-configured)
+  if (!token) return false
+  if (token === 'DEV_BYPASS') return false // explicit reject — secret is set
+
+  try {
+    const formData = new URLSearchParams()
+    formData.append('secret', secret)
+    formData.append('response', token)
+    if (clientIp) formData.append('remoteip', clientIp)
+
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: formData,
+    })
+    if (!res.ok) return false
+    const json = (await res.json()) as { success?: boolean; 'error-codes'?: string[] }
+    return Boolean(json.success)
+  } catch (err) {
+    console.error('[provision-org] turnstile siteverify error:', err)
+    return false
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -65,6 +97,18 @@ Deno.serve(async (req: Request) => {
     const metadata = body.metadata && typeof body.metadata === 'object'
       ? body.metadata
       : {}
+
+    // 2a. BRT sub-2 §4.2 — Cloudflare Turnstile server-side verify. Opt-out
+    //     path: when TURNSTILE_SECRET_KEY is unset (local dev), the check
+    //     passes through; production builds set the secret, which forces
+    //     a real token + siteverify success.
+    const clientIp = req.headers.get('CF-Connecting-IP')
+      ?? req.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
+      ?? null
+    const turnstileOk = await verifyTurnstile(body.turnstile_token, clientIp)
+    if (!turnstileOk) {
+      throw new HttpError(403, 'Human-verification challenge failed. Please refresh and try again.')
+    }
 
     // 3. Idempotency check — if the user already owns an org with the same
     //    slug-or-name, return that one rather than creating a duplicate.
