@@ -536,12 +536,23 @@ DO $$ BEGIN
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- delivery_items
+-- delivery_items — joins through deliveries(delivery_id → project_id).
+-- delivery_items has no project_id column of its own (only delivery_id +
+-- po_line_item_id + quantity/condition fields); the original version of
+-- this migration referenced project_id directly and failed (SQLSTATE
+-- 42703 "column does not exist") on clean `supabase db reset`, aborting
+-- the migration chain before pgTAP could run. Forward-fix: rewrite the
+-- 4 policies to EXISTS-join through deliveries, mirroring the
+-- equipment_maintenance and toolbox_talk_attendees fixes earlier in
+-- this file.
 DO $$ BEGIN
   CREATE POLICY "Project members can view" ON delivery_items
     FOR SELECT USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM deliveries d
+        JOIN project_members pm ON pm.project_id = d.project_id
+        WHERE d.id = delivery_items.delivery_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -549,8 +560,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can insert" ON delivery_items
     FOR INSERT WITH CHECK (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM deliveries d
+        JOIN project_members pm ON pm.project_id = d.project_id
+        WHERE d.id = delivery_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -558,8 +572,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Project members can update" ON delivery_items
     FOR UPDATE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM deliveries d
+        JOIN project_members pm ON pm.project_id = d.project_id
+        WHERE d.id = delivery_items.delivery_id
+          AND pm.user_id = (select auth.uid())
       )
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -567,9 +584,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Managers can delete" ON delivery_items
     FOR DELETE USING (
-      project_id IN (
-        SELECT pm.project_id FROM project_members pm
-        WHERE pm.user_id = (select auth.uid())
+      EXISTS (
+        SELECT 1 FROM deliveries d
+        JOIN project_members pm ON pm.project_id = d.project_id
+        WHERE d.id = delivery_items.delivery_id
+          AND pm.user_id = (select auth.uid())
           AND pm.role IN ('owner', 'admin', 'project_manager')
       )
     );
