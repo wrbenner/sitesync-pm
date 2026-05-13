@@ -34,11 +34,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      # Switched bun → npm 2026-05-13 (BRT Phase 0): repo uses
+      # npm-managed package-lock.json; bun --frozen-lockfile drifted.
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version-file: '.nvmrc'
 
-      - run: bun install --frozen-lockfile
+      - run: npm ci
 
       - name: Apply migrations
         run: |
@@ -48,13 +50,13 @@ jobs:
         continue-on-error: true
 
       - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Build app
-        run: bun run build
+        run: npm run build
 
       - name: Start preview server
-        run: bun run preview &
+        run: npm run preview &
         env:
           VITE_DEV_BYPASS: "true"
 
@@ -69,7 +71,7 @@ jobs:
           done
 
       - name: Run scenarios
-        run: bunx playwright test -c playwright.scenarios.config.ts
+        run: npx playwright test -c playwright.scenarios.config.ts
 
       - name: Upload Playwright report
         if: always()

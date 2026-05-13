@@ -1,0 +1,88 @@
+# .github/workflows/audit-npm-deps.yml
+#
+# Dependency vulnerability gate.
+# Runs on every PR and nightly. Fails if any high or critical CVE is introduced.
+#
+# Triggered: every PR touching package.json or package-lock.json, plus nightly cron.
+# Failure mode: PR blocked from merge; nightly run pages Walker.
+
+name: Audit — npm dependencies
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/audit-npm-deps.yml'
+  push:
+    branches: [main]
+  schedule:
+    # Daily at 13:00 UTC (7 AM CT)
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+jobs:
+  npm-audit:
+    name: npm audit (high+)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies (production only — faster, fewer false positives)
+        run: npm ci --omit=dev
+
+      - name: Run npm audit at high+ severity
+        id: audit
+        run: |
+          set +e
+          npm audit --audit-level=high --json > audit-result.json
+          AUDIT_EXIT=$?
+          set -e
+
+          # Parse for human-readable summary
+          HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-result.json)
+          CRIT=$(jq '.metadata.vulnerabilities.critical // 0' audit-result.json)
+
+          echo "high_count=$HIGH" >> $GITHUB_OUTPUT
+          echo "critical_count=$CRIT" >> $GITHUB_OUTPUT
+
+          echo "::group::npm audit summary"
+          echo "High:     $HIGH"
+          echo "Critical: $CRIT"
+          echo "::endgroup::"
+
+          if [ "$AUDIT_EXIT" != "0" ]; then
+            echo "::group::Failing vulnerabilities"
+            jq '.vulnerabilities | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | {name: .key, severity: .value.severity, via: [.value.via[] | if type=="string" then . else .title end]}' audit-result.json
+            echo "::endgroup::"
+
+            echo "::error::npm audit found $CRIT critical and $HIGH high severity vulnerabilities. Run 'npm audit' locally for details."
+            exit 1
+          fi
+
+          echo "✅ No high or critical vulnerabilities found."
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-${{ github.run_id }}
+          path: audit-result.json
+          retention-days: 14
+
+      - name: Post Slack alert on nightly failure
+        if: failure() && github.event_name == 'schedule'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Nightly npm audit failed on main: ${{ steps.audit.outputs.critical_count }} critical, ${{ steps.audit.outputs.high_count }} high. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "${{ secrets.SLACK_ALERTS_WEBHOOK }}"
+        continue-on-error: true  # Slack failure must not mask audit failure

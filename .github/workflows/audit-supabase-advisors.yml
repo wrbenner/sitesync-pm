@@ -1,0 +1,154 @@
+# .github/workflows/audit-supabase-advisors.yml
+#
+# Supabase security advisor regression gate.
+#
+# Runs on every PR that touches migrations or edge functions, plus nightly.
+# Fails if security advisor finds NEW issues compared to the committed baseline.
+# Specifically gates: ERROR-level lints, plus selected WARN families.
+#
+# Requires repo secret: SUPABASE_ACCESS_TOKEN
+# Requires repo secret: SUPABASE_PROJECT_REF
+# (Optional) Repo secret: SLACK_ALERTS_WEBHOOK for nightly Slack alert
+
+name: Audit — Supabase security advisors
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - 'docs/audits/.supabase-advisor-baseline.json'
+      - '.github/workflows/audit-supabase-advisors.yml'
+  push:
+    branches: [main]
+  schedule:
+    # Daily at 14:00 UTC (8 AM CT) — runs after npm audit
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  advisor-check:
+    name: Supabase security advisor diff vs. baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        run: |
+          curl -fsSL https://supabase.com/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Fetch live security advisor lints
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          # Use the Supabase Management API to fetch lints
+          # (Equivalent to the get_advisors MCP tool)
+          curl -fsSL \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/lints?type=security" \
+            > advisor-current.json
+
+          echo "Fetched $(jq '.lints | length' advisor-current.json) lints from live project"
+
+      - name: Compute current totals by family
+        run: |
+          jq '
+            .lints
+            | group_by(.name)
+            | map({name: .[0].name, level: .[0].level, count: length})
+            | sort_by(.name)
+          ' advisor-current.json > advisor-current-summary.json
+
+          echo "::group::Current advisor counts by family"
+          cat advisor-current-summary.json | jq -r '.[] | "\(.count | tostring | (. + (" " * (5 - length)))) [\(.level)] \(.name)"'
+          echo "::endgroup::"
+
+      - name: Verify baseline file exists, create on first run if absent
+        run: |
+          BASELINE=docs/audits/.supabase-advisor-baseline.json
+          if [ ! -f "$BASELINE" ]; then
+            echo "::warning::No baseline exists yet. Committing current state as baseline."
+            cp advisor-current-summary.json "$BASELINE"
+            echo "FIRST_RUN=true" >> $GITHUB_ENV
+            # On first run, we don't fail — we just record. Subsequent runs gate on this.
+            exit 0
+          fi
+          echo "Baseline exists: $BASELINE"
+
+      - name: Diff current vs. baseline (ERROR-level: zero tolerance)
+        if: env.FIRST_RUN != 'true'
+        run: |
+          # ERROR-level lints: ANY count > 0 fails the gate.
+          # Currently includes: security_definer_view
+          ERROR_COUNT=$(jq '[.[] | select(.level == "ERROR") | .count] | add // 0' advisor-current-summary.json)
+
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo "::error::Supabase security advisor reports $ERROR_COUNT ERROR-level lints. ZERO ALLOWED."
+            jq '.[] | select(.level == "ERROR")' advisor-current-summary.json
+            exit 1
+          fi
+
+          echo "✅ Zero ERROR-level lints."
+
+      - name: Diff current vs. baseline (gated WARN families)
+        if: env.FIRST_RUN != 'true'
+        run: |
+          # The WARN families below are zero-tolerance for NEW additions.
+          # Increases vs. baseline fail the gate.
+
+          GATED_FAMILIES=(
+            "rls_policy_always_true"
+            "anon_security_definer_function_executable"
+            "authenticated_security_definer_function_executable"
+            "materialized_view_in_api"
+            "public_bucket_allows_listing"
+          )
+
+          BASELINE=docs/audits/.supabase-advisor-baseline.json
+          FAILED=0
+
+          for family in "${GATED_FAMILIES[@]}"; do
+            BL=$(jq -r --arg n "$family" '.[] | select(.name == $n) | .count // 0' "$BASELINE" | head -1)
+            BL=${BL:-0}
+            CUR=$(jq -r --arg n "$family" '.[] | select(.name == $n) | .count // 0' advisor-current-summary.json | head -1)
+            CUR=${CUR:-0}
+
+            if [ "$CUR" -gt "$BL" ]; then
+              DELTA=$((CUR - BL))
+              echo "::error::Family '$family' regressed: $BL → $CUR (+$DELTA)"
+              FAILED=1
+            else
+              echo "✅ $family: $BL → $CUR"
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "To accept this regression as a new baseline, update docs/audits/.supabase-advisor-baseline.json"
+            echo "and include justification in the PR description."
+            exit 1
+          fi
+
+      - name: Upload current advisor snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-advisors-${{ github.run_id }}
+          path: |
+            advisor-current.json
+            advisor-current-summary.json
+          retention-days: 30
+
+      - name: Post Slack alert on nightly failure
+        if: failure() && github.event_name == 'schedule'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 Nightly Supabase advisor check failed on main. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "${{ secrets.SLACK_ALERTS_WEBHOOK }}"
+        continue-on-error: true

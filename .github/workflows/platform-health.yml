@@ -21,22 +21,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      # Switched from bun to npm/tsx 2026-05-13 (BRT Phase 0): bun's
+      # --frozen-lockfile failed against the repo's npm-managed
+      # package-lock.json. Project tooling is npm-native; tsx runs the
+      # TypeScript audit scripts directly.
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version-file: '.nvmrc'
 
-      - run: bun install --frozen-lockfile
+      - run: npm ci
 
       - name: Audit edge functions
-        run: bun scripts/audit-edge-functions.ts
+        run: npx tsx scripts/audit-edge-functions.ts
         continue-on-error: true
 
       - name: Audit migrations
-        run: bun scripts/audit-migrations.ts
+        run: npx tsx scripts/audit-migrations.ts
         continue-on-error: true
 
       - name: Audit cron
-        run: bun scripts/audit-cron.ts
+        run: npx tsx scripts/audit-cron.ts
         continue-on-error: true
 
       - name: Upload audit reports

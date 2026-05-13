@@ -1,0 +1,12 @@
+[
+  {"name": "anon_security_definer_function_executable", "level": "WARN", "count": 74},
+  {"name": "auth_leaked_password_protection", "level": "WARN", "count": 1},
+  {"name": "authenticated_security_definer_function_executable", "level": "WARN", "count": 82},
+  {"name": "extension_in_public", "level": "WARN", "count": 3},
+  {"name": "function_search_path_mutable", "level": "WARN", "count": 81},
+  {"name": "materialized_view_in_api", "level": "WARN", "count": 0},
+  {"name": "public_bucket_allows_listing", "level": "WARN", "count": 1},
+  {"name": "rls_enabled_no_policy", "level": "INFO", "count": 3},
+  {"name": "rls_policy_always_true", "level": "WARN", "count": 31},
+  {"name": "security_definer_view", "level": "ERROR", "count": 0}
+]
