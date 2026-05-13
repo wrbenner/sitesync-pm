@@ -65,6 +65,7 @@ function lazyWithRetry(
 // Auth pages
 const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
 const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: m.Signup })));
+const VerifyPending = lazy(() => import('./pages/auth/VerifyPending').then((m) => ({ default: m.VerifyPending })));
 // BRT sub-0 day-4 P0-I: legal placeholder pages (final copy pending review).
 const Terms = lazy(() => import('./pages/legal/Terms').then((m) => ({ default: m.Terms })));
 const Privacy = lazy(() => import('./pages/legal/Privacy').then((m) => ({ default: m.Privacy })));
@@ -389,6 +390,7 @@ function AppRoutes() {
           <Routes location={location}>
             <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
+            <Route path="/verify-pending" element={<PageSuspense><VerifyPending /></PageSuspense>} />
             <Route path="/terms" element={<PageSuspense><Terms /></PageSuspense>} />
             <Route path="/privacy" element={<PageSuspense><Privacy /></PageSuspense>} />
             <Route path="/security" element={<PageSuspense><SecurityOverview /></PageSuspense>} />
@@ -563,7 +565,7 @@ function AppContent() {
   useFieldSession('view');
 
   // Auth pages render without the app shell (no sidebar, no offline banner)
-  const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
+  const isAuthPage = ['/login', '/signup', '/verify-pending', '/onboarding'].includes(location.pathname);
 
   useProjectCache(isAuthPage ? undefined : projectId);
 

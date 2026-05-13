@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useCallback, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 import { signupSchema } from '../../schemas/auth'
+import { Turnstile } from '../../components/auth/Turnstile'
 
 function mapSignupError(message: string): { text: string; linkToLogin?: boolean } {
   const msg = message.toLowerCase()
@@ -26,7 +27,7 @@ function mapSignupError(message: string): { text: string; linkToLogin?: boolean 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const Signup: React.FC = () => {
-  // const navigate = useNavigate()
+  const navigate = useNavigate()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -45,14 +46,13 @@ export const Signup: React.FC = () => {
 
   const [submitError, setSubmitError] = useState<{ text: string; linkToLogin?: boolean } | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
   // BRT sub-0 day-4 P0-I: required Terms/Privacy acceptance.
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedTermsError, setAcceptedTermsError] = useState<string | null>(null)
-  // BRT sub-0 day-4 P0-H: surface the slug that provision-org actually
-  // resolved (may differ from the user-typed company name if a collision
-  // pushed it to "name-2", "name-3", etc.).
-  const [resolvedSlug, setResolvedSlug] = useState<string | null>(null)
+  // BRT sub-2 §4.2: Cloudflare Turnstile token. Empty until the widget
+  // fires its callback. provision-org verifies server-side via siteverify.
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const onTurnstileVerify = useCallback((token: string) => setTurnstileToken(token), [])
 
   const validateFirstName = (val: string) => {
     if (!val.trim()) { setFirstNameError('First name is required'); return false }
@@ -116,6 +116,11 @@ export const Signup: React.FC = () => {
     }
     setAcceptedTermsError(null)
 
+    if (!turnstileToken) {
+      setSubmitError({ text: 'Please complete the human-verification challenge before continuing.' })
+      return
+    }
+
     setIsSubmitting(true)
     // try/catch (no finally) — React Compiler doesn't lower try/finally.
     // Loading state is cleared in both branches explicitly.
@@ -147,17 +152,15 @@ export const Signup: React.FC = () => {
       // slice) handles the half-provisioned-account cleanup.
       const { data: provisionData, error: provisionError } = await supabase.functions.invoke(
         'provision-org',
-        { body: { name: company.trim() } },
+        { body: { name: company.trim(), turnstile_token: turnstileToken } },
       )
 
       let organizationId: string | null = null
-      let resolvedSlugLocal: string | null = null
       if (provisionError) {
         console.error('[signup] provision-org failed:', provisionError)
       } else if (provisionData) {
-        const pd = provisionData as { organization_id?: unknown; slug?: unknown }
+        const pd = provisionData as { organization_id?: unknown }
         if (typeof pd.organization_id === 'string') organizationId = pd.organization_id
-        if (typeof pd.slug === 'string') resolvedSlugLocal = pd.slug
       }
 
       // Create user profile (links to the freshly provisioned org).
@@ -173,9 +176,12 @@ export const Signup: React.FC = () => {
         terms_accepted_at: new Date().toISOString(),
       } as never)
 
-      setResolvedSlug(resolvedSlugLocal)
-      setSuccess(true)
+      // BRT sub-2 §4.1: hand off to /verify-pending so the user has a
+      // clear "check your inbox" landing instead of an inline success card
+      // that lives on the form route. The state.email lets VerifyPending
+      // offer a resend button without making the user re-type their email.
       setIsSubmitting(false)
+      navigate('/verify-pending', { state: { email } })
     } catch (err) {
       console.error('[signup] unexpected error:', err)
       setSubmitError({
@@ -308,88 +314,6 @@ export const Signup: React.FC = () => {
         >
           <style>{`@keyframes spin-loader { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
-          {success ? (
-            <div
-              role="status"
-              aria-live="polite"
-              style={{
-                textAlign: 'center',
-                padding: `${spacing['6']} ${spacing['4']}`,
-              }}
-            >
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: '#E6F9F1',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto',
-                  marginBottom: spacing['4'],
-                }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M5 13l4 4L19 7" stroke="#4EC896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <p
-                style={{
-                  fontSize: typography.fontSize.body,
-                  fontWeight: typography.fontWeight.medium,
-                  color: colors.textPrimary,
-                  margin: 0,
-                  marginBottom: spacing['2'],
-                }}
-              >
-                Account created.
-              </p>
-              {/* BRT sub-0 day-4 P0-H: surface the slug provision-org actually
-                  resolved. If it differs from the lowercased+kebab'd company
-                  name the user typed, it means a slug collision pushed it to
-                  "name-2", "name-3", etc. — give the user a heads-up. */}
-              {resolvedSlug && (
-                <p
-                  style={{
-                    fontSize: typography.fontSize.sm,
-                    color: colors.textSecondary,
-                    margin: 0,
-                    marginBottom: spacing['2'],
-                    letterSpacing: typography.letterSpacing.normal,
-                  }}
-                >
-                  Workspace: <code style={{ fontFamily: 'monospace', color: colors.textPrimary }}>{resolvedSlug}</code>
-                  {company.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') !== resolvedSlug && (
-                    <span style={{ display: 'block', marginTop: spacing['1'], color: colors.textTertiary, fontStyle: 'italic' }}>
-                      The original name was already taken. You can rename your workspace later in Settings.
-                    </span>
-                  )}
-                </p>
-              )}
-              <p
-                style={{
-                  fontSize: typography.fontSize.sm,
-                  color: colors.textSecondary,
-                  margin: 0,
-                  marginBottom: spacing['5'],
-                }}
-              >
-                Check your email to verify your account before signing in.
-              </p>
-              <Link
-                to="/login"
-                style={{
-                  color: colors.orangeText,
-                  fontWeight: typography.fontWeight.medium,
-                  textDecoration: 'none',
-                  fontSize: typography.fontSize.body,
-                }}
-              >
-                Go to sign in
-              </Link>
-            </div>
-          ) : (
           <form onSubmit={handleSubmit} noValidate aria-label="Create SiteSync account">
 
             {submitError && (
@@ -638,6 +562,13 @@ export const Signup: React.FC = () => {
               </p>
             )}
 
+            {/* BRT sub-2 §4.2 — Cloudflare Turnstile. Server-side verified
+                in provision-org via siteverify. Renders nothing in dev when
+                VITE_TURNSTILE_SITE_KEY is unset (passthrough sentinel). */}
+            <div style={{ marginTop: spacing['5'], display: 'flex', justifyContent: 'center' }}>
+              <Turnstile onVerify={onTurnstileVerify} />
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
@@ -670,7 +601,6 @@ export const Signup: React.FC = () => {
               {isSubmitting ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
-          )}
         </div>
 
         {/* Sign in link */}
