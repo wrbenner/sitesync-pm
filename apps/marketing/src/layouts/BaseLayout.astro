@@ -32,6 +32,7 @@ const canonical = new URL(canonicalPath, Astro.site).toString();
   <meta name="description" content={description} />
   {noIndex && <meta name="robots" content="noindex,nofollow" />}
   <link rel="canonical" href={canonical} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
   <!-- OpenGraph -->
   <meta property="og:type" content="website" />

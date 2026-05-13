@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss';
 
-// BRT sub-5 — Option B "Modern SaaS" palette (per BRT_FOUNDER_DEFAULTS).
+// BRT sub-5 — Option A "Construction" palette (Walker pre-auth 2026-05-13).
+// Construction navy + safety orange + warm white.
 // Inter family loaded via Google Fonts in BaseLayout.
 
 export default {
@@ -9,11 +10,11 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#0F172A',  // slate-900 — primary
-          accent:  '#0066FF',  // electric blue — accent
-          highlight: '#EEF4FF',
+          DEFAULT: '#1B2D4A',  // construction navy — primary
+          accent:  '#E87722',  // safety orange — accent
+          highlight: '#FAF8F4', // warm white — page background
           ink:     '#1A1A1A',
-          mute:    '#64748B',
+          mute:    '#5C5C5C',
         },
       },
       fontFamily: {
