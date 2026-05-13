@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
@@ -6,6 +6,9 @@ import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
 import { signupSchema } from '../../schemas/auth'
 import { Turnstile } from '../../components/auth/Turnstile'
+import { isDisposableEmail } from '../../lib/auth/disposableEmails'
+import { checkPasswordSafe } from '../../lib/auth/passwordChecks'
+import { useTrack } from '../../hooks/useTrack'
 
 function mapSignupError(message: string): { text: string; linkToLogin?: boolean } {
   const msg = message.toLowerCase()
@@ -28,6 +31,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate()
+  const track = useTrack()
+  const [signupStartedAt] = useState<number>(() => Date.now())
+
+  // BRT sub-2 §6: signup_started fires once on mount.
+  useEffect(() => {
+    track('signup_started', { source: 'signup_page' })
+  }, [track])
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -65,6 +75,10 @@ export const Signup: React.FC = () => {
   const validateEmail = (val: string) => {
     if (!val.trim()) { setEmailError('Email is required'); return false }
     if (!EMAIL_RE.test(val)) { setEmailError('Please enter a valid email address'); return false }
+    if (isDisposableEmail(val)) {
+      setEmailError('We don\'t accept signups from disposable email providers. Please use your work email.')
+      return false
+    }
     setEmailError(null); return true
   }
   const validatePassword = (val: string) => {
@@ -121,7 +135,16 @@ export const Signup: React.FC = () => {
       return
     }
 
+    // BRT sub-2 §4.3: pwned-password k-anonymity check at submit (not per
+    // keystroke — latency + rate limits). Fails open on network errors.
+    const pwSafe = await checkPasswordSafe(password)
+    if (!pwSafe.ok) {
+      setPasswordError(pwSafe.reason ?? 'Password rejected. Please choose a different one.')
+      return
+    }
+
     setIsSubmitting(true)
+    track('signup_email_submitted', {})
     // try/catch (no finally) — React Compiler doesn't lower try/finally.
     // Loading state is cleared in both branches explicitly.
     try {
@@ -160,7 +183,10 @@ export const Signup: React.FC = () => {
         console.error('[signup] provision-org failed:', provisionError)
       } else if (provisionData) {
         const pd = provisionData as { organization_id?: unknown }
-        if (typeof pd.organization_id === 'string') organizationId = pd.organization_id
+        if (typeof pd.organization_id === 'string') {
+          organizationId = pd.organization_id
+          track('signup_org_provisioned', { org_id: organizationId })
+        }
       }
 
       // Create user profile (links to the freshly provisioned org).
@@ -180,6 +206,12 @@ export const Signup: React.FC = () => {
       // clear "check your inbox" landing instead of an inline success card
       // that lives on the form route. The state.email lets VerifyPending
       // offer a resend button without making the user re-type their email.
+      if (organizationId) {
+        track('signup_completed', {
+          org_id: organizationId,
+          total_seconds: Math.round((Date.now() - signupStartedAt) / 1000),
+        })
+      }
       setIsSubmitting(false)
       navigate('/verify-pending', { state: { email } })
     } catch (err) {
