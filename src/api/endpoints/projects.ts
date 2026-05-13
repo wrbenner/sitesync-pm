@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { fromTable } from '../../lib/db/queries'
+import { supabase } from '../../lib/supabase'
 import { ApiError, transformSupabaseError } from '../errors'
 import { queryKeys } from '../queryKeys'
 import type { EnrichedProject } from '../../types/project'
@@ -110,7 +111,7 @@ export async function getMetrics(projectId: string): Promise<ProjectMetricsResul
 
   const [projectResult, metricsResult, scheduleMetrics, costData] = await Promise.all([
     fromTable('projects').select('*').eq('id' as never, projectId).maybeSingle(),
-    fromTable('project_metrics' as never).select('*').eq('project_id' as never, projectId).maybeSingle(),
+    supabase.rpc('get_project_metrics' as never, { p_project_id: projectId } as never).maybeSingle(),
     fetchScheduleMetrics(projectId).catch(() => ({ scheduleVarianceDays: null, completionPercentage: null })),
     fetchBudgetDivisions(projectId).catch(() => null),
   ])
