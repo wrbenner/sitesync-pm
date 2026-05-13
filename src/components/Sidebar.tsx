@@ -623,15 +623,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
       setSidebarCollapsed(true)
       return
     }
+    if (isMobile) return
     setSidebarCollapsed(readStoredCollapsed(false))
-  }, [location.pathname, setSidebarCollapsed])
+  }, [location.pathname, setSidebarCollapsed, isMobile])
 
   // Persist user-driven changes — but only when they happen on a non-/day
   // page so the auto-collapse on /day doesn't poison the preference.
+  // Skip on mobile: the forced collapse there must not overwrite the desktop
+  // preference stored in localStorage.
   useEffect(() => {
     if (location.pathname === '/day') return
+    if (isMobile) return
     writeStoredCollapsed(sidebarCollapsed)
-  }, [sidebarCollapsed, location.pathname])
+  }, [sidebarCollapsed, location.pathname, isMobile])
 
   // Keyboard: `[` toggles the sidebar (light-touch chord). Cmd+\ is the
   // platform-standard sidebar toggle and works even while typing in an
