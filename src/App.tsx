@@ -65,6 +65,9 @@ function lazyWithRetry(
 // Auth pages
 const Login = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.Login })));
 const Signup = lazy(() => import('./pages/auth/Signup').then((m) => ({ default: m.Signup })));
+// BRT sub-0 day-4 P0-I: legal placeholder pages (final copy pending review).
+const Terms = lazy(() => import('./pages/legal/Terms').then((m) => ({ default: m.Terms })));
+const Privacy = lazy(() => import('./pages/legal/Privacy').then((m) => ({ default: m.Privacy })));
 // Public, unauthenticated trust center page used by procurement reviewers.
 const SecurityOverview = lazy(() => import('./pages/SecurityOverview'));
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -386,6 +389,8 @@ function AppRoutes() {
           <Routes location={location}>
             <Route path="/login" element={<PageSuspense><Login /></PageSuspense>} />
             <Route path="/signup" element={<PageSuspense><Signup /></PageSuspense>} />
+            <Route path="/terms" element={<PageSuspense><Terms /></PageSuspense>} />
+            <Route path="/privacy" element={<PageSuspense><Privacy /></PageSuspense>} />
             <Route path="/security" element={<PageSuspense><SecurityOverview /></PageSuspense>} />
 
             {/* ── The Nine ── */}
