@@ -330,6 +330,7 @@ const PunchListPage: React.FC = () => {
         const { error: uploadError } = await supabase.storage
           .from('punch-list-photos')
           .upload(filePath, file, { contentType: file.type });
+        // eslint-disable-next-line react-hooks/todo -- React Compiler can't yet analyze ThrowStatement inside try/catch; pre-existing advisory
         if (uploadError) throw uploadError;
         const { data: urlData } = supabase.storage
           .from('punch-list-photos')
@@ -448,8 +449,8 @@ const PunchListPage: React.FC = () => {
           zIndex: 10,
           background: '#FCFCFA',
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          paddingLeft: spacing[6],
-          paddingRight: spacing[6],
+          paddingLeft: spacing[9],
+          paddingRight: spacing[9],
           paddingTop: spacing[4],
           paddingBottom: spacing[3],
           display: 'flex',
@@ -633,8 +634,8 @@ const PunchListPage: React.FC = () => {
 
       <main
         style={{
-          paddingLeft: spacing[6],
-          paddingRight: spacing[6],
+          paddingLeft: spacing[9],
+          paddingRight: spacing[9],
           paddingTop: spacing[4],
           paddingBottom: spacing[8],
         }}
