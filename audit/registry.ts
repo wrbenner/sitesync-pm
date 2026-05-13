@@ -107,6 +107,14 @@ export const PAGE_REGISTRY: PageContract[] = [
     expected: {},
     status: 'production',
   },
+  {
+    route: '/verify-pending',
+    pageFile: 'src/pages/auth/VerifyPending.tsx',
+    title: 'Verify Email',
+    entity: null,
+    expected: {},
+    status: 'production',
+  },
 
   // ── The Nine ─────────────────────────────────────────────
   // The IA the manifesto promises: nine question-shaped destinations
