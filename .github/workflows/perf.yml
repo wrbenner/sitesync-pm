@@ -32,17 +32,19 @@ jobs:
             echo "override=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: oven-sh/setup-bun@v2
+      # Switched bun → npm/tsx 2026-05-13 (BRT Phase 0): repo uses
+      # npm-managed package-lock.json; bun --frozen-lockfile drifted.
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version-file: '.nvmrc'
 
-      - run: bun install --frozen-lockfile
+      - run: npm ci
 
       - name: Build
-        run: bun run build
+        run: npm run build
 
       - name: Run virtualization audit
-        run: bun scripts/virtualization-audit.ts || true
+        run: npx tsx scripts/virtualization-audit.ts || true
         # Non-blocking — informational only. Convert to a hard check (drop the
         # `|| true`) once the existing offenders are migrated.
 
@@ -55,4 +57,4 @@ jobs:
         continue-on-error: ${{ steps.override.outputs.override == 'true' }}
 
       - name: Run perf unit tests
-        run: bun vitest run src/lib/perf src/lib/search
+        run: npx vitest run src/lib/perf src/lib/search

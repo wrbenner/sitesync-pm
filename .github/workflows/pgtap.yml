@@ -47,7 +47,12 @@ jobs:
           version: latest
 
       - name: Start ephemeral Supabase
-        run: supabase start --exclude=realtime,storage-api,inbucket,studio,gotrue,kong,edge-runtime,logflare,vector
+        # BRT Phase 0 (2026-05-13): --debug added to surface the
+        # underlying migration error. The chain previously fell over
+        # without enough log context to diagnose; once the responsible
+        # migration is forward-fixed per Standing Decisions §5, drop
+        # --debug to reduce log noise.
+        run: supabase start --debug --exclude=realtime,storage-api,inbucket,studio,gotrue,kong,edge-runtime,logflare,vector
 
       - name: Run pgTAP suite
         run: supabase test db

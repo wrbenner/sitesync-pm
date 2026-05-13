@@ -32,12 +32,20 @@ jobs:
         id: check
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        # BRT Phase 0 (2026-05-13): tightened the validation. The
+        # original `-n` check passed when the secret was set to a
+        # placeholder value (e.g. `***` or `TODO`), causing the
+        # postgres library to throw "Invalid URL". Now we explicitly
+        # require the value to start with `postgres://` or `postgresql://`.
         run: |
-          if [ -n "$DB_URL" ]; then
-            echo "has_db=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "$DB_URL" ]; then
             echo "has_db=false" >> "$GITHUB_OUTPUT"
             echo "::warning::SUPABASE_DB_URL not set; skipping adversarial. Add to GitHub Secrets to gate read-only mode."
+          elif ! printf '%s' "$DB_URL" | grep -qE '^postgres(ql)?://'; then
+            echo "has_db=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SUPABASE_DB_URL is set but does not match postgres://… or postgresql://… — skipping adversarial. Update the secret to a valid Postgres connection string."
+          else
+            echo "has_db=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/setup-node@v4
