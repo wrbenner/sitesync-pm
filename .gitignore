@@ -52,6 +52,11 @@ test-results/
 coverage/
 .env
 
+# Battle-test artifacts (transient — see docs/runbooks/BATTLE_TEST_RUNBOOK.md)
+.env.scale-test
+.scale-test-orgs.csv
+battle-test-results/
+
 # Audit harness generated specs (regenerate with `npm run audit:gen`)
 audit/generated/
 
