@@ -23,13 +23,19 @@ CREATE INDEX IF NOT EXISTS idx_notification_queue_recipient ON notification_queu
 
 ALTER TABLE notification_queue ENABLE ROW LEVEL SECURITY;
 
+-- BRT sub-0 day-0 forward-fix: policy names were quoted with single quotes
+-- in the original (a syntax error — single quotes are string literals, not
+-- identifier quotes). Postgres rejected the CREATE POLICY statements with
+-- SQLSTATE 42601 on clean `supabase db reset`, aborting the migration chain.
+-- Identifiers may be left unquoted (project convention elsewhere) since
+-- nq_select_own / nq_insert_members are valid identifier characters.
 DO $$ BEGIN
-  CREATE POLICY 'nq_select_own' ON notification_queue
+  CREATE POLICY nq_select_own ON notification_queue
     FOR SELECT USING (recipient_user_id = (select auth.uid()));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE POLICY 'nq_insert_members' ON notification_queue
+  CREATE POLICY nq_insert_members ON notification_queue
     FOR INSERT WITH CHECK (project_id IN (
       SELECT pm.project_id FROM project_members pm WHERE pm.user_id = (select auth.uid())
     ));
@@ -54,7 +60,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
-  CREATE POLICY 'np_own' ON notification_preferences
+  CREATE POLICY np_own ON notification_preferences
     FOR ALL USING (user_id = (select auth.uid()));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
