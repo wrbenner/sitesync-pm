@@ -268,6 +268,14 @@ BEGIN
 END;
 $$;
 
-COMMENT ON POLICY "storage_attachments_access" ON storage.objects IS
-  'BRT sub-0 Day 0 sync: declaration of pre-existing cross-tenant policy. '
-  'Replaced by member-scoped policies in Day 3b migration.';
+-- NOTE: COMMENT ON POLICY on storage.objects is intentionally omitted here.
+-- It requires supabase_storage_admin ownership, which the Supabase MCP
+-- migration role does not have (fails with 42501). If you need to
+-- document a storage.objects policy, do it via a markdown reference
+-- (docs/audits/STORAGE_POLICIES_NOTES.md or the policy NAME itself)
+-- rather than COMMENT ON POLICY. Otherwise db push --linked will abort
+-- at this point on a clean re-apply.
+--
+-- Annotation that previously lived here: "BRT sub-0 Day 0 sync:
+-- declaration of pre-existing cross-tenant policy. Replaced by
+-- member-scoped policies in Day 3b migration."
