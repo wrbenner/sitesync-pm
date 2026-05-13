@@ -110,7 +110,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
             <input style={input} value={draft.saml_idp_entity_id ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_idp_entity_id: e.target.value }))} />
           </Field>
-          <Field label="SSO URL" error={!samlUrlCheck.ok ? (samlUrlCheck as any).reason : undefined}>
+          <Field label="SSO URL" error={!samlUrlCheck.ok ? samlUrlCheck.reason : undefined}>
             <input style={input} value={draft.saml_sso_url ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_sso_url: e.target.value }))} />
           </Field>
@@ -175,7 +175,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
         />
         <Field label="Default role (used when no group matches)">
           <input style={input} value={draft.default_role ?? ''}
-            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null as any }))} />
+            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null }))} />
         </Field>
       </fieldset>
 
