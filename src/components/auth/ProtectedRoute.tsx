@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Permission } from '../../hooks/usePermissions'
@@ -107,18 +107,19 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
         ? `You do not have permission to access ${moduleName}.`
         : 'You do not have permission to access this page.'}
     </p>
-    <button
-      onClick={() => {/* TODO: wire up request access flow */}}
+    <Link
+      to="/settings/team"
       style={{
+        display: 'inline-block',
         backgroundColor: colors.brand400, color: colors.white,
-        border: 'none', borderRadius: borderRadius.md,
+        textDecoration: 'none', borderRadius: borderRadius.md,
         padding: `${spacing['2']} ${spacing['5']}`,
         fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-        cursor: 'pointer', fontFamily: typography.fontFamily,
+        fontFamily: typography.fontFamily,
       }}
     >
-      Request Access
-    </button>
+      Contact Admin
+    </Link>
   </div>
 )
 

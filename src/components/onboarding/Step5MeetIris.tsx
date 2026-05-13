@@ -78,7 +78,7 @@ export default function Step5MeetIris() {
 
       <p style={{ color: '#5C5C5C', fontSize: 13 }}>
         Or click <strong>Finish</strong> below to land on your dashboard. You
-        can come back to <Link to="/help/iris-copilot" style={{ color: '#0066FF' }}>Help → AI Copilot</Link>{' '}
+        can come back to <Link to="/ai" style={{ color: '#0066FF' }}>AI Copilot</Link>{' '}
         any time.
       </p>
     </div>
