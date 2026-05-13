@@ -9,8 +9,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { fromTable } from '../../lib/db/queries'
-import { scoped } from '../../lib/supabase/orgScope';
+import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import type { PortfolioProjectInput } from '../../types/portfolio';
 
@@ -22,14 +21,14 @@ export function usePortfolioHealth() {
     staleTime: 60_000,
     queryFn: async (): Promise<PortfolioProjectInput[]> => {
       if (!organization?.id) return [];
-      const { data, error } = await scoped(
-        fromTable('project_health_summary' as never).select('*'),
-        organization.id,
-      );
+      // BRT sub-0 day-2 P0-A: read through the get_project_health_summary
+      // wrapper RPC. p_organization_id pins to active org; direct .from()
+      // on the matview is REVOKE'd from authenticated.
+      const { data, error } = await supabase
+        .rpc('get_project_health_summary' as never, { p_organization_id: organization.id } as never);
       if (error) {
-        // Materialized view may not exist yet in older deploys —
-        // graceful degradation.
-        if (error.code === '42P01' || error.code === 'PGRST205') return [];
+        // Wrapper RPC missing on older deploys — graceful degradation.
+        if (error.code === '42P01' || error.code === 'PGRST205' || error.code === '42883') return [];
         throw error;
       }
       return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({

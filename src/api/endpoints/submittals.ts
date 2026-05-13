@@ -163,9 +163,10 @@ export const bulkUpdateSubmittals = async (
 }
 
 /**
- * Filter + search across submittals_log_mv. Server-side filters; client
- * gets the denormalised log shape (sub_name, current_reviewer_name,
- * days_in_court, risk_band).
+ * Filter + search across submittals_log_mv via the get_submittals_log_mv
+ * Bugatti RPC. High-selectivity filters (status, kind, due-date range)
+ * push into the SQL via RPC params; sparse filters chain client-side
+ * on the SETOF return (PostgREST supports filter chains on RPCs).
  */
 export const filterSubmittals = async (
   projectId: string,
@@ -173,30 +174,34 @@ export const filterSubmittals = async (
   pagination?: PaginationParams,
 ): Promise<PaginatedResult<Record<string, unknown>>> => {
   await assertProjectAccess(projectId)
+  // required_on_site_within_days maps to p_due_to = today + N days.
+  let p_due_to: string | undefined
+  if (filter.required_on_site_within_days !== undefined) {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() + filter.required_on_site_within_days)
+    p_due_to = cutoff.toISOString().slice(0, 10)
+  }
   return buildPaginatedQuery<Record<string, unknown>, Record<string, unknown>>(
     (from, to) => {
-      let q = fromTable('submittals_log_mv' as never)
-        .select('*', { count: 'exact' })
-        .eq('project_id' as never, projectId)
-      if (filter.status?.length) q = q.in('status' as never, filter.status)
-      if (filter.kind?.length) q = q.in('kind' as never, filter.kind)
-      if (filter.csi_section?.length) q = q.in('csi_section' as never, filter.csi_section)
+      let q = supabase
+        .rpc('get_submittals_log_mv' as never, {
+          p_project_id: projectId,
+          p_status: filter.status?.length ? filter.status : null,
+          p_kind: filter.kind?.length ? filter.kind : null,
+          p_due_to: p_due_to ?? null,
+        } as never, { count: 'exact' })
+      if (filter.csi_section?.length) q = q.in('csi_section', filter.csi_section)
       if (filter.responsible_sub_id?.length)
-        q = q.in('responsible_sub_id' as never, filter.responsible_sub_id)
+        q = q.in('responsible_sub_id', filter.responsible_sub_id)
       if (filter.current_reviewer_id?.length)
-        q = q.in('current_reviewer_id' as never, filter.current_reviewer_id)
+        q = q.in('current_reviewer_id', filter.current_reviewer_id)
       if (filter.is_critical_path !== undefined)
-        q = q.eq('is_critical_path' as never, filter.is_critical_path)
-      if (filter.is_overdue) q = q.eq('risk_band' as never, 'overdue')
-      if (filter.required_on_site_within_days !== undefined) {
-        const cutoff = new Date()
-        cutoff.setDate(cutoff.getDate() + filter.required_on_site_within_days)
-        q = q.lte('required_on_site_date' as never, cutoff.toISOString().slice(0, 10))
-      }
+        q = q.eq('is_critical_path', filter.is_critical_path)
+      if (filter.is_overdue) q = q.eq('risk_band', 'overdue')
       if (filter.has_iris_preflight_finding === true)
-        q = q.not('iris_preflight_findings' as never, 'is', null)
+        q = q.not('iris_preflight_findings', 'is', null)
       if (filter.has_iris_preflight_finding === false)
-        q = q.is('iris_preflight_findings' as never, null)
+        q = q.is('iris_preflight_findings', null)
       return q.order('number', { ascending: false }).range(from, to)
     },
     pagination,
@@ -213,9 +218,8 @@ export const searchSubmittals = async (
   if (!q) return filterSubmittals(projectId, {}, pagination)
   return buildPaginatedQuery<Record<string, unknown>, Record<string, unknown>>(
     (from, to) =>
-      fromTable('submittals_log_mv' as never)
-        .select('*', { count: 'exact' })
-        .eq('project_id' as never, projectId)
+      supabase
+        .rpc('get_submittals_log_mv' as never, { p_project_id: projectId } as never, { count: 'exact' })
         .or(`title.ilike.%${q}%,csi_section.ilike.%${q}%,number.ilike.%${q}%,sub_name.ilike.%${q}%`)
         .order('number', { ascending: false })
         .range(from, to),
@@ -273,10 +277,11 @@ export const generateCloseoutIndex = async (
   projectId: string,
 ): Promise<Array<{ csi_division: string | null; items: Record<string, unknown>[] }>> => {
   await assertProjectAccess(projectId)
-  const { data, error } = await fromTable('submittals_log_mv' as never)
-    .select('*')
-    .eq('project_id' as never, projectId)
-    .in('kind' as never, ['warranty', 'closeout', 'maintenance'])
+  const { data, error } = await supabase
+    .rpc('get_submittals_log_mv' as never, {
+      p_project_id: projectId,
+      p_kind: ['warranty', 'closeout', 'maintenance'],
+    } as never)
   if (error) throw transformSupabaseError(error)
 
   const groups = new Map<string, Record<string, unknown>[]>()

@@ -38,11 +38,10 @@ function usePortfolioHealth(projects: Project[] | undefined) {
     queryFn: async (): Promise<Record<string, PortfolioMetricRow>> => {
       if (ids.length === 0) return {};
       const { data, error } = await supabase
-        .from('project_metrics')
-        .select('project_id, budget_total, budget_spent, schedule_variance_days, overall_progress')
+        .rpc('get_project_metrics' as never)
         .in('project_id', ids);
       if (error) {
-        // Materialized view may not exist — degrade gracefully
+        // Wrapper RPC may not exist on older deploys — degrade gracefully
         return {};
       }
       const map: Record<string, PortfolioMetricRow> = {};

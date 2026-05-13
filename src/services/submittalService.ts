@@ -55,15 +55,10 @@ export const submittalService = {
     return ok((data ?? []) as unknown as Submittal[]);
   },
 
-  /** D37: read from the materialised log view (denormalised + risk_band). */
+  /** D37: read from the materialised log view via the BRT sub-0 day-2 wrapper RPC. */
   async loadSubmittalsLogView(projectId: string): Promise<Result<Array<Record<string, unknown>>>> {
-    // The materialised view is added in the D37 migration; database.ts is
-    // regenerated against the live schema on db-types:write. Cast through
-    // never until that regen lands so this service can compile against
-    // either pre- or post-D37 type bundles.
-    const { data, error } = await fromTable('submittals_log_mv' as never)
-      .select('*')
-      .eq('project_id' as never, projectId)
+    const { data, error } = await supabase
+      .rpc('get_submittals_log_mv' as never, { p_project_id: projectId } as never)
       .order('number', { ascending: false });
 
     if (error) return fail(dbError(error.message, { projectId }));
