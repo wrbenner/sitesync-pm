@@ -79,31 +79,37 @@ These should have `anon` + `authenticated` REVOKE'd entirely (no GRANT to authen
 - `authenticated_security_definer_function_executable`: 82 → 77 (−5)
 - `function_search_path_mutable`: 81 → 76 (−5)
 
-### Batch 2 — RFI helpers + simple project-scoped (next session)
-**Status:** ⏳ Pending
-**Functions:**
-- `fn_rfi_project_id(p_rfi_id)` — RLS helper, looks up project from RFI
-- `fn_user_is_rfi_assignee(p_rfi_id, p_user_id)` — assignee check
-- `restore_rfi(p_rfi_id)` — undelete with project-membership gate
-- `is_pilot_project(p_project_id)` — RLS helper
-- `is_pilot_user(p_user_id)` — RLS helper (user-self pattern)
-- `reorder_tasks(task_ids[], new_orders[])` — bulk reorder, project gate via tasks' project_id
-- `withdraw_stale_draft(p_draft_id, p_reason)` — gate via draft's project
-- `promote_insight_to_draft(p_insight jsonb, p_project_id)` — direct project gate
-- `lap_2_open_incident_count()` — internal stat; service-role-only
-- `iris_enqueue_ingest(...)` — has p_project_id; project gate
+### Batch 2 — RFI helpers + RPCs + trigger-invoked (10 fns)
+**Status:** ✅ **APPLIED 2026-05-14** (`20261016000000_task_30_batch_2_rfi_helpers_rpcs.sql`)
+Functions hardened: fn_rfi_project_id, fn_user_is_rfi_assignee, is_pilot_project, is_pilot_user, iris_enqueue_ingest, restore_rfi, list_deleted_rfis, reorder_tasks (added inline gate), promote_insight_to_draft (→ service-role-only), withdraw_stale_draft (→ service-role-only).
 
-### Batch 2 — Submittal RPC family (post-Batch-1)
-**Status:** ⏳ Pending
+### Batch 3 — Submittal workflow family (12 fns)
+**Status:** ✅ **APPLIED 2026-05-14** (`20261016010000_task_30_batch_3_submittal_workflow.sql`)
+12 RPCs hardened via DO-block loop. RLS on underlying tables provides the membership gate; anon revoked.
 
-### Batch 3 — Cron/refresh + notification
-**Status:** ⏳ Pending
+### Batch 4 — Trigger-only functions (18 fns)
+**Status:** ✅ **APPLIED 2026-05-14** (`20261016020000_task_30_batch_4_trigger_hardening.sql`)
+Zero RPC callers verified via grep. anon AND authenticated revoked.
 
-### Batch 4–5 — partial-gate pin + revoke
-**Status:** ⏳ Pending
+### Batch 5 — Permission helpers + search_org (11 fns)
+**Status:** ✅ **APPLIED 2026-05-14** (`20261016030000_task_30_batch_5_permission_helpers.sql`)
+All retain authenticated (RLS evaluation needs it). Anon revoked.
 
-### Batch 6 — Trigger hardening
-**Status:** ⏳ Pending
+### Batch 6 — Cleanup (19 fns)
+**Status:** ✅ **APPLIED 2026-05-14** (`20261016040000_task_30_batch_6_cleanup.sql`)
+17 standard + 2 pre-auth (check_login_lockout, record_failed_login — keep anon by design).
+
+## Final lint posture (Day 2 EOD)
+
+| Lint family | Day 5 baseline | Task #30 final | Δ |
+|---|---|---|---|
+| `anon_security_definer_function_executable` | 74 | **2** | **−72** |
+| `authenticated_security_definer_function_executable` | 82 | **57** | **−25** |
+| `function_search_path_mutable` | 81 | **48** | **−33** |
+| **ERROR-level** | **0** | **0** | held |
+| **TOTAL** | **276** | **146** | **−130** |
+
+The 2 remaining anon-callable functions are the pre-auth pair — intentional exemption.
 
 ## Target end-state
 
