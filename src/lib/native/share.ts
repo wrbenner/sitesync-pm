@@ -25,6 +25,17 @@ export interface ShareResult {
   error?: string
 }
 
+/** Minimal Web Share API typing for browsers that support it but lack
+ *  full TypeScript lib declarations (shipped in lib.dom.d.ts only since TS 5.1). */
+interface WebShareNavigator extends Navigator {
+  share(data: ShareData): Promise<void>
+  canShare?(data: { files?: File[] }): boolean
+}
+
+interface ShareDataWithFiles extends ShareData {
+  files?: File[]
+}
+
 /** Detect the active share channel without firing the share. The UI
  *  uses this to render the correct icon (native sheet vs web). */
 export async function detectShareChannel(): Promise<ShareResult['channel']> {
@@ -34,7 +45,7 @@ export async function detectShareChannel(): Promise<ShareResult['channel']> {
   } catch {
     /* not capacitor */
   }
-  if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+  if (typeof navigator !== 'undefined' && typeof (navigator as WebShareNavigator).share === 'function') {
     return 'web'
   }
   if (typeof navigator !== 'undefined' && navigator.clipboard != null) {
@@ -67,16 +78,16 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
 
   // 2. Web Share API
   try {
-    if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
-      const payload: ShareData = {
+    if (typeof navigator !== 'undefined' && typeof (navigator as WebShareNavigator).share === 'function') {
+      const payload: ShareDataWithFiles = {
         title: input.title,
         text: input.text,
         url: input.url,
       }
-      if (input.file && (navigator as any).canShare?.({ files: [new File([input.file.blob], input.file.name, { type: input.file.type })] })) {
-        ;(payload as any).files = [new File([input.file.blob], input.file.name, { type: input.file.type })]
+      if (input.file && (navigator as WebShareNavigator).canShare?.({ files: [new File([input.file.blob], input.file.name, { type: input.file.type })] })) {
+        payload.files = [new File([input.file.blob], input.file.name, { type: input.file.type })]
       }
-      await (navigator as any).share(payload)
+      await (navigator as WebShareNavigator).share(payload)
       return { ok: true, channel: 'web' }
     }
   } catch (err) {
