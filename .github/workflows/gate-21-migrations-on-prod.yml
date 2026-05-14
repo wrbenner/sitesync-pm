@@ -14,11 +14,13 @@
 #   - Every PR that touches supabase/migrations/** (warns at PR time)
 #
 # Required secrets:
-#   SUPABASE_PROD_URL        — https://<ref>.supabase.co
-#   SUPABASE_PROD_SERVICE_KEY — service-role JWT for the prod project
+#   SUPABASE_PROD_URL      — https://<ref>.supabase.co
+#   SUPABASE_PROD_ANON_KEY — anon JWT for the prod project
 #
-# These are read-only used here. The action does NOT apply migrations;
-# it only audits. Application is a separate operator step.
+# Reads via the public.v_applied_migrations view (anon-grantable), NOT
+# via the supabase_migrations schema directly. service_role is NOT
+# required and should not be added — see Walker's note 2026-05-14 on
+# the security tradeoff (CI should never hold prod root keys).
 #
 # SECURITY: no untrusted github.event.* is interpolated into run: blocks.
 # Only repository secrets are passed via env: (already trusted).
@@ -61,23 +63,24 @@ jobs:
           echo "$versions" > local-versions.txt
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: Query remote schema_migrations
+      - name: Query remote schema_migrations (via public anon-readable view)
         if: steps.local.outputs.skip != 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_PROD_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_PROD_SERVICE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PROD_ANON_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_KEY:-}" ]; then
-            echo "::warning::SUPABASE_PROD_URL or SUPABASE_PROD_SERVICE_KEY not set; gate skipped (informational mode)."
+            echo "::warning::SUPABASE_PROD_URL or SUPABASE_PROD_ANON_KEY not set; gate skipped (informational mode)."
             exit 0
           fi
 
+          # Reads from public.v_applied_migrations (anon-readable view,
+          # exposes only the version column — no SQL bodies, no metadata).
           response=$(curl -s -w "\n%{http_code}" \
-            "${SUPABASE_URL}/rest/v1/schema_migrations?select=version&order=version" \
+            "${SUPABASE_URL}/rest/v1/v_applied_migrations?select=version&order=version" \
             -H "apikey: ${SUPABASE_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_KEY}" \
-            -H "Accept-Profile: supabase_migrations")
+            -H "Authorization: Bearer ${SUPABASE_KEY}")
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | head -n -1)
 
