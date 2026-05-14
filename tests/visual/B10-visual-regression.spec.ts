@@ -10,7 +10,10 @@
  */
 import { test, expect, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const REAL_BACKEND = process.env.E2E_REAL_BACKEND === 'true'
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
