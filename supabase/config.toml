@@ -58,8 +58,11 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-# If enabled, seeds the database after migrations during a db reset.
-enabled = true
+# Disabled locally: supabase/seed.sql was written against an older schema
+# and trips iris-ingest / notification triggers that have drifted (column
+# rename org_id → organization_id, missing NEW.* fields, etc). Migrations
+# alone now produce a usable schema; re-enable when seed.sql is refreshed.
+enabled = false
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
 sql_paths = ["./seed.sql"]

@@ -28,6 +28,9 @@ import {
   FolderOpen,
   Handshake,
   BarChart3,
+  LogOut,
+  User as UserIcon,
+  Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -36,6 +39,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import { useRFIs } from '../hooks/queries/rfis'
 import { useSubmittals } from '../hooks/queries/submittals'
 import { usePunchItems } from '../hooks/queries/punch-items'
+import { useAuthStore } from '../stores/authStore'
 import { toStreamRole } from '../types/stream'
 import { getNavForRole, type NavItem } from '../config/navigation'
 import { colors, spacing, typography, borderRadius, shadows, zIndex } from '../styles/theme'
@@ -248,6 +252,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { role: projectRole } = usePermissions()
   const streamRole = useMemo(() => toStreamRole(projectRole), [projectRole])
   const navItems = useMemo<NavItem[]>(() => getNavForRole(streamRole), [streamRole])
+  const signOut = useAuthStore((s) => s.signOut)
 
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -282,9 +287,28 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const trimmed = query.trim()
   const showRecents = trimmed.length > 0
 
+  // The overlay backdrop closes the palette on click; keyboard parity is
+  // covered by the window-level Escape listener above. We add a no-op
+  // keyboard handler so jsx-a11y is satisfied without adding a focusable
+  // surface that would steal focus from the search input.
+  const noopKeyHandler = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') onClose()
+  }
+
   return (
-    <div style={overlayStyle} onClick={onClose} role="presentation" aria-hidden="true">
-      <div style={{ height: 'fit-content' }} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      onKeyDown={noopKeyHandler}
+      role="presentation"
+      aria-hidden="true"
+    >
+      <div
+        style={{ height: 'fit-content' }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="presentation"
+      >
         <Command label="Search or jump to…" style={dialogStyle} shouldFilter>
           <div style={inputWrapStyle}>
             <Search size={20} color={colors.textTertiary} style={{ flexShrink: 0 }} />
@@ -334,6 +358,44 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   </Command.Item>
                 )
               })}
+            </Command.Group>
+
+            {/* Account group — Audit P0-4: the palette is the only escape
+                hatch when the sidebar is collapsed or the user is on a
+                stuck route. "Sign out" needs to be reachable here so
+                users typing "sign out" / "log out" can recover their
+                session even if the sidebar avatar isn't visible. */}
+            <Command.Group heading="Account">
+              <Command.Item
+                value="Profile account user"
+                onSelect={() => goTo('/profile')}
+                style={itemStyle}
+              >
+                <UserIcon size={18} strokeWidth={1.75} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: typography.fontWeight.medium }}>Profile</span>
+              </Command.Item>
+              <Command.Item
+                value="Settings preferences"
+                onSelect={() => goTo('/settings')}
+                style={itemStyle}
+              >
+                <SettingsIcon size={18} strokeWidth={1.75} color={colors.textTertiary} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: typography.fontWeight.medium }}>Settings</span>
+              </Command.Item>
+              <Command.Item
+                value="Sign out log out logout signout"
+                onSelect={() => {
+                  onClose()
+                  // signOut is async; the global SIGNED_OUT listener handles
+                  // the /login redirect. Don't await here so the palette
+                  // closes immediately even if the network is slow.
+                  void signOut()
+                }}
+                style={{ ...itemStyle, color: colors.statusCritical }}
+              >
+                <LogOut size={18} strokeWidth={1.75} color={colors.statusCritical} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: typography.fontWeight.medium }}>Sign out</span>
+              </Command.Item>
             </Command.Group>
 
             {showRecents && (() => {

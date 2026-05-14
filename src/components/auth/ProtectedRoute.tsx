@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Permission } from '../../hooks/usePermissions'
@@ -10,6 +10,7 @@ import { isDevBypassActive } from '../../lib/devBypass'
 import { useMfa } from '../../hooks/useMfa'
 import { useAuthStore } from '../../stores/authStore'
 import { evaluateMfaRequirement } from './MfaRequiredBanner'
+import { supabase } from '../../lib/supabase'
 
 interface Props {
   children: React.ReactNode
@@ -73,6 +74,89 @@ const SkeletonLoader: React.FC<{ ariaLabel: string }> = ({ ariaLabel }) => {
       }} />
     </div>
   </div>
+  )
+}
+
+// SessionRecoveryPanel — shown when auth/permissions loading exceeds the 8s
+// timeout. Two affordances: a primary "Sign in again" button that clears the
+// local Supabase session (offline-safe) and routes to /login, and a secondary
+// "Try once more" that just reloads the page (kept for the network-blip case).
+// The dual path is the audit P0-1 fix: previously the only option was reload,
+// which re-fires the same hung /auth/v1/user call forever.
+const SessionRecoveryPanel: React.FC = () => {
+  const navigate = useNavigate()
+  const [working, setWorking] = useState(false)
+
+  const handleSignInAgain = async () => {
+    setWorking(true)
+    try {
+      // scope: 'local' clears the cached session without hitting the
+      // network — important because the reason we're here is the
+      // network/auth backend is unresponsive.
+      await supabase.auth.signOut({ scope: 'local' as never })
+    } catch {
+      // If the SDK throws (e.g., already signed out), the localStorage
+      // fallback below still wipes any lingering session keys.
+    }
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('sb-') || key.startsWith('supabase.')) {
+          localStorage.removeItem(key)
+        }
+      }
+    } catch { /* localStorage unavailable */ }
+    navigate('/login', { replace: true })
+  }
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
+    }}>
+      <h2 style={{
+        fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
+      }}>
+        Session check failed
+      </h2>
+      <p style={{
+        fontSize: typography.fontSize.body, color: colors.textSecondary,
+        margin: 0, marginBottom: spacing['5'], maxWidth: 420,
+      }}>
+        We couldn't verify your session. Sign in again to recover.
+      </p>
+      <div style={{ display: 'flex', gap: spacing['3'], flexWrap: 'wrap', justifyContent: 'center' }}>
+        <button
+          onClick={handleSignInAgain}
+          disabled={working}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+            minHeight: 44, backgroundColor: colors.primaryOrange, color: colors.white,
+            border: 'none', borderRadius: borderRadius.md,
+            padding: `${spacing['2']} ${spacing['5']}`,
+            fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+            cursor: working ? 'wait' : 'pointer', fontFamily: typography.fontFamily,
+            opacity: working ? 0.7 : 1,
+          }}
+        >
+          {working ? 'Signing out…' : 'Sign in again'}
+        </button>
+        <button
+          onClick={() => window.location.reload()}
+          disabled={working}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
+            minHeight: 44, backgroundColor: 'transparent', color: colors.textSecondary,
+            border: `1px solid ${colors.borderSubtle}`, borderRadius: borderRadius.md,
+            padding: `${spacing['2']} ${spacing['5']}`,
+            fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
+            cursor: working ? 'wait' : 'pointer', fontFamily: typography.fontFamily,
+          }}
+        >
+          Try once more
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -147,40 +231,15 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredPermission, moduleI
     )
   }
 
-  // If auth timed out and we still have no user, show an error with retry
+  // If auth timed out and we still have no user, surface a real recovery
+  // path. Previously this rendered a Retry button that called
+  // window.location.reload() — which re-fired the same hung /auth/v1/user
+  // call indefinitely, leaving production users with no escape (the audit
+  // P0-1 reproduction). The recovery now clears local Supabase state via
+  // signOut(scope: 'local') (offline-safe, no network) and routes to
+  // /login so the user can sign in fresh.
   if (authTimedOut && !user && !isDevBypassActive()) {
-    return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        minHeight: '60vh', textAlign: 'center', padding: spacing['6'],
-      }}>
-        <h2 style={{
-          fontSize: typography.fontSize.subtitle, fontWeight: typography.fontWeight.semibold,
-          color: colors.textPrimary, margin: 0, marginBottom: spacing['2'],
-        }}>
-          Connection Issue
-        </h2>
-        <p style={{
-          fontSize: typography.fontSize.body, color: colors.textSecondary,
-          margin: 0, marginBottom: spacing['5'], maxWidth: 400,
-        }}>
-          Unable to verify your session. Check your connection and try again.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: spacing['2'],
-            minHeight: 56, backgroundColor: colors.primaryOrange, color: colors.white,
-            border: 'none', borderRadius: borderRadius.md,
-            padding: `${spacing['2']} ${spacing['5']}`,
-            fontSize: typography.fontSize.body, fontWeight: typography.fontWeight.medium,
-            cursor: 'pointer', fontFamily: typography.fontFamily,
-          }}
-        >
-          Retry
-        </button>
-      </div>
-    )
+    return <SessionRecoveryPanel />
   }
 
   if (!isDevBypassActive() && !user) {
