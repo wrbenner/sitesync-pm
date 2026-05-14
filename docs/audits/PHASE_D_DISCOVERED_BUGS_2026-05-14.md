@@ -61,6 +61,33 @@
 
 All `B.2 — DB: <entity> row persisted` tests failing are downstream — they query the DB for the row created by the UI test. Since the UI submit never succeeds (per #1), the row never lands, and the DB check fails. Fix #1 and these auto-resolve.
 
+## 6. Anon-write RLS violations on 5 (table, op) cells — FIXED 2026-05-14
+
+**Discovery:** B.5 RLS role-matrix codegen (PR #570) on 64-cell sample run against staging `nrsbvqkpxxlonvkmcmxf` flagged 5 cells where the anonymous role's UPDATE/DELETE was classified as `'allow'` instead of `'deny'`.
+
+| # | Table | Op |
+|---|---|---|
+| 1 | `public.account_deletion_events` | UPDATE |
+| 2 | `public.account_deletion_events` | DELETE |
+| 3 | `public.activity_feed` | UPDATE |
+| 4 | `public.agent_tasks` | UPDATE |
+| 5 | `public.ai_agent_actions` | UPDATE |
+
+**Root cause:** Supabase's default `anon` role had table-level INSERT/UPDATE/DELETE grants on every public table. RLS was enabled on all four, so anon's writes affected zero rows in practice — but PostgREST returned 200 OK with an empty result rather than a permission error. The B.5 probe's `classify()` treats `!error` on a write as `'allow'`, so the cells flipped to `'allow'` even though no row was actually mutated. The deny boundary was invisible to the probe (and to any security scanner that doesn't introspect row counts).
+
+**Fix:** Migration `20261025000000_fix_anon_write_rls_violations.sql` issues `REVOKE INSERT, UPDATE, DELETE ON public.<table> FROM anon` for all four tables. PostgREST now returns `42501 permission denied for table` at the grant gate, which the probe matches against `/^42/` → `'deny'`. Applied to both staging (`nrsbvqkpxxlonvkmcmxf`) and prod (`hypxrmcppjfbtlwuoafc`).
+
+**Verification (post-migration, on both projects):**
+```
+SET LOCAL ROLE anon;
+UPDATE public.account_deletion_events SET reason='x'
+  WHERE id='00000000-0000-0000-0000-000000000000';
+-- ERROR: 42501: permission denied for table account_deletion_events
+```
+Same `42501` returned for the other four (table, op) pairs.
+
+**References:** Issue #572 (tracking), PR #570 (discovery), migration `20261025000000_fix_anon_write_rls_violations.sql` (fix).
+
 ---
 
 ## What CI shows now
