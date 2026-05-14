@@ -6,6 +6,30 @@ import { fromTable } from '../lib/db/queries'
 import { queryClient } from '../lib/queryClient'
 import { setSentryUser, clearSentryUser } from '../lib/sentry'
 import { isDevBypassActive } from '../lib/devBypass'
+import { useAuthStore } from '../stores/authStore'
+
+// Audit P1-5: keep the Zustand `useAuthStore` (Profile/Sidebar avatar/
+// UserProfile read from this) in sync with this module's session state.
+// authStore.initialize() exists but was never called at app boot, so its
+// `user`, `profile`, `organization` stayed null forever — hence /profile
+// rendering every field as "Not set" for legitimately signed-in users.
+// This helper writes session + user across on every auth-state transition
+// and triggers the downstream profile/org loads from authStore itself.
+function syncAuthStore(session: Session | null) {
+  const user = session?.user ?? null
+  useAuthStore.setState({ session, user })
+  if (user) {
+    void useAuthStore.getState().loadProfile()
+    void useAuthStore.getState().loadOrganization()
+  } else {
+    useAuthStore.setState({
+      profile: null,
+      organization: null,
+      organizations: [],
+      currentOrgRole: null,
+    })
+  }
+}
 
 // ── Shared auth state (module-level singleton) ──────────────
 // All callers of useAuth() share this exact state.
@@ -86,6 +110,9 @@ async function initAuth() {
   try {
     const { data: { session: s } } = await supabase.auth.getSession()
     setState({ session: s, user: s?.user ?? null })
+    // Mirror to the Zustand authStore so UserProfile / Sidebar avatar see
+    // the signed-in user (P1-5 fix).
+    syncAuthStore(s)
     if (s?.user) {
       setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
       recordActivity()
@@ -97,6 +124,7 @@ async function initAuth() {
   supabase.auth.onAuthStateChange((_event, s) => {
     if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
       setState({ session: s, user: s?.user ?? null, error: null })
+      syncAuthStore(s)
       if (s?.user) {
         setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
         recordActivity() // reset idle clock on fresh sign-in / refresh
@@ -145,6 +173,7 @@ async function initAuth() {
       queryClient.invalidateQueries()
     } else if (_event === 'SIGNED_OUT') {
       setState({ session: null, user: null, error: null })
+      syncAuthStore(null)
       queryClient.clear()
       clearSentryUser()
       // Clear the named greeting but keep the returning flag so
@@ -157,9 +186,11 @@ async function initAuth() {
       if (!isDevBypassActive()) navigateFn?.('/login')
     } else if (_event === 'INITIAL_SESSION') {
       setState({ session: s, user: s?.user ?? null, loading: false })
+      syncAuthStore(s)
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     } else {
       setState({ session: s, user: s?.user ?? null })
+      syncAuthStore(s)
       if (s?.user) setSentryUser(s.user.id, s.user.email ?? '', s.user.user_metadata?.role)
     }
   })

@@ -476,7 +476,13 @@ function AppRoutes() {
             {/* ── Field Ops ── */}
             <Route path="/equipment" element={<PageSuspense><ProtectedRoute moduleId="equipment" moduleName="Equipment"><EquipmentPage /></ProtectedRoute></PageSuspense>} />
             <Route path="/procurement" element={<PageSuspense><ProtectedRoute moduleId="procurement" moduleName="Procurement"><Procurement /></ProtectedRoute></PageSuspense>} />
-            <Route path="/permits" element={<PageSuspense><ProtectedRoute moduleId="permits" moduleName="Permits"><Permits /></ProtectedRoute></PageSuspense>} />
+            {/* Audit P1-3: removed page-level ProtectedRoute moduleId gate. Per
+                config/navigation.ts every page is reachable by every authenticated
+                user; per-action permissions (Create/Delete permit) gate behavior
+                INSIDE the page via PermissionGate. The page-level gate
+                contradicted that locked vision and surfaced "Access Restricted"
+                even to roles that legitimately need to view permits. */}
+            <Route path="/permits" element={<PageSuspense><Permits /></PageSuspense>} />
 
             {/* ── Documents & Closeout ── */}
             <Route path="/files" element={<PageSuspense><ProtectedRoute moduleId="files" moduleName="Files"><Files /></ProtectedRoute></PageSuspense>} />
@@ -583,10 +589,16 @@ function AppContent() {
   // per super within 30 days of onboarding.
   useFieldSession('view');
 
-  // Auth pages render without the app shell (no sidebar, no offline banner)
+  // Auth pages + public-shell pages render without the app shell (no sidebar,
+  // no offline banner, no ProjectGate). Audit P1-1: /terms and /privacy
+  // previously fell through to ProjectGate when no project was selected,
+  // 404-ing despite the routes being defined. They are public legal pages
+  // and have no concept of a "project".
   const isAuthPage = ['/login', '/signup', '/verify-pending', '/onboarding'].includes(location.pathname);
+  const isPublicShellPage = ['/terms', '/privacy', '/security'].includes(location.pathname);
+  const isChromelessPage = isAuthPage || isPublicShellPage;
 
-  useProjectCache(isAuthPage ? undefined : projectId);
+  useProjectCache(isChromelessPage ? undefined : projectId);
 
   // Auto-open conflict modal when conflicts appear.
   // setState in an effect triggers an extra render but is the right shape
@@ -674,8 +686,8 @@ function AppContent() {
     { keys: ['escape'], action: () => { setCommandPaletteOpen(false); setNotificationsOpen(false); setShortcutsOpen(false); setExportOpen(false); closeCopilot(); } },
   ]);
 
-  // Auth pages render without the app shell (no sidebar, no offline banner)
-  if (isAuthPage) {
+  // Auth pages + public-shell pages render without the app shell
+  if (isChromelessPage) {
     return <AppRoutes />;
   }
 

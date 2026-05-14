@@ -257,7 +257,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const { results: recentResults, loading: recentsLoading } = useRecentItems()
+  const { results: recentResults } = useRecentItems()
 
   useEffect(() => {
     ensureSelectedRowStyles()
@@ -329,6 +329,11 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
 
           <Command.List style={listStyle}>
+            {/* Audit P1-4: previously showed "Loading…" indefinitely when
+                the recents query stalled (auth outage), implying the
+                whole palette was broken. Nav items + Account group render
+                independent of recents, so a clearer "No matches" is honest
+                — recent items still surface as they arrive. */}
             <Command.Empty
               style={{
                 padding: `${spacing.xl} ${spacing.lg}`,
@@ -337,7 +342,7 @@ const CommandPaletteBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 color: colors.textTertiary,
               }}
             >
-              {recentsLoading ? 'Loading…' : 'No matches'}
+              No matches
             </Command.Empty>
 
             <Command.Group heading="Pages">
