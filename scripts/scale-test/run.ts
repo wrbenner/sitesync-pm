@@ -89,12 +89,28 @@ export const options = {
   thresholds: {
     http_req_failed: ['rate<0.01'],
     http_req_duration: PROFILE === 'heavy' ? ['p(95)<1500'] : ['p(95)<500'],
+    // Reads — strict
     'checks{op:rfi_read}': ['rate>0.99'],
+    'checks{op:daily_log_read}': ['rate>0.99'],
+    'checks{op:punch_read}': ['rate>0.99'],
+    'checks{op:submittal_read}': ['rate>0.99'],
+    'checks{op:schedule_read}': ['rate>0.99'],
+    'checks{op:project_read}': ['rate>0.99'],
+    'checks{op:member_read}': ['rate>0.99'],
+    // Creates — strict
     'checks{op:rfi_create}': ['rate>0.99'],
     'checks{op:daily_log_create}': ['rate>0.99'],
+    'checks{op:punch_create}': ['rate>0.99'],
+    'checks{op:submittal_create}': ['rate>0.99'],
+    // Updates — strict
+    'checks{op:rfi_update}': ['rate>0.99'],
+    'checks{op:punch_update}': ['rate>0.99'],
+    // Deletes — strict
+    'checks{op:rfi_delete}': ['rate>0.99'],
+    // Edge fns — looser (cold-start tolerance)
     'checks{op:ai_call}': ['rate>0.95'],
-    'checks{op:schedule_read}': ['rate>0.99'],
     'checks{op:pdf_export}': ['rate>0.95'],
+    'checks{op:health}': ['rate>0.95'],
   },
 };
 
@@ -156,26 +172,59 @@ function headersFor(tok: VuToken) {
 }
 
 // ---------------------------------------------------------------------------
-// Per-VU per-minute call mix (200 + 50 + 30 + 100 + 20 + 10 = 410/min/VU)
+// Per-VU per-minute call mix — expanded to 18 ops covering reads, creates,
+// updates, deletes, edge fns. Total ~410/min/VU.
 // ---------------------------------------------------------------------------
 const CALLS_PER_MINUTE_PER_VU = 410;
 const SLEEP_BETWEEN_CALLS_SEC = 60 / CALLS_PER_MINUTE_PER_VU;
 
 type Op =
+  // Reads (60% of mix — typical web app read/write ratio)
   | 'rfi_read'
+  | 'daily_log_read'
+  | 'punch_read'
+  | 'submittal_read'
+  | 'schedule_read'
+  | 'project_read'
+  | 'member_read'
+  // Creates (20%)
   | 'rfi_create'
   | 'daily_log_create'
+  | 'punch_create'
+  | 'submittal_create'
+  // Updates (10%)
+  | 'rfi_update'
+  | 'punch_update'
+  // Deletes (3%) — small mix to test the cascade paths
+  | 'rfi_delete'
+  // Edge fns (7%)
   | 'ai_call'
-  | 'schedule_read'
-  | 'pdf_export';
+  | 'pdf_export'
+  | 'health';
 
 const OP_BAG: Op[] = [
-  ...Array<Op>(200).fill('rfi_read'),
-  ...Array<Op>(50).fill('rfi_create'),
-  ...Array<Op>(30).fill('daily_log_create'),
-  ...Array<Op>(100).fill('ai_call'),
-  ...Array<Op>(20).fill('schedule_read'),
+  // Reads — 60% (246/410)
+  ...Array<Op>(80).fill('rfi_read'),
+  ...Array<Op>(40).fill('daily_log_read'),
+  ...Array<Op>(30).fill('punch_read'),
+  ...Array<Op>(20).fill('submittal_read'),
+  ...Array<Op>(40).fill('schedule_read'),
+  ...Array<Op>(20).fill('project_read'),
+  ...Array<Op>(16).fill('member_read'),
+  // Creates — 20% (82/410)
+  ...Array<Op>(40).fill('rfi_create'),
+  ...Array<Op>(20).fill('daily_log_create'),
+  ...Array<Op>(12).fill('punch_create'),
+  ...Array<Op>(10).fill('submittal_create'),
+  // Updates — 10% (41/410)
+  ...Array<Op>(30).fill('rfi_update'),
+  ...Array<Op>(11).fill('punch_update'),
+  // Deletes — 3% (12/410)
+  ...Array<Op>(12).fill('rfi_delete'),
+  // Edge fns — 7% (29/410)
+  ...Array<Op>(15).fill('ai_call'),
   ...Array<Op>(10).fill('pdf_export'),
+  ...Array<Op>(4).fill('health'),
 ];
 
 function pickOp(): Op {
@@ -292,6 +341,88 @@ function pdfExport(tok: VuToken) {
 }
 
 // ---------------------------------------------------------------------------
+// Expanded ops — reads, creates, updates, deletes, health.
+// ---------------------------------------------------------------------------
+
+function tableRead(tok: VuToken, table: string, op: Op) {
+  const res = http.get(
+    `${SUPABASE_URL}/rest/v1/${table}?select=id&organization_id=eq.${tok.orgId}&limit=50`,
+    { headers: headersFor(tok), tags: { op } },
+  );
+  check(res, { [`${op} 200`]: (r: { status: number }) => r.status === 200 }, { op });
+}
+
+function dailyLogRead(tok: VuToken) { tableRead(tok, 'daily_logs', 'daily_log_read'); }
+function punchRead(tok: VuToken)    { tableRead(tok, 'punch_items', 'punch_read'); }
+function submittalRead(tok: VuToken){ tableRead(tok, 'submittals', 'submittal_read'); }
+function projectRead(tok: VuToken)  { tableRead(tok, 'projects', 'project_read'); }
+function memberRead(tok: VuToken)   { tableRead(tok, 'organization_members', 'member_read'); }
+
+function punchCreate(tok: VuToken) {
+  const body = JSON.stringify({
+    organization_id: tok.orgId, project_id: tok.projectId,
+    description: `k6 punch ${Date.now()}`, status: 'open',
+    metadata: { scale_test: true },
+  });
+  const res = http.post(`${SUPABASE_URL}/rest/v1/punch_items`, body, {
+    headers: headersFor(tok), tags: { op: 'punch_create' },
+  });
+  check(res, { 'punch_create 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300 }, { op: 'punch_create' });
+}
+
+function submittalCreate(tok: VuToken) {
+  const body = JSON.stringify({
+    organization_id: tok.orgId, project_id: tok.projectId,
+    title: `k6 submittal ${Date.now()}`, status: 'pending',
+    metadata: { scale_test: true },
+  });
+  const res = http.post(`${SUPABASE_URL}/rest/v1/submittals`, body, {
+    headers: headersFor(tok), tags: { op: 'submittal_create' },
+  });
+  check(res, { 'submittal_create 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300 }, { op: 'submittal_create' });
+}
+
+function rfiUpdate(tok: VuToken) {
+  // Update the most recent k6-tagged RFI to status='answered'. If none exist
+  // for this VU yet, this is a no-op write (0 rows updated → 200).
+  const res = http.patch(
+    `${SUPABASE_URL}/rest/v1/rfis?organization_id=eq.${tok.orgId}&subject=like.Scale-test%20RFI*&status=eq.open&limit=1`,
+    JSON.stringify({ status: 'answered' }),
+    { headers: headersFor(tok), tags: { op: 'rfi_update' } },
+  );
+  check(res, { 'rfi_update 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300 }, { op: 'rfi_update' });
+}
+
+function punchUpdate(tok: VuToken) {
+  const res = http.patch(
+    `${SUPABASE_URL}/rest/v1/punch_items?organization_id=eq.${tok.orgId}&status=eq.open&limit=1`,
+    JSON.stringify({ status: 'in_progress' }),
+    { headers: headersFor(tok), tags: { op: 'punch_update' } },
+  );
+  check(res, { 'punch_update 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300 }, { op: 'punch_update' });
+}
+
+function rfiDelete(tok: VuToken) {
+  // Delete a k6-created RFI to test the cascade path. Match strict so we
+  // don't ever delete a non-scale_test row.
+  const res = http.del(
+    `${SUPABASE_URL}/rest/v1/rfis?organization_id=eq.${tok.orgId}&metadata->>scale_test=eq.true&status=eq.answered&limit=1`,
+    null,
+    { headers: headersFor(tok), tags: { op: 'rfi_delete' } },
+  );
+  check(res, { 'rfi_delete 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300 }, { op: 'rfi_delete' });
+}
+
+function health(tok: VuToken) {
+  const res = http.get(`${SUPABASE_URL}/functions/v1/health`, {
+    headers: headersFor(tok), tags: { op: 'health' },
+  });
+  // /health may not exist on all projects — accept 200, 401, or 404 as
+  // "function-level reachable." 5xx = real issue.
+  check(res, { 'health reachable': (r: { status: number }) => r.status < 500 }, { op: 'health' });
+}
+
+// ---------------------------------------------------------------------------
 // VU entry point
 // ---------------------------------------------------------------------------
 declare const __VU: number;
@@ -301,24 +432,23 @@ export default function () {
   const op = pickOp();
 
   switch (op) {
-    case 'rfi_read':
-      rfiRead(tok);
-      break;
-    case 'rfi_create':
-      rfiCreate(tok);
-      break;
-    case 'daily_log_create':
-      dailyLogCreate(tok);
-      break;
-    case 'ai_call':
-      aiCall(tok);
-      break;
-    case 'schedule_read':
-      scheduleRead(tok);
-      break;
-    case 'pdf_export':
-      pdfExport(tok);
-      break;
+    case 'rfi_read':         rfiRead(tok); break;
+    case 'daily_log_read':   dailyLogRead(tok); break;
+    case 'punch_read':       punchRead(tok); break;
+    case 'submittal_read':   submittalRead(tok); break;
+    case 'schedule_read':    scheduleRead(tok); break;
+    case 'project_read':     projectRead(tok); break;
+    case 'member_read':      memberRead(tok); break;
+    case 'rfi_create':       rfiCreate(tok); break;
+    case 'daily_log_create': dailyLogCreate(tok); break;
+    case 'punch_create':     punchCreate(tok); break;
+    case 'submittal_create': submittalCreate(tok); break;
+    case 'rfi_update':       rfiUpdate(tok); break;
+    case 'punch_update':     punchUpdate(tok); break;
+    case 'rfi_delete':       rfiDelete(tok); break;
+    case 'ai_call':          aiCall(tok); break;
+    case 'pdf_export':       pdfExport(tok); break;
+    case 'health':           health(tok); break;
   }
 
   sleep(SLEEP_BETWEEN_CALLS_SEC);
