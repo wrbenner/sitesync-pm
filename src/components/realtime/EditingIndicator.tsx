@@ -24,9 +24,7 @@ export const EditingIndicator: React.FC<Props> = ({ roomKey, fieldId, selfUserId
   const [editors, setEditors] = useState<PresenceMember[]>([]);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb.channel(`presence:${roomKey}:editors`);
+    const channel = supabase.channel(`presence:${roomKey}:editors`);
 
     channel
       .on('broadcast', { event: 'editing' }, ({ payload }: { payload: PresenceMember & { field?: string } }) => {
@@ -48,7 +46,7 @@ export const EditingIndicator: React.FC<Props> = ({ roomKey, fieldId, selfUserId
 
     return () => {
       clearInterval(stale);
-      try { sb.removeChannel(channel); } catch { /* idempotent */ }
+      try { supabase.removeChannel(channel); } catch { /* idempotent */ }
     };
   }, [roomKey, fieldId, selfUserId]);
 

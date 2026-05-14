@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { useQuery } from '../../hooks/useQuery';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { FileText, ExternalLink } from 'lucide-react';
 import { colors, spacing, typography } from '../../styles/theme';
 
@@ -41,27 +41,20 @@ export const SpecExcerptPanel: React.FC<SpecExcerptPanelProps> = ({
     async () => {
       if (!enabled) return [];
       const trimmed = (specSection ?? '').trim();
-      // The generated Database types are strict about column-name unions and
-      // lag behind some live schemas. Cast through `any` for the local query
-      // — same escape hatch the rest of the codebase uses.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
       // Exact match first; if none, fall back to prefix match.
-      const exact = await sb
-        .from('specifications')
+      const { data: exactData } = await fromTable('specifications')
         .select('id, section_number, title, description, division, revision, status, file_url')
-        .eq('project_id', projectId)
+        .eq('project_id', projectId as string)
         .eq('section_number', trimmed)
         .limit(1);
-      if (exact.data && exact.data.length > 0) return exact.data as unknown as Specification[];
+      if (exactData && exactData.length > 0) return exactData as unknown as Specification[];
 
-      const prefix = await sb
-        .from('specifications')
+      const { data: prefixData } = await fromTable('specifications')
         .select('id, section_number, title, description, division, revision, status, file_url')
-        .eq('project_id', projectId)
+        .eq('project_id', projectId as string)
         .ilike('section_number', `${trimmed}%`)
         .limit(3);
-      return (prefix.data as unknown as Specification[]) ?? [];
+      return (prefixData as unknown as Specification[]) ?? [];
     },
     { enabled },
   );

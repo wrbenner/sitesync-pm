@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pause, Play, AlertTriangle, X } from 'lucide-react';
 import { SlaTimer } from './SlaTimer';
@@ -43,18 +44,14 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
   const { data: lastEscalation } = useQuery({
     queryKey: ['rfi-escalation-latest', rfiId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data: esc } = await sb
-        .from('rfi_escalations')
+      const { data: esc } = await fromTable('rfi_escalations')
         .select('id, stage, channel, recipient_email, notification_queue_id, triggered_at')
         .eq('rfi_id', rfiId)
         .order('triggered_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       if (!esc?.notification_queue_id) return { escalation: esc, queue: null };
-      const { data: q } = await sb
-        .from('notification_queue')
+      const { data: q } = await fromTable('notification_queue')
         .select('id, status, error, retry_count, recipient_email')
         .eq('id', esc.notification_queue_id)
         .maybeSingle();
@@ -73,16 +70,13 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       return;
     }
     setBusy(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const userId = (await sb.auth.getUser()).data?.user?.id ?? null;
-    const { error } = await sb
-      .from('rfis')
+    const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
+    const { error } = await fromTable('rfis')
       .update({
         sla_paused_at: new Date().toISOString(),
         sla_paused_reason: reason.trim(),
         sla_paused_by: userId,
-      } as never)
+      })
       .eq('id', rfiId);
     setBusy(false);
     if (error) {
@@ -90,14 +84,14 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
       return;
     }
     // Audit-log the pause via rfi_escalations so the trail is unified.
-    await sb.from('rfi_escalations').insert({
+    await fromTable('rfi_escalations').insert({
       rfi_id: rfiId,
       project_id: projectId,
       stage: 'pause',
       channel: 'none',
       triggered_by: userId,
       metadata: { reason: reason.trim() },
-    } as never);
+    });
     toast.success('SLA clock paused');
     setShowPauseInput(false);
     setReason('');
@@ -108,14 +102,11 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
 
   const resumeClock = async () => {
     setBusy(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const userId = (await sb.auth.getUser()).data?.user?.id ?? null;
+    const userId = (await supabase.auth.getUser()).data?.user?.id ?? null;
     const pausedSince = pausedAt ? new Date(pausedAt).getTime() : Date.now();
     const pauseSeconds = Math.floor((Date.now() - pausedSince) / 1000);
 
-    const { error } = await sb
-      .from('rfis')
+    const { error } = await fromTable('rfis')
       .update({
         sla_paused_at: null,
         sla_paused_reason: null,
@@ -126,21 +117,21 @@ export const RfiSlaPanel: React.FC<RfiSlaPanelProps> = ({
         // any project that doesn't track it will simply unfreeze with the
         // same nominal due_date (acceptable approximation).
         sla_total_pause_seconds: pauseSeconds,
-      } as never)
+      })
       .eq('id', rfiId);
     setBusy(false);
     if (error) {
       toast.error(`Failed to resume: ${error.message}`);
       return;
     }
-    await sb.from('rfi_escalations').insert({
+    await fromTable('rfi_escalations').insert({
       rfi_id: rfiId,
       project_id: projectId,
       stage: 'resume',
       channel: 'none',
       triggered_by: userId,
       metadata: { paused_for_seconds: pauseSeconds },
-    } as never);
+    });
     toast.success('SLA clock resumed');
     qc.invalidateQueries({ queryKey: ['rfi', rfiId] });
     qc.invalidateQueries({ queryKey: ['rfi-escalation-latest', rfiId] });

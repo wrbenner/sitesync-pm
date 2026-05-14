@@ -6,6 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { Edit3 } from 'lucide-react';
 import { colors, typography } from '../../styles/theme';
 
@@ -36,11 +37,8 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     let timer: ReturnType<typeof setInterval> | null = null;
 
     const refresh = async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
       const cutoff = new Date(Date.now() - ACTIVE_WINDOW_MS).toISOString();
-      const { data } = await sb
-        .from('typing_indicators')
+      const { data } = await fromTable('typing_indicators')
         .select('user_id, user_name, last_seen_at')
         .eq('entity_type', entityType)
         .eq('entity_id', entityId)
@@ -57,9 +55,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     timer = setInterval(refresh, 5_000);
 
     // Realtime for instant updates between polls.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb
+    const channel = supabase
       .channel(`typing:${entityType}:${entityId}`)
       .on(
         'postgres_changes',
@@ -76,7 +72,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
-      try { sb.removeChannel(channel); } catch { /* idempotent */ }
+      try { supabase.removeChannel(channel); } catch { /* idempotent */ }
     };
   }, [entityType, entityId, ignoreUserId]);
 

@@ -119,16 +119,12 @@ export const taskService = {
     let baselineEndDate: string | null = null;
     let projectId: string | null = null;
     if ('end_date' in safeUpdates) {
-      // Generated Database types lag behind live schema; localized any cast.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data: prior } = await sb
-        .from('tasks')
+      const { data: prior } = await fromTable('tasks')
         .select('end_date, project_id')
-        .eq('id' as never, taskId)
+        .eq('id', taskId)
         .maybeSingle();
-      baselineEndDate = (prior?.end_date as string | null) ?? null;
-      projectId = (prior?.project_id as string | null) ?? null;
+      baselineEndDate = prior?.end_date ?? null;
+      projectId = prior?.project_id ?? null;
     }
 
     const { error } = await fromTable('tasks')
