@@ -70,7 +70,10 @@ test('B.2 onboarding — provision_organization RPC defaults plan to free', asyn
 })
 
 test('B.2 onboarding — UI invite flow opens + sends', async ({ page }) => {
-  // Sign in as existing PM, then attempt to invite from settings/team.
+  // Sign in as existing PM, then invite from /settings/team (UserManagement
+  // page is the canonical invite surface — gated by PermissionGate on
+  // permission="project.members", which PMs and admins hold).
+  //
   // Real DOM: Login.tsx defaults to magic-link mode; click the
   // "Sign in with password" footer toggle to reveal the Password input
   // (only rendered when mode === 'password'). aria-label="Email"/"Password",
@@ -88,34 +91,28 @@ test('B.2 onboarding — UI invite flow opens + sends', async ({ page }) => {
   await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|day|onboarding|profile|$)/, { timeout: 20_000 })
 
-  // Navigate to a team / members settings page. Try common routes.
-  for (const route of ['#/settings/team', '#/settings/members', '#/team', '#/admin/members']) {
-    await page.goto(`${BASE_URL}/${route}`).catch(() => undefined)
-    if (!page.url().match(/#\/$/)) break // landed somewhere valid
-  }
-  await page.waitForTimeout(1_500)
-
-  // Real DOM: src/components/admin/InviteModal.tsx is the canonical invite
-  // surface — the trigger varies by page (admin/members shows an "Invite"
-  // primary button; onboarding flow auto-launches it). Match permissively
-  // since the trigger is consumer-side, not in the modal itself.
-  const inviteBtn = page.getByRole('button', { name: /^Invite|Add member|Add teammate|Invite member/i }).first()
-  if (await inviteBtn.count() === 0) {
-    test.skip(true, 'no invite UI surfaced at common settings routes — skipping')
-  }
+  // The canonical invite trigger lives at /settings/team (route registered
+  // in src/App.tsx:512 → src/pages/admin/UserManagement.tsx). The button
+  // text is exactly "Invite Member" (UserManagement.tsx:205). The expanded
+  // panel has placeholder "colleague@company.com" (line 350) and a
+  // "Send Invite" submit button (line 423). On success the panel swaps
+  // to the "Invitation sent" confirmation (line 277).
+  await page.goto(`${BASE_URL}/#/settings/team`)
+  await page.waitForLoadState('networkidle').catch(() => undefined)
+  // Members list query + permission resolution can lag a beat; allow the
+  // PermissionGate-wrapped Invite Member button to mount.
+  const inviteBtn = page.getByRole('button', { name: 'Invite Member', exact: true })
+  await expect(inviteBtn).toBeVisible({ timeout: 15_000 })
   await inviteBtn.click()
-  // InviteModal.tsx (line 179) renders the single-mode email input with
-  // placeholder "teammate@company.com".
-  const emailInput = page.getByPlaceholder('teammate@company.com').first()
+
+  // Inline panel (not a modal) — AnimatePresence-mounted, so wait for the
+  // email input to be attached and visible before filling.
+  const emailInput = page.getByPlaceholder('colleague@company.com')
+  await expect(emailInput).toBeVisible({ timeout: 10_000 })
   await emailInput.fill(`${MARKER}-invite@sitesync.test`)
-  // InviteModal submit button (line 310) reads dynamically:
-  //   "Send N invite" or "Send N invites" — N is the count. Match on the
-  //   stable "Send" prefix.
-  await page.getByRole('button', { name: /^Send\b.*invite/ }).first().click()
-  await page.waitForTimeout(2_000)
-  const body = await page.locator('body').textContent()
-  expect(
-    /sent|invited|invitation|success/i.test(body ?? ''),
-    'invite submit should show a success indicator',
-  ).toBe(true)
+
+  await page.getByRole('button', { name: 'Send Invite', exact: true }).click()
+
+  // Success state renders "Invitation sent" inline (UserManagement.tsx:277).
+  await expect(page.getByText(/invitation sent/i)).toBeVisible({ timeout: 15_000 })
 })
