@@ -483,7 +483,10 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
   const signOut = useAuthStore((s) => s.signOut)
-  const fullName = authProfile?.full_name?.trim() || ''
+  const rawName = authProfile?.full_name?.trim() || ''
+  // Only use full_name if it contains at least one word character — guards
+  // against the seed user whose full_name is the em-dash placeholder '—'.
+  const fullName = /\w/.test(rawName) ? rawName : ''
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
@@ -742,12 +745,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   // Mobile detection — when present we render <MobileTabBar/>; the App shell
   // already prefers MobileLayout, so this is the safety net.
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches,
   )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(max-width: 768px)')
+    const mq = window.matchMedia('(max-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)

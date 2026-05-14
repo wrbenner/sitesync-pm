@@ -574,8 +574,7 @@ function AppContent() {
   const { sidebarCollapsed, setSidebarCollapsed, setActiveView } = useUiStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1024px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   useTheme();
 
   const projectId = useProjectId();
@@ -644,7 +643,7 @@ function AppContent() {
       setSidebarCollapsed(prevDesktopCollapsed.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile, isTablet]);
+  }, [isMobile]);
   const { toggleContextPanel, contextPanelOpen } = useAIAnnotationStore();
   const { openCopilot: closeCopilot, isOpen: copilotOpen } = useCopilotStore();
 

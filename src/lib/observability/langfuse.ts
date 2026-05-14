@@ -105,11 +105,7 @@ interface IngestionEvent {
 }
 
 function uuid(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return (crypto as Crypto).randomUUID()
-  }
-  // Fallback (very-old runtimes) — random non-cryptographic id.
-  return `id-${Date.now()}-${Math.floor(Math.random() * 1e9).toString(16)}`
+  return crypto.randomUUID()
 }
 
 function basicAuth(env: LangfuseEnv): string {
