@@ -35,9 +35,7 @@ export const PresenceLayer: React.FC<PresenceLayerProps> = ({ roomKey, user, chi
   const deviceId = useRef(getOrCreateDeviceId());
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb.channel(`presence:${roomKey}`, {
+    const channel = supabase.channel(`presence:${roomKey}`, {
       config: { presence: { key: `${user.user_id}:${deviceId.current}` } },
     });
 
@@ -46,7 +44,7 @@ export const PresenceLayer: React.FC<PresenceLayerProps> = ({ roomKey, user, chi
         const state = channel.presenceState();
         const flat: PresenceMember[] = [];
         for (const tag of Object.keys(state)) {
-          const entries = state[tag] as Array<{ user_id: string; user_name: string; device_id: string; last_seen_at: number; avatar_url?: string }>;
+          const entries = state[tag] as unknown as Array<{ user_id: string; user_name: string; device_id: string; last_seen_at: number; avatar_url?: string }>;
           for (const e of entries) flat.push(e);
         }
         setMembers((cur) => {
@@ -83,7 +81,7 @@ export const PresenceLayer: React.FC<PresenceLayerProps> = ({ roomKey, user, chi
     return () => {
       clearInterval(interval);
       clearInterval(stale);
-      try { sb.removeChannel(channel); } catch { /* idempotent */ }
+      try { void supabase.removeChannel(channel); } catch { /* idempotent */ }
     };
   }, [roomKey, user.user_id, user.user_name, user.avatar_url]);
 
