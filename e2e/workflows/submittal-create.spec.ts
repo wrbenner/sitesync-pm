@@ -93,6 +93,26 @@ test('B.2 — UI: submittal create form submits without 42703', async ({ page })
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
+  // Wait for permissions + project context. pages/submittals/index.tsx
+  // wraps the "New Submittal" button in <PermissionGate
+  // permission="submittals.create"> which returns null while permissions
+  // are loading (PermissionGate.tsx line 32). Without this wait we can
+  // race past navigation before the button renders.
+  await page
+    .waitForFunction(
+      () => {
+        const buttons = Array.from(document.querySelectorAll('button')) as HTMLButtonElement[]
+        return buttons.some((b) => {
+          const t = (b.textContent ?? '').trim()
+          return (t === 'New Submittal' || t.startsWith('New Submittal') ||
+                  t === 'Create submittal' || t.startsWith('Create submittal')) && !b.disabled
+        })
+      },
+      null,
+      { timeout: 15_000 },
+    )
+    .catch(() => undefined)
+
   // Open create modal. Real DOM: pages/submittals/index.tsx renders a
   // PrimaryBtn with text "New Submittal" (line 342) when the list has rows,
   // OR "Create submittal" in the empty-state actions (line 451).

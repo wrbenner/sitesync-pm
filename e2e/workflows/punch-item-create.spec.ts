@@ -76,6 +76,24 @@ test('B.2 — UI: punch item create submits without RLS/trigger error', async ({
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
+  // Wait for permissions to load. punch-list/index.tsx wraps the create
+  // button in <PermissionGate permission="punch_list.create"> with a
+  // fallback that renders an *always-disabled* "New Punch" button (lines
+  // 530-549). If we click before permissions resolve we either hit the
+  // fallback (disabled) or PermissionGate's null render. The canonical
+  // create button (data-testid="create-punch-item-button") only appears
+  // inside the permission-allowed branch and is never disabled there.
+  await page
+    .waitForFunction(
+      () => {
+        const btn = document.querySelector('[data-testid="create-punch-item-button"]') as HTMLButtonElement | null
+        return !!btn && !btn.disabled
+      },
+      null,
+      { timeout: 15_000 },
+    )
+    .catch(() => undefined)
+
   // Real DOM: pages/punch-list/index.tsx (line 555) renders the New-Punch
   // button with data-testid="create-punch-item-button". Mobile builds also
   // expose a FAB with aria-label="Quick capture punch item" (line 794) —
