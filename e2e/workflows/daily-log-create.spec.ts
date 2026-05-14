@@ -74,6 +74,29 @@ test('B.2 — UI: daily log create submits without 42703 or NEW.narrative error'
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
+  // Wait for the project context + permissions to resolve before clicking.
+  // pages/daily-log/index.tsx wraps the creation buttons in <PermissionGate
+  // permission="daily_log.create"> which returns null while permissions are
+  // loading (PermissionGate.tsx line 32). Additionally, "new-entry-button"
+  // renders with disabled={isLocked} where isLocked === (logStatus ===
+  // 'submitted' || 'approved'). We wait until either creation button is
+  // present AND not disabled — this guarantees: (a) projectId resolved,
+  // (b) permissions loaded, (c) PermissionGate allowed the children, and
+  // (d) the log is not locked.
+  await page
+    .waitForFunction(
+      () => {
+        const start = document.querySelector('[data-testid="start-log-button"]') as HTMLButtonElement | null
+        if (start && !start.disabled) return true
+        const entry = document.querySelector('[data-testid="new-entry-button"]') as HTMLButtonElement | null
+        if (entry && !entry.disabled) return true
+        return false
+      },
+      null,
+      { timeout: 15_000 },
+    )
+    .catch(() => undefined)
+
   // Real DOM: pages/daily-log/index.tsx renders two creation buttons:
   //   - data-testid="start-log-button" (line 1116) shown when logStatus
   //     === 'not_started' — opens the create-modal. Primary entry point.
