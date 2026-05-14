@@ -94,15 +94,18 @@ export const OfflineBanner: React.FC = () => {
   // Don't show banner when online, idle, with nothing pending and no just-synced flash
   if (isOnline && !isSyncing && !isCaching && !hasPending && !hasConflicts && !justSynced) return null;
 
-  // Cache priming once at least one table has landed: collapse the full
-  // banner into a compact pill anchored top-right. The full multi-line
-  // "Loading project — submittals (3/16)… · Never synced" bar across the
-  // top of every page during the first 30s read as ominous in audit
-  // captures. The pill keeps users informed without dominating the page.
+  // Cache priming: collapse into a compact pill anchored top-right for the
+  // ENTIRE caching window, including the very first moments before any table
+  // has landed. The previous guard (cacheCompletedCount > 0) let the full
+  // "Loading project — submittals (3/16)… · Never synced" banner appear
+  // during those first ~5 s, which audit captures flagged as ominous. Now the
+  // pill appears immediately on caching start and disappears when done.
   const cacheCompletedCount = cacheProgress?.completed ?? 0;
   const cacheTotalCount = cacheProgress?.total ?? 0;
-  if (isCaching && !hasConflicts && !hasPending && cacheCompletedCount > 0 && cacheTotalCount > 0) {
-    const pct = Math.round((cacheCompletedCount / cacheTotalCount) * 100);
+  if (isCaching && !hasConflicts && !hasPending) {
+    const progressLabel = cacheTotalCount > 0
+      ? `${Math.round((cacheCompletedCount / cacheTotalCount) * 100)}%`
+      : 'Starting…';
     return (
       <div
         role="status"
@@ -127,7 +130,7 @@ export const OfflineBanner: React.FC = () => {
         }}
       >
         <Cloud size={12} style={{ animation: 'spin 1s linear infinite', color: colors.statusInfo }} />
-        <span>Syncing project · {pct}%</span>
+        <span>Syncing project · {progressLabel}</span>
       </div>
     );
   }
