@@ -1,0 +1,72 @@
+# Gate 7 - Playwright Workflows (B.2)
+#
+# Runs e2e/workflows/* against the configured preview deployment +
+# staging Supabase. Catches end-to-end regressions on submittal/RFI/
+# daily-log/punch/change-order create flows.
+#
+# Currently runs in INFORMATIONAL mode (continue-on-error) until the
+# staging credentials and Vercel preview URL are wired into secrets.
+#
+# Required secrets:
+#   PREVIEW_BASE_URL              (e.g., https://sitesync-pm.vercel.app)
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_SERVICE_KEY
+#   STAGING_POLISH_USER
+#   STAGING_POLISH_PASS
+#
+# SECURITY: no untrusted github.event.* in run: blocks. Only secrets.*
+# passed via env:.
+
+name: Gate 7 - Playwright Workflows
+
+on:
+  pull_request:
+    paths:
+      - 'e2e/workflows/**'
+      - 'src/**'
+      - 'supabase/migrations/**'
+  push:
+    branches: [main]
+
+jobs:
+  workflows:
+    name: Playwright workflow specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright workflow specs
+        env:
+          E2E_REAL_BACKEND: 'true'
+          E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+          POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
+          POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${E2E_BASE_URL:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx playwright test e2e/workflows/ --project=chromium --reporter=list
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-workflow-report
+          path: playwright-report/
+          retention-days: 7
