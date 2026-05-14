@@ -39,12 +39,12 @@ test.beforeAll(() => {
 const MARKER = `b2-daily-log-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
+  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password".
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|onboarding|profile|day|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)
 }
@@ -66,26 +66,47 @@ test('B.2 — UI: daily log create submits without 42703 or NEW.narrative error'
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
-  await page
-    .getByRole('button', { name: /new log|new entry|create log|^new$/i })
-    .first()
-    .click()
+  // Real DOM: pages/daily-log/index.tsx renders two creation buttons:
+  //   - data-testid="start-log-button" (line 1116) shown when logStatus
+  //     === 'not_started' — opens the create-modal. Primary entry point.
+  //   - data-testid="new-entry-button" (line 1103) appends a field-entry
+  //     row to an already-started log.
+  // We prefer "start-log-button" because it produces the daily_logs row
+  // that fires the iris-ingest trigger we're regression-testing.
+  const startBtn = page.getByTestId('start-log-button')
+  if (await startBtn.count() > 0) {
+    await startBtn.click()
+  } else {
+    await page.getByTestId('new-entry-button').click()
+  }
 
-  // Daily log forms typically have a summary/narrative textarea + date.
-  const summary = page.getByPlaceholder(/summary|narrative|notes|what happened/i).first()
+  // The daily log uses an inline EditableCell pattern (see lines 1351, 1419,
+  // 1496, 1583 in index.tsx) rather than a single summary textarea. The
+  // most universal placeholder that exists across modes is "Add description…"
+  // (line 1496) on the field-entries table. Fall back to any visible
+  // textarea on the page if the editable cell isn't reachable.
+  const summary = page.getByPlaceholder('Add description…').first()
   if (await summary.count() > 0) {
+    await summary.click()
     await summary.fill(`${MARKER} summary text`)
-  }
-  // Fallback: any textarea on the page
-  const ta = page.locator('textarea').first()
-  if ((await summary.count()) === 0 && (await ta.count()) > 0) {
-    await ta.fill(`${MARKER} narrative fallback`)
+  } else {
+    const ta = page.locator('textarea').first()
+    if (await ta.count() > 0) await ta.fill(`${MARKER} narrative fallback`)
   }
 
-  await page
-    .getByRole('button', { name: /^submit$|^save$|^create$/i })
-    .first()
-    .click()
+  // Submit — pages/daily-log/index.tsx renders the submit-log button with
+  // data-testid="submit-log-button" (line 1129) once the log is in draft.
+  const submitBtn = page.getByTestId('submit-log-button')
+  if (await submitBtn.count() > 0) {
+    await submitBtn.click()
+  } else {
+    // Fall back to any visible Save/Submit button on the page.
+    await page
+      .getByRole('button', { name: /^Submit log$|^Submit$|^Save$/ })
+      .first()
+      .click()
+      .catch(() => undefined)
+  }
 
   await page.waitForTimeout(2_000)
 

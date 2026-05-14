@@ -1,0 +1,89 @@
+# Gate 16 - Visual Regression (B.10)
+#
+# Runs Playwright tests/visual/*.spec.ts. Compares page screenshots
+# against committed baselines under tests/visual/__snapshots__/ and
+# fails on any pixel-diff above the configured threshold.
+#
+# Informational mode until secrets wired.
+#
+# Required secrets:
+#   PREVIEW_BASE_URL
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_POLISH_USER
+#   STAGING_POLISH_PASS
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 16 - Visual Regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/visual/**'
+      - '.github/workflows/gate-16-visual-regression.yml'
+  push:
+    branches: [main]
+
+jobs:
+  visual-regression:
+    name: Playwright visual snapshot diff
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright visual specs
+        env:
+          E2E_REAL_BACKEND: 'true'
+          E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
+          POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${E2E_BASE_URL:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          # Detect missing baseline directory (first-ever run). When absent
+          # we generate baselines via --update-snapshots and upload them as
+          # an artifact for Walker to inspect and commit. Subsequent runs
+          # fail on drift as designed.
+          baseline_dir="tests/visual/B10-visual-regression.spec.ts-snapshots"
+          if [ ! -d "$baseline_dir" ] || [ -z "$(ls -A "$baseline_dir" 2>/dev/null)" ]; then
+            echo "::warning::No visual baselines on disk. Generating via --update-snapshots; upload as artifact for review + commit."
+            npx playwright test tests/visual/ --project=chromium --reporter=list --update-snapshots || true
+            exit 0
+          fi
+          npx playwright test tests/visual/ --project=chromium --reporter=list
+
+      - name: Upload visual baselines on first generation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-${{ github.sha }}
+          path: tests/visual/B10-visual-regression.spec.ts-snapshots/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-visual-report
+          path: playwright-report/
+          retention-days: 7

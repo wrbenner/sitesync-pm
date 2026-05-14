@@ -17,7 +17,15 @@ const webServerEnv: Record<string, string> = REAL_BACKEND
     }
 
 export default defineConfig({
-  testDir: './e2e',
+  // Phase B Playwright suites live under tests/{a11y,mobile,visual}/; the
+  // original e2e/ folder still hosts workflows + coverage sweeps.
+  testDir: '.',
+  testMatch: [
+    'e2e/**/*.spec.ts',
+    'tests/a11y/**/*.spec.ts',
+    'tests/mobile/**/*.spec.ts',
+    'tests/visual/**/*.spec.ts',
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

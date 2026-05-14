@@ -25,7 +25,10 @@
  */
 import { test, expect, type Page, type Response, type ConsoleMessage } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 interface RouteRow {
   path: string

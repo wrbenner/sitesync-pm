@@ -1,0 +1,40 @@
+# Gate 10 - Realtime Channel Contract (B.9)
+#
+# Static-scan vitest spec that walks src/** for supabase realtime channel
+# subscriptions and asserts each registered channel has a matching
+# postgres_changes publication entry and an unsubscribe/cleanup path.
+#
+# No backend secrets required - this is a pure file-scan gate.
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 10 - Realtime Channel Contract
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/realtime/**'
+  push:
+    branches: [main]
+
+jobs:
+  realtime-channels:
+    name: Realtime channel registration scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest realtime channel spec
+        run: |
+          set -euo pipefail
+          npx vitest run tests/realtime/B9-realtime-channels.spec.ts

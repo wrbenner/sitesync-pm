@@ -1,0 +1,43 @@
+# Gate 14 - Capacitor Plugin Sanity (B.14)
+#
+# Runs tests/capacitor/B14-capacitor-plugins.spec.ts via vitest. Walks
+# capacitor.config.* and package.json + src/** for every @capacitor/*
+# plugin import and asserts the plugin is also declared in deps and
+# every call site is wrapped in a Capacitor.isNativePlatform() guard.
+#
+# Pure file-scan gate - no backend secrets needed.
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 14 - Capacitor Plugin Sanity
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'capacitor.config.*'
+      - 'package.json'
+      - 'tests/capacitor/**'
+  push:
+    branches: [main]
+
+jobs:
+  capacitor-plugins:
+    name: Capacitor plugin import/declare scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest capacitor plugin spec
+        run: |
+          set -euo pipefail
+          npx vitest run tests/capacitor/B14-capacitor-plugins.spec.ts

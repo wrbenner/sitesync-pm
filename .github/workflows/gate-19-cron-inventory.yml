@@ -1,0 +1,55 @@
+# Gate 19 - Cron Job Inventory (B.7)
+#
+# Runs tests/cron/*.spec.ts via vitest. Walks supabase/** and
+# src/services/** for pg_cron / supabase scheduler registrations and
+# asserts each declared job has a matching handler, a non-overlapping
+# schedule, and a recorded last-run within its expected cadence.
+#
+# Informational mode until staging credentials are wired into secrets.
+#
+# Required secrets:
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_SUPABASE_SERVICE_KEY
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 19 - Cron Job Inventory
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - 'src/services/**'
+      - 'tests/cron/**'
+  push:
+    branches: [main]
+
+jobs:
+  cron-inventory:
+    name: Cron job registration + cadence check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest cron suite
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::warning::STAGING_SUPABASE_URL not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/cron/

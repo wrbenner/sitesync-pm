@@ -1,39 +1,39 @@
-# Gate 7 - Playwright Workflows (B.2)
+# Gate 20 - Every-Route + Every-Button Sweep (B.1)
 #
-# Runs e2e/workflows/* against the configured preview deployment +
-# staging Supabase. Catches end-to-end regressions on submittal/RFI/
-# daily-log/punch/change-order create flows.
+# Runs the two top-level coverage specs:
+#   e2e/coverage/B1-every-route.spec.ts   - visits every src/pages/** route
+#   e2e/coverage/B1-every-button.spec.ts  - clicks every interactive control
+# Asserts no thrown exceptions, no 500 network responses, no console errors
+# above warn level on any route or after any button click.
 #
-# Currently runs in INFORMATIONAL mode (continue-on-error) until the
-# staging credentials and Vercel preview URL are wired into secrets.
+# Informational mode until secrets wired.
 #
 # Required secrets:
-#   PREVIEW_BASE_URL              (e.g., https://sitesync-pm.vercel.app)
+#   PREVIEW_BASE_URL
 #   STAGING_SUPABASE_URL
-#   STAGING_SUPABASE_SERVICE_KEY
+#   STAGING_SUPABASE_ANON_KEY
 #   STAGING_POLISH_USER
 #   STAGING_POLISH_PASS
 #
-# SECURITY: no untrusted github.event.* in run: blocks. Only secrets.*
-# passed via env:.
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
 
-name: Gate 7 - Playwright Workflows
+name: Gate 20 - Every-Route + Every-Button Sweep
 
 on:
   pull_request:
     paths:
-      - 'e2e/workflows/**'
-      - 'src/**'
-      - 'supabase/migrations/**'
-      - '.github/workflows/gate-7-playwright-workflows.yml'
+      - 'src/pages/**'
+      - 'src/components/**'
+      - 'e2e/coverage/**'
+      - '.github/workflows/gate-20-every-route-every-button.yml'
   push:
     branches: [main]
 
 jobs:
-  workflows:
-    name: Playwright workflow specs
+  every-route-every-button:
+    name: Playwright route + button coverage sweep
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -48,13 +48,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright workflow specs
+      - name: Run Playwright coverage sweep
         env:
           E2E_REAL_BACKEND: 'true'
           E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
           SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
           POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
           POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
         run: |
@@ -63,12 +62,15 @@ jobs:
             echo "::warning::Required secrets not set; gate skipped (informational mode)."
             exit 0
           fi
-          npx playwright test e2e/workflows/ --project=chromium --reporter=list
+          npx playwright test \
+            e2e/coverage/B1-every-route.spec.ts \
+            e2e/coverage/B1-every-button.spec.ts \
+            --project=chromium --reporter=list
 
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-workflow-report
+          name: playwright-coverage-report
           path: playwright-report/
           retention-days: 7

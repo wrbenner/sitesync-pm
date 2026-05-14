@@ -25,6 +25,13 @@ export default defineConfig({
       // @playwright/test, not vitest.
       'audit/generated/**',
       'audit/harness/route-audit.ts',
+      // Phase B Playwright suites (a11y, mobile, visual) — runtime is
+      // @playwright/test. They live under tests/ alongside vitest suites
+      // (rls, storage, webhooks, cron, rpc, capacitor, realtime,
+      // migrations) so the runtimes must be split explicitly.
+      'tests/a11y/**',
+      'tests/mobile/**',
+      'tests/visual/**',
       // macOS Finder / iCloud sync conflict duplicates ("foo 2.test.tsx",
       // "__tests__ 4/foo.test.tsx", etc.). Already gitignored, but iCloud
       // can regenerate them on disk and vitest would otherwise run stale

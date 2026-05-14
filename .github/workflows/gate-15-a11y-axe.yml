@@ -1,37 +1,34 @@
-# Gate 7 - Playwright Workflows (B.2)
+# Gate 15 - a11y Axe Scan (B.11)
 #
-# Runs e2e/workflows/* against the configured preview deployment +
-# staging Supabase. Catches end-to-end regressions on submittal/RFI/
-# daily-log/punch/change-order create flows.
+# Runs Playwright tests/a11y/*.spec.ts which load each top-level route
+# in chromium and run @axe-core/playwright against the page. Asserts no
+# violations of WCAG 2.1 AA serious/critical level.
 #
-# Currently runs in INFORMATIONAL mode (continue-on-error) until the
-# staging credentials and Vercel preview URL are wired into secrets.
+# Informational mode until secrets wired.
 #
 # Required secrets:
-#   PREVIEW_BASE_URL              (e.g., https://sitesync-pm.vercel.app)
+#   PREVIEW_BASE_URL
 #   STAGING_SUPABASE_URL
-#   STAGING_SUPABASE_SERVICE_KEY
+#   STAGING_SUPABASE_ANON_KEY
 #   STAGING_POLISH_USER
 #   STAGING_POLISH_PASS
 #
-# SECURITY: no untrusted github.event.* in run: blocks. Only secrets.*
-# passed via env:.
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
 
-name: Gate 7 - Playwright Workflows
+name: Gate 15 - a11y Axe Scan
 
 on:
   pull_request:
     paths:
-      - 'e2e/workflows/**'
       - 'src/**'
-      - 'supabase/migrations/**'
-      - '.github/workflows/gate-7-playwright-workflows.yml'
+      - 'tests/a11y/**'
+      - '.github/workflows/gate-15-a11y-axe.yml'
   push:
     branches: [main]
 
 jobs:
-  workflows:
-    name: Playwright workflow specs
+  a11y-axe:
+    name: Playwright axe-core a11y scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true
@@ -48,13 +45,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright workflow specs
+      - name: Run Playwright a11y specs
         env:
           E2E_REAL_BACKEND: 'true'
           E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
           SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
           POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
           POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
         run: |
@@ -63,12 +59,12 @@ jobs:
             echo "::warning::Required secrets not set; gate skipped (informational mode)."
             exit 0
           fi
-          npx playwright test e2e/workflows/ --project=chromium --reporter=list
+          npx playwright test tests/a11y/ --project=chromium --reporter=list
 
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-workflow-report
+          name: playwright-a11y-report
           path: playwright-report/
           retention-days: 7

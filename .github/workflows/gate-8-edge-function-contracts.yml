@@ -1,0 +1,54 @@
+# Gate 8 - Edge Function Contracts (B.3)
+#
+# Runs tests/api/*.spec.ts via vitest. Asserts every edge function returns
+# a 4xx response on malformed / unauthenticated / missing-field input
+# (instead of 500 or 200).
+#
+# Informational mode until staging credentials are wired into secrets.
+#
+# Required secrets:
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_SUPABASE_SERVICE_KEY
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 8 - Edge Function Contracts
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - 'src/api/**'
+      - 'tests/api/**'
+  push:
+    branches: [main]
+
+jobs:
+  edge-contracts:
+    name: Edge function 4xx contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest edge-function contract suite
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::warning::STAGING_SUPABASE_URL not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/api/

@@ -1,0 +1,54 @@
+# Gate 9 - RPC Contracts (B.4)
+#
+# Runs tests/rpc/B4-rpc-contract.spec.ts via vitest. Asserts every
+# Postgres RPC (SECURITY DEFINER function) accepts only the parameter
+# shape its callers send, and rejects unauthorized callers.
+#
+# Informational mode until staging credentials are wired into secrets.
+#
+# Required secrets:
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_SUPABASE_SERVICE_KEY
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 9 - RPC Contracts
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'src/services/**'
+      - 'tests/rpc/**'
+  push:
+    branches: [main]
+
+jobs:
+  rpc-contracts:
+    name: RPC parameter + auth contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest RPC contract suite
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::warning::STAGING_SUPABASE_URL not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/rpc/B4-rpc-contract.spec.ts
