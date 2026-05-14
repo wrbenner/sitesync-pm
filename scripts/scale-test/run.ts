@@ -1,5 +1,5 @@
 /**
- * BRT sub-8 §4.4 scale test (k6).
+ * BRT sub-8 §4.4 scale test (k6) — per-VU auth edition.
  *
  * DO NOT EXECUTE the `heavy` profile without Walker greenlight on spend —
  * see BATTLE_TEST_RUNBOOK.md for the budget envelope.
@@ -13,52 +13,58 @@
  *   20 schedule reads, 10 PDF exports = 410 calls/min/VU.
  *
  * --- USAGE ---
- *   # Smoke (default):
+ *   # 1. Seed (writes NDJSON fixture file with per-org credentials):
+ *   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... SCALE_TEST_PASSWORD=... \
+ *     npx tsx scripts/scale-test/seed-orgs.ts \
+ *       --count 50 --members-per-org 10 \
+ *       --out /tmp/scale-fixture.ndjson
+ *
+ *   # 2. Sign in all users up-front (Node-side, since k6 can't easily POST
+ *   #    in setup() against a remote Supabase auth endpoint with persistence):
+ *   SUPABASE_URL=... SUPABASE_ANON_KEY=... SCALE_TEST_PASSWORD=... \
+ *     npx tsx scripts/scale-test/mint-vu-tokens.ts \
+ *       --fixture /tmp/scale-fixture.ndjson \
+ *       --out /tmp/scale-vu-tokens.json
+ *
+ *   # 3. Run k6, pointing at the minted token file:
  *   k6 run \
  *     -e SUPABASE_URL=https://<project>.supabase.co \
  *     -e SUPABASE_ANON_KEY=<anon> \
- *     -e TEST_ORG_IDS=<csv> \
+ *     -e VU_TOKENS_FILE=/tmp/scale-vu-tokens.json \
  *     scripts/scale-test/run.ts
  *
  *   # Heavy:
  *   k6 run -e PROFILE=heavy \
- *     -e SUPABASE_URL=... -e SUPABASE_ANON_KEY=... -e TEST_ORG_IDS=... \
+ *     -e SUPABASE_URL=... -e SUPABASE_ANON_KEY=... -e VU_TOKENS_FILE=... \
  *     scripts/scale-test/run.ts
  *
  * Required env:
- *   SUPABASE_URL        - project URL
- *   SUPABASE_ANON_KEY   - anon key
- *   TEST_ORG_IDS        - comma-separated org UUIDs from seed-orgs.ts
- *   PROFILE             - "heavy" for the 500-VU battle profile (default: smoke)
+ *   SUPABASE_URL       - project URL
+ *   SUPABASE_ANON_KEY  - anon key (still required as the `apikey` header)
+ *   VU_TOKENS_FILE     - path to JSON {tokens: [{jwt, orgId, projectId}, ...]}
+ *                        produced by mint-vu-tokens.ts. Per-VU index modulo.
+ *   PROFILE            - "heavy" for the 500-VU battle profile (default: smoke)
  *
- * --- KNOWN GAP ---
- * This harness uses the ANON key only. Under RLS that means every read returns
- * zero rows and every write 403s. The k6 numbers therefore measure
- * "permission-denied throughput" — useful for floor-level latency, edge fn
- * cold-start, rate-limiter behavior, and timeout shaping, but NOT for real
- * feature throughput. The primary battle test is the Playwright persona suite
- * — see docs/runbooks/BATTLE_TEST_RUNBOOK.md.
+ * --- SAFETY GUARD ---
+ * Refuses to run if SUPABASE_URL host matches SCALE_TEST_PROD_BLOCKLIST.
  *
  * Tear down via: npx tsx scripts/scale-test/teardown.ts
  *
- * Owner: BRT Track C / sub-8 §4.4
+ * Owner: BRT Track C / sub-8 §4.4 + Track 1b
  */
 
 // @ts-expect-error - k6 imports resolved at runtime by the k6 binary, not tsc.
 import http from 'k6/http';
 // @ts-expect-error - k6 imports resolved at runtime by the k6 binary, not tsc.
 import { check, sleep } from 'k6';
+// @ts-expect-error - k6 imports resolved at runtime by the k6 binary, not tsc.
+import { SharedArray } from 'k6/data';
 
 // ---------------------------------------------------------------------------
 // Load profile
 // ---------------------------------------------------------------------------
 const PROFILE = (__ENV.PROFILE || 'smoke').toLowerCase();
 
-// Smoke (default): cheap, ~37 min total.
-//   1m  ramp-up   0  -> 50  VUs
-//  30m  steady    50         VUs
-//   5m  spike     50 -> 150  VUs
-//   1m  ramp-down 150 -> 0   VUs
 const SMOKE_STAGES = [
   { duration: '1m', target: 50 },
   { duration: '30m', target: 50 },
@@ -66,14 +72,6 @@ const SMOKE_STAGES = [
   { duration: '1m', target: 0 },
 ];
 
-// Heavy: full battle, ~2h 8m total.
-//   5m   ramp-up    0    -> 500   VUs
-// 100m   sustain    500          VUs
-//   2m   spike-up   500  -> 1500 VUs
-//   5m   spike-hold 1500         VUs
-//   3m   spike-down 1500 -> 500  VUs
-//   5m   sustain    500          VUs
-//   5m   ramp-down  500  -> 0    VUs
 const HEAVY_STAGES = [
   { duration: '5m', target: 500 },
   { duration: '100m', target: 500 },
@@ -89,8 +87,6 @@ const STAGES = PROFILE === 'heavy' ? HEAVY_STAGES : SMOKE_STAGES;
 export const options = {
   stages: STAGES,
   thresholds: {
-    // Heavy profile widens the perf threshold — under 500 VUs against prod
-    // Supabase, p95<500ms is unrealistic. Floor-level smoke keeps the tight gate.
     http_req_failed: ['rate<0.01'],
     http_req_duration: PROFILE === 'heavy' ? ['p(95)<1500'] : ['p(95)<500'],
     'checks{op:rfi_read}': ['rate>0.99'],
@@ -107,29 +103,60 @@ export const options = {
 // ---------------------------------------------------------------------------
 const SUPABASE_URL = __ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = __ENV.SUPABASE_ANON_KEY;
-const TEST_ORG_IDS = (__ENV.TEST_ORG_IDS || '')
-  .split(',')
-  .map((s: string) => s.trim())
-  .filter(Boolean);
+const VU_TOKENS_FILE = __ENV.VU_TOKENS_FILE;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY || TEST_ORG_IDS.length === 0) {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !VU_TOKENS_FILE) {
   throw new Error(
-    'Missing required env: SUPABASE_URL, SUPABASE_ANON_KEY, TEST_ORG_IDS (comma-separated UUIDs)',
+    'Missing required env: SUPABASE_URL, SUPABASE_ANON_KEY, VU_TOKENS_FILE',
   );
 }
 
-const baseHeaders = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  'Content-Type': 'application/json',
-  Prefer: 'return=minimal',
-};
+// Hard guard: refuse to run against prod host.
+const PROD_BLOCKLIST = (__ENV.SCALE_TEST_PROD_BLOCKLIST || '')
+  .split(',')
+  .map((s: string) => s.trim())
+  .filter(Boolean);
+const HOST = SUPABASE_URL.replace(/^https?:\/\//, '').split('/')[0];
+if (PROD_BLOCKLIST.some((ref: string) => HOST.indexOf(ref) >= 0)) {
+  throw new Error(`scale-test run.ts: SUPABASE_URL host "${HOST}" is in PROD blocklist`);
+}
 
 // ---------------------------------------------------------------------------
-// Per-VU per-minute call mix
+// Per-VU credentials (loaded once, shared across VUs via SharedArray)
 // ---------------------------------------------------------------------------
-// 200 RFI reads + 50 RFI creates + 30 daily-log creates +
-// 100 AI calls + 20 schedule reads + 10 PDF exports = 410 calls/min/VU.
+interface VuToken {
+  jwt: string;
+  orgId: string;
+  projectId?: string;
+}
+
+// SharedArray loads + parses on the main thread once. VUs read by index.
+const vuTokens = new SharedArray<VuToken>('vu_tokens', () => {
+  // @ts-expect-error - k6 SharedArray callback runs at init time only.
+  const raw = open(VU_TOKENS_FILE);
+  const parsed = JSON.parse(raw) as { tokens: VuToken[] };
+  if (!parsed.tokens || parsed.tokens.length === 0) {
+    throw new Error(`VU_TOKENS_FILE ${VU_TOKENS_FILE} contains no tokens`);
+  }
+  return parsed.tokens;
+});
+
+function tokenForVu(): VuToken {
+  // __VU is 1-indexed; modulo so VU counts above token count round-robin.
+  return vuTokens[(__VU - 1) % vuTokens.length];
+}
+
+function headersFor(tok: VuToken) {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${tok.jwt}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=minimal',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Per-VU per-minute call mix (200 + 50 + 30 + 100 + 20 + 10 = 410/min/VU)
 // ---------------------------------------------------------------------------
 const CALLS_PER_MINUTE_PER_VU = 410;
 const SLEEP_BETWEEN_CALLS_SEC = 60 / CALLS_PER_MINUTE_PER_VU;
@@ -142,7 +169,6 @@ type Op =
   | 'schedule_read'
   | 'pdf_export';
 
-// Weighted bag of operations: each entry repeated by its target count.
 const OP_BAG: Op[] = [
   ...Array<Op>(200).fill('rfi_read'),
   ...Array<Op>(50).fill('rfi_create'),
@@ -152,22 +178,18 @@ const OP_BAG: Op[] = [
   ...Array<Op>(10).fill('pdf_export'),
 ];
 
-function pickOrg(): string {
-  return TEST_ORG_IDS[Math.floor(Math.random() * TEST_ORG_IDS.length)];
-}
-
 function pickOp(): Op {
   return OP_BAG[Math.floor(Math.random() * OP_BAG.length)];
 }
 
 // ---------------------------------------------------------------------------
-// Operation implementations
+// Ops — all now scoped by per-VU JWT, hitting real (RLS-allowed) rows.
 // ---------------------------------------------------------------------------
 
-function rfiRead(orgId: string) {
+function rfiRead(tok: VuToken) {
   const res = http.get(
-    `${SUPABASE_URL}/rest/v1/rfis?select=*&organization_id=eq.${orgId}`,
-    { headers: baseHeaders, tags: { op: 'rfi_read' } },
+    `${SUPABASE_URL}/rest/v1/rfis?select=*&organization_id=eq.${tok.orgId}`,
+    { headers: headersFor(tok), tags: { op: 'rfi_read' } },
   );
   check(
     res,
@@ -176,9 +198,10 @@ function rfiRead(orgId: string) {
   );
 }
 
-function rfiCreate(orgId: string) {
+function rfiCreate(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: orgId,
+    organization_id: tok.orgId,
+    project_id: tok.projectId,
     subject: `Scale-test RFI ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     question: 'Synthetic question for load testing.',
     status: 'open',
@@ -186,47 +209,47 @@ function rfiCreate(orgId: string) {
     metadata: { scale_test: true },
   });
   const res = http.post(`${SUPABASE_URL}/rest/v1/rfis`, body, {
-    headers: baseHeaders,
+    headers: headersFor(tok),
     tags: { op: 'rfi_create' },
   });
   check(
     res,
-    { 'rfi_create status 201': (r: { status: number }) => r.status === 201 || r.status === 200 },
+    { 'rfi_create status 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300 },
     { op: 'rfi_create' },
   );
 }
 
-function dailyLogCreate(orgId: string) {
+function dailyLogCreate(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: orgId,
+    organization_id: tok.orgId,
+    project_id: tok.projectId,
     log_date: new Date().toISOString().slice(0, 10),
     weather: 'sunny',
     notes: `Scale-test daily log ${Date.now()}`,
     metadata: { scale_test: true },
   });
   const res = http.post(`${SUPABASE_URL}/rest/v1/daily_logs`, body, {
-    headers: baseHeaders,
+    headers: headersFor(tok),
     tags: { op: 'daily_log_create' },
   });
   check(
     res,
     {
-      'daily_log_create status 201': (r: { status: number }) =>
-        r.status === 201 || r.status === 200,
+      'daily_log_create status 2xx': (r: { status: number }) => r.status >= 200 && r.status < 300,
     },
     { op: 'daily_log_create' },
   );
 }
 
-function aiCall(orgId: string) {
+function aiCall(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: orgId,
+    organization_id: tok.orgId,
     prompt: 'Summarize the open RFIs for this project.',
     feature: 'scale_test',
     metadata: { scale_test: true },
   });
   const res = http.post(`${SUPABASE_URL}/functions/v1/iris-call`, body, {
-    headers: baseHeaders,
+    headers: headersFor(tok),
     tags: { op: 'ai_call' },
   });
   check(
@@ -236,10 +259,10 @@ function aiCall(orgId: string) {
   );
 }
 
-function scheduleRead(orgId: string) {
+function scheduleRead(tok: VuToken) {
   const res = http.get(
-    `${SUPABASE_URL}/rest/v1/schedule_tasks?select=*&organization_id=eq.${orgId}&order=start_date.asc&limit=200`,
-    { headers: baseHeaders, tags: { op: 'schedule_read' } },
+    `${SUPABASE_URL}/rest/v1/schedule_tasks?select=*&organization_id=eq.${tok.orgId}&order=start_date.asc&limit=200`,
+    { headers: headersFor(tok), tags: { op: 'schedule_read' } },
   );
   check(
     res,
@@ -248,20 +271,21 @@ function scheduleRead(orgId: string) {
   );
 }
 
-function pdfExport(orgId: string) {
+function pdfExport(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: orgId,
+    organization_id: tok.orgId,
+    project_id: tok.projectId,
     document_type: 'rfi_log',
     metadata: { scale_test: true },
   });
   const res = http.post(`${SUPABASE_URL}/functions/v1/export-pdf`, body, {
-    headers: baseHeaders,
+    headers: headersFor(tok),
     tags: { op: 'pdf_export' },
   });
   check(
     res,
     {
-      'pdf_export status 200': (r: { status: number }) => r.status === 200 || r.status === 202,
+      'pdf_export status ok': (r: { status: number }) => r.status === 200 || r.status === 202,
     },
     { op: 'pdf_export' },
   );
@@ -270,28 +294,30 @@ function pdfExport(orgId: string) {
 // ---------------------------------------------------------------------------
 // VU entry point
 // ---------------------------------------------------------------------------
+declare const __VU: number;
+
 export default function () {
-  const orgId = pickOrg();
+  const tok = tokenForVu();
   const op = pickOp();
 
   switch (op) {
     case 'rfi_read':
-      rfiRead(orgId);
+      rfiRead(tok);
       break;
     case 'rfi_create':
-      rfiCreate(orgId);
+      rfiCreate(tok);
       break;
     case 'daily_log_create':
-      dailyLogCreate(orgId);
+      dailyLogCreate(tok);
       break;
     case 'ai_call':
-      aiCall(orgId);
+      aiCall(tok);
       break;
     case 'schedule_read':
-      scheduleRead(orgId);
+      scheduleRead(tok);
       break;
     case 'pdf_export':
-      pdfExport(orgId);
+      pdfExport(tok);
       break;
   }
 
