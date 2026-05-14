@@ -44,7 +44,7 @@ export const PresenceLayer: React.FC<PresenceLayerProps> = ({ roomKey, user, chi
         const state = channel.presenceState();
         const flat: PresenceMember[] = [];
         for (const tag of Object.keys(state)) {
-          const entries = state[tag] as Array<{ user_id: string; user_name: string; device_id: string; last_seen_at: number; avatar_url?: string }>;
+          const entries = state[tag] as unknown as PresenceMember[];
           for (const e of entries) flat.push(e);
         }
         setMembers((cur) => {
