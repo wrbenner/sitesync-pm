@@ -124,15 +124,27 @@ npx tsx scripts/scale-test/seed-orgs.ts \
   --members-per-org 10 \
   --out $RUN_DIR/fixture.ndjson
 
-# 2. Sign each user in, capture JWTs for k6's SharedArray.
-npx tsx scripts/scale-test/mint-vu-tokens.ts \
+# 2. Hydrate project_members rows so RLS-write policies pass.
+#    Idempotent: rewrites the fixture in place with projectId per org.
+npx tsx scripts/scale-test/seed-projects.ts \
   --fixture $RUN_DIR/fixture.ndjson \
-  --out $RUN_DIR/vu-tokens.json
+  --out $RUN_DIR/fixture.ndjson
 
-# 3. Seed Storage buckets so upload-dependent specs can run end-to-end.
+# 3. Sign each user in, capture JWTs for k6's SharedArray.
+#    `--owners-only` skips the 450 non-owner members for a smaller token
+#    pool when the staging Supabase auth rate-limit is tight. Drop the flag
+#    for a full 500-token pool. `--throttle 5` = 5 sign-ins/sec.
+npx tsx scripts/scale-test/mint-vu-tokens.ts \
+  --owners-only \
+  --throttle 5 \
+  --fixture $RUN_DIR/fixture.ndjson \
+  --out $RUN_DIR/vu-tokens.ndjson
+
+# 4. Seed Storage buckets so upload-dependent specs can run end-to-end.
+#    `--per-project 9` = 3 drawings + 3 photos + 3 documents per project.
 npx tsx scripts/scale-test/seed-storage.ts \
   --fixture $RUN_DIR/fixture.ndjson \
-  --per-project 5
+  --per-project 9
 ```
 
 **Verify:**
@@ -175,7 +187,7 @@ set -a; source .env.scale-test; set +a
 k6 run -e PROFILE=heavy \
        -e SUPABASE_URL=$SUPABASE_URL \
        -e SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
-       -e VU_TOKENS_FILE=$RUN_DIR/vu-tokens.json \
+       -e VU_TOKENS_FILE=$RUN_DIR/vu-tokens.ndjson \
        --out json=$RUN_DIR/k6.json \
        scripts/scale-test/run.ts
 ```

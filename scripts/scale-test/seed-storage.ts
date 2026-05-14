@@ -45,15 +45,30 @@ const { values: args } = parseArgs({
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const PER_PROJECT = Number(args['per-project'] ?? '5');
+const PER_PROJECT = Number(args['per-project'] ?? '9');
+const FIXTURE_PATH = (args.fixture as string | undefined) ?? 'ops/scale-test-fixtures.ndjson';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('Missing required env: SUPABASE_URL and SUPABASE_SERVICE_KEY.');
   process.exit(1);
 }
-if (!args.fixture) {
-  console.error('Missing --fixture <ndjson> (output from seed-orgs.ts).');
-  process.exit(1);
+
+// Hard-fail blocklist guard (same shape as seed-orgs.ts). Empty blocklist is
+// treated as critical missing input, not permissive. See
+// docs/audits/INCIDENT_2026-05-14_SCALE_TEST_IN_PROD.md.
+const BLOCKLIST_RAW = process.env.SCALE_TEST_PROD_BLOCKLIST;
+if (!BLOCKLIST_RAW || BLOCKLIST_RAW.trim().length === 0) {
+  console.error('[seed-storage] FATAL: SCALE_TEST_PROD_BLOCKLIST is empty. Refusing to run.');
+  process.exit(2);
+}
+const PROD_BLOCKLIST = BLOCKLIST_RAW.split(',').map((s) => s.trim()).filter(Boolean);
+const HOST = new URL(SUPABASE_URL).host;
+const BLOCKED_HIT = PROD_BLOCKLIST.find((ref) => HOST.includes(ref));
+if (BLOCKED_HIT) {
+  console.error(
+    `[seed-storage] FATAL: SUPABASE_URL host "${HOST}" matches blocklisted ref "${BLOCKED_HIT}".`,
+  );
+  process.exit(2);
 }
 
 // We use a minimal stand-in binary set below. A truly thorough seed would
@@ -174,7 +189,7 @@ async function main() {
   await ensureBucket('photos', true); // photos often need public read for thumbnails
   await ensureBucket('documents');
 
-  const raw = readFileSync(args.fixture as string, 'utf-8');
+  const raw = readFileSync(FIXTURE_PATH, 'utf-8');
   const orgs: SeededOrg[] = raw
     .split('\n')
     .map((l) => l.trim())

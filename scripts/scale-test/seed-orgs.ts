@@ -43,6 +43,57 @@ import { randomUUID } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { writeFileSync } from 'node:fs';
 
+// ---------------------------------------------------------------------------
+// HARD-FAIL GUARD — added 2026-05-14 after the in-prod incident
+// (see docs/audits/INCIDENT_2026-05-14_SCALE_TEST_IN_PROD.md).
+//
+// Refuse to run if:
+//   (1) SCALE_TEST_PROD_BLOCKLIST is missing/empty, OR
+//   (2) SUPABASE_URL is missing/empty, OR
+//   (3) SUPABASE_URL host (or its project-ref subdomain) matches any
+//       blocklist entry.
+//
+// This runs BEFORE arg parsing, BEFORE the supabase client is constructed,
+// BEFORE any network call. No warning, no continue.
+// ---------------------------------------------------------------------------
+{
+  const url = process.env.SUPABASE_URL;
+  const blocklistRaw = process.env.SCALE_TEST_PROD_BLOCKLIST;
+  if (!blocklistRaw || blocklistRaw.trim().length === 0) {
+    console.error(
+      '[seed-orgs] FATAL: SCALE_TEST_PROD_BLOCKLIST is empty. Refusing to run. ' +
+        'Populate the blocklist with every Supabase project ref that must NEVER ' +
+        'receive scale_test rows (typically: every project in your account except ' +
+        'a dedicated staging ref).',
+    );
+    process.exit(2);
+  }
+  if (!url || url.trim().length === 0) {
+    console.error('[seed-orgs] FATAL: SUPABASE_URL is empty. Refusing to run.');
+    process.exit(2);
+  }
+  let host: string;
+  try {
+    host = new URL(url).host;
+  } catch {
+    console.error(`[seed-orgs] FATAL: SUPABASE_URL is malformed (${url}). Refusing to run.`);
+    process.exit(2);
+  }
+  const blocked = blocklistRaw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const hit = blocked.find((ref) => host.includes(ref));
+  if (hit) {
+    console.error(
+      `[seed-orgs] FATAL: SUPABASE_URL host "${host}" matches blocklisted ref "${hit}". ` +
+        'This script cannot run against a non-staging Supabase project. ' +
+        'See docs/audits/INCIDENT_2026-05-14_SCALE_TEST_IN_PROD.md.',
+    );
+    process.exit(2);
+  }
+}
+
 const { values: args } = parseArgs({
   options: {
     count: { type: 'string', short: 'n' },
@@ -222,11 +273,16 @@ async function provisionOne(index: number): Promise<SeededOrg> {
   if (memberRoles.length > 0) {
     const memberPayload: Array<{ user_id: string; role: string }> = [];
     for (let i = 0; i < memberRoles.length; i++) {
-      const role = memberRoles[i];
-      const email = `scaletest-org-${tag}-${role}-${String(i + 1).padStart(2, '0')}@sitesync.test`;
+      const persona = memberRoles[i];
+      // Persona (pm/super/sub/architect) is the test-domain tag; the
+      // organization_members.role column is constrained to (owner|admin|member).
+      // Map persona → membership role for the RPC; persona stays in NDJSON
+      // (members[i].role) so downstream k6 specs can drive RBAC assertions.
+      const membershipRole = persona === 'sub' ? 'member' : 'admin';
+      const email = `scaletest-org-${tag}-${persona}-${String(i + 1).padStart(2, '0')}@sitesync.test`;
       const userId = await createAuthUser(email);
-      members.push({ email, userId, role });
-      memberPayload.push({ user_id: userId, role });
+      members.push({ email, userId, role: persona });
+      memberPayload.push({ user_id: userId, role: membershipRole });
     }
     const { error: bulkErr } = await supabase.rpc('bulk_add_team_members', {
       p_org_id: orgId,
