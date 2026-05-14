@@ -39,7 +39,7 @@ const { values: args } = parseArgs({
     fixture: { type: 'string', short: 'f' },
     'per-project': { type: 'string' },
   },
-  allowPositionals: false,
+  allowPositionals: true,
   strict: false,
 });
 

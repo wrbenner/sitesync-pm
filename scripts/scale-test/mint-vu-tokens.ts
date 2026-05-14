@@ -44,7 +44,7 @@ const { values: args } = parseArgs({
     out: { type: 'string', short: 'o' },
     'owner-only': { type: 'boolean' }, // skip non-owner members; useful for read-mostly smoke
   },
-  allowPositionals: false,
+  allowPositionals: true,
   strict: false,
 });
 
