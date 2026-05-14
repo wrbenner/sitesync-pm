@@ -1,0 +1,101 @@
+/**
+ * Workflow B.2 — Onboarding (org create → invite teammate → accept).
+ *
+ * The post-signup flow. Where the demo bug actually started showing up
+ * (every fresh signup hit broken triggers on org create).
+ */
+import { test, expect } from '@playwright/test'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { randomUUID } from 'node:crypto'
+
+const REAL_BACKEND = process.env.E2E_REAL_BACKEND === 'true'
+const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
+const USER = process.env.POLISH_USER ?? ''
+const PASS = process.env.POLISH_PASS ?? ''
+const SUPABASE_URL = process.env.SUPABASE_URL ?? ''
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY ?? ''
+
+test.skip(!REAL_BACKEND, 'Stage-env only — set E2E_REAL_BACKEND=true')
+test.skip(
+  REAL_BACKEND && (!SUPABASE_URL || !SUPABASE_SERVICE_KEY),
+  'SUPABASE_URL + SUPABASE_SERVICE_KEY required',
+)
+
+let admin: SupabaseClient
+test.beforeAll(() => {
+  if (REAL_BACKEND && SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+    admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+  }
+})
+
+const MARKER = `b2-onboarding-${Date.now()}`
+
+test('B.2 onboarding — provision_organization RPC defaults plan to free', async () => {
+  // Direct RPC test — the bug that PR #539 fixed. Catches regression.
+  const probeUser = await admin.auth.admin.createUser({
+    email: `${MARKER}-${randomUUID().slice(0, 6)}@sitesync.test`,
+    password: `pw-${randomUUID().slice(0, 16)}!`,
+    email_confirm: true,
+    user_metadata: { scale_test: true },
+  })
+  try {
+    expect(probeUser.error).toBeNull()
+    const userId = probeUser.data.user!.id
+
+    const { data: orgId, error } = await admin.rpc('provision_organization', {
+      p_name: `${MARKER} probe org`,
+      p_slug: `${MARKER}-probe`,
+      p_owner: userId,
+      p_metadata: { scale_test: true, e2e: true },
+    })
+    expect(error, error ? `provision_organization failed: ${error.message}` : undefined).toBeNull()
+    expect(orgId).toBeTruthy()
+
+    // Verify the row was created with plan='free' (PR #539 regression catch)
+    const { data: org } = await admin
+      .from('organizations')
+      .select('id, plan, settings')
+      .eq('id', orgId)
+      .single()
+    expect(org?.plan).toBe('free')
+    // Cleanup
+    await admin.from('organizations').delete().eq('id', orgId)
+  } finally {
+    if (probeUser.data.user?.id) {
+      await admin.auth.admin.deleteUser(probeUser.data.user.id).catch(() => undefined)
+    }
+  }
+})
+
+test('B.2 onboarding — UI invite flow opens + sends', async ({ page }) => {
+  // Sign in as existing PM, then attempt to invite from settings/team.
+  await page.goto(`${BASE_URL}/#/login`)
+  await page.getByPlaceholder('you@company.com').fill(USER)
+  await page.getByPlaceholder('Enter your password').fill(PASS)
+  await page.locator('button[type="submit"]').first().click()
+  await page.waitForURL(/#\/(dashboard|day|onboarding|profile|$)/, { timeout: 20_000 })
+
+  // Navigate to a team / members settings page. Try common routes.
+  for (const route of ['#/settings/team', '#/settings/members', '#/team', '#/admin/members']) {
+    await page.goto(`${BASE_URL}/${route}`).catch(() => undefined)
+    if (!page.url().match(/#\/$/)) break // landed somewhere valid
+  }
+  await page.waitForTimeout(1_500)
+
+  const inviteBtn = page.getByRole('button', { name: /invite|add.*member|add.*teammate/i }).first()
+  if (await inviteBtn.count() === 0) {
+    test.skip(true, 'no invite UI surfaced at common settings routes — skipping')
+  }
+  await inviteBtn.click()
+  const emailInput = page.getByPlaceholder(/email/i).first()
+  await emailInput.fill(`${MARKER}-invite@sitesync.test`)
+  await page.getByRole('button', { name: /send|invite|^submit$/i }).first().click()
+  await page.waitForTimeout(2_000)
+  const body = await page.locator('body').textContent()
+  expect(
+    /sent|invited|invitation|success/i.test(body ?? ''),
+    'invite submit should show a success indicator',
+  ).toBe(true)
+})

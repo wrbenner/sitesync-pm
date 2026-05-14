@@ -1,0 +1,47 @@
+# Gate 11 - RLS Contract (B.5)
+#
+# Runs tests/rls/*.spec.ts against staging Supabase. Asserts every public
+# table has RLS enabled + the top-traffic tables hide rows from anon.
+#
+# Informational mode until secrets wired.
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 11 - RLS Contract
+
+on:
+  pull_request:
+    paths:
+      - 'tests/rls/**'
+      - 'supabase/migrations/**'
+  push:
+    branches: [main]
+
+jobs:
+  rls:
+    name: RLS contract baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest RLS suite
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "STAGING_SUPABASE_URL not set; gate skipped."
+            exit 0
+          fi
+          npx vitest run tests/rls/
