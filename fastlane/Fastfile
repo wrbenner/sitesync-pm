@@ -1,0 +1,132 @@
+# fastlane/Fastfile — SiteSync iOS release pipeline
+#
+# Authentication
+# --------------
+# Both lanes authenticate to App Store Connect using an API key, not an
+# Apple ID. The key is delivered via three environment variables that map
+# to the GitHub Actions secrets configured for this repo:
+#
+#   APP_STORE_CONNECT_API_KEY_ID       (10-char key id, e.g. ABCD123XYZ)
+#   APP_STORE_CONNECT_API_ISSUER_ID    (UUID for the issuer)
+#   APP_STORE_CONNECT_API_KEY_BASE64   (base64-encoded contents of the .p8 file)
+#
+# We decode the base64 key into a temp .p8 at runtime, hand fastlane the
+# path, and delete the temp file in `after_all`/`error`. Nothing ever
+# touches disk in a tracked path.
+#
+# Lanes
+# -----
+#   beta     – build + upload to TestFlight
+#   release  – build + submit to App Store Review
+#
+# Both lanes assume `npm run build && npx cap sync ios` has already run
+# (CI runs them; locally you do it yourself before invoking fastlane).
+
+default_platform(:ios)
+
+WORKSPACE = "App.xcworkspace"
+SCHEME    = "App"
+PROJECT   = "App.xcodeproj"
+
+# --- API key plumbing -------------------------------------------------------
+
+def write_api_key_file
+  key_id     = ENV.fetch("APP_STORE_CONNECT_API_KEY_ID")
+  issuer_id  = ENV.fetch("APP_STORE_CONNECT_API_ISSUER_ID")
+  key_b64    = ENV.fetch("APP_STORE_CONNECT_API_KEY_BASE64")
+
+  require "base64"
+  require "tmpdir"
+
+  p8_path = File.join(Dir.mktmpdir("appstoreconnect-"), "AuthKey_#{key_id}.p8")
+  File.write(p8_path, Base64.decode64(key_b64))
+  File.chmod(0o600, p8_path)
+
+  ENV["FASTLANE_API_KEY_P8_PATH"] = p8_path
+
+  app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    key_filepath: p8_path,
+    duration: 1200,
+    in_house: false,
+  )
+end
+
+def cleanup_api_key_file
+  path = ENV["FASTLANE_API_KEY_P8_PATH"]
+  return if path.nil? || path.empty?
+  File.delete(path) if File.exist?(path)
+  parent = File.dirname(path)
+  Dir.rmdir(parent) if Dir.exist?(parent) && Dir.empty?(parent)
+  ENV.delete("FASTLANE_API_KEY_P8_PATH")
+end
+
+# --- Shared build step ------------------------------------------------------
+
+def build_archive(api_key)
+  build_app(
+    workspace: WORKSPACE,
+    scheme: SCHEME,
+    configuration: "Release",
+    clean: true,
+    export_method: "app-store",
+    output_directory: "fastlane/build",
+    output_name: "SiteSync.ipa",
+    export_options: {
+      uploadBitcode: false,
+      uploadSymbols: true,
+      compileBitcode: false,
+      signingStyle: "automatic",
+      teamID: ENV.fetch("APPLE_TEAM_ID"),
+    },
+    silent: false,
+  )
+end
+
+# --- Lanes ------------------------------------------------------------------
+
+platform :ios do
+  before_all do
+    setup_ci if ENV["CI"]
+  end
+
+  desc "Build and upload the current commit to TestFlight"
+  lane :beta do
+    api_key = write_api_key_file
+    build_archive(api_key)
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      changelog: "Internal build from #{ENV["GITHUB_SHA"] || `git rev-parse --short HEAD`.strip}.",
+    )
+  end
+
+  desc "Build and submit to App Store Review (manual release)"
+  lane :release do
+    api_key = write_api_key_file
+    build_archive(api_key)
+    upload_to_app_store(
+      api_key: api_key,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      automatic_release: false,
+      force: true,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        export_compliance_encryption_updated: false,
+      },
+    )
+  end
+
+  after_all do |lane|
+    cleanup_api_key_file
+  end
+
+  error do |lane, exception|
+    cleanup_api_key_file
+  end
+end

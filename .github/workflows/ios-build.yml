@@ -1,0 +1,94 @@
+name: iOS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "Fastlane lane to run (beta = TestFlight, release = App Store)"
+        required: true
+        default: "beta"
+        type: choice
+        options:
+          - beta
+          - release
+  push:
+    tags:
+      - "v*-ios"
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build + upload
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      # `inputs.lane` is constrained to {beta, release} by the choice type, but
+      # we still bind it to an env var to follow the GitHub Actions injection
+      # guidance: never interpolate event/input values directly into run: lines.
+      LANE: ${{ inputs.lane || 'beta' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+
+      - name: Use Ruby 3.3 (cached bundler)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Select Xcode 15.4
+        run: sudo xcode-select -switch /Applications/Xcode_15.4.app
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Build web bundle
+        run: npm run build
+
+      - name: Sync iOS native project
+        run: npx cap sync ios
+
+      - name: Pod install
+        working-directory: ios/App
+        run: pod install --repo-update
+
+      - name: Validate lane name
+        run: |
+          case "$LANE" in
+            beta|release) ;;
+            *) echo "::error::Unexpected lane: $LANE"; exit 1 ;;
+          esac
+
+      - name: Fastlane
+        working-directory: ios/App
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+          FASTLANE_HIDE_CHANGELOG: "1"
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+        run: bundle exec fastlane "$LANE"
+
+      - name: Upload .ipa artifact
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SiteSync-ipa-${{ github.run_id }}
+          path: ios/App/fastlane/build/*.ipa
+          if-no-files-found: warn
+          retention-days: 14

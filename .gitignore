@@ -103,3 +103,17 @@ android/build/
 android/app/build/
 android/local.properties
 android/app/release/
+
+# iOS signing material — NEVER commit. Live secrets are in GitHub Actions
+# secrets (APP_STORE_CONNECT_API_KEY_*, APPLE_TEAM_ID, APP_BUNDLE_ID).
+secrets/
+*.p8
+*.mobileprovision
+*.cer
+*.p12
+
+# Fastlane transient output
+fastlane/report.xml
+fastlane/test_output/
+fastlane/build/
+fastlane/.env*
