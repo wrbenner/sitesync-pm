@@ -125,20 +125,22 @@ test('B.2 — UI: change order create submits without 42703', async ({ page }) =
 })
 
 test('B.2 — DB: change_orders row persisted', async () => {
-  // change_orders schema typically uses justification/description for the text;
-  // search broadly via title-like columns.
+  // Real change_orders schema (verified against staging 2026-05-14):
+  //   - `number` (integer)         — CO sequence number, NOT `co_number`
+  //   - `description` (text)       — long-form text, NOT `justification`
+  //   - `amount_cents` (bigint)    — money, NOT `total_cents`
+  // Title carries the MARKER (see UI test above).
   const { data, error } = await admin
     .from('change_orders')
-    .select('id, justification, co_number, project_id, status, total_cents, created_at')
-    .or(`justification.ilike.${MARKER}%,co_number.ilike.${MARKER}%`)
+    .select('id, title, description, number, project_id, status, amount_cents, created_at')
+    .or(`title.ilike.${MARKER}%,description.ilike.${MARKER}%`)
     .order('created_at', { ascending: false })
     .limit(1)
 
   if (error) {
-    // Schema may not have justification — fall back to ordering by recency
     const fb = await admin
       .from('change_orders')
-      .select('id, project_id, status, co_number, created_at')
+      .select('id, project_id, status, number, created_at')
       .order('created_at', { ascending: false })
       .limit(1)
     expect(fb.error, fb.error ? `change_orders fallback failed: ${fb.error.message}` : undefined).toBeNull()
@@ -146,7 +148,7 @@ test('B.2 — DB: change_orders row persisted', async () => {
   }
   expect((data ?? []).length).toBeGreaterThan(0)
   expect(data![0].project_id).toBeTruthy()
-  expect(data![0].co_number).toBeTruthy()
+  expect(data![0].number).toBeTruthy()
 })
 
 test('B.2 — DB: trigger source on prod uses organization_id (not org_id)', async () => {
