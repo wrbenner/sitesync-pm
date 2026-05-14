@@ -40,7 +40,8 @@ export async function setupPush(opts: PushHandlerOptions): Promise<PushSetupResu
   }
   if (!isNative) return { ok: true, available: false }
 
-  const mod = await import('@capacitor/push-notifications').catch(() => null) as any
+  type PushMod = typeof import('@capacitor/push-notifications')
+  const mod = await import('@capacitor/push-notifications').catch(() => null) as PushMod | null
   if (!mod?.PushNotifications) return { ok: true, available: false, error: 'plugin missing' }
   const PN = mod.PushNotifications
 
