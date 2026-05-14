@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
 
   Save, Users, Building2, MapPin, Calendar, DollarSign,
   FileText, HardHat, CheckCircle, Settings, Shield,
-  UserPlus, Mail, Check, X, AlertCircle, RefreshCw} from 'lucide-react';
+  UserPlus, Mail, Check, X, AlertCircle, RefreshCw,
+  User as UserIcon, Bell, CreditCard, ChevronRight, HelpCircle, History} from 'lucide-react';
 import { toast } from 'sonner';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -14,6 +16,90 @@ import { fromTable } from '../../lib/supabase';
 import { resetDemoProject } from '../../services/demoSeed';
 import { DemoSeedButton } from '../../components/admin/DemoSeedButton';
 import { colors, spacing, typography, borderRadius, shadows } from '../../styles/theme';
+
+// Audit P1-2: when no project is selected, /settings used to dead-end with
+// "No project selected — Select a project from the sidebar to configure
+// its settings". That blocked every user with zero projects from
+// reaching account-level config (profile, billing, team, notifications)
+// that doesn't actually depend on a project. This hub surfaces those
+// account-scoped sub-routes directly so /settings is always useful.
+const ACCOUNT_LINKS: { to: string; label: string; description: string; icon: React.ReactNode }[] = [
+  { to: '/profile', label: 'Profile', description: 'Name, contact info, avatar, password',
+    icon: <UserIcon size={18} strokeWidth={1.75} /> },
+  { to: '/settings/notifications', label: 'Notifications', description: 'Email + push preferences',
+    icon: <Bell size={18} strokeWidth={1.75} /> },
+  { to: '/settings/team', label: 'Team', description: 'Manage organization members',
+    icon: <Users size={18} strokeWidth={1.75} /> },
+  { to: '/settings/billing', label: 'Billing', description: 'Plan, invoices, payment method',
+    icon: <CreditCard size={18} strokeWidth={1.75} /> },
+  { to: '/settings/security/impersonation', label: 'Impersonation history', description: 'Audit trail of admin sessions',
+    icon: <History size={18} strokeWidth={1.75} /> },
+  { to: '/help', label: 'Help center', description: 'Guides, FAQs, and support',
+    icon: <HelpCircle size={18} strokeWidth={1.75} /> },
+]
+
+const AccountSettingsHub: React.FC = () => (
+  <div style={{
+    maxWidth: 800, margin: '0 auto', padding: `${spacing['8']} ${spacing['6']}`,
+    fontFamily: typography.fontFamily,
+  }}>
+    <header style={{ marginBottom: spacing['6'] }}>
+      <h1 style={{
+        margin: 0, marginBottom: spacing['1'],
+        fontSize: typography.fontSize.title,
+        fontWeight: typography.fontWeight.semibold,
+        color: colors.textPrimary,
+        letterSpacing: '-0.01em',
+      }}>
+        Settings
+      </h1>
+      <p style={{
+        margin: 0,
+        fontSize: typography.fontSize.body,
+        color: colors.textSecondary,
+      }}>
+        Account-level configuration. Select a project from the sidebar to edit project settings.
+      </p>
+    </header>
+
+    <ul style={{
+      listStyle: 'none', padding: 0, margin: 0,
+      backgroundColor: colors.surfaceRaised,
+      border: `1px solid ${colors.borderSubtle}`,
+      borderRadius: borderRadius.lg,
+      overflow: 'hidden',
+    }}>
+      {ACCOUNT_LINKS.map((link, idx) => (
+        <li key={link.to} style={{
+          borderTop: idx === 0 ? 'none' : `1px solid ${colors.borderSubtle}`,
+        }}>
+          <Link
+            to={link.to}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing['3'],
+              padding: `${spacing['3']} ${spacing['4']}`,
+              textDecoration: 'none',
+              color: colors.textPrimary,
+            }}
+          >
+            <span style={{ color: colors.textSecondary, display: 'inline-flex' }}>{link.icon}</span>
+            <span style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+              <span style={{ fontWeight: typography.fontWeight.medium, fontSize: typography.fontSize.body }}>
+                {link.label}
+              </span>
+              <span style={{ fontSize: typography.fontSize.sm, color: colors.textTertiary }}>
+                {link.description}
+              </span>
+            </span>
+            <ChevronRight size={16} color={colors.textTertiary} />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </div>
+)
 
 /* ─────────────────────── Constants ─────────────────────── */
 
@@ -178,6 +264,10 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
     if (!ok) return
 
     setResetting(true)
+    // Explicit catch path that releases the loading flag, mirroring the
+    // useAuth.signIn pattern — the React Compiler lint rule
+    // (BuildHIR::lowerStatement) can't lower try/catch/finally clauses, so
+    // we drop the finally and manage the flag in both success + catch.
     try {
       const result = await resetDemoProject(orgId)
       if (result.ok) {
@@ -188,10 +278,10 @@ const DemoProjectSection: React.FC<{ orgId: string }> = ({ orgId }) => {
         toast.error(`Demo reset partially failed for: ${failedTables}. See console for details.`)
         console.error('[demo reset] errors:', result.errors)
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Demo reset failed')
-    } finally {
       setResetting(false)
+    } catch (e) {
+      setResetting(false)
+      toast.error(e instanceof Error ? e.message : 'Demo reset failed')
     }
   }
 
@@ -377,26 +467,7 @@ export function ProjectSettings() {
   };
 
   if (!activeProject) {
-    return (
-      <div style={{
-        maxWidth: 800, margin: '0 auto', padding: `${spacing['14']} ${spacing['6']}`,
-        textAlign: 'center', fontFamily: typography.fontFamily,
-      }}>
-        <Settings size={40} color={colors.textTertiary} strokeWidth={1} style={{ marginBottom: spacing['4'] }} />
-        <h2 style={{
-          margin: 0, fontSize: typography.fontSize.subtitle,
-          fontWeight: typography.fontWeight.semibold, color: colors.textPrimary,
-        }}>
-          No project selected
-        </h2>
-        <p style={{
-          margin: 0, marginTop: spacing['2'],
-          fontSize: typography.fontSize.body, color: colors.textTertiary,
-        }}>
-          Select a project from the sidebar to configure its settings
-        </p>
-      </div>
-    );
+    return <AccountSettingsHub />;
   }
 
 
