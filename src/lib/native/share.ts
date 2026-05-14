@@ -6,6 +6,13 @@
 // Inputs are intentionally small (a URL + optional file). Callers don't
 // need to know which path will be taken.
 
+// Web Share API surface — not all browsers expose these, so we check at
+// runtime before calling. Using unknown-narrowing avoids `as any`.
+interface WebShareNav {
+  share(data?: ShareData): Promise<void>
+  canShare?(data?: ShareData): boolean
+}
+
 export interface ShareInput {
   title: string
   /** A direct link OR a sealed-PDF URL for the entity. */
@@ -34,7 +41,7 @@ export async function detectShareChannel(): Promise<ShareResult['channel']> {
   } catch {
     /* not capacitor */
   }
-  if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+  if (typeof navigator !== 'undefined' && typeof (navigator as unknown as WebShareNav).share === 'function') {
     return 'web'
   }
   if (typeof navigator !== 'undefined' && navigator.clipboard != null) {
@@ -67,16 +74,18 @@ export async function shareEntity(input: ShareInput): Promise<ShareResult> {
 
   // 2. Web Share API
   try {
-    if (typeof navigator !== 'undefined' && typeof (navigator as any).share === 'function') {
+    const webNav = navigator as unknown as WebShareNav
+    if (typeof navigator !== 'undefined' && typeof webNav.share === 'function') {
+      const file = input.file
+        ? new File([input.file.blob], input.file.name, { type: input.file.type })
+        : undefined
       const payload: ShareData = {
         title: input.title,
         text: input.text,
         url: input.url,
+        ...(file && webNav.canShare?.({ files: [file] }) ? { files: [file] } : {}),
       }
-      if (input.file && (navigator as any).canShare?.({ files: [new File([input.file.blob], input.file.name, { type: input.file.type })] })) {
-        ;(payload as any).files = [new File([input.file.blob], input.file.name, { type: input.file.type })]
-      }
-      await (navigator as any).share(payload)
+      await webNav.share(payload)
       return { ok: true, channel: 'web' }
     }
   } catch (err) {
