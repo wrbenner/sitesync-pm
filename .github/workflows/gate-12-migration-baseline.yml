@@ -1,0 +1,41 @@
+# Gate 12 - Migration Baseline (B.12)
+#
+# Runs tests/migrations/B12-migrations-fresh-apply.spec.ts via vitest.
+# Asserts every supabase/migrations/*.sql file applies cleanly to an
+# empty database in the order recorded in the filename timestamp, with
+# no syntax errors and no missing dependencies.
+#
+# Pure file/SQL-scan gate - no remote backend secrets needed.
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 12 - Migration Baseline
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/migrations/**'
+  push:
+    branches: [main]
+
+jobs:
+  migration-baseline:
+    name: Fresh-apply migration baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest migration-baseline spec
+        run: |
+          set -euo pipefail
+          npx vitest run tests/migrations/B12-migrations-fresh-apply.spec.ts

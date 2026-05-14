@@ -26,17 +26,26 @@ const inventory = JSON.parse(
 
 // Routes that have visual regression baselines. Cap to top 20 to keep
 // the screenshot bytes manageable in the repo. Full sweep is nightly.
+// Paths match ops/coverage/routes.json — '/files' replaces '/photos',
+// '/settings/team' + '/settings/billing' replace standalone '/team' + '/billing'.
 const VISUAL_ROUTES = [
   '/day', '/rfis', '/submittals', '/daily-log', '/punch-list',
   '/change-orders', '/schedule', '/drawings', '/budget', '/closeout',
-  '/photos', '/field', '/safety', '/team', '/billing',
+  '/files', '/field', '/safety', '/settings/team', '/settings/billing',
   '/settings', '/dashboard', '/portfolio', '/iris', '/audit-trail',
 ].filter((p) => inventory.routes.some((r) => r.path === p))
 
 async function signIn(page: Page): Promise<void> {
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  // Login defaults to magic-link mode; toggle to password mode.
+  await page
+    .getByRole('button', { name: /sign in with password/i })
+    .first()
+    .click()
+    .catch(() => undefined)
+  await page.waitForTimeout(400)
+  await page.getByPlaceholder('Email').fill(USER)
+  await page.getByPlaceholder('Password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|day|onboarding|profile|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_500)

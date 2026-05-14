@@ -1,0 +1,54 @@
+# Gate 17 - Webhook Contracts (B.6)
+#
+# Runs tests/webhooks/*.spec.ts via vitest. Asserts every inbound webhook
+# endpoint (Stripe, Twilio, Resend, etc.) verifies its signature header,
+# rejects replayed payloads, and 4xx's malformed bodies.
+#
+# Informational mode until staging credentials are wired into secrets.
+#
+# Required secrets:
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_SUPABASE_SERVICE_KEY
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 17 - Webhook Contracts
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/functions/**'
+      - 'src/server/**'
+      - 'tests/webhooks/**'
+  push:
+    branches: [main]
+
+jobs:
+  webhook-contracts:
+    name: Webhook signature + replay contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run vitest webhook contract suite
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            echo "::warning::STAGING_SUPABASE_URL not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx vitest run tests/webhooks/

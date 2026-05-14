@@ -1,0 +1,75 @@
+# Gate 20 - Every-Route + Every-Button Sweep (B.1)
+#
+# Runs the two top-level coverage specs:
+#   e2e/coverage/B1-every-route.spec.ts   - visits every src/pages/** route
+#   e2e/coverage/B1-every-button.spec.ts  - clicks every interactive control
+# Asserts no thrown exceptions, no 500 network responses, no console errors
+# above warn level on any route or after any button click.
+#
+# Informational mode until secrets wired.
+#
+# Required secrets:
+#   PREVIEW_BASE_URL
+#   STAGING_SUPABASE_URL
+#   STAGING_SUPABASE_ANON_KEY
+#   STAGING_POLISH_USER
+#   STAGING_POLISH_PASS
+#
+# SECURITY: only secrets.* via env: blocks. No github.event.* in run:.
+
+name: Gate 20 - Every-Route + Every-Button Sweep
+
+on:
+  pull_request:
+    paths:
+      - 'src/pages/**'
+      - 'src/components/**'
+      - 'e2e/coverage/**'
+  push:
+    branches: [main]
+
+jobs:
+  every-route-every-button:
+    name: Playwright route + button coverage sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright coverage sweep
+        env:
+          E2E_REAL_BACKEND: 'true'
+          E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
+          POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${E2E_BASE_URL:-}" ]; then
+            echo "::warning::Required secrets not set; gate skipped (informational mode)."
+            exit 0
+          fi
+          npx playwright test \
+            e2e/coverage/B1-every-route.spec.ts \
+            e2e/coverage/B1-every-button.spec.ts \
+            --project=chromium --reporter=list
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-coverage-report
+          path: playwright-report/
+          retention-days: 7

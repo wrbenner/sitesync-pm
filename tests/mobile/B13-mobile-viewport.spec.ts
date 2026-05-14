@@ -26,12 +26,30 @@ const VIEWPORTS = [
 ]
 
 // High-value flows that MUST work on mobile (field users + supers).
-const FLOWS = ['/day', '/daily-log', '/punch-list', '/rfis', '/photos', '/field']
+// Routes match ops/coverage/routes.json — '/files' is where photos live in
+// this codebase (was '/photos' in earlier scaffolds), '/field-capture' is
+// the rapid photo-burst flow.
+const FLOWS = [
+  '/day',
+  '/daily-log',
+  '/punch-list',
+  '/rfis',
+  '/files',
+  '/field',
+  '/field-capture',
+]
 
 async function signIn(page: Page): Promise<void> {
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  // Login defaults to magic-link mode; toggle to password mode.
+  await page
+    .getByRole('button', { name: /sign in with password/i })
+    .first()
+    .click()
+    .catch(() => undefined)
+  await page.waitForTimeout(400)
+  await page.getByPlaceholder('Email').fill(USER)
+  await page.getByPlaceholder('Password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|day|onboarding|profile|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)

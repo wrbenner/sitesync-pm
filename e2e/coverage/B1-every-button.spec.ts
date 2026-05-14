@@ -56,6 +56,8 @@ const DANGER_LABELS = [
   /delete/i,
   /destroy/i,
   /remove/i,
+  /drop/i,
+  /cancel subscription/i,
   /sign out/i,
   /log out/i,
   /switch org/i,
