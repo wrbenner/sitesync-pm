@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schemas.sitesync.dev/loop-state.v1.json",
+  "loop_name": "functional-frog-self-heal",
+  "version": 1,
+  "started_at": "2026-05-14T22:45:00Z",
+  "last_run": null,
+  "consecutive_passes": 0,
+  "iterations": 0,
+  "stop_reason": null,
+  "stop_condition_checks": {
+    "two_consecutive_passes": false,
+    "coverage_threshold_met": false,
+    "no_stale_loop_issues": true,
+    "cost_budget_intact": true
+  },
+  "failures_seen": [],
+  "fixes_applied": [],
+  "quarantined": [],
+  "cost_today_usd": 0.0,
+  "cost_cap_usd_per_day": 30.0,
+  "cost_pause_until": null,
+  "in_scope_cells_total": 31744,
+  "in_scope_cells_covered": 3200,
+  "coverage_percent": 10.1,
+  "coverage_target_percent": 90.0,
+  "phases": {
+    "phase_1_one_shot_triage": {
+      "status": "in_progress",
+      "steps": {
+        "step_a_staging_migrations": {
+          "status": "completed",
+          "note": "Confirmed already applied; investigation made 20261020/22/23 visible on staging via list_migrations MCP. Hypothesis from earlier triage doc was wrong."
+        },
+        "step_b_login_mode_toggle_restore": {
+          "status": "in_progress",
+          "note": "Agent dispatched to fix 12 signIn helpers + restore mode toggle click."
+        },
+        "step_c_signup_diagnostic_logging": {
+          "status": "in_progress",
+          "note": "Bundled with step b in the same PR."
+        },
+        "step_d_rerun_gate_7": {
+          "status": "blocked_on_step_b"
+        }
+      }
+    },
+    "phase_2_steady_state": {
+      "status": "not_started",
+      "watch_mode_runs": 0,
+      "expand_mode_batches_completed": []
+    }
+  },
+  "branch_protection": {
+    "required_gates_today": [
+      "Gate 1: TypeScript",
+      "Gate 2: ESLint",
+      "Gate 3: Tests",
+      "Gate 4: Build",
+      "Eval Layer 1: Database/RLS",
+      "Eval Layer 2: API"
+    ],
+    "promotion_target_gates": [
+      "Playwright workflow specs",
+      "RPC parameter + auth contract",
+      "Realtime channel registration scan",
+      "RLS contract baseline",
+      "Fresh-apply migration baseline",
+      "Playwright mobile viewport specs",
+      "Capacitor plugin import/declare scan",
+      "Playwright axe-core a11y scan",
+      "Playwright visual snapshot diff",
+      "Webhook handler signature contract",
+      "Storage bucket contract",
+      "Cron job inventory scan",
+      "Edge function auth contract",
+      "Playwright route + button coverage sweep",
+      "Verify all migrations on main are applied to prod"
+    ],
+    "promote_after_consecutive_passes": 3
+  },
+  "issue_queue": {
+    "open_issues_from_loop": [],
+    "stale_threshold_days": 7
+  }
+}
