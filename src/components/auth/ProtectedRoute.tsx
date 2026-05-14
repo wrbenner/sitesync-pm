@@ -6,6 +6,7 @@ import type { Permission } from '../../hooks/usePermissions'
 import { colors, spacing, typography, zIndex, borderRadius } from '../../styles/theme'
 import { MODULE_PERMISSIONS } from '../../hooks/usePermissions'
 import { ShieldAlert } from 'lucide-react'
+import { toast } from 'sonner'
 import { isDevBypassActive } from '../../lib/devBypass'
 import { useMfa } from '../../hooks/useMfa'
 import { useAuthStore } from '../../stores/authStore'
@@ -192,7 +193,7 @@ const RequestAccessPage: React.FC<RequestAccessPageProps> = ({ moduleName }) => 
         : 'You do not have permission to access this page.'}
     </p>
     <button
-      onClick={() => {/* TODO: wire up request access flow */}}
+      onClick={() => toast.info('Contact your project admin to request access to this module.')}
       style={{
         backgroundColor: colors.brand400, color: colors.white,
         border: 'none', borderRadius: borderRadius.md,

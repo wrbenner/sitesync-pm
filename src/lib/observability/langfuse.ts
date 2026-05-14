@@ -108,8 +108,11 @@ function uuid(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return (crypto as Crypto).randomUUID()
   }
-  // Fallback (very-old runtimes) — random non-cryptographic id.
-  return `id-${Date.now()}-${Math.floor(Math.random() * 1e9).toString(16)}`
+  const arr = new Uint32Array(2)
+  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+    (crypto as Crypto).getRandomValues(arr)
+  }
+  return `id-${Date.now()}-${arr[0].toString(16)}${arr[1].toString(16)}`
 }
 
 function basicAuth(env: LangfuseEnv): string {
