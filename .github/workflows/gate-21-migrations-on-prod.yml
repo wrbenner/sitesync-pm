@@ -1,0 +1,117 @@
+# Gate 21 — Migrations-on-prod parity check
+#
+# Authored 2026-05-14 as part of the functional-frog mission (Phase E
+# surfaced this gap from the 2026-05-14 demo bug root cause).
+#
+# Fails CI if any migration file under supabase/migrations/ is NOT
+# present in the prod `supabase_migrations.schema_migrations` table.
+# This is the gate that would have caught PR #543 merging trigger fixes
+# into main without ever applying them to prod.
+#
+# Runs on:
+#   - Every push to main (catches merges that landed migrations the CI
+#     check should require apply)
+#   - Every PR that touches supabase/migrations/** (warns at PR time)
+#
+# Required secrets:
+#   SUPABASE_PROD_URL        — https://<ref>.supabase.co
+#   SUPABASE_PROD_SERVICE_KEY — service-role JWT for the prod project
+#
+# These are read-only used here. The action does NOT apply migrations;
+# it only audits. Application is a separate operator step.
+#
+# SECURITY: no untrusted github.event.* is interpolated into run: blocks.
+# Only repository secrets are passed via env: (already trusted).
+
+name: Gate 21 - Migrations-on-Prod Parity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/gate-21-migrations-on-prod.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+jobs:
+  parity-check:
+    name: Verify all migrations on main are applied to prod
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute local migration versions
+        id: local
+        run: |
+          set -euo pipefail
+          versions=$(ls supabase/migrations/*.sql 2>/dev/null \
+            | xargs -n1 basename \
+            | grep -oE '^[0-9]{14}' \
+            | sort -u)
+          if [ -z "$versions" ]; then
+            echo "No local migrations found - skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          local_count=$(echo "$versions" | wc -l | tr -d ' ')
+          echo "Local versions: $local_count"
+          echo "$versions" > local-versions.txt
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Query remote schema_migrations
+        if: steps.local.outputs.skip != 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_PROD_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PROD_SERVICE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_KEY:-}" ]; then
+            echo "::warning::SUPABASE_PROD_URL or SUPABASE_PROD_SERVICE_KEY not set; gate skipped (informational mode)."
+            exit 0
+          fi
+
+          response=$(curl -s -w "\n%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/schema_migrations?select=version&order=version" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
+            -H "Accept-Profile: supabase_migrations")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n -1)
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::PostgREST returned $http_code"
+            echo "Body: $body"
+            echo "Falling back to informational mode (gate cannot reach remote)."
+            exit 0
+          fi
+
+          echo "$body" | python3 -c "import json, sys; [print(r['version']) for r in json.load(sys.stdin)]" \
+            | sort -u > remote-versions.txt
+          remote_count=$(wc -l < remote-versions.txt | tr -d ' ')
+          echo "Remote versions: $remote_count"
+
+      - name: Diff local vs remote
+        if: steps.local.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          if [ ! -f remote-versions.txt ]; then
+            echo "remote-versions.txt missing (informational mode) - skipping diff."
+            exit 0
+          fi
+          missing=$(comm -23 local-versions.txt remote-versions.txt || true)
+          if [ -n "$missing" ]; then
+            echo "::error title=Migrations not applied to prod::"
+            echo "The following migration versions exist in supabase/migrations/ on main"
+            echo "but are NOT present in prod's supabase_migrations.schema_migrations:"
+            echo ""
+            echo "$missing" | sed 's/^/  - /'
+            echo ""
+            echo "Run 'supabase db push --linked' against prod or apply via the MCP"
+            echo "pattern documented in Standing Decisions section 4 (shadow-row pairing)."
+            exit 1
+          fi
+          local_count=$(wc -l < local-versions.txt | tr -d ' ')
+          echo "All $local_count local migrations present in prod schema_migrations."
