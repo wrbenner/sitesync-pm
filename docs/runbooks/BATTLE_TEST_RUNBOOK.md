@@ -108,39 +108,75 @@ or sustained 5xx > 10%.
 
 See above. **Gate:** dry-run clean, baselines captured.
 
-### Phase B — Full seed (15 min, ~$5)
+### Phase B — Full seed (20 min, ~$5)
 
-Scale to 500 orgs:
+The seed-orgs.ts harness was reworked on 2026-05-14 (Track 1b+1c) to write
+per-VU auth credentials. Seed → mint tokens → seed storage:
 
 ```bash
 set -a; source .env.scale-test; set +a
-npx tsx scripts/scale-test/seed-orgs.ts --count 500 > .scale-test-orgs.csv
-echo "Provisioned: $(cat .scale-test-orgs.csv | tr ',' '\n' | wc -l) orgs"
+mkdir -p battle-test-results/$(date +%Y%m%d-%H%M)
+export RUN_DIR=battle-test-results/$(date +%Y%m%d-%H%M)
+
+# 1. Provision 50 orgs × 10 mixed-role members = 500 real users.
+npx tsx scripts/scale-test/seed-orgs.ts \
+  --count 50 \
+  --members-per-org 10 \
+  --out $RUN_DIR/fixture.ndjson
+
+# 2. Sign each user in, capture JWTs for k6's SharedArray.
+npx tsx scripts/scale-test/mint-vu-tokens.ts \
+  --fixture $RUN_DIR/fixture.ndjson \
+  --out $RUN_DIR/vu-tokens.json
+
+# 3. Seed Storage buckets so upload-dependent specs can run end-to-end.
+npx tsx scripts/scale-test/seed-storage.ts \
+  --fixture $RUN_DIR/fixture.ndjson \
+  --per-project 5
 ```
 
 **Verify:**
 ```sql
 SELECT count(*) FROM organizations WHERE settings->>'scale_test' = 'true';
--- expect: 500
-SELECT count(*) FROM projects WHERE is_demo = true;
--- expect: ~500 (one per org from seed_sample_data)
+-- expect: 50
+SELECT count(*) FROM organization_members WHERE organization_id IN
+  (SELECT id FROM organizations WHERE settings->>'scale_test' = 'true');
+-- expect: ~500 (50 orgs × ~10 members each)
+SELECT role, count(*) FROM organization_members WHERE organization_id IN
+  (SELECT id FROM organizations WHERE settings->>'scale_test' = 'true')
+GROUP BY role;
+-- expect role mix matching the configured ROLE_MIX (default pm:1 super:2 sub:5 architect:1 + owner)
 ```
 
-**Gate:** 500 orgs provisioned, no SQL exceptions in seed-orgs stderr.
+**Gate:** 500 users authenticated, fixture.ndjson + vu-tokens.json present, no
+SQL exceptions in seed-orgs stderr.
+
+### Phase B.1 — Verify recently-shipped fixes (3 min, $0)
+
+Before the load run, confirm none of the 14 audit fixes have regressed:
+
+```bash
+npx playwright test e2e/audit/verify-pr-529-531.spec.ts --reporter=list
+# Expect: 16 passed, 2 skipped (fixme + conditional). Any failure → halt.
+```
 
 ### Phase C — Sustained load (2 hours, ~$400–500)
 
-The main event. Two parallel runs.
+The main event. Three parallel runs.
 
-**Terminal 1 — k6 heavy profile (coarse load):**
+**JWT-expiry caveat:** Supabase JWTs default to 1h. The heavy profile is
+~2h 8m. Either (a) extend JWT expiry to 3h in the project's auth config
+before kicking off, or (b) re-run mint-vu-tokens.ts at the 50-min mark and
+restart k6 with the new token file.
+
+**Terminal 1 — k6 heavy profile (per-VU auth):**
 ```bash
 set -a; source .env.scale-test; set +a
-mkdir -p battle-test-results/$(date +%Y%m%d-%H%M)
 k6 run -e PROFILE=heavy \
        -e SUPABASE_URL=$SUPABASE_URL \
        -e SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
-       -e TEST_ORG_IDS=$(cat .scale-test-orgs.csv) \
-       --out json=battle-test-results/$(date +%Y%m%d-%H%M)/k6.json \
+       -e VU_TOKENS_FILE=$RUN_DIR/vu-tokens.json \
+       --out json=$RUN_DIR/k6.json \
        scripts/scale-test/run.ts
 ```
 
@@ -179,6 +215,11 @@ While Phase C is hammering the backend:
 ```bash
 # All 62 non-persona specs at 4-worker parallelism:
 npx playwright test --config=playwright.config.ts --workers=4
+
+# CRUD round-trip suite (real backend, real auth — Track 3):
+E2E_REAL_BACKEND=true \
+POLISH_USER=$SCALE_TEST_OWNER_EMAIL POLISH_PASS=$SCALE_TEST_PASSWORD \
+  npx playwright test e2e/scenarios/06-crud-roundtrip.spec.ts --workers=4
 
 # Polish-audit visual crawler:
 npx playwright test e2e/polish-audit.spec.ts --config=playwright.polish.config.ts
