@@ -42,12 +42,12 @@ test.beforeAll(() => {
 const MARKER = `b2-co-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
+  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password".
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|onboarding|profile|day|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)
 }
@@ -69,22 +69,38 @@ test('B.2 — UI: change order create submits without 42703', async ({ page }) =
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
+  // Real DOM: pages/ChangeOrders.tsx (line 576 and 614) renders a PrimaryBtn
+  // labeled "New CO" inside <PermissionGate permission="change_orders.create">.
   await page
-    .getByRole('button', { name: /new co|new change|create change|^new$/i })
+    .getByRole('button', { name: 'New CO' })
     .first()
     .click()
 
-  // Change order forms typically need title/description + amount.
+  // CreateChangeOrderModal.tsx (line 20) defines the Title field with
+  // placeholder "Brief title for this change". Required per changeOrderSchema.
   await page
-    .getByPlaceholder(/title|description|change|reason/i)
+    .getByPlaceholder('Brief title for this change')
     .first()
     .fill(`${MARKER} change order`)
 
+  // Description (line 38) is the other required text field.
+  const descBox = page
+    .getByPlaceholder('Describe the scope change and what triggered it')
+    .first()
+  if (await descBox.count() > 0) {
+    await descBox.fill('Synthetic B.2 change-order regression description.')
+  }
+
+  // Amount — the modal uses a currency-type FormInput rendered as
+  // <input type="number"> with placeholder "0" (EntityFormModal currency
+  // branch). The first number input on the modal is the Estimated Amount.
   const amount = page.locator('input[type="number"]').first()
   if (await amount.count() > 0) await amount.fill('5000')
 
+  // Submit — CreateChangeOrderModal sets submitLabel="Create Change Order"
+  // (line 262 in CreateChangeOrderModal.tsx).
   await page
-    .getByRole('button', { name: /^submit$|^save$|^create$/i })
+    .getByRole('button', { name: 'Create Change Order' })
     .first()
     .click()
 

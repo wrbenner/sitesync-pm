@@ -41,12 +41,12 @@ test.beforeAll(() => {
 const MARKER = `b2-punch-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
+  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password".
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|onboarding|profile|day|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)
 }
@@ -68,18 +68,26 @@ test('B.2 — UI: punch item create submits without RLS/trigger error', async ({
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
+  // Real DOM: pages/punch-list/index.tsx (line 555) renders the New-Punch
+  // button with data-testid="create-punch-item-button". Mobile builds also
+  // expose a FAB with aria-label="Quick capture punch item" (line 794) —
+  // we use the test-id as the canonical handle.
   await page
-    .getByRole('button', { name: /new punch|new item|create item|create punch|^new$/i })
-    .first()
+    .getByTestId('create-punch-item-button')
     .click()
 
+  // PunchItemCreateWizard.tsx (line 734) renders the title input with
+  // placeholder "e.g. Cracked drywall above unit 802 doorframe" — that's
+  // the required Title field.
   await page
-    .getByPlaceholder(/title|item|description|punch/i)
+    .getByPlaceholder('e.g. Cracked drywall above unit 802 doorframe')
     .first()
     .fill(`${MARKER} title`)
 
+  // Submit — PunchItemCreateWizard footer renders a single primary button
+  // labeled "Create Punch Item" (canSubmit gate on title.length > 0).
   await page
-    .getByRole('button', { name: /^submit$|^save$|^create$/i })
+    .getByRole('button', { name: /Create Punch Item|Add Punch Item/ })
     .first()
     .click()
 

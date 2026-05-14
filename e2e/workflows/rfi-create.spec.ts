@@ -39,12 +39,12 @@ test.beforeAll(() => {
 const MARKER = `b2-rfi-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
+  // Real DOM: src/pages/auth/Login.tsx — see submittal-create.spec.ts notes.
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|onboarding|profile|day|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)
 }
@@ -66,23 +66,33 @@ test('B.2 — UI: RFI create form submits without 42703', async ({ page }) => {
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
+  // Real DOM: pages/RFIs.tsx (line 1319) renders the New-RFI button with
+  // data-testid="create-rfi-button" and aria-label="Create new RFI".
   await page
-    .getByRole('button', { name: /new rfi|create rfi|create first rfi|^new$/i })
-    .first()
+    .getByTestId('create-rfi-button')
     .click()
 
+  // RFICreateWizard.tsx (line 867) renders the question textarea with
+  // placeholder "What needs to be clarified?" — this is the title/subject
+  // field (mapped to `title` on submit, line 671).
   await page
-    .getByPlaceholder(/needs to be clarified|subject|title/i)
+    .getByPlaceholder('What needs to be clarified?')
     .first()
     .fill(`${MARKER} subject`)
 
-  const question = page.locator('textarea').first()
+  // Optional details — the RFIRichTextEditor (line 946) renders a TipTap
+  // editor. If a plain textarea exists in DOM, fill it as a smoke check;
+  // otherwise skip — `description` falls back to the question on submit.
+  const question = page.locator('textarea').nth(1)
   if (await question.count() > 0) {
-    await question.fill('Synthetic B.2 regression test question.')
+    await question.fill('Synthetic B.2 regression test question.').catch(() => undefined)
   }
 
+  // Submit — RFICreateWizard footer renders two buttons: "Save as Draft"
+  // (line ~1361) and "Create as Open" (line ~1382). We exercise the
+  // primary publish path.
   await page
-    .getByRole('button', { name: /^submit$|create rfi|^create$/i })
+    .getByRole('button', { name: 'Create as Open' })
     .first()
     .click()
 

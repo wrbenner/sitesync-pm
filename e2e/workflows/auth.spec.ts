@@ -46,12 +46,23 @@ test('B.2 auth — signup form renders and submits', async ({ page }) => {
   const email = newEmail()
   const pass = newPassword()
   try {
+    // Real DOM: src/pages/auth/Signup.tsx renders a form with
+    // aria-label="Create SiteSync account" and id-anchored inputs:
+    //   signup-first-name / signup-last-name / signup-email /
+    //   signup-password / signup-confirm-password / signup-company /
+    //   signup-accept-terms. None of them carry a placeholder. We bind via
+    //   label-for relationships using getByLabel (each input has an <label
+    //   htmlFor>).
     await page.goto(`${BASE_URL}/#/signup`)
-    await page.getByPlaceholder(/email|you@company/i).fill(email)
-    await page.getByPlaceholder(/password/i).first().fill(pass)
-    // Some signup forms have a confirm-password input
-    const confirm = page.getByPlaceholder(/confirm/i).first()
-    if (await confirm.count() > 0) await confirm.fill(pass)
+    await page.getByLabel(/^First Name/).fill('B2')
+    await page.getByLabel(/^Last Name/).fill('Test')
+    await page.getByLabel(/^Email/).fill(email)
+    // Password + Confirm Password share the "Password" prefix — match each
+    // exactly to avoid resolving to two elements.
+    await page.getByLabel(/^Password\*?$/).fill(pass)
+    await page.getByLabel(/^Confirm Password/).fill(pass)
+    await page.getByLabel(/^Company \/ Organization/).fill('Acme Test Co')
+    await page.getByLabel(/I accept the Terms of Service/).check().catch(() => undefined)
     await page.locator('button[type="submit"]').first().click()
     // Expect either /verify-pending OR a toast indicating the email was sent
     await page.waitForTimeout(2_500)
@@ -69,10 +80,15 @@ test('B.2 auth — signup form renders and submits', async ({ page }) => {
 
 test('B.2 auth — login form rejects bad password with a visible error', async ({ page }) => {
   const email = `nonexistent-${randomUUID().slice(0, 6)}@sitesync.test`
+  // Real DOM: src/pages/auth/Login.tsx — the email input has
+  // aria-label="Email" and placeholder="Email" (password mode); the
+  // password input has aria-label="Password" and placeholder="Password".
+  // Submission is via a SubmitPill button (no readable name); Enter on the
+  // password field also triggers the form (onKeyDown handler).
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByPlaceholder('you@company.com').fill(email)
-  await page.getByPlaceholder('Enter your password').fill('definitely-wrong-pw-9876')
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(email)
+  await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-pw-9876')
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForTimeout(2_500)
   const body = await page.locator('body').textContent()
   expect(
@@ -89,12 +105,21 @@ test('B.2 auth — forgot password flow renders + submits', async ({ page }: { p
     await page.goto(`${BASE_URL}/#/login`)
     await page.getByText(/forgot/i).first().click().catch(() => undefined)
   }
-  const emailInput = page.getByPlaceholder(/email|you@company/i).first()
+  // Real DOM: any email input on the resulting page is the one we want.
+  // Login.tsx uses aria-label="Email"; magic-mode forgot-password screens
+  // typically reuse the same field. Fall through to placeholder if the
+  // label isn't present.
+  const labelMatch = page.getByLabel('Email', { exact: true })
+  const emailInput = (await labelMatch.count()) > 0
+    ? labelMatch
+    : page.getByPlaceholder('Email').first()
   if (await emailInput.count() === 0) {
     test.skip(true, 'forgot-password not surfaced as a separate route or modal')
   }
   await emailInput.fill('walker@sitesyncai.com')
-  await page.locator('button[type="submit"]').first().click()
+  // The SubmitPill button on Login.tsx has no readable name; pressing
+  // Enter on the email field triggers the form via onKeyDown.
+  await emailInput.press('Enter')
   await page.waitForTimeout(2_000)
   const body = await page.locator('body').textContent()
   expect(

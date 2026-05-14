@@ -71,12 +71,13 @@ test('B.2 onboarding — provision_organization RPC defaults plan to free', asyn
 
 test('B.2 onboarding — UI invite flow opens + sends', async ({ page }) => {
   // Sign in as existing PM, then attempt to invite from settings/team.
+  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password",
+  // SubmitPill button without a readable name; Enter on password submits.
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|day|onboarding|profile|$)/, { timeout: 20_000 })
 
   // Navigate to a team / members settings page. Try common routes.
@@ -86,14 +87,23 @@ test('B.2 onboarding — UI invite flow opens + sends', async ({ page }) => {
   }
   await page.waitForTimeout(1_500)
 
-  const inviteBtn = page.getByRole('button', { name: /invite|add.*member|add.*teammate/i }).first()
+  // Real DOM: src/components/admin/InviteModal.tsx is the canonical invite
+  // surface — the trigger varies by page (admin/members shows an "Invite"
+  // primary button; onboarding flow auto-launches it). Match permissively
+  // since the trigger is consumer-side, not in the modal itself.
+  const inviteBtn = page.getByRole('button', { name: /^Invite|Add member|Add teammate|Invite member/i }).first()
   if (await inviteBtn.count() === 0) {
     test.skip(true, 'no invite UI surfaced at common settings routes — skipping')
   }
   await inviteBtn.click()
-  const emailInput = page.getByPlaceholder(/email/i).first()
+  // InviteModal.tsx (line 179) renders the single-mode email input with
+  // placeholder "teammate@company.com".
+  const emailInput = page.getByPlaceholder('teammate@company.com').first()
   await emailInput.fill(`${MARKER}-invite@sitesync.test`)
-  await page.getByRole('button', { name: /send|invite|^submit$/i }).first().click()
+  // InviteModal submit button (line 310) reads dynamically:
+  //   "Send N invite" or "Send N invites" — N is the count. Match on the
+  //   stable "Send" prefix.
+  await page.getByRole('button', { name: /^Send\b.*invite/ }).first().click()
   await page.waitForTimeout(2_000)
   const body = await page.locator('body').textContent()
   expect(

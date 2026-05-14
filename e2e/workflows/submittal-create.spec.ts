@@ -54,12 +54,15 @@ test.beforeAll(() => {
 const MARKER = `b2-submittal-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
+  // Real DOM: src/pages/auth/Login.tsx renders email + password inputs with
+  // aria-label="Email"/"Password" inside a form labeled "Sign in with email
+  // and password" (password mode). Submit is a SubmitPill button (no
+  // explicit name) so we trigger the form via Enter on the password field.
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|onboarding|profile|day|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)
 }
@@ -83,28 +86,30 @@ test('B.2 — UI: submittal create form submits without 42703', async ({ page })
     .waitForFunction(() => !/Loading…|Loading\.\.\./.test(document.body.textContent ?? ''), { timeout: 20_000 })
     .catch(() => undefined)
 
-  // Open create modal/form. Real-app button labels vary; match permissively.
+  // Open create modal. Real DOM: pages/submittals/index.tsx renders a
+  // PrimaryBtn with text "New Submittal" (line 342) when the list has rows,
+  // OR "Create submittal" in the empty-state actions (line 451).
   await page
-    .getByRole('button', { name: /new submittal|create submittal|create first submittal|^new$/i })
+    .getByRole('button', { name: /^(New Submittal|Create submittal)$/ })
     .first()
     .click()
 
-  // Fill title — required field per submittals_title_check.
+  // Fill title — SubmittalCreateWizard.tsx (line 667) renders an input with
+  // placeholder "What is this submittal for?" focused via titleRef after
+  // file drop. Required per submittals_title_check.
   await page
-    .getByPlaceholder(/title|name|description/i)
+    .getByPlaceholder('What is this submittal for?')
     .first()
     .fill(`${MARKER} title`)
 
-  // Some forms require a spec section. If a select with that label exists,
-  // pick the first non-empty option. Safe no-op otherwise.
-  const specSelect = page.getByLabel(/spec section|section|csi/i).first()
-  if (await specSelect.count() > 0) {
-    const options = await specSelect.locator('option').all()
-    if (options.length > 1) await specSelect.selectOption({ index: 1 })
-  }
+  // SubmittalCreateWizard uses a custom SpecSectionInput (input + dropdown),
+  // not a native <select>. The spec-section is optional in the wizard, so
+  // we skip pre-filling it — the wizard handles auto-detection from filenames.
 
+  // Submit — SubmittalCreateWizard footer button (line ~903) reads
+  // "Submit for Review" once a title is present.
   await page
-    .getByRole('button', { name: /^submit$|^save$|^create$|^create submittal$/i })
+    .getByRole('button', { name: 'Submit for Review' })
     .first()
     .click()
 

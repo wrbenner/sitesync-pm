@@ -34,12 +34,12 @@ test.beforeAll(() => {
 const MARKER = `b2-payapp-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
+  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password".
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
   await page.waitForTimeout(400)
-  await page.getByPlaceholder('Email').fill(USER)
-  await page.getByPlaceholder('Password').fill(PASS)
-  await page.locator('button[type="submit"]').first().click()
+  await page.getByLabel('Email', { exact: true }).fill(USER)
+  await page.getByLabel('Password', { exact: true }).fill(PASS)
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await page.waitForURL(/#\/(dashboard|day|onboarding|profile|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)
 }
@@ -53,10 +53,10 @@ test('B.2 pay-app — list page renders without 5xx', async ({ page }) => {
     }
   })
   await signIn(page)
-  for (const route of ['#/pay-apps', '#/payment-applications', '#/billing/pay-apps']) {
-    await page.goto(`${BASE_URL}/${route}`).catch(() => undefined)
-    if (page.url().includes(route.replace('#', ''))) break
-  }
+  // Real DOM: App.tsx route table — canonical route is `/pay-apps`
+  // (line 471). `/payment-applications` redirects to `/pay-apps` (line 472).
+  // Hit the canonical route directly.
+  await page.goto(`${BASE_URL}/#/pay-apps`).catch(() => undefined)
   await page.waitForTimeout(2_000)
   expect(errors, `5xx on pay-app list: ${errors.join(', ')}`).toHaveLength(0)
 })
