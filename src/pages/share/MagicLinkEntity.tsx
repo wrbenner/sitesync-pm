@@ -21,8 +21,8 @@ interface ValidationResult {
 }
 
 const FUNCTION_BASE =
-  (typeof window !== 'undefined' && (window as any).VITE_SUPABASE_URL) ||
-  (import.meta as any).env?.VITE_SUPABASE_URL ||
+  (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).VITE_SUPABASE_URL as string | undefined) ||
+  import.meta.env.VITE_SUPABASE_URL ||
   '';
 
 export const MagicLinkEntity: React.FC = () => {
@@ -32,14 +32,15 @@ export const MagicLinkEntity: React.FC = () => {
   const entityType = params.entity_type ?? '';
   const entityId = params.entity_id ?? '';
 
-  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [validation, setValidation] = useState<ValidationResult | null>(() =>
+    !token || !entityType || !entityId
+      ? { ok: false, scope: null, project_id: null, expires_at: null, error: 'Missing token or entity reference.' }
+      : null
+  );
 
   useEffect(() => {
+    if (!token || !entityType || !entityId) return;
     let cancelled = false;
-    if (!token || !entityType || !entityId) {
-      setValidation({ ok: false, scope: null, project_id: null, expires_at: null, error: 'Missing token or entity reference.' });
-      return;
-    }
     (async () => {
       const url =
         `${FUNCTION_BASE}/functions/v1/entity-magic-link` +
