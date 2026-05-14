@@ -146,6 +146,16 @@ export const Signup: React.FC = () => {
 
     setIsSubmitting(true)
     track('signup_email_submitted', {})
+    // Diagnostic flags consumed by the outer-catch fallback below. If
+    // supabase.auth.signUp() succeeded we MUST get the user to /verify-pending
+    // even when downstream provisioning (provision-org / profile insert /
+    // track) throws — the auth.users row already exists, so dropping them
+    // on /signup with an inline error is worse than landing on the inbox-
+    // check page where they can complete verification and recover via
+    // support if provisioning needs a retry.
+    let authSucceededUserId: string | null = null
+    let profileInsertOk: boolean | null = null
+    let trackOk: boolean | null = null
     // try/catch (no finally) — React Compiler doesn't lower try/finally.
     // Loading state is cleared in both branches explicitly.
     try {
@@ -168,6 +178,7 @@ export const Signup: React.FC = () => {
       }
 
       const userId = data.user.id
+      authSucceededUserId = userId
 
       // BRT sub-2 §4.1 — provision the org via the atomic edge function
       // (replaces the prior 3-step ad-hoc insert that had no slug retry,
@@ -211,13 +222,17 @@ export const Signup: React.FC = () => {
           terms_accepted_at: new Date().toISOString(),
         } as never)
         if (profileError) {
+          profileInsertOk = false
           console.error('[signup] profile insert failed:', profileError)
           Sentry.captureException(profileError, {
             tags: { area: 'signup', step: 'profile_insert' },
             extra: { userId, organizationId },
           })
+        } else {
+          profileInsertOk = true
         }
       } catch (err) {
+        profileInsertOk = false
         console.error('[signup] profile insert failed:', err)
         Sentry.captureException(err, {
           tags: { area: 'signup', step: 'profile_insert' },
@@ -235,7 +250,9 @@ export const Signup: React.FC = () => {
             org_id: organizationId,
             total_seconds: Math.round((Date.now() - signupStartedAt) / 1000),
           })
+          trackOk = true
         } catch (err) {
+          trackOk = false
           console.error('[signup] track(signup_completed) failed:', err)
           Sentry.captureException(err, {
             tags: { area: 'signup', step: 'track_completed' },
@@ -244,6 +261,15 @@ export const Signup: React.FC = () => {
         }
       }
       setIsSubmitting(false)
+      // Diagnostic — surfaces in browser console / CI logs even when Sentry
+      // isn't receiving. Lets the next test run see WHICH downstream steps
+      // completed vs. failed when the redirect fires.
+      console.warn('[signup] navigating to /verify-pending', {
+        userId,
+        organizationId,
+        profileInsertOk,
+        trackOk,
+      })
       try {
         navigate('/verify-pending', { state: { email } })
       } catch (err) {
@@ -255,12 +281,40 @@ export const Signup: React.FC = () => {
       }
     } catch (err) {
       console.error('[signup] unexpected error:', err)
+      Sentry.captureException(err, {
+        tags: { area: 'signup', step: 'unexpected_outer_catch' },
+        extra: { authSucceededUserId, profileInsertOk, trackOk },
+      })
+      setIsSubmitting(false)
+      // Fallback navigation — if auth.signUp() succeeded the user already
+      // exists in auth.users. Anything that throws between line 170 and the
+      // navigate above (provision-org, profile insert, track, etc.) lands
+      // here; without this fallback the user is stranded on /signup with an
+      // inline error even though their account exists. Landing on
+      // /verify-pending lets them complete email verification and recover.
+      if (authSucceededUserId) {
+        console.warn('[signup] navigating to /verify-pending despite errors:', {
+          userId: authSucceededUserId,
+          profileInsertOk,
+          trackOk,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        try {
+          navigate('/verify-pending', { state: { email } })
+          return
+        } catch (navErr) {
+          console.error('[signup] fallback navigate(/verify-pending) failed:', navErr)
+          Sentry.captureException(navErr, {
+            tags: { area: 'signup', step: 'fallback_navigate_verify_pending' },
+            extra: { userId: authSucceededUserId },
+          })
+        }
+      }
       setSubmitError({
         text: err instanceof Error
           ? `Signup hit an unexpected error: ${err.message}`
           : 'Signup hit an unexpected error. Please try again.',
       })
-      setIsSubmitting(false)
     }
   }
 
