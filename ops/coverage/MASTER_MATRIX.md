@@ -78,6 +78,7 @@
 | B.3 edge fn role matrix (FULL, generated) | `tests/api/B3-edge-fn-role-matrix.generated.spec.ts` + `tests/codegen/gen-edge-fn-role-matrix.ts` | **1,668 cells** (139 fns × 4 roles × 3 variants); cap=10 concurrency |
 | B.4 RPC contracts | `tests/rpc/B4-rpc-contract.spec.ts` | 53 tests |
 | B.5 RLS top tables | `tests/rls/B5-rls-contract-top-tables.spec.ts` | 17 tests + RLS-enabled-on-all assertion |
+| B.5 RLS role-matrix (generated) | `tests/rls/B5-rls-role-matrix.generated.spec.ts` (codegen: `tests/codegen/gen-rls-role-matrix.ts`) | **5,568** cells (348 tables × 4 roles × 4 CRUD ops); anon-deny assertion enforced for all 1,392 anon cells, viewer/PM/owner observed for next-iteration platform-diagnoser. Framework tables (auth.*, pgsodium, vault, supabase_*) excluded at codegen time. |
 | B.6 webhook contracts | `tests/webhooks/B6-webhook-contract.spec.ts` | 8 tests |
 | B.7 cron inventory | `tests/cron/B7-cron-jobs.spec.ts` | 2 tests (all 8 jobs validated) |
 | B.8 storage buckets | `tests/storage/B8-storage-buckets.spec.ts` | 42 tests |
