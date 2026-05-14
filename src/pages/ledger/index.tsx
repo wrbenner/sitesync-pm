@@ -73,12 +73,19 @@ function BigNumber({
   value,
   showDot = false,
   muted = false,
+  overBudget = false,
 }: {
   label: string;
   value: string;
   showDot?: boolean;
   muted?: boolean;
+  overBudget?: boolean;
 }) {
+  const valueColor = overBudget
+    ? colors.statusCritical
+    : muted
+      ? colors.ink3
+      : colors.ink;
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div
@@ -99,7 +106,7 @@ function BigNumber({
           fontWeight: 400,
           lineHeight: 1.1,
           letterSpacing: '-0.02em',
-          color: muted ? colors.ink3 : colors.ink,
+          color: valueColor,
         }}
       >
         {value}
@@ -357,8 +364,15 @@ const LedgerPage: React.FC = () => {
             />
             <BigNumber
               label="Remaining"
-              value={budgetTotal ? formatCurrency(budgetRemaining) : '—'}
-              muted={budgetRemaining <= 0}
+              value={
+                !budgetTotal
+                  ? '—'
+                  : budgetRemaining < 0
+                    ? `Over by ${formatCurrency(-budgetRemaining)}`
+                    : formatCurrency(budgetRemaining)
+              }
+              muted={budgetTotal > 0 && budgetRemaining === 0}
+              overBudget={budgetRemaining < 0}
             />
           </div>
 
