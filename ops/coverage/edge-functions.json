@@ -1,0 +1,707 @@
+{
+  "source": "supabase/functions/* dirs",
+  "count": 140,
+  "present_handler_count": 139,
+  "functions": [
+    {
+      "name": "admin-list-orgs",
+      "handler": "supabase/functions/admin-list-orgs/index.ts",
+      "present": true
+    },
+    {
+      "name": "agent-approval",
+      "handler": "supabase/functions/agent-approval/index.ts",
+      "present": true
+    },
+    {
+      "name": "agent-orchestrator",
+      "handler": "supabase/functions/agent-orchestrator/index.ts",
+      "present": true
+    },
+    {
+      "name": "agent-runner",
+      "handler": "supabase/functions/agent-runner/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-chat",
+      "handler": "supabase/functions/ai-chat/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-conflict-detection",
+      "handler": "supabase/functions/ai-conflict-detection/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-copilot",
+      "handler": "supabase/functions/ai-copilot/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-daily-summary",
+      "handler": "supabase/functions/ai-daily-summary/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-insights",
+      "handler": "supabase/functions/ai-insights/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-rfi-draft",
+      "handler": "supabase/functions/ai-rfi-draft/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-rfi-draft-v2",
+      "handler": "supabase/functions/ai-rfi-draft-v2/index.ts",
+      "present": true
+    },
+    {
+      "name": "ai-schedule-risk",
+      "handler": "supabase/functions/ai-schedule-risk/index.ts",
+      "present": true
+    },
+    {
+      "name": "analyze-discrepancies",
+      "handler": "supabase/functions/analyze-discrepancies/index.ts",
+      "present": true
+    },
+    {
+      "name": "analyze-safety-photo",
+      "handler": "supabase/functions/analyze-safety-photo/index.ts",
+      "present": true
+    },
+    {
+      "name": "api-v1",
+      "handler": "supabase/functions/api-v1/index.ts",
+      "present": true
+    },
+    {
+      "name": "audit-posture-snapshot",
+      "handler": "supabase/functions/audit-posture-snapshot/index.ts",
+      "present": true
+    },
+    {
+      "name": "audit-scales",
+      "handler": "supabase/functions/audit-scales/index.ts",
+      "present": true
+    },
+    {
+      "name": "auto-link-media",
+      "handler": "supabase/functions/auto-link-media/index.ts",
+      "present": true
+    },
+    {
+      "name": "billing-create-customer",
+      "handler": "supabase/functions/billing-create-customer/index.ts",
+      "present": true
+    },
+    {
+      "name": "billing-create-invoice",
+      "handler": "supabase/functions/billing-create-invoice/index.ts",
+      "present": true
+    },
+    {
+      "name": "billing-payment-method",
+      "handler": "supabase/functions/billing-payment-method/index.ts",
+      "present": true
+    },
+    {
+      "name": "billing-portal",
+      "handler": "supabase/functions/billing-portal/index.ts",
+      "present": true
+    },
+    {
+      "name": "billing-process-payment",
+      "handler": "supabase/functions/billing-process-payment/index.ts",
+      "present": true
+    },
+    {
+      "name": "classify-drawing",
+      "handler": "supabase/functions/classify-drawing/index.ts",
+      "present": true
+    },
+    {
+      "name": "closeout-package-generator",
+      "handler": "supabase/functions/closeout-package-generator/index.ts",
+      "present": true
+    },
+    {
+      "name": "coi-expiration-watcher",
+      "handler": "supabase/functions/coi-expiration-watcher/index.ts",
+      "present": true
+    },
+    {
+      "name": "compliance-pack",
+      "handler": "supabase/functions/compliance-pack/index.ts",
+      "present": true
+    },
+    {
+      "name": "cron-conversion-alert",
+      "handler": "supabase/functions/cron-conversion-alert/index.ts",
+      "present": true
+    },
+    {
+      "name": "cron-error-rate-alert",
+      "handler": "supabase/functions/cron-error-rate-alert/index.ts",
+      "present": true
+    },
+    {
+      "name": "cron-impersonation-expire",
+      "handler": "supabase/functions/cron-impersonation-expire/index.ts",
+      "present": true
+    },
+    {
+      "name": "cron-rate-limit-purge",
+      "handler": "supabase/functions/cron-rate-limit-purge/index.ts",
+      "present": true
+    },
+    {
+      "name": "cron-storage-backup",
+      "handler": "supabase/functions/cron-storage-backup/index.ts",
+      "present": true
+    },
+    {
+      "name": "cross-project-search",
+      "handler": "supabase/functions/cross-project-search/index.ts",
+      "present": true
+    },
+    {
+      "name": "customer-s3-export",
+      "handler": "supabase/functions/customer-s3-export/index.ts",
+      "present": true
+    },
+    {
+      "name": "delete-account",
+      "handler": "supabase/functions/delete-account/index.ts",
+      "present": true
+    },
+    {
+      "name": "detect-edges",
+      "handler": "supabase/functions/detect-edges/index.ts",
+      "present": true
+    },
+    {
+      "name": "digest-flusher",
+      "handler": "supabase/functions/digest-flusher/index.ts",
+      "present": true
+    },
+    {
+      "name": "draft-change-order",
+      "handler": "supabase/functions/draft-change-order/index.ts",
+      "present": true
+    },
+    {
+      "name": "draft-daily-log",
+      "handler": "supabase/functions/draft-daily-log/index.ts",
+      "present": true
+    },
+    {
+      "name": "dunning-email-send",
+      "handler": "supabase/functions/dunning-email-send/index.ts",
+      "present": true
+    },
+    {
+      "name": "embed-document",
+      "handler": "supabase/functions/embed-document/index.ts",
+      "present": true
+    },
+    {
+      "name": "end-impersonation",
+      "handler": "supabase/functions/end-impersonation/index.ts",
+      "present": true
+    },
+    {
+      "name": "entity-magic-link",
+      "handler": "supabase/functions/entity-magic-link/index.ts",
+      "present": true
+    },
+    {
+      "name": "export-training-data",
+      "handler": "supabase/functions/export-training-data/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-draw-report",
+      "handler": "supabase/functions/extract-draw-report/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-drawing-pairs",
+      "handler": "supabase/functions/extract-drawing-pairs/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-floor-outline",
+      "handler": "supabase/functions/extract-floor-outline/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-inspection-report",
+      "handler": "supabase/functions/extract-inspection-report/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-quote-pdf",
+      "handler": "supabase/functions/extract-quote-pdf/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-schedule-pdf",
+      "handler": "supabase/functions/extract-schedule-pdf/index.ts",
+      "present": true
+    },
+    {
+      "name": "extract-spec-pdf",
+      "handler": "supabase/functions/extract-spec-pdf/index.ts",
+      "present": true
+    },
+    {
+      "name": "generate-benchmarks",
+      "handler": "supabase/functions/generate-benchmarks/index.ts",
+      "present": true
+    },
+    {
+      "name": "generate-insights",
+      "handler": "supabase/functions/generate-insights/index.ts",
+      "present": true
+    },
+    {
+      "name": "generate-overlap",
+      "handler": "supabase/functions/generate-overlap/index.ts",
+      "present": true
+    },
+    {
+      "name": "generate-report",
+      "handler": "supabase/functions/generate-report/index.ts",
+      "present": true
+    },
+    {
+      "name": "generate-revision-diff",
+      "handler": "supabase/functions/generate-revision-diff/index.ts",
+      "present": true
+    },
+    {
+      "name": "health",
+      "handler": "supabase/functions/health/index.ts",
+      "present": true
+    },
+    {
+      "name": "healthz",
+      "handler": "supabase/functions/healthz/index.ts",
+      "present": true
+    },
+    {
+      "name": "highlight-conflicts",
+      "handler": "supabase/functions/highlight-conflicts/index.ts",
+      "present": true
+    },
+    {
+      "name": "inbound-email",
+      "handler": "supabase/functions/inbound-email/index.ts",
+      "present": true
+    },
+    {
+      "name": "inbound-email-events",
+      "handler": "supabase/functions/inbound-email-events/index.ts",
+      "present": true
+    },
+    {
+      "name": "insurance-alerts",
+      "handler": "supabase/functions/insurance-alerts/index.ts",
+      "present": true
+    },
+    {
+      "name": "insurance-bond-watcher",
+      "handler": "supabase/functions/insurance-bond-watcher/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-call",
+      "handler": "supabase/functions/iris-call/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-embed",
+      "handler": "supabase/functions/iris-embed/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ground",
+      "handler": "supabase/functions/iris-ground/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-change-order-worker",
+      "handler": "supabase/functions/iris-ingest-change-order-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-contract-worker",
+      "handler": "supabase/functions/iris-ingest-contract-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-conversation-worker",
+      "handler": "supabase/functions/iris-ingest-conversation-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-daily-log-worker",
+      "handler": "supabase/functions/iris-ingest-daily-log-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-dispatcher",
+      "handler": "supabase/functions/iris-ingest-dispatcher/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-drawing-worker",
+      "handler": "supabase/functions/iris-ingest-drawing-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-photo-worker",
+      "handler": "supabase/functions/iris-ingest-photo-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-rfi-worker",
+      "handler": "supabase/functions/iris-ingest-rfi-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-spec-worker",
+      "handler": "supabase/functions/iris-ingest-spec-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-spreadsheet-worker",
+      "handler": "supabase/functions/iris-ingest-spreadsheet-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-ingest-submittal-worker",
+      "handler": "supabase/functions/iris-ingest-submittal-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-rfi-response-draft",
+      "handler": "supabase/functions/iris-rfi-response-draft/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-score",
+      "handler": "supabase/functions/iris-score/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-suggest",
+      "handler": "supabase/functions/iris-suggest/index.ts",
+      "present": true
+    },
+    {
+      "name": "iris-weekly-digest",
+      "handler": "supabase/functions/iris-weekly-digest/index.ts",
+      "present": true
+    },
+    {
+      "name": "lien-waiver-generator",
+      "handler": "supabase/functions/lien-waiver-generator/index.ts",
+      "present": true
+    },
+    {
+      "name": "liveblocks-auth",
+      "handler": "supabase/functions/liveblocks-auth/index.ts",
+      "present": true
+    },
+    {
+      "name": "meeting-minutes-generator",
+      "handler": "supabase/functions/meeting-minutes-generator/index.ts",
+      "present": true
+    },
+    {
+      "name": "monthly-report-generator",
+      "handler": "supabase/functions/monthly-report-generator/index.ts",
+      "present": true
+    },
+    {
+      "name": "notification-queue-worker",
+      "handler": "supabase/functions/notification-queue-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "oauth-token-exchange",
+      "handler": "supabase/functions/oauth-token-exchange/index.ts",
+      "present": true
+    },
+    {
+      "name": "organism-cycle",
+      "handler": "supabase/functions/organism-cycle/index.ts",
+      "present": true
+    },
+    {
+      "name": "osha300-csv-export",
+      "handler": "supabase/functions/osha300-csv-export/index.ts",
+      "present": true
+    },
+    {
+      "name": "owner-payapp-preview",
+      "handler": "supabase/functions/owner-payapp-preview/index.ts",
+      "present": true
+    },
+    {
+      "name": "owner-weekly-digest",
+      "handler": "supabase/functions/owner-weekly-digest/index.ts",
+      "present": true
+    },
+    {
+      "name": "p6-export",
+      "handler": "supabase/functions/p6-export/index.ts",
+      "present": true
+    },
+    {
+      "name": "p6-import",
+      "handler": "supabase/functions/p6-import/index.ts",
+      "present": true
+    },
+    {
+      "name": "parse-ifc",
+      "handler": "supabase/functions/parse-ifc/index.ts",
+      "present": true
+    },
+    {
+      "name": "parse-walkthrough-capture",
+      "handler": "supabase/functions/parse-walkthrough-capture/index.ts",
+      "present": true
+    },
+    {
+      "name": "payapp-audit",
+      "handler": "supabase/functions/payapp-audit/index.ts",
+      "present": true
+    },
+    {
+      "name": "payapp-reconciliation",
+      "handler": "supabase/functions/payapp-reconciliation/index.ts",
+      "present": true
+    },
+    {
+      "name": "platform-health",
+      "handler": "supabase/functions/platform-health/index.ts",
+      "present": true
+    },
+    {
+      "name": "portfolio-summary-refresh",
+      "handler": "supabase/functions/portfolio-summary-refresh/index.ts",
+      "present": true
+    },
+    {
+      "name": "preliminary-notice-watcher",
+      "handler": "supabase/functions/preliminary-notice-watcher/index.ts",
+      "present": true
+    },
+    {
+      "name": "prevailing-wage-sync",
+      "handler": "supabase/functions/prevailing-wage-sync/index.ts",
+      "present": true
+    },
+    {
+      "name": "process-drawing-tiles",
+      "handler": "supabase/functions/process-drawing-tiles/index.ts",
+      "present": true
+    },
+    {
+      "name": "process-zip-upload",
+      "handler": "supabase/functions/process-zip-upload/index.ts",
+      "present": true
+    },
+    {
+      "name": "procore-import",
+      "handler": "supabase/functions/procore-import/index.ts",
+      "present": true
+    },
+    {
+      "name": "procore-import-extended",
+      "handler": "supabase/functions/procore-import-extended/index.ts",
+      "present": true
+    },
+    {
+      "name": "provision-org",
+      "handler": "supabase/functions/provision-org/index.ts",
+      "present": true
+    },
+    {
+      "name": "query-brain",
+      "handler": "supabase/functions/query-brain/index.ts",
+      "present": true
+    },
+    {
+      "name": "refresh-materialized-views",
+      "handler": "supabase/functions/refresh-materialized-views/index.ts",
+      "present": true
+    },
+    {
+      "name": "rls-policy-drift",
+      "handler": "supabase/functions/rls-policy-drift/index.ts",
+      "present": true
+    },
+    {
+      "name": "scheduled-insights-worker",
+      "handler": "supabase/functions/scheduled-insights-worker/index.ts",
+      "present": true
+    },
+    {
+      "name": "scim-v2",
+      "handler": "supabase/functions/scim-v2/index.ts",
+      "present": true
+    },
+    {
+      "name": "sealed-entity-export",
+      "handler": "supabase/functions/sealed-entity-export/index.ts",
+      "present": true
+    },
+    {
+      "name": "send-email",
+      "handler": "supabase/functions/send-email/index.ts",
+      "present": true
+    },
+    {
+      "name": "send-invite",
+      "handler": "supabase/functions/send-invite/index.ts",
+      "present": true
+    },
+    {
+      "name": "send-notification",
+      "handler": "supabase/functions/send-notification/index.ts",
+      "present": true
+    },
+    {
+      "name": "send-notification-email",
+      "handler": "supabase/functions/send-notification-email/index.ts",
+      "present": true
+    },
+    {
+      "name": "send-slack-notification",
+      "handler": "supabase/functions/send-slack-notification/index.ts",
+      "present": true
+    },
+    {
+      "name": "shared",
+      "handler": null,
+      "present": false
+    },
+    {
+      "name": "sla-escalator",
+      "handler": "supabase/functions/sla-escalator/index.ts",
+      "present": true
+    },
+    {
+      "name": "sso-oidc-handler",
+      "handler": "supabase/functions/sso-oidc-handler/index.ts",
+      "present": true
+    },
+    {
+      "name": "sso-saml-handler",
+      "handler": "supabase/functions/sso-saml-handler/index.ts",
+      "present": true
+    },
+    {
+      "name": "start-impersonation",
+      "handler": "supabase/functions/start-impersonation/index.ts",
+      "present": true
+    },
+    {
+      "name": "start-trial-checkout",
+      "handler": "supabase/functions/start-trial-checkout/index.ts",
+      "present": true
+    },
+    {
+      "name": "stripe-reconciliation",
+      "handler": "supabase/functions/stripe-reconciliation/index.ts",
+      "present": true
+    },
+    {
+      "name": "stripe-webhook",
+      "handler": "supabase/functions/stripe-webhook/index.ts",
+      "present": true
+    },
+    {
+      "name": "structure-field-note",
+      "handler": "supabase/functions/structure-field-note/index.ts",
+      "present": true
+    },
+    {
+      "name": "switch-active-org",
+      "handler": "supabase/functions/switch-active-org/index.ts",
+      "present": true
+    },
+    {
+      "name": "transcribe-audio",
+      "handler": "supabase/functions/transcribe-audio/index.ts",
+      "present": true
+    },
+    {
+      "name": "transcribe-voice",
+      "handler": "supabase/functions/transcribe-voice/index.ts",
+      "present": true
+    },
+    {
+      "name": "transcribe-walkthrough",
+      "handler": "supabase/functions/transcribe-walkthrough/index.ts",
+      "present": true
+    },
+    {
+      "name": "verify-audit-chain",
+      "handler": "supabase/functions/verify-audit-chain/index.ts",
+      "present": true
+    },
+    {
+      "name": "vision-verify-link",
+      "handler": "supabase/functions/vision-verify-link/index.ts",
+      "present": true
+    },
+    {
+      "name": "voice-extract",
+      "handler": "supabase/functions/voice-extract/index.ts",
+      "present": true
+    },
+    {
+      "name": "walkthrough-pdf",
+      "handler": "supabase/functions/walkthrough-pdf/index.ts",
+      "present": true
+    },
+    {
+      "name": "weather-multi-source",
+      "handler": "supabase/functions/weather-multi-source/index.ts",
+      "present": true
+    },
+    {
+      "name": "weather-sync",
+      "handler": "supabase/functions/weather-sync/index.ts",
+      "present": true
+    },
+    {
+      "name": "webhook-dispatch",
+      "handler": "supabase/functions/webhook-dispatch/index.ts",
+      "present": true
+    },
+    {
+      "name": "webhook-receiver",
+      "handler": "supabase/functions/webhook-receiver/index.ts",
+      "present": true
+    },
+    {
+      "name": "weekly-digest",
+      "handler": "supabase/functions/weekly-digest/index.ts",
+      "present": true
+    },
+    {
+      "name": "wh347-generator",
+      "handler": "supabase/functions/wh347-generator/index.ts",
+      "present": true
+    }
+  ]
+}

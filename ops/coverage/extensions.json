@@ -1,0 +1,16 @@
+{
+  "source": "staging pg_extension",
+  "extensions": [
+    "pg_cron",
+    "pg_net",
+    "pg_stat_statements",
+    "pg_trgm",
+    "pgcrypto",
+    "pgmq",
+    "pgtap",
+    "plpgsql",
+    "supabase_vault",
+    "uuid-ossp",
+    "vector"
+  ]
+}

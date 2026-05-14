@@ -1,0 +1,99 @@
+{
+  "source": "staging storage.buckets",
+  "count": 15,
+  "buckets": [
+    {
+      "id": "drawings",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "field-captures",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "avatars",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "exports",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "project-files",
+      "public": false,
+      "file_size_limit": 524288000,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "daily-log-photos",
+      "public": false,
+      "file_size_limit": 52428800,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "daily-log-signatures",
+      "public": false,
+      "file_size_limit": 10485760,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "documents",
+      "public": false,
+      "file_size_limit": 104857600,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "safety-photos",
+      "public": false,
+      "file_size_limit": 52428800,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "submittal-specs",
+      "public": false,
+      "file_size_limit": 104857600,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "attachments",
+      "public": false,
+      "file_size_limit": 104857600,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "reports",
+      "public": false,
+      "file_size_limit": 104857600,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "punch-list-photos",
+      "public": true,
+      "file_size_limit": 52428800,
+      "allowed_mime_types": null
+    },
+    {
+      "id": "sealed-exports",
+      "public": false,
+      "file_size_limit": 10485760,
+      "allowed_mime_types": [
+        "text/html",
+        "application/pdf"
+      ]
+    },
+    {
+      "id": "photos",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null
+    }
+  ]
+}

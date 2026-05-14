@@ -1,0 +1,19 @@
+{
+  "inbound_handlers": [
+    "stripe-reconciliation",
+    "stripe-webhook",
+    "webhook-dispatch",
+    "webhook-receiver"
+  ],
+  "outbound_caller_files": [
+    "src/pages/admin/webhooks/index.tsx",
+    "src/types/database.ts",
+    "supabase/functions/send-slack-notification/index.ts",
+    "supabase/functions/webhook-dispatch/index.ts"
+  ],
+  "sources": {
+    "stripe-webhook": "inbound \u2014 Stripe events",
+    "webhook-receiver": "inbound \u2014 generic",
+    "webhook-dispatch": "outbound \u2014 customer endpoints"
+  }
+}

@@ -1,0 +1,2794 @@
+{
+  "source": "staging pg_proc public.*",
+  "count": 294,
+  "rpcs": [
+    {
+      "name": "agent_tasks_set_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "array_to_halfvec",
+      "argTypes": [
+        "integer[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_halfvec",
+      "argTypes": [
+        "real[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_halfvec",
+      "argTypes": [
+        "double precision[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_halfvec",
+      "argTypes": [
+        "numeric[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_sparsevec",
+      "argTypes": [
+        "real[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_sparsevec",
+      "argTypes": [
+        "numeric[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_sparsevec",
+      "argTypes": [
+        "double precision[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_sparsevec",
+      "argTypes": [
+        "integer[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_vector",
+      "argTypes": [
+        "numeric[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_vector",
+      "argTypes": [
+        "integer[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_vector",
+      "argTypes": [
+        "real[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "array_to_vector",
+      "argTypes": [
+        "double precision[]",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "audit_log_block_mutation",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "audit_log_compute_hash",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "auto_add_rfi_watchers",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "auto_number_change_order",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "auto_number_rfi",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "auto_number_submittal",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "binary_quantize",
+      "argTypes": [
+        "halfvec"
+      ],
+      "returnType": "bit",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "binary_quantize",
+      "argTypes": [
+        "vector"
+      ],
+      "returnType": "bit",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "bulk_add_team_members",
+      "argTypes": [
+        "uuid",
+        "jsonb"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "calculate_next_run",
+      "argTypes": [
+        "text",
+        "integer",
+        "integer",
+        "time without time zone"
+      ],
+      "returnType": "timestamp with time zone",
+      "isSecurityDefiner": false,
+      "numArgs": 4
+    },
+    {
+      "name": "can_user_approve",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "can_user_create",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "change_orders_iris_ingest_trigger",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "check_ai_rate_limit",
+      "argTypes": [
+        "uuid",
+        "integer"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "check_expiring_certifications",
+      "argTypes": null,
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "check_login_lockout",
+      "argTypes": [
+        "text"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "check_plan_limit",
+      "argTypes": [
+        "uuid",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "check_rate_limit",
+      "argTypes": [
+        "uuid",
+        "text",
+        "integer",
+        "integer"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 4
+    },
+    {
+      "name": "check_webhook_health",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "clear_demo_data",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "jsonb",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "compute_submittal_hash",
+      "argTypes": [
+        "uuid",
+        "text",
+        "integer",
+        "uuid",
+        "text",
+        "jsonb",
+        "text"
+      ],
+      "returnType": "text",
+      "isSecurityDefiner": false,
+      "numArgs": 7
+    },
+    {
+      "name": "cosine_distance",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "cosine_distance",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "cosine_distance",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "create_notification",
+      "argTypes": [
+        "uuid",
+        "uuid",
+        "text",
+        "text",
+        "text",
+        "text"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 6
+    },
+    {
+      "name": "current_user_org_ids",
+      "argTypes": null,
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "custom_access_token_hook",
+      "argTypes": [
+        "jsonb"
+      ],
+      "returnType": "jsonb",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "daily_logs_iris_ingest_trigger",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "documents_iris_ingest_trigger",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "drafted_actions_guard_telemetry",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "drafted_actions_set_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "emit_submittal_event",
+      "argTypes": [
+        "uuid",
+        "text",
+        "uuid",
+        "jsonb"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 4
+    },
+    {
+      "name": "end_impersonation_session",
+      "argTypes": [
+        "uuid",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "enqueue_insights_jobs",
+      "argTypes": null,
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "find_unprotected_tables",
+      "argTypes": null,
+      "returnType": "record",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_audit_trigger",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_mark_search_dirty",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_project_role_groups_touch",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_protect_signed_daily_log",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_rfi_attachments_touch",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_rfi_project_id",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "fn_rfi_recompute_ball_in_court",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_rfi_responses_capture_version",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_rfi_saved_views_touch",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_rfi_user_column_prefs_touch",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_touch_draw_report_extraction_jobs",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_touch_schedule_import_jobs",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "fn_user_is_rfi_assignee",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "get_my_org_ids",
+      "argTypes": null,
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "get_pay_app_status_summary",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "pay_app_status_summary",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "get_portfolio_metrics",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "get_project_health_summary",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "project_health_summary",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "get_project_metrics",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "project_metrics",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "get_punch_list_status_rollup",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "punch_list_status_rollup",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "get_rfi_kpi_rollup",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "rfi_kpi_rollup",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "get_submittals_log_mv",
+      "argTypes": [
+        "uuid",
+        "text[]",
+        "submittal_kind[]",
+        "date",
+        "date"
+      ],
+      "returnType": "submittals_log_mv",
+      "isSecurityDefiner": true,
+      "numArgs": 5
+    },
+    {
+      "name": "get_user_project_role",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "text",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "gin_extract_query_trgm",
+      "argTypes": [
+        "text",
+        "internal",
+        "smallint",
+        "internal",
+        "internal",
+        "internal",
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 7
+    },
+    {
+      "name": "gin_extract_value_trgm",
+      "argTypes": [
+        "text",
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "gin_trgm_consistent",
+      "argTypes": [
+        "internal",
+        "smallint",
+        "text",
+        "integer",
+        "internal",
+        "internal",
+        "internal",
+        "internal"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 8
+    },
+    {
+      "name": "gin_trgm_triconsistent",
+      "argTypes": [
+        "internal",
+        "smallint",
+        "text",
+        "integer",
+        "internal",
+        "internal",
+        "internal"
+      ],
+      "returnType": "\"char\"",
+      "isSecurityDefiner": false,
+      "numArgs": 7
+    },
+    {
+      "name": "gtrgm_compress",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "gtrgm_consistent",
+      "argTypes": [
+        "internal",
+        "text",
+        "smallint",
+        "oid",
+        "internal"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 5
+    },
+    {
+      "name": "gtrgm_decompress",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "gtrgm_distance",
+      "argTypes": [
+        "internal",
+        "text",
+        "smallint",
+        "oid",
+        "internal"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 5
+    },
+    {
+      "name": "gtrgm_in",
+      "argTypes": [
+        "cstring"
+      ],
+      "returnType": "gtrgm",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "gtrgm_options",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "gtrgm_out",
+      "argTypes": [
+        "gtrgm"
+      ],
+      "returnType": "cstring",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "gtrgm_penalty",
+      "argTypes": [
+        "internal",
+        "internal",
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "gtrgm_picksplit",
+      "argTypes": [
+        "internal",
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "gtrgm_same",
+      "argTypes": [
+        "gtrgm",
+        "gtrgm",
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "gtrgm_union",
+      "argTypes": [
+        "internal",
+        "internal"
+      ],
+      "returnType": "gtrgm",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec",
+      "argTypes": [
+        "halfvec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "halfvec_accum",
+      "argTypes": [
+        "double precision[]",
+        "halfvec"
+      ],
+      "returnType": "double precision[]",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_add",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_avg",
+      "argTypes": [
+        "double precision[]"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "halfvec_cmp",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_combine",
+      "argTypes": [
+        "double precision[]",
+        "double precision[]"
+      ],
+      "returnType": "double precision[]",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_concat",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_eq",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_ge",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_gt",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_in",
+      "argTypes": [
+        "cstring",
+        "oid",
+        "integer"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "halfvec_l2_squared_distance",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_le",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_lt",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_mul",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_ne",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_negative_inner_product",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_out",
+      "argTypes": [
+        "halfvec"
+      ],
+      "returnType": "cstring",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "halfvec_recv",
+      "argTypes": [
+        "internal",
+        "oid",
+        "integer"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "halfvec_send",
+      "argTypes": [
+        "halfvec"
+      ],
+      "returnType": "bytea",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "halfvec_spherical_distance",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_sub",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "halfvec_to_float4",
+      "argTypes": [
+        "halfvec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "real[]",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "halfvec_to_sparsevec",
+      "argTypes": [
+        "halfvec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "halfvec_to_vector",
+      "argTypes": [
+        "halfvec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "halfvec_typmod_in",
+      "argTypes": [
+        "cstring[]"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "hamming_distance",
+      "argTypes": [
+        "bit",
+        "bit"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "has_project_permission",
+      "argTypes": [
+        "uuid",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "hnsw_bit_support",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "hnsw_halfvec_support",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "hnsw_sparsevec_support",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "hnswhandler",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "index_am_handler",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "increment_webhook_failures",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "inner_product",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "inner_product",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "inner_product",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "iris_call_count_recent",
+      "argTypes": [
+        "uuid",
+        "integer"
+      ],
+      "returnType": "bigint",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "iris_enqueue_ingest",
+      "argTypes": [
+        "text",
+        "text",
+        "uuid",
+        "uuid",
+        "text"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 5
+    },
+    {
+      "name": "iris_kb_record_retrieve",
+      "argTypes": [
+        "uuid",
+        "text",
+        "text",
+        "integer",
+        "boolean",
+        "integer",
+        "text",
+        "text"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 8
+    },
+    {
+      "name": "is_org_admin_or_empty",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "is_org_writable",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "is_pilot_project",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "is_pilot_user",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "is_project_member",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "is_project_org_writable",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "is_project_role",
+      "argTypes": [
+        "uuid",
+        "text[]"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "is_project_role_compat",
+      "argTypes": [
+        "uuid",
+        "text[]"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "is_project_writable_exempt_table",
+      "argTypes": [
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "is_writable_exempt_table",
+      "argTypes": [
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "ivfflat_bit_support",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "ivfflat_halfvec_support",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "internal",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "ivfflathandler",
+      "argTypes": [
+        "internal"
+      ],
+      "returnType": "index_am_handler",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "jaccard_distance",
+      "argTypes": [
+        "bit",
+        "bit"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "kb_retrieve",
+      "argTypes": [
+        "vector",
+        "text",
+        "uuid",
+        "text",
+        "integer",
+        "real",
+        "real",
+        "real",
+        "real"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": true,
+      "numArgs": 9
+    },
+    {
+      "name": "kernel_role_label",
+      "argTypes": [
+        "text"
+      ],
+      "returnType": "text",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "l1_distance",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "l1_distance",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "l1_distance",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "l2_distance",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "l2_distance",
+      "argTypes": [
+        "halfvec",
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "l2_distance",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "l2_norm",
+      "argTypes": [
+        "halfvec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "l2_norm",
+      "argTypes": [
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "l2_normalize",
+      "argTypes": [
+        "vector"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "l2_normalize",
+      "argTypes": [
+        "sparsevec"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "l2_normalize",
+      "argTypes": [
+        "halfvec"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "lap_2_open_incident_count",
+      "argTypes": null,
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "list_deleted_rfis",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "rfis",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "log_activity_on_punch_resolved",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "log_activity_on_rfi",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "log_activity_on_safety_observation",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "log_activity_on_toolbox_talk",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "match_document_chunks",
+      "argTypes": [
+        "vector",
+        "uuid",
+        "integer",
+        "double precision"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": false,
+      "numArgs": 4
+    },
+    {
+      "name": "my_active_org_writable",
+      "argTypes": null,
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_audit_incident_p0",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_daily_log_submitted",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_incident_reported",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_inspection_corrective_action",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_punch_item_assigned",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_rfi_assigned",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_safety_inspection_result",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_submittal_review",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "notify_task_assigned",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "pilot_agreements_set_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "profiles_set_mfa_grace",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "promote_insight_to_draft",
+      "argTypes": [
+        "jsonb",
+        "uuid"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "provision_organization",
+      "argTypes": [
+        "text",
+        "text",
+        "uuid",
+        "jsonb"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 4
+    },
+    {
+      "name": "purge_rate_limit_buckets",
+      "argTypes": null,
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "purge_stripe_processed_events",
+      "argTypes": null,
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "record_citation_interaction",
+      "argTypes": [
+        "uuid",
+        "integer",
+        "text",
+        "text",
+        "uuid"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 5
+    },
+    {
+      "name": "record_draft_decision",
+      "argTypes": [
+        "uuid",
+        "text",
+        "boolean"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    },
+    {
+      "name": "record_draft_view",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "record_event",
+      "argTypes": [
+        "uuid",
+        "text",
+        "jsonb"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    },
+    {
+      "name": "record_failed_login",
+      "argTypes": [
+        "text",
+        "text",
+        "text"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    },
+    {
+      "name": "refresh_project_health_summary",
+      "argTypes": null,
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "refresh_project_metrics",
+      "argTypes": null,
+      "returnType": "void",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "refresh_submittals_log_mv",
+      "argTypes": [
+        "boolean"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "reorder_tasks",
+      "argTypes": [
+        "uuid[]",
+        "integer[]"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "resolve_citation",
+      "argTypes": [
+        "text",
+        "uuid",
+        "jsonb"
+      ],
+      "returnType": "jsonb",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    },
+    {
+      "name": "resolve_persona",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "text",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "restore_rfi",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "rfis",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "rfis_iris_ingest_trigger",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "round_half_even_cents",
+      "argTypes": [
+        "numeric"
+      ],
+      "returnType": "bigint",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "search_org",
+      "argTypes": [
+        "text",
+        "uuid",
+        "integer"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "search_org",
+      "argTypes": [
+        "uuid",
+        "uuid",
+        "text",
+        "integer"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": true,
+      "numArgs": 4
+    },
+    {
+      "name": "search_project",
+      "argTypes": [
+        "uuid",
+        "text",
+        "integer"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    },
+    {
+      "name": "seed_iris_suggested_submittal_views",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "seed_role_catalogue",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "seed_sample_data",
+      "argTypes": [
+        "uuid",
+        "text"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "set_active_org",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "set_limit",
+      "argTypes": [
+        "real"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "set_next_run_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "set_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "should_send_notification",
+      "argTypes": [
+        "uuid",
+        "text",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    },
+    {
+      "name": "show_limit",
+      "argTypes": null,
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "show_trgm",
+      "argTypes": [
+        "text"
+      ],
+      "returnType": "text[]",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "similarity",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "similarity_dist",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "similarity_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "site_map_pins_touch_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "site_map_zones_touch_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "sparsevec",
+      "argTypes": [
+        "sparsevec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "sparsevec_cmp",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_eq",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_ge",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_gt",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_in",
+      "argTypes": [
+        "cstring",
+        "oid",
+        "integer"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "sparsevec_l2_squared_distance",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_le",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_lt",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_ne",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_negative_inner_product",
+      "argTypes": [
+        "sparsevec",
+        "sparsevec"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "sparsevec_out",
+      "argTypes": [
+        "sparsevec"
+      ],
+      "returnType": "cstring",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "sparsevec_recv",
+      "argTypes": [
+        "internal",
+        "oid",
+        "integer"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "sparsevec_send",
+      "argTypes": [
+        "sparsevec"
+      ],
+      "returnType": "bytea",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "sparsevec_to_halfvec",
+      "argTypes": [
+        "sparsevec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "sparsevec_to_vector",
+      "argTypes": [
+        "sparsevec",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "sparsevec_typmod_in",
+      "argTypes": [
+        "cstring[]"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "start_impersonation_session",
+      "argTypes": [
+        "uuid",
+        "uuid",
+        "uuid",
+        "text",
+        "timestamp with time zone",
+        "integer",
+        "inet",
+        "text"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 8
+    },
+    {
+      "name": "strict_word_similarity",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "strict_word_similarity_commutator_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "strict_word_similarity_dist_commutator_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "strict_word_similarity_dist_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "strict_word_similarity_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "submittal_advance_status",
+      "argTypes": [
+        "uuid",
+        "text",
+        "uuid",
+        "text"
+      ],
+      "returnType": "submittals",
+      "isSecurityDefiner": true,
+      "numArgs": 4
+    },
+    {
+      "name": "submittal_close",
+      "argTypes": [
+        "uuid",
+        "text"
+      ],
+      "returnType": "submittals",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "submittal_compute_required_on_site",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "jsonb",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "submittal_create_package",
+      "argTypes": [
+        "uuid",
+        "text",
+        "text",
+        "uuid",
+        "text",
+        "uuid[]"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 6
+    },
+    {
+      "name": "submittal_create_revision",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "submittals",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "submittal_delete_package",
+      "argTypes": [
+        "uuid"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "submittal_distribute",
+      "argTypes": [
+        "uuid",
+        "uuid[]"
+      ],
+      "returnType": "submittals",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "submittal_record_disposition",
+      "argTypes": [
+        "uuid",
+        "text",
+        "text",
+        "text"
+      ],
+      "returnType": "submittals",
+      "isSecurityDefiner": true,
+      "numArgs": 4
+    },
+    {
+      "name": "submittal_replace_user",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "submittal_set_package_members",
+      "argTypes": [
+        "uuid",
+        "uuid[]"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "submittal_update_package",
+      "argTypes": [
+        "uuid",
+        "text",
+        "text",
+        "uuid",
+        "text"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 5
+    },
+    {
+      "name": "subvector",
+      "argTypes": [
+        "halfvec",
+        "integer",
+        "integer"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "subvector",
+      "argTypes": [
+        "vector",
+        "integer",
+        "integer"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "trg_refresh_submittals_log_mv",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "trg_submittal_saved_views_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "update_rfi_ball_in_court",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "update_submittal_days_in_review",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "update_submittal_submit_by",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "update_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "update_warranty_status",
+      "argTypes": null,
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 0
+    },
+    {
+      "name": "update_webhook_endpoint_timestamp",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "vector",
+      "argTypes": [
+        "vector",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "vector_accum",
+      "argTypes": [
+        "double precision[]",
+        "vector"
+      ],
+      "returnType": "double precision[]",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_add",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_avg",
+      "argTypes": [
+        "double precision[]"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "vector_cmp",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_combine",
+      "argTypes": [
+        "double precision[]",
+        "double precision[]"
+      ],
+      "returnType": "double precision[]",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_concat",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_dims",
+      "argTypes": [
+        "halfvec"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "vector_dims",
+      "argTypes": [
+        "vector"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "vector_eq",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_ge",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_gt",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_in",
+      "argTypes": [
+        "cstring",
+        "oid",
+        "integer"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "vector_l2_squared_distance",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_le",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_lt",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_mul",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_ne",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_negative_inner_product",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_norm",
+      "argTypes": [
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "vector_out",
+      "argTypes": [
+        "vector"
+      ],
+      "returnType": "cstring",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "vector_recv",
+      "argTypes": [
+        "internal",
+        "oid",
+        "integer"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "vector_send",
+      "argTypes": [
+        "vector"
+      ],
+      "returnType": "bytea",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "vector_spherical_distance",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "double precision",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_sub",
+      "argTypes": [
+        "vector",
+        "vector"
+      ],
+      "returnType": "vector",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "vector_to_float4",
+      "argTypes": [
+        "vector",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "real[]",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "vector_to_halfvec",
+      "argTypes": [
+        "vector",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "halfvec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "vector_to_sparsevec",
+      "argTypes": [
+        "vector",
+        "integer",
+        "boolean"
+      ],
+      "returnType": "sparsevec",
+      "isSecurityDefiner": false,
+      "numArgs": 3
+    },
+    {
+      "name": "vector_typmod_in",
+      "argTypes": [
+        "cstring[]"
+      ],
+      "returnType": "integer",
+      "isSecurityDefiner": false,
+      "numArgs": 1
+    },
+    {
+      "name": "verify_audit_chain",
+      "argTypes": [
+        "timestamp with time zone"
+      ],
+      "returnType": "record",
+      "isSecurityDefiner": true,
+      "numArgs": 1
+    },
+    {
+      "name": "verify_membership",
+      "argTypes": [
+        "uuid",
+        "uuid"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "view_freshness_status",
+      "argTypes": null,
+      "returnType": "record",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "walkthrough_captures_bump_session_counts",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "walkthrough_captures_set_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "walkthrough_sessions_set_updated_at",
+      "argTypes": null,
+      "returnType": "trigger",
+      "isSecurityDefiner": false,
+      "numArgs": 0
+    },
+    {
+      "name": "withdraw_stale_draft",
+      "argTypes": [
+        "uuid",
+        "text"
+      ],
+      "returnType": "void",
+      "isSecurityDefiner": true,
+      "numArgs": 2
+    },
+    {
+      "name": "word_similarity",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "word_similarity_commutator_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "word_similarity_dist_commutator_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "word_similarity_dist_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "real",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "word_similarity_op",
+      "argTypes": [
+        "text",
+        "text"
+      ],
+      "returnType": "boolean",
+      "isSecurityDefiner": false,
+      "numArgs": 2
+    },
+    {
+      "name": "write_audit_entry",
+      "argTypes": [
+        "uuid",
+        "text",
+        "text",
+        "uuid",
+        "text",
+        "jsonb",
+        "jsonb"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 7
+    },
+    {
+      "name": "write_audit_incident",
+      "argTypes": [
+        "text",
+        "text",
+        "jsonb"
+      ],
+      "returnType": "uuid",
+      "isSecurityDefiner": true,
+      "numArgs": 3
+    }
+  ]
+}

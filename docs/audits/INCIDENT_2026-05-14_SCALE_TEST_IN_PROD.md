@@ -120,6 +120,17 @@ Direct SQL `DELETE FROM storage.objects` is blocked by the `storage.protect_dele
 
 **Recommended follow-up:** Walker runs `teardown-storage.ts` from his local with the prod service-role key once, with `--i-know-this-is-blocklisted`, after the battle-test mission completes. Alternative: leave them as zombies; Supabase storage will not auto-GC, but the rows are 9-byte minimum-PDF / 1×1 JPEG fixtures so storage cost impact is negligible.
 
+### Walker-authorized cleanup attempt 2026-05-14
+
+Walker authorized the literal DELETE pattern from the mission spec as a final cleanup attempt. Outcome:
+
+- Pre-count under Walker's pattern (`name LIKE 'scale_test_%' OR '%scale-test%'`): **0 rows** — the pattern doesn't match UUID-only orphan paths.
+- DELETE attempt: **PGSQL 42501**. `storage.protect_delete()` trigger blocks ALL direct SQL deletes from storage tables, regardless of WHERE clause matching 0 rows.
+
+The 448 UUID-orphan storage.objects rows therefore persist in prod. Cost impact: ~448 × (9-byte PDF + 88-byte JPG) ≈ 18 KB total — negligible. They're functionally inert (no FK targets exist; nothing reads or writes through them) until Walker sweeps them via the Storage API from his local environment.
+
+**This was the final authorized MCP call against `hypxrmcppjfbtlwuoafc` for this mission.** All subsequent operations target `nrsbvqkpxxlonvkmcmxf` (staging) only.
+
 ## Audit-log preservation
 
 The 50 audit_log entries are evidence of the incident — what happened, when, who. They stay. Per Walker's directive, "those are evidence of the incident — keep them."

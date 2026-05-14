@@ -1,0 +1,6829 @@
+{
+  "roles": [
+    "owner",
+    "project_executive",
+    "admin",
+    "project_manager",
+    "superintendent",
+    "foreman",
+    "project_engineer",
+    "field_engineer",
+    "safety_manager",
+    "subcontractor",
+    "architect",
+    "owner_rep",
+    "member",
+    "field_user",
+    "viewer"
+  ],
+  "categories": {
+    "rfi": [
+      "create",
+      "read",
+      "update",
+      "close",
+      "delete",
+      "assign",
+      "escalate",
+      "distribute"
+    ],
+    "submittal": [
+      "create",
+      "read",
+      "update",
+      "approve",
+      "reject",
+      "distribute",
+      "close",
+      "external_review",
+      "markup"
+    ],
+    "daily_log": [
+      "create",
+      "read",
+      "update",
+      "sign",
+      "approve",
+      "delete",
+      "revise",
+      "ai_summarize"
+    ],
+    "punch_item": [
+      "create",
+      "read",
+      "update",
+      "close",
+      "verify",
+      "delete"
+    ],
+    "change_order": [
+      "create",
+      "read",
+      "update",
+      "approve",
+      "sign",
+      "delete",
+      "impact_pricing"
+    ],
+    "pay_app": [
+      "create",
+      "read",
+      "update",
+      "submit",
+      "approve",
+      "release_retainage",
+      "lien_waiver",
+      "fund"
+    ],
+    "project": [
+      "create",
+      "read",
+      "update",
+      "archive",
+      "delete",
+      "manage_members",
+      "manage_billing"
+    ],
+    "organization": [
+      "read",
+      "update",
+      "delete",
+      "invite",
+      "transfer_ownership"
+    ],
+    "iris": [
+      "chat",
+      "approve_action",
+      "withdraw_action"
+    ],
+    "storage": [
+      "upload",
+      "download",
+      "delete"
+    ]
+  },
+  "total_cells": 960,
+  "note": "expected outcomes (allow/deny) and coverage_status are TBD \u2014 populated by Phase B.4/B.5 contract tests. Roles per project_members CHECK constraint; actions per docs/audits/PERMISSION_GATE_AUDIT_2026-05-01.md categories.",
+  "cells": [
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_executive",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "admin",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_manager",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "superintendent",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "foreman",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "project_engineer",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_engineer",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "safety_manager",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "subcontractor",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "architect",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "owner_rep",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "member",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "field_user",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "assign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "escalate",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "rfi",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "reject",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "distribute",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "external_review",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "submittal",
+      "action": "markup",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "revise",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "daily_log",
+      "action": "ai_summarize",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "punch_item",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "punch_item",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "punch_item",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "punch_item",
+      "action": "close",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "punch_item",
+      "action": "verify",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "punch_item",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "sign",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "change_order",
+      "action": "impact_pricing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "submit",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "approve",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "release_retainage",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "lien_waiver",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "pay_app",
+      "action": "fund",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "create",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "archive",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "manage_members",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "project",
+      "action": "manage_billing",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "organization",
+      "action": "read",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "organization",
+      "action": "update",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "organization",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "organization",
+      "action": "invite",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "organization",
+      "action": "transfer_ownership",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "iris",
+      "action": "chat",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "iris",
+      "action": "approve_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "iris",
+      "action": "withdraw_action",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "storage",
+      "action": "upload",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "storage",
+      "action": "download",
+      "expected": null,
+      "coverage_status": "uncovered"
+    },
+    {
+      "role": "viewer",
+      "entity": "storage",
+      "action": "delete",
+      "expected": null,
+      "coverage_status": "uncovered"
+    }
+  ]
+}
