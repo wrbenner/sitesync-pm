@@ -23,6 +23,7 @@ on:
       - 'src/**'
       - 'e2e/**'
       - 'tests/mobile/**'
+      - '.github/workflows/gate-13-mobile-viewport.yml'
   push:
     branches: [main]
 

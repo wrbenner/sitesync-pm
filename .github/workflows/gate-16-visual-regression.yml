@@ -22,6 +22,7 @@ on:
     paths:
       - 'src/**'
       - 'tests/visual/**'
+      - '.github/workflows/gate-16-visual-regression.yml'
   push:
     branches: [main]
 

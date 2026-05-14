@@ -25,6 +25,7 @@ on:
       - 'src/pages/**'
       - 'src/components/**'
       - 'e2e/coverage/**'
+      - '.github/workflows/gate-20-every-route-every-button.yml'
   push:
     branches: [main]
 

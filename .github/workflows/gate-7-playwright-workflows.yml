@@ -25,6 +25,7 @@ on:
       - 'e2e/workflows/**'
       - 'src/**'
       - 'supabase/migrations/**'
+      - '.github/workflows/gate-7-playwright-workflows.yml'
   push:
     branches: [main]
 

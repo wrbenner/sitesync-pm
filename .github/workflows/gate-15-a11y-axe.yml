@@ -22,6 +22,7 @@ on:
     paths:
       - 'src/**'
       - 'tests/a11y/**'
+      - '.github/workflows/gate-15-a11y-axe.yml'
   push:
     branches: [main]
 
