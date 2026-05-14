@@ -21,11 +21,13 @@
  * create a real account). We capture form-filled state instead.
  */
 import { test, expect, Page } from '@playwright/test'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = path.resolve(__dirname, '..', 'polish-review', 'pages', 'login')
+fs.mkdirSync(OUT_DIR, { recursive: true })
 
 const _USER = process.env.POLISH_USER!
 const _PASS = process.env.POLISH_PASS!
