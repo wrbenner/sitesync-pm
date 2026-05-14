@@ -319,7 +319,7 @@ export const Signup: React.FC = () => {
               letterSpacing: '-0.01em',
             }}
           >
-            Welcome.
+            Get started.
           </h1>
           <p
             style={{
