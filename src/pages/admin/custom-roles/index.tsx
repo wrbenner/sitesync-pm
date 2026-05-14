@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { fromTable } from '../../../lib/db/queries';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
 import { colors, spacing, typography } from '../../../styles/theme';
 import { Plus, Trash2 } from 'lucide-react';
@@ -43,8 +43,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: roles } = useQuery({
     queryKey: ['org_custom_roles', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('org_custom_roles')
+      const { data } = await fromTable('org_custom_roles')
         .select('*')
         .eq('organization_id', organizationId)
         .order('name', { ascending: true });
@@ -54,7 +53,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
 
   const create = async () => {
     if (!draft.name.trim()) { toast.error('Name required'); return; }
-    const { error } = await (supabase as any).from('org_custom_roles').insert({
+    const { error } = await fromTable('org_custom_roles').insert({
       organization_id: organizationId,
       name: draft.name.trim(),
       description: draft.description.trim() || null,
@@ -76,7 +75,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
       destructiveLabel: 'Delete role',
     });
     if (!ok) return;
-    await (supabase as any).from('org_custom_roles').delete().eq('id', id);
+    await fromTable('org_custom_roles').delete().eq('id', id);
     qc.invalidateQueries({ queryKey: ['org_custom_roles', organizationId] });
   };
 
@@ -96,10 +95,11 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
         <legend style={legend}>New custom role</legend>
         <input style={input} placeholder="Role name (e.g. Cost Engineer)" value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
         <input style={{ ...input, marginTop: 6 }} placeholder="Description (optional)" value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} />
-        <label style={{ display: 'block', marginTop: 8, fontSize: typography.fontSize.label, color: colors.textSecondary }}>
+        <label htmlFor="custom_role_inherits" style={{ display: 'block', marginTop: 8, fontSize: typography.fontSize.label, color: colors.textSecondary }}>
           Inherits from (optional)
         </label>
         <select
+          id="custom_role_inherits"
           style={{ ...input, marginTop: 4 }}
           value={draft.inherits_from ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, inherits_from: e.target.value || null }))}

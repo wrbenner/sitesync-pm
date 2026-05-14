@@ -73,7 +73,7 @@ const RecipientRow: React.FC<{
       border: `1px solid ${colors.borderSubtle}`,
     }}
   >
-    <Avatar initials={(recipient.name || '?').slice(0, 2).toUpperCase()} size={28} />
+    <Avatar initials={(recipient.name || recipient.email).slice(0, 2).toUpperCase()} size={28} />
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{
         fontSize: typography.fontSize.caption, fontWeight: typography.fontWeight.medium,
@@ -177,9 +177,8 @@ const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
       })))
     } catch {
       // Error handled upstream
-    } finally {
-      setSending(false)
     }
+    setSending(false)
   }, [recipients, onDistribute])
 
   const handleCopyLink = useCallback(() => {
@@ -267,13 +266,12 @@ const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
         {/* Add People */}
         <div ref={searchRef} style={{ position: 'relative' }}>
           <div
-            onClick={() => setShowSearch(true)}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing.sm,
               padding: `${spacing.sm} ${spacing.md}`,
               borderRadius: borderRadius.md,
               border: `1px dashed ${colors.borderDefault}`,
-              cursor: 'pointer', transition: 'all 0.15s',
+              cursor: 'text', transition: 'all 0.15s',
             }}
           >
             <Plus size={14} style={{ color: colors.textTertiary }} />
@@ -304,12 +302,14 @@ const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
                 }}
               >
                 {filtered.slice(0, 8).map(c => (
-                  <div key={c.id}
+                  <button key={c.id}
+                    type="button"
                     onClick={() => addRecipient(c)}
                     style={{
-                      padding: '8px 12px', cursor: 'pointer',
+                      width: '100%', padding: '8px 12px', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: spacing.sm,
-                      transition: 'background 0.1s',
+                      transition: 'background 0.1s', border: 'none',
+                      backgroundColor: 'transparent', textAlign: 'left',
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceHover)}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -324,7 +324,7 @@ const RFIDistributionPanel: React.FC<RFIDistributionPanelProps> = ({
                       </div>
                     </div>
                     {c.email && <Mail size={10} style={{ color: colors.textTertiary }} />}
-                  </div>
+                  </button>
                 ))}
               </motion.div>
             )}
