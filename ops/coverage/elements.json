@@ -1,0 +1,1424 @@
+{
+  "source": "src/pages full-tree regex scan (Button/Link/MenuItem/Modal/Drawer + onClick/onSubmit)",
+  "pages_scanned": 223,
+  "marker_counts": {
+    "Button": 110,
+    "onClick": 1192,
+    "onSubmit": 70,
+    "href": 93,
+    "Link": 236,
+    "form": 1250,
+    "input": 514,
+    "select": 1298,
+    "Select": 519,
+    "Modal": 612,
+    "Drawer": 25,
+    "tab": 968,
+    "MenuItem": 4
+  },
+  "tracked_element_count": 610,
+  "note": "Phase A.2 inventory. Detailed entries below for first 200; full AST coverage via Phase B.1 Playwright suite.",
+  "elements_sample": [
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 146,
+      "type": "Link",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 341,
+      "type": "span",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 361,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 364,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 433,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 434,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 435,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 436,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 450,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 551,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 552,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 577,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 592,
+      "type": "Modal",
+      "aria": "New Wiki Page",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 621,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Wiki.tsx",
+      "line": 622,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 344,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 445,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 448,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 547,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 570,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 571,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 623,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 686,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 743,
+      "type": "Modal",
+      "aria": "Upload O&M Manual",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 782,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 783,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 848,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 900,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 910,
+      "type": "Modal",
+      "aria": "Add Training Session",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 920,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 921,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 1129,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 1166,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Closeout.tsx",
+      "line": 1167,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 532,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 533,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 643,
+      "type": "Modal",
+      "aria": "New Bid Package",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 668,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 669,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 675,
+      "type": "Modal",
+      "aria": "Record Bid Submission",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 707,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 708,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 714,
+      "type": "Modal",
+      "aria": "Invite Subcontractor to Bid",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 752,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 753,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 759,
+      "type": "Modal",
+      "aria": "Add Scope Item",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 769,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 770,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 776,
+      "type": "Modal",
+      "aria": "Add Subcontractor",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 796,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 797,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1067,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1070,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1073,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1150,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1151,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1152,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1169,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1202,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1223,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1353,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1396,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1410,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Preconstruction.tsx",
+      "line": 1564,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 445,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1138,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1145,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1152,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1309,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1329,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1479,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 1902,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2541,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2542,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2675,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2733,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2734,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Safety.tsx",
+      "line": 2740,
+      "type": "Modal",
+      "aria": "AI Safety Scan",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 204,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 285,
+      "type": "Modal",
+      "aria": "Log Delivery",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 293,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 294,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 298,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 309,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 383,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 387,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 405,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 419,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 454,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 461,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 488,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 565,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 596,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 608,
+      "type": "Modal",
+      "aria": "Report Damage",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 614,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 637,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 662,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Deliveries.tsx",
+      "line": 663,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/LienWaivers.tsx",
+      "line": 210,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/LienWaivers.tsx",
+      "line": 523,
+      "type": "Modal",
+      "aria": "New Lien Waiver",
+      "handler": null
+    },
+    {
+      "file": "src/pages/LienWaivers.tsx",
+      "line": 618,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/LienWaivers.tsx",
+      "line": 619,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 515,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 550,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 559,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 565,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 569,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 665,
+      "type": "FormModal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 726,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 727,
+      "type": "form",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 730,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Equipment.tsx",
+      "line": 781,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/OwnerReportPage.tsx",
+      "line": 17,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 421,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 424,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 427,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 462,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 463,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 464,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 471,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 577,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 787,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 817,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 914,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 984,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1045,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1065,
+      "type": "Modal",
+      "aria": "Enter Hours",
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1086,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1087,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1092,
+      "type": "Modal",
+      "aria": "Log Time",
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1112,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1113,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1118,
+      "type": "Modal",
+      "aria": "Create T&M Ticket",
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1142,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/TimeTracking.tsx",
+      "line": 1143,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Files.tsx",
+      "line": 498,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 360,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 361,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 386,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 428,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 524,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 638,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 678,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 701,
+      "type": "Modal",
+      "aria": "Add Vendor",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 733,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 734,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 739,
+      "type": "Modal",
+      "aria": "AI Vendor Risk Assessment",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 772,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 825,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 831,
+      "type": "Modal",
+      "aria": "Edit Vendor",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 863,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 864,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 870,
+      "type": "Modal",
+      "aria": "Create Bid Invitation List",
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 913,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 914,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 975,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 987,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 999,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Vendors.tsx",
+      "line": 1000,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/RFIs.tsx",
+      "line": 1080,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/RFIs.tsx",
+      "line": 1585,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 66,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 77,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 78,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 119,
+      "type": "div",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 137,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 138,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 312,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 389,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 464,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 476,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 477,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 782,
+      "type": "PermissionGate",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 784,
+      "type": "PermissionGate",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 864,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 877,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 883,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 925,
+      "type": "PermissionGate",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 1152,
+      "type": "Drawer",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 1168,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/Directory.tsx",
+      "line": 1169,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 268,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 297,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 298,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 406,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1104,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1117,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1147,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1198,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1381,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1412,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1464,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1477,
+      "type": "button",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1567,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1584,
+      "type": "Modal",
+      "aria": "New Site Pin",
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1591,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1655,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1658,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1667,
+      "type": "Modal",
+      "aria": null,
+      "handler": null
+    },
+    {
+      "file": "src/pages/SiteMap.tsx",
+      "line": 1725,
+      "type": "Btn",
+      "aria": null,
+      "handler": null
+    }
+  ],
+  "elements_total": 610
+}

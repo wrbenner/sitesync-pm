@@ -1,0 +1,51 @@
+{
+  "source": "grep @capacitor/ src/",
+  "capacitor_files_count": 7,
+  "capacitor_usage": [
+    {
+      "file": "src/hooks/useHaptics.ts",
+      "matches": 2
+    },
+    {
+      "file": "src/hooks/useMobileCapture.ts",
+      "matches": 5
+    },
+    {
+      "file": "src/hooks/usePushNotifications.ts",
+      "matches": 3
+    },
+    {
+      "file": "src/lib/native/appShortcuts.ts",
+      "matches": 1
+    },
+    {
+      "file": "src/lib/native/haptics.ts",
+      "matches": 2
+    },
+    {
+      "file": "src/lib/native/push.ts",
+      "matches": 3
+    },
+    {
+      "file": "src/lib/native/share.ts",
+      "matches": 3
+    }
+  ],
+  "viewport_targets": [
+    {
+      "device": "iPhone",
+      "w": 375,
+      "h": 812
+    },
+    {
+      "device": "iPad",
+      "w": 414,
+      "h": 896
+    },
+    {
+      "device": "iPad Pro",
+      "w": 1024,
+      "h": 1366
+    }
+  ]
+}

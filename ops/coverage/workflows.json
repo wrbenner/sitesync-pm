@@ -1,0 +1,172 @@
+{
+  "source": "Walker mission spec \u00a7 A.8 + docs/PLATINUM_WORKFLOWS.md",
+  "workflow_count": 18,
+  "total_steps": 129,
+  "workflows": {
+    "auth": [
+      "signup",
+      "email_verify",
+      "first_signin",
+      "password_reset",
+      "mfa_enroll",
+      "mfa_challenge",
+      "account_lockout",
+      "recovery"
+    ],
+    "onboarding": [
+      "org_create",
+      "invite_teammate",
+      "accept_invite",
+      "first_project",
+      "first_member_added"
+    ],
+    "rfi": [
+      "create",
+      "assign",
+      "escalate",
+      "respond",
+      "distribute",
+      "close",
+      "audit_chain_verify",
+      "search_index_updated"
+    ],
+    "submittal": [
+      "create",
+      "package",
+      "reviewer_assign",
+      "review_cycle",
+      "approve_reject",
+      "distribute",
+      "markup",
+      "magic_link_external_review",
+      "close"
+    ],
+    "daily_log": [
+      "create",
+      "add_weather_auto",
+      "add_crew",
+      "add_equipment",
+      "add_narrative",
+      "sign",
+      "revision",
+      "audit"
+    ],
+    "punch_list": [
+      "create_item",
+      "assign",
+      "location_pin_on_drawing",
+      "photo_evidence",
+      "contractor_close",
+      "owner_verify"
+    ],
+    "change_order": [
+      "create",
+      "source_rfi_link",
+      "impact_pricing",
+      "route_approval",
+      "owner_sign",
+      "budget_update",
+      "audit"
+    ],
+    "pay_app": [
+      "create",
+      "cost_code_rollup",
+      "retainage_calc",
+      "sub_reconciliation",
+      "owner_preview",
+      "lien_waiver",
+      "sign",
+      "submit",
+      "fund"
+    ],
+    "schedule": [
+      "import_p6_xer",
+      "parse",
+      "wbs_map",
+      "phase_create",
+      "dependency_wire",
+      "critical_path_calc",
+      "snapshot"
+    ],
+    "drawings": [
+      "upload_set",
+      "page_split",
+      "ocr",
+      "classify",
+      "sheet_number_extract",
+      "revision",
+      "markup",
+      "distribute",
+      "bulletin"
+    ],
+    "safety": [
+      "incident_report",
+      "corrective_action",
+      "photo_ai_analyze",
+      "toolbox_talk",
+      "certification_expiry",
+      "coi_tracking",
+      "site_checkin_block"
+    ],
+    "bim": [
+      "model_upload",
+      "ifc_parse",
+      "element_extract",
+      "clash_detect",
+      "sequence_4d",
+      "progress_tracking",
+      "rfi_link"
+    ],
+    "preconstruction": [
+      "bid_package",
+      "invite_subs",
+      "scope_items",
+      "bid_submission",
+      "leveling",
+      "evaluation",
+      "award"
+    ],
+    "closeout": [
+      "punch_close",
+      "warranties",
+      "as_builts",
+      "om_manuals",
+      "spec_sections",
+      "final_completion"
+    ],
+    "iris": [
+      "chat",
+      "kb_retrieve",
+      "citations",
+      "action_suggestion",
+      "execution",
+      "drafted_action_lifecycle",
+      "auto_withdraw"
+    ],
+    "settings": [
+      "org_branding",
+      "sso_config",
+      "scim_provision",
+      "api_tokens",
+      "webhook_endpoints",
+      "custom_roles"
+    ],
+    "billing": [
+      "plan_select",
+      "payment_method",
+      "subscription_create",
+      "invoice",
+      "dunning",
+      "cancellation",
+      "reactivation"
+    ],
+    "account": [
+      "profile_edit",
+      "mfa_toggle",
+      "password_change",
+      "org_switch",
+      "account_delete",
+      "data_export"
+    ]
+  }
+}

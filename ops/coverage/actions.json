@@ -1,0 +1,255 @@
+{
+  "source": "src/stores AST regex",
+  "store_count": 13,
+  "total_actions": 157,
+  "stores": [
+    {
+      "file": "src/stores/agentOrchestrator.ts",
+      "store": "agentOrchestrator",
+      "action_count": 17,
+      "actions": [
+        "addAgentMessage",
+        "addCoordinatorMessage",
+        "addUserMessage",
+        "approveAction",
+        "approveAllPending",
+        "clearMessages",
+        "handleOrchestratorResponse",
+        "incrementAgentActions",
+        "rejectAction",
+        "rejectAllPending",
+        "setActiveAgents",
+        "setAgentStatus",
+        "setError",
+        "setInput",
+        "setLastIntent",
+        "setPendingBatch",
+        "setProcessing"
+      ]
+    },
+    {
+      "file": "src/stores/aiAnnotationStore.ts",
+      "store": "aiAnnotationStore",
+      "action_count": 23,
+      "actions": [
+        "addAnnotation",
+        "canRedo",
+        "canUndo",
+        "clearAnnotations",
+        "delete",
+        "deleteAnnotation",
+        "dismissAlert",
+        "dismissAnnotation",
+        "eq",
+        "insert",
+        "isAlertSnoozed",
+        "loadFromSupabase",
+        "redo",
+        "saveToSupabase",
+        "select",
+        "selectAnnotation",
+        "setColor",
+        "setContextPanelOpen",
+        "setTool",
+        "snoozeAlert",
+        "toggleContextPanel",
+        "undo",
+        "updateAnnotation"
+      ]
+    },
+    {
+      "file": "src/stores/authStore.ts",
+      "store": "authStore",
+      "action_count": 19,
+      "actions": [
+        "clearError",
+        "clearOrganization",
+        "createCompany",
+        "createOrganization",
+        "initialize",
+        "loadOrganization",
+        "loadProfile",
+        "resetPassword",
+        "setCurrentOrg",
+        "setCurrentOrgRole",
+        "setOrganizations",
+        "signIn",
+        "signOut",
+        "signUp",
+        "switchActiveOrg",
+        "teardown",
+        "unsubscribe",
+        "updatePassword",
+        "updateProfile"
+      ]
+    },
+    {
+      "file": "src/stores/copilotStore.ts",
+      "store": "copilotStore",
+      "action_count": 9,
+      "actions": [
+        "closeCopilot",
+        "createConversation",
+        "deleteConversation",
+        "getActiveConversation",
+        "openCopilot",
+        "sendMessage",
+        "setActiveConversation",
+        "setPageContext",
+        "setProjectId"
+      ]
+    },
+    {
+      "file": "src/stores/digitalTwinStore.ts",
+      "store": "digitalTwinStore",
+      "action_count": 21,
+      "actions": [
+        "addMarkup",
+        "addPhotoPin",
+        "addViewpoint",
+        "removeMarkup",
+        "resetOverlays",
+        "selectPin",
+        "setActiveTool",
+        "setCrewLocations",
+        "setLayerActive",
+        "setMarkups",
+        "setPhotoPins",
+        "setProgressElements",
+        "setRFIPins",
+        "setSafetyData",
+        "setScheduleElements",
+        "setSensors",
+        "setTimelineDate",
+        "setTimelineOptions",
+        "setViewpoints",
+        "toggleLayer",
+        "updateCrewLocation"
+      ]
+    },
+    {
+      "file": "src/stores/entityStore.ts",
+      "store": "entityStore",
+      "action_count": 11,
+      "actions": [
+        "_setSlice",
+        "clearError",
+        "createItem",
+        "deleteItem",
+        "initSlice",
+        "loadItems",
+        "resetFilters",
+        "setFilters",
+        "setSelectedId",
+        "setSlice",
+        "updateItem"
+      ]
+    },
+    {
+      "file": "src/stores/irisDraftStore.ts",
+      "store": "irisDraftStore",
+      "action_count": 8,
+      "actions": [
+        "_reset",
+        "approveDraft",
+        "clearDraft",
+        "editDraft",
+        "generateDraft",
+        "getDraft",
+        "isLoading",
+        "rejectDraft"
+      ]
+    },
+    {
+      "file": "src/stores/presenceStore.ts",
+      "store": "presenceStore",
+      "action_count": 7,
+      "actions": [
+        "getPageUserCounts",
+        "getUsersEditingEntity",
+        "getUsersOnPage",
+        "getUsersViewingEntity",
+        "isEntityBeingEdited",
+        "setInitialized",
+        "setOnlineUsers"
+      ]
+    },
+    {
+      "file": "src/stores/projectStore.ts",
+      "store": "projectStore",
+      "action_count": 8,
+      "actions": [
+        "addMember",
+        "createProject",
+        "loadMembers",
+        "loadProjects",
+        "partialize",
+        "removeMember",
+        "setActiveProject",
+        "updateProject"
+      ]
+    },
+    {
+      "file": "src/stores/punchListStore.ts",
+      "store": "punchListStore",
+      "action_count": 3,
+      "actions": [
+        "addComment",
+        "getComments",
+        "loadComments"
+      ]
+    },
+    {
+      "file": "src/stores/scheduleStore.ts",
+      "store": "scheduleStore",
+      "action_count": 7,
+      "actions": [
+        "createPhase",
+        "deletePhase",
+        "loadSchedule",
+        "queryFn",
+        "transitionStatus",
+        "updateDependencies",
+        "updatePhase"
+      ]
+    },
+    {
+      "file": "src/stores/streamStore.ts",
+      "store": "streamStore",
+      "action_count": 8,
+      "actions": [
+        "clear",
+        "dismiss",
+        "isDismissed",
+        "isSnoozed",
+        "setUserKey",
+        "snooze",
+        "undismiss",
+        "unsnooze"
+      ]
+    },
+    {
+      "file": "src/stores/uiStore.ts",
+      "store": "uiStore",
+      "action_count": 16,
+      "actions": [
+        "addNotification",
+        "addToast",
+        "announceAlert",
+        "announceStatus",
+        "dismiss",
+        "dismissToast",
+        "markAllRead",
+        "markRead",
+        "setActiveView",
+        "setCommandPaletteOpen",
+        "setSearchQuery",
+        "setSidebarCollapsed",
+        "setThemeMode",
+        "subscribeToUserNotifications",
+        "toggleSidebar",
+        "unsubscribeFromUserNotifications"
+      ]
+    }
+  ]
+}

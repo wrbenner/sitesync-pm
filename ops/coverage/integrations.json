@@ -1,0 +1,90 @@
+{
+  "stripe": {
+    "pattern": "stripe\\.com|@stripe/|STRIPE_",
+    "file_count": 8,
+    "sample_files": [
+      "src/services/billing.test.ts",
+      "supabase/functions/billing-create-customer/index.ts",
+      "supabase/functions/billing-payment-method/index.ts",
+      "supabase/functions/billing-portal/index.ts",
+      "supabase/functions/billing-process-payment/index.ts"
+    ]
+  },
+  "resend": {
+    "pattern": "resend|RESEND_",
+    "file_count": 31,
+    "sample_files": [
+      "src/content/help/inviting-your-team 2.md",
+      "src/content/help/inviting-your-team 2.mdx",
+      "src/content/help/inviting-your-team 3.md",
+      "src/content/help/inviting-your-team 3.mdx",
+      "src/content/help/inviting-your-team.md"
+    ]
+  },
+  "turnstile": {
+    "pattern": "turnstile|TURNSTILE",
+    "file_count": 3,
+    "sample_files": [
+      "src/components/auth/Turnstile.tsx",
+      "src/pages/auth/Signup.tsx",
+      "supabase/functions/provision-org/index.ts"
+    ]
+  },
+  "anthropic": {
+    "pattern": "anthropic|claude|ANTHROPIC_",
+    "file_count": 35,
+    "sample_files": [
+      "src/components/submittals/Create/UnifiedCreateModal.tsx",
+      "src/components/submittals/detail/DetailTabs.tsx",
+      "src/lib/ai/callIris.ts",
+      "src/lib/aiObservability.ts",
+      "src/lib/dailyLogDrafting/photoCaption.ts"
+    ]
+  },
+  "slack": {
+    "pattern": "slack\\.com|SLACK_",
+    "file_count": 3,
+    "sample_files": [
+      "src/services/integrations/base.ts",
+      "supabase/functions/_shared/slackAlert.ts",
+      "supabase/functions/send-slack-notification/index.ts"
+    ]
+  },
+  "email_in": {
+    "pattern": "mailgun|postmark|inbound-email|email-receiver",
+    "file_count": 4,
+    "sample_files": [
+      "src/components/rfi/RFIEmailReviewBanner.tsx",
+      "supabase/functions/inbound-email-events/index.ts",
+      "supabase/functions/inbound-email/index.ts",
+      "supabase/functions/notification-queue-worker/index.ts"
+    ]
+  },
+  "sentry": {
+    "pattern": "sentry|SENTRY_",
+    "file_count": 37,
+    "sample_files": [
+      "src/App.tsx",
+      "src/components/ErrorBoundary.tsx",
+      "src/hooks/mutations/createAuditedMutation.ts",
+      "src/hooks/mutations/daily-log-entries.ts",
+      "src/hooks/mutations/documents.ts"
+    ]
+  },
+  "betterstack": {
+    "pattern": "betterstack|BETTERSTACK_",
+    "file_count": 0,
+    "sample_files": []
+  },
+  "vercel": {
+    "pattern": "vercel|VERCEL_",
+    "file_count": 6,
+    "sample_files": [
+      "supabase/functions/agent-orchestrator/index.ts",
+      "supabase/functions/ai-insights/index.ts",
+      "supabase/functions/generate-benchmarks/index.ts",
+      "supabase/functions/shared/apiAuth.ts",
+      "supabase/functions/stripe-webhook/index.ts"
+    ]
+  }
+}

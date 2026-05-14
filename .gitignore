@@ -48,8 +48,10 @@ test-results/
 # One-off marketing/manifesto HTML drops (track in docs/ if needed)
 /SiteSync_The_Nine_Manifesto*.html
 
-# Coverage reports
+# Coverage reports (Vitest output) — but DO track ops/coverage/ which is the
+# Phase A platform-coverage matrix authored by the functional-frog mission.
 coverage/
+!ops/coverage/
 .env
 
 # Battle-test artifacts (transient — see docs/runbooks/BATTLE_TEST_RUNBOOK.md)

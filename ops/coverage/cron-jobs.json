@@ -1,0 +1,54 @@
+{
+  "source": "staging cron.job",
+  "count": 8,
+  "jobs": [
+    {
+      "jobname": "notification-queue-worker",
+      "schedule": "*/1 * * * *",
+      "command": "\n      select net.http_post(\n        url := current_setting('app.supabase_url', true) || '/functions/v1/notification-queue-worker',\n        headers := jsonb_build_object(\n          'Authorization', 'Bearer ' || current_setting('app.service_role_key', true),\n          'Content-Type', 'application/json'\n        ),\n        body := jsonb_build_object('source', 'cron')\n      );\n    ",
+      "active": true
+    },
+    {
+      "jobname": "portfolio-summary-refresh",
+      "schedule": "*/5 * * * *",
+      "command": "\n      select net.http_post(\n        url := current_setting('app.supabase_url', true) || '/functions/v1/portfolio-summary-refresh',\n        headers := jsonb_build_object(\n          'Authorization', 'Bearer ' || current_setting('app.service_role_key', true),\n          'Content-Type', 'application/json'\n        ),\n        body := jsonb_build_object('source', 'cron')\n      );\n    ",
+      "active": true
+    },
+    {
+      "jobname": "refresh-lap-2-gate-metrics",
+      "schedule": "0 * * * *",
+      "command": "REFRESH MATERIALIZED VIEW CONCURRENTLY public.lap_2_gate_metrics_daily",
+      "active": true
+    },
+    {
+      "jobname": "insights-heartbeat",
+      "schedule": "*/15 * * * *",
+      "command": "SELECT public.enqueue_insights_jobs();",
+      "active": true
+    },
+    {
+      "jobname": "insights-worker-invoke",
+      "schedule": "*/5 * * * *",
+      "command": "\n      SELECT net.http_post(\n        url := current_setting('app.supabase_url', true)\n               || '/functions/v1/scheduled-insights-worker',\n        headers := jsonb_build_object(\n          'Authorization', 'Bearer ' || current_setting('app.service_role_key', true),\n          'Content-Type', 'application/json'\n        ),\n        body := jsonb_build_object('source','cron')\n      );\n    ",
+      "active": true
+    },
+    {
+      "jobname": "insights-log-prune",
+      "schedule": "13 4 * * *",
+      "command": "\n      DELETE FROM public.scheduled_insights_log\n       WHERE computed_at < NOW() - INTERVAL '30 days';\n    ",
+      "active": true
+    },
+    {
+      "jobname": "iris-voice-diffs-prune",
+      "schedule": "17 4 * * *",
+      "command": "\n      DELETE FROM public.iris_voice_diffs\n       WHERE recorded_at < NOW() - INTERVAL '60 days';\n    ",
+      "active": true
+    },
+    {
+      "jobname": "refresh-submittals-log-mv",
+      "schedule": "*/5 * * * *",
+      "command": " SELECT public.refresh_submittals_log_mv(true) ",
+      "active": true
+    }
+  ]
+}

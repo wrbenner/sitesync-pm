@@ -1,0 +1,734 @@
+{
+  "source": "src/App.tsx <Route> parse",
+  "count": 104,
+  "routes": [
+    {
+      "path": "/login",
+      "element_summary": "<PageSuspense><Login /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/signup",
+      "element_summary": "<PageSuspense><Signup /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/verify-pending",
+      "element_summary": "<PageSuspense><VerifyPending /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/terms",
+      "element_summary": "<PageSuspense><Terms /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/privacy",
+      "element_summary": "<PageSuspense><Privacy /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/security",
+      "element_summary": "<PageSuspense><SecurityOverview /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/day",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"day\" moduleName=\"The Day\"><DayPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/field",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"field\" moduleName=\"The Field\"><FieldPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/conversation",
+      "element_summary": "<Navigate to=\"/day\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/plan",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"plan\" moduleName=\"The Plan\"><PlanPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/ledger",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"ledger\" moduleName=\"The Ledger\"><LedgerPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/crew",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"crew\" moduleName=\"The Crew\"><CrewPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/set",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"set\" moduleName=\"The Set\"><SetPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/file",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"file\" moduleName=\"The File\"><FilePage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/site",
+      "element_summary": "<Navigate to=\"/day\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/sub/:token",
+      "element_summary": "<PageSuspense><MagicLinkSubRoute /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/owner/:token",
+      "element_summary": "<PageSuspense><MagicLinkOwnerRoute /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"day\" moduleName=\"The Day\"><DayPage /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/dashboard",
+      "element_summary": "<Navigate to=\"/day\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/home/iris",
+      "element_summary": "FLAGS.irisUseFabric ? ( <PageSuspense> <ProtectedRoute moduleId=\"day\" moduleName=\"Persona Home\"> <HomePersonaSwitch /> <",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/daily-log",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"daily-log\" moduleName=\"Daily Log\"><DailyLog /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/schedule",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"schedule\" moduleName=\"Schedule\"><Schedule /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/budget",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"budget\" moduleName=\"Budget\"><Budget /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/rfis",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"rfis\" moduleName=\"RFIs\"><RFIs /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/rfis/settings",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"rfis\" moduleName=\"RFI Settings\"><RFISettingsPage /></ProtectedRoute></PageSuspen",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/rfis/reports",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"rfis\" moduleName=\"RFI Reports\"><RFIReportsPage /></ProtectedRoute></PageSuspense",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/rfis/:rfiId",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"rfis\" moduleName=\"RFI Detail\"><RFIDetail /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/submittals",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"submittals\" moduleName=\"Submittals\"><Submittals /></ProtectedRoute></PageSuspens",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/submittals/settings",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"submittals\" moduleName=\"Submittal Settings\"><SubmittalSettingsPage /></Protected",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/submittals/:submittalId",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"submittals\" moduleName=\"Submittal Detail\"><SubmittalDetailV2 /></ProtectedRoute>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/submittals/spec-parser",
+      "element_summary": "FLAGS.specParser ? <PageSuspense><ProtectedRoute moduleId=\"submittals\" moduleName=\"Spec Parser\"><SpecParserPage /></Prot",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/punch-list",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"punch-list\" moduleName=\"Punch List\"><PunchList /></ProtectedRoute></PageSuspense",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/punch-list/:itemId",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"punch-list\" moduleName=\"Punch Item Detail\"><PunchItemDetailPage /></ProtectedRou",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/drawings",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"drawings\" moduleName=\"Drawings\"><Drawings /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/change-orders",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"change-orders\" moduleName=\"Change Orders\"><ChangeOrders /></ProtectedRoute></Pag",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/safety",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"safety\" moduleName=\"Safety\"><Safety /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/workforce",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"workforce\" moduleName=\"Workforce\"><Workforce /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/crews",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"crews\" moduleName=\"Crews\"><Crews /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/time-tracking",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"time-tracking\" moduleName=\"Time Tracking\"><TimeTracking /></ProtectedRoute></Pag",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/directory",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"directory\" moduleName=\"Directory\"><Directory /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/meetings",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"meetings\" moduleName=\"Meetings\"><Meetings /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/pay-apps",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"pay-apps\" moduleName=\"Payment Applications\"><PaymentApplications /></ProtectedRo",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/payment-applications",
+      "element_summary": "<Navigate to=\"/pay-apps\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/contracts",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"contracts\" moduleName=\"Contracts\"><Contracts /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/estimating",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"estimating\" moduleName=\"Estimating\"><Estimating /></ProtectedRoute></PageSuspens",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/equipment",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"equipment\" moduleName=\"Equipment\"><EquipmentPage /></ProtectedRoute></PageSuspen",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/procurement",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"procurement\" moduleName=\"Procurement\"><Procurement /></ProtectedRoute></PageSusp",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/permits",
+      "element_summary": "<PageSuspense><Permits /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/files",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"files\" moduleName=\"Files\"><Files /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/reports",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"reports\" moduleName=\"Reports\"><Reports /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/reports/owner",
+      "element_summary": "FLAGS.ownerReport ? <PageSuspense><ProtectedRoute moduleId=\"reports\" moduleName=\"Reports\"><OwnerReportPage /></Protected",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/closeout",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"closeout\" moduleName=\"Closeout\"><Closeout /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/bim",
+      "element_summary": "FLAGS.bimViewer ? <PageSuspense><ProtectedRoute moduleId=\"bim\" moduleName=\"3D Model Viewer\"><BIMViewerPage /></Protected",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/ai",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"ai\" moduleName=\"AI Assistant\"><AIAssistant /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/iris/inbox",
+      "element_summary": "FLAGS.irisInbox ? <PageSuspense><ProtectedRoute moduleId=\"ai\" moduleName=\"Iris Inbox\"><IrisInbox /></ProtectedRoute></Pa",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/audit-trail",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"audit-trail\" moduleName=\"Audit Trail\"><AuditTrail /></ProtectedRoute></PageSuspe",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/integrations",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"integrations\" moduleName=\"Integrations\"><Integrations /></ProtectedRoute></PageS",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/settings/workflows",
+      "element_summary": "FLAGS.approvalWorkflows ? <PageSuspense><ProtectedRoute moduleId=\"settings\" moduleName=\"Workflow Settings\"><WorkflowSett",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/settings",
+      "element_summary": "<PageSuspense><ProjectSettings /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/settings/billing",
+      "element_summary": "<PageSuspense><Billing /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/settings/security/impersonation",
+      "element_summary": "<PageSuspense><ImpersonationHistory /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/orgs",
+      "element_summary": "<PageSuspense><AdminOrgList /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/orgs/:id",
+      "element_summary": "<PageSuspense><AdminOrgDetail /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/impersonation-log",
+      "element_summary": "<PageSuspense><ImpersonationLog /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/help",
+      "element_summary": "<PageSuspense><HelpIndex /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/help/:slug",
+      "element_summary": "<PageSuspense><HelpArticle /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/settings/team",
+      "element_summary": "<PageSuspense><UserManagement /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/settings/notifications",
+      "element_summary": "<PageSuspense><NotificationSettings /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/bulk-invite",
+      "element_summary": "FLAGS.bulkInvite ? <PageSuspense><ProtectedRoute moduleId=\"settings\" moduleName=\"Bulk Invite\"><BulkInvitePage /></Protec",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/cost-code-library",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"settings\" moduleName=\"Cost Code Library\"><CostCodeLibraryPage /></ProtectedRoute",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/project-templates",
+      "element_summary": "FLAGS.projectTemplates ? <PageSuspense><ProtectedRoute moduleId=\"settings\" moduleName=\"Project Templates\"><ProjectTempla",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/procore-import",
+      "element_summary": "FLAGS.procoreImport ? <PageSuspense><ProtectedRoute moduleId=\"integrations\" moduleName=\"Procore Import\"><ProcoreImportPa",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/admin/compliance",
+      "element_summary": "FLAGS.complianceCockpit ? <PageSuspense><ProtectedRoute moduleId=\"settings\" moduleName=\"Compliance\"><ComplianceCockpit /",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/walkthrough",
+      "element_summary": "FLAGS.walkthrough ? <PageSuspense><ProtectedRoute moduleId=\"field-capture\" moduleName=\"Walk-Through\"><WalkthroughPage />",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/share/owner-payapp/:token",
+      "element_summary": "<PageSuspense><OwnerPayAppPreviewPage /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/profile",
+      "element_summary": "<PageSuspense><UserProfile /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/onboarding",
+      "element_summary": "<PageSuspense><Onboarding /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": true,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/tasks",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"tasks\" moduleName=\"Tasks\"><Tasks /></ProtectedRoute></PageSuspense>",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/commitments",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"commitments\" moduleName=\"Commitments\"><Commitments /></ProtectedRoute></PageSusp",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/lookahead",
+      "element_summary": "<Navigate to=\"/schedule\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/field-capture",
+      "element_summary": "<PageSuspense><ProtectedRoute moduleId=\"field-capture\" moduleName=\"Field Capture\"><FieldCapture /></ProtectedRoute></Pag",
+      "isProtected": true,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/financials",
+      "element_summary": "<Navigate to=\"/budget\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/cost-management",
+      "element_summary": "<Navigate to=\"/budget\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/vendors",
+      "element_summary": "<Navigate to=\"/contracts\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/portfolio",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/digital-twin",
+      "element_summary": "<Navigate to=\"/bim\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/carbon",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/compliance",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/wiki",
+      "element_summary": "<Navigate to=\"/files\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/site-map",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/portal/owner",
+      "element_summary": "<Navigate to=\"/reports\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/ai-agents",
+      "element_summary": "<Navigate to=\"/ai\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/copilot",
+      "element_summary": "<Navigate to=\"/ai\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/iris",
+      "element_summary": "<Navigate to={FLAGS.irisInbox ? '/iris/inbox' : '/ai'",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/activity",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/project-health",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/lien-waivers",
+      "element_summary": "<Navigate to=\"/pay-apps\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/transmittals",
+      "element_summary": "<Navigate to=\"/files\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/specifications",
+      "element_summary": "<Navigate to=\"/files\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/preconstruction",
+      "element_summary": "<Navigate to=\"/estimating\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/resources",
+      "element_summary": "<Navigate to=\"/estimating\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/deliveries",
+      "element_summary": "<Navigate to=\"/procurement\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "/site-intelligence",
+      "element_summary": "<Navigate to=\"/dashboard\" replace />",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    },
+    {
+      "path": "*",
+      "element_summary": "<PageSuspense><NotFound /></PageSuspense>",
+      "isProtected": false,
+      "isPublic": false,
+      "requiredPermissionHint": null
+    }
+  ]
+}
