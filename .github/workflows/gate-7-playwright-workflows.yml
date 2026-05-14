@@ -52,6 +52,7 @@ jobs:
           E2E_REAL_BACKEND: 'true'
           E2E_BASE_URL: ${{ secrets.PREVIEW_BASE_URL }}
           SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_KEY }}
           POLISH_USER: ${{ secrets.STAGING_POLISH_USER }}
           POLISH_PASS: ${{ secrets.STAGING_POLISH_PASS }}

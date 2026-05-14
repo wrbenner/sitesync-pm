@@ -58,7 +58,26 @@ jobs:
             echo "::warning::Required secrets not set; gate skipped (informational mode)."
             exit 0
           fi
+          # Detect missing baseline directory (first-ever run). When absent
+          # we generate baselines via --update-snapshots and upload them as
+          # an artifact for Walker to inspect and commit. Subsequent runs
+          # fail on drift as designed.
+          baseline_dir="tests/visual/B10-visual-regression.spec.ts-snapshots"
+          if [ ! -d "$baseline_dir" ] || [ -z "$(ls -A "$baseline_dir" 2>/dev/null)" ]; then
+            echo "::warning::No visual baselines on disk. Generating via --update-snapshots; upload as artifact for review + commit."
+            npx playwright test tests/visual/ --project=chromium --reporter=list --update-snapshots || true
+            exit 0
+          fi
           npx playwright test tests/visual/ --project=chromium --reporter=list
+
+      - name: Upload visual baselines on first generation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-${{ github.sha }}
+          path: tests/visual/B10-visual-regression.spec.ts-snapshots/
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Upload Playwright report on failure
         if: failure()
