@@ -25,6 +25,7 @@ import { ScheduleList } from './ScheduleList';
 import { ScheduleStatusChip } from './ScheduleStatusChip';
 import { isBehind, daysBehind } from './ScheduleHelpers';
 import { IrisScheduleRiskBanner } from '../../components/schedule/IrisScheduleRiskBanner';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 type ViewKey = 'timeline' | 'list' | 'critical';
 
@@ -401,46 +402,50 @@ const SchedulePage: React.FC = () => {
           </label>
         )}
 
-        <button
-          type="button"
-          onClick={() => setShowImportModal(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 12px',
-            background: 'transparent',
-            border: `1px solid ${colors.borderSubtle}`,
-            borderRadius: 6,
-            color: colors.textSecondary,
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
-          <FileUp size={14} aria-hidden="true" />
-          Import
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 14px',
-            background: colors.primaryOrange,
-            border: 'none',
-            borderRadius: 6,
-            color: '#FFFFFF',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={14} aria-hidden="true" />
-          New Activity
-        </button>
+        <PermissionGate permission="schedule.edit">
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            aria-label="Import schedule"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 12px',
+              background: 'transparent',
+              border: `1px solid ${colors.borderSubtle}`,
+              borderRadius: 6,
+              color: colors.textSecondary,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            <FileUp size={14} aria-hidden="true" />
+            Import
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            aria-label="New activity"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 14px',
+              background: colors.primaryOrange,
+              border: 'none',
+              borderRadius: 6,
+              color: '#FFFFFF',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={14} aria-hidden="true" />
+            New Activity
+          </button>
+        </PermissionGate>
       </header>
 
       <main

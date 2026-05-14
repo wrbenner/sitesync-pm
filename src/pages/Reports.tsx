@@ -20,6 +20,7 @@ import { supabase } from '../lib/supabase'
 import { OwnerUpdateGenerator, prewarmIris } from '../components/reports/OwnerUpdateGenerator'
 import { OwnerLinkButton } from '../components/reports/OwnerLinkButton'
 import { ReportCard, ReportCardRow } from '../components/reports/ReportCard'
+import { PermissionGate } from '../components/auth/PermissionGate'
 import type {
   OwnerUpdateRisk,
   OwnerUpdateDecision,
@@ -29,6 +30,78 @@ import type {
 const ExportCenter = lazy(() =>
   import('../components/export/ExportCenter').then((m) => ({ default: m.ExportCenter })),
 )
+
+// Standalone download/print helper. Lifted out of the useCallback body
+// because the React Compiler (BuildHIR) doesn't lower try/finally,
+// throw-inside-try, or dynamic import() inside hook scopes. Outside a hook
+// scope those constructs are fine; the function is invoked by the page
+// callback below.
+async function downloadReportRun(run: Record<string, unknown>): Promise<void> {
+  const runId = run.id as string
+  try {
+    const storagePath = run.storage_path as string | null
+    if (storagePath) {
+      const { data, error } = await supabase.storage.from('reports').download(storagePath)
+      if (error) throw error
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = storagePath.split('/').pop() || `report_${runId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Report downloaded')
+      return
+    }
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
+    const pdfDoc = await PDFDocument.create()
+    const page = pdfDoc.addPage([612, 792])
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+    const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const reportConfig = REPORT_TYPES.find((r) => r.type === run.report_type)
+    const reportLabel = reportConfig?.label ?? (run.report_type as string)
+    const format = ((run.format as string) || 'pdf').toUpperCase()
+    const status = (run.status as string) || 'completed'
+    const generatedAt = run.generated_at
+      ? new Date(run.generated_at as string).toLocaleString()
+      : 'N/A'
+    let y = 720
+    page.drawText('SiteSync PM — Report', { x: 50, y, font: fontBold, size: 20, color: rgb(0.96, 0.47, 0.13) })
+    y -= 30
+    page.drawLine({ start: { x: 50, y }, end: { x: 562, y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) })
+    y -= 30
+    const rows: Array<[string, string]> = [
+      ['Report Type:', reportLabel],
+      ['Format:', format],
+      ['Status:', status],
+      ['Generated:', generatedAt],
+      ['Run ID:', runId],
+    ]
+    for (const [label, value] of rows) {
+      page.drawText(label, { x: 50, y, font: fontBold, size: 11, color: rgb(0.3, 0.3, 0.3) })
+      page.drawText(value, { x: 170, y, font: fontReg, size: 11, color: rgb(0.1, 0.1, 0.1) })
+      y -= 22
+    }
+    const pdfBytes = await pdfDoc.save()
+    const blob = new Blob(
+      [pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer],
+      { type: 'application/pdf' },
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `SiteSync_${reportLabel.replace(/\s+/g, '_')}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success('Report PDF generated')
+  } catch (err) {
+    console.error('Download failed:', err)
+    toast.error('Failed to download report')
+  }
+}
 
 // ── Report category metadata ────────────────────────────────────────────────
 
@@ -394,71 +467,8 @@ export const Reports: React.FC = () => {
   const handleDownloadRun = useCallback(async (run: Record<string, unknown>) => {
     const runId = run.id as string
     setDownloadingRunId(runId)
-    try {
-      const storagePath = run.storage_path as string | null
-      if (storagePath) {
-        const { data, error } = await supabase.storage.from('reports').download(storagePath)
-        if (error) throw error
-        const url = URL.createObjectURL(data)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = storagePath.split('/').pop() || `report_${runId}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        toast.success('Report downloaded')
-      } else {
-        const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib')
-        const pdfDoc = await PDFDocument.create()
-        const page = pdfDoc.addPage([612, 792])
-        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-        const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica)
-        const reportConfig = REPORT_TYPES.find((r) => r.type === run.report_type)
-        const reportLabel = reportConfig?.label ?? (run.report_type as string)
-        const format = ((run.format as string) || 'pdf').toUpperCase()
-        const status = (run.status as string) || 'completed'
-        const generatedAt = run.generated_at
-          ? new Date(run.generated_at as string).toLocaleString()
-          : 'N/A'
-        let y = 720
-        page.drawText('SiteSync PM — Report', { x: 50, y, font: fontBold, size: 20, color: rgb(0.96, 0.47, 0.13) })
-        y -= 30
-        page.drawLine({ start: { x: 50, y }, end: { x: 562, y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) })
-        y -= 30
-        const rows: Array<[string, string]> = [
-          ['Report Type:', reportLabel],
-          ['Format:', format],
-          ['Status:', status],
-          ['Generated:', generatedAt],
-          ['Run ID:', runId],
-        ]
-        for (const [label, value] of rows) {
-          page.drawText(label, { x: 50, y, font: fontBold, size: 11, color: rgb(0.3, 0.3, 0.3) })
-          page.drawText(value, { x: 170, y, font: fontReg, size: 11, color: rgb(0.1, 0.1, 0.1) })
-          y -= 22
-        }
-        const pdfBytes = await pdfDoc.save()
-        const blob = new Blob(
-          [pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength) as ArrayBuffer],
-          { type: 'application/pdf' },
-        )
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `SiteSync_${reportLabel.replace(/\s+/g, '_')}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        toast.success('Report PDF generated')
-      }
-    } catch (err) {
-      console.error('Download failed:', err)
-      toast.error('Failed to download report')
-    } finally {
-      setDownloadingRunId(null)
-    }
+    await downloadReportRun(run)
+    setDownloadingRunId(null)
   }, [])
 
   return (
@@ -550,27 +560,30 @@ export const Reports: React.FC = () => {
 
         <div style={{ flex: 1 }} />
 
-        <button
-          type="button"
-          onClick={() => setExportOpen(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 14px',
-            backgroundColor: colors.primaryOrange,
-            color: colors.white,
-            border: 'none',
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.sm,
-            fontWeight: typography.fontWeight.semibold,
-            fontFamily: typography.fontFamily,
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={14} strokeWidth={2.5} />
-          New Report
-        </button>
+        <PermissionGate permission="reports.view">
+          <button
+            type="button"
+            onClick={() => setExportOpen(true)}
+            aria-label="New report"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 14px',
+              backgroundColor: colors.primaryOrange,
+              color: colors.white,
+              border: 'none',
+              borderRadius: borderRadius.md,
+              fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.semibold,
+              fontFamily: typography.fontFamily,
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            New Report
+          </button>
+        </PermissionGate>
       </header>
 
       {/* ── Body ─────────────────────────────────────────────────────── */}
