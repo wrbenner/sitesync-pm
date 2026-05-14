@@ -71,10 +71,18 @@ test('B.2 onboarding — provision_organization RPC defaults plan to free', asyn
 
 test('B.2 onboarding — UI invite flow opens + sends', async ({ page }) => {
   // Sign in as existing PM, then attempt to invite from settings/team.
-  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password",
+  // Real DOM: Login.tsx defaults to magic-link mode; click the
+  // "Sign in with password" footer toggle to reveal the Password input
+  // (only rendered when mode === 'password'). aria-label="Email"/"Password",
   // SubmitPill button without a readable name; Enter on password submits.
   await page.goto(`${BASE_URL}/#/login`)
   await page.waitForTimeout(400)
+  await page
+    .getByRole('button', { name: /sign in with password/i })
+    .first()
+    .click()
+    .catch(() => undefined)
+  await page.waitForTimeout(200)
   await page.getByLabel('Email', { exact: true }).fill(USER)
   await page.getByLabel('Password', { exact: true }).fill(PASS)
   await page.getByLabel('Password', { exact: true }).press('Enter')

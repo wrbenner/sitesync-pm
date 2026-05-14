@@ -80,12 +80,19 @@ test('B.2 auth — signup form renders and submits', async ({ page }) => {
 
 test('B.2 auth — login form rejects bad password with a visible error', async ({ page }) => {
   const email = `nonexistent-${randomUUID().slice(0, 6)}@sitesync.test`
-  // Real DOM: src/pages/auth/Login.tsx — the email input has
-  // aria-label="Email" and placeholder="Email" (password mode); the
-  // password input has aria-label="Password" and placeholder="Password".
-  // Submission is via a SubmitPill button (no readable name); Enter on the
-  // password field also triggers the form (onKeyDown handler).
+  // Real DOM: Login.tsx defaults to magic-link mode — Password input is
+  // only rendered after clicking the "Sign in with password" footer toggle
+  // (Login.tsx ~line 859). aria-label="Email" + placeholder="Email" on
+  // email input; aria-label="Password" + placeholder="Password" on password
+  // input. Submission is via a SubmitPill button (no readable name); Enter
+  // on the password field also triggers the form (onKeyDown handler).
   await page.goto(`${BASE_URL}/#/login`)
+  await page
+    .getByRole('button', { name: /sign in with password/i })
+    .first()
+    .click()
+    .catch(() => undefined)
+  await page.waitForTimeout(200)
   await page.getByLabel('Email', { exact: true }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill('definitely-wrong-pw-9876')
   await page.getByLabel('Password', { exact: true }).press('Enter')

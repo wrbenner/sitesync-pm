@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
+import * as Sentry from '@sentry/react'
 import { supabase } from '../../lib/supabase'
 import { fromTable } from '../../lib/db/queries'
 import { colors, spacing, typography, borderRadius, shadows, transitions } from '../../styles/theme'
@@ -192,28 +193,66 @@ export const Signup: React.FC = () => {
       // Create user profile (links to the freshly provisioned org).
       // BRT sub-0 day-4 P0-I: capture terms_accepted_at — required by the
       // schema; checkbox was the gate.
-      await fromTable('profiles').insert({
-        user_id: userId,
-        full_name: `${firstName.trim()} ${lastName.trim()}`,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        job_title: jobTitle.trim() || null,
-        organization_id: organizationId,
-        terms_accepted_at: new Date().toISOString(),
-      } as never)
+      // Diagnostic instrumentation (signup failure investigation): the
+      // profile insert is wrapped so we capture both the structured error
+      // (PostgREST code + message) and a Sentry breadcrumb. We do NOT
+      // re-throw — the auth user already exists; failing the profile
+      // insert silently mirrors the existing "fail-open" stance for
+      // provision-org and is preferable to dropping the user on /signup
+      // with an unrecoverable mid-flow error.
+      try {
+        const { error: profileError } = await fromTable('profiles').insert({
+          user_id: userId,
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          job_title: jobTitle.trim() || null,
+          organization_id: organizationId,
+          terms_accepted_at: new Date().toISOString(),
+        } as never)
+        if (profileError) {
+          console.error('[signup] profile insert failed:', profileError)
+          Sentry.captureException(profileError, {
+            tags: { area: 'signup', step: 'profile_insert' },
+            extra: { userId, organizationId },
+          })
+        }
+      } catch (err) {
+        console.error('[signup] profile insert failed:', err)
+        Sentry.captureException(err, {
+          tags: { area: 'signup', step: 'profile_insert' },
+          extra: { userId, organizationId },
+        })
+      }
 
       // BRT sub-2 §4.1: hand off to /verify-pending so the user has a
       // clear "check your inbox" landing instead of an inline success card
       // that lives on the form route. The state.email lets VerifyPending
       // offer a resend button without making the user re-type their email.
       if (organizationId) {
-        track('signup_completed', {
-          org_id: organizationId,
-          total_seconds: Math.round((Date.now() - signupStartedAt) / 1000),
-        })
+        try {
+          track('signup_completed', {
+            org_id: organizationId,
+            total_seconds: Math.round((Date.now() - signupStartedAt) / 1000),
+          })
+        } catch (err) {
+          console.error('[signup] track(signup_completed) failed:', err)
+          Sentry.captureException(err, {
+            tags: { area: 'signup', step: 'track_completed' },
+            extra: { userId, organizationId },
+          })
+        }
       }
       setIsSubmitting(false)
-      navigate('/verify-pending', { state: { email } })
+      try {
+        navigate('/verify-pending', { state: { email } })
+      } catch (err) {
+        console.error('[signup] navigate(/verify-pending) failed:', err)
+        Sentry.captureException(err, {
+          tags: { area: 'signup', step: 'navigate_verify_pending' },
+          extra: { userId, organizationId },
+        })
+      }
     } catch (err) {
       console.error('[signup] unexpected error:', err)
       setSubmitError({
