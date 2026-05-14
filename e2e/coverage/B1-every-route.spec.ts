@@ -83,8 +83,10 @@ const NETWORK_FAILURE_PATHS = ['/rest/v1/', '/functions/v1/', '/rpc/']
 
 async function signIn(page: Page): Promise<void> {
   await page.goto(`${BASE_URL}/#/login`)
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  await page.getByRole('button', { name: /sign in with password/i }).first().click().catch(() => undefined)
+  await page.waitForTimeout(400)
+  await page.getByPlaceholder('Email').fill(USER)
+  await page.getByPlaceholder('Password').fill(PASS)
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|day|$)/, { timeout: 20_000 })
   await page.waitForTimeout(1_200)

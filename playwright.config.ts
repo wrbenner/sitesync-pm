@@ -1,5 +1,21 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// When E2E_REAL_BACKEND=true, the dev server boots against real Supabase
+// (staging by default — controlled via VITE_SUPABASE_URL/ANON_KEY env)
+// and dev-bypass is OFF so auth/RLS/triggers are exercised end-to-end.
+const REAL_BACKEND = process.env.E2E_REAL_BACKEND === 'true'
+
+const webServerEnv: Record<string, string> = REAL_BACKEND
+  ? {
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? '',
+      VITE_SUPABASE_ANON_KEY:
+        process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY ?? '',
+      VITE_DEV_BYPASS: 'false',
+    }
+  : {
+      VITE_DEV_BYPASS: 'true',
+    }
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
@@ -8,7 +24,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173/sitesync-pm/',
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173/sitesync-pm/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,10 +36,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173/sitesync-pm/',
+    url: process.env.E2E_BASE_URL ?? 'http://localhost:5173/sitesync-pm/',
     reuseExistingServer: !process.env.CI,
-    env: {
-      VITE_DEV_BYPASS: 'true',
-    },
+    env: webServerEnv,
   },
 })
