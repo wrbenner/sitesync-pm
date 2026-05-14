@@ -11,15 +11,17 @@
 // primary surface.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   ChevronDown,
+  LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
   Search,
   Settings,
+  User as UserIcon,
   // Nav icons keyed by NAV_ITEMS[].icon
   Zap,
   MessageCircle,
@@ -127,8 +129,23 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
     return projects.filter((p) => p.name?.toLowerCase().includes(q))
   }, [projects, filter])
 
-  // Reset the search whenever the dropdown closes so the next open starts fresh.
+  // Imperative focus on the project-switcher search input when the dropdown
+  // opens, replacing an `autoFocus` prop (jsx-a11y/no-autofocus). The 0ms
+  // setTimeout defers focus past React's commit phase so the input is
+  // actually mounted before .focus() runs.
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   useEffect(() => {
+    if (!open) return
+    const id = window.setTimeout(() => searchInputRef.current?.focus(), 0)
+    return () => window.clearTimeout(id)
+  }, [open])
+
+  // Reset the search whenever the dropdown closes so the next open starts fresh.
+  // The setState-in-effect is intentional: this is the canonical "external
+  // event reset internal state" case (parent-controlled `open` toggle), not a
+  // derive-from-props loop. One state mutation per `open=false` transition.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) setFilter('')
   }, [open])
 
@@ -257,7 +274,7 @@ const ProjectSwitcher: React.FC<{ collapsed: boolean }> = ({ collapsed }) => {
                 >
                   <Search size={12} color={colors.textTertiary} />
                   <input
-                    autoFocus
+                    ref={searchInputRef}
                     type="text"
                     placeholder="Search projects…"
                     value={filter}
@@ -465,6 +482,7 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const navigate = useNavigate()
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
+  const signOut = useAuthStore((s) => s.signOut)
   const fullName = authProfile?.full_name?.trim() || ''
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
@@ -478,9 +496,41 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
     'Y'
   const roleLabel = STREAM_ROLE_LABEL[streamRole]
 
+  // Audit P0-4: the avatar previously routed straight to /profile, leaving
+  // the product with no Sign Out affordance anywhere in the UI (SOC2 AC-7
+  // violation + practical recovery dead-end). The avatar now opens a small
+  // popover with Profile / Settings / Sign out.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const strapRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!strapRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [menuOpen])
+
+  const handleSignOut = useCallback(async () => {
+    setMenuOpen(false)
+    // signOut clears the Supabase session; the global SIGNED_OUT listener
+    // in useAuth.ts handles the redirect to /login and clears React Query.
+    await signOut()
+  }, [signOut])
+
   return (
     <div
+      ref={strapRef}
       style={{
+        position: 'relative',
         borderTop: `1px solid ${colors.borderSubtle}`,
         padding: collapsed ? `${spacing['2']} 0` : `${spacing['2']} ${spacing['3']}`,
         display: 'flex',
@@ -490,8 +540,10 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
       }}
     >
       <button
-        onClick={() => navigate('/profile')}
-        aria-label={`Profile — ${displayName}, ${roleLabel}`}
+        onClick={() => setMenuOpen((v) => !v)}
+        aria-label={`Account menu — ${displayName}, ${roleLabel}`}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
         title={collapsed ? `${displayName} · ${roleLabel}` : undefined}
         style={{
           display: 'flex',
@@ -582,7 +634,97 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
           <Settings size={16} strokeWidth={1.75} />
         </button>
       )}
+
+      {menuOpen && (
+        <div
+          role="menu"
+          aria-label="Account"
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: collapsed ? spacing['2'] : spacing['3'],
+            right: collapsed ? 'auto' : spacing['3'],
+            marginBottom: spacing['1'],
+            minWidth: collapsed ? 200 : 'auto',
+            backgroundColor: colors.surfaceRaised,
+            border: `1px solid ${colors.borderSubtle}`,
+            borderRadius: borderRadius.md,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+            padding: spacing['1'],
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            zIndex: zIndex.dropdown,
+            fontFamily: typography.fontFamily,
+          }}
+        >
+          <AccountMenuItem
+            icon={<UserIcon size={14} />}
+            label="Profile"
+            onSelect={() => { setMenuOpen(false); navigate('/profile') }}
+          />
+          <AccountMenuItem
+            icon={<Settings size={14} />}
+            label="Settings"
+            onSelect={() => { setMenuOpen(false); navigate('/settings') }}
+          />
+          <div style={{
+            height: 1,
+            backgroundColor: colors.borderSubtle,
+            margin: `${spacing['1']} 0`,
+          }} />
+          <AccountMenuItem
+            icon={<LogOut size={14} />}
+            label="Sign out"
+            onSelect={handleSignOut}
+            destructive
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+// Compact menu row for the avatar popover. Kept inline so it doesn't pull
+// in another shared primitive for a single consumer; if a second account-
+// menu surface appears later (e.g., topbar profile chip on mobile), promote
+// this into src/components/ui/.
+const AccountMenuItem: React.FC<{
+  icon: React.ReactNode
+  label: string
+  onSelect: () => void
+  destructive?: boolean
+}> = ({ icon, label, onSelect, destructive }) => {
+  const [hover, setHover] = useState(false)
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onSelect}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: spacing['2'],
+        padding: `${spacing['2']} ${spacing['2']}`,
+        background: hover ? colors.surfaceInset : 'transparent',
+        border: 'none',
+        borderRadius: borderRadius.sm,
+        cursor: 'pointer',
+        color: destructive ? colors.statusCritical : colors.textPrimary,
+        fontFamily: typography.fontFamily,
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: 'left',
+        width: '100%',
+      }}
+    >
+      <span style={{ display: 'inline-flex', flexShrink: 0, color: destructive ? colors.statusCritical : colors.textSecondary }}>
+        {icon}
+      </span>
+      <span>{label}</span>
+    </button>
   )
 }
 

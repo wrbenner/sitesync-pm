@@ -187,7 +187,9 @@ class SyncManager {
 
     this.update({ syncState: 'caching', cacheProgress: null } as never)
 
+    let lastProgressAt = Date.now()
     const onProgress: CacheProgressCallback = (progress) => {
+      lastProgressAt = Date.now()
       this.update({
         cacheProgress: {
           total: progress.total,
@@ -197,10 +199,46 @@ class SyncManager {
       } as never)
     }
 
+    // Audit P0-3: when the auth backend wedges, the RLS-scoped queries
+    // inside cacheProjectData hang, leaving syncState pinned to 'caching'
+    // and the "Loading project — projects (0/16)…" banner stuck forever.
+    // Two-tier watchdog:
+    //   - Stall watchdog (15s of no progress callback) → suspect a hung
+    //     fetch; transition to idle so the banner clears.
+    //   - Hard cap (90s total) → cover the case where progress trickles
+    //     but the overall operation isn't going to finish in a reasonable
+    //     time. Whichever fires first wins.
+    const STALL_MS = 15_000
+    const HARD_CAP_MS = 90_000
+    const startedAt = Date.now()
+    const stallCheck = setInterval(() => {
+      if (this.state.syncState !== 'caching') return
+      const sinceProgress = Date.now() - lastProgressAt
+      const sinceStart = Date.now() - startedAt
+      if (sinceProgress > STALL_MS || sinceStart > HARD_CAP_MS) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            `SyncManager: cache watchdog fired (sinceProgress=${sinceProgress}ms, sinceStart=${sinceStart}ms); releasing banner.`
+          )
+        }
+        // Force back to idle so the OfflineBanner stops showing the
+        // misleading "Loading project — projects (0/16)…" forever.
+        // The underlying cacheProjectData promise may still resolve later;
+        // if it does, its completion handler below is a no-op because
+        // we've already moved past 'caching'.
+        this.update({ syncState: 'idle', cacheProgress: null } as never)
+      }
+    }, 3_000)
+
     try {
       const result = await cacheProjectData(projectId, onProgress)
       await this.refreshCounts()
-      this.update({ syncState: 'idle', cacheProgress: null } as never)
+      // Only transition to idle if the watchdog didn't already do it. If
+      // the watchdog fired, leave the state alone — the user's already
+      // moved on and a late "syncing 16/16" flash would be confusing.
+      if (this.state.syncState === 'caching') {
+        this.update({ syncState: 'idle', cacheProgress: null } as never)
+      }
 
       // Warn about failures
       if (import.meta.env.DEV) {
@@ -215,8 +253,12 @@ class SyncManager {
       return result
     } catch (err) {
       if (import.meta.env.DEV) console.error('SyncManager: cacheProject error:', err)
-      this.update({ syncState: 'error', cacheProgress: null } as never)
+      if (this.state.syncState === 'caching') {
+        this.update({ syncState: 'error', cacheProgress: null } as never)
+      }
       return null
+    } finally {
+      clearInterval(stallCheck)
     }
   }
 

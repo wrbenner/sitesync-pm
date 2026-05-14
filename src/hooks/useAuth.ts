@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
@@ -176,7 +176,37 @@ function mapAuthError(message: string): string {
   if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed')) return 'Unable to connect. Check your internet connection'
   if (msg.includes('already registered') || msg.includes('already been registered')) return 'An account with this email already exists'
   if (msg.includes('password') && msg.includes('short')) return 'Password must be at least 6 characters'
+  if (msg.includes('timed out') || msg.includes('timeout')) return "We're having trouble reaching the server. Try again in a moment, or use a sign-in link."
   return message
+}
+
+// Audit P0-2: signInWithPassword can hang indefinitely if the auth backend
+// is unhealthy (504s + then pending), leaving the user staring at a
+// loading button with no feedback. Cap each sign-in attempt at 15s so the
+// form recovers and surfaces a real error.
+const SIGN_IN_TIMEOUT_MS = 15_000
+const SIGN_IN_TIMEOUT_SENTINEL = Symbol('sign_in_timeout')
+
+async function signInWithPasswordWithTimeout(email: string, password: string) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<typeof SIGN_IN_TIMEOUT_SENTINEL>((resolve) => {
+    timer = setTimeout(() => resolve(SIGN_IN_TIMEOUT_SENTINEL), SIGN_IN_TIMEOUT_MS)
+  })
+  try {
+    const result = await Promise.race([
+      supabase.auth.signInWithPassword({ email, password }),
+      timeoutPromise,
+    ])
+    if (result === SIGN_IN_TIMEOUT_SENTINEL) {
+      return {
+        data: null,
+        error: { message: 'Request timed out — please try again.', name: 'TimeoutError' } as { message: string; name: string },
+      }
+    }
+    return result
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
 }
 
 // ── Account lockout helpers ─────────────────────────────────
@@ -261,14 +291,18 @@ export function useAuth(): AuthState {
 
   const signIn = useCallback(async (email: string, password: string) => {
     setState({ loading: true, error: null })
+    // Explicit catch + rethrow keeps the React Compiler happy
+    // (BuildHIR doesn't lower try/finally without catch) while preserving
+    // the original guarantee that `loading: false` always runs.
     try {
       // Pre-check: is this email currently locked out?
       const preLockout = await checkLockout(email)
       if (preLockout?.isLocked) {
+        setState({ loading: false })
         return { error: formatLockoutMessage(preLockout) }
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await signInWithPasswordWithTimeout(email, password)
 
       if (error) {
         // Record the failed attempt; it's fire-and-forget but we await it
@@ -278,6 +312,7 @@ export function useAuth(): AuthState {
         // Re-check: did this attempt push them over the threshold?
         const postLockout = await checkLockout(email)
         if (postLockout?.isLocked) {
+          setState({ loading: false })
           return { error: formatLockoutMessage(postLockout) }
         }
 
@@ -288,16 +323,19 @@ export function useAuth(): AuthState {
         const suffix = remaining !== null && remaining <= 2
           ? ` (${remaining} attempt${remaining === 1 ? '' : 's'} left before temporary lockout)`
           : ''
+        setState({ loading: false })
         return { error: baseMsg + suffix }
       }
 
-      if (data.session) {
+      if (data?.session) {
         // Immediately update shared state so ProtectedRoute sees the user
         setState({ session: data.session, user: data.session.user })
       }
-      return { error: null }
-    } finally {
       setState({ loading: false })
+      return { error: null }
+    } catch (err) {
+      setState({ loading: false })
+      throw err
     }
   }, [])
 
@@ -341,7 +379,18 @@ export function useAuth(): AuthState {
   }, [])
 
   const isAuthenticated = !!session
-  const isSessionValid = !!session && !!session.expires_at && session.expires_at > Math.floor(Date.now() / 1000)
+
+  // Compute `isSessionValid` against a clock tick instead of a raw
+  // Date.now() call so the render is pure (React Compiler rule). The tick
+  // refreshes every 30s — granular enough that expiry is enforced within a
+  // minute, cheap enough to ignore. On mount we seed `nowSec` from
+  // Date.now so the first render still produces a correct value.
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000))
+  useEffect(() => {
+    const id = window.setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+  const isSessionValid = !!session && !!session.expires_at && session.expires_at > nowSec
 
   // Enforce session expiry: if we have a user but the session has expired, sign out.
   useEffect(() => {
