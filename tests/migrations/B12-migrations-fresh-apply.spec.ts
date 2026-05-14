@@ -23,13 +23,16 @@ describe('B.12 — Migration apply baseline', () => {
     .filter((f) => f.endsWith('.sql'))
     .sort()
 
-  it('every file has 14-digit prefix + snake_case name', () => {
-    const bad = files.filter((f) => !/^\d{14}_[a-z0-9_]+\.sql$/.test(f))
+  it('every file has a valid numeric prefix + snake_case name', () => {
+    // Legacy migrations use a 5-digit prefix (00001_..._.sql); the
+    // Supabase-CLI convention since the project switched is 14-digit
+    // timestamps. Both are valid prefixes.
+    const bad = files.filter((f) => !/^\d{5,14}_[a-z0-9_]+\.sql$/.test(f))
     expect(bad, `bad filenames:\n${bad.map((b) => '  ' + b).join('\n')}`).toHaveLength(0)
   })
 
-  it('no two migrations share the same 14-digit version', () => {
-    const versions = files.map((f) => f.slice(0, 14))
+  it('no two migrations share the same version prefix', () => {
+    const versions = files.map((f) => f.split('_')[0])
     const seen = new Set<string>()
     const dupes: string[] = []
     for (const v of versions) {
@@ -44,13 +47,24 @@ describe('B.12 — Migration apply baseline', () => {
     for (const f of files) {
       const path = resolve(MIG_DIR, f)
       const content = readFileSync(path, 'utf-8').trim()
-      const tail = content.slice(-200)
-      // Heuristic: must end with `;` or `$$;` or end-of-DDL-block markers.
-      // Allow trailing comments + blank lines.
-      const stripped = tail.replace(/--[^\n]*$/gm, '').trim()
-      const endsClean = /[;}]$|END\s*$|\$\$\s*;?\s*$|\$function\$\s*;?\s*$|\$fn\$\s*;?\s*$/i.test(stripped)
+      // Walk back from the end, skipping comment-only and blank lines.
+      // The first non-comment line we hit must end with a statement
+      // terminator (`;`, end of dollar-quoted body, etc.). Documentation
+      // banners after the last statement are not truncation.
+      const lines = content.split('\n').map((l) => l.trimEnd())
+      let lastCode = ''
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim()
+        if (line === '' || line.startsWith('--')) continue
+        lastCode = line
+        break
+      }
+      const endsClean =
+        /[;}]$|END\s*$|\$\$\s*;?\s*$|\$function\$\s*;?\s*$|\$fn\$\s*;?\s*$/i.test(
+          lastCode,
+        ) || lastCode === ''
       if (!endsClean) {
-        truncated.push({ file: f, tail: stripped.slice(-80) })
+        truncated.push({ file: f, tail: lastCode.slice(-80) })
       }
     }
     expect(
