@@ -2,6 +2,7 @@ import { fromTable } from '../../lib/db/queries'
 import { useAuditedMutation } from './createAuditedMutation'
 import { dailyLogDbSchema,
 } from '../../components/forms/schemas'
+import { validateDailyLogStatusTransition } from './state-machine-validation-helpers'
 
 // Dynamic table access helper. Tables may include those added by migration but not yet in generated types.
 // `as never` collapses the table-name union so strict-generic .insert/.update overloads don't trigger TS2589.
@@ -38,6 +39,15 @@ export function useUpdateDailyLog() {
     getEntityId: (p) => p.id,
     getAfterState: (p) => p.updates,
     mutationFn: async ({ id, updates, projectId }) => {
+      // Enforce the dailyLogMachine transition before writing. The helper is a
+      // no-op when `updates.status` is absent; it throws on invalid status
+      // changes (role-aware), which React Query surfaces via errorMessage.
+      // Pattern matches the five sibling mutation files (rfis, submittals,
+      // tasks, punch-items, change-orders) — daily-logs was the only one
+      // bypassing the machine. HONEST_STATE.md gap closed.
+      if (typeof updates.status === 'string') {
+        await validateDailyLogStatusTransition(id, projectId, updates.status)
+      }
       const { error } = await from('daily_logs').update(updates as never).eq('id' as never, id).eq('project_id' as never, projectId)
       if (error) throw error
       return { projectId, id }
