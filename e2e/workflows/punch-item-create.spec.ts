@@ -41,9 +41,17 @@ test.beforeAll(() => {
 const MARKER = `b2-punch-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
-  // Real DOM: src/pages/auth/Login.tsx — aria-label="Email"/"Password".
+  // Real DOM: Login.tsx defaults to magic-link mode; click the
+  // "Sign in with password" footer toggle to reveal the Password input
+  // (only rendered when mode === 'password'). aria-label="Email"/"Password".
   await page.goto(`${BASE_URL}/#/login`)
   await page.waitForTimeout(400)
+  await page
+    .getByRole('button', { name: /sign in with password/i })
+    .first()
+    .click()
+    .catch(() => undefined)
+  await page.waitForTimeout(200)
   await page.getByLabel('Email', { exact: true }).fill(USER)
   await page.getByLabel('Password', { exact: true }).fill(PASS)
   await page.getByLabel('Password', { exact: true }).press('Enter')

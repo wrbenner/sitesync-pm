@@ -54,12 +54,19 @@ test.beforeAll(() => {
 const MARKER = `b2-submittal-${Date.now()}`
 
 async function signIn(page: Page): Promise<void> {
-  // Real DOM: src/pages/auth/Login.tsx renders email + password inputs with
-  // aria-label="Email"/"Password" inside a form labeled "Sign in with email
-  // and password" (password mode). Submit is a SubmitPill button (no
-  // explicit name) so we trigger the form via Enter on the password field.
+  // Real DOM: src/pages/auth/Login.tsx defaults to magic-link mode — the
+  // Password input is only rendered after clicking the "Sign in with
+  // password" toggle in the page footer. Email/Password inputs have
+  // aria-label="Email"/"Password"; submit is a SubmitPill button without a
+  // readable name, so we trigger the form via Enter on the password field.
   await page.goto(`${BASE_URL}/#/login`)
   await page.waitForTimeout(400)
+  await page
+    .getByRole('button', { name: /sign in with password/i })
+    .first()
+    .click()
+    .catch(() => undefined)
+  await page.waitForTimeout(200)
   await page.getByLabel('Email', { exact: true }).fill(USER)
   await page.getByLabel('Password', { exact: true }).fill(PASS)
   await page.getByLabel('Password', { exact: true }).press('Enter')
