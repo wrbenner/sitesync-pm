@@ -50,7 +50,10 @@ const { values: args } = parseArgs({
     'role-mix': { type: 'string' }, // JSON, e.g. '{"pm":1,"super":2,"sub":5,"architect":1}'
     out: { type: 'string', short: 'o' }, // optional file path; default stdout
   },
-  allowPositionals: false,
+  // Tolerate stray positional args from shell paste (non-breaking spaces in
+  // markdown-pasted multi-line commands have bitten us). Unknown flags also
+  // ignored so the operator can pass benign extras without re-deploying.
+  allowPositionals: true,
   strict: false,
 });
 
@@ -119,26 +122,50 @@ interface SeededOrg {
 async function createAuthUser(email: string): Promise<string> {
   // admin.createUser is idempotent-ish: it throws on duplicate email. Catch
   // that and look up the existing row so re-runs are stable.
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password: SHARED_PASSWORD,
-    email_confirm: true,
-    user_metadata: { scale_test: true, batch_id: BATCH_ID },
-  });
-  if (error) {
-    const dup = /already.*registered|exists/i.test(error.message);
-    if (!dup) throw error;
-    const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 200,
+  //
+  // Battle test 2026-05-14 observed Cloudflare 521 / AuthRetryableFetchError
+  // bursts on the first ~15 sequential calls before gotrue warmed up. Retry
+  // with exponential backoff so a cold-start doesn't lose the first 30%
+  // of seeded users.
+  const MAX_ATTEMPTS = 6;
+  const BASE_DELAY_MS = 750;
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      password: SHARED_PASSWORD,
+      email_confirm: true,
+      user_metadata: { scale_test: true, batch_id: BATCH_ID },
     });
-    if (listErr) throw listErr;
-    const existing = list.users.find((u) => u.email === email);
-    if (!existing) throw new Error(`createUser dup but no listUsers match for ${email}`);
-    return existing.id;
+    if (error) {
+      lastErr = error;
+      const dup = /already.*registered|exists/i.test(error.message);
+      if (dup) {
+        const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 200,
+        });
+        if (listErr) throw listErr;
+        const existing = list.users.find((u) => u.email === email);
+        if (!existing) throw new Error(`createUser dup but no listUsers match for ${email}`);
+        return existing.id;
+      }
+      // Retry transient errors (gotrue cold-start surfaces as Cloudflare 521,
+      // network resets, or empty-body retryable errors).
+      const status = (error as { status?: number }).status;
+      const transient =
+        status === undefined ||
+        status >= 500 ||
+        status === 429 ||
+        /timeout|network|retry/i.test(error.message);
+      if (!transient || attempt === MAX_ATTEMPTS) throw error;
+      await new Promise((r) => setTimeout(r, BASE_DELAY_MS * 2 ** (attempt - 1)));
+      continue;
+    }
+    if (!data.user) throw new Error(`createUser returned no user for ${email}`);
+    return data.user.id;
   }
-  if (!data.user) throw new Error(`createUser returned no user for ${email}`);
-  return data.user.id;
+  throw lastErr ?? new Error(`createAuthUser exhausted retries for ${email}`);
 }
 
 function buildMemberRoles(): string[] {
