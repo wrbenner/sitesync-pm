@@ -74,6 +74,16 @@
 | B.1 every-button | `e2e/coverage/B1-every-button.spec.ts` | 25 routes × ≤8 buttons ≈ 200 |
 | B.2 create-flows (5 entities) | `e2e/workflows/{submittal,rfi,daily-log,punch-item,change-order}-create.spec.ts` | 5 × (UI + DB + audit) = 15 |
 | B.2 auth/onboarding/pay-app | `e2e/workflows/{auth,onboarding,pay-app}.spec.ts` | 3 × ~4 assertions = 12 |
+| B.2 schedule (import + WBS map) | `e2e/workflows/schedule.spec.ts` | 3 (import wizard mount + new activity + schedule_activities reachable) |
+| B.2 drawings (upload + OCR + markup distribute) | `e2e/workflows/drawings.spec.ts` | 2 (upload modal w/ set-name + drawings table reachable) |
+| B.2 safety (incident report + corrective action) | `e2e/workflows/safety.spec.ts` | 2 (incident form submit + safety_incidents DB row) |
+| B.2 bim (model upload + clash detect) | `e2e/workflows/bim.spec.ts` | 2 (IFC/GLTF drop-zone + viewer scaffold) |
+| B.2 preconstruction (bid package + submission) | `e2e/workflows/preconstruction.spec.ts` | 2 (New Package modal submit + bid_packages DB row) |
+| B.2 closeout (warranties + as-builts) | `e2e/workflows/closeout.spec.ts` | 2 (warranty modal submit + warranties DB row) |
+| B.2 iris (chat + KB-retrieve + citations) | `e2e/workflows/iris.spec.ts` | 2 (iris-call invocation + composer scaffold) |
+| B.2 settings-sso (config + provision test user) | `e2e/workflows/settings-sso.spec.ts` | 2 (SAML/OIDC protocol mount + OIDC fieldset toggle) |
+| B.2 billing-plan (plan select + dunning escalation) | `e2e/workflows/billing-plan.spec.ts` | 2 (Current plan render + Manage billing portal session) |
+| B.2 account-mfa (enroll + challenge) | `e2e/workflows/account-mfa.spec.ts` | 2 (MFA card + enroll-or-enabled branch) |
 | B.3 edge fn contracts (baseline, 20 fns) | `tests/api/B3-edge-function-contract.spec.ts` | 34 tests (20 fns × auth-reject + valid-shape) |
 | B.3 edge fn role matrix (FULL, generated) | `tests/api/B3-edge-fn-role-matrix.generated.spec.ts` + `tests/codegen/gen-edge-fn-role-matrix.ts` | **1,668 cells** (139 fns × 4 roles × 3 variants); cap=10 concurrency |
 | B.4 RPC contracts | `tests/rpc/B4-rpc-contract.spec.ts` | 53 tests |
@@ -88,7 +98,7 @@
 | B.12 migration baseline | `tests/migrations/B12-migrations-fresh-apply.spec.ts` | 4 file-scan tests (311 migrations validated) |
 | B.13 mobile viewport | `tests/mobile/B13-mobile-viewport.spec.ts` | 21 (3 viewports × 7 flows) |
 | B.14 capacitor sanity | `tests/capacitor/B14-capacitor-plugins.spec.ts` | 3 file-scan tests |
-| **Total baselines** | | **≈ 500 spec runs covering ~4,800 matrix cells** (Session 3 B.3 expansion +1,668) |
+| **Total baselines** | | **≈ 530 spec runs covering ~11,507 matrix cells** (Session 3: B.2 +23, B.3 +1,668, B.4 +1,048, B.5 +5,568, visual baselines +20 = +8,327 cells over baseline ~3,180) |
 
 ---
 
