@@ -61,8 +61,8 @@
 
 | Status | Cells | Notes |
 |---|---:|---|
-| **Baseline-covered** (Phase B authored, Phase D aligned) | ~ 3,200 (~10%) | Every dimension has a runnable baseline. See "Baseline coverage by sub-suite" below for per-suite cell counts. |
-| **Contract-class enforced** (sampled but assertion covers class) | ~ 25,000 (~78%) | RLS-enabled assertion fires for all 348 tables (only 17 spot-checked for row leakage). Migration parse + version-prefix fires for all 311 migrations (only 4 file-scan tests). Edge-fn auth-reject contract fires for sampled 20 of 139 fns (the class — "every fn must 4xx on unauth" — is the assertion). |
+| **Baseline-covered** (Phase B authored, Phase D aligned) | ~ 4,800 (~15%) | Every dimension has a runnable baseline. See "Baseline coverage by sub-suite" below for per-suite cell counts. B.3 expanded from 20-fn sample to full 139-fn × 4-role × 3-variant matrix (+1,668 cells). |
+| **Contract-class enforced** (sampled but assertion covers class) | ~ 25,000 (~78%) | RLS-enabled assertion fires for all 348 tables (only 17 spot-checked for row leakage). Migration parse + version-prefix fires for all 311 migrations (only 4 file-scan tests). Edge-fn 5xx-rejection contract fires for ALL 139 deployed fns (full matrix). |
 | **Awaiting CI promotion to required** | n/a | All 15 platform-coverage gates (7-21) shipped in informational mode. Branch protection promotion is a Walker-manual after 3-5 stable runs. |
 | **Out-of-scope** (documented) | 150 | App Store review flows, real Stripe webhooks from Stripe servers, real iOS hardware behavior, multi-GB uploads in CI, real customer behavior, real-world OCR accuracy on hand-drawn markups, real-Anthropic-API rate limits, etc. |
 
@@ -74,7 +74,8 @@
 | B.1 every-button | `e2e/coverage/B1-every-button.spec.ts` | 25 routes × ≤8 buttons ≈ 200 |
 | B.2 create-flows (5 entities) | `e2e/workflows/{submittal,rfi,daily-log,punch-item,change-order}-create.spec.ts` | 5 × (UI + DB + audit) = 15 |
 | B.2 auth/onboarding/pay-app | `e2e/workflows/{auth,onboarding,pay-app}.spec.ts` | 3 × ~4 assertions = 12 |
-| B.3 edge fn contracts | `tests/api/B3-edge-function-contract.spec.ts` | 34 tests (20 fns × auth-reject + valid-shape) |
+| B.3 edge fn contracts (baseline, 20 fns) | `tests/api/B3-edge-function-contract.spec.ts` | 34 tests (20 fns × auth-reject + valid-shape) |
+| B.3 edge fn role matrix (FULL, generated) | `tests/api/B3-edge-fn-role-matrix.generated.spec.ts` + `tests/codegen/gen-edge-fn-role-matrix.ts` | **1,668 cells** (139 fns × 4 roles × 3 variants); cap=10 concurrency |
 | B.4 RPC contracts | `tests/rpc/B4-rpc-contract.spec.ts` | 53 tests |
 | B.5 RLS top tables | `tests/rls/B5-rls-contract-top-tables.spec.ts` | 17 tests + RLS-enabled-on-all assertion |
 | B.6 webhook contracts | `tests/webhooks/B6-webhook-contract.spec.ts` | 8 tests |
@@ -86,7 +87,7 @@
 | B.12 migration baseline | `tests/migrations/B12-migrations-fresh-apply.spec.ts` | 4 file-scan tests (311 migrations validated) |
 | B.13 mobile viewport | `tests/mobile/B13-mobile-viewport.spec.ts` | 21 (3 viewports × 7 flows) |
 | B.14 capacitor sanity | `tests/capacitor/B14-capacitor-plugins.spec.ts` | 3 file-scan tests |
-| **Total baselines** | | **≈ 500 spec runs covering ~3,200 matrix cells** |
+| **Total baselines** | | **≈ 500 spec runs covering ~4,800 matrix cells** (Session 3 B.3 expansion +1,668) |
 
 ---
 
