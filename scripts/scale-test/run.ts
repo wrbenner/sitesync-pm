@@ -147,14 +147,31 @@ interface VuToken {
 }
 
 // SharedArray loads + parses on the main thread once. VUs read by index.
+// Accepts either the legacy JSON shape ({mintedAt, tokens:[{jwt, ...}]}) OR
+// the runbook NDJSON shape (one line per token: {userId, orgId, projectId,
+// accessToken, role}). Auto-detected from the first non-whitespace char.
 const vuTokens = new SharedArray<VuToken>('vu_tokens', () => {
   // @ts-expect-error - k6 SharedArray callback runs at init time only.
-  const raw = open(VU_TOKENS_FILE);
-  const parsed = JSON.parse(raw) as { tokens: VuToken[] };
-  if (!parsed.tokens || parsed.tokens.length === 0) {
+  const raw = open(VU_TOKENS_FILE) as string;
+  const trimmed = raw.trimStart();
+  let toks: VuToken[];
+  if (trimmed.startsWith('{') && trimmed.includes('"tokens"')) {
+    const parsed = JSON.parse(raw) as { tokens: Array<{ jwt: string; orgId: string; projectId?: string }> };
+    toks = parsed.tokens.map((t) => ({ jwt: t.jwt, orgId: t.orgId, projectId: t.projectId }));
+  } else {
+    toks = raw
+      .split('\n')
+      .map((l: string) => l.trim())
+      .filter(Boolean)
+      .map((l: string) => {
+        const o = JSON.parse(l) as { accessToken?: string; jwt?: string; orgId: string; projectId?: string };
+        return { jwt: o.accessToken ?? o.jwt ?? '', orgId: o.orgId, projectId: o.projectId };
+      });
+  }
+  if (toks.length === 0) {
     throw new Error(`VU_TOKENS_FILE ${VU_TOKENS_FILE} contains no tokens`);
   }
-  return parsed.tokens;
+  return toks;
 });
 
 function tokenForVu(): VuToken {
@@ -235,9 +252,12 @@ function pickOp(): Op {
 // Ops — all now scoped by per-VU JWT, hitting real (RLS-allowed) rows.
 // ---------------------------------------------------------------------------
 
+// Tables in this schema scope by project_id (not organization_id). Only
+// `projects` and `organization_members` carry organization_id directly. RLS
+// resolves org membership through the projects→organizations chain.
 function rfiRead(tok: VuToken) {
   const res = http.get(
-    `${SUPABASE_URL}/rest/v1/rfis?select=*&organization_id=eq.${tok.orgId}`,
+    `${SUPABASE_URL}/rest/v1/rfis?select=id&project_id=eq.${tok.projectId}&limit=50`,
     { headers: headersFor(tok), tags: { op: 'rfi_read' } },
   );
   check(
@@ -248,14 +268,13 @@ function rfiRead(tok: VuToken) {
 }
 
 function rfiCreate(tok: VuToken) {
+  // is_demo=true so the row is distinguishable from real load and reachable
+  // by the teardown's belt-and-suspenders filter even if FK cascade fails.
   const body = JSON.stringify({
-    organization_id: tok.orgId,
     project_id: tok.projectId,
-    subject: `Scale-test RFI ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    question: 'Synthetic question for load testing.',
-    status: 'open',
-    priority: 'normal',
-    metadata: { scale_test: true },
+    title: `Scale-test RFI ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    description: 'Synthetic RFI for load testing.',
+    is_demo: true,
   });
   const res = http.post(`${SUPABASE_URL}/rest/v1/rfis`, body, {
     headers: headersFor(tok),
@@ -270,12 +289,9 @@ function rfiCreate(tok: VuToken) {
 
 function dailyLogCreate(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: tok.orgId,
     project_id: tok.projectId,
     log_date: new Date().toISOString().slice(0, 10),
-    weather: 'sunny',
-    notes: `Scale-test daily log ${Date.now()}`,
-    metadata: { scale_test: true },
+    is_demo: true,
   });
   const res = http.post(`${SUPABASE_URL}/rest/v1/daily_logs`, body, {
     headers: headersFor(tok),
@@ -309,8 +325,9 @@ function aiCall(tok: VuToken) {
 }
 
 function scheduleRead(tok: VuToken) {
+  // Schedule lives in schedule_phases (not schedule_tasks). Scoped by project_id.
   const res = http.get(
-    `${SUPABASE_URL}/rest/v1/schedule_tasks?select=*&organization_id=eq.${tok.orgId}&order=start_date.asc&limit=200`,
+    `${SUPABASE_URL}/rest/v1/schedule_phases?select=id&project_id=eq.${tok.projectId}&limit=50`,
     { headers: headersFor(tok), tags: { op: 'schedule_read' } },
   );
   check(
@@ -344,7 +361,15 @@ function pdfExport(tok: VuToken) {
 // Expanded ops — reads, creates, updates, deletes, health.
 // ---------------------------------------------------------------------------
 
-function tableRead(tok: VuToken, table: string, op: Op) {
+function projectScopeRead(tok: VuToken, table: string, op: Op) {
+  const res = http.get(
+    `${SUPABASE_URL}/rest/v1/${table}?select=id&project_id=eq.${tok.projectId}&limit=50`,
+    { headers: headersFor(tok), tags: { op } },
+  );
+  check(res, { [`${op} 200`]: (r: { status: number }) => r.status === 200 }, { op });
+}
+
+function orgScopeRead(tok: VuToken, table: string, op: Op) {
   const res = http.get(
     `${SUPABASE_URL}/rest/v1/${table}?select=id&organization_id=eq.${tok.orgId}&limit=50`,
     { headers: headersFor(tok), tags: { op } },
@@ -352,17 +377,18 @@ function tableRead(tok: VuToken, table: string, op: Op) {
   check(res, { [`${op} 200`]: (r: { status: number }) => r.status === 200 }, { op });
 }
 
-function dailyLogRead(tok: VuToken) { tableRead(tok, 'daily_logs', 'daily_log_read'); }
-function punchRead(tok: VuToken)    { tableRead(tok, 'punch_items', 'punch_read'); }
-function submittalRead(tok: VuToken){ tableRead(tok, 'submittals', 'submittal_read'); }
-function projectRead(tok: VuToken)  { tableRead(tok, 'projects', 'project_read'); }
-function memberRead(tok: VuToken)   { tableRead(tok, 'organization_members', 'member_read'); }
+function dailyLogRead(tok: VuToken)  { projectScopeRead(tok, 'daily_logs', 'daily_log_read'); }
+function punchRead(tok: VuToken)     { projectScopeRead(tok, 'punch_items', 'punch_read'); }
+function submittalRead(tok: VuToken) { projectScopeRead(tok, 'submittals', 'submittal_read'); }
+function projectRead(tok: VuToken)   { orgScopeRead(tok, 'projects', 'project_read'); }
+function memberRead(tok: VuToken)    { orgScopeRead(tok, 'organization_members', 'member_read'); }
 
 function punchCreate(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: tok.orgId, project_id: tok.projectId,
-    description: `k6 punch ${Date.now()}`, status: 'open',
-    metadata: { scale_test: true },
+    project_id: tok.projectId,
+    title: `k6 punch ${Date.now()}`,
+    description: 'Synthetic punch item for load testing.',
+    is_demo: true,
   });
   const res = http.post(`${SUPABASE_URL}/rest/v1/punch_items`, body, {
     headers: headersFor(tok), tags: { op: 'punch_create' },
@@ -372,9 +398,9 @@ function punchCreate(tok: VuToken) {
 
 function submittalCreate(tok: VuToken) {
   const body = JSON.stringify({
-    organization_id: tok.orgId, project_id: tok.projectId,
-    title: `k6 submittal ${Date.now()}`, status: 'pending',
-    metadata: { scale_test: true },
+    project_id: tok.projectId,
+    title: `k6 submittal ${Date.now()}`,
+    is_demo: true,
   });
   const res = http.post(`${SUPABASE_URL}/rest/v1/submittals`, body, {
     headers: headersFor(tok), tags: { op: 'submittal_create' },
@@ -383,10 +409,10 @@ function submittalCreate(tok: VuToken) {
 }
 
 function rfiUpdate(tok: VuToken) {
-  // Update the most recent k6-tagged RFI to status='answered'. If none exist
-  // for this VU yet, this is a no-op write (0 rows updated → 200).
+  // RFIs default to status='draft' on insert. Transition draft → answered for
+  // demo rows; the filter is strict on is_demo so no real RFIs can be touched.
   const res = http.patch(
-    `${SUPABASE_URL}/rest/v1/rfis?organization_id=eq.${tok.orgId}&subject=like.Scale-test%20RFI*&status=eq.open&limit=1`,
+    `${SUPABASE_URL}/rest/v1/rfis?project_id=eq.${tok.projectId}&is_demo=eq.true&status=eq.draft&limit=1`,
     JSON.stringify({ status: 'answered' }),
     { headers: headersFor(tok), tags: { op: 'rfi_update' } },
   );
@@ -394,8 +420,9 @@ function rfiUpdate(tok: VuToken) {
 }
 
 function punchUpdate(tok: VuToken) {
+  // punch_items default status='open' on insert. Strict is_demo filter.
   const res = http.patch(
-    `${SUPABASE_URL}/rest/v1/punch_items?organization_id=eq.${tok.orgId}&status=eq.open&limit=1`,
+    `${SUPABASE_URL}/rest/v1/punch_items?project_id=eq.${tok.projectId}&is_demo=eq.true&status=eq.open&limit=1`,
     JSON.stringify({ status: 'in_progress' }),
     { headers: headersFor(tok), tags: { op: 'punch_update' } },
   );
@@ -403,10 +430,10 @@ function punchUpdate(tok: VuToken) {
 }
 
 function rfiDelete(tok: VuToken) {
-  // Delete a k6-created RFI to test the cascade path. Match strict so we
-  // don't ever delete a non-scale_test row.
+  // Delete RFIs we previously flipped to 'answered'. Strict is_demo guard so
+  // we can never reach a non-test row.
   const res = http.del(
-    `${SUPABASE_URL}/rest/v1/rfis?organization_id=eq.${tok.orgId}&metadata->>scale_test=eq.true&status=eq.answered&limit=1`,
+    `${SUPABASE_URL}/rest/v1/rfis?project_id=eq.${tok.projectId}&is_demo=eq.true&status=eq.answered&limit=1`,
     null,
     { headers: headersFor(tok), tags: { op: 'rfi_delete' } },
   );
