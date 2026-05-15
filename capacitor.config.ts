@@ -1,9 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.sitesync.pm',
-  appName: 'SiteSync PM',
+  appId: 'com.sitesyncai.app',
+  appName: 'SiteSync',
   webDir: 'dist',
+  ios: {
+    scheme: 'SiteSync',
+    contentInset: 'always',
+  },
   server: {
     androidScheme: 'https',
     allowNavigation: [

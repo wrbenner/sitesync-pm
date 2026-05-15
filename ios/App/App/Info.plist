@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>SiteSync</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+
+	<!-- Privacy usage descriptions — field-construction copy -->
+	<key>NSCameraUsageDescription</key>
+	<string>SiteSync uses the camera to capture site photos for daily logs, RFIs, submittals, and punch list items.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SiteSync needs access to your photo library to attach existing site photos to daily logs, RFIs, and reports.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SiteSync saves captured site photos and exported PDFs to your photo library for offline access.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SiteSync uses your location to verify on-site check-ins and to tag photos with the job site where they were taken.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SiteSync uses the microphone for voice-to-text daily log entries and to record audio notes attached to RFIs.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>SiteSync uses Face ID to securely sign you in and to confirm sensitive actions like submitting change orders.</string>
+
+	<!-- App Store export-compliance: app uses only HTTPS / standard iOS crypto -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

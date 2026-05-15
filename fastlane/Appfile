@@ -1,0 +1,6 @@
+app_identifier(ENV["APP_BUNDLE_ID"] || "com.sitesyncai.app")
+team_id(ENV["APPLE_TEAM_ID"])
+
+# Apple ID is intentionally omitted — we authenticate via App Store Connect
+# API key (APP_STORE_CONNECT_API_KEY_ID / ISSUER_ID / KEY_BASE64), not Apple ID
+# session cookies. This makes the CI lane non-interactive and 2FA-safe.
