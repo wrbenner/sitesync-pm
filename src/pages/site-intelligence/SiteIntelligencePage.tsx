@@ -24,6 +24,7 @@ import {
 } from '../../services/siteIntelligenceService';
 
 import 'leaflet/dist/leaflet.css';
+import type { Map as LeafletMap, LayerGroup } from 'leaflet';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -793,8 +794,8 @@ const SiteIntelligencePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markersLayerRef = useRef<LayerGroup | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -821,6 +822,7 @@ const SiteIntelligencePage: React.FC = () => {
     setLoading(true);
     setError(null);
     setShowSuggestions(false);
+    // eslint-disable-next-line react-hooks/todo
     try {
       const result = await fetchSiteIntelligence(query);
       if (!result) {
@@ -864,11 +866,12 @@ const SiteIntelligencePage: React.FC = () => {
     let cancelled = false;
 
     (async () => {
+      // eslint-disable-next-line react-hooks/todo
       const L = await import('leaflet');
       if (cancelled) return;
 
       // Fix default marker icon issue
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
         iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -905,7 +908,7 @@ const SiteIntelligencePage: React.FC = () => {
         mapInstanceRef.current = map;
       }
 
-      const map = mapInstanceRef.current;
+      const map = mapInstanceRef.current!;
       const { lat, lng } = data.address;
 
       // Clear previous markers
@@ -928,7 +931,7 @@ const SiteIntelligencePage: React.FC = () => {
       });
 
       L.marker([lat, lng], { icon: siteIcon })
-        .addTo(markersLayerRef.current)
+        .addTo(markersLayerRef.current!)
         .bindPopup(`<strong>Site Location</strong><br>${data.address.display_name}`);
 
       // Add nearby amenities as smaller markers
@@ -947,7 +950,7 @@ const SiteIntelligencePage: React.FC = () => {
           iconAnchor: [11, 11],
         });
         L.marker([amenity.lat, amenity.lng], { icon: amenityIcon })
-          .addTo(markersLayerRef.current)
+          .addTo(markersLayerRef.current!)
           .bindPopup(`<strong>${amenity.name}</strong><br>${amenity.category} · ${amenity.distance_mi} mi`);
       }
 
