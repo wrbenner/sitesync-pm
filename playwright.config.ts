@@ -25,6 +25,9 @@ export default defineConfig({
     'tests/a11y/**/*.spec.ts',
     'tests/mobile/**/*.spec.ts',
     'tests/visual/**/*.spec.ts',
+    // FMEA Wave-1 race specs: only the double-submit spec is Playwright;
+    // the other tests/concurrency/* specs are vitest (excluded below).
+    'tests/concurrency/double-submit.spec.ts',
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

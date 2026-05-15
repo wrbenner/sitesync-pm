@@ -32,6 +32,9 @@ export default defineConfig({
       'tests/a11y/**',
       'tests/mobile/**',
       'tests/visual/**',
+      // FMEA Wave-1: the double-submit spec is Playwright; sibling
+      // tests/concurrency/* specs are vitest.
+      'tests/concurrency/double-submit.spec.ts',
       // macOS Finder / iCloud sync conflict duplicates ("foo 2.test.tsx",
       // "__tests__ 4/foo.test.tsx", etc.). Already gitignored, but iCloud
       // can regenerate them on disk and vitest would otherwise run stale
