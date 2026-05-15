@@ -1,5 +1,5 @@
 -- =============================================================================
--- 20261026000000_mfa_backup_codes.sql
+-- 20261028000000_mfa_backup_codes.sql
 --
 -- Issue #586 (CRITICAL) — MFA backup recovery codes.
 --

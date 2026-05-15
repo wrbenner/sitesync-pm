@@ -20,7 +20,7 @@
  *   TXT button, and an acknowledgment checkbox that gates the modal
  *   close. The corresponding SQL RPCs (`generate_mfa_backup_codes`,
  *   `consume_mfa_backup_code`) live in
- *   `supabase/migrations/20261026000000_mfa_backup_codes.sql`.
+ *   `supabase/migrations/20261028000000_mfa_backup_codes.sql`.
  *
  * This vitest spec asserts the contract at the static level (the
  * component source contains backup-code markers). When the UI is

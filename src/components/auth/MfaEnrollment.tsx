@@ -97,7 +97,7 @@ export const MfaEnrollment: React.FC = () => {
       // we surface the error so the user can retry from the modal.
       //
       // NB: `generate_mfa_backup_codes` is defined in
-      // supabase/migrations/20261026000000_mfa_backup_codes.sql. database.ts
+      // supabase/migrations/20261028000000_mfa_backup_codes.sql. database.ts
       // gets regenerated post-migration; until then we cast through `unknown`
       // (the project's pattern for RPCs added in the same PR as their DB
       // migration — see CLAUDE.md "Stacked-PR conflicts on database.ts regen").
