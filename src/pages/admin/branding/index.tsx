@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { fromTable } from '../../../lib/db/queries';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
 import { colors, spacing, typography } from '../../../styles/theme';
 import { toast } from 'sonner';
@@ -35,8 +35,7 @@ export const BrandingAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: row } = useQuery({
     queryKey: ['org_branding', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('org_branding')
+      const { data } = await fromTable('org_branding')
         .select('*')
         .eq('organization_id', organizationId)
         .maybeSingle();
@@ -45,6 +44,7 @@ export const BrandingAdminPage: React.FC<Props> = ({ organizationId }) => {
   });
 
   const [draft, setDraft] = useState<Partial<BrandingRow>>({});
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (row) setDraft(row); }, [row]);
 
   const errs: Partial<Record<keyof BrandingRow, string>> = {};
@@ -54,7 +54,7 @@ export const BrandingAdminPage: React.FC<Props> = ({ organizationId }) => {
   const save = async () => {
     if (Object.keys(errs).length > 0) { toast.error('Fix the highlighted fields'); return; }
     const payload = { ...draft, organization_id: organizationId };
-    const { error } = await (supabase as any).from('org_branding').upsert(payload, { onConflict: 'organization_id' });
+    const { error } = await fromTable('org_branding').upsert(payload as never, { onConflict: 'organization_id' });
     if (error) { toast.error(error.message); return; }
     toast.success('Branding saved');
     qc.invalidateQueries({ queryKey: ['org_branding', organizationId] });

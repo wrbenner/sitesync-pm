@@ -210,7 +210,7 @@ export const DailyLogPDF: React.FC<{ data: DailyLogPDFData }> = ({ data }) => {
             <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: NAVY, marginTop: 2 }}>{data.weather}</Text>
             {(data.temperature_high != null || data.temperature_low != null) && (
               <Text style={{ fontSize: 8, color: GRAY, marginTop: 1 }}>
-                {data.temperature_high != null ? `${data.temperature_high}F` : ''}{data.temperature_low != null ? ` / ${data.temperature_low}F` : ''}
+                {data.temperature_high != null ? `H ${data.temperature_high}°F` : ''}{data.temperature_low != null ? ` / L ${data.temperature_low}°F` : ''}
                 {data.wind_speed ? `  Wind ${data.wind_speed}` : ''}
               </Text>
             )}

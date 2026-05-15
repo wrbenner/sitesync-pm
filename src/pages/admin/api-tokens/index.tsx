@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { fromTable } from '../../../lib/db/queries';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
 import { mintToken, maskToken } from '../../../lib/apiTokens';
 import { colors, spacing, typography } from '../../../styles/theme';
@@ -49,25 +49,24 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: tokens } = useQuery({
     queryKey: ['org_api_tokens', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('org_api_tokens')
+      const { data } = await fromTable('org_api_tokens')
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
-      return (data as unknown as TokenRow[] | null) ?? [];
+      return (data as TokenRow[] | null) ?? [];
     },
   });
 
   const create = async () => {
     if (!name.trim()) { toast.error('Name required'); return; }
     const minted = await mintToken();
-    const { error } = await (supabase as any).from('org_api_tokens').insert({
+    const { error } = await fromTable('org_api_tokens').insert({
       organization_id: organizationId,
       name: name.trim(),
       prefix: minted.prefix,
       token_hash: minted.hash,
       scopes,
-    } as never);
+    });
     if (error) { toast.error(error.message); return; }
     setRevealedToken(minted.token);
     setName('');
@@ -83,9 +82,8 @@ export const ApiTokensAdminPage: React.FC<Props> = ({ organizationId }) => {
       destructiveLabel: 'Revoke token',
     });
     if (!ok) return;
-    const { error } = await (supabase as any)
-      .from('org_api_tokens')
-      .update({ revoked_at: new Date().toISOString(), revoked_reason: 'admin_revoked' } as never)
+    const { error } = await fromTable('org_api_tokens')
+      .update({ revoked_at: new Date().toISOString(), revoked_reason: 'admin_revoked' })
       .eq('id', id);
     if (error) { toast.error(error.message); return; }
     toast.success('Token revoked');
