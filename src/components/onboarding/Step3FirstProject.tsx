@@ -10,6 +10,7 @@
 // populated dashboard without committing real data.
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { useCreateOnboardingProject } from '../../hooks/mutations/onboarding'
 
@@ -146,7 +147,7 @@ export default function Step3FirstProject() {
       </button>
 
       <p style={{ marginTop: 8, color: '#5C5C5C', fontSize: 13 }}>
-        Or <a href="/help/getting-started" style={{ color: '#0066FF' }}>skip and try the sample project</a> first.
+        Or <Link to="/dashboard" style={{ color: '#0066FF' }}>skip and try the sample project</Link> first.
       </p>
     </div>
   )
