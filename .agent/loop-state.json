@@ -3,9 +3,9 @@
   "loop_name": "functional-frog-self-heal",
   "version": 1,
   "started_at": "2026-05-14T22:45:00Z",
-  "last_run": null,
-  "consecutive_passes": 0,
-  "iterations": 0,
+  "last_run": "2026-05-15T16:10:00Z",
+  "consecutive_passes": 1,
+  "iterations": 2,
   "stop_reason": null,
   "stop_condition_checks": {
     "two_consecutive_passes": false,
@@ -13,10 +13,39 @@
     "no_stale_loop_issues": true,
     "cost_budget_intact": true
   },
-  "failures_seen": [],
+  "failures_seen": [
+    {
+      "iteration": 2,
+      "class": "infra-bug",
+      "workflow": "Test + Audit",
+      "headSha": "b8f47c0c",
+      "note": "Failing on 3 consecutive push events (b8f47c0c, f8d6f193, 293c6ad8). Local vitest green. Suspect push-event env mismatch."
+    },
+    {
+      "iteration": 2,
+      "class": "infra-bug",
+      "workflow": "Audit — npm dependencies",
+      "headSha": "b8f47c0c",
+      "note": "Informational. Not in 6 required gates."
+    },
+    {
+      "iteration": 2,
+      "class": "infra-bug",
+      "workflow": "Persona Audit (Tab C)",
+      "headSha": "b8f47c0c",
+      "note": "Informational."
+    },
+    {
+      "iteration": 2,
+      "class": "infra-bug",
+      "workflow": "Performance Budget (standalone)",
+      "headSha": "b8f47c0c",
+      "note": "Known NO_FCP false-positive per CLAUDE.md."
+    }
+  ],
   "fixes_applied": [],
   "quarantined": [],
-  "cost_today_usd": 0.0,
+  "cost_today_usd": 1.5,
   "cost_cap_usd_per_day": 30.0,
   "cost_pause_until": null,
   "in_scope_cells_total": 31744,
@@ -25,29 +54,61 @@
   "coverage_target_percent": 90.0,
   "phases": {
     "phase_1_one_shot_triage": {
-      "status": "in_progress",
+      "status": "completed",
+      "completed_at": "2026-05-15T16:10:00Z",
       "steps": {
         "step_a_staging_migrations": {
           "status": "completed",
-          "note": "Confirmed already applied; investigation made 20261020/22/23 visible on staging via list_migrations MCP. Hypothesis from earlier triage doc was wrong."
+          "note": "Confirmed already applied; investigation made 20261020/22/23 visible on staging via list_migrations MCP."
         },
         "step_b_login_mode_toggle_restore": {
-          "status": "in_progress",
-          "note": "Agent dispatched to fix 12 signIn helpers + restore mode toggle click."
+          "status": "completed",
+          "note": "Landed via PR #562 (feat 2026-05-14 23:07 UTC): 12 signIn helpers + mode toggle restored."
         },
         "step_c_signup_diagnostic_logging": {
-          "status": "in_progress",
-          "note": "Bundled with step b in the same PR."
+          "status": "completed",
+          "note": "Bundled in PR #562. Hardened in PR #571."
         },
         "step_d_rerun_gate_7": {
-          "status": "blocked_on_step_b"
+          "status": "completed",
+          "note": "Gate 7 GREEN on b8f47c0c (push event 2026-05-15T07:13Z)."
         }
       }
     },
     "phase_2_steady_state": {
-      "status": "not_started",
-      "watch_mode_runs": 0,
-      "expand_mode_batches_completed": []
+      "status": "in_progress",
+      "watch_mode_runs": 1,
+      "expand_mode_batches_completed": [
+        "B.2 partial — workflow specs via PR #546, #547, #548, #549, #559",
+        "B.3 — edge-fn role-matrix via PR #565",
+        "B.4 — RPC role-matrix via PR #569, #552",
+        "B.5 — RLS role-matrix via PR #570",
+        "B.6 — webhook contracts via PR #551",
+        "B.7 — cron contracts via PR #551",
+        "B.8 — storage contracts via PR #551",
+        "B.9 — realtime channel via PR #552",
+        "B.10 — visual regression via PR #553, #573",
+        "B.11 — a11y baseline via PR #552",
+        "B.12 — migration baseline via PR #552",
+        "B.13 — mobile viewport via PR #552",
+        "B.14 — Capacitor sanity via PR #553"
+      ]
+    },
+    "phase_3_fmdc": {
+      "status": "in_progress",
+      "fmea_waves_landed": [
+        "Wave 1 concurrency PR #594",
+        "Wave 1 adversarial security PR #585",
+        "Wave 1 lifecycle E2E PR #580",
+        "xstate fuzz PR #582",
+        "Wave 2 PR #590",
+        "Wave 3 PR #595 + fixes #597",
+        "Wave 4 PR #596 + fixes #599",
+        "Wave 5 PR #598",
+        "Wave 6 PR #600 + fix #603 (OAuth)"
+      ],
+      "fmea_catalog_seed": "docs/audits/FMEA_CATALOG_2026-05-14.md",
+      "fmdc_gates_22_through_27_status": "informational mode (PR #579)"
     }
   },
   "branch_protection": {
