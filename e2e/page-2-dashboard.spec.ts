@@ -18,11 +18,13 @@
  *  11. Bottom tab bar (mobile)
  */
 import { test, expect, Page } from '@playwright/test'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const OUT_DIR = path.resolve(__dirname, '..', 'polish-review', 'pages', 'dashboard')
+fs.mkdirSync(OUT_DIR, { recursive: true })
 
 const USER = process.env.POLISH_USER!
 const PASS = process.env.POLISH_PASS!
