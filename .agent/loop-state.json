@@ -3,9 +3,9 @@
   "loop_name": "functional-frog-self-heal",
   "version": 1,
   "started_at": "2026-05-14T22:45:00Z",
-  "last_run": "2026-05-15T19:37:00Z",
-  "consecutive_passes": 16,
-  "iterations": 17,
+  "last_run": "2026-05-15T19:45:00Z",
+  "consecutive_passes": 17,
+  "iterations": 18,
   "stop_reason": null,
   "stop_condition_checks": {
     "two_consecutive_passes": true,
@@ -45,12 +45,12 @@
   ],
   "fixes_applied": [],
   "quarantined": [],
-  "cost_today_usd": 27.0,
+  "cost_today_usd": 28.5,
   "cost_cap_usd_per_day": 30.0,
-  "cost_pause_until": null,
+  "cost_pause_until": "2026-05-16T00:00:00Z",
   "in_scope_cells_total": 31744,
-  "in_scope_cells_covered": 4192,
-  "coverage_percent": 13.21,
+  "in_scope_cells_covered": 4296,
+  "coverage_percent": 13.54,
   "coverage_target_percent": 90.0,
   "phases": {
     "phase_1_one_shot_triage": {
@@ -77,8 +77,9 @@
     },
     "phase_2_steady_state": {
       "status": "in_progress",
-      "watch_mode_runs": 16,
+      "watch_mode_runs": 17,
       "expand_mode_batches_completed": [
+        "Route × viewer × mobile viewport — +104 cells via iter 18 (e2e/workflows/codegen/B2-route-viewer-mobile.generated.spec.ts, 104 routes × viewer × mobile 375x667; pairs with iter 14 desktop)",
         "Route × anon × mobile viewport — +104 cells via iter 17 (e2e/workflows/codegen/B2-route-anon-mobile.generated.spec.ts, 104 routes × anon × mobile 375x667; pairs with iter 13 desktop)",
         "Route × owner access matrix — +104 cells via iter 16 (e2e/workflows/codegen/B2-route-owner-access.generated.spec.ts, 104 routes × owner × 1 viewport; COMPLETES first persona quad = 416 cells across iter 13-16)",
         "Route × project_manager access matrix — +104 cells via iter 15 (e2e/workflows/codegen/B2-route-pm-access.generated.spec.ts, 104 routes × project_manager × 1 viewport)",
