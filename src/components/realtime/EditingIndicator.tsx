@@ -31,7 +31,7 @@ export const EditingIndicator: React.FC<Props> = ({ roomKey, fieldId, selfUserId
     channel
       .on('broadcast', { event: 'editing' }, ({ payload }: { payload: PresenceMember & { field?: string } }) => {
         if (payload.user_id === selfUserId) return;
-        if ((payload.cursor?.field ?? (payload as any).field) !== fieldId) return;
+        if ((payload.cursor?.field ?? payload.field) !== fieldId) return;
         setEditors((cur) => {
           const next = cur.filter(
             (e) => isMemberActive(e) && !(e.user_id === payload.user_id && e.device_id === payload.device_id),
