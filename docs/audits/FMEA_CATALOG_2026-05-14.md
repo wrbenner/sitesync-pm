@@ -43,15 +43,15 @@
 | 14 | H.AUDIT.1 | Audit hash chain broken by partial rollback | HIGH | MEDIUM | sql-pgtap | UNCOVERED |
 | 15 | F.MFA.1 | MFA backup codes never displayed; account recovery impossible | CRITICAL | MEDIUM | playwright | UNCOVERED |
 | 16 | F.IMP.1 | Impersonation token persists after admin logout | HIGH | MEDIUM | playwright | UNCOVERED |
-| 17 | A.XSTATE.1 | Event fired in unhandled state silently dropped (per-machine fuzz) | MEDIUM | MEDIUM | vitest | UNCOVERED |
-| 18 | A.CO.1 | Change-order PROMOTE defined in helpers but not in machine | HIGH | HIGH | vitest | PARTIAL (e2e/lifecycle/change-order-full-lifecycle.spec.ts walks PROMOTE at DB layer; vitest fuzz still UNCOVERED) |
-| 19 | A.SUB.1 | Submittal FORWARD_TO_REVIEWER skips gc_review state | HIGH | HIGH | vitest | PARTIAL (e2e/lifecycle/submittal-full-lifecycle.spec.ts walks gc_review → architect_review; vitest fuzz still UNCOVERED) |
-| 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (e2e/lifecycle/daily-log-full-lifecycle.spec.ts walks AMEND + signature chain; concurrent k6 race still UNCOVERED) |
-| 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | PARTIAL (e2e/lifecycle/punch-item-full-lifecycle.spec.ts walks open→in_progress→sub_complete→verified + reject loop) |
-| 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | UNCOVERED |
-| 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | UNCOVERED |
-| 24 | A.SCHED.1 | Machine state ≠ displayed status (on_track/at_risk not in machine) | MEDIUM | HIGH | vitest | UNCOVERED |
-| 25 | A.RFI.1 | VOID accepted from non-admin role | HIGH | MEDIUM | vitest | PARTIAL (e2e/lifecycle/rfi-full-lifecycle.spec.ts walks create→close; role-restriction vitest still UNCOVERED) |
+| 17 | A.XSTATE.1 | Event fired in unhandled state silently dropped (per-machine fuzz) | MEDIUM | MEDIUM | vitest | PARTIAL (xstate-fuzz wave 1 — 13 specs at tests/machines/) |
+| 18 | A.CO.1 | Change-order PROMOTE defined in helpers but not in machine | HIGH | HIGH | vitest | PARTIAL (tests/machines/changeOrderMachine.fuzz.spec.ts + e2e/lifecycle/change-order-full-lifecycle.spec.ts) |
+| 19 | A.SUB.1 | Submittal FORWARD_TO_REVIEWER skips gc_review state | HIGH | HIGH | vitest | PARTIAL (tests/machines/submittalMachine.fuzz.spec.ts + e2e/lifecycle/submittal-full-lifecycle.spec.ts) |
+| 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (tests/machines/dailyLogMachine.fuzz.spec.ts + e2e/lifecycle/daily-log-full-lifecycle.spec.ts; concurrent k6 race still UNCOVERED) |
+| 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/punchItemMachine.fuzz.spec.ts + e2e/lifecycle/punch-item-full-lifecycle.spec.ts) |
+| 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | PARTIAL (tests/machines/paymentMachine.fuzz.spec.ts — spy on autoGenerateLienWaivers) |
+| 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | PARTIAL (tests/machines/paymentMachine.fuzz.spec.ts — calculateG702 sign probe) |
+| 24 | A.SCHED.1 | Machine state ≠ displayed status (on_track/at_risk not in machine) | MEDIUM | HIGH | vitest | PARTIAL (tests/machines/scheduleMachine.fuzz.spec.ts) |
+| 25 | A.RFI.1 | VOID accepted from non-admin role | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/rfiMachine.fuzz.spec.ts + e2e/lifecycle/rfi-full-lifecycle.spec.ts) |
 | 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | PARTIAL (e2e/lifecycle/submittal-full-lifecycle.spec.ts walks full state chain + audit; cross-role distribution test gated on SECONDARY_POLISH_USER seed) |
 | 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | UNCOVERED |
 | 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | UNCOVERED |
@@ -75,7 +75,7 @@
 | 46 | K.EMAIL.1 | Inbound email From header not validated; spoofed sender | HIGH | MEDIUM | vitest | UNCOVERED |
 | 47 | J.XSS.1 | TipTap rich-text `<iframe>` injection | HIGH | MEDIUM | vitest | UNCOVERED |
 | 48 | J.CSV.1 | CSV import formula injection (`=cmd|...`) | MEDIUM | MEDIUM | vitest | UNCOVERED |
-| 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | UNCOVERED |
+| 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/drawingMachine.fuzz.spec.ts — vitest portion; B.DRAW.1 still UNCOVERED) |
 | 50 | D.NOTIF.2 + G.RLS.2 | Notification cross-tenant leak (missing org_id filter) | CRITICAL | LOW | sql-pgtap | UNCOVERED |
 
 ---
@@ -534,3 +534,30 @@ Loop exits when ≥ 95% of in-scope catalog entries are VALIDATED (≥ ~135 of ~
 ---
 
 _Source: 3 Explore agents (state-machine + lifecycle; security + integrity + concurrency; UI + integration + performance + mobile). Synthesized into this catalog 2026-05-14. Loop iteration 2 picks from here._
+
+---
+
+## Section A Coverage Receipt — xstate-fuzz wave 1 (2026-05-14)
+
+13 fuzz specs landed under `tests/machines/`, exercising **613 (state × event) pairs** and 22 specific hazard probes. All specs run via vitest; no `src/` changes; each spec < 300 lines (max 186).
+
+| Machine               | Spec path                                                | (state × event) | Hazards covered                          |
+|-----------------------|----------------------------------------------------------|----------------:|------------------------------------------|
+| rfiMachine            | tests/machines/rfiMachine.fuzz.spec.ts                   |              54 | A.XSTATE.1, A.RFI.1, A.RFI.2             |
+| submittalMachine      | tests/machines/submittalMachine.fuzz.spec.ts             |              88 | A.XSTATE.1, A.SUB.1, A.SUB.2             |
+| changeOrderMachine    | tests/machines/changeOrderMachine.fuzz.spec.ts           |              35 | A.XSTATE.1, A.CO.1, A.CO.2               |
+| dailyLogMachine       | tests/machines/dailyLogMachine.fuzz.spec.ts              |              30 | A.XSTATE.1, A.DL.1, A.DL.2               |
+| punchItemMachine      | tests/machines/punchItemMachine.fuzz.spec.ts             |              40 | A.XSTATE.1, A.PUNCH.1, A.PUNCH.2         |
+| paymentMachine        | tests/machines/paymentMachine.fuzz.spec.ts               |              80 | A.XSTATE.1, A.PAY.1, A.PAY.2             |
+| scheduleMachine       | tests/machines/scheduleMachine.fuzz.spec.ts              |              28 | A.XSTATE.1, A.SCHED.1                    |
+| inspectionMachine     | tests/machines/inspectionMachine.fuzz.spec.ts            |              42 | A.XSTATE.1, A.INSP.1                     |
+| drawingMachine        | tests/machines/drawingMachine.fuzz.spec.ts               |              48 | A.XSTATE.1, A.DRAW.1                     |
+| documentMachine       | tests/machines/documentMachine.fuzz.spec.ts              |              48 | A.XSTATE.1, A.DOC.1                      |
+| closeoutItemMachine   | tests/machines/closeoutMachine.fuzz.spec.ts              |              42 | A.XSTATE.1, A.CLOSE.1                    |
+| taskMachine           | tests/machines/taskMachine.fuzz.spec.ts                  |              28 | A.XSTATE.1, A.TASK.1                     |
+| agentStreamMachine    | tests/machines/agentStreamMachine.fuzz.spec.ts           |              50 | A.XSTATE.1, A.AGENT.1                    |
+| **Total**             |                                                          |         **613** | **A.XSTATE.1 + 13 per-machine probes**   |
+
+Shared harness: `tests/machines/_fuzzHelpers.ts` — `fuzzMatrix()` drives every (state, event) pair on a fresh actor with reachability paths and minimal payloads, captures pre/post snapshots, and `assertNoSilentDrops()` checks the post-send state is in the known state set.
+
+Wave 1 flips 10 Top-50 entries from UNCOVERED → PARTIAL (A.XSTATE.1, A.CO.1, A.SUB.1, A.DL.1, A.PUNCH.1, A.PAY.1, A.PAY.2, A.SCHED.1, A.RFI.1, A.DRAW.1). Wave 2 = mutation-injector flips to VALIDATED.
