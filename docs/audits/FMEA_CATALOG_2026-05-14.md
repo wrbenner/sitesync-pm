@@ -75,7 +75,7 @@
 | 46 | K.EMAIL.1 | Inbound email From header not validated; spoofed sender | HIGH | MEDIUM | vitest | UNCOVERED |
 | 47 | J.XSS.1 | TipTap rich-text `<iframe>` injection | HIGH | MEDIUM | vitest | UNCOVERED |
 | 48 | J.CSV.1 | CSV import formula injection (`=cmd|...`) | MEDIUM | MEDIUM | vitest | UNCOVERED |
-| 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/drawingMachine.fuzz.spec.ts — vitest portion; B.DRAW.1 still UNCOVERED) |
+| 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/drawingMachine.fuzz.spec.ts — A.DRAW.1 machine path; Wave 4 — tests/integrity/drawing-supersede-revision.spec.ts contracts next-revision-number computation + duplicate rejection + race shape for B.DRAW.1) |
 | 50 | D.NOTIF.2 + G.RLS.2 | Notification cross-tenant leak (missing org_id filter) | CRITICAL | LOW | sql-pgtap | UNCOVERED |
 
 ---
@@ -113,10 +113,10 @@ For each entity: create → assign → respond → close happy path + every fail
 - Pay App — draft → submit → gc_review → owner_review → approved → MARK_PAID. Lien waiver generated on approve.
 - Schedule — import .xer → WBS map → activities created → critical path → snapshot.
 - Drawings — upload → page-split → OCR → distribute → mark-up → SUPERSEDE creates rev N+1.
-- Safety Incident — report → assign → investigate → resolve → close. Photo-AI corrective action.
+- Safety Incident — report → assign → investigate → resolve → close. Photo-AI corrective action. B.SAFETY.1 — PARTIAL (Wave 4 — tests/cron/safety-incident-escalation.spec.ts; static probe confirms `incidents` table exists + scans every cron.schedule migration — **KNOWN-VIOLATION**: no escalation cron currently references incidents.investigation_status/investigated_by)
 - Bid Package — draft → invite → submission → leveling → award → COI validated before start.
-- COI — pending → verify → valid; expiry cron blocks check-in.
-- Lien Waiver — pending → conditional → unconditional → final. State-specific (CA/TX/FL/NY) form template.
+- COI — pending → verify → valid; expiry cron blocks check-in. B.COI.1 — PARTIAL (Wave 4 — tests/integrity/coi-expiry-blocks-checkin.spec.ts; pure-unit contract on daysUntil + decideBlocks day-0 inclusion + isSubBlocked override / block_until / companyName fallback / end-to-end compose)
+- Lien Waiver — pending → conditional → unconditional → final. State-specific (CA/TX/FL/NY) form template. B.LIEN.1 — PARTIAL (Wave 4 — tests/integrity/lien-waiver-jurisdiction-match.spec.ts; pins registry + resolver + authors `validateWaiverJurisdiction` contract — **KNOWN-VIOLATION**: no service-layer wrapper exists, resolver silently falls back to AIA on CA/TX/FL projects)
 
 ### Section B Wave 1 status (authored 2026-05-14)
 
@@ -391,11 +391,11 @@ Remaining 25+:
 - M.FOCUS.1 — modal trap unannounced (a11y) → S.A11Y.2
 - M.FOCUS.2 — keyboard skips hidden elements
 - M.FOCUS.3 — command palette Escape closes app
-- M.SCROLL.1 — infinite scroll loads same page twice
+- M.SCROLL.1 — infinite scroll loads same page twice — PARTIAL (Wave 4 — tests/ui/infinite-scroll-dedup.spec.ts; static probe records zero `useInfiniteQuery` usages in src/ as a phantom-hazard pin, live probe inspects cursor dedup when STAGING_URL set, pure-unit contract pins cache-merge dedup)
 - M.SCROLL.2 — virtual list height misreport
 - M.SCROLL.3 — re-render on filter change loses scroll
-- M.KBD.1 — Cmd+S intercepted by command palette
-- M.KBD.2 — "/" conflicts with URL routing
+- M.KBD.1 — Cmd+S intercepted by command palette — PARTIAL (Wave 4 — tests/ui/keyboard-cmd-s-shortcut.spec.ts; static probe confirms App.tsx registers Cmd+S with empty `() => {}` action + useKeyboardShortcuts.ts calls preventDefault on meta-modifier match — **surfaced real bug**: silent browser-save swallow)
+- M.KBD.2 — "/" conflicts with URL routing — PARTIAL (Wave 4 — tests/ui/keyboard-slash-in-input.spec.ts; full src/ sweep confirms NO bare-`/` shortcut registered + isTyping guard exists for non-meta single-key + sequential chord shortcuts; live probe asserts `/` inserts literal char in inputs)
 - M.KBD.3 — Tab conflicts with TipTap inside modal
 - M.STALE.1 — stale closure in async handler
 - M.UNMOUNT.1 — conditional render unmount cascade
@@ -438,7 +438,7 @@ Remaining 25+:
 ## Section P — Performance (10+ hazards)
 
 - P.NPLUS1.1 — covered by #37
-- P.WIDGET.1 — dashboard widgets each fetch own metrics (no batch)
+- P.WIDGET.1 — dashboard widgets each fetch own metrics (no batch) — PARTIAL (Wave 4 — tests/perf/dashboard-widget-batching.spec.ts; static probe counts ≥ 2 dashboard widgets running their own useQuery+from/rpc, confirms no `get_dashboard_payload` batched RPC exists in src/, pure-unit contract pins ≤ 1 network call for batched fetcher + negative-control sensitivity probe trips on per-widget anti-pattern)
 - P.LIST.1 — unbounded list memory
 - P.FEED.1 — activity feed infinite append memory leak
 - P.DEBOUNCE.1 — covered by #36
@@ -550,10 +550,10 @@ _Source: 3 Explore agents (state-machine + lifecycle; security + integrity + con
 | punchItemMachine      | tests/machines/punchItemMachine.fuzz.spec.ts             |              40 | A.XSTATE.1, A.PUNCH.1, A.PUNCH.2         |
 | paymentMachine        | tests/machines/paymentMachine.fuzz.spec.ts               |              80 | A.XSTATE.1, A.PAY.1, A.PAY.2             |
 | scheduleMachine       | tests/machines/scheduleMachine.fuzz.spec.ts              |              28 | A.XSTATE.1, A.SCHED.1                    |
-| inspectionMachine     | tests/machines/inspectionMachine.fuzz.spec.ts            |              42 | A.XSTATE.1, A.INSP.1                     |
+| inspectionMachine     | tests/machines/inspectionMachine.fuzz.spec.ts + tests/machines/inspection-reschedule-id-collision.spec.ts |              42 | A.XSTATE.1, A.INSP.1 (Wave 4: reschedule FK contract) |
 | drawingMachine        | tests/machines/drawingMachine.fuzz.spec.ts               |              48 | A.XSTATE.1, A.DRAW.1                     |
 | documentMachine       | tests/machines/documentMachine.fuzz.spec.ts              |              48 | A.XSTATE.1, A.DOC.1                      |
-| closeoutItemMachine   | tests/machines/closeoutMachine.fuzz.spec.ts              |              42 | A.XSTATE.1, A.CLOSE.1                    |
+| closeoutItemMachine   | tests/machines/closeoutMachine.fuzz.spec.ts + tests/machines/closeout-actor-leak.spec.ts |              42 | A.XSTATE.1, A.CLOSE.1 (Wave 4: actor-leak contract) |
 | taskMachine           | tests/machines/taskMachine.fuzz.spec.ts                  |              28 | A.XSTATE.1, A.TASK.1                     |
 | agentStreamMachine    | tests/machines/agentStreamMachine.fuzz.spec.ts           |              50 | A.XSTATE.1, A.AGENT.1                    |
 | **Total**             |                                                          |         **613** | **A.XSTATE.1 + 13 per-machine probes**   |
@@ -631,3 +631,41 @@ Wave 3 = the next 10 priority hazards across machines + integrity + security + n
 - 9 of 10 are pure vitest (sub-second-per-file). DST sweep iterates ~576 instants and still runs in <50ms.
 - Each spec under 200 lines (verified). No source-file changes.
 - Mutation-injector compatibility: each spec has at least one assertion that fails when the underlying contract is silently removed (the wave 2 mutation-injector pattern carries forward).
+
+---
+
+## FMEA Wave 4 — 10 more hazards covered (2026-05-14)
+
+Wave 4 = the next 10 priority hazards focused on Sections A / B / M / P — machine identity + actor cleanup, drawing revision integrity, safety escalation, COI expiration, lien-waiver jurisdiction, infinite scroll, keyboard handlers, and dashboard widget batching. **All 53 wave-4 vitest tests pass** locally; the 3 Playwright specs live under `tests/ui/` (run under `@playwright/test`, excluded from vitest per project config).
+
+| # | ID                | Spec path                                                              | Layer                                          | Status               |
+|--:|-------------------|------------------------------------------------------------------------|------------------------------------------------|----------------------|
+| 1 | A.INSP.1          | tests/machines/inspection-reschedule-id-collision.spec.ts              | machine FK identity + reschedule lifecycle     | UNCOVERED → PARTIAL  |
+| 2 | A.CLOSE.1         | tests/machines/closeout-actor-leak.spec.ts                             | terminal-state cleanup + subscription leak     | UNCOVERED → PARTIAL  |
+| 3 | B.DRAW.1          | tests/integrity/drawing-supersede-revision.spec.ts                     | next-revision-number contract + race shape    | UNCOVERED → PARTIAL  |
+| 4 | B.SAFETY.1        | tests/cron/safety-incident-escalation.spec.ts                          | static migration scan for escalation cron      | UNCOVERED → PARTIAL  |
+| 5 | B.COI.1           | tests/integrity/coi-expiry-blocks-checkin.spec.ts                      | daysUntil + decideBlocks + isSubBlocked        | UNCOVERED → PARTIAL  |
+| 6 | B.LIEN.1          | tests/integrity/lien-waiver-jurisdiction-match.spec.ts                 | template registry + resolver + validator       | UNCOVERED → PARTIAL  |
+| 7 | M.SCROLL.1        | tests/ui/infinite-scroll-dedup.spec.ts                                 | useInfiniteQuery static probe + cache merge    | UNCOVERED → PARTIAL  |
+| 8 | M.KBD.1           | tests/ui/keyboard-cmd-s-shortcut.spec.ts                               | App.tsx Cmd+S static probe + live save toast   | UNCOVERED → PARTIAL  |
+| 9 | M.KBD.2           | tests/ui/keyboard-slash-in-input.spec.ts                               | bare-`/` shortcut sweep + isTyping guard       | UNCOVERED → PARTIAL  |
+|10 | P.WIDGET.1        | tests/perf/dashboard-widget-batching.spec.ts                           | widget useQuery count + batched RPC contract   | UNCOVERED → PARTIAL  |
+
+**Real bugs surfaced (KNOWN-VIOLATION ledger entries inline in specs):**
+
+1. **M.KBD.1** — `src/App.tsx` line 662 registers `{ key: 's', meta: true, action: () => {} }`. The empty closure paired with `useKeyboardShortcuts.ts` lines 110-113 (`if (shortcut.meta) { e.preventDefault(); shortcut.action(); return; }`) silently swallows Cmd+S browser save. Fix: remove the registration or wire `action` to the active form's save handler.
+
+2. **B.SAFETY.1** — full migration scan finds NO `cron.schedule(...)` job targeting `incidents` for escalation. `notify_incident_reported()` (00005_safety_module.sql line 437) fires the on-trigger notification but never re-escalates an unassigned `lost_time`/`fatality` incident. Fix candidate: add a cron job polling `incidents WHERE investigation_status='open' AND investigated_by IS NULL AND now() - created_at > interval '4h'`.
+
+3. **B.LIEN.1** — `src/lib/lienWaiver/templateRenderer.ts` exports `resolveWaiverTemplateId(jurisdiction, type)` which falls back to `aia-g706-conditional-progress-v1` if jurisdiction doesn't match. No service-layer wrapper enforces project-state ↔ template-jurisdiction match. Fix: author `validateWaiverJurisdiction({projectState, templateId})` per the spec contract + call it from the lien_waivers insert path.
+
+4. **P.WIDGET.1** — dashboard mounts ~6 widgets, each running its own `useQuery` against Supabase. No `get_dashboard_payload` RPC exists in src/. First paint of /dashboard fires ≥ 6 parallel REST calls. Fix: introduce a batched RPC + a shared TanStack cache key the widgets read from.
+
+5. **B.DRAW.1** — `drawingMachine.SUPERSEDE` mutates state only (published → draft); revision-number INSERT lives in service layer with no `validateSupersedeInsert` wrapper visible in src/. Fix: enforce UNIQUE (drawing_series_id, revision_number) constraint at DB layer + add the application-side validator.
+
+**Cost-aware notes:**
+- 7 vitest specs (53 tests, ~1.7s total) + 3 Playwright specs (skip-gracefully without STAGING_URL).
+- Each spec ≤ 185 lines (verified — longest is dashboard-widget-batching at 185, infinite-scroll-dedup at 150).
+- No source-file changes.
+- Mutation-injector compatibility: each spec pins at least one positive-case contract that fails when the underlying contract is silently removed (e.g. computeNextRevisionNumber returns wrong rev → assertion fires; resolveWaiverTemplateId returns AIA on CA project → assertion fires; etc.).
+- KNOWN-VIOLATION pattern: 5 specs ratchet on the *current* hazard surface (empty-closure Cmd+S, no escalation cron, no jurisdiction validator, no batched payload, per-widget fetches). Each is a regression boundary: when the platform fixes the bug, the corresponding assertion must be flipped in a follow-up wave.
