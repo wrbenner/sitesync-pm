@@ -4,7 +4,7 @@
 // useCommitDrawReport  — given reviewed JSON: insert pay app + line items, update budget actuals, trigger RAG embed
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { supabase, fromTable } from '../../lib/supabase'
 import { uploadFile } from '../../lib/storage'
 import { prepareDrawReportUpload } from '../../lib/drawReportParser'
 import {
@@ -14,13 +14,6 @@ import {
   fromCents,
   subtractCents,
 } from '../../types/money'
-
-// Untyped escape hatch: some tables we write to (pay_application_line_items,
-// freshly added columns on pay_applications, etc.) aren't in the generated
-// Database types yet. Cast through any so the query builder accepts .eq()
-// filters on columns PostgREST validates server-side.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromAny = (table: string): any => (supabase.from as any)(table)
 
 // ── Shared types ────────────────────────────────────────────
 
@@ -91,7 +84,7 @@ async function ensureContractId(projectId: string): Promise<string> {
   // pay_applications.contract_id is NOT NULL. Reuse an existing contract
   // for the project if one exists; otherwise auto-create a minimal
   // "Prime Contract" so draw-report uploads Just Work on new projects.
-  const { data: existing } = await fromAny('contracts')
+  const { data: existing } = await fromTable('contracts')
     .select('id')
     .eq('project_id', projectId)
     .limit(1)
@@ -101,7 +94,7 @@ async function ensureContractId(projectId: string): Promise<string> {
   // Insert uses the live-schema column set: `counterparty` and
   // `original_value` are NOT NULL on this DB. `type` is a CHECK-constrained
   // enum; "prime" is always valid.
-  const { data: created, error } = await fromAny('contracts')
+  const { data: created, error } = await fromTable('contracts')
     .insert({
       project_id: projectId,
       title: 'Prime Contract',
@@ -133,7 +126,7 @@ export function useExtractDrawReport() {
       // 2. Create a documents row so we can link line items back to it.
       //    Live schema uses file_url / file_type; the catchall migration's
       //    storage_path / content_type columns aren't present on this DB.
-      const { data: doc, error: docErr } = await fromAny('documents')
+      const { data: doc, error: docErr } = await fromTable('documents')
         .insert({
           project_id: projectId,
           name: file.name,
@@ -196,7 +189,7 @@ export function useExtractDrawReport() {
       let job: Record<string, unknown> | null = null
       while (Date.now() - started < POLL_TIMEOUT_MS) {
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
-        const { data: row, error: pollErr } = await fromAny('draw_report_extraction_jobs')
+        const { data: row, error: pollErr } = await fromTable('draw_report_extraction_jobs')
           .select('id, status, result_json, error_message')
           .eq('id', jobId)
           .maybeSingle()
@@ -340,12 +333,12 @@ export function useCommitDrawReport() {
         raw_extraction: extraction as unknown as Record<string, unknown>,
       }
       const upsertResult = extraction.application_number != null
-        ? await fromAny('pay_applications')
-            .upsert(payAppRow, { onConflict: 'project_id,application_number' })
+        ? await fromTable('pay_applications')
+            .upsert(payAppRow as never, { onConflict: 'project_id,application_number' })
             .select('id')
             .single()
-        : await fromAny('pay_applications')
-            .insert(payAppRow)
+        : await fromTable('pay_applications')
+            .insert(payAppRow as never)
             .select('id')
             .single()
       if (upsertResult.error) {
@@ -358,7 +351,7 @@ export function useCommitDrawReport() {
       //    duplicate. A brief inconsistency window exists between DELETE
       //    and INSERT — if INSERT fails, user re-uploads to recover. This
       //    is safer than leaving stale rows from a prior extraction.
-      await fromAny('pay_application_line_items')
+      await fromTable('pay_application_line_items')
         .delete()
         .eq('pay_application_id', payAppId)
 
@@ -381,7 +374,7 @@ export function useCommitDrawReport() {
         source_document_id: documentId,
         extraction_confidence: li.confidence,
       }))
-      const { error: lineErr } = await fromAny('pay_application_line_items').insert(lineRows)
+      const { error: lineErr } = await fromTable('pay_application_line_items').insert(lineRows)
       if (lineErr) {
         throw new Error(`Line item insert failed: ${lineErr.message}`)
       }
@@ -417,7 +410,7 @@ export function useCommitDrawReport() {
       for (const [division, totalActual] of byDivision) {
         // Safety: never write NaN or negative actuals to the budget.
         if (!Number.isFinite(totalActual) || totalActual < 0) continue
-        const { data: matches } = await fromAny('budget_line_items')
+        const { data: matches } = await fromTable('budget_line_items')
           .select('id, revised_budget, original_amount')
           .eq('project_id', projectId)
           .eq('csi_code', division)
@@ -435,7 +428,7 @@ export function useCommitDrawReport() {
           const actualShare = Number.isFinite(rawShare)
             ? Math.round(rawShare * 100) / 100
             : 0
-          const { error: updErr } = await fromAny('budget_line_items')
+          const { error: updErr } = await fromTable('budget_line_items')
             .update({ actual_cost: actualShare } as never)
             .eq('id', row.id)
           if (!updErr) budgetRowsUpdated++
@@ -448,14 +441,14 @@ export function useCommitDrawReport() {
         // Skip if this line was already handled via csi_division above.
         if ((li.csi_division || '').padStart(2, '0') !== '00') continue
         const actual = li.previous_completed + li.this_period + li.materials_stored
-        const { data: matches } = await fromAny('budget_line_items')
+        const { data: matches } = await fromTable('budget_line_items')
           .select('id')
           .eq('project_id', projectId)
           .eq('csi_code', li.cost_code)
           .limit(10)
         if (!matches || matches.length === 0) continue
         for (const row of matches as Array<{ id: string }>) {
-          const { error: updErr } = await fromAny('budget_line_items')
+          const { error: updErr } = await fromTable('budget_line_items')
             .update({ actual_cost: actual } as never)
             .eq('id', row.id)
           if (!updErr) budgetRowsUpdated++
