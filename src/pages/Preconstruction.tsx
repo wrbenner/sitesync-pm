@@ -534,34 +534,49 @@ export const Preconstruction: React.FC = () => {
         </div>
       }
     >
-      {/* Navigation Tabs */}
-      <div style={{
-        display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
-        borderRadius: borderRadius.lg, padding: spacing['1'], marginBottom: spacing['5'], overflowX: 'auto',
-      }}>
-        {VIEWS.map((view) => {
-          const isActive = activeView === view.key
-          return (
-            <button
-              key={view.key}
-              onClick={() => setActiveView(view.key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
-                borderRadius: borderRadius.base, cursor: 'pointer',
-                fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
-                fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.orangeText : colors.textSecondary,
-                backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
-                boxShadow: isActive ? shadows.sm : 'none',
-              }}
-            >
-              {React.createElement(view.icon, { size: 14 })}
-              {view.label}
-            </button>
-          )
-        })}
+      {/* Navigation Tabs — scrollable with right-fade hint on narrow viewports */}
+      <div style={{ position: 'relative', marginBottom: spacing['5'] }}>
+        <div style={{
+          display: 'flex', gap: spacing['1'], backgroundColor: colors.surfaceInset,
+          borderRadius: borderRadius.lg, padding: spacing['1'], overflowX: 'auto', scrollbarWidth: 'none',
+        }}>
+          {VIEWS.map((view) => {
+            const isActive = activeView === view.key
+            return (
+              <button
+                key={view.key}
+                onClick={() => setActiveView(view.key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['4']}`, border: 'none',
+                  borderRadius: borderRadius.base, cursor: 'pointer',
+                  fontSize: typography.fontSize.sm, fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`, whiteSpace: 'nowrap',
+                  boxShadow: isActive ? shadows.sm : 'none',
+                }}
+              >
+                {React.createElement(view.icon, { size: 14 })}
+                {view.label}
+              </button>
+            )
+          })}
+        </div>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 56,
+            background: `linear-gradient(to right, transparent, ${colors.surfacePage})`,
+            borderRadius: `0 ${borderRadius.lg} ${borderRadius.lg} 0`,
+            pointerEvents: 'none',
+          }}
+        />
       </div>
 
       {packagesLoading ? (

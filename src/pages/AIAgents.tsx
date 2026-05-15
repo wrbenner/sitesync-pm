@@ -594,53 +594,68 @@ export const AIAgents: React.FC = () => {
       title="AI Agents"
       subtitle="Your team of 6 specialist agents analyzing schedule, cost, safety, quality, compliance, and documents"
     >
-      {/* Tab Switcher */}
-      <div
-        role="tablist"
-        aria-label="AI Agents navigation"
-        style={{
-          display: 'flex',
-          gap: spacing['1'],
-          backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.lg,
-          padding: spacing['1'],
-          marginBottom: spacing['2xl'],
-          overflowX: 'auto',
-        }}
-      >
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              role="tab"
-              aria-selected={isActive}
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing['2'],
-                padding: `${spacing['2']} ${spacing['4']}`,
-                minHeight: 56,
-                border: 'none',
-                borderRadius: borderRadius.base,
-                cursor: 'pointer',
-                fontSize: typography.fontSize.sm,
-                fontFamily: typography.fontFamily,
-                fontWeight: isActive
-                  ? typography.fontWeight.medium
-                  : typography.fontWeight.normal,
-                color: isActive ? colors.orangeText : colors.textSecondary,
-                backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                transition: `all ${transitions.instant}`,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {React.createElement(tab.icon, { size: 14 })}
-              {tab.label}
-            </button>
-          )
-        })}
+      {/* Tab Switcher — scrollable with right-fade hint on narrow viewports */}
+      <div style={{ position: 'relative', marginBottom: spacing['2xl'] }}>
+        <div
+          role="tablist"
+          aria-label="AI Agents navigation"
+          style={{
+            display: 'flex',
+            gap: spacing['1'],
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.lg,
+            padding: spacing['1'],
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                role="tab"
+                aria-selected={isActive}
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['2'],
+                  padding: `${spacing['2']} ${spacing['4']}`,
+                  minHeight: 56,
+                  border: 'none',
+                  borderRadius: borderRadius.base,
+                  cursor: 'pointer',
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  fontWeight: isActive
+                    ? typography.fontWeight.medium
+                    : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {React.createElement(tab.icon, { size: 14 })}
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 56,
+            background: `linear-gradient(to right, transparent, ${colors.surfacePage})`,
+            borderRadius: `0 ${borderRadius.lg} ${borderRadius.lg} 0`,
+            pointerEvents: 'none',
+          }}
+        />
       </div>
 
       {/* Loading State */}

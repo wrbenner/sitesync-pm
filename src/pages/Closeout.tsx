@@ -131,6 +131,7 @@ export const Closeout: React.FC = () => {
       </Card>
 
       {/* ── Tabs ─────────────────────────────────────── */}
+      <div style={{ position: 'relative', margin: `${spacing['4']} 0 ${spacing['4']}` }}>
       <div
         role="tablist"
         aria-label="Closeout sections"
@@ -138,10 +139,8 @@ export const Closeout: React.FC = () => {
           display: 'flex',
           gap: spacing['1'],
           borderBottom: `1px solid ${colors.borderSubtle}`,
-          margin: `${spacing['4']} 0 ${spacing['4']}`,
           overflowX: 'auto',
           overflowY: 'hidden',
-          WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
         }}
       >
@@ -187,6 +186,19 @@ export const Closeout: React.FC = () => {
             </button>
           )
         })}
+      </div>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 56,
+          background: `linear-gradient(to right, transparent, ${colors.surfacePage})`,
+          pointerEvents: 'none',
+        }}
+      />
       </div>
 
       {loading || !projectId ? (

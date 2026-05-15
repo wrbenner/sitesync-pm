@@ -850,52 +850,67 @@ export const Procurement: React.FC = () => {
         <MetricBox label="Low Stock Items" value={lowStockItems} change={lowStockItems > 0 ? -1 : 1} changeLabel={lowStockItems > 0 ? 'below minimum' : 'all stocked'} />
       </div>
 
-      {/* Tab Switcher */}
-      <div
-        role="tablist"
-        aria-label="Procurement sections"
-        style={{
-          display: 'flex',
-          gap: spacing['1'],
-          backgroundColor: colors.surfaceInset,
-          borderRadius: borderRadius.lg,
-          padding: spacing['1'],
-          marginBottom: spacing['2xl'],
-          overflowX: 'auto',
-        }}
-      >
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: spacing['2'],
-                padding: `0 ${spacing['4']}`,
-                minHeight: touchTarget.field,
-                border: 'none',
-                borderRadius: borderRadius.base,
-                cursor: 'pointer',
-                fontSize: typography.fontSize.sm,
-                fontFamily: typography.fontFamily,
-                fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
-                color: isActive ? colors.orangeText : colors.textSecondary,
-                backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
-                transition: `all ${transitions.instant}`,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {React.createElement(Icon, { size: 14 })}
-              {tab.label}
-            </button>
-          )
-        })}
+      {/* Tab Switcher — scrollable with right-fade hint on narrow viewports */}
+      <div style={{ position: 'relative', marginBottom: spacing['2xl'] }}>
+        <div
+          role="tablist"
+          aria-label="Procurement sections"
+          style={{
+            display: 'flex',
+            gap: spacing['1'],
+            backgroundColor: colors.surfaceInset,
+            borderRadius: borderRadius.lg,
+            padding: spacing['1'],
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+          }}
+        >
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing['2'],
+                  padding: `0 ${spacing['4']}`,
+                  minHeight: touchTarget.field,
+                  border: 'none',
+                  borderRadius: borderRadius.base,
+                  cursor: 'pointer',
+                  fontSize: typography.fontSize.sm,
+                  fontFamily: typography.fontFamily,
+                  fontWeight: isActive ? typography.fontWeight.medium : typography.fontWeight.normal,
+                  color: isActive ? colors.orangeText : colors.textSecondary,
+                  backgroundColor: isActive ? colors.surfaceRaised : 'transparent',
+                  transition: `all ${transitions.instant}`,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {React.createElement(Icon, { size: 14 })}
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 56,
+            background: `linear-gradient(to right, transparent, ${colors.surfacePage})`,
+            borderRadius: `0 ${borderRadius.lg} ${borderRadius.lg} 0`,
+            pointerEvents: 'none',
+          }}
+        />
       </div>
 
       {/* Loading State */}
