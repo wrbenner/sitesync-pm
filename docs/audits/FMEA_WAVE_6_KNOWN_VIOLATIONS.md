@@ -171,7 +171,7 @@ Status flips this wave: 10 hazards UNCOVERED → PARTIAL (see
 
 ---
 
-## R.SLACK.1 — Slack OAuth callback origin mismatch
+## R.SLACK.1 — Slack OAuth callback origin mismatch — FIXED 2026-05-15
 
 - **Spec:** `tests/security/slack-oauth-origin-mismatch.spec.ts`
 - **Finding (REAL BUG):**
@@ -190,10 +190,23 @@ Status flips this wave: 10 hazards UNCOVERED → PARTIAL (see
 - **Risk:** CSRF / open-redirect chaining against any OAuth flow; an
   attacker can complete an OAuth exchange in a user's session and
   attach a hostile integration to the victim's project.
-- **Recommended fix:** Add a `REDIRECT_ALLOWLIST` env var (newline-
-  separated); reject any `redirectUri` whose origin isn't in the list.
-  Require `state` parameter; store nonces in `oauth_state_nonces` with
-  TTL; reject if state doesn't match.
+- **Status:** **VALIDATED** — fix shipped on branch
+  `fix/r-slack-1-oauth-redirect-validation`:
+    1. `redirectUri` is now exact-match validated against a hardcoded
+       canonical list (`app.sitesync.ai`, `sitesync.ai`,
+       `staging.sitesync.ai`, localhost dev) plus newline-separated
+       `OAUTH_REDIRECT_ALLOWLIST` env entries. Mismatch → HTTP 400
+       `{ error: 'invalid_redirect_uri' }`.
+    2. `Origin` header (or `Referer` fallback) origin must equal the
+       redirectUri's origin — blocks cross-origin callers.
+    3. `state` is now a required field; the SPA must mint one via
+       `issue_oauth_state(provider, redirect_uri)` (SECURITY DEFINER RPC,
+       10-minute TTL, 256-bit entropy). The edge function consumes it
+       via `consume_oauth_state(state, provider, redirect_uri)`, which
+       validates user_id + provider + redirect_uri + expiry and deletes
+       the row (single-use).
+  Migration: `20261031000000_oauth_state_nonce_table.sql` (applied to
+  staging `nrsbvqkpxxlonvkmcmxf` + prod `hypxrmcppjfbtlwuoafc`).
 
 ---
 
@@ -210,6 +223,6 @@ Status flips this wave: 10 hazards UNCOVERED → PARTIAL (see
 | Q.CAM.1    | `src/components/walkthrough/CaptureButton.tsx` (partial mitigation)       | Partial   | MEDIUM   |
 | Q.GPS.2    | `src/pages/SiteMap.tsx :: useCurrentLocation` (no timeout)                | Yes       | HIGH     |
 | R.STRIPE.2 | `src/components/financial/PaySubFlow.tsx` (no back-recovery)              | Yes       | MEDIUM   |
-| R.SLACK.1  | `supabase/functions/oauth-token-exchange/index.ts` (no origin allowlist)  | Yes       | CRITICAL |
+| R.SLACK.1  | `supabase/functions/oauth-token-exchange/index.ts` (FIXED 2026-05-15)     | Yes       | CRITICAL |
 
 Total: **9 confirmed real bugs**, 1 latent contract pin (O.MUT.1).
