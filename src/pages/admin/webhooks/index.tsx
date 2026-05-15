@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { supabase, fromTable } from '../../../lib/supabase';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
 import { colors, spacing, typography } from '../../../styles/theme';
 import { toast } from 'sonner';
@@ -46,8 +46,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: subs } = useQuery({
     queryKey: ['outbound_webhooks', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('outbound_webhooks')
+      const { data } = await fromTable('outbound_webhooks')
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
@@ -58,8 +57,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: recent } = useQuery({
     queryKey: ['webhook_deliveries_recent', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('webhook_deliveries')
+      const { data } = await fromTable('webhook_deliveries')
         .select('id, webhook_id, event_type, status, attempt_count, last_response_status, last_attempt_at, created_at')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
@@ -73,7 +71,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
     if (!newName.trim() || !newUrl.trim()) { toast.error('Name and URL required'); return; }
     if (!/^https:\/\//.test(newUrl)) { toast.error('URL must use HTTPS'); return; }
     const events = newEvents.split(',').map((s) => s.trim()).filter(Boolean);
-    const { error } = await (supabase as any).from('outbound_webhooks').insert({
+    const { error } = await fromTable('outbound_webhooks').insert({
       organization_id: organizationId,
       name: newName.trim(),
       url: newUrl.trim(),
@@ -87,7 +85,7 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
   };
 
   const togglePause = async (sub: SubRow) => {
-    await (supabase as any).from('outbound_webhooks').update({ paused: !sub.paused } as never).eq('id', sub.id);
+    await fromTable('outbound_webhooks').update({ paused: !sub.paused } as never).eq('id', sub.id);
     qc.invalidateQueries({ queryKey: ['outbound_webhooks', organizationId] });
   };
 
@@ -100,13 +98,13 @@ export const WebhooksAdminPage: React.FC<Props> = ({ organizationId }) => {
       destructiveLabel: 'Delete webhook',
     });
     if (!ok) return;
-    await (supabase as any).from('outbound_webhooks').delete().eq('id', id);
+    await fromTable('outbound_webhooks').delete().eq('id', id);
     toast.success('Webhook deleted');
     qc.invalidateQueries({ queryKey: ['outbound_webhooks', organizationId] });
   };
 
   const testFire = async (id: string) => {
-    const { error } = await (supabase as any).functions.invoke('webhook-dispatch', {
+    const { error } = await supabase.functions.invoke('webhook-dispatch', {
       body: { webhook_id: id },
     });
     if (error) { toast.error(error.message); return; }

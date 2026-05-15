@@ -5,7 +5,7 @@
 // the last 10 seconds.
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, fromTable } from '../../lib/supabase';
 import { Edit3 } from 'lucide-react';
 import { colors, typography } from '../../styles/theme';
 
@@ -36,18 +36,15 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     let timer: ReturnType<typeof setInterval> | null = null;
 
     const refresh = async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
       const cutoff = new Date(Date.now() - ACTIVE_WINDOW_MS).toISOString();
-      const { data } = await sb
-        .from('typing_indicators')
+      const { data } = await fromTable('typing_indicators')
         .select('user_id, user_name, last_seen_at')
         .eq('entity_type', entityType)
         .eq('entity_id', entityId)
         .gte('last_seen_at', cutoff)
         .order('last_seen_at', { ascending: false });
       if (cancelled) return;
-      const rows = ((data as unknown as TypingRow[] | null) ?? []).filter(
+      const rows = ((data ?? []) as TypingRow[]).filter(
         (r) => r.user_id !== ignoreUserId,
       );
       setActive(rows);
@@ -57,9 +54,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     timer = setInterval(refresh, 5_000);
 
     // Realtime for instant updates between polls.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb
+    const channel = supabase
       .channel(`typing:${entityType}:${entityId}`)
       .on(
         'postgres_changes',
@@ -76,7 +71,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({
     return () => {
       cancelled = true;
       if (timer) clearInterval(timer);
-      try { sb.removeChannel(channel); } catch { /* idempotent */ }
+      void supabase.removeChannel(channel).catch(() => undefined);
     };
   }, [entityType, entityId, ignoreUserId]);
 

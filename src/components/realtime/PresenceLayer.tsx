@@ -35,9 +35,7 @@ export const PresenceLayer: React.FC<PresenceLayerProps> = ({ roomKey, user, chi
   const deviceId = useRef(getOrCreateDeviceId());
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb.channel(`presence:${roomKey}`, {
+    const channel = supabase.channel(`presence:${roomKey}`, {
       config: { presence: { key: `${user.user_id}:${deviceId.current}` } },
     });
 
@@ -83,7 +81,7 @@ export const PresenceLayer: React.FC<PresenceLayerProps> = ({ roomKey, user, chi
     return () => {
       clearInterval(interval);
       clearInterval(stale);
-      try { sb.removeChannel(channel); } catch { /* idempotent */ }
+      void supabase.removeChannel(channel).catch(() => undefined);
     };
   }, [roomKey, user.user_id, user.user_name, user.avatar_url]);
 

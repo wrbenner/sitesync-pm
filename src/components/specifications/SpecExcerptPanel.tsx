@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { useQuery } from '../../hooks/useQuery';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/supabase';
 import { FileText, ExternalLink } from 'lucide-react';
 import { colors, spacing, typography } from '../../styles/theme';
 
@@ -41,22 +41,15 @@ export const SpecExcerptPanel: React.FC<SpecExcerptPanelProps> = ({
     async () => {
       if (!enabled) return [];
       const trimmed = (specSection ?? '').trim();
-      // The generated Database types are strict about column-name unions and
-      // lag behind some live schemas. Cast through `any` for the local query
-      // — same escape hatch the rest of the codebase uses.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
       // Exact match first; if none, fall back to prefix match.
-      const exact = await sb
-        .from('specifications')
+      const exact = await fromTable('specifications')
         .select('id, section_number, title, description, division, revision, status, file_url')
         .eq('project_id', projectId)
         .eq('section_number', trimmed)
         .limit(1);
       if (exact.data && exact.data.length > 0) return exact.data as unknown as Specification[];
 
-      const prefix = await sb
-        .from('specifications')
+      const prefix = await fromTable('specifications')
         .select('id, section_number, title, description, division, revision, status, file_url')
         .eq('project_id', projectId)
         .ilike('section_number', `${trimmed}%`)
