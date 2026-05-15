@@ -45,9 +45,23 @@ async function shot(page: Page, viewport: string, n: number, name: string) {
 }
 
 async function signIn(page: Page) {
+  // Dev-bypass: ProtectedRoute renders without redirect, so stay on dashboard.
+  await page.goto('#/dashboard')
+  await page.waitForTimeout(400)
+  if (!page.url().includes('/login')) return
+  // Real auth flow:
   await page.goto('#/login')
-  await page.getByPlaceholder('you@company.com').fill(USER)
-  await page.getByPlaceholder('Enter your password').fill(PASS)
+  const toPassBtn = page.getByRole('button', { name: /sign in with password/i })
+  if (await toPassBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await toPassBtn.click()
+    await page.waitForTimeout(300)
+  }
+  await page.getByPlaceholder('Email').fill(USER).catch(async () => {
+    await page.getByPlaceholder('you@company.com').fill(USER).catch(() => undefined)
+  })
+  await page.getByPlaceholder('Password').fill(PASS).catch(async () => {
+    await page.getByPlaceholder('Enter your password').fill(PASS).catch(() => undefined)
+  })
   await page.locator('button[type="submit"]').first().click()
   await page.waitForURL(/#\/(dashboard|onboarding|profile|$)/, { timeout: 20_000 })
   await settle(page, 1500)
