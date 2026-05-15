@@ -671,3 +671,41 @@ Wave 4 = the next 10 priority hazards focused on Sections A / B / M / P — mach
 - No source-file changes.
 - Mutation-injector compatibility: each spec pins at least one positive-case contract that fails when the underlying contract is silently removed (e.g. computeNextRevisionNumber returns wrong rev → assertion fires; resolveWaiverTemplateId returns AIA on CA project → assertion fires; etc.).
 - KNOWN-VIOLATION pattern: 5 specs ratchet on the *current* hazard surface (empty-closure Cmd+S, no escalation cron, no jurisdiction validator, no batched payload, per-widget fetches). Each is a regression boundary: when the platform fixes the bug, the corresponding assertion must be flipped in a follow-up wave.
+
+---
+
+## FMEA Wave 5 — 10 more hazards covered (2026-05-15)
+
+Wave 5 = next 10 priority hazards, Sections A / F / M / K emphasis — xstate machine boundaries (REOPEN-terminal, missing-actor, actor-timeout, type-history demote, tile-orphan), share-token entity scope, SCIM externalId uniqueness, optimistic-UI vs presence + pagination conflicts, and Stripe webhook signature timing attack. **All 60 wave-5 vitest tests pass** locally (4 live-gated skips); each spec ≤ 199 lines (verified).
+
+| # | ID                | Spec path                                                              | Layer                                                  | Status               |
+|--:|-------------------|------------------------------------------------------------------------|--------------------------------------------------------|----------------------|
+| 1 | A.RFI.2           | tests/machines/rfi-reopen-terminal.spec.ts                             | xstate fuzz — REOPEN from closed AND void              | UNCOVERED → PARTIAL  |
+| 2 | A.SUB.2           | tests/machines/submittal-actor-missing.spec.ts                         | bare-machine probe + spy contract + KNOWN-VIOLATION    | UNCOVERED → PARTIAL  |
+| 3 | A.DL.2            | tests/machines/daily-log-actor-timeout.spec.ts                         | never-resolving actor + KNOWN-VIOLATION (no `after:`)  | UNCOVERED → PARTIAL  |
+| 4 | A.CO.2            | tests/machines/change-order-return-to-pco-history.spec.ts              | cor→pco demote contract + missing assign KNOWN-VIOLATION | UNCOVERED → PARTIAL |
+| 5 | A.DRAW.2          | tests/integrity/drawing-tile-orphan.spec.ts                            | UUID[] schema probe + orphan-safe filter + cascade pin | UNCOVERED → PARTIAL  |
+| 6 | F.SHARE.2         | tests/security/share-token-scope-too-broad.spec.ts                     | aud:entity_type:entity_id contract + live cross-entity | UNCOVERED → PARTIAL  |
+| 7 | F.SCIM.1          | tests/security/scim-users-externalid-uniqueness.spec.ts                | createUser stub KNOWN-VIOLATION + live dedup probe     | UNCOVERED → PARTIAL  |
+| 8 | M.OPT.2           | tests/realtime/presence-optimistic-edit-conflict.spec.ts               | presenceStore broadcast-race + flag-accuracy contract  | UNCOVERED → PARTIAL  |
+| 9 | M.OPT.3           | tests/realtime/pagination-optimistic-insert.spec.ts                    | InfiniteData merger + total/cursor/rollback contract   | UNCOVERED → PARTIAL  |
+|10 | K.STRIPE.2        | tests/security/stripe-signature-timing-attack.spec.ts                  | static XOR-pattern + 5,000 paired timed compares       | UNCOVERED → PARTIAL  |
+
+**Real bugs surfaced (KNOWN-VIOLATION ledger entries inline in specs):**
+
+1. **A.SUB.2** — `src/machines/submittalMachine.ts` ships a no-op default `triggerRevisionCreation: () => {}` with NO `createSubmittalActor()` factory enforcing the `.provide()` wiring. Every production call site must remember to override the action; missing override = silent prod fail where revisionNumber bookkeeping looks healthy but no submittal_revisions row is created. Fix: add a fail-fast factory in src/machines/submittalMachine.ts.
+
+2. **A.DL.2** — `src/machines/dailyLogMachine.ts` `amending` state has no `after:` timeout on the `createLog` invoke. A hung createLog actor leaves the machine in `amending` forever (no auto-recovery, no error context). Fix: add `after: { 30000: { target: 'submitted', actions: assign({ error: () => 'amend_timeout' }) } }`.
+
+3. **A.CO.2** — `RETURN_TO_PCO` transition in `src/machines/changeOrderMachine.ts` lacks an `actions:` clause to revert `context.type` via the existing `getPreviousCOType()` helper. A cor-typed CO that's rejected and returned to PCO sits in `draft` state with `co_type='cor'` — impossible per the doc contract, and the historical "promoted then demoted" fact is lost. Fix: `actions: assign({ type: ({ context }) => getPreviousCOType(context.type) ?? context.type })` + emit a co_type_history audit row.
+
+4. **A.DRAW.2** — `drawing_sets.drawing_ids UUID[]` (migration `20260421000001_drawing_tiles_and_sets.sql`) has NO foreign-key constraint, NO junction table, NO trigger on drawings DELETE to sweep the array. Deleting a drawing leaves dangling UUIDs in every set; deleting a set leaves the tiled storage assets behind. Fix: replace UUID[] with `drawing_set_members(set_id, drawing_id)` junction + `ON DELETE CASCADE` on the drawings side.
+
+5. **F.SCIM.1** — `supabase/functions/scim-v2/index.ts` `createUser()` is a 501 stub returning "not implemented yet". SCIM POST /Users from Okta / Azure AD / OneLogin fails today; when the impl lands it MUST dedupe by externalId (RFC 7643 §3.3) — recommend `UNIQUE (organization_id, external_id)` + dedup-by-externalId query before INSERT. `toScimUser()` also omits externalId from the output, breaking IdP reconciliation.
+
+**Cost-aware notes:**
+- 10 vitest specs (60 tests, ~1.6s total); 4 live-gated skips for staging-only probes (F.SHARE.2 cross-entity replay × 2, F.SCIM.1 live duplicate × 2).
+- Each spec ≤ 199 lines (verified — longest is pagination-optimistic-insert at 199).
+- No source-file changes.
+- Mutation-injector compatibility: each spec pins at least one positive-case contract that fails when the underlying contract is silently removed (e.g. REOPEN-from-closed must transition to open; spy fires on RESUBMIT; aud check precedes DB lookup; xor-comparator returns true on match; etc.).
+- KNOWN-VIOLATION pattern: 5 of 10 specs ratchet on the *current* hazard surface (no submittal actor factory, no daily-log timeout, no RETURN_TO_PCO type revert, no drawing_set_members junction, no SCIM createUser impl). Each is a regression boundary: when the platform ships the fix, the corresponding assertion flips and the catalog entry moves to VALIDATED.
