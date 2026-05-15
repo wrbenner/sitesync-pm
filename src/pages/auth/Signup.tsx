@@ -192,7 +192,25 @@ export const Signup: React.FC = () => {
 
       let organizationId: string | null = null
       if (provisionError) {
+        // FMEA F.SIGNUP.3 fix (wave 3): surface a user-visible error
+        // instead of swallowing to console. The auth user already
+        // exists; we still navigate to /verify-pending in the outer
+        // fallback so they can recover, but the inline error gives
+        // them an actionable next step before that redirect fires.
         console.error('[signup] provision-org failed:', provisionError)
+        Sentry.captureException(provisionError, {
+          tags: { area: 'signup', step: 'provision_org' },
+          extra: { userId },
+        })
+        const message =
+          provisionError instanceof Error
+            ? provisionError.message
+            : typeof provisionError === 'object' && provisionError && 'message' in provisionError
+              ? String((provisionError as { message: unknown }).message)
+              : 'We couldn\'t finish setting up your organization. Please try again or contact support.'
+        setSubmitError({
+          text: `Account created, but organization setup failed: ${message}. We've recorded the issue — please contact support if it persists.`,
+        })
       } else if (provisionData) {
         const pd = provisionData as { organization_id?: unknown }
         if (typeof pd.organization_id === 'string') {

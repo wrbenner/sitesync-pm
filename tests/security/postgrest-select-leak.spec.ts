@@ -21,10 +21,11 @@
  *      asking for key_hash; assert 401/empty rows.
  */
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, readdirSync } from 'node:fs'
+import { resolve, join } from 'node:path'
 
 const DB_TYPES = resolve(__dirname, '..', '..', 'src', 'types', 'database.ts')
+const PGTAP_DIR = resolve(__dirname, '..', '..', 'supabase', 'tests', 'database')
 
 const SENSITIVE_PATTERNS: RegExp[] = [
   /\b(\w+_hash)\b/,
@@ -80,9 +81,27 @@ describe('FMEA G.HEADER.2 — sensitive columns must not be exposed by ?select='
     expect(projected.entry_hash).toBeUndefined()
   })
 
-  it('KNOWN GAP: no SQL-pgtap test denies anon SELECT of *_hash columns', () => {
-    const hasPgtapHashDenialTests = false
-    expect(hasPgtapHashDenialTests).toBe(false)
+  it('pgtap SELECT-denial test for *_hash columns ships (FMEA G.HEADER.2 fix)', () => {
+    // Wave-3 fix: supabase/tests/database/wave3_hash_columns_anon_select_denial.sql
+    // asserts (a) RLS enabled, (b) no anon SELECT grant, (c) no anon-scoped
+    // policy on each of the four hash-bearing tables.
+    let files: string[] = []
+    try {
+      files = readdirSync(PGTAP_DIR)
+    } catch {
+      files = []
+    }
+    const denialTest = files.find((f) => /hash.*anon.*select|hash.*denial/i.test(f))
+    expect(denialTest).toBeDefined()
+    if (denialTest) {
+      const src = readFileSync(join(PGTAP_DIR, denialTest), 'utf-8')
+      // Spot-check that each target table is referenced.
+      for (const t of ['account_deletion_events', 'api_keys', 'ai_rfi_drafts', 'audit_log']) {
+        expect(src).toContain(t)
+      }
+      // And that the anon role denial is asserted.
+      expect(src).toMatch(/has_table_privilege\(\s*'anon'/)
+    }
   })
 
   it('live (skips without staging): authed GET of key_hash returns no leakage', async () => {

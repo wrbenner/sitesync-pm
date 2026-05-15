@@ -104,6 +104,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             signupAt: session.user.created_at ?? null,
           });
         } else {
+          // FMEA N.RT.1 fix (wave 3): tear down all Supabase Realtime
+          // channels on SIGNED_OUT so channels subscribed by the prior
+          // user cannot deliver events into the next user's session
+          // (cross-user message leak). Safe to call even when no
+          // channels are active — it's a no-op in that case.
+          try {
+            await supabase.removeAllChannels();
+          } catch (err) {
+            if (import.meta.env.DEV) console.error('[auth] removeAllChannels on SIGNED_OUT failed:', err);
+          }
           set({ profile: null, organization: null, organizations: [], currentOrgRole: null });
           // BRT sub-6 §4.1: reset Crisp on signout so a shared device gets a clean thread.
           resetCrispSession();
@@ -167,6 +177,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     set({ loading: true });
     try {
+      // FMEA N.RT.1 fix (wave 3): tear down all Realtime channels
+      // BEFORE clearing auth so the channel-close frames carry the
+      // current JWT. The onAuthStateChange SIGNED_OUT branch also
+      // calls removeAllChannels() as a defense-in-depth no-op for
+      // out-of-band signOut() invocations.
+      try {
+        await supabase.removeAllChannels();
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('[auth] removeAllChannels on signOut failed:', err);
+      }
       await supabase.auth.signOut();
       set({
         session: null,
