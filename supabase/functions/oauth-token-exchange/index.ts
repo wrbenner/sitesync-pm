@@ -104,6 +104,113 @@ async function decryptToken(stored: string | null | undefined): Promise<string |
   return new TextDecoder().decode(pt)
 }
 
+// ── Redirect URI Allowlist & State Nonce ────────────────
+// FMEA R.SLACK.1 (CRITICAL): the prior version accepted client-supplied
+// `redirectUri` verbatim and forwarded it to the provider's token endpoint,
+// with NO origin allowlist, NO Origin/Referer header check, and NO `state`
+// nonce verification. An attacker could chain CSRF + open-redirect against
+// any supported provider (quickbooks, google_drive, autodesk_bim360,
+// sharepoint, docusign) to intercept access tokens.
+//
+// Defense:
+//   1. `redirectUri` must exactly equal one of the entries in the
+//      `OAUTH_REDIRECT_ALLOWLIST` env var (newline-separated). The runtime
+//      also seeds canonical production / staging entries so a misconfigured
+//      env can't fail open.
+//   2. The Origin (or Referer) header's origin must match the redirectUri's
+//      origin — blocks cross-origin callers using a leaked valid URI.
+//   3. The caller MUST present a `state` token previously minted via the
+//      `issue_oauth_state` RPC. The edge function consumes the state via
+//      `consume_oauth_state`, which validates user_id + provider +
+//      redirect_uri + expiry, and deletes the row (single-use).
+
+const CANONICAL_REDIRECTS = [
+  'https://app.sitesync.ai/oauth/callback',
+  'https://sitesync.ai/oauth/callback',
+  'https://staging.sitesync.ai/oauth/callback',
+  'http://localhost:5173/oauth/callback',
+  'http://localhost:3000/oauth/callback',
+]
+
+function getAllowedRedirects(): Set<string> {
+  const envList = (Deno.env.get('OAUTH_REDIRECT_ALLOWLIST') ?? '')
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return new Set<string>([...CANONICAL_REDIRECTS, ...envList])
+}
+
+function getOriginFromHeader(req: Request): string | null {
+  const origin = req.headers.get('Origin')
+  if (origin) return origin
+  const referer = req.headers.get('Referer')
+  if (!referer) return null
+  try {
+    return new URL(referer).origin
+  } catch {
+    return null
+  }
+}
+
+function validateRedirectUri(req: Request, redirectUri: string): void {
+  let parsed: URL
+  try {
+    parsed = new URL(redirectUri)
+  } catch {
+    throw new HttpError(400, 'invalid_redirect_uri')
+  }
+
+  // HTTPS required outside localhost.
+  const isLocal = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'
+  if (parsed.protocol !== 'https:' && !isLocal) {
+    throw new HttpError(400, 'invalid_redirect_uri')
+  }
+
+  // Exact-match allowlist (no prefix/suffix tricks).
+  const allowed = getAllowedRedirects()
+  if (!allowed.has(redirectUri)) {
+    throw new HttpError(400, 'invalid_redirect_uri')
+  }
+
+  // Origin header (or Referer fallback) must match the redirectUri's origin.
+  const callerOrigin = getOriginFromHeader(req)
+  if (!callerOrigin) {
+    throw new HttpError(400, 'invalid_redirect_uri')
+  }
+  let callerOriginParsed: URL
+  try {
+    callerOriginParsed = new URL(callerOrigin)
+  } catch {
+    throw new HttpError(400, 'invalid_redirect_uri')
+  }
+  if (callerOriginParsed.origin !== parsed.origin) {
+    throw new HttpError(400, 'invalid_redirect_uri')
+  }
+}
+
+async function verifyStateNonce(
+  supabase: ReturnType<typeof createClient>,
+  state: string | undefined,
+  provider: string,
+  redirectUri: string,
+): Promise<void> {
+  if (!state || typeof state !== 'string' || state.length < 16) {
+    throw new HttpError(400, 'invalid_state')
+  }
+  const { data, error } = await supabase.rpc('consume_oauth_state', {
+    p_state: state,
+    p_provider: provider,
+    p_redirect_uri: redirectUri,
+  })
+  if (error) {
+    console.error('consume_oauth_state error:', error)
+    throw new HttpError(400, 'invalid_state')
+  }
+  if (data !== true) {
+    throw new HttpError(400, 'invalid_state')
+  }
+}
+
 // ── Request Types ───────────────────────────────────────
 
 interface ExchangeRequest {
@@ -111,6 +218,7 @@ interface ExchangeRequest {
   code: string
   redirectUri: string
   projectId: string
+  state: string
   integrationId?: string // For refreshing existing integration
 }
 
@@ -153,10 +261,10 @@ async function handleExchange(
   cors: Record<string, string>,
 ): Promise<Response> {
   const body = await parseJsonBody<ExchangeRequest>(req)
-  const { provider, code, redirectUri, projectId, integrationId } = body
+  const { provider, code, redirectUri, projectId, state, integrationId } = body
 
-  if (!provider || !code || !redirectUri || !projectId) {
-    throw new HttpError(400, 'Missing required fields: provider, code, redirectUri, projectId')
+  if (!provider || !code || !redirectUri || !projectId || !state) {
+    throw new HttpError(400, 'Missing required fields: provider, code, redirectUri, projectId, state')
   }
 
   requireUuid(projectId, 'projectId')
@@ -167,6 +275,13 @@ async function handleExchange(
   if (!config) {
     throw new HttpError(400, `Unsupported OAuth provider: ${provider}`)
   }
+
+  // FMEA R.SLACK.1 — validate redirectUri against allowlist + Origin header,
+  // then consume the single-use state nonce previously minted via the
+  // issue_oauth_state RPC. Both checks must pass before we forward the
+  // authorization code to the upstream provider.
+  validateRedirectUri(req, redirectUri)
+  await verifyStateNonce(supabase, state, provider, redirectUri)
 
   // Get client credentials from environment (NEVER from frontend)
   const clientId = Deno.env.get(`OAUTH_${provider.toUpperCase()}_CLIENT_ID`)

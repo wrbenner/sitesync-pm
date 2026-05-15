@@ -476,7 +476,7 @@ Remaining 25+:
 - R.STRIPE.1 — covered by #42
 - R.STRIPE.2 — Stripe redirect cancelled mid-flow — PARTIAL (Wave 6 — `tests/mobile/stripe-redirect-cancel.spec.ts` static (PaySubFlow processing-branch) + runtime back-nav simulation; **REAL BUG**: `src/components/financial/PaySubFlow.tsx` `processing` step has no Cancel CTA / visibilitychange listener / setTimeout fallback)
 - R.STRIPE.3 — SCA challenge timeout
-- R.SLACK.1 — OAuth origin mismatch — PARTIAL (Wave 6 — `tests/security/slack-oauth-origin-mismatch.spec.ts` static + reference validator contract; **REAL BUG (CRITICAL)**: `supabase/functions/oauth-token-exchange/index.ts` accepts client-supplied `redirectUri` without origin allowlist / Origin header check / state nonce verification — generic to all OAuth providers, not just Slack)
+- R.SLACK.1 — OAuth origin mismatch — VALIDATED (Wave 6 + fix/r-slack-1-oauth-redirect-validation — `tests/security/slack-oauth-origin-mismatch.spec.ts` static + reference validator contract; **FIXED 2026-05-15**: `supabase/functions/oauth-token-exchange/index.ts` now enforces (1) exact-match `redirectUri` allowlist (`OAUTH_REDIRECT_ALLOWLIST` env + canonical app.sitesync.ai / staging.sitesync.ai / localhost entries), (2) Origin/Referer header origin must equal the redirectUri's origin, (3) single-use `state` nonce stored server-side via `oauth_pending_states` table + `issue_oauth_state` / `consume_oauth_state` SECURITY DEFINER RPCs (migration `20261031000000_oauth_state_nonce_table.sql`, applied to staging + prod). Generic across all 5 providers (quickbooks, google_drive, autodesk_bim360, sharepoint, docusign).)
 - R.SLACK.2 — token expires mid-session
 - R.CAL.1 — Calendly link expired UI shows OK
 - R.CAL.2 — Calendly iframe blocks page scroll
