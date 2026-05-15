@@ -32,6 +32,9 @@ export default defineConfig({
       'tests/a11y/**',
       'tests/mobile/**',
       'tests/visual/**',
+      // FMEA Wave 2 UI hazard specs run under @playwright/test (not vitest):
+      // modal-error, empty-state, optimistic-rollback, double-submit.
+      'tests/ui/**',
       // macOS Finder / iCloud sync conflict duplicates ("foo 2.test.tsx",
       // "__tests__ 4/foo.test.tsx", etc.). Already gitignored, but iCloud
       // can regenerate them on disk and vitest would otherwise run stale

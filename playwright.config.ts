@@ -25,6 +25,9 @@ export default defineConfig({
     'tests/a11y/**/*.spec.ts',
     'tests/mobile/**/*.spec.ts',
     'tests/visual/**/*.spec.ts',
+    // FMEA Wave 2 — UI hazard coverage (modal-error, empty-state,
+    // optimistic-rollback, double-submit). Playwright runtime.
+    'tests/ui/**/*.spec.ts',
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
