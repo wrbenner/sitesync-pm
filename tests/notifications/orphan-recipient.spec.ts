@@ -46,16 +46,14 @@ describe('FMEA D.NOTIF.5 — orphan recipient handling', () => {
     expect(/recipient_user_id\s*:\s*recipientUserId/.test(source)).toBe(true)
   })
 
-  it('static: send path resolves recipient_email at send time (KNOWN GAP)', () => {
-    // The hazard: today the queue row stores recipient_email at send
-    // time but does NOT check whether the user was deleted between
-    // queue and send. Document the absence.
+  it('static: send path includes a recipient deletion guard (FMEA D.NOTIF.5 fix)', () => {
+    // Wave-3 fix landed: processNotificationQueue calls
+    // isRecipientDeleted() which selects profile.deleted_at for the
+    // recipient. The pattern below matches the SELECT join in the
+    // guard helper.
     const source = readFileSync(SVC_SRC, 'utf-8')
-    // No explicit deleted_at / disabled check on the recipient lookup.
-    // This is the FMEA-recorded baseline; flip to `.toBe(true)` after
-    // a future PR adds the guard.
-    const hasDeletionGuard = /recipient[^=]*deleted_at|profile[^=]*deleted_at|is_active\s*=\s*true/.test(source)
-    expect(hasDeletionGuard).toBe(false)
+    const hasDeletionGuard = /recipient[^=]*deleted_at|profile[^=]*deleted_at|isRecipientDeleted/.test(source)
+    expect(hasDeletionGuard).toBe(true)
   })
 
   it('mocked: deleted recipient short-circuits to status="skipped"', async () => {

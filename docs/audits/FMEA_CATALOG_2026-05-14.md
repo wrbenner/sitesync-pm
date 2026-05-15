@@ -49,12 +49,12 @@
 | 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (tests/machines/dailyLogMachine.fuzz.spec.ts + e2e/lifecycle/daily-log-full-lifecycle.spec.ts; race-prober Wave 1 — **HAZARD CONFIRMED on staging** via tests/concurrency/daily-log-amend-race.spec.ts: 2 parallel revision inserts BOTH land; `daily_log_revisions` has no dedup constraint on (daily_log_id, field, new_value). Platform-fix needed: add UNIQUE partial index or wrap in pg_advisory_xact_lock RPC) |
 | 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/punchItemMachine.fuzz.spec.ts + e2e/lifecycle/punch-item-full-lifecycle.spec.ts) |
 | 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | PARTIAL (Wave 1 — tests/machines/paymentMachine.fuzz.spec.ts spy on autoGenerateLienWaivers; Wave 3 — tests/machines/payApp-approve-side-effect.spec.ts contracts the endpoint + lien_waivers INSERT path) |
-| 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | PARTIAL (Wave 1 — paymentMachine.fuzz.spec.ts sign probe; Wave 3 — tests/machines/payApp-negative-retainage.spec.ts boundary contract + documents missing validator) |
+| 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | VALIDATED (Wave 3 fix: src/machines/paymentMachine.ts exports validateRetainagePercent / isValidRetainagePercent — clamps [0,100] + Infinity/NaN; wired into calculateG702 + calculateG703LineItem. Spec tests/machines/payApp-negative-retainage.spec.ts asserts the clamp contract directly.) |
 | 24 | A.SCHED.1 | Machine state ≠ displayed status (on_track/at_risk not in machine) | MEDIUM | HIGH | vitest | PARTIAL (Wave 1 — scheduleMachine.fuzz.spec.ts; Wave 3 — tests/machines/schedule-status-divergence.spec.ts boundary fuzz of deriveStatusFromProgress + idempotence) |
 | 25 | A.RFI.1 | VOID accepted from non-admin role | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/rfiMachine.fuzz.spec.ts + e2e/lifecycle/rfi-full-lifecycle.spec.ts) |
 | 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | PARTIAL (Wave 1 e2e — submittal-full-lifecycle.spec.ts; Wave 3 — tests/notifications/submittal-distribution-refresh.spec.ts mocked-supabase contract: getBallInCourt + fresh-recipient queueNotification) |
-| 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | PARTIAL (Wave 3 — tests/ui/signup-provision-failure.spec.ts; static layer documents the swallow-to-console hazard, live layer route-intercepts provision-org 500; surfaced real bug — no setSubmitError on provisionError) |
-| 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | PARTIAL (Wave 3 — tests/security/realtime-logout-channel-leak.spec.ts; static + mocked-supabase confirms authStore.signOut does NOT call removeAllChannels — recorded as a real bug) |
+| 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | VALIDATED (Wave 3 fix: src/pages/auth/Signup.tsx `if (provisionError)` branch now calls setSubmitError() + Sentry.captureException() so the user sees an actionable inline error before fallback redirect. Spec tests/ui/signup-provision-failure.spec.ts asserts the user-visible handler is present.) |
+| 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | VALIDATED (Wave 3 fix: src/stores/authStore.ts signOut() + onAuthStateChange SIGNED_OUT branch both call supabase.removeAllChannels() before clearing auth — defense in depth for in-band + out-of-band signout. Spec tests/security/realtime-logout-channel-leak.spec.ts asserts both call sites.) |
 | 29 | D.NOTIF.1 + I.IDEM.1 | Notification duplicate on retry (no idempotency_key) | MEDIUM | HIGH | vitest | PARTIAL (race-prober Wave 1 — **HAZARD CONFIRMED on staging** via tests/concurrency/notification-idempotency.spec.ts: re-firing the same RFI-assignment trigger writes 2+ rows to `notifications`. Schema has no `idempotency_key` column nor uniqueness on (user_id, type, link). Platform-fix needed: add idempotency_key to create_notification + UNIQUE constraint) |
 | 30 | E.MV.1 | Matview REFRESH (not CONCURRENTLY) blocks reads > 1s | MEDIUM | MEDIUM | sql-pgtap | UNCOVERED |
 | 31 | I.PGMQ.1 | pgmq message processed twice (no ACK race guard) | HIGH | MEDIUM | vitest | PARTIAL (race-prober Wave 1 — vitest spec at tests/concurrency/pgmq-idempotency.spec.ts; **inconclusive on staging**: no public-schema pgmq.send wrapper exposed via REST so test skips on staging. Loop iteration must either expose `public.pgmq_send` RPC or run via psql) |
@@ -67,7 +67,7 @@
 | 38 | Q.PUSH.1 | Push deep-link arrives before auth ready | HIGH | MEDIUM | playwright | UNCOVERED |
 | 39 | Q.GPS.1 | GPS off → check-in falls back to wrong location silently | HIGH | MEDIUM | playwright | UNCOVERED |
 | 40 | Q.FILE.1 | File picker null on iOS 18 → upload crash | MEDIUM | MEDIUM | manual-only + sentry | UNCOVERED |
-| 41 | L.SIGNED.1 | Signed-URL scope too broad; allows path traversal | HIGH | MEDIUM | vitest | PARTIAL (Wave 3 — tests/security/signed-url-path-traversal.spec.ts; static inventory of createSignedUrl callers + path-traversal-rejecting normalizer contract + documents missing wrapper) |
+| 41 | L.SIGNED.1 | Signed-URL scope too broad; allows path traversal | HIGH | MEDIUM | vitest | PARTIAL (Wave 3 wrapper landed: src/lib/storage/scopedSignedUrl.ts exports createScopedSignedUrl + normalizeStoragePath — rejects `..` / `%2e%2e` / `\` / leading `/`. src/hooks/useSignedUrl.ts (both useSignedUrl + batchSignedUrls) migrated as first caller. ~10 remaining direct callers in src/pages, src/services, src/components await follow-up migration sweep before VALIDATED.) |
 | 42 | R.STRIPE.1 | Stripe Elements iframe blocked by extension → blank form | MEDIUM | MEDIUM | playwright | UNCOVERED |
 | 43 | S.A11Y.1 | Status indicated by color only (colorblind users) | MEDIUM | HIGH | axe-extended | UNCOVERED |
 | 44 | S.A11Y.2 | Modal focus-trap not announced (no role="alertdialog") | MEDIUM | MEDIUM | axe-extended | UNCOVERED |
@@ -150,7 +150,7 @@ For each entity × page tuple, an assertion: after entity creation, page renders
 
 - D.NOTIF.3 — wrong recipient (cross-tenant) — covered by #50
 - D.NOTIF.4 — duplicate notification idempotency — covered by #29
-- D.NOTIF.5 — orphaned notification (recipient deleted) — PARTIAL (Wave 3 — tests/notifications/orphan-recipient.spec.ts; static-source confirms send path lacks recipient.deleted_at guard, behavioral probes establish skip-not-throw contract)
+- D.NOTIF.5 — orphaned notification (recipient deleted) — VALIDATED (Wave 3 fix: src/services/notifications/emailNotificationService.ts processNotificationQueue() now calls isRecipientDeleted() per row — SELECTs profile.deleted_at and marks the queue row 'skipped' with error='recipient_deleted' if missing or soft-deleted. Fails open on transient lookup errors so the worker never stalls. Spec tests/notifications/orphan-recipient.spec.ts asserts the guard is present.)
 - D.NOTIF.6 — queue worker never picks up (worker crashed)
 - D.NOTIF.7 — throttle window resets unexpectedly (timezone)
 - D.NOTIF.8 — mention parsed wrong ("@John O'Reilly")
@@ -266,7 +266,7 @@ Remaining 25+:
 - G.ANON.2 — anon check_email_available reveals account existence
 - G.ANON.3 — anon INSERT error reveals table structure
 - G.HEADER.1 — apikey header swappable (service-role bypass)
-- G.HEADER.2 — ?select= leaks computed columns — PARTIAL (Wave 3 — tests/security/postgrest-select-leak.spec.ts; inventories *_hash columns from generated types, documents missing pgtap SELECT-denial coverage, live anon-fetch probe skips without staging)
+- G.HEADER.2 — ?select= leaks computed columns — VALIDATED (Wave 3 fix: supabase/tests/database/wave3_hash_columns_anon_select_denial.sql asserts RLS enabled + zero anon SELECT privilege + zero anon-scoped policies on account_deletion_events / api_keys / ai_rfi_drafts / audit_log — the four *_hash-bearing tables. Vitest spec tests/security/postgrest-select-leak.spec.ts now asserts the pgtap file ships and references all four tables + the anon denial check.)
 - G.HEADER.3 — malformed ?filter returns all rows
 - G.ROLE.1 — profile.update missing role field check
 - G.ROLE.2 — custom-role JSONB injectable
@@ -607,24 +607,26 @@ Wave 3 = the next 10 priority hazards across machines + integrity + security + n
 | # | ID                | Spec path                                                       | Layer                                          | Status               |
 |--:|-------------------|-----------------------------------------------------------------|------------------------------------------------|----------------------|
 | 1 | A.PAY.1           | tests/machines/payApp-approve-side-effect.spec.ts               | endpoint contract + INSERT path                | UNCOVERED → PARTIAL  |
-| 2 | A.PAY.2           | tests/machines/payApp-negative-retainage.spec.ts                | boundary + missing-validator ledger            | UNCOVERED → PARTIAL  |
+| 2 | A.PAY.2           | tests/machines/payApp-negative-retainage.spec.ts                | boundary + validator contract                  | UNCOVERED → VALIDATED |
 | 3 | A.SCHED.1         | tests/machines/schedule-status-divergence.spec.ts               | derive-vs-machine boundary fuzz                | UNCOVERED → PARTIAL  |
-| 4 | F.SIGNUP.3        | tests/ui/signup-provision-failure.spec.ts                       | static + Playwright route-intercept            | UNCOVERED → PARTIAL  |
+| 4 | F.SIGNUP.3        | tests/ui/signup-provision-failure.spec.ts                       | static + Playwright route-intercept            | UNCOVERED → VALIDATED |
 | 5 | B.SUB.1           | tests/notifications/submittal-distribution-refresh.spec.ts      | mocked-supabase recipient refresh              | UNCOVERED → PARTIAL  |
-| 6 | N.RT.1            | tests/security/realtime-logout-channel-leak.spec.ts             | static + mocked-channel orphan probe           | UNCOVERED → PARTIAL  |
-| 7 | D.NOTIF.5         | tests/notifications/orphan-recipient.spec.ts                    | static + mocked-supabase send-time guard       | UNCOVERED → PARTIAL  |
-| 8 | L.SIGNED.1        | tests/security/signed-url-path-traversal.spec.ts                | source inventory + normalizer contract         | UNCOVERED → PARTIAL  |
-| 9 | G.HEADER.2        | tests/security/postgrest-select-leak.spec.ts                    | sensitive-column inventory + projection probe  | UNCOVERED → PARTIAL  |
+| 6 | N.RT.1            | tests/security/realtime-logout-channel-leak.spec.ts             | static + mocked-channel orphan probe           | UNCOVERED → VALIDATED |
+| 7 | D.NOTIF.5         | tests/notifications/orphan-recipient.spec.ts                    | static + mocked-supabase send-time guard       | UNCOVERED → VALIDATED |
+| 8 | L.SIGNED.1        | tests/security/signed-url-path-traversal.spec.ts                | source inventory + normalizer contract         | UNCOVERED → PARTIAL (wrapper shipped; 1 of ~10 callers migrated) |
+| 9 | G.HEADER.2        | tests/security/postgrest-select-leak.spec.ts                    | sensitive-column inventory + projection probe  | UNCOVERED → VALIDATED |
 |10 | H.TIME.1          | tests/integrity/dst-boundary.spec.ts                            | pure-unit DST inclusion sweep                  | UNCOVERED → PARTIAL  |
 
-**Real bugs surfaced (recorded as KNOWN-VIOLATION ledger entries in their respective specs):**
+**Real bugs surfaced + Wave-3 close-out PR (2026-05-14):**
 
-1. **F.SIGNUP.3** — `Signup.tsx` `if (provisionError)` branch only `console.error`s; no `setSubmitError`/toast/inline error. User lands on `/verify-pending` with `organizationId=null` and no recovery hint.
-2. **N.RT.1** — `authStore.signOut` (and the `SIGNED_OUT` branch of `onAuthStateChange`) does not call `supabase.removeAllChannels()`. Channels subscribed by the previous user remain alive into the next user's session.
-3. **A.PAY.2** — `paymentMachine.ts` exports no `validateRetainagePercent`. `calculateG702` propagates negative *and* >100% retainage values through to G702 totals (sign + magnitude unbounded).
-4. **D.NOTIF.5** — `emailNotificationService.ts` send path has no `deleted_at` / `is_active` check on the recipient — soft-deleted users keep receiving (or 500-on-send) at the queue worker.
-5. **L.SIGNED.1** — no project-wide `createScopedSignedUrl` wrapper enforces path normalization; multiple call sites construct paths from variables passed in from caller code.
-6. **G.HEADER.2** — `*_hash` columns (`user_id_hash`, `key_hash`, `prompt_hash`, `entry_hash`) are present in `database.ts` with no companion pgtap test denying anon/authed SELECT.
+All 6 bugs surfaced during Wave 3 authoring were closed in a single follow-up PR. Status after fix:
+
+1. **F.SIGNUP.3 — VALIDATED.** `src/pages/auth/Signup.tsx` `if (provisionError)` branch now calls `setSubmitError()` + `Sentry.captureException()` so the user sees an actionable inline error before the outer-catch fallback redirect to `/verify-pending`.
+2. **N.RT.1 — VALIDATED.** `src/stores/authStore.ts` `signOut()` and the `onAuthStateChange` SIGNED_OUT branch both call `supabase.removeAllChannels()` (defense-in-depth for in-band + out-of-band signout).
+3. **A.PAY.2 — VALIDATED.** `src/machines/paymentMachine.ts` exports `validateRetainagePercent` + `isValidRetainagePercent`; clamps `[0, 100]` with NaN→0 and ±Infinity→band edges; wired into both `calculateG702` and `calculateG703LineItem` entry points.
+4. **D.NOTIF.5 — VALIDATED.** `src/services/notifications/emailNotificationService.ts` `processNotificationQueue()` calls `isRecipientDeleted()` per row (SELECT `profiles.deleted_at`); marks the queue row `'skipped'` with `error='recipient_deleted'` instead of attempting to send. Fails open on transient lookup errors so the worker never stalls.
+5. **L.SIGNED.1 — PARTIAL (wrapper shipped, callers migrating).** `src/lib/storage/scopedSignedUrl.ts` exports `createScopedSignedUrl` + `normalizeStoragePath` (rejects `..` / `%2e%2e` / `\` / leading `/`). `src/hooks/useSignedUrl.ts` (both `useSignedUrl` and `batchSignedUrls`) migrated as the first caller. Catalog entry stays PARTIAL until the remaining ~10 direct call sites in `src/pages`, `src/services`, `src/components` route through the wrapper (follow-up sweep tracked).
+6. **G.HEADER.2 — VALIDATED.** `supabase/tests/database/wave3_hash_columns_anon_select_denial.sql` asserts RLS enabled + zero anon SELECT privilege + zero anon-scoped policies on `account_deletion_events` / `api_keys` / `ai_rfi_drafts` / `audit_log` (all four `*_hash`-bearing tables). 16 pgtap assertions total.
 
 **Cost-aware notes:**
 - All 10 specs are vitest-skip-gracefully or Playwright-skip-gracefully — zero env required to land green in CI.

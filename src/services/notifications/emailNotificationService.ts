@@ -124,6 +124,38 @@ async function sendEmail(notification: EmailNotification): Promise<void> {
     .eq('id' as never, notification.id)
 }
 
+/**
+ * FMEA D.NOTIF.5 (wave 3) — recipient deletion guard.
+ *
+ * Returns true when the recipient profile is missing or soft-deleted
+ * so the caller can skip the queue row instead of attempting an email
+ * send that will bounce or crash the worker. Failing open (returning
+ * false) on lookup errors preserves the prior send behavior so a
+ * transient profiles-table error never blocks the whole queue.
+ */
+async function isRecipientDeleted(recipientUserId: string): Promise<boolean> {
+  try {
+    const { data, error } = await fromTable('profiles')
+      .select('user_id, deleted_at')
+      .eq('user_id' as never, recipientUserId)
+      .maybeSingle()
+    if (error) {
+      // Lookup failed (network / transient) — fail open so the worker
+      // doesn't stall. The send path will still surface a per-row
+      // failure if the recipient is truly gone.
+      return false
+    }
+    if (!data) {
+      // No profile row found — treat as deleted so we skip cleanly.
+      return true
+    }
+    const deletedAt = (data as { deleted_at?: string | null }).deleted_at ?? null
+    return deletedAt !== null
+  } catch {
+    return false
+  }
+}
+
 export async function processNotificationQueue(): Promise<void> {
   const { data: pending, error } = await fromTable('notification_queue')
     .select('*')
@@ -145,6 +177,17 @@ export async function processNotificationQueue(): Promise<void> {
       sentAt: row.sent_at,
       error: row.error,
       createdAt: row.created_at ?? new Date().toISOString(),
+    }
+
+    // FMEA D.NOTIF.5 fix (wave 3): if the recipient's profile is
+    // soft-deleted or missing, mark the queue row 'skipped' instead
+    // of sending. Never throws — a deleted recipient must not crash
+    // the worker loop nor reroute to a stale email.
+    if (await isRecipientDeleted(notification.recipientUserId)) {
+      await fromTable('notification_queue')
+        .update({ status: 'skipped', error: 'recipient_deleted' } as never)
+        .eq('id' as never, notification.id)
+      continue
     }
 
     const prefs = await getUserNotificationPreferences(notification.recipientUserId)

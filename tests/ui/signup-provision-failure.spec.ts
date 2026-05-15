@@ -26,30 +26,29 @@
  */
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
+// __dirname shim for ESM (the rest of the suite is CommonJS-style; this
+// is the only Playwright spec that needs a source-relative path).
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 const SIGNUP_SRC = resolve(__dirname, '..', '..', 'src', 'pages', 'auth', 'Signup.tsx')
 
 test.describe('FMEA F.SIGNUP.3 — provision-org failure handling', () => {
-  test('static: signup logs provisionError (today\'s baseline)', () => {
-    // This is the load-bearing static contract. The hazard says the
-    // current code silently swallows; the spec records that fact.
-    // When a future PR adds a user-visible error path, flip the
-    // expectation to assert setSubmitError or toast invocation.
+  test('static: signup surfaces provisionError via setSubmitError (FMEA F.SIGNUP.3 fix)', () => {
     const source = readFileSync(SIGNUP_SRC, 'utf-8')
     expect(/provisionError/.test(source)).toBe(true)
     expect(/console\.error\([^)]*provision-org/.test(source)).toBe(true)
-    // KNOWN-VIOLATION (Wave 3): there is no setSubmitError call inside
-    // the provisionError branch. When this changes the next line flips.
-    const provisionErrorBlock = source.slice(
-      source.indexOf('if (provisionError)'),
-      source.indexOf('if (provisionError)') + 400,
-    )
+    // Wave-3 fix landed: the `if (provisionError)` branch now calls
+    // setSubmitError() (and Sentry.captureException) so the user sees
+    // a concrete error message instead of the page sitting silent.
+    const provisionErrorIdx = source.indexOf('if (provisionError)')
+    expect(provisionErrorIdx).toBeGreaterThan(-1)
+    const provisionErrorBlock = source.slice(provisionErrorIdx, provisionErrorIdx + 1200)
     const hasUserVisibleHandler =
       /setSubmitError\(|toast\.|setError\(/.test(provisionErrorBlock)
-    // Today: false. When a fix lands, this assertion fails and signals
-    // that the catalog can flip A.PAY/F.SIGNUP.3 → VALIDATED.
-    expect(hasUserVisibleHandler).toBe(false)
+    expect(hasUserVisibleHandler).toBe(true)
   })
 
   test('live: provision-org 500 leaves user with a clear next step (skips without dev server)', async ({ page }, testInfo) => {

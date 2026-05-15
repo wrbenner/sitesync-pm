@@ -80,14 +80,17 @@ describe('FMEA L.SIGNED.1 — signed URL path traversal', () => {
     expect(normalize('projects\\..\\evil.pdf')).toBeNull()
   })
 
-  it('KNOWN GAP: no project-wide createSignedUrl wrapper enforces the normalizer', () => {
-    // Wave-3 documents the gap. Flip to `.toBe(true)` once a wrapper
-    // (e.g. createScopedSignedUrl) ships and call sites migrate.
+  it('project-wide createScopedSignedUrl wrapper ships (FMEA L.SIGNED.1 fix)', () => {
+    // Wave-3 fix landed: src/lib/storage/scopedSignedUrl.ts exports
+    // createScopedSignedUrl which normalizes the path before issuing
+    // the Supabase signed URL. Full caller-migration sweep is a
+    // follow-up — catalog entry stays PARTIAL until ~10 callers route
+    // through the wrapper.
     const hasWrapper = allFiles.some((p) => {
       const src = readFileSync(p, 'utf-8')
       return /createScopedSignedUrl|safeSignedUrl|createSafeSignedUrl/.test(src)
     })
-    expect(hasWrapper).toBe(false)
+    expect(hasWrapper).toBe(true)
   })
 
   it('live (skips without staging): traversal attempt is rejected', () => {

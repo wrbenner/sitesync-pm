@@ -120,6 +120,40 @@ export function getPaymentStatusConfig(status: PaymentStatus) {
   return config[status] || config.draft
 }
 
+// ── Retainage Validation ─────────────────────────────────
+//
+// FMEA A.PAY.2 (wave 3) — retainage percent must stay in [0, 100].
+// Construction convention is 0–10% on progress draws, but contracts
+// can legitimately hit higher values on final retainage releases.
+// We bound the storage range at [0, 100] (the math operates in
+// fractions thereof) and clamp silently — callers that need a hard
+// reject should use `isValidRetainagePercent` first.
+
+/**
+ * Clamps a retainage percent into the [0, 100] band. Non-finite
+ * inputs (NaN / Infinity) collapse to 0 so downstream G702 math
+ * never propagates a nonsensical sign or magnitude into owner
+ * liability.
+ */
+export function validateRetainagePercent(pct: number): number {
+  if (Number.isNaN(pct)) return 0
+  // Infinity / -Infinity collapse to the corresponding band edge so
+  // a runaway form input never escapes the [0, 100] range.
+  if (pct === Number.POSITIVE_INFINITY) return 100
+  if (pct === Number.NEGATIVE_INFINITY) return 0
+  if (pct < 0) return 0
+  if (pct > 100) return 100
+  return pct
+}
+
+/**
+ * Predicate variant — returns false for negative, > 100, or non-finite
+ * inputs. Useful for form-level validation before submitting a pay app.
+ */
+export function isValidRetainagePercent(pct: number): boolean {
+  return Number.isFinite(pct) && pct >= 0 && pct <= 100
+}
+
 // ── G702 Calculation Engine ──────────────────────────────
 
 export interface G702Data {
@@ -164,6 +198,10 @@ export function calculateG702(
   originalContractSum: number,
   approvedChangeOrders: number,
 ): G702Data {
+  // FMEA A.PAY.2 fix (wave 3): clamp retainage to [0, 100] at the
+  // boundary so negative / >100% inputs cannot propagate a flipped
+  // sign or > totalCompleted magnitude into owner liability.
+  const safeRetainagePercent = validateRetainagePercent(retainagePercent)
   // All money inputs are dollars; convert to integer cents for the math, convert back for the output shape.
   const ZERO = 0 as Cents
   const originalContractSumC = toCents(originalContractSum * 100)
@@ -175,7 +213,7 @@ export function calculateG702(
     (sum, item) => addCents(sum, toCents(item.totalCompletedAndStored * 100)), ZERO,
   )
 
-  const retainageAmountC = applyRateCents(totalCompletedAndStoredC, retainagePercent / 100)
+  const retainageAmountC = applyRateCents(totalCompletedAndStoredC, safeRetainagePercent / 100)
   const totalEarnedLessRetainageC = subtractCents(totalCompletedAndStoredC, retainageAmountC)
   const currentPaymentDueC = subtractCents(totalEarnedLessRetainageC, previousCertificatesC)
   const balanceToFinishC = subtractCents(contractSumToDateC, totalCompletedAndStoredC)
@@ -189,7 +227,7 @@ export function calculateG702(
     netChangeOrders: approvedChangeOrders,
     contractSumToDate: fromCents(contractSumToDateC) / 100,
     totalCompletedAndStored: fromCents(totalCompletedAndStoredC) / 100,
-    retainagePercent,
+    retainagePercent: safeRetainagePercent,
     retainageAmount: fromCents(retainageAmountC) / 100,
     totalEarnedLessRetainage: fromCents(totalEarnedLessRetainageC) / 100,
     lessPreviousCertificates: previousCertificates,
@@ -205,6 +243,10 @@ export function calculateG703LineItem(
   materialsStored: number,
   retainagePercent: number,
 ): Omit<G703LineItem, 'itemNumber' | 'costCode' | 'description'> {
+  // FMEA A.PAY.2 fix (wave 3): same clamp at the line-item entry
+  // point so per-line retainage stays bounded even when callers
+  // skip the G702 aggregator.
+  const safeRetainagePercent = validateRetainagePercent(retainagePercent)
   const scheduledC = toCents(scheduledValue * 100)
   const prevC = toCents(previousCompleted * 100)
   const thisC = toCents(thisPeriod * 100)
@@ -215,7 +257,7 @@ export function calculateG703LineItem(
     ? Math.round((fromCents(totalCompletedAndStoredC) / fromCents(scheduledC)) * 10000) / 100
     : 0
   const balanceToFinishC = subtractCents(scheduledC, totalCompletedAndStoredC)
-  const retainageC = applyRateCents(totalCompletedAndStoredC, retainagePercent / 100)
+  const retainageC = applyRateCents(totalCompletedAndStoredC, safeRetainagePercent / 100)
 
   return {
     scheduledValue,

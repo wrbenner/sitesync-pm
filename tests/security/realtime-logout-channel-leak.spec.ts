@@ -31,25 +31,24 @@ import { resolve } from 'node:path'
 const AUTH_STORE_SRC = resolve(__dirname, '..', '..', 'src', 'stores', 'authStore.ts')
 
 describe('FMEA N.RT.1 — channel teardown on logout', () => {
-  it('static: authStore signOut path does NOT call removeAllChannels (today\'s baseline)', () => {
+  it('static: authStore signOut calls removeAllChannels (FMEA N.RT.1 fix)', () => {
     const source = readFileSync(AUTH_STORE_SRC, 'utf-8')
-    // Find the signOut function body.
-    const signOutIdx = source.indexOf('signOut:')
-    expect(signOutIdx).toBeGreaterThan(-1)
-    const window = source.slice(signOutIdx, signOutIdx + 800)
-    // KNOWN-VIOLATION (FMEA Wave 3): no removeAllChannels in signOut.
-    // When a future PR adds the teardown, this assertion flips and we
-    // upgrade catalog entry N.RT.1 → VALIDATED.
-    expect(/removeAllChannels|removeChannel/.test(window)).toBe(false)
+    // Find the IMPLEMENTATION of signOut (the second occurrence — the
+    // first is the interface type declaration). The fix lives inside
+    // the function body.
+    const firstIdx = source.indexOf('signOut:')
+    expect(firstIdx).toBeGreaterThan(-1)
+    const implIdx = source.indexOf('signOut: async')
+    expect(implIdx).toBeGreaterThan(-1)
+    const window = source.slice(implIdx, implIdx + 1200)
+    expect(/removeAllChannels/.test(window)).toBe(true)
   })
 
-  it('static: SIGNED_OUT branch of onAuthStateChange also lacks channel teardown', () => {
+  it('static: SIGNED_OUT branch of onAuthStateChange also tears down channels', () => {
     const source = readFileSync(AUTH_STORE_SRC, 'utf-8')
-    // Pull the onAuthStateChange handler body. The else branch (no session)
-    // is the SIGNED_OUT equivalent.
     const handlerIdx = source.indexOf('onAuthStateChange')
-    const window = source.slice(handlerIdx, handlerIdx + 2000)
-    expect(/removeAllChannels|removeChannel/.test(window)).toBe(false)
+    const window = source.slice(handlerIdx, handlerIdx + 3000)
+    expect(/removeAllChannels/.test(window)).toBe(true)
   })
 
   it('mocked supabase: a channel subscribed pre-logout is not auto-removed', async () => {

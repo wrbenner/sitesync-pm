@@ -41,14 +41,22 @@ async function tryLoadValidator(): Promise<ValidatorModule | null> {
 }
 
 describe('FMEA A.PAY.2 — negative retainage rejection', () => {
-  it('documents validator presence/absence', async () => {
+  it('exports validateRetainagePercent (FMEA A.PAY.2 fix)', async () => {
     const mod = await tryLoadValidator()
     const hasValidator = typeof mod?.validateRetainagePercent === 'function'
-    // KNOWN-VIOLATION LEDGER ENTRY:
-    // As of FMEA Wave 3 (2026-05-14) no dedicated `validateRetainagePercent`
-    // export exists. The behavioral assertions below substitute; flip this
-    // assertion to `.toBe(true)` once a validator is added.
-    expect(hasValidator).toBe(false)
+    // FMEA Wave 3 fix landed: validateRetainagePercent exported from
+    // src/machines/paymentMachine.ts; clamps to [0, 100]; wired into
+    // both calculateG702 and calculateG703LineItem.
+    expect(hasValidator).toBe(true)
+    // Behavioral contract on the validator itself.
+    const v = mod!.validateRetainagePercent! as (p: number) => number
+    expect(v(-5)).toBe(0)
+    expect(v(0)).toBe(0)
+    expect(v(5)).toBe(5)
+    expect(v(100)).toBe(100)
+    expect(v(200)).toBe(100)
+    expect(v(Number.NaN)).toBe(0)
+    expect(v(Number.POSITIVE_INFINITY)).toBe(100)
   })
 
   it('calculateG702 propagates a negative sign when given negative retainage', () => {
@@ -74,10 +82,10 @@ describe('FMEA A.PAY.2 — negative retainage rejection', () => {
     expect(result.retainageAmount).toBeLessThanOrEqual(0)
   })
 
-  it('calculateG702 rejects retainage > 100 by capping or producing > totalCompleted', () => {
-    // 200% retainage is nonsensical; the helper currently propagates the
-    // arithmetic. Document the contract: retainageAmount ≤ totalCompletedAndStored
-    // is the sane bound. If the helper exceeds that, the validator is missing.
+  it('calculateG702 clamps retainage > 100 to 100% (FMEA A.PAY.2 fix)', () => {
+    // 200% retainage is nonsensical; with the wave-3 fix the helper
+    // clamps the percent at the boundary so retainageAmount never
+    // exceeds totalCompletedAndStored.
     const lineItems = [
       {
         itemNumber: '1',
@@ -94,10 +102,10 @@ describe('FMEA A.PAY.2 — negative retainage rejection', () => {
       },
     ]
     const result = calculateG702(lineItems, 200, 0, 1000, 0)
-    // KNOWN-VIOLATION: today's helper propagates 200% literally (retainage = 2x completed).
-    // The hazard is "no bound check"; this is the recorded gap.
-    const propagatesUnbounded = result.retainageAmount > result.totalCompletedAndStored
-    expect(propagatesUnbounded).toBe(true)
+    // FIX CONTRACT: retainageAmount ≤ totalCompletedAndStored.
+    expect(result.retainageAmount).toBeLessThanOrEqual(result.totalCompletedAndStored)
+    // And the reported percent is the clamped value.
+    expect(result.retainagePercent).toBe(100)
   })
 
   it('calculateG702 with retainagePercent=0 produces zero retainage', () => {
