@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Shield, CheckCircle2, AlertCircle, Smartphone, Trash2, Copy } from 'lucide-react'
+import { Shield, CheckCircle2, AlertCircle, Smartphone, Trash2, Copy, Download, KeyRound } from 'lucide-react'
 import { Btn, Card, Modal } from '../Primitives'
 import { colors, spacing, typography, borderRadius } from '../../styles/theme'
 import { supabase } from '../../lib/supabase'
@@ -11,15 +11,21 @@ import { toast } from 'sonner'
 // Single-purpose component for src/pages/UserProfile.tsx. Handles:
 //   1. Reading current MFA state (factors + AAL).
 //   2. Walking the user through TOTP enrollment (QR + verify code).
-//   3. Letting them remove an existing factor.
+//   3. Generating & displaying one-time backup recovery codes (Issue #586).
+//   4. Letting them remove an existing factor.
 //
 // Uses Supabase JS MFA APIs:
 //   supabase.auth.mfa.enroll       — creates a new TOTP factor in unverified state
 //   supabase.auth.mfa.challenge    — issues a challenge for that factor
 //   supabase.auth.mfa.verify       — verifies the user-entered TOTP code
 //   supabase.auth.mfa.unenroll     — removes a factor
+//
+// Plus our own RPC for backup codes (Supabase Auth has no built-in
+// recovery-code mechanism):
+//   rpc('generate_mfa_backup_codes')  — returns 10 plaintext codes ONCE;
+//                                       only bcrypt hashes are stored.
 
-type EnrollmentStep = 'idle' | 'showing-qr' | 'verifying' | 'success'
+type EnrollmentStep = 'idle' | 'showing-qr' | 'verifying' | 'backup-codes' | 'success'
 
 interface EnrollmentDraft {
   factorId: string
@@ -35,6 +41,8 @@ export const MfaEnrollment: React.FC = () => {
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [backupCodes, setBackupCodes] = useState<string[] | null>(null)
+  const [acknowledgedSaved, setAcknowledgedSaved] = useState(false)
 
   // ── Start enrollment ────────────────────────────────────
   const startEnrollment = async () => {
@@ -81,9 +89,42 @@ export const MfaEnrollment: React.FC = () => {
       })
       if (verify.error) throw verify.error
 
-      setStep('success')
       setCode('')
       await refresh()
+
+      // Now generate the one-time backup recovery codes via our RPC. If this
+      // fails we still show MFA as enabled (verify succeeded server-side), but
+      // we surface the error so the user can retry from the modal.
+      //
+      // NB: `generate_mfa_backup_codes` is defined in
+      // supabase/migrations/20261026000000_mfa_backup_codes.sql. database.ts
+      // gets regenerated post-migration; until then we cast through `unknown`
+      // (the project's pattern for RPCs added in the same PR as their DB
+      // migration — see CLAUDE.md "Stacked-PR conflicts on database.ts regen").
+      const rpcClient = supabase.rpc as unknown as (
+        fn: string,
+        args?: Record<string, unknown>,
+      ) => Promise<{ data: string[] | null; error: { message: string } | null }>
+      const { data: codesData, error: codesError } = await rpcClient(
+        'generate_mfa_backup_codes',
+        {},
+      )
+      if (codesError) {
+        // Fall back to success-without-codes; user can re-roll from profile.
+        setStep('success')
+        toast.error('Two-factor enabled, but backup codes could not be generated. Re-roll from your profile.')
+        return
+      }
+
+      const codes = Array.isArray(codesData) ? (codesData as string[]) : null
+      if (!codes || codes.length === 0) {
+        setStep('success')
+        toast.error('Two-factor enabled, but backup codes could not be generated.')
+        return
+      }
+
+      setBackupCodes(codes)
+      setStep('backup-codes')
       toast.success('Multi-factor authentication enabled')
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Invalid verification code')
@@ -92,15 +133,23 @@ export const MfaEnrollment: React.FC = () => {
     }
   }
 
+  // The modal's close path. From the backup-codes step we hard-block until
+  // the user checks the acknowledgment box — losing the codes is irreversible
+  // and that's the entire reason this UI exists (Issue #586).
   const cancelEnrollment = async () => {
-    if (draft?.factorId) {
-      // Best-effort cleanup of the unverified factor.
+    if (step === 'backup-codes' && !acknowledgedSaved) {
+      return
+    }
+    if (draft?.factorId && step !== 'backup-codes' && step !== 'success') {
+      // Best-effort cleanup of the unverified factor (only if we never finished).
       await supabase.auth.mfa.unenroll({ factorId: draft.factorId }).catch(() => {})
     }
     setDraft(null)
     setStep('idle')
     setCode('')
     setErrorMsg(null)
+    setBackupCodes(null)
+    setAcknowledgedSaved(false)
   }
 
   const removeFactor = async (factor: MfaFactor) => {
@@ -122,6 +171,38 @@ export const MfaEnrollment: React.FC = () => {
     if (!draft?.secret) return
     await navigator.clipboard.writeText(draft.secret)
     toast.success('Secret copied to clipboard')
+  }
+
+  // ── Backup code helpers ─────────────────────────────────
+  // NOTE: never log the codes (no console.log, no analytics). Local-only.
+  const copyAllBackupCodes = async () => {
+    if (!backupCodes) return
+    await navigator.clipboard.writeText(backupCodes.join('\n'))
+    toast.success('Backup codes copied to clipboard')
+  }
+
+  const downloadBackupCodes = () => {
+    if (!backupCodes) return
+    const stamp = new Date().toISOString().slice(0, 10)
+    const header = [
+      'SiteSync — Two-Factor Authentication Backup Codes',
+      `Generated: ${new Date().toISOString()}`,
+      '',
+      'Each code may be used ONCE to sign in if you lose access to your',
+      'authenticator app. Store them somewhere safe — a password manager,',
+      'a printed copy in a locked drawer, etc. Never email them to yourself.',
+      '',
+    ].join('\n')
+    const body = backupCodes.join('\n')
+    const blob = new Blob([`${header}${body}\n`], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `sitesync-mfa-backup-codes-${stamp}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const isEnrolled = verifiedFactors.length > 0
@@ -208,9 +289,15 @@ export const MfaEnrollment: React.FC = () => {
 
       {/* ── Enrollment QR modal ─────────────────────────── */}
       <Modal
-        open={step === 'showing-qr' || step === 'verifying' || step === 'success'}
+        open={step === 'showing-qr' || step === 'verifying' || step === 'backup-codes' || step === 'success'}
         onClose={cancelEnrollment}
-        title={step === 'success' ? 'Two-factor authentication enabled' : 'Set up authenticator app'}
+        title={
+          step === 'success'
+            ? 'Two-factor authentication enabled'
+            : step === 'backup-codes'
+              ? 'Save your backup recovery codes'
+              : 'Set up authenticator app'
+        }
         width="480px"
       >
         {step === 'success' && (
@@ -222,6 +309,109 @@ export const MfaEnrollment: React.FC = () => {
             <Btn variant="primary" onClick={cancelEnrollment} style={{ marginTop: spacing['4'] }}>
               Done
             </Btn>
+          </div>
+        )}
+
+        {step === 'backup-codes' && backupCodes && (
+          <div
+            data-testid="mfa-backup-codes"
+            style={{ display: 'flex', flexDirection: 'column', gap: spacing['4'] }}
+          >
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: spacing['2'],
+                padding: spacing['3'],
+                borderRadius: borderRadius.md,
+                background: `${colors.statusPending}15`,
+                border: `1px solid ${colors.statusPending}40`,
+              }}
+            >
+              <KeyRound size={18} color={colors.statusPending} style={{ flexShrink: 0, marginTop: 2 }} />
+              <div style={{ fontSize: typography.fontSize.sm, color: colors.textPrimary, lineHeight: 1.5 }}>
+                <strong>These backup recovery codes will only be shown once.</strong>{' '}
+                Each code can be used a single time if you lose access to your
+                authenticator app. Save them in a password manager or print them
+                and store somewhere safe.
+              </div>
+            </div>
+
+            <div
+              aria-label="Backup recovery codes"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: spacing['2'],
+                padding: spacing['3'],
+                borderRadius: borderRadius.md,
+                background: colors.surfaceInset,
+                fontFamily: 'monospace',
+                fontSize: typography.fontSize.sm,
+                letterSpacing: '0.05em',
+              }}
+            >
+              {backupCodes.map((c) => (
+                <code
+                  key={c}
+                  style={{
+                    padding: '6px 8px',
+                    background: colors.surfaceRaised,
+                    borderRadius: borderRadius.sm,
+                    userSelect: 'all',
+                    textAlign: 'center',
+                    color: colors.textPrimary,
+                  }}
+                >
+                  {c}
+                </code>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: spacing['2'] }}>
+              <Btn variant="ghost" size="sm" onClick={copyAllBackupCodes} icon={<Copy size={14} />}>
+                Copy to clipboard
+              </Btn>
+              <Btn variant="ghost" size="sm" onClick={downloadBackupCodes} icon={<Download size={14} />}>
+                Download as TXT
+              </Btn>
+            </div>
+
+            <label
+              htmlFor="mfa-backup-ack"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: spacing['2'],
+                fontSize: typography.fontSize.sm,
+                color: colors.textPrimary,
+                cursor: 'pointer',
+                padding: spacing['2'],
+                borderRadius: borderRadius.sm,
+                background: acknowledgedSaved ? `${colors.statusActive}10` : 'transparent',
+              }}
+            >
+              <input
+                id="mfa-backup-ack"
+                type="checkbox"
+                checked={acknowledgedSaved}
+                onChange={(e) => setAcknowledgedSaved(e.target.checked)}
+                style={{ marginTop: 3, width: 16, height: 16, accentColor: colors.statusActive }}
+              />
+              <span>I have saved these codes somewhere safe.</span>
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Btn
+                variant="primary"
+                onClick={cancelEnrollment}
+                disabled={!acknowledgedSaved}
+                aria-disabled={!acknowledgedSaved}
+              >
+                Done
+              </Btn>
+            </div>
           </div>
         )}
 
@@ -242,9 +432,9 @@ export const MfaEnrollment: React.FC = () => {
                   borderRadius: borderRadius.md,
                   background: '#fff',
                 }}
-                // Supabase returns a `data:image/svg+xml;...` URL for the QR.
-                // Render as <img> rather than dangerouslySetInnerHTML so we never
-                // inject arbitrary SVG into the DOM.
+                // Supabase returns a `data:image/svg+xml;...` URL for the QR
+                // code. We render as an <img> tag (never as raw inline SVG) so
+                // arbitrary markup is never injected into the DOM.
               >
                 <img src={draft.qrCodeSvg} alt="MFA setup QR code" width={200} height={200} />
               </div>

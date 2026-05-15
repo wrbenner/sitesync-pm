@@ -13,22 +13,19 @@
  *   - Once dismissed, the codes are gone — the user can re-roll, but
  *     they're never reshown.
  *
- * Codebase status (verified 2026-05-14):
- *   `src/components/auth/MfaEnrollment.tsx` walks (idle → showing-qr →
- *   verifying → success) but the `success` branch has NO render path
- *   for backup codes. Grepping the file shows zero hits for `backup`,
- *   `recovery`, or `download`. The hazard is real and currently
- *   uncovered.
+ * Codebase status (Issue #586 — fix landed):
+ *   `src/components/auth/MfaEnrollment.tsx` now walks
+ *   (idle → showing-qr → verifying → backup-codes → success), with
+ *   `backup-codes` rendering the 10 codes, a Copy button, a Download as
+ *   TXT button, and an acknowledgment checkbox that gates the modal
+ *   close. The corresponding SQL RPCs (`generate_mfa_backup_codes`,
+ *   `consume_mfa_backup_code`) live in
+ *   `supabase/migrations/20261026000000_mfa_backup_codes.sql`.
  *
  * This vitest spec asserts the contract at the static level (the
- * component source contains backup-code markers). It is the lightweight
- * canary for FMDC. A future Playwright spec (under e2e/) should drive
- * the full enrollment flow against staging once the UI lands.
- *
- * Status: PARTIAL. Until the component renders backup codes, this test
- * is intentionally FAILABLE-on-purpose: it skips, with the catalog
- * entry marked PARTIAL and the rationale logged. When the UI ships,
- * the skip is removed and the assertion goes green.
+ * component source contains backup-code markers). When the UI is
+ * removed or regresses, this spec turns red — the catalog entry for
+ * F.MFA.1 flips back to PARTIAL.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
@@ -47,31 +44,59 @@ describe.skipIf(!HAS_COMPONENT)(
       expect(HAS_COMPONENT).toBe(true)
     })
 
-    // Pending until the UI lands. Acts as a tripwire: when the component
-    // gains backup-code rendering, flip `.todo` to `.it` and the test
-    // turns green.
-    it.todo(
-      'MfaEnrollment.tsx renders backup recovery codes on success step',
-    )
-
-    // This test passes today *only* by virtue of being negative —
-    // it documents the gap. The FMDC loop's mutation-injector will
-    // not be able to flip this to VALIDATED until backup-code UI exists.
-    it('CURRENT STATE: no backup-code rendering — F.MFA.1 PARTIAL', () => {
+    it('MfaEnrollment.tsx renders backup recovery codes on the post-verify step', () => {
       const src = readFileSync(COMPONENT_PATH, 'utf-8')
       const hasBackup = /backup[\s_-]?code|recovery[\s_-]?code/i.test(src)
-      const hasDownload = /download|toBlob|createObjectURL/i.test(src)
-      // We RECORD the state rather than fail. The catalog entry stays
-      // PARTIAL until both go true; when they do, this assertion gets
-      // tightened to `expect(hasBackup && hasDownload).toBe(true)`.
-      if (!hasBackup || !hasDownload) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[FMEA F.MFA.1] MfaEnrollment.tsx missing backup-code UI ` +
-            `(backup=${hasBackup}, download=${hasDownload}). PARTIAL.`,
+      expect(hasBackup).toBe(true)
+    })
+
+    it('MfaEnrollment.tsx exposes a download-as-TXT affordance', () => {
+      const src = readFileSync(COMPONENT_PATH, 'utf-8')
+      // Component uses Blob + URL.createObjectURL + a.download to emit the
+      // codes as a .txt file.
+      const hasBlob = /new Blob\(/.test(src)
+      const hasObjectUrl = /createObjectURL/.test(src)
+      const hasDownloadAttr = /\.download\s*=/.test(src)
+      const hasDownloadLabel = /Download as TXT/.test(src)
+      expect(hasBlob && hasObjectUrl && hasDownloadAttr && hasDownloadLabel).toBe(
+        true,
+      )
+    })
+
+    it('MfaEnrollment.tsx exposes a copy-to-clipboard affordance for backup codes', () => {
+      const src = readFileSync(COMPONENT_PATH, 'utf-8')
+      const hasCopyAll = /copyAllBackupCodes/.test(src)
+      const hasClipboardWrite = /clipboard\.writeText/.test(src)
+      expect(hasCopyAll && hasClipboardWrite).toBe(true)
+    })
+
+    it('MfaEnrollment.tsx gates modal close on the "I have saved these codes" acknowledgment', () => {
+      const src = readFileSync(COMPONENT_PATH, 'utf-8')
+      const hasAck = /acknowledgedSaved/.test(src)
+      const hasGate =
+        /step\s*===\s*'backup-codes'\s*&&\s*!acknowledgedSaved/.test(src)
+      const hasCheckboxLabel = /I have saved these codes/i.test(src)
+      expect(hasAck && hasGate && hasCheckboxLabel).toBe(true)
+    })
+
+    it('MfaEnrollment.tsx calls the generate_mfa_backup_codes RPC', () => {
+      const src = readFileSync(COMPONENT_PATH, 'utf-8')
+      expect(/generate_mfa_backup_codes/.test(src)).toBe(true)
+    })
+
+    it('MfaEnrollment.tsx does not log plaintext backup codes', () => {
+      const src = readFileSync(COMPONENT_PATH, 'utf-8')
+      // Sanity: no console.* call that references backupCodes (we should
+      // never log secrets). Strip comments first so explanatory prose is
+      // not a false positive.
+      const codeWithoutComments = src
+        .replace(/\/\/[^\n]*/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+      const logsCodes =
+        /console\.(log|info|warn|error)\([^)]*backupCodes/.test(
+          codeWithoutComments,
         )
-      }
-      expect(true).toBe(true)
+      expect(logsCodes).toBe(false)
     })
   },
 )
