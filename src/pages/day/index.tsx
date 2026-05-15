@@ -333,7 +333,7 @@ const DayPage: React.FC = () => {
     if (projectsLoading) {
       return (
         <Cockpit
-          header={<CockpitHeader projectName="LOADING…" />}
+          header={<CockpitHeader projectName="" />}
           metrics={null}
           irisLane={null}
           needsYou={
