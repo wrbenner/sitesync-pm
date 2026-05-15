@@ -106,14 +106,21 @@ describe('resolveWaiverTemplateId', () => {
     );
   });
 
-  it('falls back to AIA when jurisdiction is unknown', () => {
-    expect(resolveWaiverTemplateId('XX', 'conditional_progress')).toBe(
+  it('throws on truly unknown jurisdiction (FMEA B.LIEN.1 — no silent AIA fallback)', () => {
+    // Wave-4 fix: 'XX' / 'IL' / 'PA' etc. are NOT in
+    // KNOWN_WAIVER_JURISDICTIONS, so the resolver throws rather than
+    // silently signing a non-statutory waiver against the wrong state.
+    expect(() => resolveWaiverTemplateId('XX', 'conditional_progress')).toThrow(/Unknown lien waiver jurisdiction/);
+  });
+
+  it('falls back to AIA when jurisdiction is null (defaults to explicit AIA opt-in)', () => {
+    expect(resolveWaiverTemplateId(null, 'conditional_progress')).toBe(
       'aia-g706-conditional-progress-v1',
     );
   });
 
-  it('falls back to AIA when jurisdiction is null', () => {
-    expect(resolveWaiverTemplateId(null, 'conditional_progress')).toBe(
+  it('NY routes to AIA fallback (recognized jurisdiction, no localized template yet)', () => {
+    expect(resolveWaiverTemplateId('NY', 'conditional_progress')).toBe(
       'aia-g706-conditional-progress-v1',
     );
   });

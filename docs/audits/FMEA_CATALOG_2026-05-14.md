@@ -75,7 +75,7 @@
 | 46 | K.EMAIL.1 | Inbound email From header not validated; spoofed sender | HIGH | MEDIUM | vitest | UNCOVERED |
 | 47 | J.XSS.1 | TipTap rich-text `<iframe>` injection | HIGH | MEDIUM | vitest | UNCOVERED |
 | 48 | J.CSV.1 | CSV import formula injection (`=cmd|...`) | MEDIUM | MEDIUM | vitest | UNCOVERED |
-| 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/drawingMachine.fuzz.spec.ts — A.DRAW.1 machine path; Wave 4 — tests/integrity/drawing-supersede-revision.spec.ts contracts next-revision-number computation + duplicate rejection + race shape for B.DRAW.1) |
+| 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | VALIDATED (Wave 4 follow-up — src/lib/drawings/validateSupersede.ts is now called from the service-layer SUPERSEDE path in src/pages/drawings/index.tsx; rejects duplicate / backwards / gap revisions before the INSERT lands. DB UNIQUE constraint remains the ultimate backstop.) |
 | 50 | D.NOTIF.2 + G.RLS.2 | Notification cross-tenant leak (missing org_id filter) | CRITICAL | LOW | sql-pgtap | UNCOVERED |
 
 ---
@@ -113,10 +113,10 @@ For each entity: create → assign → respond → close happy path + every fail
 - Pay App — draft → submit → gc_review → owner_review → approved → MARK_PAID. Lien waiver generated on approve.
 - Schedule — import .xer → WBS map → activities created → critical path → snapshot.
 - Drawings — upload → page-split → OCR → distribute → mark-up → SUPERSEDE creates rev N+1.
-- Safety Incident — report → assign → investigate → resolve → close. Photo-AI corrective action. B.SAFETY.1 — PARTIAL (Wave 4 — tests/cron/safety-incident-escalation.spec.ts; static probe confirms `incidents` table exists + scans every cron.schedule migration — **KNOWN-VIOLATION**: no escalation cron currently references incidents.investigation_status/investigated_by)
+- Safety Incident — report → assign → investigate → resolve → close. Photo-AI corrective action. B.SAFETY.1 — VALIDATED (Wave 4 follow-up — `supabase/migrations/20261029000000_safety_incident_escalation_cron.sql` adds `escalate_unassigned_high_severity_incidents()` SECURITY DEFINER scanner + pg_cron hourly schedule that selects `incidents WHERE investigation_status='open' AND investigated_by IS NULL AND severity IN ('lost_time','fatality') AND created_at < now() - interval '4 hours'`; enqueues notification_queue rows to org owners/admins with per-incident-per-recipient-per-day idempotency)
 - Bid Package — draft → invite → submission → leveling → award → COI validated before start.
 - COI — pending → verify → valid; expiry cron blocks check-in. B.COI.1 — PARTIAL (Wave 4 — tests/integrity/coi-expiry-blocks-checkin.spec.ts; pure-unit contract on daysUntil + decideBlocks day-0 inclusion + isSubBlocked override / block_until / companyName fallback / end-to-end compose)
-- Lien Waiver — pending → conditional → unconditional → final. State-specific (CA/TX/FL/NY) form template. B.LIEN.1 — PARTIAL (Wave 4 — tests/integrity/lien-waiver-jurisdiction-match.spec.ts; pins registry + resolver + authors `validateWaiverJurisdiction` contract — **KNOWN-VIOLATION**: no service-layer wrapper exists, resolver silently falls back to AIA on CA/TX/FL projects)
+- Lien Waiver — pending → conditional → unconditional → final. State-specific (CA/TX/FL/NY) form template. B.LIEN.1 — VALIDATED (Wave 4 follow-up — `src/lib/lienWaiver/templateRenderer.ts` now exports `validateWaiverJurisdiction(state)` + `KNOWN_WAIVER_JURISDICTIONS` enum; resolver throws on unknown jurisdictions (e.g. 'IL', 'PA') rather than silently AIA-falling-back. CA/TX/FL keep their localized templates; NY explicitly opts into AIA fallback.)
 
 ### Section B Wave 1 status (authored 2026-05-14)
 
@@ -394,7 +394,7 @@ Remaining 25+:
 - M.SCROLL.1 — infinite scroll loads same page twice — PARTIAL (Wave 4 — tests/ui/infinite-scroll-dedup.spec.ts; static probe records zero `useInfiniteQuery` usages in src/ as a phantom-hazard pin, live probe inspects cursor dedup when STAGING_URL set, pure-unit contract pins cache-merge dedup)
 - M.SCROLL.2 — virtual list height misreport
 - M.SCROLL.3 — re-render on filter change loses scroll
-- M.KBD.1 — Cmd+S intercepted by command palette — PARTIAL (Wave 4 — tests/ui/keyboard-cmd-s-shortcut.spec.ts; static probe confirms App.tsx registers Cmd+S with empty `() => {}` action + useKeyboardShortcuts.ts calls preventDefault on meta-modifier match — **surfaced real bug**: silent browser-save swallow)
+- M.KBD.1 — Cmd+S intercepted by command palette — VALIDATED (Wave 4 follow-up — `src/App.tsx` Cmd+S entry removed. The empty-closure registration that paired with `useKeyboardShortcuts.ts` `preventDefault` on meta-modifier match silently swallowed the browser's native save affordance; with the registration gone, Cmd+S falls through to the browser unchanged. Future re-introduction must wire a real save handler — contract test pins this.)
 - M.KBD.2 — "/" conflicts with URL routing — PARTIAL (Wave 4 — tests/ui/keyboard-slash-in-input.spec.ts; full src/ sweep confirms NO bare-`/` shortcut registered + isTyping guard exists for non-meta single-key + sequential chord shortcuts; live probe asserts `/` inserts literal char in inputs)
 - M.KBD.3 — Tab conflicts with TipTap inside modal
 - M.STALE.1 — stale closure in async handler
@@ -438,7 +438,7 @@ Remaining 25+:
 ## Section P — Performance (10+ hazards)
 
 - P.NPLUS1.1 — covered by #37
-- P.WIDGET.1 — dashboard widgets each fetch own metrics (no batch) — PARTIAL (Wave 4 — tests/perf/dashboard-widget-batching.spec.ts; static probe counts ≥ 2 dashboard widgets running their own useQuery+from/rpc, confirms no `get_dashboard_payload` batched RPC exists in src/, pure-unit contract pins ≤ 1 network call for batched fetcher + negative-control sensitivity probe trips on per-widget anti-pattern)
+- P.WIDGET.1 — dashboard widgets each fetch own metrics (no batch) — PARTIAL (Wave 4 follow-up — `supabase/migrations/20261029000001_get_dashboard_payload_rpc.sql` adds `public.get_dashboard_payload(p_project_id uuid)` batched RPC; `src/hooks/queries/dashboard-payload.ts` adds the shared `useDashboardPayload` hook; `DashboardCompliance` + `DashboardPortfolio` (active-project case) now read from the shared cache. Remaining widgets — CriticalPath, Carbon, EarnedValue, MyTasks, ActivityFeed, SiteMapMini — continue running individual queries; full migration is follow-up.)
 - P.LIST.1 — unbounded list memory
 - P.FEED.1 — activity feed infinite append memory leak
 - P.DEBOUNCE.1 — covered by #36
@@ -644,26 +644,26 @@ Wave 4 = the next 10 priority hazards focused on Sections A / B / M / P — mach
 |--:|-------------------|------------------------------------------------------------------------|------------------------------------------------|----------------------|
 | 1 | A.INSP.1          | tests/machines/inspection-reschedule-id-collision.spec.ts              | machine FK identity + reschedule lifecycle     | UNCOVERED → PARTIAL  |
 | 2 | A.CLOSE.1         | tests/machines/closeout-actor-leak.spec.ts                             | terminal-state cleanup + subscription leak     | UNCOVERED → PARTIAL  |
-| 3 | B.DRAW.1          | tests/integrity/drawing-supersede-revision.spec.ts                     | next-revision-number contract + race shape    | UNCOVERED → PARTIAL  |
-| 4 | B.SAFETY.1        | tests/cron/safety-incident-escalation.spec.ts                          | static migration scan for escalation cron      | UNCOVERED → PARTIAL  |
+| 3 | B.DRAW.1          | tests/integrity/drawing-supersede-revision.spec.ts                     | next-revision-number contract + race shape    | UNCOVERED → VALIDATED |
+| 4 | B.SAFETY.1        | tests/cron/safety-incident-escalation.spec.ts                          | static migration scan for escalation cron      | UNCOVERED → VALIDATED |
 | 5 | B.COI.1           | tests/integrity/coi-expiry-blocks-checkin.spec.ts                      | daysUntil + decideBlocks + isSubBlocked        | UNCOVERED → PARTIAL  |
-| 6 | B.LIEN.1          | tests/integrity/lien-waiver-jurisdiction-match.spec.ts                 | template registry + resolver + validator       | UNCOVERED → PARTIAL  |
+| 6 | B.LIEN.1          | tests/integrity/lien-waiver-jurisdiction-match.spec.ts                 | template registry + resolver + validator       | UNCOVERED → VALIDATED |
 | 7 | M.SCROLL.1        | tests/ui/infinite-scroll-dedup.spec.ts                                 | useInfiniteQuery static probe + cache merge    | UNCOVERED → PARTIAL  |
-| 8 | M.KBD.1           | tests/ui/keyboard-cmd-s-shortcut.spec.ts                               | App.tsx Cmd+S static probe + live save toast   | UNCOVERED → PARTIAL  |
+| 8 | M.KBD.1           | tests/ui/keyboard-cmd-s-shortcut.spec.ts                               | App.tsx Cmd+S static probe + live save toast   | UNCOVERED → VALIDATED |
 | 9 | M.KBD.2           | tests/ui/keyboard-slash-in-input.spec.ts                               | bare-`/` shortcut sweep + isTyping guard       | UNCOVERED → PARTIAL  |
 |10 | P.WIDGET.1        | tests/perf/dashboard-widget-batching.spec.ts                           | widget useQuery count + batched RPC contract   | UNCOVERED → PARTIAL  |
 
-**Real bugs surfaced (KNOWN-VIOLATION ledger entries inline in specs):**
+**Real bugs surfaced (KNOWN-VIOLATION ledger entries — Wave-4 follow-up fixes landed; entries below kept as audit trail):**
 
-1. **M.KBD.1** — `src/App.tsx` line 662 registers `{ key: 's', meta: true, action: () => {} }`. The empty closure paired with `useKeyboardShortcuts.ts` lines 110-113 (`if (shortcut.meta) { e.preventDefault(); shortcut.action(); return; }`) silently swallows Cmd+S browser save. Fix: remove the registration or wire `action` to the active form's save handler.
+1. **M.KBD.1 — VALIDATED.** `src/App.tsx` line 662 previously registered `{ key: 's', meta: true, action: () => {} }`. The empty closure paired with `useKeyboardShortcuts.ts` lines 110-113 silently swallowed Cmd+S browser save. **Fix applied:** Cmd+S registration removed from `src/App.tsx`. The browser's native save now passes through unchanged. Contract test pins that any future re-introduction must not be an empty closure.
 
-2. **B.SAFETY.1** — full migration scan finds NO `cron.schedule(...)` job targeting `incidents` for escalation. `notify_incident_reported()` (00005_safety_module.sql line 437) fires the on-trigger notification but never re-escalates an unassigned `lost_time`/`fatality` incident. Fix candidate: add a cron job polling `incidents WHERE investigation_status='open' AND investigated_by IS NULL AND now() - created_at > interval '4h'`.
+2. **B.SAFETY.1 — VALIDATED.** `notify_incident_reported()` (00005_safety_module.sql line 437) fires the on-trigger notification but never re-escalated an unassigned `lost_time`/`fatality` incident. **Fix applied:** `supabase/migrations/20261029000000_safety_incident_escalation_cron.sql` adds `public.escalate_unassigned_high_severity_incidents()` SECURITY DEFINER scanner + pg_cron hourly schedule (`0 * * * *`). Scans `incidents WHERE investigation_status='open' AND investigated_by IS NULL AND severity IN ('lost_time','fatality') AND created_at < now() - interval '4 hours'`; enqueues `notification_queue` rows to org owners/admins with per-incident-per-recipient-per-day idempotency.
 
-3. **B.LIEN.1** — `src/lib/lienWaiver/templateRenderer.ts` exports `resolveWaiverTemplateId(jurisdiction, type)` which falls back to `aia-g706-conditional-progress-v1` if jurisdiction doesn't match. No service-layer wrapper enforces project-state ↔ template-jurisdiction match. Fix: author `validateWaiverJurisdiction({projectState, templateId})` per the spec contract + call it from the lien_waivers insert path.
+3. **B.LIEN.1 — VALIDATED.** `src/lib/lienWaiver/templateRenderer.ts` `resolveWaiverTemplateId` silently fell back to `aia-g706-conditional-progress-v1` for any unrecognized jurisdiction. **Fix applied:** added `KNOWN_WAIVER_JURISDICTIONS = ['AIA','CA','TX','FL','NY']` enum + `validateWaiverJurisdiction(state)` that throws on unknown states (e.g. 'IL', 'PA'). Resolver now invokes the validator first — typos surface an error instead of silently producing a non-statutory waiver. CA/TX/FL still resolve to localized templates; NY explicitly routes to AIA fallback.
 
-4. **P.WIDGET.1** — dashboard mounts ~6 widgets, each running its own `useQuery` against Supabase. No `get_dashboard_payload` RPC exists in src/. First paint of /dashboard fires ≥ 6 parallel REST calls. Fix: introduce a batched RPC + a shared TanStack cache key the widgets read from.
+4. **P.WIDGET.1 — PARTIAL.** Dashboard mounted ~6 widgets, each running its own `useQuery`. **Fix applied (partial):** `supabase/migrations/20261029000001_get_dashboard_payload_rpc.sql` adds `public.get_dashboard_payload(p_project_id uuid) returns jsonb` batched RPC; `src/hooks/queries/dashboard-payload.ts` adds the shared `useDashboardPayload` hook; `DashboardCompliance` + `DashboardPortfolio` (active-project case) now read from the shared cache. **Deferred (follow-up):** CriticalPath, Carbon, EarnedValue, MyTasks, ActivityFeed, SiteMapMini still run individual queries.
 
-5. **B.DRAW.1** — `drawingMachine.SUPERSEDE` mutates state only (published → draft); revision-number INSERT lives in service layer with no `validateSupersedeInsert` wrapper visible in src/. Fix: enforce UNIQUE (drawing_series_id, revision_number) constraint at DB layer + add the application-side validator.
+5. **B.DRAW.1 — VALIDATED.** `drawingMachine.SUPERSEDE` mutates state only; revision-number INSERT lived in the service layer with no application-side guard. **Fix applied:** `src/lib/drawings/validateSupersede.ts` exports `validateSupersedeInsert(rows, candidate)` which throws on duplicate / backwards / gap revisions. The supersede path in `src/pages/drawings/index.tsx` now invokes this validator before INSERT. DB UNIQUE constraint remains the ultimate backstop.
 
 **Cost-aware notes:**
 - 7 vitest specs (53 tests, ~1.7s total) + 3 Playwright specs (skip-gracefully without STAGING_URL).

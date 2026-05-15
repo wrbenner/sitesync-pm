@@ -37,6 +37,11 @@ import {
 } from '../../lib/pdfClassifier';
 import { extractPdfFirstPageText, extractPdfTextFromPages } from '../../lib/pdfPageSplitter';
 import { extractSheetTitleBlock } from '../../lib/sheetTitleBlockParser';
+import {
+  validateSupersedeInsert,
+  SupersedeRevisionError,
+  type DrawingRevisionRow,
+} from '../../lib/drawings/validateSupersede';
 import { rightEdgeStripRegion } from '../../lib/titleBlockDetector';
 import { cropPngToRegion } from '../../lib/imageCrop';
 import { RevisionOverlay } from '../../components/drawings/RevisionOverlay';
@@ -1397,6 +1402,26 @@ const DrawingsPage: React.FC = () => {
         if (storageErr) { addToast('error', `Revision upload failed: ${storageErr.message}`); setIsRevUploading(false); return; }
         if (storageData?.path) fileUrl = storageData.path;
       } catch { addToast('error', 'Revision upload failed'); setIsRevUploading(false); return; }
+    }
+    // FMEA B.DRAW.1 (Wave 4): backstop the revision-number INSERT with
+    // an application-side validator. Throws if the candidate number
+    // duplicates or wraps backwards relative to existing rows.
+    const existingResp = await fromTable('drawing_revisions')
+      .select('id, drawing_id, revision_number')
+      .eq('drawing_id' as never, String(selectedDrawing.id));
+    const existingRows = ((existingResp.data ?? []) as unknown as DrawingRevisionRow[]).filter(
+      (r) => Number.isFinite(r.revision_number),
+    );
+    try {
+      validateSupersedeInsert(existingRows, {
+        drawing_id: String(selectedDrawing.id),
+        next_revision_number: Number(revUploadNum),
+      });
+    } catch (err) {
+      const msg = err instanceof SupersedeRevisionError ? err.message : String(err);
+      addToast('error', `Cannot supersede: ${msg}`);
+      setIsRevUploading(false);
+      return;
     }
     await fromTable('drawing_revisions').update({ superseded_at: new Date().toISOString() } as never).eq('drawing_id' as never, String(selectedDrawing.id)).is('superseded_at' as never, null);
     await fromTable('drawing_revisions').insert({

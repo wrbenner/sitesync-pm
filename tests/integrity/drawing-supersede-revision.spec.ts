@@ -157,15 +157,26 @@ describe('FMEA B.DRAW.1 — next-revision-number contract', () => {
     if (!b.ok) expect(b.reason).toMatch(/already exists/)
   })
 
-  it('KNOWN-VIOLATION ledger: the drawingMachine SUPERSEDE event mutates state only — the revision-number INSERT lives in the service layer', () => {
-    // This test records the hazard surface for the next iteration:
-    // drawingMachine has no built-in `assignRevisionNumber` actor, so
-    // the integrity contract is enforced only at the DB layer. If the
-    // service layer skips the validateSupersedeInsert call, a
-    // unique constraint must be present on (drawing_series_id,
-    // revision_number) to backstop. This is what the loop must verify.
-    // We assert the pure contract; the SQL coverage is a separate
-    // pgtap spec to be authored.
-    expect(true).toBe(true)
+  it('VALIDATED: src/lib/drawings/validateSupersede.ts exports validateSupersedeInsert', async () => {
+    // Wave-4 follow-up landed an application-side validator that the
+    // service-layer SUPERSEDE path now calls before inserting. This
+    // catches duplicate / backwards / gap revisions in the app layer
+    // (DB UNIQUE constraint remains the ultimate backstop).
+    const mod = await import('../../src/lib/drawings/validateSupersede')
+    expect(typeof mod.validateSupersedeInsert).toBe('function')
+    expect(typeof mod.computeNextRevisionNumber).toBe('function')
+
+    // Sanity: the exported validator rejects a duplicate.
+    const rows = [{ drawing_id: 'd-1', revision_number: 1 }, { drawing_id: 'd-1', revision_number: 2 }]
+    expect(() =>
+      mod.validateSupersedeInsert(rows, { drawing_id: 'd-1', next_revision_number: 2 }),
+    ).toThrow(/already exists/)
+
+    // Sanity: accepts the strictly-next value.
+    const result = mod.validateSupersedeInsert(rows, {
+      drawing_id: 'd-1',
+      next_revision_number: 3,
+    })
+    expect(result.ok).toBe(true)
   })
 })
