@@ -483,7 +483,11 @@ const UserStrip: React.FC<{ collapsed: boolean; streamRole: StreamRole }> = ({
   const authProfile = useAuthStore((s) => s.profile)
   const authUser = useAuthStore((s) => s.user)
   const signOut = useAuthStore((s) => s.signOut)
-  const fullName = authProfile?.full_name?.trim() || ''
+  // Guard against placeholder values like '—' (em-dash) stored in full_name.
+  // '—'.trim() is truthy (length 1) so a plain || '' test would display it.
+  // /\w/.test() accepts only names containing at least one word character.
+  const rawName = authProfile?.full_name?.trim() ?? ''
+  const fullName = /\w/.test(rawName) ? rawName : ''
   const email = authUser?.email?.trim() || ''
   const emailLocal = email.split('@')[0] ?? ''
   const derivedFromEmail = emailLocal
@@ -739,15 +743,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, mode, 
   const streamRole: StreamRole = useMemo(() => toStreamRole(projectRole), [projectRole])
   const navItems = useMemo(() => getNavForRole(streamRole), [streamRole])
 
-  // Mobile detection — when present we render <MobileTabBar/>; the App shell
-  // already prefers MobileLayout, so this is the safety net.
+  // Safety net: if Sidebar is somehow mounted on mobile/tablet (≤1024px),
+  // render MobileTabBar instead. App.tsx already routes ≤1024px through
+  // MobileLayout, so this branch only fires on extreme resize edge cases.
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches,
   )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(max-width: 768px)')
+    const mq = window.matchMedia('(max-width: 1024px)')
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
