@@ -3,9 +3,9 @@
   "loop_name": "functional-frog-self-heal",
   "version": 1,
   "started_at": "2026-05-14T22:45:00Z",
-  "last_run": "2026-05-15T18:00:00Z",
-  "consecutive_passes": 7,
-  "iterations": 8,
+  "last_run": "2026-05-15T18:10:00Z",
+  "consecutive_passes": 8,
+  "iterations": 9,
   "stop_reason": null,
   "stop_condition_checks": {
     "two_consecutive_passes": true,
@@ -45,12 +45,12 @@
   ],
   "fixes_applied": [],
   "quarantined": [],
-  "cost_today_usd": 12.5,
+  "cost_today_usd": 15.0,
   "cost_cap_usd_per_day": 30.0,
   "cost_pause_until": null,
   "in_scope_cells_total": 31744,
-  "in_scope_cells_covered": 3372,
-  "coverage_percent": 10.62,
+  "in_scope_cells_covered": 3447,
+  "coverage_percent": 10.86,
   "coverage_target_percent": 90.0,
   "phases": {
     "phase_1_one_shot_triage": {
@@ -77,8 +77,9 @@
     },
     "phase_2_steady_state": {
       "status": "in_progress",
-      "watch_mode_runs": 7,
+      "watch_mode_runs": 8,
       "expand_mode_batches_completed": [
+        "B.2 role matrix create flows — +75 cells via iter 9 (e2e/workflows/codegen/B2-role-matrix-create-flows.generated.spec.ts, 15 roles × 5 flows)",
         "B.13 mobile viewport × 20 routes — +39 cells via iter 7 (tests/mobile/codegen/B13-mobile-viewport-extended.generated.spec.ts, 20 routes × 3 viewports)",
         "B.10 visual ×3 viewports — +40 cells via iter 6 (tests/visual/codegen/B10-visual-multi-viewport.generated.spec.ts, 20 routes × 3 viewports)",
         "B.11 full-route sweep — +93 cells via iter 5 (tests/a11y/codegen/B11-axe-scan.generated.spec.ts, 104 routes)",
