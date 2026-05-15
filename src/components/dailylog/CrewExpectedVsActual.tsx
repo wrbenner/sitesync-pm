@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { Clock, Check, AlertTriangle, Phone } from 'lucide-react';
 import { colors, spacing, typography } from '../../styles/theme';
 import { toast } from 'sonner';
@@ -58,10 +58,7 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
   const { data: crews } = useQuery({
     queryKey: ['crews-with-arrival', projectId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data } = await sb
-        .from('crews')
+      const { data } = await fromTable('crews')
         .select('id, name, trade, lead_id, planned_arrival_time, status')
         .eq('project_id', projectId)
         .not('planned_arrival_time', 'is', null);
@@ -74,10 +71,7 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
   const { data: attendance } = useQuery({
     queryKey: ['crew-attendance', projectId, date],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data } = await sb
-        .from('crew_attendance')
+      const { data } = await fromTable('crew_attendance')
         .select('id, crew_id, attendance_date, planned_arrival_time, actual_check_in_at, no_show_flagged_at, meeting_action_item_id')
         .eq('project_id', projectId)
         .eq('attendance_date', date);
@@ -98,23 +92,20 @@ export const CrewExpectedVsActual: React.FC<CrewExpectedVsActualProps> = ({
 
   const checkIn = async (crew: CrewRow) => {
     setBusyCrew(crew.id);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
     const existing = attendanceByCrew.get(crew.id);
     if (existing) {
-      const { error } = await sb
-        .from('crew_attendance')
-        .update({ actual_check_in_at: new Date().toISOString() } as never)
+      const { error } = await fromTable('crew_attendance')
+        .update({ actual_check_in_at: new Date().toISOString() })
         .eq('id', existing.id);
       if (error) toast.error(error.message);
     } else {
-      const { error } = await sb.from('crew_attendance').insert({
+      const { error } = await fromTable('crew_attendance').insert({
         project_id: projectId,
         crew_id: crew.id,
         attendance_date: date,
         planned_arrival_time: crew.planned_arrival_time,
         actual_check_in_at: new Date().toISOString(),
-      } as never);
+      });
       if (error) toast.error(error.message);
     }
     setBusyCrew(null);

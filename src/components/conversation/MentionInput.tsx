@@ -11,7 +11,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
+import { fromTable } from '../../lib/db/queries';
 import { colors, typography } from '../../styles/theme';
 import {
   detectMentionQuery,
@@ -57,19 +57,16 @@ export const MentionInput: React.FC<MentionInputProps> = ({
   const { data: contacts = [] } = useQuery({
     queryKey: ['mention-contacts', projectId],
     queryFn: async (): Promise<MentionContact[]> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data } = await sb
-        .from('directory_contacts')
+      const { data } = await fromTable('directory_contacts')
         .select('id, name, email, role, trade, company, project_id')
         .eq('project_id', projectId);
-      return ((data as any[] | null) ?? []).map((c) => ({
-        id: c.id as string,
-        name: c.name as string,
-        email: c.email as string | null,
-        role: c.role as string | null,
-        trade: c.trade as string | null,
-        company: c.company as string | null,
+      return (data ?? []).map((c) => ({
+        id: c.id,
+        name: c.name ?? '',
+        email: c.email ?? null,
+        role: c.role ?? null,
+        trade: c.trade ?? null,
+        company: c.company ?? null,
       }));
     },
     enabled: !!projectId,
@@ -92,9 +89,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
     const now = Date.now();
     if (now - lastHeartbeat.current < 4000) return;
     lastHeartbeat.current = now;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    sb.from('typing_indicators').upsert(
+    fromTable('typing_indicators').upsert(
       {
         project_id: projectId,
         entity_type: typingChannel.split('/')[0] ?? 'rfi',

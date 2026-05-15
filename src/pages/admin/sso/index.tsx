@@ -2,9 +2,9 @@
 // IT director / org admin pastes IdP metadata, picks attribute mappings,
 // runs in test mode against a single user, then enables org-wide.
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { fromTable } from '../../../lib/db/queries';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
 import { colors, spacing, typography } from '../../../styles/theme';
 import {
@@ -42,8 +42,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
   const { data: cfg } = useQuery({
     queryKey: ['org_sso_config', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('org_sso_config')
+      const { data } = await fromTable('org_sso_config')
         .select('*')
         .eq('organization_id', organizationId)
         .maybeSingle();
@@ -52,7 +51,11 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
   });
 
   const [draft, setDraft] = useState<Partial<SsoConfigRow>>({});
-  useEffect(() => { if (cfg) setDraft(cfg); }, [cfg]);
+  const [prevCfg, setPrevCfg] = useState(cfg);
+  if (cfg !== prevCfg) {
+    setPrevCfg(cfg);
+    if (cfg != null) setDraft(cfg);
+  }
 
   const protocol = draft.protocol ?? 'saml';
   const samlUrlCheck = draft.saml_sso_url
@@ -62,9 +65,8 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
 
   const save = async () => {
     const payload = { ...draft, organization_id: organizationId };
-    const { error } = await (supabase as any)
-      .from('org_sso_config')
-      .upsert(payload, { onConflict: 'organization_id' });
+    const { error } = await fromTable('org_sso_config')
+      .upsert(payload as never, { onConflict: 'organization_id' });
     if (error) {
       toast.error(`Save failed: ${error.message}`);
       return;
@@ -110,7 +112,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
             <input style={input} value={draft.saml_idp_entity_id ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_idp_entity_id: e.target.value }))} />
           </Field>
-          <Field label="SSO URL" error={!samlUrlCheck.ok ? (samlUrlCheck as any).reason : undefined}>
+          <Field label="SSO URL" error={!samlUrlCheck.ok ? samlUrlCheck.reason : undefined}>
             <input style={input} value={draft.saml_sso_url ?? ''}
               onChange={(e) => setDraft((d) => ({ ...d, saml_sso_url: e.target.value }))} />
           </Field>
@@ -175,7 +177,7 @@ export const SsoAdminPage: React.FC<SsoAdminProps> = ({ organizationId }) => {
         />
         <Field label="Default role (used when no group matches)">
           <input style={input} value={draft.default_role ?? ''}
-            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null as any }))} />
+            onChange={(e) => setDraft((d) => ({ ...d, default_role: e.target.value || null }))} />
         </Field>
       </fieldset>
 

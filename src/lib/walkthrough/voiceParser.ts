@@ -145,9 +145,9 @@ export async function transcribeAudio(
   // multipart bodies need the raw fetch — invoke serializes JSON.
   const { data: sessionData } = await supabase.auth.getSession()
   const accessToken = sessionData.session?.access_token
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const baseUrl = (supabase as any).functionsUrl
-    || `${(supabase as any).supabaseUrl}/functions/v1`
+  const supabaseInternal = supabase as unknown as { functionsUrl?: string; supabaseUrl: string }
+  const baseUrl = supabaseInternal.functionsUrl
+    || `${supabaseInternal.supabaseUrl}/functions/v1`
 
   const res = await fetch(`${baseUrl}/transcribe-walkthrough`, {
     method: 'POST',

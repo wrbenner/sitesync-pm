@@ -34,9 +34,7 @@ export const LiveCursorOverlay: React.FC<Props> = ({ roomKey, surfaceRef, selfUs
   const allMembersRef = useRef<PresenceMember[]>([]);
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const channel = sb.channel(`cursor:${roomKey}`);
+    const channel = supabase.channel(`cursor:${roomKey}`);
 
     channel
       .on('broadcast', { event: 'cursor' }, ({ payload }: { payload: CursorEntry }) => {
@@ -52,7 +50,7 @@ export const LiveCursorOverlay: React.FC<Props> = ({ roomKey, surfaceRef, selfUs
       })
       .subscribe();
 
-    return () => { try { sb.removeChannel(channel); } catch { /* idempotent */ } };
+    return () => { try { supabase.removeChannel(channel); } catch { /* idempotent */ } };
   }, [roomKey, selfUserId]);
 
   if (!surfaceRef.current) return null;

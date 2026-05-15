@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../lib/supabase';
+import { fromTable } from '../../../lib/db/queries';
 import { AdminPageShell } from '../../../components/admin/AdminPageShell';
 import { colors, spacing, typography } from '../../../styles/theme';
 import { Plus, Trash2 } from 'lucide-react';
@@ -43,8 +43,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
   const { data: roles } = useQuery({
     queryKey: ['org_custom_roles', organizationId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from('org_custom_roles')
+      const { data } = await fromTable('org_custom_roles')
         .select('*')
         .eq('organization_id', organizationId)
         .order('name', { ascending: true });
@@ -54,13 +53,13 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
 
   const create = async () => {
     if (!draft.name.trim()) { toast.error('Name required'); return; }
-    const { error } = await (supabase as any).from('org_custom_roles').insert({
+    const { error } = await fromTable('org_custom_roles').insert({
       organization_id: organizationId,
       name: draft.name.trim(),
       description: draft.description.trim() || null,
       inherits_from: draft.inherits_from,
       permissions: draft.permissions,
-    } as never);
+    });
     if (error) { toast.error(error.message); return; }
     toast.success('Custom role created');
     setDraft({ name: '', description: '', inherits_from: null, permissions: [] });
@@ -76,7 +75,7 @@ export const CustomRolesAdminPage: React.FC<Props> = ({ organizationId }) => {
       destructiveLabel: 'Delete role',
     });
     if (!ok) return;
-    await (supabase as any).from('org_custom_roles').delete().eq('id', id);
+    await fromTable('org_custom_roles').delete().eq('id', id);
     qc.invalidateQueries({ queryKey: ['org_custom_roles', organizationId] });
   };
 
