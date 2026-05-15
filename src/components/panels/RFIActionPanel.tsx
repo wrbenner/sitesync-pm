@@ -18,7 +18,7 @@ import { colors, typography, transitions } from '../../styles/theme';
 
 // ── Types ─────────────────────────────────────────────────
 
-interface RFIData {
+export interface RFIData {
   id: string;
   number?: number;
   subject?: string;

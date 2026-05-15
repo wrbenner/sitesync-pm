@@ -17,7 +17,7 @@ import { colors, typography, transitions } from '../../styles/theme';
 
 // ── Types ─────────────────────────────────────────────────
 
-interface SubmittalData {
+export interface SubmittalData {
   id: string;
   number?: number;
   title?: string;
