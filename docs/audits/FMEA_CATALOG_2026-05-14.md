@@ -36,17 +36,17 @@
 | 7 | L.BUCKET.1 | Storage bucket misconfigured public; anon lists files | CRITICAL | MEDIUM | vitest | UNCOVERED |
 | 8 | K.ANTH.1 | Anthropic / Stripe / Resend API key leaked into client bundle | CRITICAL | LOW | vitest | UNCOVERED |
 | 9 | G.RLS.1 | Anon-write violations on N tables | HIGH | MEDIUM | sql-pgtap | PARTIAL (PR #574 fixed 5; loop validates the rest) |
-| 10 | I.PROV.1 | Concurrent provision-org creates duplicate slug | HIGH | MEDIUM | k6-load | UNCOVERED |
-| 11 | K.STRIPE.1 | Stripe webhook replay (old event re-processed) | HIGH | MEDIUM | vitest | UNCOVERED |
+| 10 | I.PROV.1 | Concurrent provision-org creates duplicate slug | HIGH | MEDIUM | k6-load | PARTIAL (race-prober Wave 1 — vitest spec + k6 fallback at tests/concurrency/provision-org-race.spec.ts; 10-call race against staging produced exactly 1 org_id) |
+| 11 | K.STRIPE.1 | Stripe webhook replay (old event re-processed) | HIGH | MEDIUM | vitest | PARTIAL (Wave 2 — tests/security/stripe-replay.spec.ts) |
 | 12 | H.SOFTDEL.1 | Soft-deleted entity still returned by queries missing deleted_at filter | HIGH | HIGH | sql-pgtap | VALIDATED (tests/integrity/softdel.spec.ts — static + live SQL; 3 production leaks in rfis/submittals/field closed 2026-05-14) |
-| 13 | H.MONEY.1 | Money cents drift: $12.35×3 ≠ 3705 cents in DB | MEDIUM | MEDIUM | vitest | UNCOVERED |
-| 14 | H.AUDIT.1 | Audit hash chain broken by partial rollback | HIGH | MEDIUM | sql-pgtap | UNCOVERED |
+| 13 | H.MONEY.1 | Money cents drift: $12.35×3 ≠ 3705 cents in DB | MEDIUM | MEDIUM | vitest | PARTIAL (Wave 2 — tests/integrity/money.spec.ts) |
+| 14 | H.AUDIT.1 | Audit hash chain broken by partial rollback | HIGH | MEDIUM | sql-pgtap | PARTIAL (Wave 2 — tests/integrity/audit-chain.spec.ts) |
 | 15 | F.MFA.1 | MFA backup codes never displayed; account recovery impossible | CRITICAL | MEDIUM | playwright | UNCOVERED |
 | 16 | F.IMP.1 | Impersonation token persists after admin logout | HIGH | MEDIUM | playwright | UNCOVERED |
 | 17 | A.XSTATE.1 | Event fired in unhandled state silently dropped (per-machine fuzz) | MEDIUM | MEDIUM | vitest | PARTIAL (xstate-fuzz wave 1 — 13 specs at tests/machines/) |
 | 18 | A.CO.1 | Change-order PROMOTE defined in helpers but not in machine | HIGH | HIGH | vitest | PARTIAL (tests/machines/changeOrderMachine.fuzz.spec.ts + e2e/lifecycle/change-order-full-lifecycle.spec.ts) |
 | 19 | A.SUB.1 | Submittal FORWARD_TO_REVIEWER skips gc_review state | HIGH | HIGH | vitest | PARTIAL (tests/machines/submittalMachine.fuzz.spec.ts + e2e/lifecycle/submittal-full-lifecycle.spec.ts) |
-| 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (tests/machines/dailyLogMachine.fuzz.spec.ts + e2e/lifecycle/daily-log-full-lifecycle.spec.ts; concurrent k6 race still UNCOVERED) |
+| 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (tests/machines/dailyLogMachine.fuzz.spec.ts + e2e/lifecycle/daily-log-full-lifecycle.spec.ts; race-prober Wave 1 — **HAZARD CONFIRMED on staging** via tests/concurrency/daily-log-amend-race.spec.ts: 2 parallel revision inserts BOTH land; `daily_log_revisions` has no dedup constraint on (daily_log_id, field, new_value). Platform-fix needed: add UNIQUE partial index or wrap in pg_advisory_xact_lock RPC) |
 | 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/punchItemMachine.fuzz.spec.ts + e2e/lifecycle/punch-item-full-lifecycle.spec.ts) |
 | 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | PARTIAL (tests/machines/paymentMachine.fuzz.spec.ts — spy on autoGenerateLienWaivers) |
 | 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | PARTIAL (tests/machines/paymentMachine.fuzz.spec.ts — calculateG702 sign probe) |
@@ -55,13 +55,13 @@
 | 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | PARTIAL (e2e/lifecycle/submittal-full-lifecycle.spec.ts walks full state chain + audit; cross-role distribution test gated on SECONDARY_POLISH_USER seed) |
 | 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | UNCOVERED |
 | 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | UNCOVERED |
-| 29 | D.NOTIF.1 + I.IDEM.1 | Notification duplicate on retry (no idempotency_key) | MEDIUM | HIGH | vitest | UNCOVERED |
+| 29 | D.NOTIF.1 + I.IDEM.1 | Notification duplicate on retry (no idempotency_key) | MEDIUM | HIGH | vitest | PARTIAL (race-prober Wave 1 — **HAZARD CONFIRMED on staging** via tests/concurrency/notification-idempotency.spec.ts: re-firing the same RFI-assignment trigger writes 2+ rows to `notifications`. Schema has no `idempotency_key` column nor uniqueness on (user_id, type, link). Platform-fix needed: add idempotency_key to create_notification + UNIQUE constraint) |
 | 30 | E.MV.1 | Matview REFRESH (not CONCURRENTLY) blocks reads > 1s | MEDIUM | MEDIUM | sql-pgtap | UNCOVERED |
-| 31 | I.PGMQ.1 | pgmq message processed twice (no ACK race guard) | HIGH | MEDIUM | vitest | UNCOVERED |
-| 32 | M.MOD.2 | Modal stuck open after mutation error | MEDIUM | HIGH | playwright | UNCOVERED |
-| 33 | I.IDEM.2 + M.FORM.1 | Double-submit creates duplicate (no idempotency middleware) | MEDIUM | HIGH | playwright | UNCOVERED |
-| 34 | M.EMPTY.1 | Empty array crashes detail page | MEDIUM | HIGH | playwright | UNCOVERED |
-| 35 | M.OPT.1 | Optimistic UI + server reject leaves orphan | MEDIUM | MEDIUM | playwright | UNCOVERED |
+| 31 | I.PGMQ.1 | pgmq message processed twice (no ACK race guard) | HIGH | MEDIUM | vitest | PARTIAL (race-prober Wave 1 — vitest spec at tests/concurrency/pgmq-idempotency.spec.ts; **inconclusive on staging**: no public-schema pgmq.send wrapper exposed via REST so test skips on staging. Loop iteration must either expose `public.pgmq_send` RPC or run via psql) |
+| 32 | M.MOD.2 | Modal stuck open after mutation error | MEDIUM | HIGH | playwright | PARTIAL (Wave 2 — tests/ui/modal-error.spec.ts) |
+| 33 | I.IDEM.2 + M.FORM.1 | Double-submit creates duplicate (no idempotency middleware) | MEDIUM | HIGH | playwright | PARTIAL (Wave 2 — tests/ui/double-submit.spec.ts; M.FORM.1 only. Race-prober Wave 1 — additional playwright spec at tests/concurrency/double-submit.spec.ts; requires E2E_REAL_BACKEND + Vercel preview URL to run; not yet executed in CI) |
+| 34 | M.EMPTY.1 | Empty array crashes detail page | MEDIUM | HIGH | playwright | PARTIAL (Wave 2 — tests/ui/empty-state.spec.ts) |
+| 35 | M.OPT.1 | Optimistic UI + server reject leaves orphan | MEDIUM | MEDIUM | playwright | PARTIAL (Wave 2 — tests/ui/optimistic-rollback.spec.ts) |
 | 36 | P.DEBOUNCE.1 | Search debounce too short → API flood | MEDIUM | MEDIUM | k6-load | UNCOVERED |
 | 37 | P.NPLUS1.1 | List view N+1 on assignee names | MEDIUM | HIGH | vitest | UNCOVERED |
 | 38 | Q.PUSH.1 | Push deep-link arrives before auth ready | HIGH | MEDIUM | playwright | UNCOVERED |
@@ -561,3 +561,40 @@ _Source: 3 Explore agents (state-machine + lifecycle; security + integrity + con
 Shared harness: `tests/machines/_fuzzHelpers.ts` — `fuzzMatrix()` drives every (state, event) pair on a fresh actor with reachability paths and minimal payloads, captures pre/post snapshots, and `assertNoSilentDrops()` checks the post-send state is in the known state set.
 
 Wave 1 flips 10 Top-50 entries from UNCOVERED → PARTIAL (A.XSTATE.1, A.CO.1, A.SUB.1, A.DL.1, A.PUNCH.1, A.PAY.1, A.PAY.2, A.SCHED.1, A.RFI.1, A.DRAW.1). Wave 2 = mutation-injector flips to VALIDATED.
+
+---
+
+## Wave-1 race-prober receipts (2026-05-14)
+
+Branch: `feat/fmea-concurrency-race-wave1`. 5 specs authored under
+`tests/concurrency/`:
+
+| Spec | Catalog | Outcome on staging (`nrsbvqkpxxlonvkmcmxf`) |
+|---|---|---|
+| `provision-org-race.spec.ts` | I.PROV.1 | PASS — provision_organization v2 idempotency holds; 10 racing calls → 1 org_id |
+| `notification-idempotency.spec.ts` | I.IDEM.1 / D.NOTIF.1 | **FAIL — 2 rows landed**. Real bug. |
+| `double-submit.spec.ts` (Playwright) | I.IDEM.2 / M.FORM.1 | Not run (needs Vercel preview URL + auth env) |
+| `daily-log-amend-race.spec.ts` | I.DL.1 / A.DL.1 | **FAIL — 2 revision rows landed**. Real bug. |
+| `pgmq-idempotency.spec.ts` | I.PGMQ.1 | Skipped — staging exposes no `public.pgmq_send` RPC over REST |
+
+**Real race-condition bugs surfaced for next loop iteration:**
+
+1. **I.IDEM.1 / D.NOTIF.1** — `notifications` table has no idempotency key.
+   `create_notification(p_user_id, p_project_id, p_type, p_title, p_body, p_link)`
+   blindly INSERTs. Re-firing the `trg_rfi_assigned` trigger 3x in parallel
+   yielded 2+ rows.
+   Fix candidates: (a) add `idempotency_key text UNIQUE` to `notifications`
+   and accept it as a `create_notification` param; (b) add a partial UNIQUE
+   index on `(user_id, type, link, body)` for the same 60s window.
+
+2. **I.DL.1 / A.DL.1** — `daily_log_revisions` accepts arbitrarily many
+   rows for the same (daily_log_id, field, new_value) tuple. Two parallel
+   inserts BOTH succeed; the bigserial `sequence` column doesn't dedupe.
+   Fix candidates: (a) add a partial UNIQUE on (daily_log_id, field,
+   new_value) where revision_hash IS NULL; (b) wrap amend in a SECURITY
+   DEFINER RPC that takes pg_advisory_xact_lock(hashtext(daily_log_id))
+   before inserting.
+
+Both are queued as `loop-detected-bug` for platform-diagnoser-agent in the
+next iteration.
+
