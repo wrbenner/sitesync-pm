@@ -44,15 +44,15 @@
 | 15 | F.MFA.1 | MFA backup codes never displayed; account recovery impossible | CRITICAL | MEDIUM | playwright | UNCOVERED |
 | 16 | F.IMP.1 | Impersonation token persists after admin logout | HIGH | MEDIUM | playwright | UNCOVERED |
 | 17 | A.XSTATE.1 | Event fired in unhandled state silently dropped (per-machine fuzz) | MEDIUM | MEDIUM | vitest | UNCOVERED |
-| 18 | A.CO.1 | Change-order PROMOTE defined in helpers but not in machine | HIGH | HIGH | vitest | UNCOVERED |
-| 19 | A.SUB.1 | Submittal FORWARD_TO_REVIEWER skips gc_review state | HIGH | HIGH | vitest | UNCOVERED |
-| 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | UNCOVERED |
-| 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | UNCOVERED |
+| 18 | A.CO.1 | Change-order PROMOTE defined in helpers but not in machine | HIGH | HIGH | vitest | PARTIAL (e2e/lifecycle/change-order-full-lifecycle.spec.ts walks PROMOTE at DB layer; vitest fuzz still UNCOVERED) |
+| 19 | A.SUB.1 | Submittal FORWARD_TO_REVIEWER skips gc_review state | HIGH | HIGH | vitest | PARTIAL (e2e/lifecycle/submittal-full-lifecycle.spec.ts walks gc_review → architect_review; vitest fuzz still UNCOVERED) |
+| 20 | A.DL.1 + I.DL.1 | Concurrent daily-log AMEND creates duplicate version | HIGH | MEDIUM | vitest + k6 | PARTIAL (e2e/lifecycle/daily-log-full-lifecycle.spec.ts walks AMEND + signature chain; concurrent k6 race still UNCOVERED) |
+| 21 | A.PUNCH.1 | VERIFY_DIRECT from open skips sub_complete state | HIGH | MEDIUM | vitest | PARTIAL (e2e/lifecycle/punch-item-full-lifecycle.spec.ts walks open→in_progress→sub_complete→verified + reject loop) |
 | 22 | A.PAY.1 | Lien waiver never generated on APPROVE (action no-op) | CRITICAL | MEDIUM | vitest | UNCOVERED |
 | 23 | A.PAY.2 | Negative retainage accepted at validator | HIGH | LOW | vitest | UNCOVERED |
 | 24 | A.SCHED.1 | Machine state ≠ displayed status (on_track/at_risk not in machine) | MEDIUM | HIGH | vitest | UNCOVERED |
-| 25 | A.RFI.1 | VOID accepted from non-admin role | HIGH | MEDIUM | vitest | UNCOVERED |
-| 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | UNCOVERED |
+| 25 | A.RFI.1 | VOID accepted from non-admin role | HIGH | MEDIUM | vitest | PARTIAL (e2e/lifecycle/rfi-full-lifecycle.spec.ts walks create→close; role-restriction vitest still UNCOVERED) |
+| 26 | B.SUB.1 | Distribution list stale after reviewer added mid-flight | MEDIUM | MEDIUM | playwright | PARTIAL (e2e/lifecycle/submittal-full-lifecycle.spec.ts walks full state chain + audit; cross-role distribution test gated on SECONDARY_POLISH_USER seed) |
 | 27 | F.ONB.1 + M.MOD.1 | provision-org fails silently; user stranded at /signup | HIGH | MEDIUM | playwright | UNCOVERED |
 | 28 | N.RT.1 | Realtime channel survives logout — cross-user message leak | HIGH | MEDIUM | playwright | UNCOVERED |
 | 29 | D.NOTIF.1 + I.IDEM.1 | Notification duplicate on retry (no idempotency_key) | MEDIUM | HIGH | vitest | UNCOVERED |
@@ -117,6 +117,18 @@ For each entity: create → assign → respond → close happy path + every fail
 - Bid Package — draft → invite → submission → leveling → award → COI validated before start.
 - COI — pending → verify → valid; expiry cron blocks check-in.
 - Lien Waiver — pending → conditional → unconditional → final. State-specific (CA/TX/FL/NY) form template.
+
+### Section B Wave 1 status (authored 2026-05-14)
+
+| Entity | Spec | Status | Notes |
+|---|---|:--:|---|
+| RFI | e2e/lifecycle/rfi-full-lifecycle.spec.ts | PARTIAL | Walks create + cross-page (/rfis, /day) + close + audit-log. Multi-role handoff gated on SECONDARY_POLISH_USER. Covers B.RFI.1, partial A.RFI.1. |
+| Submittal | e2e/lifecycle/submittal-full-lifecycle.spec.ts | PARTIAL | Walks draft→gc_review→architect_review→approved→closed at DB layer. Audit trail enforced. Distribution-stale cross-role test gated on SECONDARY_POLISH_USER. Covers B.SUB.1, partial A.SUB.1. |
+| Change Order | e2e/lifecycle/change-order-full-lifecycle.spec.ts | PARTIAL | Walks pco→review→approved→PROMOTE→cor→re-review→approved. Asserts co_type column + amount_cents cost-snapshot retention. Covers partial A.CO.1. |
+| Daily Log | e2e/lifecycle/daily-log-full-lifecycle.spec.ts | PARTIAL | Walks create→sign(v1)→AMEND(v2)→re-sign. Asserts signature-chain preservation across versions. Concurrent race (k6) still UNCOVERED. Covers partial A.DL.1 + I.DL.1. |
+| Punch Item | e2e/lifecycle/punch-item-full-lifecycle.spec.ts | PARTIAL | Walks open→in_progress→sub_complete→verified + reject-loop (super rejects→sub re-completes→verifies). Cross-role queue tests gated on SECONDARY+TERTIARY users. Covers partial A.PUNCH.1. |
+
+**Multi-user infrastructure gap**: setup-polish-user.ts currently seeds only one user (polish-test@sitesync-staging.local) with owner role. Cross-role hazards (reviewer/sub/super assignment routing, distribution-list refresh, role-specific queues) are walked at the DB layer but the UI-side role-handoff assertions test.skip cleanly until SECONDARY_POLISH_USER + TERTIARY_POLISH_USER env vars are configured. Follow-up: extend setup-polish-user.ts to seed engineer + sub + super roles, or use existing project_members RPC to add additional principals.
 
 ---
 
