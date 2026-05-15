@@ -29,7 +29,7 @@
  *
  * Catalog: Q.CAM.1.
  */
-import { test, expect, chromium } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { signIn, settle, waitLoad } from '../../e2e/_helpers'
 
 const USER = process.env.POLISH_USER ?? 'dev@sitesync.test'
