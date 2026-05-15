@@ -28,6 +28,9 @@ export default defineConfig({
     // FMEA Wave 2 — UI hazard coverage (modal-error, empty-state,
     // optimistic-rollback, double-submit). Playwright runtime.
     'tests/ui/**/*.spec.ts',
+    // FMEA Wave-1 race specs: only the double-submit spec is Playwright;
+    // the other tests/concurrency/* specs are vitest (excluded below).
+    'tests/concurrency/double-submit.spec.ts',
   ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
