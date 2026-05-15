@@ -37,10 +37,10 @@
 | 8 | K.ANTH.1 | Anthropic / Stripe / Resend API key leaked into client bundle | CRITICAL | LOW | vitest | UNCOVERED |
 | 9 | G.RLS.1 | Anon-write violations on N tables | HIGH | MEDIUM | sql-pgtap | PARTIAL (PR #574 fixed 5; loop validates the rest) |
 | 10 | I.PROV.1 | Concurrent provision-org creates duplicate slug | HIGH | MEDIUM | k6-load | UNCOVERED |
-| 11 | K.STRIPE.1 | Stripe webhook replay (old event re-processed) | HIGH | MEDIUM | vitest | PARTIAL (Wave 2 — tests/security/stripe-replay.spec.ts) |
-| 12 | H.SOFTDEL.1 | Soft-deleted entity still returned by queries missing deleted_at filter | HIGH | HIGH | sql-pgtap | PARTIAL (Wave 2 — tests/integrity/softdel.spec.ts; surfaced 3 real bugs in rfis/submittals/field) |
-| 13 | H.MONEY.1 | Money cents drift: $12.35×3 ≠ 3705 cents in DB | MEDIUM | MEDIUM | vitest | PARTIAL (Wave 2 — tests/integrity/money.spec.ts) |
-| 14 | H.AUDIT.1 | Audit hash chain broken by partial rollback | HIGH | MEDIUM | sql-pgtap | PARTIAL (Wave 2 — tests/integrity/audit-chain.spec.ts) |
+| 11 | K.STRIPE.1 | Stripe webhook replay (old event re-processed) | HIGH | MEDIUM | vitest | UNCOVERED |
+| 12 | H.SOFTDEL.1 | Soft-deleted entity still returned by queries missing deleted_at filter | HIGH | HIGH | sql-pgtap | VALIDATED (tests/integrity/softdel.spec.ts — static + live SQL; 3 production leaks in rfis/submittals/field closed 2026-05-14) |
+| 13 | H.MONEY.1 | Money cents drift: $12.35×3 ≠ 3705 cents in DB | MEDIUM | MEDIUM | vitest | UNCOVERED |
+| 14 | H.AUDIT.1 | Audit hash chain broken by partial rollback | HIGH | MEDIUM | sql-pgtap | UNCOVERED |
 | 15 | F.MFA.1 | MFA backup codes never displayed; account recovery impossible | CRITICAL | MEDIUM | playwright | UNCOVERED |
 | 16 | F.IMP.1 | Impersonation token persists after admin logout | HIGH | MEDIUM | playwright | UNCOVERED |
 | 17 | A.XSTATE.1 | Event fired in unhandled state silently dropped (per-machine fuzz) | MEDIUM | MEDIUM | vitest | PARTIAL (xstate-fuzz wave 1 — 13 specs at tests/machines/) |
@@ -58,12 +58,12 @@
 | 29 | D.NOTIF.1 + I.IDEM.1 | Notification duplicate on retry (no idempotency_key) | MEDIUM | HIGH | vitest | UNCOVERED |
 | 30 | E.MV.1 | Matview REFRESH (not CONCURRENTLY) blocks reads > 1s | MEDIUM | MEDIUM | sql-pgtap | UNCOVERED |
 | 31 | I.PGMQ.1 | pgmq message processed twice (no ACK race guard) | HIGH | MEDIUM | vitest | UNCOVERED |
-| 32 | M.MOD.2 | Modal stuck open after mutation error | MEDIUM | HIGH | playwright | PARTIAL (Wave 2 — tests/ui/modal-error.spec.ts) |
-| 33 | I.IDEM.2 + M.FORM.1 | Double-submit creates duplicate (no idempotency middleware) | MEDIUM | HIGH | playwright | PARTIAL (Wave 2 — tests/ui/double-submit.spec.ts; M.FORM.1 only) |
-| 34 | M.EMPTY.1 | Empty array crashes detail page | MEDIUM | HIGH | playwright | PARTIAL (Wave 2 — tests/ui/empty-state.spec.ts) |
-| 35 | M.OPT.1 | Optimistic UI + server reject leaves orphan | MEDIUM | MEDIUM | playwright | PARTIAL (Wave 2 — tests/ui/optimistic-rollback.spec.ts) |
+| 32 | M.MOD.2 | Modal stuck open after mutation error | MEDIUM | HIGH | playwright | UNCOVERED |
+| 33 | I.IDEM.2 + M.FORM.1 | Double-submit creates duplicate (no idempotency middleware) | MEDIUM | HIGH | playwright | UNCOVERED |
+| 34 | M.EMPTY.1 | Empty array crashes detail page | MEDIUM | HIGH | playwright | UNCOVERED |
+| 35 | M.OPT.1 | Optimistic UI + server reject leaves orphan | MEDIUM | MEDIUM | playwright | UNCOVERED |
 | 36 | P.DEBOUNCE.1 | Search debounce too short → API flood | MEDIUM | MEDIUM | k6-load | UNCOVERED |
-| 37 | P.NPLUS1.1 | List view N+1 on assignee names | MEDIUM | HIGH | vitest | PARTIAL (Wave 2 — tests/perf/n-plus-1.spec.ts) |
+| 37 | P.NPLUS1.1 | List view N+1 on assignee names | MEDIUM | HIGH | vitest | UNCOVERED |
 | 38 | Q.PUSH.1 | Push deep-link arrives before auth ready | HIGH | MEDIUM | playwright | UNCOVERED |
 | 39 | Q.GPS.1 | GPS off → check-in falls back to wrong location silently | HIGH | MEDIUM | playwright | UNCOVERED |
 | 40 | Q.FILE.1 | File picker null on iOS 18 → upload crash | MEDIUM | MEDIUM | manual-only + sentry | UNCOVERED |
@@ -73,7 +73,7 @@
 | 44 | S.A11Y.2 | Modal focus-trap not announced (no role="alertdialog") | MEDIUM | MEDIUM | axe-extended | UNCOVERED |
 | 45 | S.A11Y.3 | Route change doesn't focus heading | MEDIUM | HIGH | playwright | UNCOVERED |
 | 46 | K.EMAIL.1 | Inbound email From header not validated; spoofed sender | HIGH | MEDIUM | vitest | UNCOVERED |
-| 47 | J.XSS.1 | TipTap rich-text `<iframe>` injection | HIGH | MEDIUM | vitest | PARTIAL (Wave 2 — tests/security/tiptap-xss.spec.ts; covers iframe + script + object + embed + on* + javascript:) |
+| 47 | J.XSS.1 | TipTap rich-text `<iframe>` injection | HIGH | MEDIUM | vitest | UNCOVERED |
 | 48 | J.CSV.1 | CSV import formula injection (`=cmd|...`) | MEDIUM | MEDIUM | vitest | UNCOVERED |
 | 49 | A.DRAW.1 + B.DRAW.1 | Drawing SUPERSEDE creates duplicate revision number | HIGH | MEDIUM | vitest | PARTIAL (tests/machines/drawingMachine.fuzz.spec.ts — vitest portion; B.DRAW.1 still UNCOVERED) |
 | 50 | D.NOTIF.2 + G.RLS.2 | Notification cross-tenant leak (missing org_id filter) | CRITICAL | LOW | sql-pgtap | UNCOVERED |

@@ -55,17 +55,15 @@ const SOFT_DELETED_OPT_IN_FILES = [
  * is a real, fileable bug — they leak soft-deleted rows into the user-
  * facing list and detail paths. Tracked in:
  *
- *   docs/audits/FMEA_CATALOG_2026-05-14.md — H.SOFTDEL.1 (PARTIAL)
+ *   docs/audits/FMEA_CATALOG_2026-05-14.md — H.SOFTDEL.1 (VALIDATED)
  *
- * Until each file is fixed (add `.is('deleted_at', null)` to every
- * getX / getXById query), this allowlist documents the regression
- * baseline. Removing entries when the underlying read paths are
- * patched is the "make it VALIDATED" path.
+ * The original 3 violations (rfis, submittals, daily_logs) were closed
+ * on 2026-05-14 by fix/softdel-leaks-api-endpoints. The ledger framework
+ * is retained as a ratchet — adding a new entry here documents drift; a
+ * green run with an empty ledger proves the hazard remains validated.
  */
 const KNOWN_VIOLATIONS: Readonly<Record<string, readonly string[]>> = {
-  rfis: ['src/api/endpoints/rfis.ts'],
-  submittals: ['src/api/endpoints/submittals.ts'],
-  daily_logs: ['src/api/endpoints/field.ts'],
+  // Empty: all original H.SOFTDEL.1 violations closed 2026-05-14.
 } as const
 
 function walk(dir: string, acc: string[] = []): string[] {
